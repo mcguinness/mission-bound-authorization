@@ -3,8 +3,8 @@
  "source": {
   "specs": {
    "draft-mcguinness-mission-control-plane.md": {
-    "revision": "6dbc9eb9ebe444a82ede6e1c4f920205b82cebdf",
-    "content_sha256": "97aecd8c39b1e8641a8d6e93c13795d263d7f900843bc51cd120f853824fdbd1"
+    "revision": "ae362420a2d87cce061cd26711a709e48c6763e5",
+    "content_sha256": "9bff622c97ce5d02e6d5204472ffe001ed97121e7c56bcc9432757ab1a53c822"
    },
    "draft-mcguinness-mission-authority-server.md": {
     "revision": "40d9f6750419b04b62eca76a81eb11479f78a311",
@@ -1797,9 +1797,15 @@
      "name": "managed transaction publication > refuses unmanaged outer transactions rather than publishing before their commit",
      "level": "unit",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "durable lifecycle fan-out > a rolled-back transaction leaves no event, no delivery row and no tombstone",
+     "level": "concurrency",
+     "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "Single-process fault coverage: conditional state/version and counter writes admitted from the stored row, rollback-safe nested publication, child fanout admission in the creation transaction, and expansion deferral retirement with successor/supersession/outbox. Durable generalized fan-out and asynchronous artifact issuance remain incomplete; the counter tests prove conditional admission and a synchronous caller transaction, not provider/continuation token issuance. No multi-process claim."
+   "notes": "Single-process fault coverage: conditional state/version and counter writes admitted from the stored row, rollback-safe nested publication, child fanout admission in the creation transaction, expansion deferral retirement with successor and supersession, and lifecycle state/version with durable publication work and the terminal tombstone in one transaction. Asynchronous artifact issuance stays outside that domain: the counter tests prove conditional admission and a synchronous caller transaction, not provider or continuation token issuance, so the named atomic domain coupling a counter check and increment with artifact issuance is not covered. No multi-process claim."
   },
   {
    "id": "control-plane.consistency.fresh-observation",
@@ -1882,9 +1888,22 @@
     "normative": "After restore or failover, the Mission Issuer MUST NOT issue a lower state `version` for an existing Mission, and MUST refuse state-dependent service while its durable version or commit metadata is uncertain. A retaining consumer MUST key its high-water mark by the canonical (issuer, mission_id) tuple, reject a lower version, and retain the high-water mark across its own recovery. A legitimate higher-version resume to active is accepted under the other validity checks; state names are not ordered by severity. Issuer durability is required even when a consumer has never seen the pre-restore version."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "restart recovery on the declared file-backed store > recovers the unpublished commit, the version high-water and the tombstone across a restart",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "terminal tombstones and identifier nonreuse > records the terminal tombstone in the terminal transition's own transaction",
+     "level": "cross-component",
+     "surface": "verification"
+    }
+   ],
+   "notes": "A restart on the declared file-backed single-writer store keeps the state version and the terminal tombstone, so no lower version is served after recovery and the committed-but-unpublished transition replays at its own version. The rest of the invariant is unimplemented: the issuer does not refuse state-dependent service while a durable version or commit metadata is uncertain after an out-of-band restore, there is no fenced reconciliation policy that decides when it is certain again, and no retaining-consumer high-water mark is exercised here. No waiver of existing binding-level requirements."
   },
   {
    "id": "control-plane.consistency.tombstones",
@@ -1904,9 +1923,58 @@
     "normative": "The Mission Issuer MUST retain terminal-state tombstones for the maximum applicable credential/artifact lifetime, state-staleness plus skew, idempotency/retry horizon, child-cascade horizon, and audit-retention horizon. A tombstone identifies the canonical issuer/Mission tuple, terminal state, final version, and transition time or commit reference. After detailed retention expires, the issuer MUST retain enough namespace state to prevent identifier reuse or a return to active. This composes retention horizons; it does not weaken the binding's existing identifier-nonreuse requirement."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "terminal tombstones and identifier nonreuse > composes every declared retention horizon into the detailed horizon",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "terminal tombstones and identifier nonreuse > records the terminal tombstone in the terminal transition's own transaction",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "terminal tombstones and identifier nonreuse > refuses a reused identifier after the record is purged and after the detail is pruned",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "terminal tombstones and identifier nonreuse > keeps the composed horizon at or above the creation-idempotency purge window",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "terminal tombstones and identifier nonreuse > isolates tombstones per issuer, so one issuer's terminal id does not refuse another's",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "restart recovery on the declared file-backed store > recovers the unpublished commit, the version high-water and the tombstone across a restart",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "terminal tombstones and identifier nonreuse > composes a configured discharge retention that outlives the audit horizon",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "terminal tombstones and identifier nonreuse > derives one effective discharge retention for the store and the horizon",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "The tombstone commits in the terminal transition's own transaction with the canonical issuer/Mission identity, terminal state, final version, transition time and commit event reference, and carries no foreign key to the record table so pruning a terminal record cannot delete the marker. The detailed horizon is computed as the composed maximum of the declared credential and artifact lifetime, staleness plus skew, idempotency and retry, child-cascade and audit-retention horizons; each input is shown to govern the composition, and a non-numeric declaration is refused. Past that horizon the detail is pruned and the identity row remains: creation refuses the identifier both after the record is purged and after the detail is gone. The effective discharge retention is derived once for the discharge event store and for the composed horizon, in the AS assembly and in direct KernelOptions construction alike, so a configured retry window longer than audit retention keeps the terminal detail readable until it expires and leaves the permanent identity marker afterwards."
   },
   {
    "id": "control-plane.consistency.partitions",
@@ -2033,9 +2101,136 @@
     "normative": "The Mission Issuer MUST atomically retain durable publication or repair work with each committed transition and publish only after that commit, with idempotent recovery that prevents loss of the committed transition. An outbox or equivalent satisfies this only when it shares the state transaction. A second Signals database does not join that transaction merely because its API is called inside it. Publication can duplicate, reorder, or stop after commit: event identity and Mission/version correlation make redelivery idempotent and gaps detectable, and consumers resynchronize from an authoritative state surface. Non-active transitions receive priority. The profile does not promise global delivery order or require a particular worker/claiming topology."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "durable lifecycle fan-out > assigns one event identity per commit, for every commit kind",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "durable lifecycle fan-out > keeps an unpublishable event pending on the recovery path instead of failing an unrelated drain",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "durable lifecycle fan-out > a rolled-back transaction leaves no event, no delivery row and no tombstone",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "durable lifecycle fan-out > redelivers a commit lost before publication under its original identity and timestamp",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "durable lifecycle fan-out > roots the activating commit from the payload, so a redelivery after the record advanced still resolves",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "durable lifecycle fan-out > acknowledges durable subscribers independently: one accepts while another retries with the same payload",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "durable lifecycle fan-out > abandons a delivery only after its bounded retry budget, keeping the row for audit",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "durable lifecycle fan-out > marks a removed subscriber's pending delivery terminal without blocking or resurrecting it",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "durable lifecycle fan-out > migrates a legacy expansion outbox onto the generalized table without losing an event",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "restart recovery on the declared file-backed store > recovers the unpublished commit, the version high-water and the tombstone across a restart",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/packages/mission-signals/test/durable-delivery.test.ts",
+     "name": "durable per-consumer delivery (@spec signals#delivery, #641) > carries ONE jti across a kernel redelivery of an ordinary lifecycle commit",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > round 5 (#640 review): a crash BEFORE the drain (failpoint after commit) recovers with the persisted event identity",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > cascade under replay (#641): a child-bearing predecessor's crash-window replay re-cascades nothing",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "async-delegation terminal paths (@spec async-delegation) > revoke Mission -> next refresh invalid_grant + the family is destroyed",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "serialized drains on one outbox instance > attempts one delivery for two overlapping drains and keeps the acknowledgement",
+     "level": "concurrency",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "serialized drains on one outbox instance > records one attempt when the delivery under two overlapping drains fails",
+     "level": "concurrency",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "serialized drains on one outbox instance > abandons the final attempt once, and a later drain does not reverse it",
+     "level": "concurrency",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "serialized drains on one outbox instance > attempts each delivery once across four concurrent request-path drains",
+     "level": "concurrency",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "serialized drains on one outbox instance > delivers a row enqueued during a pass in the queued follow-up pass",
+     "level": "concurrency",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "serialized drains on one outbox instance > keeps an acknowledged row acknowledged when a stale attempt fails later",
+     "level": "concurrency",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
+     "name": "serialized drains on one outbox instance > keeps an abandoned row abandoned when a stale attempt succeeds later",
+     "level": "concurrency",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "Every commit funnel writes an immutable event row with an in-transaction event identity on the kernel handle, in the state write's own transaction, and publishes only after that commit; a rollback leaves no event, delivery row or tombstone. A publication lost after commit replays the persisted payload with the same identity and commit timestamp, so the Signals SET carries one jti across redelivery and its unique event key makes the replay a no-op. Durable retryable subscribers are acknowledged independently with bounded backoff, and a removed subscriber's pending row reaches a terminal disposition without blocking others. Delivery is at least once with idempotent acceptance: exactly-once external delivery is not claimed, and multi-process claiming and worker topology stay under #641's trigger. The one subscriber whose effect leaves the process, the per-delegation family grant revocation, is captured in the terminal transaction and awaited by the request-path drain, replacing a fire-and-forget promise with a swallowed rejection. The committing caller still learns that publication did not complete, while the recovery path isolates an unpublishable event so one poison row cannot fail a request that committed nothing. Overlapping drains are serialized on the outbox instance: one pass runs at a time, a caller arriving mid-pass joins one follow-up pass that starts after it, and every disposition write is guarded on the pending row and on the attempt that produced it, so a terminal disposition never moves and a stale attempt never rewrites the attempt count, the error or the backoff. The controlled-promise cases cover both completion orders, the recorded attempt counts, the request-path seam under four concurrent drains, and the follow-up pass that keeps a row enqueued mid-pass live; the two-instance cases exercise the interleaving serialization removes, in one process over one handle and with no lease. Multi-process claiming and fencing stay under #641's trigger."
   },
   {
    "id": "control-plane.consistency.declaration",
@@ -9620,18 +9815,12 @@
     },
     {
      "file": "src/services/pdp/test/evaluate.test.ts",
-     "name": "PDP decisions against OpenFGA (@spec authzen) > vendor outside the constraint -> deny out_of_authority (contextual tuple withheld)",
-     "level": "endpoint",
-     "surface": "decision-request"
-    },
-    {
-     "file": "src/services/pdp/test/evaluate.test.ts",
      "name": "basic gate: active predicate, non-active outcome, unrecognized-fails-closed > an action absent from the policy's action-to-relation map fails closed (out_of_authority), never reaching the FGA check",
      "level": "unit",
      "surface": "decision-request"
     }
    ],
-   "notes": "The two endpoint-level tests need live OpenFGA and sandbox-skip locally; the unit-level test runs unconditionally against a stub Fga and proves the same 'no applicable entry -> refused' rule for an action absent from the policy's action map entirely, so this row has non-skipping local coverage too."
+   "notes": "The endpoint-level test needs live OpenFGA and sandbox-skip locally; the unit-level test runs unconditionally against a stub Fga and proves the same 'no applicable entry -> refused' rule for an action absent from the policy's action map entirely, so this row has non-skipping local coverage too. 'vendor outside the constraint -> deny parameter_violation (entry matched, constraint fails)' (same file) is no longer cited here (#801): a vendors constraint that excludes the target is a matched entry whose constraint fails, not an entry falling outside this row's resource/actions match, so it no longer supports this row's claim."
   },
   {
    "id": "runtime.decision-inputs.discharge-excludes-authority",
@@ -10894,7 +11083,7 @@
     },
     {
      "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
-     "name": "GAP 1: list_invoices binds its result set to the Mission's Authority Set (@spec read-binding) > vendor_id outside the entry's vendor constraint is refused out_of_authority, not silently filtered",
+     "name": "GAP 1: list_invoices binds its result set to the Mission's Authority Set (@spec read-binding) > vendor_id outside the entry's vendor constraint is refused parameter_violation, not silently filtered",
      "level": "endpoint",
      "surface": "resource-operation"
     },
@@ -10959,7 +11148,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "list_invoices is the bulk/cross-vendor material read (#610 GAP 1, hardened by #612 finding 1): a requested vendor_id binds through the ordinary vendor-constraint check (out-of-scope -> out_of_authority; in-scope -> permitted, bound to exactly that vendor); its absence binds the result set to the entry's own vendor scope (proven for a two-vendor allowlist, not just a singleton) rather than the unconstrained store. Result-set filtering alone is not Runtime parameter binding: list_invoices now derives a normalized list Operation Profile ({action, resource, vendor_scope, vendor_scope_source}, effective-params.ts's buildListEffectiveParams/deriveVendorScope in pep.ts), a genuine parameter_digest enters the PDP request and the retained Decision Evidence (previously absent entirely), and server.ts's callReadTool reverifies that digest against a freshly loaded MissionView immediately before execution (Pep.reverifyList), exactly as the write/transaction paths already do. The omitted-vendor_id normal form is a THIRD, explicit case (vendor_scope_source: \"all\"), never collapsed with an entry's own allowlist even when the two enumerate the same vendors (proven by a distinct-digest test). This row's role is AS (the draft's generic \"Deployments MUST\" language); this deployment has no separate AS-side gate for read parameter binding, so the PEP is where the requirement is enforced and tested. #612 finding 3 fix: the FGA/PDP request now names the FULL collection (resource.properties.vendor_ids, populated in pep.ts's bindsVendorScope \"entry\" branch), and evaluateInner's step 6a checks every named member independently, denying the WHOLE read out_of_authority the moment any one member is refused (fail-closed choice: the response contract has no lane for a partially narrowed permit). Proven with a stub Fga (denies one specific vendor object) at both the pure evaluateInner level and the full pep.ts->server.ts integration level, since this domain model's contextual-tuple-only grant mechanism has no way to make a LIVE OpenFGA check independently disagree with the Mission's own allowlist. There is still no genuine persisted Resource-policy layer distinct from the Mission's authority_set in this deployment (a `resource_policy` denial reason is named in the draft's failure classification but implemented nowhere here), so the stub proves the MECHANISM (every named member is actually checked) rather than a real independent policy disagreement. entry_digest still anchors only the Mission ceiling; it was never evidence of Resource-policy's independent say and still is not."
+   "notes": "list_invoices is the bulk/cross-vendor material read (#610 GAP 1, hardened by #612 finding 1): a requested vendor_id binds through the ordinary vendor-constraint check (out-of-scope -> parameter_violation, #801: the entry is matched, only this vendor is excluded by its own constraint; in-scope -> permitted, bound to exactly that vendor); its absence binds the result set to the entry's own vendor scope (proven for a two-vendor allowlist, not just a singleton) rather than the unconstrained store. Result-set filtering alone is not Runtime parameter binding: list_invoices now derives a normalized list Operation Profile ({action, resource, vendor_scope, vendor_scope_source}, effective-params.ts's buildListEffectiveParams/deriveVendorScope in pep.ts), a genuine parameter_digest enters the PDP request and the retained Decision Evidence (previously absent entirely), and server.ts's callReadTool reverifies that digest against a freshly loaded MissionView immediately before execution (Pep.reverifyList), exactly as the write/transaction paths already do. The omitted-vendor_id normal form is a THIRD, explicit case (vendor_scope_source: \"all\"), never collapsed with an entry's own allowlist even when the two enumerate the same vendors (proven by a distinct-digest test). This row's role is AS (the draft's generic \"Deployments MUST\" language); this deployment has no separate AS-side gate for read parameter binding, so the PEP is where the requirement is enforced and tested. #612 finding 3 fix: the FGA/PDP request now names the FULL collection (resource.properties.vendor_ids, populated in pep.ts's bindsVendorScope \"entry\" branch), and evaluateInner's step 6a checks every named member independently, denying the WHOLE read the moment any one member is refused (out_of_authority for an independent policy denial; parameter_violation for a member the entry's own vendors constraint excludes, #801) (fail-closed choice: the response contract has no lane for a partially narrowed permit). Proven with a stub Fga (denies one specific vendor object) at both the pure evaluateInner level and the full pep.ts->server.ts integration level, since this domain model's contextual-tuple-only grant mechanism has no way to make a LIVE OpenFGA check independently disagree with the Mission's own allowlist. There is still no genuine persisted Resource-policy layer distinct from the Mission's authority_set in this deployment (a `resource_policy` denial reason is named in the draft's failure classification but implemented nowhere here), so the stub proves the MECHANISM (every named member is actually checked) rather than a real independent policy disagreement. entry_digest still anchors only the Mission ceiling; it was never evidence of Resource-policy's independent say and still is not."
   },
   {
    "id": "runtime.read-binding.floor-and-no-misclassification",
@@ -10996,7 +11185,7 @@
     },
     {
      "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
-     "name": "GAP 1: list_invoices binds its result set to the Mission's Authority Set (@spec read-binding) > vendor_id outside the entry's vendor constraint is refused out_of_authority, not silently filtered",
+     "name": "GAP 1: list_invoices binds its result set to the Mission's Authority Set (@spec read-binding) > vendor_id outside the entry's vendor constraint is refused parameter_violation, not silently filtered",
      "level": "endpoint",
      "surface": "resource-operation"
     },
@@ -11055,7 +11244,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "Before #610's fix, list_invoices without vendor_id was never actually classified as materially unaffecting the resource set in the sense of successfully returning everything: a vendor-constrained entry always denied out_of_authority (the unbound call's implicit vendorId of \"\" never matched a real vendors constraint) and an unconstrained entry threw an FGA validation error (the default resourceObj named an FGA object type/id the domain model does not accept). Neither path reached a permit, so the pre-fix behavior was closer to broken-and-fail-closed-by-accident than to the issue's literal \"returns every invoice\" description; the LATENT misclassification was in server.ts's execute(), which would have trusted args.vendor_id blindly and returned the unfiltered store had a permit ever been reached. The fix repairs the underlying FGA object typing (so the call reaches a real decision at all) and binds the result: a vendor-constrained entry narrows the bulk result to its own multi-vendor scope, never the whole store (proven for two vendors, with a third excluded, not just a singleton); an unconstrained entry legitimately keeps returning every vendor, which is the entry's true scope, not a misclassification. Verified this fix is reached from every entry point: McpPaymentsServer.callReadTool directly, and both mcp-transport.ts's and mcp-http-transport.ts's route() functions fall through to callReadTool for list_invoices (no separate switch bypasses it). This row's role is AS for the same reason noted on the paired must-require-binding-for-material-reads row; see that row's notes for the representative-vendor FGA-check limitation, which applies equally here. #612 finding 1 hardening: the bulk read's normalized parameters (vendor_scope/vendor_scope_source) now actually enter parameter_digest and are reverified immediately before execution (Pep.reverifyList), so a Mission-authority change landing between the permit and execution is caught as a digest mismatch rather than executed on a stale scope (proven with a live-OpenFGA TOCTOU test that narrows the entry's vendors constraint via the same beforeReverify test-hook idiom callWriteTool already uses for writes). #612 finding 3 fix: the FGA/PDP request now names the FULL collection (resource.properties.vendor_ids, populated in pep.ts's bindsVendorScope \"entry\" branch), and evaluateInner's step 6a checks every named member independently, denying the WHOLE read out_of_authority the moment any one member is refused (fail-closed choice: the response contract has no lane for a partially narrowed permit). Proven with a stub Fga (denies one specific vendor object) at both the pure evaluateInner level and the full pep.ts->server.ts integration level, since this domain model's contextual-tuple-only grant mechanism has no way to make a LIVE OpenFGA check independently disagree with the Mission's own allowlist. There is still no genuine persisted Resource-policy layer distinct from the Mission's authority_set in this deployment (a `resource_policy` denial reason is named in the draft's failure classification but implemented nowhere here), so the stub proves the MECHANISM (every named member is actually checked) rather than a real independent policy disagreement. entry_digest still anchors only the Mission ceiling; it was never evidence of Resource-policy's independent say and still is not."
+   "notes": "Before #610's fix, list_invoices without vendor_id was never actually classified as materially unaffecting the resource set in the sense of successfully returning everything: a vendor-constrained entry always denied (out_of_authority then; parameter_violation now, #801) since the unbound call's implicit vendorId of \"\" never matched a real vendors constraint and an unconstrained entry threw an FGA validation error (the default resourceObj named an FGA object type/id the domain model does not accept). Neither path reached a permit, so the pre-fix behavior was closer to broken-and-fail-closed-by-accident than to the issue's literal \"returns every invoice\" description; the LATENT misclassification was in server.ts's execute(), which would have trusted args.vendor_id blindly and returned the unfiltered store had a permit ever been reached. The fix repairs the underlying FGA object typing (so the call reaches a real decision at all) and binds the result: a vendor-constrained entry narrows the bulk result to its own multi-vendor scope, never the whole store (proven for two vendors, with a third excluded, not just a singleton); an unconstrained entry legitimately keeps returning every vendor, which is the entry's true scope, not a misclassification. Verified this fix is reached from every entry point: McpPaymentsServer.callReadTool directly, and both mcp-transport.ts's and mcp-http-transport.ts's route() functions fall through to callReadTool for list_invoices (no separate switch bypasses it). This row's role is AS for the same reason noted on the paired must-require-binding-for-material-reads row; see that row's notes for the representative-vendor FGA-check limitation, which applies equally here. #612 finding 1 hardening: the bulk read's normalized parameters (vendor_scope/vendor_scope_source) now actually enter parameter_digest and are reverified immediately before execution (Pep.reverifyList), so a Mission-authority change landing between the permit and execution is caught as a digest mismatch rather than executed on a stale scope (proven with a live-OpenFGA TOCTOU test that narrows the entry's vendors constraint via the same beforeReverify test-hook idiom callWriteTool already uses for writes). #612 finding 3 fix: the FGA/PDP request now names the FULL collection (resource.properties.vendor_ids, populated in pep.ts's bindsVendorScope \"entry\" branch), and evaluateInner's step 6a checks every named member independently, denying the WHOLE read the moment any one member is refused (out_of_authority for an independent policy denial; parameter_violation for a member the entry's own vendors constraint excludes, #801) (fail-closed choice: the response contract has no lane for a partially narrowed permit). Proven with a stub Fga (denies one specific vendor object) at both the pure evaluateInner level and the full pep.ts->server.ts integration level, since this domain model's contextual-tuple-only grant mechanism has no way to make a LIVE OpenFGA check independently disagree with the Mission's own allowlist. There is still no genuine persisted Resource-policy layer distinct from the Mission's authority_set in this deployment (a `resource_policy` denial reason is named in the draft's failure classification but implemented nowhere here), so the stub proves the MECHANISM (every named member is actually checked) rather than a real independent policy disagreement. entry_digest still anchors only the Mission ceiling; it was never evidence of Resource-policy's independent say and still is not."
   },
   {
    "id": "runtime.metering.unmetered-bound-refusal",
@@ -16729,7 +16918,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "The PDP-owned evaluation trace records only inspected entry types and reached constraint gates, including delegate narrowing, before signing; no outcomes are inferred for unvisited entries. The identifiers are authorization_details entry types and constraints keys, as the member's definition and its worked example require, not per-entry instance identifiers; a permit's individual entry stays identified by authorizing_entry or entry_digest. The evaluated key is recorded whichever reason the deny carries, so a target excluded by a vendors constraint records vendors under out_of_authority."
+   "notes": "The PDP-owned evaluation trace records only inspected entry types and reached constraint gates, including delegate narrowing, before signing; no outcomes are inferred for unvisited entries. The identifiers are authorization_details entry types and constraints keys, as the member's definition and its worked example require, not per-entry instance identifiers; a permit's individual entry stays identified by authorizing_entry or entry_digest. The evaluated key is recorded whichever reason the deny carries, so a target excluded by a vendors constraint records vendors under parameter_violation (out_of_authority before #801)."
   },
   {
    "id": "evidence.decision.sequence-monotonic-per-emitter",

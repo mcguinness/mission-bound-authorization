@@ -1930,8 +1930,10 @@ async function pollDeferredExpansion(
   }
   // redeem() committed successor creation AND predecessor supersession as one
   // expiry-aware transaction (@spec expansion#superseded-state); the token is
-  // delivered only because that commit succeeded. Mint the successor's first
-  // token, bound to the possession key.
+  // delivered only because that commit succeeded.
+  // Mint the successor's first token, bound to the possession key. The
+  // supersession's durable subscriber deliveries are awaited by the
+  // request-path drain (@spec control-plane#fanout) before the response flushes.
   const minted = await mintMissionAccessToken(
     opts,
     provider,

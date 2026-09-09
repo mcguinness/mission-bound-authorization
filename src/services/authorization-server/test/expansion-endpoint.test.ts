@@ -578,12 +578,21 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
     const body = await opened.json() as { deferral_code: string };
     approveDeferral(body.deferral_code);
     const before = as.kernel.get(pred.missionId);
+    const eventCount = (missionId: string): number =>
+      (as.kernel.db
+        .prepare("SELECT count(*) AS n FROM lifecycle_events WHERE mission_id = ?")
+        .get(missionId) as { n: number }).n;
+    const eventsBefore = eventCount(pred.missionId);
     as.kernel.db.exec("CREATE TEMP TRIGGER test_refuse_retirement BEFORE UPDATE OF redeemed ON expansion_deferrals WHEN NEW.redeemed = 1 BEGIN SELECT RAISE(ABORT, 'retirement fault'); END");
     try {
       expect((await pollExpansion(body.deferral_code)).status).not.toBe(200);
       expect(as.kernel.get(pred.missionId)).toEqual(before);
       expect(as.kernel.db.prepare("SELECT count(*) AS n FROM missions WHERE predecessor = ?").get(pred.missionId)).toEqual({ n: 0 });
-      expect(as.kernel.db.prepare("SELECT count(*) AS n FROM lifecycle_outbox WHERE mission_id = ?").get(pred.missionId)).toEqual({ n: 0 });
+      // @spec control-plane#fanout — the rolled-back transaction left NO
+      // durable event behind: neither the successor's activation nor the
+      // predecessor's supersession, and nothing pending publication.
+      expect(eventCount(pred.missionId)).toBe(eventsBefore);
+      expect(as.kernel.outbox.pendingEventCount()).toBe(0);
       expect(as.kernel.db.prepare("SELECT redeemed, completion_released FROM expansion_deferrals WHERE deferral_code = ?").get(body.deferral_code)).toEqual({ redeemed: 0, completion_released: 0 });
     } finally { as.kernel.db.exec("DROP TRIGGER test_refuse_retirement"); }
     expect((await pollExpansion(body.deferral_code)).status).toBe(200);
@@ -609,7 +618,7 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
     as.expansionDeferrals.db
       .prepare("UPDATE expansion_deferrals SET completion_released = 0 WHERE deferral_code = ?")
       .run(ob.deferral_code as string);
-    as.kernel.db.prepare("UPDATE lifecycle_outbox SET done = 0").run();
+    as.kernel.db.prepare("UPDATE lifecycle_events SET published = 0").run();
 
     const second = await pollExpansion(ob.deferral_code as string);
     const sb = (await second.json()) as { access_token?: string; error?: string };
@@ -618,11 +627,8 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
     const recoveredId = (decodeJwt(sb.access_token as string) as { mission: { id: string } }).mission.id;
     expect(recoveredId).toBe(successorId);
     expect(as.kernel.get(pred.missionId)?.state).toBe("superseded");
-    // The replayed outbox job completed (idempotent drain, marked done).
-    const undone = as.kernel.db
-      .prepare("SELECT COUNT(*) AS n FROM lifecycle_outbox WHERE done = 0")
-      .get() as { n: number };
-    expect(undone.n).toBe(0);
+    // The replayed outbox events all published (idempotent drain).
+    expect(as.kernel.outbox.pendingEventCount()).toBe(0);
   });
 
   it("round 5 (#640 review): a crash BEFORE the drain (failpoint after commit) recovers with the persisted event identity", async () => {
@@ -634,36 +640,41 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
     const ob = (await opened.json()) as { error?: string; deferral_code?: string };
     approveDeferral(ob.deferral_code as string);
 
-    // FAILPOINT: the drain throws immediately after the activation
-    // transaction commits, before any finalization work runs.
+    // FAILPOINT: publication throws immediately after the activation
+    // transaction commits, before any event is marked published. This is the
+    // crash window the durable outbox exists to close.
     const kernelAny = as.kernel as unknown as {
-      drainExpansionOutbox: () => void;
       opts: { onLifecycleCommit?: (c: { id: string; event_id?: string; committed_at: string }) => void };
     };
-    const realDrain = kernelAny.drainExpansionOutbox.bind(as.kernel);
-    kernelAny.drainExpansionOutbox = () => {
-      throw new Error("failpoint: crash before drain");
+    const realHook = kernelAny.opts.onLifecycleCommit;
+    kernelAny.opts.onLifecycleCommit = () => {
+      throw new Error("failpoint: crash before publication");
     };
     let firstStatus = 0;
     try {
       const first = await pollExpansion(ob.deferral_code as string);
       firstStatus = first.status;
     } finally {
-      kernelAny.drainExpansionOutbox = realDrain;
+      kernelAny.opts.onLifecycleCommit = realHook;
     }
     expect(firstStatus).not.toBe(200);
 
     // The crash window: the activation transaction committed (predecessor
     // superseded), the deferral is retired IN THAT SAME commit, and the durable
-    // job is pending with its immutable payloads persisted. The completion has
-    // not yet been released to the token adapter, so recovery can return it.
+    // events are pending with their immutable payloads persisted. The
+    // completion has not yet been released to the token adapter, so recovery
+    // can return it.
     expect(as.kernel.get(pred.missionId)?.state).toBe("superseded");
     expect(as.kernel.db.prepare("SELECT redeemed, completion_released FROM expansion_deferrals WHERE deferral_code = ?").get(ob.deferral_code)).toEqual({ redeemed: 1, completion_released: 0 });
+    expect(as.kernel.outbox.pendingEventCount()).toBeGreaterThan(0);
+    const successorId = (as.kernel.db
+      .prepare("SELECT id FROM missions WHERE predecessor = ?")
+      .get(pred.missionId) as { id: string }).id;
     const pending = as.kernel.db
-      .prepare("SELECT activation_json FROM lifecycle_outbox WHERE done = 0")
-      .get() as { activation_json: string } | undefined;
+      .prepare("SELECT commit_json FROM lifecycle_events WHERE published = 0 AND mission_id = ?")
+      .get(successorId) as { commit_json: string } | undefined;
     expect(pending).toBeDefined();
-    const persisted = JSON.parse((pending as { activation_json: string }).activation_json) as {
+    const persisted = JSON.parse((pending as { commit_json: string }).commit_json) as {
       id: string;
       event_id?: string;
       committed_at: string;
@@ -692,10 +703,7 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
     const replayed = recorded.find((commitEvt) => commitEvt.id === persisted.id);
     expect(replayed?.event_id).toBe(persisted.event_id);
     expect(replayed?.committed_at).toBe(persisted.committed_at);
-    const undoneAfter = as.kernel.db
-      .prepare("SELECT COUNT(*) AS n FROM lifecycle_outbox WHERE done = 0")
-      .get() as { n: number };
-    expect(undoneAfter.n).toBe(0);
+    expect(as.kernel.outbox.pendingEventCount()).toBe(0);
   });
 
   it("cascade under replay (#641): a child-bearing predecessor's crash-window replay re-cascades nothing", async () => {
@@ -726,16 +734,25 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
     expect(cascaded?.state).toBe("cascaded");
     const versionAfterFirst = cascaded?.version;
 
-    // Crash window: completion was not released and the durable
-    // finalization job was never drained.
+    // The child's `cascaded` transition is itself a durable event, committed in
+    // the SAME transaction as the supersession that cascaded it.
+    const childEvents = as.kernel.db
+      .prepare("SELECT event_id, commit_json FROM lifecycle_events WHERE mission_id = ? ORDER BY seq")
+      .all(child.id) as Array<{ event_id: string; commit_json: string }>;
+    const cascadedEvent = childEvents.find(
+      (row) => (JSON.parse(row.commit_json) as { state: string }).state === "cascaded",
+    );
+    expect(cascadedEvent).toBeDefined();
+
+    // Crash window: completion was not released and no event was published.
     as.expansionDeferrals.db
       .prepare("UPDATE expansion_deferrals SET completion_released = 0 WHERE deferral_code = ?")
       .run(ob.deferral_code as string);
-    as.kernel.db.prepare("UPDATE lifecycle_outbox SET done = 0").run();
+    as.kernel.db.prepare("UPDATE lifecycle_events SET published = 0").run();
 
-    const recorded: Array<{ id: string }> = [];
+    const recorded: Array<{ id: string; event_id?: string; state?: string }> = [];
     const kernelAny = as.kernel as unknown as {
-      opts: { onLifecycleCommit?: (c: { id: string }) => void };
+      opts: { onLifecycleCommit?: (c: { id: string; event_id?: string; state?: string }) => void };
     };
     const origHook = kernelAny.opts.onLifecycleCommit;
     kernelAny.opts.onLifecycleCommit = (c) => {
@@ -750,17 +767,25 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
       kernelAny.opts.onLifecycleCommit = origHook;
     }
 
-    // Idempotent under replay: the already-cascaded child is skipped (same
-    // terminal state, same version), and no child commit was re-emitted; the
-    // replay redelivers only the persisted activation and supersession.
+    // Idempotent under replay: no state moved (the child keeps its terminal
+    // state and version, and no NEW event row exists for it), and the
+    // descendant's committed transition is REDELIVERED rather than lost, with
+    // the identity it was committed under.
     const after = as.kernel.get(child.id);
     expect(after?.state).toBe("cascaded");
     expect(after?.version).toBe(versionAfterFirst);
-    expect(recorded.filter((c) => c.id === child.id)).toHaveLength(0);
-    const undone = as.kernel.db
-      .prepare("SELECT COUNT(*) AS n FROM lifecycle_outbox WHERE done = 0")
-      .get() as { n: number };
-    expect(undone.n).toBe(0);
+    const childEventsAfter = as.kernel.db
+      .prepare("SELECT event_id FROM lifecycle_events WHERE mission_id = ?")
+      .all(child.id) as Array<{ event_id: string }>;
+    expect(childEventsAfter.map((r) => r.event_id).sort()).toEqual(
+      childEvents.map((r) => r.event_id).sort(),
+    );
+    const replayedChild = recorded.filter(
+      (c) => c.id === child.id && c.state === "cascaded",
+    );
+    expect(replayedChild).toHaveLength(1);
+    expect(replayedChild[0]?.event_id).toBe(cascadedEvent?.event_id);
+    expect(as.kernel.outbox.pendingEventCount()).toBe(0);
   });
 
   it("check (a): containment that ADVANCED during the window fails completion (version delta), a deferred approval MUST NOT bypass a later containment", async () => {
