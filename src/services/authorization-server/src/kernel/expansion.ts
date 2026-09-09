@@ -52,6 +52,15 @@ export interface ExpansionInput {
    * successor record's `submission_evidence`, outside all anchors.
    */
   submissionEvidence?: IntentSubmissionEvidenceFact[];
+  /**
+   * @spec child-delegation#carryover-manifest — the RESERVED successor
+   * identifier. A Carryover Manifest commits proposed identifiers at
+   * preparation, so completion MUST use exactly the identifier the approval
+   * authenticated and MUST NOT invent one. Absent (every non-carryover
+   * expansion) the identifier is minted here as before. A reservation creates
+   * no authority: this member only fixes which identifier the record takes.
+   */
+  successorId?: string;
 }
 
 /**
@@ -161,7 +170,7 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
     },
   });
 
-  const id = newMissionId();
+  const id = input.successorId ?? newMissionId();
   const authorityHashValue = authorityHash(predecessor.issuer, authoritySet as never);
   // @spec mission#approval-basis — Expansion is a fresh human approval that
   // widens authority (like kernel.approve()'s direct path): consent_principal

@@ -14,6 +14,19 @@
 
 import { randomBytes } from "node:crypto";
 import { openStore, withTransaction, type Database } from "@mission/store";
+import {
+  applyCarryoverInCallerTx,
+  decodeCarryoverEvidence,
+  type CarryoverConfig,
+  type CarryoverEvidence,
+  CarryoverError,
+  type CarryoverManifest,
+  type CarryoverMap,
+  type CarryoverPlan,
+  CarryoverStore,
+  commitCarryoverManifest,
+  prepareCarryover,
+} from "./carryover.js";
 import { CreationIdempotencyStore } from "./creation-idempotency.js";
 import { isSubsetSetIgnoringCapabilitySources } from "@mission/core";
 import { createExpansion } from "./expansion.js";
@@ -244,6 +257,10 @@ CREATE TABLE IF NOT EXISTS expansion_deferrals (
   creation_request_id TEXT,
   pred_containment_version INTEGER NOT NULL,
   submission_evidence_json TEXT,
+  carryover_plan_id TEXT,
+  carryover_plan_json TEXT,
+  carryover_manifest_json TEXT,
+  carryover_manifest_hash TEXT,
   approver_json TEXT,
   approval_event_id TEXT,
   approved_until TEXT,
@@ -253,6 +270,20 @@ CREATE TABLE IF NOT EXISTS expansion_deferrals (
   last_polled_at INTEGER
 ) STRICT;
 `;
+
+/**
+ * @spec child-delegation#carryover-evidence — the committed batch outcome a
+ * completion returns: the plan identity, the committed manifest commitment, the
+ * complete final map, and the authenticated Carryover Evidence.
+ */
+export interface ApplyCarryoverOutcome {
+  planId: string;
+  manifestHash: string;
+  map: CarryoverMap;
+  evidence: CarryoverEvidence;
+  evidenceJws: string;
+  replacements: MissionRecord[];
+}
 
 /** The Approver's async adjudication payload for a deferred expansion. */
 export interface ExpansionApproval {
@@ -269,11 +300,28 @@ export interface ExpansionDeferredResult {
   /** The creation_request_id recorded at initiation (the handler attaches the
    *  delivery artifact to the completed idempotency operation). */
   creationRequestId?: string;
+  /**
+   * @spec child-delegation#carryover-evidence — the committed batch result,
+   * present only when this completion applied an approved Carryover Manifest.
+   * The MAP, not `related_to`, is the normative record of replacement.
+   */
+  carryover?: ApplyCarryoverOutcome;
 }
 
+/**
+ * A deferred-expansion initiation refusal. `carryover_plan_too_large` is the
+ * subtree-size/transaction-budget refusal (@spec child-delegation#carryover):
+ * an oversized widening proposal is refused at INTAKE, before approval, so the
+ * approval event never names a plan the kernel cannot commit in one
+ * transaction. Pre-decision (no Decision was reached), so it is a Refusal
+ * Record at the enforcement point, never Execution Evidence.
+ *
+ * LOCAL to this store's code union by design: it is deliberately NOT added to
+ * any draft's Execution Evidence or Refusal Record enumeration.
+ */
 export class ExpansionDeferralError extends Error {
   constructor(
-    readonly code: "predecessor_not_active",
+    readonly code: "predecessor_not_active" | "carryover_plan_too_large",
     message: string,
   ) {
     super(message);
@@ -304,15 +352,37 @@ export class ExpansionDeferralStore {
    *  completed ATOMICALLY with successor creation. Instances over the same
    *  kernel share the table, so this internal instance needs no wiring. */
   private readonly creationIdempotency: CreationIdempotencyStore;
+  /**
+   * @spec child-delegation#carryover — the carryover reservation, result and
+   * replacement stores, over the SAME kernel database, so a prepared plan's
+   * reservations and a committed batch's map share this store's transactions.
+   */
+  readonly carryover: CarryoverStore;
   constructor(
     private readonly kernel: MissionKernel,
     private readonly now: () => Date = () => new Date(),
+    /**
+     * @spec child-delegation#carryover — the deployment's carryover
+     * configuration. Absent or disabled, this store behaves exactly as before:
+     * no plan is prepared, no identifier is reserved and no manifest is
+     * committed, and ordinary cascade remains the default.
+     */
+    private readonly carryoverConfig?: CarryoverConfig,
   ) {
     // @spec control-plane#serialization — retiring this row and activating
     // its successor must share the kernel transaction, not two databases.
     this.db = kernel.db;
     this.db.exec(EXPANSION_SCHEMA);
     this.creationIdempotency = new CreationIdempotencyStore(kernel);
+    this.carryover = new CarryoverStore(kernel, now);
+  }
+
+  /** The committed carryover batch result for a deferral, when one applied. */
+  carryoverResultFor(deferralCode: string): ReturnType<CarryoverStore["result"]> {
+    const row = this.db
+      .prepare("SELECT carryover_plan_id FROM expansion_deferrals WHERE deferral_code = ?")
+      .get(deferralCode) as { carryover_plan_id: string | null } | undefined;
+    return row?.carryover_plan_id ? this.carryover.result(row.carryover_plan_id) : undefined;
   }
 
   /**
@@ -375,9 +445,32 @@ export class ExpansionDeferralStore {
       .get(key, input.clientId) as { deferral_code: string } | undefined;
     const code = existing?.deferral_code ?? `xdfr_${randomBytes(18).toString("base64url")}`;
     if (!existing) {
+      // @spec child-delegation#carryover-manifest — PREPARATION: render the
+      // plan read-only and RESERVE the proposed successor and replacement
+      // identifiers, before any approval. A reservation creates no authority.
+      // An oversized plan is refused HERE, at intake, so the approval event
+      // never names a plan the kernel cannot commit in one transaction. The
+      // idempotent branch above returns the EXISTING deferral and therefore the
+      // existing plan and reservations: nothing is re-minted on retry.
+      let plan: CarryoverPlan | undefined;
+      if (this.carryoverConfig?.enabled) {
+        try {
+          plan = prepareCarryover(this.kernel, this.carryover, {
+            predecessorId: input.predecessorId,
+            successorIntent: input.intent,
+            ...(proposal ? { successorProposal: proposal } : {}),
+            config: this.carryoverConfig,
+          });
+        } catch (e) {
+          if (e instanceof CarryoverError && e.code === "carryover_plan_too_large") {
+            throw new ExpansionDeferralError("carryover_plan_too_large", e.message);
+          }
+          throw e;
+        }
+      }
       this.db
         .prepare(
-          "INSERT INTO expansion_deferrals (deferral_code, state, predecessor_id, intent_json, client_id, jkt, creation_request_id, pred_containment_version, submission_evidence_json, created_at) VALUES (?, 'authorization_pending', ?, ?, ?, ?, ?, ?, ?, ?)",
+          "INSERT INTO expansion_deferrals (deferral_code, state, predecessor_id, intent_json, client_id, jkt, creation_request_id, pred_containment_version, submission_evidence_json, carryover_plan_id, carryover_plan_json, created_at) VALUES (?, 'authorization_pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         )
         .run(
           code,
@@ -388,6 +481,8 @@ export class ExpansionDeferralStore {
           input.creationRequestId ?? null,
           snapshotCv,
           input.submissionEvidence?.length ? JSON.stringify(input.submissionEvidence) : null,
+          plan?.plan_id ?? null,
+          plan ? JSON.stringify(plan) : null,
           this.now().getTime(),
         );
     }
@@ -401,14 +496,32 @@ export class ExpansionDeferralStore {
 
   /** Approver adjudication: records the approver, the approval event, and the expiry. */
   approve(deferralCode: string, approval: ExpansionApproval): void {
+    // @spec child-delegation#carryover-manifest — the approval event COMMITS
+    // the exact manifest: the deterministic per-child approval identifiers
+    // derive from this committed expansion approval event identifier, and the
+    // `manifest_hash` is taken over the finalized manifest. Approval
+    // authenticates exactly what preparation rendered.
+    const planRow = this.db
+      .prepare("SELECT carryover_plan_json FROM expansion_deferrals WHERE deferral_code = ? AND state = 'authorization_pending'")
+      .get(deferralCode) as { carryover_plan_json: string | null } | undefined;
+    let manifestJson: string | null = null;
+    let manifestHash: string | null = null;
+    if (planRow?.carryover_plan_json) {
+      const plan = JSON.parse(planRow.carryover_plan_json) as CarryoverPlan;
+      const committed = commitCarryoverManifest(plan, approval.approvalEventId);
+      manifestJson = JSON.stringify(committed.manifest);
+      manifestHash = committed.manifestHash;
+    }
     this.db
       .prepare(
-        "UPDATE expansion_deferrals SET state = 'approved', approver_json = ?, approval_event_id = ?, approved_until = ? WHERE deferral_code = ? AND state = 'authorization_pending'",
+        "UPDATE expansion_deferrals SET state = 'approved', approver_json = ?, approval_event_id = ?, approved_until = ?, carryover_manifest_json = ?, carryover_manifest_hash = ? WHERE deferral_code = ? AND state = 'authorization_pending'",
       )
       .run(
         JSON.stringify(approval.approver),
         approval.approvalEventId,
         approval.approvedUntil,
+        manifestJson,
+        manifestHash,
         deferralCode,
       );
   }
@@ -417,6 +530,18 @@ export class ExpansionDeferralStore {
     this.db
       .prepare("UPDATE expansion_deferrals SET state = 'access_denied' WHERE deferral_code = ?")
       .run(deferralCode);
+    // @spec child-delegation#carryover-manifest — a CANCELLED plan's reserved
+    // identifiers stay HELD: never handed to another plan, never re-drawn as a
+    // fresh identifier, and the cancelled plan can never complete.
+    this.cancelCarryoverPlan(deferralCode);
+  }
+
+  /** Mark a denied or abandoned deferral's carryover reservations cancelled. */
+  private cancelCarryoverPlan(deferralCode: string): void {
+    const row = this.db
+      .prepare("SELECT carryover_plan_id FROM expansion_deferrals WHERE deferral_code = ?")
+      .get(deferralCode) as { carryover_plan_id: string | null } | undefined;
+    if (row?.carryover_plan_id) this.carryover.cancel(row.carryover_plan_id);
   }
 
   /** The possession key recorded at request time (the handler re-binds the minted token to it). */
@@ -485,10 +610,35 @@ export class ExpansionDeferralStore {
           typeof row.creation_request_id === "string" && row.creation_request_id
             ? row.creation_request_id
             : undefined;
+        // @spec child-delegation#carryover-commit — an interrupted delivery
+        // resumes from the DURABLY RETAINED result: the committed map and its
+        // authenticated evidence are read back, never recomputed, and no
+        // duplicate replacement is created.
+        const retained = row.carryover_plan_id
+          ? this.carryover.result(row.carryover_plan_id as string)
+          : undefined;
         return {
           successor: linked,
           approvedUntil: row.approved_until as string,
           ...(recoveredCreationRequestId ? { creationRequestId: recoveredCreationRequestId } : {}),
+          ...(retained
+            ? {
+                carryover: {
+                  planId: retained.plan_id,
+                  manifestHash: retained.manifest_hash,
+                  map: retained.map,
+                  evidence: decodeCarryoverEvidence(retained.evidence_jws),
+                  evidenceJws: retained.evidence_jws,
+                  replacements: retained.map.flatMap((r) =>
+                    r.outcome === "carried"
+                      ? [this.kernel.get(r.replacement_id)].filter(
+                          (m): m is MissionRecord => m !== undefined,
+                        )
+                      : [],
+                  ),
+                },
+              }
+            : {}),
         };
       }
     }
@@ -574,12 +724,24 @@ export class ExpansionDeferralStore {
     // whole transaction rolls back, no successor exists, and the exchange fails
     // with this profile's denial semantics, the same path a predecessor that
     // stopped being effectively active takes.
-    let txOut: { successor: MissionRecord; predecessorId: string } | undefined;
+    let txOut:
+      | { successor: MissionRecord; predecessorId: string; carryover?: ApplyCarryoverOutcome }
+      | undefined;
     try {
       txOut = this.redeemInTransaction(row, intent, recorded, approver, submissionEvidence, creationRequestId);
     } catch (e) {
-      if (!(e instanceof IntentError)) throw e;
-      txOut = undefined;
+      // @spec child-delegation#carryover-commit — a carryover refusal rolls the
+      // WHOLE completion back: no partial successor, no surviving replacement
+      // and no cascade. The approval is stale, so the completion fails and a
+      // fresh render and approval are required.
+      if (e instanceof CarryoverError) {
+        this.cancelCarryoverPlan(row.deferral_code as string);
+        txOut = undefined;
+      } else if (e instanceof IntentError) {
+        txOut = undefined;
+      } else {
+        throw e;
+      }
     }
     if (!txOut) {
       this.db
@@ -593,6 +755,7 @@ export class ExpansionDeferralStore {
       successor: txOut.successor,
       approvedUntil: row.approved_until as string,
       ...(creationRequestId ? { creationRequestId } : {}),
+      ...(txOut.carryover ? { carryover: txOut.carryover } : {}),
     };
   }
 
@@ -604,7 +767,7 @@ export class ExpansionDeferralStore {
     approver: { iss: string; sub: string },
     submissionEvidence: IntentSubmissionEvidenceFact[] | undefined,
     creationRequestId: string | undefined,
-  ): { successor: MissionRecord; predecessorId: string } | undefined {
+  ): { successor: MissionRecord; predecessorId: string; carryover?: ApplyCarryoverOutcome } | undefined {
     return withTransaction(this.kernel.db, () => {
       // Read-only effective-active re-check inside the transaction (nothing is
       // materialized here; lazy expiry stays with the ordinary gates).
@@ -616,6 +779,12 @@ export class ExpansionDeferralStore {
       ) {
         return undefined;
       }
+      // @spec child-delegation#carryover-manifest — completion uses EXACTLY the
+      // reserved successor identifier the approval authenticated; it never
+      // invents an identity the approved manifest did not name.
+      const manifest = row.carryover_manifest_json
+        ? (JSON.parse(row.carryover_manifest_json as string) as CarryoverManifest)
+        : undefined;
       const res = createExpansion(this.kernel, {
         predecessorId: row.predecessor_id as string,
         intent,
@@ -624,6 +793,7 @@ export class ExpansionDeferralStore {
         approvalEventId: row.approval_event_id as string,
         approvedUntil: row.approved_until as string,
         ...(submissionEvidence?.length ? { submissionEvidence } : {}),
+        ...(manifest ? { successorId: manifest.successor.mission_id } : {}),
       });
       if (creationRequestId) {
         this.creationIdempotency.completeInCallerTx(
@@ -631,6 +801,39 @@ export class ExpansionDeferralStore {
           creationRequestId,
           res.successor.id,
         );
+      }
+      // @spec child-delegation#carryover-commit — the whole batch runs in THIS
+      // transaction, between successor activation and predecessor supersession:
+      // the descendant-set membership check, the per-row compare-and-set, every
+      // replacement record, every external transfer, the terminal cascade of the
+      // WHOLE old subtree (rendered carries, exclusions and unrendered
+      // descendants alike), the complete final map and the authenticated
+      // Carryover Evidence. Because the explicit traversal terminates every
+      // descendant here, the `cascadeChildren` inside the supersession CAS below
+      // is a genuine no-op rather than a second, outcome-less descent.
+      let carryover: ApplyCarryoverOutcome | undefined;
+      if (manifest && this.carryoverConfig?.enabled) {
+        const applied = applyCarryoverInCallerTx(this.kernel, this.carryover, {
+          planId: row.carryover_plan_id as string,
+          manifest,
+          manifestHash: row.carryover_manifest_hash as string,
+          successor: res.successor,
+          approver,
+          expansionApprovalEventId: row.approval_event_id as string,
+          // @spec child-delegation#carryover — this is the AUTHENTICATED direct
+          // approval completion route; there is no policy-adjudicated
+          // completion path into carryover to refuse from.
+          directApproval: true,
+          config: this.carryoverConfig,
+        });
+        carryover = {
+          planId: row.carryover_plan_id as string,
+          manifestHash: row.carryover_manifest_hash as string,
+          map: applied.map,
+          evidence: applied.evidence,
+          evidenceJws: applied.evidenceJws,
+          replacements: applied.replacements,
+        };
       }
       // @spec control-plane#fanout — the supersession CAS enqueues its own
       // durable event, its tombstone and the mandatory child cascade inside
@@ -645,7 +848,11 @@ export class ExpansionDeferralStore {
         .prepare("UPDATE expansion_deferrals SET redeemed = 1 WHERE deferral_code = ? AND redeemed = 0 AND state = 'approved'")
         .run(row.deferral_code as string);
       if (retired.changes !== 1) throw new Error("expansion deferral retirement conflicted");
-      return { successor: res.successor, predecessorId: cas.predecessorId };
+      return {
+        successor: res.successor,
+        predecessorId: cas.predecessorId,
+        ...(carryover ? { carryover } : {}),
+      };
     });
   }
 }

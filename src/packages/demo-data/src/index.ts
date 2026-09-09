@@ -559,6 +559,21 @@ interface LoadedPolicy {
    */
   derivation_limit_ceiling: number | null;
   /**
+   * @spec child-delegation#carryover — the Child Mission Carryover capability
+   * on-switch. OPTIONAL in policy.json; absent means the deployment does NOT
+   * implement carryover, and ordinary cascade remains the default.
+   */
+  child_mission_carryover: boolean;
+  /**
+   * @spec child-delegation#carryover — the subtree-size/transaction-budget cap:
+   * the maximum rendered rows one carryover plan may carry. OPTIONAL; absent or
+   * explicit null means this deployment imposes none. A non-integer, or an
+   * integer below 1, is refused at config load. No number is prescribed: it is
+   * a deployment choice about how large a subtree it will commit in one
+   * transaction.
+   */
+  carryover_max_rows: number | null;
+  /**
    * @spec mission#mission-record — the deployment's own ceiling on a Mission's
    * granted lifetime, in seconds measured from the creation instant,
    * independent of any requested `intent.expires_at`. OPTIONAL in policy.json;
@@ -633,6 +648,22 @@ function loadPolicy(): LoadedPolicy {
     }
     maxMissionLifetimeS = rawLifetime;
   }
+  // @spec child-delegation#carryover — the capability on-switch. A value that is
+  // present and not a boolean is refused at load, never coerced.
+  const rawCarryover = root.child_mission_carryover;
+  if (rawCarryover !== undefined && typeof rawCarryover !== "boolean") {
+    throw new ConfigError(file, "policy.child_mission_carryover must be a boolean");
+  }
+  // @spec child-delegation#carryover — the plan cap. Absent or null means no
+  // cap; anything else must be an integer >= 1.
+  const rawMaxRows = root.carryover_max_rows;
+  let carryoverMaxRows: number | null = null;
+  if (rawMaxRows !== undefined && rawMaxRows !== null) {
+    if (typeof rawMaxRows !== "number" || !Number.isInteger(rawMaxRows) || rawMaxRows < 1) {
+      throw new ConfigError(file, "policy.carryover_max_rows must be an integer >= 1, or null");
+    }
+    carryoverMaxRows = rawMaxRows;
+  }
   return {
     policy_version: reqString(file, root, "policy_version", "policy"),
     ceiling,
@@ -644,6 +675,8 @@ function loadPolicy(): LoadedPolicy {
       "policy",
     ),
     derivation_limit_ceiling: derivationLimitCeiling,
+    child_mission_carryover: rawCarryover === true,
+    carryover_max_rows: carryoverMaxRows,
     max_mission_lifetime_s: maxMissionLifetimeS,
   };
 }
@@ -663,6 +696,26 @@ export const RAS_LOCAL_POLICY = (() => {
 
 /** Actions whose presence makes a mission write-bearing (D37 governance). */
 export const WRITE_ACTIONS = new Set(POLICY.write_actions);
+
+/**
+ * @spec draft-mcguinness-oauth-mission-child-delegation#carryover — the
+ * deployment's Child Mission Carryover configuration, typed and validated at
+ * config load (D25). `all_or_nothing` is the reference exclusion policy: any
+ * relevant change after rendering requires a fresh render and approval.
+ *
+ * `no_applicable_external_state` is this deployment's explicit declaration
+ * that no external meter or latch applies to a carried child. The reference
+ * deployment has no external meter or latch: the meter branch is the deployment
+ * seam the foundation ruling left open, so the declaration is what makes a
+ * carried derivation budget honest here rather than a claimed distributed
+ * atomicity the deployment does not have.
+ */
+export const CHILD_MISSION_CARRYOVER = {
+  enabled: POLICY.child_mission_carryover,
+  maxRows: POLICY.carryover_max_rows,
+  exclusionPolicy: { mode: "all_or_nothing" } as const,
+  noApplicableExternalState: true,
+};
 
 /**
  * @spec draft-mcguinness-oauth-mission#per-entry-enforcement (allowed_delegates)

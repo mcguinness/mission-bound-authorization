@@ -185,6 +185,20 @@ export interface ChildEvidence {
   decision: "created" | "denied";
   /** Present (and REQUIRED) when `decision` is `denied`. */
   denial_reason?: string;
+  /**
+   * @spec child-delegation#carryover-evidence — the Child Evidence extension a
+   * Child Mission Carryover replacement carries. Absent on every ordinary child
+   * creation, so the baseline record shape is unchanged. `parent`, `child`,
+   * `attenuation`, `fanout` and `decision` above stay REQUIRED: a batch map
+   * never replaces ordinary Child Evidence and never becomes authority.
+   */
+  creation_mode?: "carryover";
+  /** The QUALIFIED old-child reference the replacement continues. */
+  carried_from?: { issuer: string; mission_id: string };
+  /** The committed Carryover Manifest commitment this replacement was rendered under. */
+  manifest_hash?: string;
+  /** An authenticated reference to the retained batch map (never the map itself). */
+  carryover_evidence?: { batch_id: string; evidence_hash: string };
   created_at: string;
 }
 
@@ -452,6 +466,24 @@ export interface MissionRecord {
   status_list_idx: number | null;
   /** @spec expansion#predecessor-member: set on a successor Mission only. */
   predecessor?: string;
+  /**
+   * @spec expansion#predecessor-member, child-delegation#carryover-records —
+   * same-issuer correlation with a related Mission, a BARE Mission Identifier
+   * string interpreted in this record's own issuing namespace (never an object
+   * like `parent`). Set on a Child Mission Carryover replacement, naming the old
+   * child it continues. Lineage and audit context only: it grants nothing,
+   * selects no authority, and rebinds no credential. Immutable after creation,
+   * so it is written only by `insertRecord`.
+   */
+  related_to?: string;
+  /**
+   * @spec child-delegation#carryover-records — the old child's pointer at its
+   * replacement: a BARE Mission Identifier string under the same issuer, set
+   * exactly when the old child's `cascaded` transition and its replacement
+   * commit in one transaction. Absent for an excluded child, immutable
+   * thereafter, and grants nothing.
+   */
+  carried_to?: string;
   /** @spec child-delegation#parent-member: set on a Child Mission only. */
   parent?: ParentRef;
   /**
@@ -506,6 +538,16 @@ export interface LifecycleCommit {
   committed_at: string;
   expires_at: string;
   successor?: string;
+  /**
+   * @spec status#mission-status-response, signals#lifecycle-event — the
+   * committed replacement Mission identifier on an old child's `cascaded`
+   * commit, a bare same-issuer string interpreted in this event's own issuing
+   * namespace. Present exactly when a replacement committed with this
+   * transition (@spec child-delegation#carryover-records); absent on every
+   * other commit, including an excluded child's cascade. Correlation, never
+   * authority.
+   */
+  carried_to?: string;
   /**
    * @spec signals#delivery, control-plane#fanout — stable event identity for
    * replayable emission, assigned by the kernel INSIDE the state write's

@@ -4,7 +4,7 @@
  * oidc-provider types cross this boundary.
  */
 
-import { randomBytes, randomInt } from "node:crypto";
+import { KeyObject, randomBytes, randomInt, sign } from "node:crypto";
 import {
   type ApprovalContextManifestInput,
   authorityHash,
@@ -161,6 +161,8 @@ CREATE TABLE IF NOT EXISTS missions (
   status_list_idx INTEGER UNIQUE,
   predecessor TEXT,
   successor TEXT,
+  related_to TEXT,
+  carried_to TEXT,
   parent_id TEXT,
   parent_json TEXT,
   template_id TEXT,
@@ -828,9 +830,9 @@ export class MissionKernel {
            authority_hash, subject_iss, subject_sub, approver_iss, approver_sub,
            approval_basis_json, authority_source_json, client_id,
            policy_version, approval_event_id, created_at, expires_at, version, derivation_limit,
-           derivation_count, grant_id, predecessor, parent_id, parent_json, template_id,
+           derivation_count, grant_id, predecessor, related_to, parent_id, parent_json, template_id,
            template_json, projected_from, submission_evidence_json)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
           record.id,
@@ -865,6 +867,12 @@ export class MissionKernel {
           record.derivation_count,
           record.grant_id,
           record.predecessor ?? null,
+          // @spec child-delegation#carryover-records: `related_to` is a bare
+          // same-issuer correlation string, immutable after creation (the
+          // `predecessor` treatment), so it is written only here. `carried_to`
+          // is deliberately NOT written here: it lands on the OLD child at its
+          // committed carried cascade, never at a replacement's creation.
+          record.related_to ?? null,
           // @spec child-delegation#parent-member: `parent` is immutable after
           // creation (like `predecessor`), so it is written only here.
           record.parent?.id ?? null,
@@ -1066,6 +1074,121 @@ export class MissionKernel {
       }
     }
   }
+
+  /**
+   * @spec child-delegation#carryover-cas — the WHOLE current subtree rooted at
+   * `rootId`, in breadth-first generation order, in EVERY state (terminal rows
+   * included). Distinct from {@link findChildren}, which is one generation, and
+   * from {@link cascadeChildren}, whose walker visits only `active`/`suspended`
+   * rows and so cannot see a live descendant behind a terminal intermediate.
+   * Child Mission Carryover compares descendant-set MEMBERSHIP against its
+   * committed manifest, which per-row compare-and-set cannot do: a child or
+   * grandchild created after rendering has no rendered row to CAS against.
+   * Read-only; the root itself is not included.
+   */
+  descendantsOf(rootId: string): MissionRecord[] {
+    const out: MissionRecord[] = [];
+    const seen = new Set<string>([rootId]);
+    let frontier = [rootId];
+    while (frontier.length > 0) {
+      const next: string[] = [];
+      for (const id of frontier) {
+        // Deterministic generation-order enumeration: `created_at` then
+        // identifier byte order, the manifest's own row order rule.
+        const children = this.findChildren(id).sort((a, b) =>
+          a.created_at === b.created_at ? (a.id < b.id ? -1 : 1) : a.created_at < b.created_at ? -1 : 1,
+        );
+        for (const child of children) {
+          if (seen.has(child.id)) continue;
+          seen.add(child.id);
+          out.push(child);
+          next.push(child.id);
+        }
+      }
+      frontier = next;
+    }
+    return out;
+  }
+
+  /**
+   * @spec child-delegation#carryover-commit, #carryover-records — the ONE
+   * internal terminal-transition entry point Child Mission Carryover owns. It
+   * takes the manifest outcome (`carriedTo`, the committed replacement
+   * identifier, or nothing for an excluded row) and suppresses ONLY
+   * {@link setState}'s automatic {@link cascadeChildren} recursion, so the
+   * explicit whole-subtree traversal owns the generation-ordered descent and no
+   * terminal intermediate can hide a live descendant.
+   *
+   * It is not a second emission mechanism: the state write, its `carried_to`
+   * write, its durable outbox row and its terminal tombstone all go through
+   * {@link emitCommit} in the CALLER's transaction, exactly as `setState` does.
+   * An ALREADY-terminal row keeps its state and gets NO second transition
+   * (@spec child-delegation#carryover-cas), returning `undefined`.
+   */
+  carryTerminalInCallerTx(
+    record: MissionRecord,
+    outcome: { carriedTo?: string } = {},
+  ): MissionRecord | undefined {
+    if (!this.db.inTransaction) {
+      throw new Error("a carried terminal transition must run inside the completion transaction");
+    }
+    if (TERMINAL_STATES.has(record.state)) return undefined;
+    // setState's guarded CAS, verbatim: the transition is admitted from the
+    // stored row, never the caller's snapshot.
+    const changed = this.db
+      .prepare(
+        "UPDATE missions SET state = 'cascaded', version = version + 1, carried_to = ? WHERE id = ? AND version = ? AND state = ?",
+      )
+      .run(outcome.carriedTo ?? null, record.id, record.version, record.state);
+    if (changed.changes !== 1) {
+      throw new LifecycleConflictError(`stale lifecycle version for ${record.id}`);
+    }
+    const fresh = this.get(record.id);
+    if (fresh) this.emitCommit(fresh, record.state, undefined, false, false, outcome.carriedTo);
+    return fresh;
+  }
+
+  /**
+   * @spec child-delegation#carryover-records — re-run the ordinary
+   * source-ACTIVATION and source-CEILING checks against an already-RENDERED
+   * `authority_source`. A carryover replacement's approval basis is `direct`
+   * (its own child-specific approval event), so the drawdown treatment
+   * {@link assertInheritedAuthoritySource} applies, which is ceiling-only, is
+   * not sufficient: the approver must still be permitted to activate that
+   * source, the subject discipline must still hold, and the governed policy
+   * digest must still agree.
+   */
+  assertRenderedAuthoritySource(input: {
+    source: AuthoritySource;
+    subject: { iss: string; sub: string };
+    approver: { iss: string; sub: string };
+    authoritySet: readonly AuthorityEntry[];
+  }): void {
+    const entry = resolveDeclaredSource(this.opts.authoritySourceCatalog, input.source);
+    assertApproverMayActivate(entry, input.approver);
+    assertSubjectDiscipline(this.opts.authoritySourceCatalog, entry, input.subject);
+    assertPolicyDigestMatches(entry, authoritySourceOf(entry));
+    assertWithinSourceCeiling(entry, input.authoritySet);
+  }
+
+  /**
+   * @spec child-delegation#carryover-evidence — the issuer's Status signing
+   * material, as a SYNCHRONOUS signer. The completion transaction is
+   * synchronous (better-sqlite3), so authenticated Carryover Evidence that must
+   * be retained ATOMICALLY with the records cannot be produced by an awaited
+   * JWS builder. `KeyObject.from` plus `crypto.sign(..., ieee-p1363)` yields the
+   * same ES256 signature the asynchronous Status path produces, over the same
+   * key and `kid`, with no second key and no post-commit signing window.
+   */
+  statusSigner(): { sign: (input: string) => Buffer; kid: string } {
+    if (!this.syncStatusKey) this.syncStatusKey = KeyObject.from(this.opts.statusKey);
+    const key = this.syncStatusKey;
+    return {
+      kid: this.opts.statusKid,
+      sign: (input: string) => sign("sha256", Buffer.from(input, "utf8"), { key, dsaEncoding: "ieee-p1363" }),
+    };
+  }
+  private syncStatusKey?: KeyObject;
 
   /**
    * @spec child-delegation#cascade (reversible trigger), #child-state — project a
@@ -2034,6 +2157,13 @@ export class MissionKernel {
       ...(fresh.containment
         ? { containment_version: fresh.containment.containment_version }
         : {}),
+      // @spec child-delegation#carryover-evidence — the committed replacement
+      // correlation, present exactly when a replacement committed with this
+      // child's carried cascade and absent otherwise (an excluded child's
+      // `cascaded` state carries none).
+      ...(fresh.state === "cascaded" && fresh.carried_to
+        ? { carried_to: fresh.carried_to }
+        : {}),
       ...(caller.disclose.has("status_list") ? this.statusListRef(fresh) : {}),
     };
   }
@@ -2104,6 +2234,12 @@ export class MissionKernel {
         fresh_until: new Date((nowS + freshness) * 1000).toISOString(),
         ...(record.containment
           ? { containment_version: record.containment.containment_version }
+          : {}),
+        // @spec status#mission-status-response — CONDITIONAL `carried_to`: the
+        // committed replacement identifier when reporting an old child's
+        // `cascaded` state, omitted when no replacement was committed.
+        ...(record.state === "cascaded" && record.carried_to
+          ? { carried_to: record.carried_to }
           : {}),
         ...this.statusListRef(record),
       },
@@ -2270,6 +2406,7 @@ export class MissionKernel {
     successor?: string,
     authorityChanged = false,
     containmentAdvanced = false,
+    carriedTo?: string,
   ): void {
     const event: LifecycleCommit = {
       id: record.id,
@@ -2285,6 +2422,12 @@ export class MissionKernel {
       client_id: record.client_id,
       ...(prior ? { prior_state: prior } : {}),
       ...(successor ? { successor } : {}),
+      // @spec child-delegation#carryover-evidence, status#mission-status-response,
+      // signals#lifecycle-event — the committed replacement identifier rides the
+      // old child's carried cascade. Supplied ONLY by
+      // {@link carryTerminalInCallerTx}, and only when a replacement committed in
+      // the same transaction: an excluded child's cascade carries nothing.
+      ...(carriedTo ? { carried_to: carriedTo } : {}),
       ...(authorityChanged ? { authority_changed: true } : {}),
       // @spec signals#discharge-compatibility — provenance, set ONLY by the
       // one funnel that advances containment_version (`contain`); the Signals
@@ -2355,6 +2498,8 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
     grant_id: (row.grant_id as string | null) ?? null,
     status_list_idx: (row.status_list_idx as number | null) ?? null,
     ...(row.predecessor ? { predecessor: row.predecessor as string } : {}),
+    ...(row.related_to ? { related_to: row.related_to as string } : {}),
+    ...(row.carried_to ? { carried_to: row.carried_to as string } : {}),
     ...(row.parent_json ? { parent: JSON.parse(row.parent_json as string) as ParentRef } : {}),
     ...(row.template_json
       ? { template: JSON.parse(row.template_json as string) as TemplateRef }
