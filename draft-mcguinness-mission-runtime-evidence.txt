@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                        8 September 2026
-Expires: 12 March 2027
+Intended status: Standards Track                        9 September 2026
+Expires: 13 March 2027
 
 
                         Mission Runtime Evidence
@@ -55,7 +55,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 12 March 2027.
+   This Internet-Draft will expire on 13 March 2027.
 
 Copyright Notice
 
@@ -171,8 +171,8 @@ Table of Contents
 2.  Status: An Optional Profile
 
    Role: companion.  Spec maturity: experimental.  Maintenance: active.
-   Implementation: 94 conformance rows in conformance-manifest.json (19
-   tested, 11 partial, 64 todo).  Adopt when: Runtime enforcement is
+   Implementation: 94 conformance rows in conformance-manifest.json (45
+   tested, 11 partial, 38 todo).  Adopt when: Runtime enforcement is
    deployed and decisions need durable, verifiable records.  Requires:
    Mission-Bound Runtime Enforcement; Mission Substrate Requirements.
    Also requires, conditionally: Mission Cross-Domain Projection for

@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                        8 September 2026
-Expires: 12 March 2027
+Intended status: Standards Track                        9 September 2026
+Expires: 13 March 2027
 
 
                    Mission Control-Plane Consistency
@@ -48,7 +48,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 12 March 2027.
+   This Internet-Draft will expire on 13 March 2027.
 
 Copyright Notice
 
@@ -114,11 +114,12 @@ Table of Contents
 
    Role: companion.  Spec maturity: experimental.  Maintenance: lab-
    best-effort.  Implementation: 12 conformance rows in conformance-
-   manifest.json (3 partial, 9 todo).  Adopt when: A deployment claims
-   testable control-plane consistency across replication, partition, and
-   recovery.  Requires: Mission-Bound Runtime Enforcement; Mission-Bound
-   Authorization for OAuth 2.0; Mission Lifecycle Signals for OAuth 2.0;
-   Mission Status and Lifecycle for OAuth 2.0.
+   manifest.json (2 tested, 4 partial, 6 todo).  Adopt when: A
+   deployment claims testable control-plane consistency across
+   replication, partition, and recovery.  Requires: Mission-Bound
+   Runtime Enforcement; Mission-Bound Authorization for OAuth 2.0;
+   Mission Lifecycle Signals for OAuth 2.0; Mission Status and Lifecycle
+   for OAuth 2.0.
 
    This document has no implemented conformance coverage.  Its fault
    cases and requirement rows are unimplemented, and its maintenance
