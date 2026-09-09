@@ -8,7 +8,7 @@
 import { createHash } from "node:crypto";
 import { calculateJwkThumbprint, decodeJwt, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
-import { Fga, type MissionView } from "@mission/pdp";
+import { executionLeaseMaxSeconds, Fga, type Decision, type MissionView, RUNTIME_POSTURE } from "@mission/pdp";
 import {
   buildEffectiveParams,
   CANONICAL_RESOURCE,
@@ -1193,6 +1193,71 @@ d("M5 transaction-assurance tier", () => {
     expect(executions.map((e) => [e.content.outcome, e.content.error])).toEqual([
       ["suppressed", "consumption_unavailable"],
     ]);
+  });
+  it("derives the execution lease from the published transaction_assurance maximum, capped by the permit's validity", async () => {
+    // @spec runtime#execution-reverification — "the Operation Profile MUST
+    // define an execution lease or a published maximum execution duration,
+    // and run-to-completion applies only within that bound". The bound is a
+    // PUBLISHED number in the Enforcement Scope Statement, read from the same
+    // object `protectedResourceMetadata()` serves rather than a literal in
+    // the enforcement path, and the lease this deployment takes is that
+    // number capped by the permit's own validity, so a local lease can never
+    // extend authorization.
+    const published = executionLeaseMaxSeconds(RUNTIME_POSTURE, "irreversible_action");
+    expect(published).toBe(30);
+    const leaseEndFor = (x: ReturnType<typeof build>, opKey: string): number =>
+      (
+        x.engine.db.prepare("SELECT lease_expires_at FROM operations WHERE op_key = ?").get(opKey) as {
+          lease_expires_at: number;
+        }
+      ).lease_expires_at;
+
+    let permit: Decision | undefined;
+    const bounded = build({
+      decide: async (req, options) => {
+        permit = await EVIDENCE_KEYS.decide(req, options);
+        return permit;
+      },
+    });
+    const started = Date.now();
+    const res = await bounded.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1" }, TOKEN);
+    expect(res.ok, JSON.stringify(res)).toBe(true);
+    const leaseEnd = leaseEndFor(bounded, (res.result as { op_key: string }).op_key);
+    const validUntil = Date.parse((permit?.context.conditions as { valid_until: string }).valid_until);
+    expect(leaseEnd).toBeLessThanOrEqual(validUntil);
+    expect(leaseEnd).toBeLessThanOrEqual(started + (published as number) * 1000);
+    expect(leaseEnd).toBeGreaterThan(started);
+
+    // A permit valid for less than the published maximum wins: the lease ends
+    // with the authorization, not the full 30 seconds after this crossing
+    // began.
+    let shortValidUntil = 0;
+    const shortLived = build({
+      decide: async (req, options) => {
+        const decided = await EVIDENCE_KEYS.decide(req, options);
+        shortValidUntil = Date.now() + 5_000;
+        return {
+          ...decided,
+          context: {
+            ...decided.context,
+            conditions: {
+              ...(decided.context.conditions as Record<string, unknown>),
+              valid_until: new Date(shortValidUntil).toISOString(),
+            },
+          },
+        } as Decision;
+      },
+    });
+    const shortStart = Date.now();
+    const short = await shortLived.server.callTransactionTool(
+      "execute_wire_transfer",
+      { invoice_id: "inv-1" },
+      TOKEN,
+    );
+    expect(short.ok, JSON.stringify(short)).toBe(true);
+    const shortLeaseEnd = leaseEndFor(shortLived, (short.result as { op_key: string }).op_key);
+    expect(shortLeaseEnd).toBeLessThanOrEqual(shortValidUntil);
+    expect(shortLeaseEnd).toBeLessThan(shortStart + (published as number) * 1000);
   });
 });
 
