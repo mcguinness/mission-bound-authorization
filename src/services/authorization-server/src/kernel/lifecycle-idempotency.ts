@@ -46,6 +46,9 @@ CREATE TABLE IF NOT EXISTS lifecycle_responses (
   body TEXT NOT NULL,
   created_at INTEGER NOT NULL,
   expires_at INTEGER NOT NULL,
+  state TEXT NOT NULL DEFAULT 'final',
+  material_json TEXT,
+  response_valid_until INTEGER,
   PRIMARY KEY (endpoint, principal, mission_id, nonce)
 ) STRICT;
 CREATE TABLE IF NOT EXISTS discharge_events (
@@ -104,6 +107,54 @@ export interface StoredLifecycleResponse {
   body: string;
 }
 
+/**
+ * @spec control-plane#serialization, control-plane#fresh-observation — THE
+ * SIGNING BOUNDARY.
+ *
+ * A response the endpoint must be able to replay cannot be written in the
+ * transition transaction, because signing and serialization are asynchronous
+ * and a synchronous `withTransaction` cannot span them. What CAN commit with
+ * the transition is the nonce claim, the committed outcome, and enough
+ * IMMUTABLE MATERIAL to reproduce the response afterwards. So the retention is
+ * two-phase:
+ *
+ *  1. `committed` - written by {@link LifecycleResponseStore.claimInCallerTx}
+ *     inside the transition transaction. The nonce is claimed, the outcome is
+ *     durable, and the material is fixed. A crash here loses only the bytes.
+ *  2. `final` - written by {@link LifecycleResponseStore.record} once the exact
+ *     bytes exist, BEFORE they are handed to the network.
+ *
+ * A retransmission that finds a `committed` row finalizes it from the retained
+ * material rather than re-executing the operation. For a signed envelope that
+ * means the recorded observation is signed again: the payload, including its
+ * `iat` and `exp`, is the ORIGINAL observation's, so recovery never re-dates
+ * it. A recorded envelope past its own validity is not replayed at all
+ * ({@link LifecycleResponseStore.find} drops it), so expired signed output is
+ * never presented as fresh.
+ */
+export type LifecycleResponseState = "committed" | "final";
+
+/**
+ * The immutable material a committed outcome is reproducible from: either the
+ * exact response members of a JSON outcome, or a signed state observation
+ * captured at its observation point.
+ */
+export type LifecycleResponseMaterial =
+  | { kind: "json"; body: Record<string, unknown> }
+  | { kind: "status-observation"; observation: Record<string, unknown> };
+
+/** A retained response: claimed and reproducible, or finalized and verbatim. */
+export interface RetainedLifecycleResponse {
+  state: LifecycleResponseState;
+  requestDigest: string;
+  status: number;
+  contentType: string;
+  /** The exact bytes; present only for `final`. */
+  body?: string;
+  /** The material a `committed` row is finalized from. */
+  material?: LifecycleResponseMaterial;
+}
+
 export class LifecycleResponseStore {
   private readonly retentionMs: number;
 
@@ -112,47 +163,57 @@ export class LifecycleResponseStore {
     private readonly options: { now: () => Date; retentionSeconds?: number },
   ) {
     this.db.exec(SCHEMA);
+    migrateLifecycleResponses(this.db);
     this.retentionMs = (options.retentionSeconds ?? DEFAULT_LIFECYCLE_NONCE_TTL_S) * 1000;
   }
 
   /**
    * The response stored for this nonce, or undefined when none is live. A row
    * past its window is out of contract: it is purged, so the nonce is free.
+   *
+   * @spec control-plane#fresh-observation — a SECOND, tighter clock applies to
+   * a row that carries its own validity (a signed envelope): past that instant
+   * the retained response is no longer replayable, because replaying it would
+   * present an expired observation. The store retention is deliberately longer
+   * than a response's validity, so this is the clock that decides. The row is
+   * purged and the request is processed fresh, which for the idempotent
+   * operations behind this endpoint yields a NEW observation at a new
+   * observation point rather than a re-dated old one.
    */
-  find(key: LifecycleNonceKey): StoredLifecycleResponse | undefined {
-    const row = this.db
-      .prepare(
-        `SELECT * FROM lifecycle_responses
-         WHERE endpoint = ? AND principal = ? AND mission_id = ? AND nonce = ?`,
-      )
-      .get(key.endpoint, key.principal, key.missionId, key.nonce) as
-      | Record<string, unknown>
-      | undefined;
+  find(key: LifecycleNonceKey): RetainedLifecycleResponse | undefined {
+    const row = this.row(key);
     if (!row) return undefined;
-    if (this.options.now().getTime() > (row.expires_at as number)) {
-      this.db
-        .prepare(
-          `DELETE FROM lifecycle_responses
-           WHERE endpoint = ? AND principal = ? AND mission_id = ? AND nonce = ?`,
-        )
-        .run(key.endpoint, key.principal, key.missionId, key.nonce);
+    const nowMs = this.options.now().getTime();
+    const validUntil = row.response_valid_until as number | null;
+    if (nowMs > (row.expires_at as number) || (validUntil !== null && nowMs > validUntil)) {
+      this.purge(key);
       return undefined;
     }
-    return {
-      requestDigest: row.request_digest as string,
-      status: row.status as number,
-      contentType: row.content_type as string,
-      body: row.body as string,
-    };
+    return toRetained(row);
   }
 
   /**
-   * Store the response this exchange produced. FIRST WRITER WINS (the PK
-   * conflict is ignored): a later response under the same nonce, including the
-   * `invalid_request` the divergent-retry rule itself produces, must never
-   * overwrite the original the retransmission rule has to replay.
+   * @spec control-plane#serialization — CLAIM the nonce and the committed
+   * outcome INSIDE the transition transaction. NO OWN TRANSACTION: the caller
+   * MUST hold the transaction that commits the operation, so the nonce claim
+   * and its side effect are one atomic domain and a committed operation always
+   * leaves a replayable record behind.
+   *
+   * FIRST WRITER WINS, decided by the datastore: a losing claim re-reads the
+   * winning row and returns it, so a divergent retry still refuses on the
+   * original request digest.
    */
-  record(key: LifecycleNonceKey, response: StoredLifecycleResponse): void {
+  claimInCallerTx(
+    key: LifecycleNonceKey,
+    claim: {
+      requestDigest: string;
+      status: number;
+      contentType: string;
+      material: LifecycleResponseMaterial;
+      /** The response's own validity end, in epoch ms; signed envelopes only. */
+      responseValidUntil?: number;
+    },
+  ): RetainedLifecycleResponse {
     const nowMs = this.options.now().getTime();
     this.db
       .prepare(
@@ -163,8 +224,66 @@ export class LifecycleResponseStore {
     this.db
       .prepare(
         `INSERT INTO lifecycle_responses (endpoint, principal, mission_id, nonce, request_digest,
-         status, content_type, body, created_at, expires_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         status, content_type, body, created_at, expires_at, state, material_json, response_valid_until)
+         VALUES (?, ?, ?, ?, ?, ?, ?, '', ?, ?, 'committed', ?, ?)
+         ON CONFLICT DO NOTHING`,
+      )
+      .run(
+        key.endpoint,
+        key.principal,
+        key.missionId,
+        key.nonce,
+        claim.requestDigest,
+        claim.status,
+        claim.contentType,
+        nowMs,
+        nowMs + this.retentionMs,
+        JSON.stringify(claim.material),
+        claim.responseValidUntil ?? null,
+      );
+    const row = this.row(key);
+    if (!row) throw new Error("lifecycle response claim vanished");
+    return toRetained(row);
+  }
+
+  /**
+   * Retain the exact bytes this exchange produced, BEFORE they are delivered.
+   *
+   * A row this exchange already claimed is FINALIZED (the bytes fill in the
+   * committed outcome). Otherwise this is an unclaimed response, typically a
+   * refusal that committed nothing, and first writer wins: the PK conflict is
+   * ignored so a later divergent-retry refusal never overwrites the response a
+   * retransmission has to replay.
+   */
+  record(key: LifecycleNonceKey, response: StoredLifecycleResponse): void {
+    const finalized = this.db
+      .prepare(
+        `UPDATE lifecycle_responses
+         SET body = ?, status = ?, content_type = ?, state = 'final'
+         WHERE endpoint = ? AND principal = ? AND mission_id = ? AND nonce = ? AND state = 'committed'`,
+      )
+      .run(
+        response.body,
+        response.status,
+        response.contentType,
+        key.endpoint,
+        key.principal,
+        key.missionId,
+        key.nonce,
+      );
+    if (finalized.changes === 1) return;
+    const nowMs = this.options.now().getTime();
+    this.db
+      .prepare(
+        `DELETE FROM lifecycle_responses
+         WHERE endpoint = ? AND principal = ? AND mission_id = ? AND nonce = ? AND expires_at < ?`,
+      )
+      .run(key.endpoint, key.principal, key.missionId, key.nonce, nowMs);
+    this.db
+      .prepare(
+        `INSERT INTO lifecycle_responses (endpoint, principal, mission_id, nonce, request_digest,
+         status, content_type, body, created_at, expires_at, state)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'final')
          ON CONFLICT DO NOTHING`,
       )
       .run(
@@ -179,6 +298,64 @@ export class LifecycleResponseStore {
         nowMs,
         nowMs + this.retentionMs,
       );
+  }
+
+  private row(key: LifecycleNonceKey): Record<string, unknown> | undefined {
+    return this.db
+      .prepare(
+        `SELECT * FROM lifecycle_responses
+         WHERE endpoint = ? AND principal = ? AND mission_id = ? AND nonce = ?`,
+      )
+      .get(key.endpoint, key.principal, key.missionId, key.nonce) as
+      | Record<string, unknown>
+      | undefined;
+  }
+
+  private purge(key: LifecycleNonceKey): void {
+    this.db
+      .prepare(
+        `DELETE FROM lifecycle_responses
+         WHERE endpoint = ? AND principal = ? AND mission_id = ? AND nonce = ?`,
+      )
+      .run(key.endpoint, key.principal, key.missionId, key.nonce);
+  }
+}
+
+function toRetained(row: Record<string, unknown>): RetainedLifecycleResponse {
+  const state = (row.state as LifecycleResponseState) ?? "final";
+  const material = row.material_json
+    ? (JSON.parse(row.material_json as string) as LifecycleResponseMaterial)
+    : undefined;
+  return {
+    state,
+    requestDigest: row.request_digest as string,
+    status: row.status as number,
+    contentType: row.content_type as string,
+    ...(state === "final" ? { body: row.body as string } : {}),
+    ...(material ? { material } : {}),
+  };
+}
+
+/**
+ * The two-phase retention columns are additive, and `openStore` only ever runs
+ * `CREATE TABLE IF NOT EXISTS`, so a kernel database that predates them (a
+ * file-backed store opened again) is migrated here. The Mission Signals outbox
+ * sets the precedent for an idempotent in-place migration.
+ */
+function migrateLifecycleResponses(db: Database): void {
+  const columns = new Set(
+    (db.prepare("PRAGMA table_info(lifecycle_responses)").all() as Array<{ name: string }>).map(
+      (c) => c.name,
+    ),
+  );
+  if (!columns.has("state")) {
+    db.exec("ALTER TABLE lifecycle_responses ADD COLUMN state TEXT NOT NULL DEFAULT 'final'");
+  }
+  if (!columns.has("material_json")) {
+    db.exec("ALTER TABLE lifecycle_responses ADD COLUMN material_json TEXT");
+  }
+  if (!columns.has("response_valid_until")) {
+    db.exec("ALTER TABLE lifecycle_responses ADD COLUMN response_valid_until INTEGER");
   }
 }
 
