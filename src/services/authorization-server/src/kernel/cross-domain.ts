@@ -68,6 +68,14 @@ export interface IssueGrantInput {
    * as top-level `auth_time`/`acr`/`amr`; absent sub-fields are omitted.
    */
   authEnvelope?: { auth_time?: number; acr?: string; amr?: string[] };
+  /**
+   * @spec control-plane#serialization — OPTIONAL durable operation identity.
+   * When supplied, the counted derivation is reserved against it and a repeat
+   * of the same identity REPLAYS the recorded grant instead of counting a
+   * second derivation. When omitted, the reservation is keyed by the grant's
+   * own `jti`, so the operation is reconcilable but not replayable.
+   */
+  operationId?: string;
 }
 
 /**
@@ -82,7 +90,20 @@ export async function issueCrossDomainGrant(
   input: IssueGrantInput,
 ): Promise<{ grant: string; jti: string; audienceScoped: AuthorityEntry[] }> {
   // Derivation gate: throws GateError when non-active/expired/cap-exhausted.
-  const record: MissionRecord = kernel.gateDerivation(input.missionId);
+  // @spec control-plane#serialization — the grant identity is minted BEFORE the
+  // count, so the counted derivation and the grant it pays for share one
+  // durable reservation, released on acceptance below.
+  const jti = `jag_${randomBytes(12).toString("base64url")}`;
+  const admitted = kernel.reserveDerivation(input.missionId, {
+    operationId: input.operationId ?? jti,
+    artifactId: jti,
+  });
+  if (admitted.reservation.kind === "replay" && admitted.reservation.reservation.completion) {
+    return JSON.parse(admitted.reservation.reservation.completion) as Awaited<
+      ReturnType<typeof issueCrossDomainGrant>
+    >;
+  }
+  const record: MissionRecord = admitted.record;
 
   // Containment: the audience-scoped projection draws on the EFFECTIVE set, so
   // a contained capability never crosses the domain boundary.
@@ -96,7 +117,6 @@ export async function issueCrossDomainGrant(
   const nowS = Math.floor(kernel.nowDate().getTime() / 1000);
   const missionExp = Math.floor(Date.parse(record.expires_at) / 1000);
   const exp = Math.min(nowS + MAX_GRANT_LIFETIME_S, missionExp);
-  const jti = `jag_${randomBytes(12).toString("base64url")}`;
 
   // The five legacy claims, in their legacy insertion order. `sub` defaults to
   // the GLOBAL subject; an audience-local `sub` (when passed) replaces it. Any
@@ -146,5 +166,11 @@ export async function issueCrossDomainGrant(
     .setJti(jti)
     .sign(signKey);
 
+  kernel.releaseDerivation(admitted.reservation.reservation.reservationId, {
+    artifactId: jti,
+    ...(input.operationId
+      ? { completion: JSON.stringify({ grant, jti, audienceScoped: scoped }) }
+      : {}),
+  });
   return { grant, jti, audienceScoped: scoped };
 }

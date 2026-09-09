@@ -27,6 +27,7 @@ import {
 } from "@mission/core";
 import { calculateJwkThumbprint, type CryptoKey, decodeJwt, exportJWK, type JWK, SignJWT } from "jose";
 import { isSubsetSetIgnoringCapabilitySources } from "@mission/core";
+import type { DerivationReservationResult } from "./derivation-reservations.js";
 import type { MissionKernel } from "./kernel.js";
 import type { AuthorityEntry, MissionRecord } from "./types.js";
 
@@ -148,6 +149,14 @@ export interface DeriveRootInput {
    */
   requestedTools?: AATTools;
   lifetimeSeconds?: number;
+  /**
+   * @spec control-plane#serialization — OPTIONAL durable operation identity.
+   * When supplied, the counted derivation is reserved against it and a repeat
+   * of the same identity REPLAYS the recorded artifact instead of counting a
+   * second derivation. When omitted, the reservation is keyed by the artifact
+   * identity alone, so the operation is reconcilable but not replayable.
+   */
+  operationId?: string;
 }
 
 /**
@@ -180,7 +189,18 @@ export async function deriveAttenuationRoot(
   }
 
   // Derivation gate (D26 lifecycle): throws GateError when non-active/expired.
-  const record: MissionRecord = kernel.gateDerivation(input.missionId);
+  // @spec control-plane#serialization — the artifact identity is minted BEFORE
+  // the count, so the counted derivation and the artifact it pays for share
+  // one durable reservation; a recorded operation identity replays instead of
+  // counting again, and the reservation is released on acceptance below.
+  const jti = `aat_root_${randomBytes(12).toString("base64url")}`;
+  const admitted = kernel.reserveDerivation(input.missionId, {
+    operationId: input.operationId ?? jti,
+    artifactId: jti,
+  });
+  const replayed = replayRoot(admitted.reservation);
+  if (replayed) return replayed;
+  const record: MissionRecord = admitted.record;
 
   // Containment: the root maps from the EFFECTIVE set (approved minus the
   // containment overlay); a contained capability never becomes an AAT tool.
@@ -221,7 +241,6 @@ export async function deriveAttenuationRoot(
   const nowS = Math.floor(kernel.nowDate().getTime() / 1000);
   const missionExp = Math.floor(Date.parse(record.expires_at) / 1000);
   const exp = Math.min(nowS + (input.lifetimeSeconds ?? MAX_ROOT_LIFETIME_S), missionExp);
-  const jti = `aat_root_${randomBytes(12).toString("base64url")}`;
 
   const root = await new SignJWT({
     mission: { id: record.id, issuer: record.issuer, authority_hash: record.authority_hash },
@@ -240,7 +259,32 @@ export async function deriveAttenuationRoot(
     .setJti(jti)
     .sign(signKey);
 
+  // @spec control-plane#serialization — artifact acceptance settles the
+  // reservation. The completion material is retained only for a caller that
+  // supplied its own operation identity, i.e. one that asked to be replayable.
+  kernel.releaseDerivation(admitted.reservation.reservation.reservationId, {
+    artifactId: jti,
+    ...(input.operationId ? { completion: JSON.stringify({ root, jti, tools }) } : {}),
+  });
   return { root, jti, tools };
+}
+
+/**
+ * @spec control-plane#serialization — the REPLAY half of the counter's recovery
+ * states: a recorded operation whose artifact was accepted returns that exact
+ * artifact. A reservation with no retained completion is reconcilable but not
+ * replayable, so the operation runs on (its count was already spent and is
+ * never spent twice).
+ */
+function replayRoot(
+  reservation: DerivationReservationResult,
+): { root: string; jti: string; tools: AATTools } | undefined {
+  if (reservation.kind !== "replay" || !reservation.reservation.completion) return undefined;
+  return JSON.parse(reservation.reservation.completion) as {
+    root: string;
+    jti: string;
+    tools: AATTools;
+  };
 }
 
 export interface MintChildOptions {
@@ -328,6 +372,14 @@ export interface CrossOrgRootInput {
   requestedTools?: AATTools;
   lifetimeSeconds?: number;
   delMaxDepth?: number;
+  /**
+   * @spec control-plane#serialization — OPTIONAL durable operation identity.
+   * When supplied, the counted derivation is reserved against it and a repeat
+   * of the same identity REPLAYS the recorded artifact instead of counting a
+   * second derivation. When omitted, the reservation is keyed by the artifact
+   * identity alone, so the operation is reconcilable but not replayable.
+   */
+  operationId?: string;
 }
 
 export async function deriveCrossOrgRoot(
@@ -336,7 +388,20 @@ export async function deriveCrossOrgRoot(
   kid: string,
   input: CrossOrgRootInput,
 ): Promise<{ root: string; jti: string; tools: AATTools; actorMapping: { client_id: string; actor: CrossOrgRootInput["actor"]; version: string } }> {
-  const record: MissionRecord = kernel.gateDerivation(input.missionId);
+  // @spec control-plane#serialization — same reservation boundary as the
+  // in-org root: artifact identity first, count and reservation together, and
+  // release on acceptance.
+  const jti = `aat_root_${randomBytes(12).toString("base64url")}`;
+  const admitted = kernel.reserveDerivation(input.missionId, {
+    operationId: input.operationId ?? jti,
+    artifactId: jti,
+  });
+  if (admitted.reservation.kind === "replay" && admitted.reservation.reservation.completion) {
+    return JSON.parse(admitted.reservation.reservation.completion) as Awaited<
+      ReturnType<typeof deriveCrossOrgRoot>
+    >;
+  }
+  const record: MissionRecord = admitted.record;
   const effective = kernel.effectiveAuthoritySet(record);
   const delMaxDepth =
     input.delMaxDepth ?? (input.requestedTools ? 0 : deriveDelMaxDepth(effective));
@@ -354,7 +419,6 @@ export async function deriveCrossOrgRoot(
   const nowS = Math.floor(kernel.nowDate().getTime() / 1000);
   const missionExp = Math.floor(Date.parse(record.expires_at) / 1000);
   const exp = Math.min(nowS + (input.lifetimeSeconds ?? MAX_ROOT_LIFETIME_S), missionExp);
-  const jti = `aat_root_${randomBytes(12).toString("base64url")}`;
   const root = await new SignJWT({
     mission: {
       id: record.id,
@@ -377,12 +441,16 @@ export async function deriveCrossOrgRoot(
     .setExpirationTime(exp)
     .setJti(jti)
     .sign(signKey);
-  return {
-    root,
-    jti,
-    tools,
-    actorMapping: { client_id: input.clientId, actor: input.actor, version: input.mappingVersion },
+  const actorMapping = {
+    client_id: input.clientId,
+    actor: input.actor,
+    version: input.mappingVersion,
   };
+  kernel.releaseDerivation(admitted.reservation.reservation.reservationId, {
+    artifactId: jti,
+    ...(input.operationId ? { completion: JSON.stringify({ root, jti, tools, actorMapping }) } : {}),
+  });
+  return { root, jti, tools, actorMapping };
 }
 
 /**
