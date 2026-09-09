@@ -978,16 +978,66 @@
    "level": "unit",
    "coverage": "tested",
    "tests": [
-    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > the draft's nested resources and excluded paths validate", "level": "unit", "surface": "deployment-documentation" },
-    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > a bare resource string is the mediated shorthand and validates", "level": "unit", "surface": "deployment-documentation" },
-    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > refuses missing disposition and names the offending entry", "level": "unit", "surface": "deployment-documentation" },
-    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > refuses unknown disposition and names the offending entry", "level": "unit", "surface": "deployment-documentation" },
-    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > refuses bare excluded path and names the offending entry", "level": "unit", "surface": "deployment-documentation" },
-    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > refuses mediated excluded path and names the offending entry", "level": "unit", "surface": "deployment-documentation" },
-    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > refuses conflicting resource dispositions and names the offending entry", "level": "unit", "surface": "deployment-documentation" },
-    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > refuses conflicting excluded dispositions and names the offending entry", "level": "unit", "surface": "deployment-documentation" },
-    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > identical repeated keys normalize to one entry and validate", "level": "unit", "surface": "deployment-documentation" },
-    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > malformed JSON containers and entries yield findings rather than throwing or widening claims", "level": "unit", "surface": "deployment-documentation" }
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > the draft's nested resources and excluded paths validate",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > a bare resource string is the mediated shorthand and validates",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > refuses missing disposition and names the offending entry",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > refuses unknown disposition and names the offending entry",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > refuses bare excluded path and names the offending entry",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > refuses mediated excluded path and names the offending entry",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > refuses conflicting resource dispositions and names the offending entry",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > refuses conflicting excluded dispositions and names the offending entry",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > identical repeated keys normalize to one entry and validate",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > malformed JSON containers and entries yield findings rather than throwing or widening claims",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
    ]
   },
   {
@@ -1012,11 +1062,36 @@
    "level": "unit",
    "coverage": "tested",
    "tests": [
-    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > a claim naming a reconstructed resource is rejected", "level": "unit", "surface": "deployment-documentation" },
-    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > a claim naming an unrecorded resource is rejected", "level": "unit", "surface": "deployment-documentation" },
-    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > an excluded execution path refuses even when it is also declared", "level": "unit", "surface": "deployment-documentation" },
-    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > a mediated resource on a declared nonexcluded path is accepted", "level": "unit", "surface": "deployment-documentation" },
-    { "file": "src/services/pdp/test/enforcement-scope.test.ts", "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > conflicts and malformed duplicates refuse in either order and cannot be repaired by a third duplicate", "level": "unit", "surface": "deployment-documentation" }
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > a claim naming a reconstructed resource is rejected",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > a claim naming an unrecorded resource is rejected",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > an excluded execution path refuses even when it is also declared",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > a mediated resource on a declared nonexcluded path is accepted",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "Perimeter dispositions inside mediated_scope (@spec runtime#runtime-conformance) > conflicts and malformed duplicates refuse in either order and cannot be repaired by a third duplicate",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
    ]
   },
   {
@@ -10728,9 +10803,15 @@
    "tests": [
     {
      "file": "src/services/mcp-payments/test/transaction.test.ts",
-     "name": "M5 transaction-assurance tier > replayed permit is refused as permit_consumed and does not double-execute",
+     "name": "M5 transaction-assurance tier > a FRESH permit for an already-claimed operation is refused as operation_already_claimed and does not double-execute",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > the SAME evaluation identifier presented again is refused as permit_consumed, and the completed record stands",
+     "level": "unit",
+     "surface": "evidence-emission"
     }
    ]
   },
@@ -10778,9 +10859,15 @@
    "tests": [
     {
      "file": "src/services/mcp-payments/test/transaction.test.ts",
-     "name": "M5 transaction-assurance tier > replayed permit is refused as permit_consumed and does not double-execute",
+     "name": "M5 transaction-assurance tier > a FRESH permit for an already-claimed operation is refused as operation_already_claimed and does not double-execute",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > the SAME evaluation identifier presented again is refused as permit_consumed, and the completed record stands",
+     "level": "unit",
+     "surface": "evidence-emission"
     }
    ]
   },
@@ -11538,7 +11625,13 @@
    "tests": [
     {
      "file": "src/services/mcp-payments/test/refusal-evidence.test.ts",
-     "name": "Refusal Records are per-attempt, immutable, and append-only > a sustained parameter-mismatch condition yields one new record per attempt, never an amendment in place",
+     "name": "Refusal Records are per-attempt, immutable, and append-only > a sustained pre-decision failure condition yields one new Refusal Record per attempt, never an amendment in place",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/refusal-evidence.test.ts",
+     "name": "PEP-emitted execution records are per-attempt, immutable, and append-only > a sustained parameter-mismatch condition yields one new record per attempt, never an amendment in place",
      "level": "unit",
      "surface": "evidence-emission"
     }
@@ -13965,8 +14058,100 @@
     "normative": "every runtime-profile failure condition maps to exactly one of the four evidence/response carriers this binding defines; none is left uncarried and none is carried by more than one"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
+     "name": "one catalog snapshot from discovery to invocation > names the moved snapshot, not a parameter mismatch, when a write is refused at invocation",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
+     "name": "one catalog snapshot from discovery to invocation > refuses %s before any PDP call and retains a Refusal Record",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "the crash window between consumption and the effect (@spec txn-authorization#offline-verification) > refuses a DIFFERENT operation presented under an already-consumed txn",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#786 made the carrier split observable for the conditions this deployment reaches: one reason string (capability_source_unresolvable) lands on a Refusal Record pre-decision and on Execution Evidence at use, chosen by call site, and a post-permit duplicate lands on Execution Evidence while the wire keeps the mandated duplicate_suppressed diagnostic. kill_switch, phase_mismatch and target_drift are ungated in this deployment (#252 C, #773), and the obligation carrier is only reached as a deny, so full coverage of the table stays open."
+  },
+  {
+   "id": "authzen.failure-condition-coverage.post-permit-duplicate-carrier",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "failure-condition-coverage",
+   "text": "A duplicate detected at use is never carried as a PDP denial reason, and a duplicate refused before a decision is never carried as an Execution Evidence `error`.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a duplicate detected after a permit surfaces as an Execution Evidence error and never as a PDP denial reason, and a pre-decision duplicate never surfaces as an Execution Evidence error"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "the crash window between consumption and the effect (@spec txn-authorization#offline-verification) > refuses a DIFFERENT operation presented under an already-consumed txn",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "the crash window between consumption and the effect (@spec txn-authorization#offline-verification) > resumes its own interrupted request instead of reporting a false duplicate",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "The wire keeps the mandated duplicate_suppressed diagnostic for the at-use refusal while the signed record names the operation-identity conflict. The pre-decision duplicate this deployment settles before any decision request emits no Execution Evidence at all (and, at present, no record either: #594 W4-3's seam)."
+  },
+  {
+   "id": "authzen.failure-condition-coverage.capability-failure-two-carriers",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "failure-condition-coverage",
+   "text": "`capability_source_unresolvable` appears on two carriers, and the carrier records whether the resolution failure happened before the decision request or at use; a resolution failure is never reported as `parameter_violation` or `parameter_mismatch`.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a capability-source resolution failure is carried by a Refusal Record pre-decision and by Execution Evidence at use, chosen by call site, and never reported as a parameter violation or parameter mismatch"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
+     "name": "one catalog snapshot from discovery to invocation > refuses %s before any PDP call and retains a Refusal Record",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
+     "name": "one catalog snapshot from discovery to invocation > names the moved snapshot, not a parameter mismatch, when a write is refused at invocation",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Classified by call site, never by the reason string the two carriers share."
   },
   {
    "id": "authzen.permit-binding-split.same-identity-no-relay",
@@ -17210,7 +17395,7 @@
    "id": "evidence.refusal.denial-reason-enum-and-boundary",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "pre-decision-refusal",
-   "text": "For a PEP refusal, one of `token_invalid`, `mission_claim_missing`, `mission_reference_conflict` (reference sources naming different Missions, or an unusable propagated reference where governance requires one, the Mission Reference Propagation channel's conflict rule, {{I-D.draft-mcguinness-mission-authority-server}}), `channel_failure`, `pdp_unreachable`, or `state_unavailable`",
+   "text": "For a PEP refusal, one of `token_invalid`, `mission_claim_missing`, `mission_reference_conflict` (reference sources naming different Missions, or an unusable propagated reference where governance requires one, the Mission Reference Propagation channel's conflict rule, {{I-D.draft-mcguinness-mission-authority-server}}), `credential_authority_insufficient` (the presented credential's own authority does not cover the request, as the PEP establishes it before any decision request), `request_unsupported` (the enforcement surface implements no such action), `target_unresolvable` (the request names a target object the enforcement surface cannot resolve), `capability_source_unresolvable` (the capability definition the PEP must present could not be resolved), `decision_evidence_unverifiable` (the Decision Evidence for a permit was absent or did not verify, so no decision the PEP can rely on was obtained), `channel_failure`, `pdp_unreachable`, or `state_unavailable`",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -17222,7 +17407,7 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "denial_reason names a pre-evaluation condition (PEP-side: token_invalid, mission_claim_missing, channel_failure, pdp_unreachable, state_unavailable; PDP-side: mission_context_missing), disjoint from the runtime profile's evaluated-decision denial reasons; a record able to populate the PDP-derived members of an evaluated decision is a Decision Evidence Object instead, never a Refusal Record"
+    "normative": "denial_reason names a pre-evaluation condition from the enumerated set (PEP-side: token_invalid, mission_claim_missing, mission_reference_conflict, credential_authority_insufficient, request_unsupported, target_unresolvable, capability_source_unresolvable, decision_evidence_unverifiable, channel_failure, pdp_unreachable, state_unavailable; PDP-side: mission_context_missing), disjoint from the runtime profile's evaluated-decision denial reasons; a record able to populate the PDP-derived members of an evaluated decision is a Decision Evidence Object instead, never a Refusal Record"
    },
    "level": "unit",
    "coverage": "partial",
@@ -17256,9 +17441,27 @@
      "name": "configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > refuses a decision function that rejects asynchronously as pdp_unreachable, with one Refusal Record and no effect",
      "level": "unit",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-channel.test.ts",
+     "name": "mediated MCP channel (harness duty 2: no bypass) > 3: adversarial \"unknown mission (msn_unknown)\" is DENIED over MCP with zero side effects and parity with the direct PEP",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
+     "name": "one catalog snapshot from discovery to invocation > refuses %s before any PDP call and retains a Refusal Record",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/decision-evidence-retention.test.ts",
+     "name": "a permit the PDP did not evidence is refused, never executed (#741) > refuses the action when the decision carries no Decision Evidence",
+     "level": "unit",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "Covers two of the enumerated PEP reasons on the remote path: `pdp_unreachable` for a timeout, transport failure or non-2xx status, `channel_failure` for a response failing authentication or integrity, each emitting a Refusal Record carrying no PDP-derived member. `pdp_unreachable` also carries an unclassified failure of the decision call itself, thrown or rejected: the PEP records the refusal rather than letting the failure escape uncarried. `token_invalid`, `mission_claim_missing`, `mission_reference_conflict` and `state_unavailable` remain for #594 wave 4; this is not full Refusal Record conformance."
+   "notes": "Covers pdp_unreachable and channel_failure on the remote path, state_unavailable (the deployment's unknown_mission diagnostic maps to it), capability_source_unresolvable pre-decision, and decision_evidence_unverifiable. #786 enumerated the eight reasons this deployment previously emitted outside the set, so every emitted reason now maps to an enumerated value; token_invalid, mission_claim_missing and mission_reference_conflict have no assertion on the signed value yet, and remain #594 wave 4. This is not full Refusal Record conformance."
   },
   {
    "id": "evidence.refusal.parameter-binding-digest-xor",
@@ -17371,12 +17574,12 @@
    "tests": [
     {
      "file": "src/services/mcp-payments/test/refusal-evidence.test.ts",
-     "name": "Refusal Records are per-attempt, immutable, and append-only > a sustained parameter-mismatch condition yields one new record per attempt, never an amendment in place",
+     "name": "Refusal Records are per-attempt, immutable, and append-only > a sustained pre-decision failure condition yields one new Refusal Record per attempt, never an amendment in place",
      "level": "unit",
      "surface": "evidence-emission"
     }
    ],
-   "notes": "Tested: a sustained parameter_mismatch condition, retried twice, yields a second distinct record (append-only) whose content leaves the first record's own content unchanged (a snapshot comparison, not reference identity, so an in-place amendment would fail it). Not tested: 'signed' -- EvidenceStore retains plain objects; signing and SCITT registration are M10 future work per its own header comment."
+   "notes": "Tested: a sustained parameter_mismatch condition, retried twice, yields a second distinct record (append-only) whose content leaves the first record's own content unchanged (a snapshot comparison, not reference identity, so an in-place amendment would fail it). Not tested: 'signed' -- EvidenceStore retains plain objects; signing and SCITT registration are M10 future work per its own header comment. #786: the witness is now a genuine PRE-decision refusal (an unresolvable target, established before any decision request), because the post-permit parameter re-check this row previously cited emits Execution Evidence rather than a Refusal Record."
   },
   {
    "id": "evidence.refusal.external-binding-exempts-missing-claim",
@@ -17773,8 +17976,22 @@
     "normative": "when authorized_parameter_digest and effective_parameter_digest diverge, the record is a parameter deviation and remains a valid record, never discarded; a deviation recorded against outcome completed or failed is equally representable, and a consumer MUST flag it as an unauthorized execution"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > joins issuer-qualified Mission identity and reports an unauthorized completed parameter deviation without discarding evidence",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > a FAILED execution carrying the same deviation is equally valid and equally flagged, and a suppressed one is not the flag's witness",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "The real receipt verifier keeps a divergent digest pair VALID and returns unauthorized_execution for both completed and failed outcomes, and does not flag a suppressed record, which is the refusal working rather than an unauthorized execution. Suppression alone is therefore not this clause's witness (#786 review point 4)."
   },
   {
    "id": "evidence.execution.error-closed-set-and-extension-naming",
@@ -17792,11 +18009,12 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "error is one of the closed set (parameter_mismatch, permit_expired, permit_consumed, obligation_unfulfilled, kill_switch) when outcome is failed or suppressed; a deployment-defined additional value must be a collision-resistant name"
+    "normative": "error is one of the closed set (parameter_mismatch, phase_mismatch, target_drift, permit_expired, permit_consumed, operation_already_claimed, operation_identity_conflict, condition_unrecognized, consumption_unavailable, capability_source_unresolvable, obligation_unfulfilled, kill_switch) when outcome is failed or suppressed; a deployment-defined additional value must be a collision-resistant name"
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#786 added the five values the reference deployment's own mandatory fail-closed exits needed, so it defines no deployment-namespaced value at all and the extension-naming rule itself is unasserted. The per-value rows below cover the set membership; this row stays with #594 W4-4 for the extension-naming half."
   },
   {
    "id": "evidence.execution.obligation-outcomes-schema",
@@ -17817,8 +18035,28 @@
     "normative": "obligation_outcomes is REQUIRED whenever the linked Decision Evidence carried obligations and a permit disposition exists, with one object per attached obligation carrying id, type, and a fulfilled/failed/unsupported outcome"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
+     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a permit carrying an obligation is refused as unfulfillable_obligation: this PEP implements no obligation type, so presence alone is a deny, distinct from an unrecognized condition",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
+     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > an obligation that does not identify itself is still refused with zero effect, and no entry is invented for it",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
+     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a mixed obligation set with one unidentifiable member names none of them, rather than a partial list that reads as complete",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "One entry per attached obligation that identifies itself, with id, type and outcome unsupported (this PEP implements no obligation type). OUTSTANDING, #786 review point 2: an obligation the decision returns WITHOUT a required id or type cannot be represented at all, so the member is omitted entirely rather than fabricated or emitted as a partial list that would read as complete; and this deployment's PDP does not implement Decision Evidence's own obligations member, so the conditional that makes obligation_outcomes REQUIRED cannot fire from the linked record. Both remain open."
   },
   {
    "id": "evidence.execution.result-summary-no-user-content",
@@ -17862,8 +18100,322 @@
     "normative": "an executing PEP that detects a parameter deviation before acting refuses the action and emits Execution Evidence with outcome suppressed and error parameter_mismatch, rather than proceeding; whatever the recorded outcome, an audit consumer MUST classify a detected digest divergence as a parameter deviation and treat it as equivalent to an unauthorized action for compliance purposes"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/enforcement.test.ts",
+     "name": "M4 core enforcement tier > scenario 3: TOCTOU -- invoice mutated between decision and execute -> parameter_mismatch refusal",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/refusal-evidence.test.ts",
+     "name": "PEP-emitted execution records are per-attempt, immutable, and append-only > a sustained parameter-mismatch condition yields one new record per attempt, never an amendment in place",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "The write path's TOCTOU gate refuses before the effect and emits Execution Evidence with outcome suppressed and error parameter_mismatch, carrying the authorized digest and a fresh observation of the effective one, with zero connector effects and no Refusal Record. #786 moved this exit off the Refusal Record carrier it previously used."
+  },
+  {
+   "id": "evidence.execution.error-operation-already-claimed",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "`operation_already_claimed` (a different evaluation identifier presented for an operation identity whose single claim is already held)",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a fresh permit presented for an operation identity whose single claim is already held records error operation_already_claimed, not permit_consumed"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > a FRESH permit for an already-claimed operation is refused as operation_already_claimed and does not double-execute",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > consumes a txn exactly once when two replicas are presented distinct token jtis simultaneously",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Redemption keys on operation identity, so the prior operation's own permit_id discriminates this from permit_consumed. The caller-visible diagnostic stays permit_consumed; only the signed value distinguishes them."
+  },
+  {
+   "id": "evidence.execution.error-operation-identity-conflict",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "`operation_identity_conflict` (a single-use authorization identifier presented for an operation identity other than the one its use was taken under)",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a single-use authorization identifier turned to a different operation identity records error operation_identity_conflict"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "the crash window between consumption and the effect (@spec txn-authorization#offline-verification) > refuses a DIFFERENT operation presented under an already-consumed txn",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "The transaction-authorization profile mandates duplicate_suppressed as the wire reason for this refusal; the signed record names the operation-identity conflict instead, and the two are different carriers."
+  },
+  {
+   "id": "evidence.execution.error-condition-unrecognized",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "`condition_unrecognized` (the permit carried a decision condition the executing PEP does not recognize, which makes the permit unusable)",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an unrecognized decision condition makes the permit unusable and is disposed of as a suppressed Execution Evidence record with error condition_unrecognized"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
+     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a permit whose context carries ONE unrecognized member INSIDE conditions is refused with zero effect, never silently granted",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Post-permit by call site: the permit was obtained, so its unusability is that permit's disposition and not a pre-decision Refusal Record. The caller-visible diagnostic stays unrecognized_condition."
+  },
+  {
+   "id": "evidence.execution.error-consumption-unavailable",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "`consumption_unavailable` (the store the executing PEP takes single use in could not be reached, so exactly-once could not be established)",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an unreachable consumption store fails closed and is recorded as a suppressed Execution Evidence record with error consumption_unavailable"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > fails closed when the consumption store is unavailable",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "This exit previously advanced the operation to abandoned and recorded nothing at all."
+  },
+  {
+   "id": "evidence.execution.error-capability-source-unresolvable",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "`capability_source_unresolvable` (the capability definition the permit was decided against could not be re-resolved at execution)",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a capability definition that cannot be re-resolved at use suppresses the permit with error capability_source_unresolvable, never a parameter comparison"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
+     "name": "one catalog snapshot from discovery to invocation > names the moved snapshot, not a parameter mismatch, when a write is refused at invocation",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "The capability snapshot is excluded from parameter_digest, so parameter_mismatch would assert a comparison that never failed."
+  },
+  {
+   "id": "evidence.execution.duplicate-identifiers-are-distinct",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "The three duplicate identifiers are distinct and MUST NOT be substituted for one another.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "permit_consumed, operation_already_claimed and operation_identity_conflict are not interchangeable, and none of them is the pre-permit PDP denial for a duplicate or conflicting claim"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > the SAME evaluation identifier presented again is refused as permit_consumed, and the completed record stands",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > a FRESH permit for an already-claimed operation is refused as operation_already_claimed and does not double-execute",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "the crash window between consumption and the effect (@spec txn-authorization#offline-verification) > refuses a DIFFERENT operation presented under an already-consumed txn",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "The three cases are asserted separately: same evaluation identifier, fresh evaluation on the same operation, and same transaction with a different operation. Each preserves the earlier completed record."
+  },
+  {
+   "id": "evidence.execution.capability-failure-carrier-not-parameter",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "It is never recorded as a parameter comparison.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a capability-source resolution failure is recorded on the carrier matching where it happened (Refusal Record pre-decision, Execution Evidence at use) and never as a parameter comparison"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
+     "name": "one catalog snapshot from discovery to invocation > names the moved snapshot, not a parameter mismatch, when a write is refused at invocation",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
+     "name": "one catalog snapshot from discovery to invocation > refuses %s before any PDP call and retains a Refusal Record",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "The same reason string on two carriers, separated by call site rather than by the string: reverifyCapability suppresses, and enforceInner's catch keeps its Refusal Record."
+  },
+  {
+   "id": "evidence.refusal.signed-value-not-caller-diagnostic",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "pre-decision-refusal",
+   "text": "This member carries an enumerated value, never a deployment's own diagnostic string.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the signed denial_reason carries an enumerated value and never the deployment's caller-visible diagnostic; a deployment maps its finer reason onto the value naming the condition and publishes that mapping"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mcp-channel.test.ts",
+     "name": "mediated MCP channel (harness duty 2: no bypass) > 3: adversarial \"unknown mission (msn_unknown)\" is DENIED over MCP with zero side effects and parity with the direct PEP",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/decision-evidence-retention.test.ts",
+     "name": "a permit the PDP did not evidence is refused, never executed (#741) > refuses the action when the decision carries no Decision Evidence",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "PRE_DECISION_DENIAL_REASON in pep.ts is this deployment's published mapping. The channel-parity assertion compares the caller diagnostic to the signed value THROUGH that mapping rather than assuming they are identical."
+  },
+  {
+   "id": "evidence.refusal.unverifiable-decision-is-pre-decision",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "pre-decision-refusal",
+   "text": "A response whose Decision Evidence the enforcing component could not verify is not a decision that component obtained.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a permit whose Decision Evidence is absent or unverifiable is refused before any permit is accepted and recorded as a Refusal Record carrying decision_evidence_unverifiable, never as Execution Evidence"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/decision-evidence-retention.test.ts",
+     "name": "a permit the PDP did not evidence is refused, never executed (#741) > refuses the action when the decision carries no Decision Evidence",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "The boundary is the permit the enforcing component accepted, not merely the existence of a decision response."
   },
   {
    "id": "evidence.retention.audit-window-floor",
@@ -18922,7 +19474,13 @@
     },
     {
      "file": "src/services/mcp-payments/test/refusal-evidence.test.ts",
-     "name": "Refusal Records are per-attempt, immutable, and append-only > a sustained parameter-mismatch condition yields one new record per attempt, never an amendment in place",
+     "name": "Refusal Records are per-attempt, immutable, and append-only > a sustained pre-decision failure condition yields one new Refusal Record per attempt, never an amendment in place",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/refusal-evidence.test.ts",
+     "name": "PEP-emitted execution records are per-attempt, immutable, and append-only > a sustained parameter-mismatch condition yields one new record per attempt, never an amendment in place",
      "level": "unit",
      "surface": "evidence-emission"
     }
