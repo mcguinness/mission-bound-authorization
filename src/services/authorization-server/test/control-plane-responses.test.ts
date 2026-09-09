@@ -23,7 +23,11 @@
  *  - a retained signed envelope past its own validity is never replayed.
  */
 
+import { mkdtempSync, rmSync } from "node:fs";
 import type { Server } from "node:http";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { type Database, openStore } from "@mission/store";
 import { CANONICAL_RESOURCE, DERIVATION_POLICY, DEV_SERVICE_TOKEN } from "@mission/demo-data";
 import { type CryptoKey, decodeJwt, generateKeyPair } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -356,6 +360,216 @@ describe("control-plane retained signed responses", () => {
       expect(store.find(key)).toBeUndefined();
     } finally {
       kernel.db.close();
+    }
+  });
+});
+
+/**
+ * @spec control-plane#serialization — the two-phase retention columns are
+ * ADDITIVE, and `openStore` only ever runs `CREATE TABLE IF NOT EXISTS`, so a
+ * kernel database written before them (the opt-in file-backed single-writer
+ * store, reopened) is migrated in place. An untested migration on the kernel
+ * database is the one thing here that can break a real file-backed deployment
+ * silently, so it is exercised against a database carrying the pre-migration
+ * shape rather than against a fresh store.
+ */
+describe("control-plane lifecycle response migration", () => {
+  /** The table exactly as it stood before the claim/finalize split. */
+  const LEGACY_SCHEMA = `
+CREATE TABLE IF NOT EXISTS lifecycle_responses (
+  endpoint TEXT NOT NULL,
+  principal TEXT NOT NULL,
+  mission_id TEXT NOT NULL,
+  nonce TEXT NOT NULL,
+  request_digest TEXT NOT NULL,
+  status INTEGER NOT NULL,
+  content_type TEXT NOT NULL,
+  body TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL,
+  PRIMARY KEY (endpoint, principal, mission_id, nonce)
+) STRICT;
+`;
+
+  const JSON_BODY = JSON.stringify({ id: "msn_legacy", state: "revoked", version: 2 });
+  const JWS_BODY = "eyJhbGciOiJFUzI1NiJ9.eyJsZWdhY3kiOnRydWV9.legacy-signature";
+  const START = new Date("2026-09-01T00:00:00Z");
+
+  const legacyKey = (nonce: string) => ({
+    endpoint: LIFECYCLE_ENDPOINT_KEY,
+    principal: "svc:legacy",
+    missionId: "msn_legacy",
+    nonce,
+  });
+
+  /** A file carrying the pre-migration table and two retained responses. */
+  function seedLegacyFile(): { dir: string; file: string } {
+    const dir = mkdtempSync(join(tmpdir(), "cp-responses-migration-"));
+    const file = join(dir, "kernel.sqlite");
+    const db = openStore(LEGACY_SCHEMA, { file });
+    try {
+      const insert = db.prepare(
+        `INSERT INTO lifecycle_responses (endpoint, principal, mission_id, nonce, request_digest,
+         status, content_type, body, created_at, expires_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      );
+      const at = START.getTime();
+      insert.run(
+        LIFECYCLE_ENDPOINT_KEY,
+        "svc:legacy",
+        "msn_legacy",
+        "nonce-legacy-json",
+        "sha-256:legacy-json",
+        200,
+        "application/json",
+        JSON_BODY,
+        at,
+        at + 600_000,
+      );
+      insert.run(
+        LIFECYCLE_ENDPOINT_KEY,
+        "svc:legacy",
+        "msn_legacy",
+        "nonce-legacy-jws",
+        "sha-256:legacy-jws",
+        200,
+        "application/mission-status-response+jwt",
+        JWS_BODY,
+        at,
+        at + 600_000,
+      );
+    } finally {
+      db.close();
+    }
+    return { dir, file };
+  }
+
+  const columnsOf = (db: Database): Set<string> =>
+    new Set(
+      (db.prepare("PRAGMA table_info(lifecycle_responses)").all() as Array<{ name: string }>).map(
+        (c) => c.name,
+      ),
+    );
+
+  it("migrates a pre-migration table in place and preserves every retained response", () => {
+    const { dir, file } = seedLegacyFile();
+    const db = openStore(LEGACY_SCHEMA, { file });
+    try {
+      expect(columnsOf(db).has("state")).toBe(false);
+      const store = new LifecycleResponseStore(db, { now: () => START });
+      // The columns arrive without rewriting the table.
+      const columns = columnsOf(db);
+      expect(columns.has("state")).toBe(true);
+      expect(columns.has("material_json")).toBe(true);
+      expect(columns.has("response_valid_until")).toBe(true);
+      // No row is lost, duplicated, or re-keyed.
+      expect(
+        (db.prepare("SELECT COUNT(*) AS n FROM lifecycle_responses").get() as { n: number }).n,
+      ).toBe(2);
+      // Every legacy row keeps its committed outcome and its replay identity,
+      // and reads back as a FINAL response: the bytes were already durable, so
+      // the migration must never demote one to a claim awaiting finalization.
+      const json = store.find(legacyKey("nonce-legacy-json"));
+      expect(json).toMatchObject({
+        state: "final",
+        status: 200,
+        contentType: "application/json",
+        requestDigest: "sha-256:legacy-json",
+        body: JSON_BODY,
+        replayable: true,
+      });
+      expect(json?.material).toBeUndefined();
+      const jws = store.find(legacyKey("nonce-legacy-jws"));
+      expect(jws).toMatchObject({
+        state: "final",
+        contentType: "application/mission-status-response+jwt",
+        requestDigest: "sha-256:legacy-jws",
+        body: JWS_BODY,
+        replayable: true,
+      });
+    } finally {
+      db.close();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("opens an already migrated database again as a no-op", () => {
+    const { dir, file } = seedLegacyFile();
+    const first = openStore(LEGACY_SCHEMA, { file });
+    try {
+      new LifecycleResponseStore(first, { now: () => START });
+    } finally {
+      first.close();
+    }
+    const second = openStore(LEGACY_SCHEMA, { file });
+    try {
+      const before = columnsOf(second);
+      // The first open migrated the file, and reopening it finds the columns
+      // already there rather than a table that needs migrating again.
+      expect(before.has("state")).toBe(true);
+      expect(before.has("material_json")).toBe(true);
+      expect(before.has("response_valid_until")).toBe(true);
+      // A second and third construction over the migrated file neither throws
+      // nor adds a duplicate column, which is what makes the migration safe to
+      // run on every boot.
+      expect(() => new LifecycleResponseStore(second, { now: () => START })).not.toThrow();
+      const store = new LifecycleResponseStore(second, { now: () => START });
+      expect(columnsOf(second)).toEqual(before);
+      expect(
+        (second.prepare("SELECT COUNT(*) AS n FROM lifecycle_responses").get() as { n: number }).n,
+      ).toBe(2);
+      expect(store.find(legacyKey("nonce-legacy-json"))?.body).toBe(JSON_BODY);
+    } finally {
+      second.close();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("replays a migrated row to the nonce window and applies the validity clock only to a recorded one", () => {
+    const { dir, file } = seedLegacyFile();
+    const clock = { at: START };
+    const db = openStore(LEGACY_SCHEMA, { file });
+    try {
+      const store = new LifecycleResponseStore(db, { now: () => clock.at });
+      // A legacy row records no response validity, and the migration must not
+      // invent one: it stays replayable for the whole nonce window it was
+      // written with, then the window frees the nonce.
+      clock.at = new Date(START.getTime() + 540_000);
+      expect(store.find(legacyKey("nonce-legacy-jws"))).toMatchObject({
+        replayable: true,
+        body: JWS_BODY,
+      });
+      clock.at = new Date(START.getTime() + 600_001);
+      expect(store.find(legacyKey("nonce-legacy-jws"))).toBeUndefined();
+
+      // A response CLAIMED after the migration, on the same file, carries its
+      // own validity: past that instant the bytes stop being deliverable while
+      // the row and its request digest are retained for the divergent-retry
+      // refusal.
+      const key = legacyKey("nonce-post-migration");
+      const validUntil = clock.at.getTime() + 60_000;
+      store.claimInCallerTx(key, {
+        requestDigest: "sha-256:post",
+        status: 200,
+        contentType: "application/mission-status-response+jwt",
+        material: { kind: "status-observation", observation: { mission_id: "msn_legacy" } },
+        responseValidUntil: validUntil,
+      });
+      store.record(key, {
+        requestDigest: "sha-256:post",
+        status: 200,
+        contentType: "application/mission-status-response+jwt",
+        body: JWS_BODY,
+      });
+      expect(store.find(key)).toMatchObject({ state: "final", replayable: true });
+      clock.at = new Date(validUntil + 1);
+      expect(store.find(key)).toMatchObject({
+        replayable: false,
+        requestDigest: "sha-256:post",
+      });
+    } finally {
+      db.close();
+      rmSync(dir, { recursive: true, force: true });
     }
   });
 });
