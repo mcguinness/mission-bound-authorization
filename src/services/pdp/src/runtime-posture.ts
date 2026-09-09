@@ -1,5 +1,9 @@
-import { RUNTIME_SCOPE_CONFIG } from "@mission/demo-data";
-import { type EnforcementScopeStatement, validateEnforcementScopeStatement } from "./enforcement-scope.js";
+import { AUDIT_HORIZON_SECONDS, RUNTIME_SCOPE_CONFIG } from "@mission/demo-data";
+import {
+  type EnforcementScopeStatement,
+  evidenceDeclarationFindings,
+  validateEnforcementScopeStatement,
+} from "./enforcement-scope.js";
 
 /**
  * The action classes this deployment declares a freshness posture for: the
@@ -57,11 +61,29 @@ function freeze<T>(v: T): T {
   return v;
 }
 
-/** @spec runtime#runtime-operational, status#status-operational — executable,
- * published deployment policy, not evidence of implementing optional modes. */
-export function loadRuntimePosture(input: unknown): RuntimePosture {
+/**
+ * @spec runtime#runtime-operational, status#status-operational — executable,
+ * published deployment policy, not evidence of implementing optional modes.
+ *
+ * `auditHorizonSeconds` is the floor an attached `evidence` declaration's
+ * retention window is checked against; it defaults to the deployment's own
+ * declared Mission audit horizon, and a caller loading some OTHER
+ * deployment's statement supplies that deployment's horizon.
+ */
+export function loadRuntimePosture(
+  input: unknown,
+  options: { auditHorizonSeconds?: number } = {},
+): RuntimePosture {
   const findings = validateEnforcementScopeStatement(input);
   if (findings.length) throw new PostureConfigError(JSON.stringify(findings));
+  // @spec runtime-evidence#execution-evidence-object — a retention window
+  // shorter than the audit horizon, or a receipt issuer or key set naming
+  // something this scope does not declare, is refused HERE rather than
+  // discovered when a verifier needs the key.
+  const evidence = evidenceDeclarationFindings(input, {
+    auditHorizonSeconds: options.auditHorizonSeconds ?? AUDIT_HORIZON_SECONDS,
+  });
+  if (evidence.length) throw new PostureConfigError(JSON.stringify(evidence));
   const state = (input as EnforcementScopeStatement).state_source as unknown as Record<string, unknown>;
   const fail = (why: string): never => { throw new PostureConfigError(why); };
   if (state.pdp_unavailability_posture !== "deny") fail("only deny is implemented; bounded permit reuse is not available");

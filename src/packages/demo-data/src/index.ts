@@ -570,6 +570,15 @@ interface LoadedPolicy {
    * ceiling in the kernel tests.
    */
   max_mission_lifetime_s: number | null;
+  /**
+   * @spec mission#mission-record — "the deployment-declared retention window
+   * for the Mission record and its evidence: at least the Mission's lifetime
+   * plus a declared post-expiry period". REQUIRED: a deployment that declares
+   * no horizon has no floor to hold its evidence retention window to
+   * (@spec runtime-evidence#execution-evidence-object), so the loader refuses
+   * rather than defaulting one.
+   */
+  audit_horizon_s: number;
 }
 
 export function parseCeilingEntry(file: string, raw: unknown, ctx: string): AuthorityEntry {
@@ -633,6 +642,20 @@ function loadPolicy(): LoadedPolicy {
     }
     maxMissionLifetimeS = rawLifetime;
   }
+  // @spec mission#mission-record — REQUIRED, in seconds. "At least the
+  // Mission's lifetime plus a declared post-expiry period": where this
+  // deployment declares a lifetime ceiling, a horizon shorter than it could
+  // release a record while the Mission it belongs to is still live.
+  const rawHorizon = root.audit_horizon_s;
+  if (typeof rawHorizon !== "number" || !Number.isInteger(rawHorizon) || rawHorizon < 1) {
+    throw new ConfigError(file, "policy.audit_horizon_s must be an integer >= 1 (seconds)");
+  }
+  if (maxMissionLifetimeS !== null && rawHorizon < maxMissionLifetimeS) {
+    throw new ConfigError(
+      file,
+      "policy.audit_horizon_s must be at least policy.max_mission_lifetime_s",
+    );
+  }
   return {
     policy_version: reqString(file, root, "policy_version", "policy"),
     ceiling,
@@ -645,10 +668,21 @@ function loadPolicy(): LoadedPolicy {
     ),
     derivation_limit_ceiling: derivationLimitCeiling,
     max_mission_lifetime_s: maxMissionLifetimeS,
+    audit_horizon_s: rawHorizon,
   };
 }
 
 const POLICY = loadPolicy();
+
+/**
+ * @spec mission#mission-record — this deployment's declared audit horizon, in
+ * seconds. The floor under the retention of the Mission record and of the
+ * runtime evidence joined to it: the runtime profile requires an evidence
+ * retention window no shorter than it
+ * (@spec runtime-evidence#execution-evidence-object), and the enforcement
+ * scope loader refuses a declared window that is.
+ */
+export const AUDIT_HORIZON_SECONDS: number = POLICY.audit_horizon_s;
 
 /** Destination-local RAS policy is independent of the originating AS ceiling. */
 export const RAS_LOCAL_POLICY = (() => {

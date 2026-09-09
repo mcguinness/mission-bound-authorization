@@ -663,6 +663,46 @@ export interface EvidenceSigningKey {
  */
 export type EvidenceSigningConfig = Partial<Record<"pep" | "executor" | "receipt_issuer", EvidenceSigningKey>>;
 
+/**
+ * @spec runtime-evidence#execution-evidence-object (Retention), issue #594
+ * (W4-8): the durable retention backend {@link EvidenceStore} writes through,
+ * implemented by `evidence-retention.ts`'s `EvidenceRetentionStore`.
+ *
+ * Declared structurally, and OPTIONAL, so this module depends on the
+ * retention CONTRACT rather than on a SQLite repository, and a store with no
+ * backend keeps exactly its previous process-local behavior. What the backend
+ * adds is the part a process-local array cannot answer: survival across a
+ * restart, restart-monotone per-emitter sequences, the retirement anchor for
+ * the key that signed each record, and refusal to release a record before the
+ * declared window does.
+ */
+export interface EvidenceRetentionBackend {
+  nextSequence(missionId: string, emitterId: string, role: string): number;
+  retain(input: {
+    kind: "decision" | "execution" | "refusal";
+    record_id: string;
+    mission_id: string;
+    emitter_id: string;
+    emitter_role: string;
+    signing_kid: string;
+    row: JsonValue;
+    record: JsonValue;
+  }): unknown;
+  retained(): ReadonlyArray<{ row: JsonValue }>;
+}
+
+/** The `kid` in a signed envelope's protected header: the key whose retirement anchor this record moves. */
+function envelopeKid(envelope: EvidenceEnvelope): string {
+  try {
+    const header = JSON.parse(Buffer.from(envelope.value.split(".")[0] ?? "", "base64url").toString("utf8")) as {
+      kid?: unknown;
+    };
+    return typeof header.kid === "string" ? header.kid : "";
+  } catch {
+    return "";
+  }
+}
+
 /** Input to {@link EvidenceStore.recordRefusal}. `missionId` is store-level correlation only (see the file header note); `mission` is the spec's own OPTIONAL, established-only reference. */
 export interface RefusalRecordInput {
   missionId: string;
@@ -711,7 +751,11 @@ export interface ExecutionEvidenceInput {
 /**
  * @spec runtime-evidence#decision-evidence-object, runtime-evidence#pre-decision-refusal,
  * runtime-evidence#execution-evidence-object, runtime-evidence#decision-evidence-integrity
- * (issue #649): an append-only, in-memory, per-attempt retained store.
+ * (issue #649): an append-only, per-attempt retained store. Its own array is
+ * process-local; the audit retention window, the restart-monotone sequences
+ * and the published-key retirement anchors live in the OPTIONAL durable
+ * backend ({@link EvidenceRetentionBackend}, issue #594 W4-8), which a
+ * deployment configures and every signed record is written through to.
  * `recordRefusal`/`recordExecution` build the current spec-native closed
  * object for the records this PEP EMITS, allocate a cryptographically
  * random record id and a monotonically increasing per-(mission, emitter)
@@ -744,7 +788,16 @@ export class EvidenceStore {
   constructor(
     private readonly signer?: EvidenceSigningConfig,
     private readonly resolveDecisionEvidenceKey?: EvidenceKeyResolver,
-  ) {}
+    private readonly retention?: EvidenceRetentionBackend,
+  ) {
+    // Startup recovery (#594 W4-8): a store over a durable backend comes up
+    // holding what the previous process retained, so a record inside the
+    // audit window survives a restart and a delivery retry that arrives after
+    // one still deduplicates against the original disposition.
+    for (const entry of retention?.retained() ?? []) {
+      this.records.push(deepFreeze(entry.row as unknown as Evidence));
+    }
+  }
 
   /**
    * `"pdp"` is accepted as a parameter only because {@link
@@ -774,10 +827,41 @@ export class EvidenceStore {
    * explicitly in the issue #649 PR body for an owner ruling.
    */
   private nextSequence(missionId: string, emitterId: string, role: string): number {
+    if (this.retention) return this.retention.nextSequence(missionId, emitterId, role);
     const key = `${missionId} ${emitterId} ${role}`;
     const n = this.sequences.get(key) ?? 0;
     this.sequences.set(key, n + 1);
     return n;
+  }
+
+  /**
+   * Write one signed record through to the durable retention backend, if the
+   * deployment configured one, and retain it in this process's own array.
+   * `record` is the complete signed spec object (what a receipt's digest
+   * commits to); `row` is the retained wrapper.
+   *
+   * Durable first, deliberately: a backend that refuses the write (at
+   * capacity, with every retained record still inside the audit window) fails
+   * the whole retention closed, rather than leaving this process reporting a
+   * record no auditor will ever be able to read.
+   */
+  private retainDurably(
+    kind: "decision" | "execution" | "refusal",
+    recordId: string,
+    row: Evidence,
+    record: { emitter: { id: string; role: string }; evidence_envelope: EvidenceEnvelope },
+  ): void {
+    this.retention?.retain({
+      kind,
+      record_id: recordId,
+      mission_id: row.mission_id,
+      emitter_id: record.emitter.id,
+      emitter_role: record.emitter.role,
+      signing_kid: envelopeKid(record.evidence_envelope),
+      row: row as unknown as JsonValue,
+      record: record as unknown as JsonValue,
+    });
+    this.records.push(row);
   }
 
   /**
@@ -825,7 +909,7 @@ export class EvidenceStore {
       at: record.evaluated_at,
       content: deepFreeze(record),
     });
-    this.records.push(row);
+    this.retainDurably("decision", record.evidence_id, row, record);
     return { retained: true, record: row };
   }
 
@@ -876,7 +960,7 @@ export class EvidenceStore {
       at: evaluated_at,
       content,
     });
-    this.records.push(record);
+    this.retainDurably("refusal", content.refusal_id, record, content);
     return record;
   }
 
@@ -953,7 +1037,7 @@ export class EvidenceStore {
       at: outcome_at,
       content,
     });
-    this.records.push(record);
+    this.retainDurably("execution", content.execution_id, record, content);
     return record;
   }
 
