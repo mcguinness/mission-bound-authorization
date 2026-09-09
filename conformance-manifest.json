@@ -18436,9 +18436,34 @@
     "normative": "all three record types are retained for at least the deployment's audit retention window, itself no shorter than the Mission's audit horizon; a regulated deployment may require longer retention"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#594 wave 3: unrelated to #741 and still unimplemented. No audit-horizon or retention-window enforcement exists anywhere in src/: services/pdp/src/enforcement-scope.ts carries a declaration-shaped retention_window field on EnforcementExtensionDeclarations and nothing reads it, and no retention path compares a retained record's age against a Mission audit horizon."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/decision-evidence-retention.test.ts",
+     "name": "retention honors the declared audit window (@spec runtime-evidence#receipt-retention) > retains all three record kinds for the declared window and refuses to evict one inside it",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/decision-evidence-retention.test.ts",
+     "name": "retention honors the declared audit window (@spec runtime-evidence#receipt-retention) > recovers the retained records, the emitter sequences and the key retirement metadata after a restart",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/decision-evidence-retention.test.ts",
+     "name": "retention honors the declared audit window (@spec runtime-evidence#receipt-retention) > releases a record only once the window has passed, and fails closed at capacity rather than evicting one still inside it",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/decision-evidence-retention.test.ts",
+     "name": "the deployment's evidence declaration and published key sets (@spec runtime#runtime-conformance) > refuses a retention window shorter than the declared Mission audit horizon, at load",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#594 W4-8: all three record kinds are retained in a durable store (services/mcp-payments/src/evidence-retention.ts) until the declared window releases them, an eviction attempt inside the window is refused observably, a record survives a process restart inside the window, and a store at capacity fails the emission closed rather than evicting a retained record. The declared duration is checked against this deployment's Mission audit horizon (config/policy.json audit_horizon_s) at load, not merely for non-emptiness, and the shipped deployment's own window IS that horizon. Mechanism-tested, not deployment-advertised: config/enforcement-scope.json still claims no Evidence capability, and the claiming statement is an explicitly scoped test deployment derived from it."
   },
   {
    "id": "evidence.receipt.verify-before-relying-on-copied-fields",
@@ -19299,8 +19324,22 @@
     "normative": "a Mission Receipt is retained at least as long as the records it projects, and the referenced evidence plus historical verification keys stay retained or resolvable for as long as verifiers are expected to validate the receipt"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/decision-evidence-retention.test.ts",
+     "name": "retention honors the declared audit window (@spec runtime-evidence#receipt-retention) > a Mission Receipt over retained evidence still verifies once the key that signed it is retired",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/decision-evidence-retention.test.ts",
+     "name": "retention honors the declared audit window (@spec runtime-evidence#receipt-retention) > a receipt whose chain names an older retained predecessor resolves it from the retention store",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#594 W4-8: a receipt is retained alongside the records it projects, keyed by the complete-object digest a successor's chain.previous names; its referenced evidence and the historical verification key both stay resolvable through the retention window past the last artifact that key signed, so the receipt still verifies after the rotation and stops verifying once the window releases the key. An unretained predecessor fails chain verification rather than reading as absent. Mechanism-tested against a claiming test deployment; the shipped statement claims no Evidence capability, so this deployment designates no receipt issuer at all."
   },
   {
    "id": "evidence.extensions.closed-ignore-unrecognized-no-authority",
@@ -19632,7 +19671,7 @@
     "normative": "the PDP's jws-compact signing key is resolvable by kid in the PDP's published JWKS, and the PEP/executor signing key used for Execution Evidence and Refusal Records is resolvable the same way through a deployment-published key set"
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/mcp-payments/test/evidence-key-resolution.test.ts",
@@ -19645,9 +19684,15 @@
      "name": "configured evidence key-set scope resolution > never treats an absent or empty enforcement-point audience as a wildcard",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/decision-evidence-retention.test.ts",
+     "name": "retention honors the declared audit window (@spec runtime-evidence#receipt-retention) > resolves the PDP, PEP and executor keys through the published document at the declared location, never past it",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "#594 W4-5: configured key-set lookup binds exact kid/emitter/role/audience for all three producer roles and refuses malformed audience wildcards. Partial: this does not exercise deployment-published JWKS discovery or retained-key availability; in-memory key registration is not proof of that publication/retention requirement."
+   "notes": "#594 W4-5 plus W4-8: resolution now runs declared key-set location -> the published document at it -> the kid in that document -> the binding registered for it, for all three producer roles, and the exact kid/emitter/role/audience binding still refuses cross-emitter, cross-role and audience-wildcard substitution. A kid reached through a location the statement does not declare resolves to nothing, and a retired key leaves the document once its retention window elapses. The published set here is the document at the declared location resolved in process, not an HTTP discovery fetch; W4-16 audits the deployment's advertisement separately."
   },
   {
    "id": "evidence.security.retired-key-resolvable-during-retention",
@@ -19668,8 +19713,22 @@
     "normative": "a retired evidence-signing key stays resolvable in the published key set for at least the evidence retention window, so a rotation does not strand previously signed records"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/decision-evidence-retention.test.ts",
+     "name": "retention honors the declared audit window (@spec runtime-evidence#receipt-retention) > a retired signing key stays resolvable until the window past the last artifact it signed",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/decision-evidence-retention.test.ts",
+     "name": "retention honors the declared audit window (@spec runtime-evidence#receipt-retention) > recovers the retained records, the emitter sequences and the key retirement metadata after a restart",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#594 W4-8: retirement is anchored on the LAST artifact the key signed, not on its creation or its retirement instant, and the published document keeps the retired kid until that window elapses; a record signed before the rotation still verifies at the boundary and resolves key_not_resolvable one second past it. The retirement metadata is durable, so the anchor survives a restart."
   },
   {
    "id": "evidence.security.transport-tls-and-encryption-at-rest",
@@ -19743,8 +19802,16 @@
     "normative": "Decision Evidence, Execution Evidence, and Refusal Records are PII sinks that should be access-controlled to audit consumers with a legitimate need, encrypted at rest, and retained per the Execution Evidence retention window"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/decision-evidence-retention.test.ts",
+     "name": "retention honors the declared audit window (@spec runtime-evidence#receipt-retention) > retains all three record kinds for the declared window and refuses to evict one inside it",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#594 W4-8: the retained-per-the-window half is exercised, on the durable store the records actually live in. Partial, deliberately: the access-control-to-audit-consumers and encrypted-at-rest halves are the deployment's storage mechanism, disclosed in services/mcp-payments/src/evidence-retention.ts and not exercised, and this store holds the PII sink in the clear. Those halves stay unclaimed until an actual deployment mechanism provides them."
   },
   {
    "id": "evidence.privacy.protected-subject-reference-should-and-disclose-limitation",
