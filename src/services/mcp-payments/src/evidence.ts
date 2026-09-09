@@ -672,9 +672,10 @@ export type EvidenceSigningConfig = Partial<Record<"pep" | "executor" | "receipt
  * retention CONTRACT rather than on a SQLite repository, and a store with no
  * backend keeps exactly its previous process-local behavior. What the backend
  * adds is the part a process-local array cannot answer: survival across a
- * restart, restart-monotone per-emitter sequences, the retirement anchor for
- * the key that signed each record, and refusal to release a record before the
- * declared window does.
+ * restart, restart-monotone sequences for the records this store EMITS (the
+ * PDP's own Decision Evidence counter stays on the PDP's emission path), the
+ * retirement anchor for the key that signed each record, and refusal to
+ * release a record before the declared window does.
  */
 export interface EvidenceRetentionBackend {
   nextSequence(missionId: string, emitterId: string, role: string): number;
@@ -878,8 +879,20 @@ export class EvidenceStore {
    * object and the signed payload BEFORE the signature is checked, then the
    * signature and protected header, then the key-to-emitter and
    * key-to-audience binding through {@link resolveDecisionEvidenceKey}. The
-   * record is retained exactly as verified, never re-serialized, so what a
-   * later verifier reads is the same bytes the PDP signed.
+   * record this process retains is the verified object ITSELF, never a
+   * reconstruction of it, so what a later verifier reads is the same bytes the
+   * PDP signed.
+   *
+   * The durable copy (#594 W4-8) is stored as JSON and recovered as a fresh
+   * object after a restart: byte-equal under the JCS canonicalization the
+   * envelope commits to, and so still verifiable, but not identical by
+   * reference the way the in-process retention is. The reopen test asserts the
+   * property that matters, that the recovered record still verifies under its
+   * own envelope.
+   *
+   * This method allocates no sequence: Decision Evidence carries the PDP's
+   * own per-Mission counter, from the PDP's emission path. Only the records
+   * this store EMITS take their sequence from the durable counter.
    */
   async retainDecision(record: DecisionEvidenceObject): Promise<DecisionEvidenceRetention> {
     if (!this.resolveDecisionEvidenceKey) {

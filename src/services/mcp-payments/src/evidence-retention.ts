@@ -20,7 +20,11 @@
  *    silently skipped, and a store at capacity fails closed rather than making
  *    room by dropping a record it still owes an auditor.
  *  - the per-(Mission, emitter, role) `sequence` counter, so a restart
- *    continues an emitter's stream instead of restarting it at zero.
+ *    continues an emitter's stream instead of restarting it at zero. This
+ *    covers the records the PEP EMITS. Decision Evidence carries the PDP's
+ *    own counter, allocated on the PDP's emission path and still in process:
+ *    making that one durable is the decision point's own work, not this
+ *    store's.
  *  - the deployment's published verification key sets: which location
  *    publishes a `kid`, which emitter, role and audience it authenticates, and
  *    for a retired key the instant it stops being resolvable, measured from
@@ -323,6 +327,11 @@ export class EvidenceRetentionStore {
    * digest, which is exactly how a successor's `chain.previous` names it.
    */
   retainReceipt(receipt: MissionReceiptObject, signingKid: string): RetainedEvidenceRow {
+    // No production path calls this yet, by design: the shipped statement
+    // claims no evidence capability, so it designates no receipt issuer and
+    // issues no receipt. The retention and resolution mechanism is here and
+    // exercised; the issuance duty belongs to the slice that switches the
+    // claim on.
     const digest = canonicalDigest(receipt as unknown as JsonValue);
     return this.retain({
       kind: "receipt",
