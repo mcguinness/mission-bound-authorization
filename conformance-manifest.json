@@ -15,8 +15,8 @@
     "content_sha256": "c57bae541d05c384bc87ee52f43efff241d5f56bcbdff6634fae3573b3236406"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "3f033485ece7963af68e5988033ce2e0553253a4",
-    "content_sha256": "7d1d0a41a3eee58371b375264026ff0f6d7b7d2c2aa72223ad33dc0fc2de3b6c"
+    "revision": "ce18f104c166cfc972fdc0f9330556b3ddee38f3",
+    "content_sha256": "6a8869a048a864601d3ad98307de55ccb1cc16a0970af4fbc631d406464c0ff0"
    },
    "draft-mcguinness-mission-runtime.md": {
     "revision": "8f356e9b1dc37c1a1451c86fc707d3e1b58729af",
@@ -17395,7 +17395,7 @@
    "id": "evidence.refusal.denial-reason-enum-and-boundary",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "pre-decision-refusal",
-   "text": "For a PEP refusal, one of `token_invalid`, `mission_claim_missing`, `mission_reference_conflict` (reference sources naming different Missions, or an unusable propagated reference where governance requires one, the Mission Reference Propagation channel's conflict rule, {{I-D.draft-mcguinness-mission-authority-server}}), `credential_authority_insufficient` (the presented credential's own authority does not cover the request, as the PEP establishes it before any decision request), `request_unsupported` (the enforcement surface implements no such action), `target_unresolvable` (the request names a target object the enforcement surface cannot resolve), `capability_source_unresolvable` (the capability definition the PEP must present could not be resolved), `decision_evidence_unverifiable` (the Decision Evidence for a permit was absent or did not verify, so no decision the PEP can rely on was obtained), `channel_failure`, `pdp_unreachable`, or `state_unavailable`",
+   "text": "For a PEP refusal, one of `token_invalid`, `mission_claim_missing`, `mission_reference_conflict` (reference sources naming different Missions, or an unusable propagated reference where governance requires one, the Mission Reference Propagation channel's conflict rule, {{I-D.draft-mcguinness-mission-authority-server}}), `credential_authority_insufficient` (the presented credential's own authority does not cover the request, as the PEP establishes it before any decision request, including a delegation instance whose authority has been withdrawn, which is distinct from a credential that failed validation), `request_unsupported` (the enforcement surface implements no such action), `target_unresolvable` (the request names a target object the enforcement surface cannot resolve), `capability_source_unresolvable` (the capability definition the PEP must present could not be resolved), `decision_evidence_unverifiable` (the Decision Evidence for a permit was absent or did not verify, so no decision the PEP can rely on was obtained), `channel_failure`, `pdp_unreachable`, or `state_unavailable`",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
