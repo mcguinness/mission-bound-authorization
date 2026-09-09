@@ -51,6 +51,7 @@ import {
   isValidCreationRequestId,
 } from "../kernel/creation-idempotency.js";
 import { DEFERRAL_EXPIRES_IN, DEFERRAL_INTERVAL, ExpansionDeferralError } from "../kernel/deferred.js";
+import { CarryoverRetrievalError } from "../kernel/carryover.js";
 import { ChildDelegationError, createChildMission } from "../kernel/child-delegation.js";
 import { IntentError } from "../kernel/intent.js";
 import { GateError } from "../kernel/kernel.js";
@@ -1317,12 +1318,122 @@ function readProposalParam(
   }
 }
 
+/**
+ * @spec child-delegation#carryover-commit — IDEMPOTENT retrieval of a committed
+ * replacement result through the CHILD-CREATION COMPLETION surface, to the
+ * authenticated and authorized child actor. No new endpoint and no new metadata
+ * member: the existing child-creation exchange carries it on
+ * `carryover_replacement`, with no `subject_token` (the replacement's actor
+ * holds no parent credential).
+ *
+ * AUTHORIZATION is the replacement record's own `client_id`: the authenticated
+ * client MUST be the replacement's child actor, and MUST prove possession of
+ * its own DPoP key. The deterministic child-specific `approval_event_id` is a
+ * correlation and idempotency key, NEVER a bearer credential and never
+ * retrieval authorization; a stable approval-event lookup is neither an
+ * authenticated result nor an authorization.
+ *
+ * Retrieval repeats no approval and creates no duplicate replacement. It
+ * returns the retained authenticated Carryover Evidence and the child-bound
+ * grant, minting a fresh grant only under the ordinary current lifecycle and
+ * authorization checks.
+ */
+async function retrieveCarryoverResult(
+  opts: AdapterOptions,
+  ctx: KoaContextWithOIDC,
+  replacementId: string,
+): Promise<void> {
+  const store = opts.expansionDeferrals?.carryover;
+  if (!store) {
+    ctx.status = 501;
+    ctx.body = { error: "child_delegation_unsupported" };
+    return;
+  }
+  const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
+  // Possession of the retriever's OWN key, over this token endpoint.
+  const proofJws = ctx.get("DPoP");
+  if (!proofJws) {
+    txError(ctx, 400, "invalid_dpop_proof", "DPoP proof JWT required");
+    return;
+  }
+  let jkt: string;
+  try {
+    const header = decodeProtectedHeader(proofJws);
+    const dpopJwk = header.jwk as JWK;
+    jkt = await calculateJwkThumbprint(dpopJwk);
+    const { payload: proof } = await jwtVerify(proofJws, dpopJwk, { typ: "dpop+jwt" });
+    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
+      throw new Error("DPoP htu/htm mismatch");
+    }
+    if (!freshProofJti(opts, proof.jti)) throw new Error("replayed jti");
+  } catch {
+    txError(ctx, 400, "invalid_dpop_proof", "invalid DPoP proof");
+    return;
+  }
+  let retrieved: ReturnType<typeof store.retrieve>;
+  try {
+    retrieved = store.retrieve({ replacementId, actor: { sub: client.clientId } });
+  } catch (e) {
+    if (e instanceof CarryoverRetrievalError) {
+      txError(
+        ctx,
+        400,
+        e.code === "unauthorized" ? "invalid_grant" : "invalid_request",
+        e.message,
+      );
+      return;
+    }
+    throw e;
+  }
+  // Ordinary current lifecycle check before any credential is minted.
+  const state = opts.kernel.applyExpiry(retrieved.replacement).state;
+  if (state !== "active") {
+    txError(ctx, 400, "invalid_grant", `replacement mission is ${state}`);
+    return;
+  }
+  if (!opts.childGrantKey || !opts.childGrantKid || !opts.childGrantAlg) {
+    ctx.status = 501;
+    ctx.body = { error: "child_delegation_unsupported" };
+    return;
+  }
+  const { assertion } = await mintChildGrant(
+    opts.kernel,
+    { key: opts.childGrantKey, kid: opts.childGrantKid, alg: opts.childGrantAlg },
+    { child: retrieved.replacement, tokenEndpoint: `${opts.issuer}/token` },
+  );
+  ctx.status = 200;
+  ctx.set("cache-control", "no-store");
+  ctx.body = {
+    access_token: assertion,
+    issued_token_type: JWT_TOKEN_TYPE,
+    token_type: "N_A",
+    mission_id: retrieved.replacement.id,
+    mission_expires_at: retrieved.replacement.expires_at,
+    parent: retrieved.replacement.parent,
+    // @spec child-delegation#carryover-records — bare same-issuer correlation.
+    related_to: retrieved.replacement.related_to,
+    // @spec child-delegation#carryover-evidence — the authenticated result: the
+    // retained, signed batch map, not a lookup key.
+    carryover_manifest_hash: retrieved.result.manifest_hash,
+    carryover_evidence: retrieved.result.evidence_jws,
+    // The confirmation key this retrieval was authorized under (audit only).
+    cnf: { jkt },
+  };
+}
+
 export async function handleChildCreationExchange(
   opts: AdapterOptions,
   _provider: Provider,
   ctx: KoaContextWithOIDC,
 ): Promise<void> {
   const params = ctx.oidc.params as Record<string, unknown>;
+  // @spec child-delegation#carryover-commit — the carryover result retrieval
+  // mode: a `carryover_replacement`, no `subject_token`. It creates nothing.
+  const carryoverReplacement = params.carryover_replacement;
+  if (typeof carryoverReplacement === "string" && carryoverReplacement) {
+    await retrieveCarryoverResult(opts, ctx, carryoverReplacement);
+    return;
+  }
   // Steps 1-3: possession — the parent is selected by subject_token.
   const resolved = await verifySubjectPossession(opts, ctx);
   if (!resolved) return;
@@ -1814,6 +1925,16 @@ export async function handleExpansionExchange(
     });
   } catch (e) {
     if (e instanceof ExpansionDeferralError) {
+      // @spec child-delegation#carryover — the plan-cap refusal is PRE-DECISION
+      // and happens BEFORE approval, so the approval event never names a plan
+      // the kernel cannot commit in one transaction. It carries its own
+      // machine-readable reason, distinct from a predecessor-state refusal.
+      if (e.code === "carryover_plan_too_large") {
+        ctx.status = 400;
+        ctx.body = { error: "invalid_request", mission_denial_reason: e.code };
+        ctx.set("cache-control", "no-store");
+        return;
+      }
       txError(ctx, 400, "invalid_grant", e.message);
       return;
     }
@@ -1942,6 +2063,22 @@ async function pollDeferredExpansion(
     opts.kernel.effectiveAuthoritySet(r.successor),
     jkt,
   );
+  if (minted && r.carryover) {
+    // @spec child-delegation#carryover-evidence — the completion response
+    // carries the AUTHENTICATED result: the committed manifest commitment and
+    // the retained, signed batch map. The map, not `related_to`, is the
+    // normative record of replacement, and a consumer that received a cascade
+    // before a creation event resynchronizes through it.
+    const body = ctx.body as Record<string, unknown>;
+    body.carryover_manifest_hash = r.carryover.manifestHash;
+    body.carryover_evidence = r.carryover.evidenceJws;
+    body.carryover_replacements = r.carryover.replacements.map((m) => ({
+      mission_id: m.id,
+      related_to: m.related_to,
+      client_id: m.client_id,
+      expires_at: m.expires_at,
+    }));
+  }
   if (minted) {
     // @spec expansion#creation-request-id — attach the delivery artifact to the
     // completed operation (redeem() already marked it completed atomically with

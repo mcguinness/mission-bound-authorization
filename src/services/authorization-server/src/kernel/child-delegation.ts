@@ -139,7 +139,7 @@ export interface ChildResult {
 // ---------------------------------------------------------------------------
 
 /** A plain-JSON value read as an integer, else undefined. */
-function asNum(v: JsonValue | undefined): number | undefined {
+export function asNum(v: JsonValue | undefined): number | undefined {
   return typeof v === "number" ? v : undefined;
 }
 
@@ -149,7 +149,7 @@ function asNum(v: JsonValue | undefined): number | undefined {
  * through this local reader so the `delegation` open index in types.ts stays
  * `JsonValue`-shaped and derive.ts is untouched.
  */
-function childrenOf(entry: AuthorityEntry): ChildFanoutControls | undefined {
+export function childrenOf(entry: AuthorityEntry): ChildFanoutControls | undefined {
   const c = entry.delegation?.children;
   return c !== null && typeof c === "object" && !Array.isArray(c)
     ? (c as ChildFanoutControls)
@@ -164,7 +164,7 @@ function childrenOf(entry: AuthorityEntry): ChildFanoutControls | undefined {
  * at the resource) rather than refused: the constraint is monotonic, `false` is
  * equivalent to omission, and a child can only ever add it.
  */
-function inheritActionApprovalRequirement(
+export function inheritActionApprovalRequirement(
   childAuthority: AuthorityEntry[],
   parentEffective: readonly AuthorityEntry[],
 ): AuthorityEntry[] {
@@ -183,7 +183,7 @@ function inheritActionApprovalRequirement(
  * child entry: the index of the FIRST parent entry (Authority Set order) the
  * child entry is a subset of. -1 only if none (never for a proven-subset child).
  */
-function justifyingIndex(childEntry: AuthorityEntry, parentSet: AuthorityEntry[]): number {
+export function justifyingIndex(childEntry: AuthorityEntry, parentSet: AuthorityEntry[]): number {
   return parentSet.findIndex((p) => isSubsetEntry(childEntry, p));
 }
 
@@ -193,7 +193,7 @@ function justifyingIndex(childEntry: AuthorityEntry, parentSet: AuthorityEntry[]
  * counts once per distinct parent entry it draws on (recomputed by the same
  * first-in-order justifying selection). Read-only over `kernel.findChildren`.
  */
-function countChildBuckets(kernel: MissionKernel, parent: MissionRecord): Map<number, number> {
+export function countChildBuckets(kernel: MissionKernel, parent: MissionRecord): Map<number, number> {
   const buckets = new Map<number, number>();
   for (const existing of kernel.findChildren(parent.id)) {
     if (TERMINAL_STATES.has(existing.state)) continue; // only non-terminal count

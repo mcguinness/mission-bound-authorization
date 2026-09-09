@@ -109,6 +109,14 @@ export function resolveDerivationLimit(
 export interface ExpiryCeilings {
   /** @spec child-delegation#attenuation — child creation: the parent's `expires_at`. */
   parent?: string;
+  /**
+   * @spec child-delegation#carryover-no-reset — Child Mission Carryover: the
+   * OLD child's `expires_at`. It composes with `parent` (the successor's own
+   * effective expiry) rather than replacing it, which is what makes a
+   * successor's separately approved extension unable to extend a replacement:
+   * the old child's horizon is an independent bound and the earliest wins.
+   */
+  carriedFrom?: string;
   /** @spec expansion#successor-expiry — expansion: the predecessor's `expires_at`. */
   predecessor?: string;
   /**
@@ -176,6 +184,11 @@ export function resolveEffectiveExpiry(input: {
   const c = input.ceilings;
   if (c) {
     addIso(c.parent);
+    // @spec child-delegation#carryover-no-reset — an INDEPENDENT bound beside
+    // the new parent's, never a replacement for it: a successor's approved
+    // extension moves `parent` later, and the old child's own horizon still
+    // wins.
+    addIso(c.carriedFrom);
     // @spec expansion#successor-expiry — the disclosed, policy-permitted
     // extension ceiling REPLACES the predecessor bound; absent one the
     // predecessor's own expiry binds, so a successor never silently outlives
