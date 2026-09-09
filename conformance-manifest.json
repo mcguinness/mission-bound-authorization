@@ -1878,9 +1878,69 @@
      "name": "durable lifecycle fan-out > a rolled-back transaction leaves no event, no delivery row and no tombstone",
      "level": "concurrency",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-faults.test.ts",
+     "name": "control-plane derivation reservations > commits the count and its reservation as one unit",
+     "level": "concurrency",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-faults.test.ts",
+     "name": "control-plane derivation reservations > never refunds a reservation that lost only its acknowledgement",
+     "level": "concurrency",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-faults.test.ts",
+     "name": "control-plane derivation reservations > replays a recorded artifact instead of counting a second derivation",
+     "level": "concurrency",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-faults.test.ts",
+     "name": "control-plane derivation reservations > returns a counted derivation only on an authoritative non-acceptance",
+     "level": "concurrency",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-responses.test.ts",
+     "name": "control-plane lifecycle response boundary > retains the exact response before delivering it",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-responses.test.ts",
+     "name": "control-plane lifecycle response boundary > replays a committed resume after the response was lost, instead of conflicting",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-responses.test.ts",
+     "name": "control-plane lifecycle response boundary > conflicts on the same retry when no claim was retained, which is what the claim fixes",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-responses.test.ts",
+     "name": "control-plane lifecycle response boundary > replays a successful request before any state-dependent check, after the state moved on",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-responses.test.ts",
+     "name": "control-plane lifecycle response boundary > claims the containment outcome with the narrowing commit",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-responses.test.ts",
+     "name": "control-plane retained signed responses > keeps a plain JSON outcome replayable for the whole nonce window",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "Single-process fault coverage: conditional state/version and counter writes admitted from the stored row, rollback-safe nested publication, child fanout admission in the creation transaction, expansion deferral retirement with successor and supersession, and lifecycle state/version with durable publication work and the terminal tombstone in one transaction. Asynchronous artifact issuance stays outside that domain: the counter tests prove conditional admission and a synchronous caller transaction, not provider or continuation token issuance, so the named atomic domain coupling a counter check and increment with artifact issuance is not covered. No multi-process claim."
+   "notes": "Single-process fault coverage: conditional state/version and counter writes admitted from the stored row, rollback-safe nested publication, child fanout admission in the creation transaction, expansion deferral retirement with successor and supersession, and lifecycle state/version with durable publication work and the terminal tombstone in one transaction. The counter now carries a durable operation and artifact identity: the increment and its reservation commit together, a recorded operation identity replays its artifact instead of counting again, an unreleased reservation is never refunded because a missing local acknowledgement is not evidence that no artifact was accepted, and only an authoritative non-acceptance returns a count. The lifecycle nonce claim and its committed outcome now commit with the transition, with the exact response finalized and recovered outside that transaction. This does not reach tested in this slice: the artifact itself is still issued outside the kernel transaction (the provider access-token hook is synchronous and has no acceptance boundary), so authoritative issuance state and artifact material are not recorded transactionally before delivery. No multi-process claim."
   },
   {
    "id": "control-plane.consistency.fresh-observation",
@@ -1919,9 +1979,45 @@
      "name": "Status List republication (@spec control-plane#fresh-observation) > a transition racing an asynchronous build is not lost and the older snapshot never lands last",
      "level": "unit",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-faults.test.ts",
+     "name": "control-plane state observations > stamps an observation with its own observation point, not the clock at signature time",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-faults.test.ts",
+     "name": "control-plane state observations > leaves a snapshot older when state commits during the signature, and re-dates nothing",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-faults.test.ts",
+     "name": "control-plane state observations > observes authoritative state, committing an expiry the observation itself materialized",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-faults.test.ts",
+     "name": "control-plane state observations > refuses an advanced observation only under the optional strict watermark policy",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-responses.test.ts",
+     "name": "control-plane retained signed responses > signs a recovered response over the original observation, never re-dating it",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-responses.test.ts",
+     "name": "control-plane retained signed responses > stops replaying a retained signed response once it passes its own validity",
+     "level": "cross-component",
+     "surface": "verification"
     }
    ],
-   "notes": "The Mission Status List publisher serves a signed token only inside the validity it carries, rebuilds from the authoritative record set rather than re-signing cached bits, keeps a failed rebuild from republishing the superseded token, and lets no older in-flight snapshot land after a newer commit. The authenticated observation/commit watermark, the Status conditional-request surface, and the other signed state observations remain unimplemented."
+   "notes": "The Mission Status List publisher serves a signed token only inside the validity it carries, rebuilds from the authoritative record set rather than re-signing cached bits, keeps a failed rebuild from republishing the superseded token, and lets no older in-flight snapshot land after a newer commit. The signed Status observation is now taken in one authoritative transactional read that carries its own (version, commit) watermark, its timestamps belong to the observation point rather than to the clock at signature time, a recovered response is signed over the recorded observation and never re-dated, and a retained signed envelope past its own validity is no longer replayed. Refusing an observation whose commit point advanced is available as a declared optional policy, not a requirement: the invariant permits delivering an authenticated authoritative observation inside its own validity. The Status conditional-request surface and the remaining signed state observations are still unimplemented."
   },
   {
    "id": "control-plane.consistency.state-surfaces",
@@ -2526,7 +2622,7 @@
     },
     {
      "file": "src/packages/mission-core/test/anchors.test.ts",
-     "name": "parseStrictJson > rejects duplicate member names (core \u00a7 canonicalization)",
+     "name": "parseStrictJson > rejects duplicate member names (core § canonicalization)",
      "level": "unit",
      "surface": "verification"
     }
@@ -2556,7 +2652,7 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/anchors.test.ts",
-     "name": "integrity anchors (core \u00a7 test-vectors) > verifyAnchor round-trips and rejects unknown algorithm prefixes",
+     "name": "integrity anchors (core § test-vectors) > verifyAnchor round-trips and rejects unknown algorithm prefixes",
      "level": "unit",
      "surface": "verification"
     }
@@ -4799,25 +4895,25 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/local-approved-set-verification.test.ts",
-     "name": "Local Approved-Set Verification \u2014 Tier 1 (@spec mission#lasv-retrieval) > a carried entry that is a subset of a retrieved, correctly-committed entry verifies (permits)",
+     "name": "Local Approved-Set Verification — Tier 1 (@spec mission#lasv-retrieval) > a carried entry that is a subset of a retrieved, correctly-committed entry verifies (permits)",
      "level": "unit",
      "surface": "verification"
     },
     {
      "file": "src/packages/mission-core/test/local-approved-set-verification.test.ts",
-     "name": "Local Approved-Set Verification \u2014 Tier 1 (@spec mission#lasv-retrieval) > rejects when the retrieved set does not recompute to the retrieved authority_hash (commitment_mismatch)",
+     "name": "Local Approved-Set Verification — Tier 1 (@spec mission#lasv-retrieval) > rejects when the retrieved set does not recompute to the retrieved authority_hash (commitment_mismatch)",
      "level": "unit",
      "surface": "verification"
     },
     {
      "file": "src/packages/mission-core/test/local-approved-set-verification.test.ts",
-     "name": "Local Approved-Set Verification \u2014 Tier 1 (@spec mission#lasv-retrieval) > rejects a carried entry that is NOT a subset of any retrieved entry (not_subset)",
+     "name": "Local Approved-Set Verification — Tier 1 (@spec mission#lasv-retrieval) > rejects a carried entry that is NOT a subset of any retrieved entry (not_subset)",
      "level": "unit",
      "surface": "verification"
     },
     {
      "file": "src/packages/mission-core/test/local-approved-set-verification.test.ts",
-     "name": "Local Approved-Set Verification \u2014 Tier 1 (@spec mission#lasv-retrieval) > rejects a carried entry against a DIFFERENT audience's resource (not_subset), never trusting commitment match alone",
+     "name": "Local Approved-Set Verification — Tier 1 (@spec mission#lasv-retrieval) > rejects a carried entry against a DIFFERENT audience's resource (not_subset), never trusting commitment match alone",
      "level": "unit",
      "surface": "verification"
     }
@@ -4848,13 +4944,13 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/local-approved-set-verification.test.ts",
-     "name": "Local Approved-Set Verification \u2014 Tier 2 (@spec mission#lasv-retrieval, independently retained root) > a Tier-1-passing retrieval that matches the independently retained authority_hash verifies",
+     "name": "Local Approved-Set Verification — Tier 2 (@spec mission#lasv-retrieval, independently retained root) > a Tier-1-passing retrieval that matches the independently retained authority_hash verifies",
      "level": "unit",
      "surface": "verification"
     },
     {
      "file": "src/packages/mission-core/test/local-approved-set-verification.test.ts",
-     "name": "Local Approved-Set Verification \u2014 Tier 2 (@spec mission#lasv-retrieval, independently retained root) > @spec mission#the-mission-claim, mission#lasv-retrieval (#702/#725 review) -- a SUBSTITUTED set that is internally self-consistent (recomputes correctly under Tier 1) is still refused once an independently retained approval-time root disagrees: Tier 1 alone would have permitted this",
+     "name": "Local Approved-Set Verification — Tier 2 (@spec mission#lasv-retrieval, independently retained root) > @spec mission#the-mission-claim, mission#lasv-retrieval (#702/#725 review) -- a SUBSTITUTED set that is internally self-consistent (recomputes correctly under Tier 1) is still refused once an independently retained approval-time root disagrees: Tier 1 alone would have permitted this",
      "level": "unit",
      "surface": "verification"
     }
@@ -5856,31 +5952,31 @@
    "tests": [
     {
      "file": "src/packages/mission-signals/test/authority-changed.test.ts",
-     "name": "authority_changed / containment_version \u2014 receiver rematerialization (@spec signals#consumer-behavior) > wired end-to-end: a real kernel contain() commit drives the receiver to rematerialize",
+     "name": "authority_changed / containment_version — receiver rematerialization (@spec signals#consumer-behavior) > wired end-to-end: a real kernel contain() commit drives the receiver to rematerialize",
      "level": "cross-component",
      "surface": "signals"
     },
     {
      "file": "src/packages/mission-signals/test/authority-changed.test.ts",
-     "name": "authority_changed / containment_version \u2014 receiver rematerialization (@spec signals#consumer-behavior) > rematerializes on an in-order event with authority_changed true, state unchanged",
+     "name": "authority_changed / containment_version — receiver rematerialization (@spec signals#consumer-behavior) > rematerializes on an in-order event with authority_changed true, state unchanged",
      "level": "unit",
      "surface": "signals"
     },
     {
      "file": "src/packages/mission-signals/test/authority-changed.test.ts",
-     "name": "authority_changed / containment_version \u2014 receiver rematerialization (@spec signals#consumer-behavior) > latches: needsRematerialization stays true across a later event that does not itself require it",
+     "name": "authority_changed / containment_version — receiver rematerialization (@spec signals#consumer-behavior) > latches: needsRematerialization stays true across a later event that does not itself require it",
      "level": "unit",
      "surface": "signals"
     },
     {
      "file": "src/packages/mission-signals/test/authority-changed.test.ts",
-     "name": "authority_changed / containment_version \u2014 receiver rematerialization (@spec signals#consumer-behavior) > markRematerialized(): version-bound acknowledgement (#572) > clears the latch when the acknowledged baseline covers the narrowing",
+     "name": "authority_changed / containment_version — receiver rematerialization (@spec signals#consumer-behavior) > markRematerialized(): version-bound acknowledgement (#572) > clears the latch when the acknowledged baseline covers the narrowing",
      "level": "unit",
      "surface": "signals"
     },
     {
      "file": "src/packages/mission-signals/test/authority-changed.test.ts",
-     "name": "authority_changed / containment_version \u2014 receiver rematerialization (@spec signals#consumer-behavior) > markRematerialized(): version-bound acknowledgement (#572) > a narrowing that arrives after a successful acknowledgement re-raises the latch",
+     "name": "authority_changed / containment_version — receiver rematerialization (@spec signals#consumer-behavior) > markRematerialized(): version-bound acknowledgement (#572) > a narrowing that arrives after a successful acknowledgement re-raises the latch",
      "level": "unit",
      "surface": "signals"
     },
@@ -14989,7 +15085,7 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/anchors.test.ts",
-     "name": "parseStrictJson > rejects duplicate member names (core \u00a7 canonicalization)",
+     "name": "parseStrictJson > rejects duplicate member names (core § canonicalization)",
      "level": "unit",
      "surface": "verification"
     }
@@ -15019,7 +15115,7 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/anchors.test.ts",
-     "name": "integrity anchors (core \u00a7 test-vectors) > verifyAnchor round-trips and rejects unknown algorithm prefixes",
+     "name": "integrity anchors (core § test-vectors) > verifyAnchor round-trips and rejects unknown algorithm prefixes",
      "level": "unit",
      "surface": "verification"
     }
@@ -19675,7 +19771,7 @@
     },
     {
      "file": "src/services/authorization-server/test/continuation-assertion.test.ts",
-     "name": "validateContinuationAssertion \u2014 rejects > a jti the redeeming caller already consumed",
+     "name": "validateContinuationAssertion — rejects > a jti the redeeming caller already consumed",
      "level": "unit",
      "surface": "verification"
     }
@@ -19899,7 +19995,7 @@
    "tests": [
     {
      "file": "src/packages/orchestration/test/orchestration.test.ts",
-     "name": "authority-narrowing behavior (@spec orchestration#authority-narrowing) > not_dispatched: denied is suppressed, never dispatched (\u00a7 in-flight's own suppress-or-pause rule, not the fuller pre_start_behavior range)",
+     "name": "authority-narrowing behavior (@spec orchestration#authority-narrowing) > not_dispatched: denied is suppressed, never dispatched (§ in-flight's own suppress-or-pause rule, not the fuller pre_start_behavior range)",
      "level": "unit",
      "surface": "decision-request"
     },
@@ -21354,7 +21450,7 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/approvalContext.test.ts",
-     "name": "Approval Context Manifest (approval-governance \u00a7 approval-context-manifest) > is a deterministic pure function of the Mission Record members alone",
+     "name": "Approval Context Manifest (approval-governance § approval-context-manifest) > is a deterministic pure function of the Mission Record members alone",
      "level": "unit",
      "surface": "commitment"
     }
@@ -21382,13 +21478,13 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/approvalContext.test.ts",
-     "name": "Approval Context Manifest (approval-governance \u00a7 approval-context-manifest) > includes ceiling_hash iff the input carries one",
+     "name": "Approval Context Manifest (approval-governance § approval-context-manifest) > includes ceiling_hash iff the input carries one",
      "level": "unit",
      "surface": "commitment"
     },
     {
      "file": "src/packages/mission-core/test/approvalContext.test.ts",
-     "name": "Approval Context Commitment vectors (approval-governance \u00a7 approval-context-vectors) > vector 3: conditional ceiling_hash",
+     "name": "Approval Context Commitment vectors (approval-governance § approval-context-vectors) > vector 3: conditional ceiling_hash",
      "level": "unit",
      "surface": "commitment"
     }
@@ -21416,13 +21512,13 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/approvalContext.test.ts",
-     "name": "Approval Context Commitment vectors (approval-governance \u00a7 approval-context-vectors) > vector 1: base manifest (no conditional members)",
+     "name": "Approval Context Commitment vectors (approval-governance § approval-context-vectors) > vector 1: base manifest (no conditional members)",
      "level": "unit",
      "surface": "commitment"
     },
     {
      "file": "src/packages/mission-core/test/approvalContext.test.ts",
-     "name": "Approval Context Commitment vectors (approval-governance \u00a7 approval-context-vectors) > vector 2: conditional proposal_hash (= core's canonical worked example)",
+     "name": "Approval Context Commitment vectors (approval-governance § approval-context-vectors) > vector 2: conditional proposal_hash (= core's canonical worked example)",
      "level": "unit",
      "surface": "commitment"
     }
@@ -21450,7 +21546,7 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/approvalContext.test.ts",
-     "name": "Approval Context Commitment vectors (approval-governance \u00a7 approval-context-vectors) > vector 4: conditional submission_evidence_commitment",
+     "name": "Approval Context Commitment vectors (approval-governance § approval-context-vectors) > vector 4: conditional submission_evidence_commitment",
      "level": "unit",
      "surface": "commitment"
     }
@@ -21555,13 +21651,13 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/approvalContext.test.ts",
-     "name": "Approval Context Commitment verification (approval-governance \u00a7 approval-context-computation) > vector 5: rejects a mutated member (recomputed digest differs)",
+     "name": "Approval Context Commitment verification (approval-governance § approval-context-computation) > vector 5: rejects a mutated member (recomputed digest differs)",
      "level": "unit",
      "surface": "verification"
     },
     {
      "file": "src/packages/mission-core/test/approvalContext.test.ts",
-     "name": "Approval Context Commitment verification (approval-governance \u00a7 approval-context-computation) > vector 6: rejects a value committed under a different typ",
+     "name": "Approval Context Commitment verification (approval-governance § approval-context-computation) > vector 6: rejects a value committed under a different typ",
      "level": "unit",
      "surface": "verification"
     }
@@ -21589,7 +21685,7 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/approvalContext.test.ts",
-     "name": "Approval Context Commitment verification (approval-governance \u00a7 approval-context-computation) > vector 6: rejects a value committed under a different typ",
+     "name": "Approval Context Commitment verification (approval-governance § approval-context-computation) > vector 6: rejects a value committed under a different typ",
      "level": "unit",
      "surface": "commitment"
     }
