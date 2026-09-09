@@ -42,6 +42,18 @@ export class TransactionEngine {
   }
 
   /**
+   * This engine's own clock, as epoch milliseconds. The lease interval and the
+   * lease-expiry comparison MUST be read from one clock, so the caller that
+   * derives a lease (capping the published maximum by the permit's validity)
+   * measures against the same instant `redeemPermit` stamps the row with.
+   * Deliberately separate from the PEP's clock, which governs whether the
+   * permit may still initiate an effect.
+   */
+  nowMs(): number {
+    return this.now().getTime();
+  }
+
+  /**
    * Redeem a single-use permit exactly once (D28). Redemption is keyed by the
    * stable operation key (mission+action+parameter_digest), so replaying the
    * same operation, even with a freshly minted permit id, cannot
@@ -69,6 +81,15 @@ export class TransactionEngine {
     action: string;
     leaseSeconds: number;
   }): { ok: boolean; reason?: "permit_consumed" | "operation_already_claimed" | "lease_setup_failed" } {
+    // @spec runtime#execution-reverification — the lease is derived from the
+    // deployment's PUBLISHED maximum, capped by the permit's own validity
+    // (`executionLeaseMs`). A non-finite or non-positive interval means no
+    // usable lease could be derived, so no operation row is opened and no
+    // redemption is taken: an unbounded or already-elapsed lease is never
+    // substituted for one.
+    if (!Number.isFinite(input.leaseSeconds) || input.leaseSeconds <= 0) {
+      return { ok: false, reason: "lease_setup_failed" };
+    }
     const consumed = redeemOnce(this.db, "permit_redemptions", input.opKey, this.instanceEpoch);
     if (!consumed) {
       const prior = this.db
@@ -110,7 +131,30 @@ export class TransactionEngine {
   }
 }
 
-/** Operation idempotency key (operation-profile): op:<mission>:<action>:<digest>. */
-export function operationKey(missionId: string, action: string, parameterDigest: string): string {
-  return `op:${missionId}:${action}:${parameterDigest}`;
+/**
+ * Operation idempotency key (operation-profile): `op:<mission>:<action>:<digest>`,
+ * or `op:<mission>:<action>:<phase>:<digest>` where the crossing is a phase of
+ * a compound action.
+ *
+ * @spec runtime#idempotency — "Where compound-action phases share an action
+ * identifier, the idempotency scope MUST include the phase". This deployment's
+ * `payments:payment.execute` serves preflight, prepare and commit crossings
+ * over one action identifier and one normalized parameter form, so without the
+ * phase all three would claim ONE key: the prepare crossing would burn the
+ * commit crossing's claim. The phase is appended only where the profile
+ * declares one, so every existing single-phase key is byte-identical.
+ *
+ * One key per crossing flows to every consumer that keys on operation
+ * identity: permit redemption and the operation state machine here, the
+ * connector's own idempotency key, the single-use transaction consumption
+ * lookup, and the join key on Execution Evidence.
+ */
+export function operationKey(
+  missionId: string,
+  action: string,
+  parameterDigest: string,
+  actionPhase?: string,
+): string {
+  const scope = actionPhase === undefined ? action : `${action}:${actionPhase}`;
+  return `op:${missionId}:${scope}:${parameterDigest}`;
 }

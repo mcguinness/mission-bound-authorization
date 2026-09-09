@@ -25,7 +25,15 @@ import {
   jwtVerify,
 } from "jose";
 import type { ActObject } from "@mission/actor-chain";
-import { RUNTIME_POSTURE, loadRuntimePosture, type RuntimePosture, type Decision, type MissionView } from "@mission/pdp";
+import {
+  executionLeaseMaxSeconds,
+  executionLeaseMs,
+  loadRuntimePosture,
+  RUNTIME_POSTURE,
+  type Decision,
+  type MissionView,
+  type RuntimePosture,
+} from "@mission/pdp";
 
 import {
   type ActionApprovalInput,
@@ -51,10 +59,10 @@ import {
   type TxnPendingStore,
 } from "./txn-store.js";
 import type { PaymentsStore } from "./payments-store.js";
-import type { Connectors } from "./connectors.js";
+import type { CommitResult, Connectors } from "./connectors.js";
 import type { EvidenceStore } from "./evidence.js";
 import { operationKey, type TransactionEngine } from "./transaction.js";
-import { buildEffectiveParams, parameterDigest } from "./effective-params.js";
+import { buildEffectiveParams, type EffectiveParams, parameterDigest } from "./effective-params.js";
 
 /** Called only after this path's signature, issuer/chain and expiry checks. */
 function verifiedCredentialRef(payload: JWTPayload): { issuer?: string; expires_at?: string } {
@@ -95,14 +103,68 @@ export interface ToolDef {
   action: string;
 }
 
+/**
+ * @spec runtime#compound-actions — `check_transfer`, `hold_transfer` and
+ * `execute_wire_transfer` are the preflight, prepare and commit crossings of
+ * ONE compound action, sharing the `payments:payment.execute` identifier and
+ * one `{invoice_id}` argument schema, so they also share one normalized
+ * effect form and one `parameter_digest`. The phase is what separates their
+ * permits; see `TOOL_ACTIONS` for the Operation Profile that assigns it.
+ */
 export const TOOLS: ToolDef[] = [
   { name: "list_invoices", description: "List invoices", action: "payments:invoice.list" },
   { name: "get_invoice", description: "Read one invoice", action: "payments:invoice.read" },
   { name: "lookup_vendor", description: "Look up a vendor", action: "payments:vendor.read" },
   { name: "schedule_payment", description: "Schedule a payment", action: "payments:payment.schedule" },
+  { name: "check_transfer", description: "Check whether a wire transfer is feasible, reserving nothing", action: "payments:payment.execute" },
+  { name: "hold_transfer", description: "Place a hold for a wire transfer", action: "payments:payment.execute" },
   { name: "execute_wire_transfer", description: "Execute a wire transfer", action: "payments:payment.execute" },
   { name: "send_remittance_email", description: "Send remittance advice", action: "payments:remittance.send" },
 ];
+
+/**
+ * @spec runtime#execution-reverification — the explicit connector operation
+ * each committing tool releases its effect through.
+ *
+ * A ternary on one tool name used to decide this, so every other name reaching
+ * the commit point sent an email: adding a served tool to the compound action
+ * would have silently mis-executed. The mapping is exhaustive over the tools
+ * the Operation Profile gives a high-consequence class (pinned by the
+ * catalog/profile consistency test), and a tool with no entry throws before
+ * any state is taken rather than falling through to another connector.
+ */
+const CONNECTOR_OPERATIONS: Record<
+  string,
+  (input: {
+    connectors: Connectors;
+    opKey: string;
+    effective: EffectiveParams;
+    permitId: string;
+    missionId: string;
+  }) => CommitResult
+> = {
+  execute_wire_transfer: ({ connectors, opKey, effective, permitId, missionId }) =>
+    connectors.postWire({
+      opKey,
+      invoiceId: effective.invoice_id,
+      payeeAccount: effective.payee_account,
+      amount: effective.amount.amount,
+      currency: effective.amount.currency,
+      permitId,
+      missionId,
+    }),
+  send_remittance_email: ({ connectors, opKey, effective, permitId, missionId }) =>
+    connectors.sendEmail({
+      opKey,
+      invoiceId: effective.invoice_id,
+      to: `${effective.vendor_id}@vendor.example`,
+      permitId,
+      missionId,
+    }),
+};
+
+/** The committing tools this server serves a connector operation for. */
+export const CONNECTOR_TOOLS: readonly string[] = Object.keys(CONNECTOR_OPERATIONS);
 
 export interface McpServerDeps {
   /** Trusted assembly's effective topology declaration, never a tool input. */
@@ -728,6 +790,10 @@ export class McpPaymentsServer {
     const loaded = loadCheckedView(this.deps.loadView, { id: token.mission.id, issuer: token.mission.issuer });
     if (!loaded) return [];
     const granted = new Set(loaded.view.authority_set.flatMap((e) => e.actions));
+    // Several tools can share one action identifier (@spec
+    // runtime#compound-actions), so every crossing of a granted action is
+    // listed: least exposure is per ACTION, and hiding one phase of a granted
+    // compound action would hide a crossing the Mission is authorized for.
     return TOOLS.filter((t) => granted.has(t.action));
   }
 
@@ -765,11 +831,18 @@ export class McpPaymentsServer {
     // was retained. Absent on a permit is unreachable; fail closed.
     const attempt = res.attempt;
     if (!attempt) return { ok: false, refusal_reason: "state_unavailable" };
+    // @spec runtime#compound-actions — admission: the phase MUST be compared
+    // at every crossing, not only at one that reaches a connector. A read
+    // crossing releases no external effect and still refuses a permit bound
+    // to another phase, and it refuses an expired permit before it reads
+    // anything.
+    const admitted = await this.deps.pep.verifyPermitAtUse(attempt, "admission");
+    if (!admitted.ok) return { ok: false, refusal_reason: admitted.error };
     beforeReverify?.();
     const capability = await this.deps.pep.reverifyCapability(
       res.capabilitySnapshot,
       token,
-      TOOL_ACTIONS[tool]?.action ?? tool,
+      this.deps.pep.toolAction(tool)?.action ?? tool,
       attempt,
     );
     if (!capability.ok) return { ok: false, refusal_reason: capability.error };
@@ -789,6 +862,12 @@ export class McpPaymentsServer {
       const bound = await this.deps.pep.reverifyList(res.listEffective, digest, token, attempt);
       if (!bound.ok) return { ok: false, refusal_reason: bound.error };
     }
+    // Time-sensitive re-check after the awaited capability and parameter
+    // reads, immediately before release: the permit can expire while one of
+    // them is pending, and the admission check above must not be the last word
+    // on validity.
+    const live = await this.deps.pep.verifyPermitAtUse(attempt, "pre-effect");
+    if (!live.ok) return { ok: false, refusal_reason: live.error };
     return { ok: true, result: this.execute(tool, args, res.list_vendor_scope) };
   }
 
@@ -822,6 +901,9 @@ export class McpPaymentsServer {
     }
     const attempt = res.attempt;
     if (!attempt) return { ok: false, refusal_reason: "state_unavailable" };
+    // Admission, ahead of every awaited read (@spec runtime#compound-actions).
+    const admitted = await this.deps.pep.verifyPermitAtUse(attempt, "admission");
+    if (!admitted.ok) return { ok: false, refusal_reason: admitted.error };
     beforeReverify?.();
     // A moved catalog snapshot is its own error, not a parameter mismatch:
     // check it first so the caller-visible reason matches the record.
@@ -835,6 +917,9 @@ export class McpPaymentsServer {
     const digest = permitConditions(res.decision)?.parameter_digest as string;
     const bound = await this.deps.pep.reverify(res.effective, digest, token, attempt);
     if (!bound.ok) return { ok: false, refusal_reason: bound.error };
+    // Time-sensitive re-check immediately before release.
+    const live = await this.deps.pep.verifyPermitAtUse(attempt, "pre-effect");
+    if (!live.ok) return { ok: false, refusal_reason: live.error };
     return { ok: true, result: this.execute(tool, args) };
   }
 
@@ -897,9 +982,50 @@ export class McpPaymentsServer {
     const resolvedMission = res.resolvedMission;
     const digest = permitConditions(res.decision)?.parameter_digest as string;
     const permitId = res.decision.context.decision_id as string;
-    const opKey = operationKey(resolvedMission.id, res.effective.action, digest);
+    const profile = this.deps.pep.toolAction(tool);
+    // @spec runtime#idempotency — the operation key carries the crossing's
+    // phase where the profile declares one, so two crossings sharing an action
+    // identifier and a parameter digest claim DISTINCT keys. Computed once and
+    // used by every consumer keyed on operation identity below: redemption,
+    // the operation state machine, the connector's own idempotency key, the
+    // single-use transaction consumption lookup, and Execution Evidence.
+    const opKey = operationKey(resolvedMission.id, res.effective.action, digest, profile?.phase);
     const attempt = res.attempt;
     if (!attempt) return { ok: false, refusal_reason: "state_unavailable" };
+
+    // @spec runtime#compound-actions — admission, BEFORE `redeemPermit`.
+    // Redemption is keyed on the operation identity and inserts a row that is
+    // never rolled back on refusal, so a wrong-phase or expired presentation
+    // checked after it would burn the claim and leave the legitimate crossing
+    // reporting `permit_consumed`. Nothing here touches the store.
+    const admitted = await this.deps.pep.verifyPermitAtUse(attempt, "admission");
+    if (!admitted.ok) return { ok: false, refusal_reason: admitted.error };
+
+    // @spec runtime#execution-reverification — the connector operation this
+    // crossing commits, resolved before any state is taken: an explicit
+    // per-tool mapping, so a newly served tool name can never fall through to
+    // another tool's connector. Unreachable by construction (only a tool the
+    // Operation Profile gives a high-consequence class routes here, and the
+    // consistency test pins that set against this mapping); a configuration
+    // that broke that pairing throws here, before a redemption or a lease.
+    const commitEffect = CONNECTOR_OPERATIONS[tool];
+    if (!commitEffect) throw new Error(`no connector operation is declared for tool ${tool}`);
+
+    // @spec runtime#execution-reverification — the execution lease comes from
+    // the deployment's PUBLISHED maximum for this action class (the
+    // Enforcement Scope Statement's `transaction_assurance` declaration, the
+    // same object `protectedResourceMetadata()` publishes) and is capped by
+    // the permit's own `valid_until`. A local lease never extends
+    // authorization, and no bound at either end yields no lease at all.
+    const leaseMs = executionLeaseMs({
+      nowMs: tx.engine.nowMs(),
+      publishedMaxSeconds: executionLeaseMaxSeconds(
+        this.deps.enforcementScopeStatement ?? RUNTIME_POSTURE,
+        profile?.actionClass,
+      ),
+      permitValidUntilMs:
+        typeof attempt.permitValidUntil === "string" ? Date.parse(attempt.permitValidUntil) : undefined,
+    });
 
     // Single-use permit redemption (D28). @spec
     // runtime-evidence#execution-evidence-object (#786): the two failures are
@@ -916,9 +1042,16 @@ export class McpPaymentsServer {
       opKey,
       missionId: resolvedMission.id,
       action: res.effective.action,
-      leaseSeconds: 30,
+      leaseSeconds: leaseMs / 1000,
     });
     if (!redeem.ok) {
+      // A lease that could not be set up took no redemption and opened no
+      // operation row, so it is not a duplicate: the permit's own window had
+      // closed by the time a lease was derived from it.
+      if (redeem.reason === "lease_setup_failed") {
+        await this.deps.pep.suppressExecution(attempt, "permit_expired");
+        return { ok: false, refusal_reason: "permit_expired" };
+      }
       await this.deps.pep.suppressExecution(
         attempt,
         redeem.reason === "operation_already_claimed" ? "operation_already_claimed" : "permit_consumed",
@@ -942,10 +1075,11 @@ export class McpPaymentsServer {
     // The execution lease is its OWN gate with its own error. It used to sit
     // as an `||` operand ahead of reverification, so an expired lease
     // short-circuited: nothing was recorded and the caller was told
-    // `parameter_mismatch`, which was false. The window this gate enforces is
-    // the 30-second local lease, a bound of this deployment's own; it is not
-    // a comparison against the permit's `conditions.valid_until`, which #252
-    // PR C adds on this same seam.
+    // `parameter_mismatch`, which was false. This gate is about an
+    // ALREADY-STARTED attempt: how long the local lease lets it run, capped by
+    // the published maximum and the permit's validity. Whether the permit may
+    // still initiate an effect at all is the separate question the pre-effect
+    // seam answers below and at admission above.
     if (!tx.engine.leaseValid(opKey)) {
       await this.deps.pep.suppressExecution(attempt, "permit_expired");
       tx.engine.advance(opKey, "abandoned");
@@ -956,6 +1090,17 @@ export class McpPaymentsServer {
     if (!bound.ok) {
       tx.engine.advance(opKey, "abandoned");
       return { ok: false, refusal_reason: bound.error };
+    }
+
+    // @spec runtime#execution-reverification — the last time-sensitive check,
+    // after every awaited read and before anything irreversible: the single
+    // use taken below and the connector commit after it. A permit that expired
+    // while the capability or parameter reads were pending initiates nothing,
+    // and its refusal is a suppressed disposition, not a consumed txn.
+    const live = await this.deps.pep.verifyPermitAtUse(attempt, "pre-effect");
+    if (!live.ok) {
+      tx.engine.advance(opKey, "abandoned");
+      return { ok: false, refusal_reason: live.error };
     }
 
     // @spec txn-authorization#offline-verification — atomic first use of the
@@ -1005,26 +1150,17 @@ export class McpPaymentsServer {
       }
     }
 
-    // Commit point (D36): connector accepts with the idempotency key.
+    // Commit point (D36): connector accepts with the idempotency key. The
+    // operation is resolved from the explicit per-tool mapping above, never
+    // from a ternary whose else-branch would email on any unrecognized name.
     const invoice = this.deps.payments.getInvoice(res.effective.invoice_id);
-    const commit =
-      tool === "execute_wire_transfer"
-        ? tx.connectors.postWire({
-            opKey,
-            invoiceId: res.effective.invoice_id,
-            payeeAccount: res.effective.payee_account,
-            amount: res.effective.amount.amount,
-            currency: res.effective.amount.currency,
-            permitId,
-            missionId: resolvedMission.id,
-          })
-        : tx.connectors.sendEmail({
-            opKey,
-            invoiceId: res.effective.invoice_id,
-            to: `${res.effective.vendor_id}@vendor.example`,
-            permitId,
-            missionId: resolvedMission.id,
-          });
+    const commit = commitEffect({
+      connectors: tx.connectors,
+      opKey,
+      effective: res.effective,
+      permitId,
+      missionId: resolvedMission.id,
+    });
     tx.engine.advance(opKey, "connector_committed");
     // The effect is durable, so the consumption row says so. A failure to write
     // it leaves the row at `consumed`, which is exactly the resumable state: a
@@ -1180,6 +1316,16 @@ export class McpPaymentsServer {
         return this.deps.payments.getVendor(String(args.vendor_id));
       case "schedule_payment":
         return { scheduled: true, invoice_id: String(args.invoice_id) };
+      // @spec runtime#compound-actions — the preflight crossing: a
+      // feasibility answer with no reservation and no external effect.
+      case "check_transfer": {
+        const invoice = this.deps.payments.getInvoice(String(args.invoice_id));
+        return { feasible: invoice?.status === "payable", invoice_id: String(args.invoice_id) };
+      }
+      // The prepare crossing: a hold, which is state and never authority for
+      // the commit crossing.
+      case "hold_transfer":
+        return { held: true, invoice_id: String(args.invoice_id) };
       default:
         return { ok: true };
     }
