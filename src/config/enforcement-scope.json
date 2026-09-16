@@ -30,7 +30,6 @@
   },
   "remote_decision_channels": [],
   "record_integrity_mechanism": "emitter-signed append-only runtime evidence; full Evidence capability not claimed",
-  "claims": ["transaction_assurance"],
   "extensions": {
     "transaction_assurance": [
       {

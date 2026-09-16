@@ -35,7 +35,10 @@ describe("published runtime posture (@spec runtime#runtime-operational, status#s
     // previously absent, so this expectation moved with the declaration it
     // describes rather than being relaxed: the statement asserts exactly the
     // one tier whose declaration it carries.
-    expect(published.claims).toEqual(["transaction_assurance"]);
+    // The declaration exists without the capability being claimed: ten rows
+    // gated on this tier are still unmet, two of them blocked, so the shipped
+    // statement asserts nothing it cannot meet (#252 C1).
+    expect(published.claims).toBeUndefined();
     for (const declaration of published.extensions.transaction_assurance) {
       expect(published.mediated_scope.action_classes).toContain(declaration.mediated_class_or_scope);
       expect(published.mediated_scope.pep_locations).toContain(declaration.execution_lease_consumer);
