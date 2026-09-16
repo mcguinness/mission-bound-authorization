@@ -59,6 +59,7 @@ export {
   type ActionMapping,
 } from "./pep.js";
 export {
+  CONNECTOR_TOOLS,
   McpPaymentsServer,
   TOOLS,
   type ToolDef,

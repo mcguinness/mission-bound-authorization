@@ -19,8 +19,8 @@
     "content_sha256": "6a8869a048a864601d3ad98307de55ccb1cc16a0970af4fbc631d406464c0ff0"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "8f356e9b1dc37c1a1451c86fc707d3e1b58729af",
-    "content_sha256": "4a3c7ec8c63dfc303da57118edf84745f8ce8c9bbe608101bd23d258a3de29b4"
+    "revision": "eaeee0641bb98a92871eb0717217ffa1bd3295b3",
+    "content_sha256": "c56a6279c4a3d0abc3373e6024842c167e0adb4fa5dd1b8ede9f31aef9b3567a"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "cf1c3d4fe0d05b3dc193538e256d401b0cfb0eb9",
@@ -710,8 +710,15 @@
     "normative": "a consequential phase never proceeds on another phase's Decision: each obtains its own"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > obtains its own Decision for the prepare and the commit crossing",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ]
   },
   {
    "id": "runtime.compound-actions.no-cross-phase-permit-reuse",
@@ -732,8 +739,21 @@
     "normative": "one permit authorizes exactly one phase, never a second phase of the same compound action"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > refuses a commit presenting prepare's permit, zero connector effects",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > refuses a wrong-phase commit and then lets the legitimate commit through against the same store",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ]
   },
   {
    "id": "runtime.compound-actions.preflight-not-a-gate",
@@ -754,8 +774,15 @@
     "normative": "a preflight Decision never stands as the gate for a consequential phase"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > refuses a commit presenting check_transfer's preflight permit",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ]
   },
   {
    "id": "runtime.compound-actions.commit-reevaluates-state",
@@ -776,8 +803,15 @@
     "normative": "the commit phase runs on its own Decision, taken against effective authority and active state within the existing freshness bounds, never on prepare's Decision or state observation"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > denies the fresh commit Decision when the Mission deactivates after prepare",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ]
   },
   {
    "id": "runtime.compound-actions.phase-on-evidence",
@@ -798,8 +832,15 @@
     "normative": "Decision Evidence for a phase records the phase; the member is retrospective only and never substitutes for the permit's phase condition"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > records action_phase on Decision Evidence for a permit and for a denial",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ]
   },
   {
    "id": "runtime.compound-actions.compensate-link-required",
@@ -864,8 +905,15 @@
     "normative": "a permit issued for a phase binds that phase, alongside the action, resource, and parameter digest it already binds"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > binds the crossing's phase into conditions.action_phase",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ]
   },
   {
    "id": "runtime.compound-actions.phase-pep-derived",
@@ -886,8 +934,21 @@
     "normative": "the phase of a crossing comes from the PEP's own Operation Profile, never from a request argument the agent supplies"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > ignores an agent-supplied action_phase argument and uses the catalog phase",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "the Operation Profile is the trusted source of a crossing's phase (@spec runtime#compound-actions) > pins the Operation Profile's phases against the trusted catalog's own per-tool declaration",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ]
   },
   {
    "id": "runtime.compound-actions.phase-verified-at-use",
@@ -905,11 +966,31 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "the executing PEP compares the permit's bound phase against the crossing's phase and refuses, fail closed, before any effect is released"
+    "normative": "the executing PEP compares the permit's bound phase against the crossing's phase and refuses, fail closed, before any effect is released",
+    "local": "asserted on all three dispatch paths, before permit redemption on the transaction path, so a refused crossing burns no redemption"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > compares the bound phase before any effect on all three dispatch paths",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > refuses a missing, unknown or malformed phase condition where the profile declares a phase",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > refuses a crossing whose phase cannot be established at use",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ]
   },
   {
    "id": "runtime.compound-actions.unrecognized-phase-condition-invalid",
@@ -930,8 +1011,21 @@
     "normative": "a PEP that does not recognize the phase condition treats the permit as invalid rather than executing it"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > treats the permit as invalid when the PEP's recognized set lacks action_phase",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > refuses a phase condition on a crossing whose profile declares no phase",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ]
   },
   {
    "id": "runtime.idempotency.phase-in-scope",
@@ -953,8 +1047,15 @@
     "local": "applies only where a compound action's phases share one action identifier; deployments giving each phase its own action identifier already separate the keys"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > keys the operation on the phase where two tools share an action identifier",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ]
   },
   {
    "id": "runtime.conformance.perimeter-disposition-declared",
@@ -10476,11 +10577,25 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a permit's expiry never exceeds the state view's valid-through instant"
+    "normative": "a permit's expiry never exceeds the state view's valid-through instant",
+    "local": "an in-process `evaluate` assertion, which is unit-shaped against an endpoint-level PDP row: partial until the remote PDP stack exercises the cap over the decision channel"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-decision.test.ts",
+     "name": "a permit expires no later than the state view it was decided against (@spec runtime#state-freshness) > caps valid_until at the state observation plus the class staleness bound",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-decision.test.ts",
+     "name": "a permit expires no later than the state view it was decided against (@spec runtime#state-freshness) > denies stale_state rather than issuing a permit whose window has already closed",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ]
   },
   {
    "id": "runtime.state-freshness.high-consequence-requires-active-source",
@@ -11135,11 +11250,19 @@
    "surface": "resource-operation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a high-consequence Operation Profile defines an execution lease or a published maximum execution duration, and run-to-completion never runs past it"
+    "normative": "a high-consequence Operation Profile defines an execution lease or a published maximum execution duration, and run-to-completion never runs past it",
+    "local": "the published bound is this deployment's Enforcement Scope Statement `extensions.transaction_assurance` declaration; the stop-or-renew-before-lease-expires duty and general outage ride-through stay with #310"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > derives the execution lease from the published transaction_assurance maximum, capped by the permit's validity",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ]
   },
   {
    "id": "runtime.read-binding.must-require-binding-for-material-reads",

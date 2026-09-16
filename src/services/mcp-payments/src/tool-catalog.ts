@@ -27,7 +27,13 @@ export class PaymentsToolCatalog implements CapabilityCatalog {
 
   resolve(tool: string): ReturnType<CapabilityCatalog["resolve"]> {
     const service = CATALOG_SERVICES.find(s => s.id === "payments");
-    if (!service?.actions?.some(a => a.tool_name === tool)) return { catalog_sourced: false };
+    // @spec runtime#compound-actions — an action whose phases share one
+    // identifier declares its served tools in `tools`; a single-tool action
+    // keeps `tool_name`. Both shapes resolve here, so a compound action's
+    // preflight/prepare/commit crossings each present their own binding.
+    if (!service?.actions?.some(a => a.tool_name === tool || a.tools?.some(t => t.tool_name === tool))) {
+      return { catalog_sourced: false };
+    }
     if (!service.server_card_uri) throw new Error("payments source URI unavailable");
     const text = this.text(); // binding AND snapshot identity from this one read
     const definition = extractMcpToolDefinition(text, tool);

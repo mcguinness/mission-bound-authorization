@@ -73,9 +73,31 @@ export type EnforcementExtensionName =
   | "high_assurance_agent"
   | "outcome_reconciliation";
 
+/**
+ * @spec runtime#execution-reverification — one `transaction_assurance`
+ * declaration: the mediated class or scope, its idempotency claim domain, and
+ * the PUBLISHED execution lease the clause requires for the high-consequence
+ * classes ("the Operation Profile MUST define an execution lease or a
+ * published maximum execution duration, and run-to-completion applies only
+ * within that bound").
+ *
+ * The lease members extend this declaration rather than replacing it, and
+ * they name their units and their consumer: `execution_lease_max_seconds` is
+ * whole seconds, and `execution_lease_consumer` is the
+ * `mediated_scope.pep_locations` entry that reads the bound and caps its own
+ * lease by it. `idempotency_claim_domain` says which component holds the
+ * claim; it does not assert a PDP-side domain a deployment does not implement.
+ */
+export interface TransactionAssuranceDeclaration {
+  mediated_class_or_scope: string;
+  idempotency_claim_domain: string;
+  execution_lease_max_seconds: number;
+  execution_lease_consumer: string;
+}
+
 export interface EnforcementExtensionDeclarations {
   custody?: ReadonlyArray<{ mediated_class: string; custody_mode: string }>;
-  transaction_assurance?: ReadonlyArray<{ mediated_class_or_scope: string; idempotency_claim_domain: string }>;
+  transaction_assurance?: ReadonlyArray<TransactionAssuranceDeclaration>;
   evidence?: {
     mechanism: string;
     retention_window: string;
@@ -250,6 +272,55 @@ export function validateEnforcementScopeStatement(
     const attached = Array.isArray(decl) ? decl.length > 0 : object(decl) && Object.keys(decl).length > 0;
     if (!attached) {
       push(`extensions.${claim}`, "claimed but carries no attached declaration");
+    }
+  }
+
+  // The `transaction_assurance` declaration carries a published execution
+  // lease, so it is shape-validated wherever it appears: a declaration
+  // present without the claim still has to be well formed, and a member
+  // naming a class or a PEP the baseline does not declare is unresolvable and
+  // refused rather than read as a wider claim.
+  const txnAssurance = object(stmt.extensions) ? stmt.extensions.transaction_assurance : undefined;
+  if (txnAssurance !== undefined) {
+    if (!Array.isArray(txnAssurance)) {
+      push("extensions.transaction_assurance", "must be an array of per-class declarations");
+    } else {
+      const classes = scopeOk && object(scope) ? (scope.action_classes as readonly string[]) : [];
+      const peps = scopeOk && object(scope) ? (scope.pep_locations as readonly string[]) : [];
+      txnAssurance.forEach((raw, i) => {
+        const member = `extensions.transaction_assurance[${i}]`;
+        const decl = object(raw) ? raw : undefined;
+        if (!decl) {
+          push(member, "entry must be an object");
+          return;
+        }
+        if (!isNonEmptyString(decl.mediated_class_or_scope)) {
+          push(member, "missing the mediated class or scope this declaration covers");
+        } else if (!classes.includes(decl.mediated_class_or_scope)) {
+          push(
+            member,
+            `mediated_class_or_scope "${decl.mediated_class_or_scope}" is outside mediated_scope.action_classes`,
+          );
+        }
+        if (!isNonEmptyString(decl.idempotency_claim_domain)) {
+          push(member, "missing the idempotency claim domain and the component that holds it");
+        }
+        if (
+          typeof decl.execution_lease_max_seconds !== "number" ||
+          !Number.isSafeInteger(decl.execution_lease_max_seconds) ||
+          decl.execution_lease_max_seconds <= 0
+        ) {
+          push(member, "execution_lease_max_seconds must be a positive whole number of seconds");
+        }
+        if (!isNonEmptyString(decl.execution_lease_consumer)) {
+          push(member, "missing the execution_lease_consumer that reads this published bound");
+        } else if (!peps.includes(decl.execution_lease_consumer)) {
+          push(
+            member,
+            `execution_lease_consumer "${decl.execution_lease_consumer}" is not a declared mediated_scope.pep_locations entry`,
+          );
+        }
+      });
     }
   }
 
