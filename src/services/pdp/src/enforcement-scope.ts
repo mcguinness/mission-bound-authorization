@@ -336,16 +336,24 @@ export interface EvidenceDeclarationContext {
  * statement's internal completeness, so {@link validateEnforcementScopeStatement}
  * stays the pure structural pass.
  *
- * A declaration and a claim travel together in both directions. A claimed
- * capability with no declaration is incomplete; an attached declaration under
- * no claim is a deployment asserting a capability in its configuration while
- * denying it in its statement, so it is refused at load rather than read as
- * the claim it is not.
+ * A claimed capability with no declaration is incomplete, and is refused: that
+ * is the direction that would otherwise let a false assertion stand. The
+ * converse is NOT an error. A declaration asserts nothing on its own, so a
+ * deployment may publish one while withholding the claim, which is the honest
+ * shape for a capability whose applicable obligations are not all met yet: it
+ * publishes the value a peer needs without asserting conformance it does not
+ * have. `transaction_assurance` ships exactly this shape for the published
+ * execution lease maximum (issue #252 C1), and the `evidence` block is
+ * intended to reach it the same way (issue #594 W4-8). Refusing it would
+ * leave a deployment choosing between asserting a capability it does not meet
+ * and publishing nothing at all. Only `claims` asserts.
  *
- * Every named location and emitter must resolve inside this statement: a
- * receipt issuer that is not a declared PDP or PEP location, or a key set that
- * is not a declared signing-key location, names something unresolvable and is
- * refused at load.
+ * Every named location and emitter must resolve inside this statement,
+ * claimed or not: a receipt issuer that is not a declared PDP or PEP location,
+ * or a key set that is not a declared signing-key location, names something
+ * unresolvable and is refused at load. So is a retention window shorter than
+ * the audit horizon, whose floor binds every runtime-enforced deployment
+ * independently of any claim.
  */
 export function evidenceDeclarationFindings(
   input: unknown,
@@ -362,9 +370,8 @@ export function evidenceDeclarationFindings(
     if (claimed) push("extensions.evidence", "the evidence capability is claimed with no attached declaration");
     return findings;
   }
-  if (!claimed) {
-    push("claims", "an evidence declaration is attached while the statement claims no evidence capability");
-  }
+  // A declaration under no claim is a published value, not an assertion, and
+  // loads. Everything below still applies to it: what it names has to resolve.
   if (!object(declared)) {
     push("extensions.evidence", "declaration must be an object");
     return findings;

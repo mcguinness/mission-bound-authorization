@@ -813,13 +813,42 @@ describe("the deployment's evidence declaration and published key sets (@spec ru
     ).not.toThrow();
   });
 
-  it("refuses a declaration attached under no claim, and a claim with no declaration", () => {
-    const attached = claimingDeployment();
-    delete attached.claims;
-    expect(() => loadRuntimePosture(attached)).toThrow(/claims no evidence capability/);
+  it("loads a declaration published under no claim, and keeps its declared values readable", () => {
+    // The permitted shape, and the one a deployment needs while a capability's
+    // applicable obligations are not all met: publish the value a peer reads,
+    // assert nothing. `transaction_assurance` ships it for the published
+    // execution lease maximum (#252 C1); the evidence block reaches the same
+    // shape here. Only `claims` asserts, so refusing this would leave a
+    // deployment choosing between an unmet claim and publishing nothing.
+    const published = claimingDeployment();
+    delete published.claims;
+    expect(() => loadRuntimePosture(published)).not.toThrow();
+    const posture = loadRuntimePosture(published);
+    expect(posture.claims).toBeUndefined();
+    expect(posture.extensions?.evidence?.retention_window).toBe("P400D");
+    expect(posture.extensions?.evidence?.signing_key_locations).toEqual([EVIDENCE_KEY_SET_LOCATION]);
+    expect(posture.extensions?.evidence?.receipt_issuers).toEqual([
+      { emitter: PEP_LOCATION, key_set: EVIDENCE_KEY_SET_LOCATION },
+    ]);
+    const leaseShaped = { ...structuredClone(SHIPPED), extensions: { transaction_assurance: [{ mediated_class_or_scope: "external_commitment", idempotency_claim_domain: "payments:operation" }] } };
+    expect(() => loadRuntimePosture(leaseShaped)).not.toThrow();
+    // Publishing is still not claiming: an unclaimed declaration designates
+    // no receipt issuer, so receipt verification stays unreachable.
+    const { retention } = retainingDeployment();
+    expect(deploymentReceiptIssuerScope(published, retention)).toBeUndefined();
+    retention.close();
+  });
+
+  it("refuses a claim with no attached declaration, and a published declaration naming what this statement does not declare", () => {
     expect(() => loadRuntimePosture({ ...structuredClone(SHIPPED), claims: ["evidence"] })).toThrow(
       /no attached declaration/,
     );
+    // The unresolvable-name direction does not depend on the claim: a
+    // published key set or issuer a peer could not resolve is broken whether
+    // or not the capability is asserted.
+    const unresolvable = claimingDeployment({ receipt_issuers: [{ emitter: "receipts.example.com", key_set: EVIDENCE_KEY_SET_LOCATION }] });
+    delete unresolvable.claims;
+    expect(() => loadRuntimePosture(unresolvable)).toThrow(/not a declared PDP or PEP location/);
     expect(() => loadRuntimePosture(SHIPPED)).not.toThrow();
   });
 
