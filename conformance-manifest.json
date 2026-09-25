@@ -9469,7 +9469,7 @@
    "id": "runtime.token-validation.establish-validity-before-use",
    "spec": "draft-mcguinness-mission-runtime-oauth.md",
    "anchor": "token-validation",
-   "text": "Before using a token's Mission, authority, subject, client, actor, or confirmation-key values as decision inputs, the PEP MUST establish that the access token is valid for the protected resource and request.",
+   "text": "Before using a token's Mission, authority, subject, client, actor, or confirmation-key values as decision inputs, the PEP MUST establish that the access token is valid for the protected resource and request, including its audience and, for a sender-constrained token, proof of possession of the confirmation key.",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -9511,7 +9511,7 @@
    "id": "runtime.token-validation.audience-and-pop",
    "spec": "draft-mcguinness-mission-runtime-oauth.md",
    "anchor": "token-validation",
-   "text": "a Resource Server PEP MUST refuse a token whose audience is not intended for that Resource Server, and MUST verify the proof-of-possession check for a sender-constrained token before treating its `cnf` binding as authenticated.",
+   "text": "the PEP MUST establish that the access token is valid for the protected resource and request, including its audience and, for a sender-constrained token, proof of possession of the confirmation key.",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -9565,7 +9565,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "a PEP never forwards unverified token claims to the PDP for a decision, refuses before runtime evaluation when token validation fails, and likewise refuses a token lacking a mission claim on an operation requiring Mission governance unless the deployment establishes the Mission binding externally"
+    "normative": "a PEP never forwards unverified token claims to the PDP for a decision, refuses before runtime evaluation when token validation fails, and likewise refuses a token lacking a mission claim on an operation requiring Mission governance unless the deployment establishes the Mission reference externally, which never substitutes where the protected resource requires Mission-bound tokens"
    },
    "level": "endpoint",
    "coverage": "partial",

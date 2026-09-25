@@ -209,53 +209,61 @@ Current effective authority:
   Effective Authority Set
   ({{I-D.draft-mcguinness-oauth-mission-status}}).
 
-# Token Presentation and Validation {#token-validation}
+# Establishing Validated Credential Context {#token-validation}
 
-The runtime decision is downstream of ordinary access token validation.
-Before using a token's Mission, authority, subject, client, actor, or
-confirmation-key values as decision inputs, the PEP MUST establish that
-the access token is valid for the protected resource and request. For
-the Mission-bound JWT access tokens defined by the issuance profile,
-this means validating the JWT per {{RFC9068}}, verifying the issuer and
-audience, checking token expiry, and verifying any sender-constraint
-binding (`cnf`) under the proof-of-possession rules of the issuance
-profile ({{I-D.draft-mcguinness-oauth-mission}}); this document defines
-no proof-of-possession mechanism of its own.
+The runtime decision is downstream of ordinary access token
+validation. Before using a token's Mission, authority, subject,
+client, actor, or confirmation-key values as decision inputs, the PEP
+MUST establish that the access token is valid for the protected
+resource and request, including its audience and, for a
+sender-constrained token, proof of possession of the confirmation key.
 
-Where the validated token's `mission` claim carries the `expires_at`
-member ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}), the PEP
-or PDP MAY refuse actions past that instant without consulting a state
-source: the value is an immutable commitment and a ceiling only. It
-carries no liveness; the runtime core's only-`active` rule and
-freshness requirements apply unchanged
-({{I-D.draft-mcguinness-mission-runtime}}).
+The issuance profile defines that validation for both of its token
+forms; this document adds no validation step of its own:
 
-The underlying OAuth deployment MUST follow the applicable security
-best current practice in {{RFC9700}}. In particular, a Resource Server
-PEP MUST refuse a token whose audience is not intended for that
-Resource Server, and MUST verify the proof-of-possession check for a
-sender-constrained token before treating its `cnf` binding as
-authenticated.
+- A JWT access token is validated under the issuance profile's
+  Resource Server rules, which apply {{RFC9068}} and verify any
+  sender-constraint binding ({{I-D.draft-mcguinness-oauth-mission}},
+  Section "Resource Server Enforcement").
+- An opaque access token is resolved under the issuance profile's
+  introspected token consumption mode: introspection before each use,
+  an `active` response, the Resource Server's own identity in `aud`,
+  and a sender-constraint binding verified locally
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Introspected Token
+  Consumption").
+
+Each value the runtime decision uses is read from the resulting
+validated credential context ({{claims-mapping}}).
+
+Introspection freshness is per use under the issuance profile: each
+response is an observation for one decision, not a cacheable state
+assertion or authority record ({{I-D.draft-mcguinness-oauth-mission}},
+Section "Mission State via Token Introspection"). The runtime core's
+freshness rules do not relax that; a deployment that needs
+bounded-staleness caching uses the Mission Status profile
+({{state-sourcing}}).
 
 A PEP MUST NOT ask a PDP to authorize an action from unverified token
 claims. If token validation fails, the PEP MUST refuse before runtime
-Mission evaluation. If the deployment requires Mission governance for
-the protected operation and the token lacks a `mission` claim, the PEP
-MUST likewise refuse, unless the deployment establishes the Mission
-binding externally, per the runtime core's Mission Binding
-Establishment ({{I-D.draft-mcguinness-mission-runtime}}); in that case
-the absence of the claim is not a refusal condition, and the join's
-verification of the supplied Mission reference applies instead. When
-the PEP is an OAuth Resource Server, it uses the normal OAuth error
-behavior for the protected resource (for example, Bearer token errors
-under {{RFC6750}}); this document defines no new OAuth error code.
+Mission evaluation. When the PEP is an OAuth Resource Server, it uses
+the normal OAuth error behavior for the protected resource (for
+example, Bearer token errors under {{RFC6750}}); this document defines
+no new OAuth error code.
 
-The runtime core separately requires that, where the PEP and PDP are
-separate components, the decision channel between them is
-authenticated and integrity-protected, and that the PDP accepts
-credential-derived inputs only from an authorized PEP
-({{I-D.draft-mcguinness-mission-runtime}}); that requirement is
-binding-neutral and is not restated here.
+A Mission reference reaches the decision in one of two ways. A
+credential-carried reference is the `mission` claim of a validated JWT,
+or the `mission` member of the introspection response for an opaque
+token. An externally established reference is supplied outside the
+token and verified under the runtime core's Mission Binding
+Establishment ({{I-D.draft-mcguinness-mission-runtime}}). If the
+deployment requires Mission governance for the protected operation and
+neither reference is established, the PEP MUST refuse. An external
+reference never substitutes for the claim where the protected resource
+requires Mission-bound tokens: a resource that advertises
+`mission_bound_authorization_required` rejects a token that lacks the
+`mission` claim ({{I-D.draft-mcguinness-oauth-mission}}, Section
+"Protected Resource Metadata"), whatever reference the deployment could
+establish externally.
 
 # Claims Mapping {#claims-mapping}
 
