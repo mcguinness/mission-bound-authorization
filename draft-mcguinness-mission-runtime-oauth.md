@@ -91,6 +91,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-mission-authority-server:
+    title: "Mission Authority Server"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-issuance-grant:
     title: "Mission Issuance Grant for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
@@ -254,8 +262,12 @@ A Mission reference reaches the decision in one of two ways. A
 credential-carried reference is the `mission` claim of a validated JWT,
 or the `mission` member of the introspection response for an opaque
 token. An externally established reference is supplied outside the
-token and verified under the runtime core's Mission Binding
-Establishment ({{I-D.draft-mcguinness-mission-runtime}}). If the
+token and verified against the acting credential under a join a
+binding profile defines, as the runtime core's Mission Binding
+Establishment requires ({{I-D.draft-mcguinness-mission-runtime}}): the
+Mission Authority Server's Mission Join is one
+({{I-D.draft-mcguinness-mission-authority-server}}), and this document
+defines none of its own. If the
 deployment requires Mission governance for the protected operation and
 neither reference is established, the PEP MUST refuse. An external
 reference never substitutes for the claim where the protected resource

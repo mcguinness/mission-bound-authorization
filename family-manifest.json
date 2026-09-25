@@ -1109,6 +1109,7 @@
     }
    ],
    "references": [
+    "draft-mcguinness-mission-authority-server",
     "draft-mcguinness-mission-authzen",
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-mission-substrate",
