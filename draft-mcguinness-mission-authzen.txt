@@ -2989,9 +2989,10 @@ Table of Contents
               draft-mcguinness-mission-runtime-evidence.html>.
 
    [I-D.draft-mcguinness-mission-runtime-oauth]
-              McGuinness, K., "Mission Runtime OAuth Adapter", 2026,
-              <https://mcguinness.github.io/mission-bound-authorization/
-              draft-mcguinness-mission-runtime-oauth.html>.
+              McGuinness, K., "Mission-Bound Runtime Enforcement: OAuth
+              2.0 Profile", 2026, <https://mcguinness.github.io/mission-
+              bound-authorization/draft-mcguinness-mission-runtime-
+              oauth.html>.
 
    [I-D.draft-mcguinness-oauth-ai-agent-instance]
               McGuinness, K., "OAuth 2.0 AI Agent Instance Profile",

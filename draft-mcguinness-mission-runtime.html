@@ -1564,7 +1564,7 @@ Mission-Bound Authorization for OAuth 2.0
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> (the "issuance profile"), and
 the concrete claim mapping (<code>mission</code>, <code>authorization_details</code>, <code>act</code>,
 <code>iss</code>, <code>aud</code>, <code>sub</code>, <code>client_id</code>, <code>exp</code>, and <code>cnf</code>) is defined by the
-OAuth Runtime Adapter (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-oauth" class="cite xref">I-D.draft-mcguinness-mission-runtime-oauth</a>]</span>).
+runtime OAuth 2.0 profile (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-oauth" class="cite xref">I-D.draft-mcguinness-mission-runtime-oauth</a>]</span>).
 The Resource Server enforcement rules in the issuance profile remain
 the baseline for every Mission-bound access token; this document adds
 an optional runtime conformance profile for deployments that claim
@@ -2673,7 +2673,7 @@ record them, consistent with <span>[<a href="#I-D.draft-mcguinness-oauth-mission
 Implementation: 152 conformance rows in conformance-manifest.json (46 tested, 23 partial, 80 todo, 3 blocked).
 Adopt when: Actions need a point-of-use check, not just issuance-time gating.
 Requires: Mission Substrate Requirements.
-Also requires, conditionally: Mission-Bound Authorization for OAuth 2.0 and Mission Runtime OAuth Adapter (when the OAuth binding is the substrate).<a href="#section-3-1" class="pilcrow">¶</a></p>
+Also requires, conditionally: Mission-Bound Authorization for OAuth 2.0 and Mission-Bound Runtime Enforcement: OAuth 2.0 Profile (when the OAuth binding is the substrate).<a href="#section-3-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="conventions-and-terminology">
@@ -5926,7 +5926,7 @@ any decision-API wire members are defined by the decision-API binding
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-runtime-oauth">[I-D.draft-mcguinness-mission-runtime-oauth]</dt>
         <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Runtime OAuth Adapter"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-oauth.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-oauth.html</a>&gt;</span>. </dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement: OAuth 2.0 Profile"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-oauth.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-oauth.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-security-model">[I-D.draft-mcguinness-mission-security-model]</dt>
         <dd>
