@@ -248,13 +248,19 @@ forms; this document adds no validation step of its own:
 Each value the runtime decision uses is read from the resulting
 validated credential context ({{claims-mapping}}).
 
-Introspection freshness is per use under the issuance profile: each
-response is an observation for one decision, not a cacheable state
-assertion or authority record ({{I-D.draft-mcguinness-oauth-mission}},
-Section "Mission State via Token Introspection"). The runtime core's
-freshness rules do not relax that; a deployment that needs
-bounded-staleness caching uses the Mission Status profile
-({{state-sourcing}}).
+Under the issuance profile alone, introspection freshness is per use:
+each response is an observation for one decision, not a cacheable state
+assertion ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
+State via Token Introspection"). A deployment that runs the Mission
+Status profile can have the Mission issuer's introspection projection
+carry `fresh_until`, until which the reported Mission `state` can be
+relied on without re-checking
+({{I-D.draft-mcguinness-oauth-mission-status}}). That caches Mission
+state only. Token validation and the credential authority are not
+cached: an opaque token is resolved by introspection before each use,
+and each response remains one observation, never a cacheable authority
+record ({{I-D.draft-mcguinness-oauth-mission}}, Section "Introspected
+Token Consumption").
 
 A PEP MUST NOT ask a PDP to authorize an action from unverified token
 claims. If token validation fails, the PEP MUST refuse before runtime
@@ -436,7 +442,8 @@ Lifecycle Signals ({{I-D.draft-mcguinness-oauth-mission-signals}}):
 
 | State source | Exposure bound | Per-action cost | Depends on | Cannot provide |
 |---|---|---|---|---|
-| Issuer introspection | the interval from the lookup to the action it serves | one lookup per use; the issuance profile defines no caching for the `mission` member | issuer availability | reuse of one response across decisions |
+| Issuer introspection | the interval from the lookup to the action it serves | one lookup per use | issuer availability | reuse of one response across decisions |
+| Issuer introspection with Status `fresh_until` | published staleness bound, to `fresh_until` | one lookup within the bound for Mission state; an opaque token is still introspected per use for its claims | issuer availability | revocation inside the bound |
 | Mission Status | published staleness bound | one lookup within the bound, cacheable to `fresh_until` | status surface availability | revocation inside the bound |
 | Status List | Status List Token TTL | local bit read, plus one list fetch per window | list publisher availability | terminal-state detail; a non-VALID bit sends the consumer to the authoritative surface |
 | Lifecycle Signals | delivery latency within the verified stream | none (event-driven) | stream liveness | the pull floor; a dead stream is stale state |
