@@ -1075,7 +1075,7 @@
   {
    "file": "draft-mcguinness-mission-runtime-oauth.md",
    "slug": "draft-mcguinness-mission-runtime-oauth",
-   "title": "Mission Runtime OAuth Adapter",
+   "title": "Mission-Bound Runtime Enforcement: OAuth 2.0 Profile",
    "category": "std",
    "role": "companion",
    "spec_maturity": "experimental",
@@ -1084,14 +1084,16 @@
    "verbs": [
     "enforce"
    ],
-   "summary": "The OAuth 2.0 realization of the runtime core's binding-neutral contract: token presentation and validation, the `mission`/`act`/`cnf`/`aud` claim mapping, the `authorization_details` and `mission_resource_access` authority-entry mapping, and Resource-Owner Class Floors through OAuth protected resource metadata.",
+   "summary": "Profiles the runtime core for OAuth 2.0 access tokens: the validated credential context for JWT and introspected tokens, the runtime input mapping, credential and current effective authority as separate bounds, OAuth Mission state sources, and Resource-Owner Class Floors through protected resource metadata.",
    "pull_when": "The Mission-bound credential is an OAuth access token and the runtime core's abstract roles need their concrete OAuth realization.",
    "normative_references": [
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-resource-access",
     "draft-mcguinness-oauth-mission-signals",
-    "draft-mcguinness-oauth-mission-status"
+    "draft-mcguinness-oauth-mission-status",
+    "draft-mcguinness-oauth-mission-status-list"
    ],
    "adoption_requires": [
     "draft-mcguinness-mission-runtime",
@@ -1107,6 +1109,7 @@
     }
    ],
    "references": [
+    "draft-mcguinness-mission-authority-server",
     "draft-mcguinness-mission-authzen",
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-mission-substrate",

@@ -82,7 +82,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-mission-runtime-oauth:
-    title: "Mission Runtime OAuth Adapter"
+    title: "Mission-Bound Runtime Enforcement: OAuth 2.0 Profile"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-oauth.html
     author:
       -
@@ -356,7 +356,7 @@ Mission-Bound Authorization for OAuth 2.0
 {{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile"), and
 the concrete claim mapping (`mission`, `authorization_details`, `act`,
 `iss`, `aud`, `sub`, `client_id`, `exp`, and `cnf`) is defined by the
-OAuth Runtime Adapter ({{I-D.draft-mcguinness-mission-runtime-oauth}}).
+runtime OAuth 2.0 profile ({{I-D.draft-mcguinness-mission-runtime-oauth}}).
 The Resource Server enforcement rules in the issuance profile remain
 the baseline for every Mission-bound access token; this document adds
 an optional runtime conformance profile for deployments that claim
@@ -1175,7 +1175,7 @@ Role: companion. Spec maturity: experimental. Maintenance: active.
 Implementation: 152 conformance rows in conformance-manifest.json (46 tested, 23 partial, 80 todo, 3 blocked).
 Adopt when: Actions need a point-of-use check, not just issuance-time gating.
 Requires: Mission Substrate Requirements.
-Also requires, conditionally: Mission-Bound Authorization for OAuth 2.0 and Mission Runtime OAuth Adapter (when the OAuth binding is the substrate).
+Also requires, conditionally: Mission-Bound Authorization for OAuth 2.0 and Mission-Bound Runtime Enforcement: OAuth 2.0 Profile (when the OAuth binding is the substrate).
 <!-- family-status: END -->
 
 # Conventions and Terminology {#conventions-and-terminology}
