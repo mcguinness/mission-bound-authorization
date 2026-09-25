@@ -283,7 +283,7 @@ claim, or the introspection response member of the same name.
 | Sender-constraint confirmation | `cnf`, verified during validation ({{token-validation}}) |
 | Token audience or protected-resource reference | The protected resource the PEP guards; validation has established that `aud` names it |
 | Authority entry | The credential authority ({{authorization-details-mapping}}) |
-| Current effective authority | Established from a Mission state source ({{authorization-details-mapping}}) |
+| Current effective authority | The approved Authority Set as narrowed, from a source that reports the narrowing ({{authorization-details-mapping}}) |
 | Token issuer | `iss` |
 | Token expiry | `exp` |
 | Mission expiry | The `mission` claim's `expires_at` member where present, or a Mission state source that reports the Mission's expiry |
@@ -354,8 +354,10 @@ two inputs, and the action MUST fall within both:
   validated JWT or, for an opaque token, of its introspection
   response; and
 - the current effective authority: the approved Authority Set,
-  narrowed by any narrowing mechanism the deployment runs and then
-  established from a Mission state source that reports the narrowing
+  narrowed by any narrowing mechanism the deployment runs. With no
+  narrowing mechanism it is the approved set, which already bounds the
+  credential authority; with one, such as Containment or discharge, it
+  is established from a source that reports the narrowing
   ({{state-sourcing}}).
 
 A token narrowed below its Mission's approved Authority Set is
@@ -411,6 +413,14 @@ Each Mission-freshness source is a separate mechanism whose
 requirements its own specification defines. A deployment adopts the
 sources its Enforcement Scope Statement declares; a normative reference
 here does not require a deployment to implement every source.
+
+A lifecycle observation is not by itself a source for the current
+effective authority. A contained Mission stays `active`, so an `active`
+observation, including an unchanged Mission Status List bit, says
+nothing about contained capability. The runtime core names the sources
+that do report it: full Mission Status or introspection carrying
+`containment_version`, or Mission Lifecycle Signals carrying the
+overlay change ({{I-D.draft-mcguinness-mission-runtime}}).
 
 Only the Mission issuer reports Mission state through introspection
 ({{I-D.draft-mcguinness-oauth-mission}}). A non-issuer Resource AS
