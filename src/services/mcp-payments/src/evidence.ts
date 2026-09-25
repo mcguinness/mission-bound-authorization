@@ -683,6 +683,16 @@ export interface RefusalRecordInput {
 export interface ExecutionEvidenceInput {
   permitId: string;
   opKey: string;
+  /**
+   * @spec runtime-evidence#execution-evidence-object `execution_id`: "unique
+   * execution identifier, stable across delivery retries of this record".
+   * The caller supplies it so ONE identity covers one disposition attempt and
+   * every emission retry of that attempt (issue #786); absent, the store
+   * allocates a fresh one. A distinct attempt MUST supply a distinct value:
+   * that is what keeps a rejected replay from presenting itself as the
+   * original completed record.
+   */
+  execution_id?: string;
   evaluation_id: string;
   mission_id: string;
   audience: string;
@@ -696,6 +706,37 @@ export interface ExecutionEvidenceInput {
   completed_at?: string;
   result_summary?: Record<string, JsonValue>;
   trace_id?: string;
+}
+
+/**
+ * The final disposition one `execution_id` names. Two emissions carrying
+ * this same triple are retries of one disposition; a third value under the
+ * same identity is a different disposition, which is refused.
+ */
+type ExecutionDisposition = Pick<ExecutionEvidenceInput, "evaluation_id" | "outcome" | "error">;
+
+/** An Execution Evidence emission whose signature has not yet been retained. */
+interface InFlightExecution {
+  disposition: ExecutionDisposition;
+  emission: Promise<ExecutionEvidence>;
+}
+
+/** Whether an emission repeats the disposition an identity already carries. */
+function sameDisposition(held: ExecutionDisposition, input: ExecutionEvidenceInput): boolean {
+  return (
+    held.evaluation_id === input.evaluation_id && held.outcome === input.outcome && held.error === input.error
+  );
+}
+
+/**
+ * One identity, one disposition. Raised the same way whether the identity is
+ * already `retained` or still `in flight`: a rejected replay presenting a
+ * completed record's identity is refused in both windows.
+ */
+function refuseRedisposition(identity: string, held: "retained" | "in flight"): never {
+  throw new Error(
+    `EvidenceStore.recordExecution(): execution_id "${identity}" is already ${held} for a different disposition (fail closed: one identity per disposition, retries only)`,
+  );
 }
 
 /**
@@ -723,6 +764,12 @@ export interface ExecutionEvidenceInput {
 export class EvidenceStore {
   private readonly records: Evidence[] = [];
   private readonly sequences = new Map<string, number>();
+  /**
+   * The Execution Evidence emission in flight under each caller-supplied
+   * `execution_id`, held from the tick the identity is taken until the
+   * signed record is retained ({@link EvidenceStore.recordExecution}).
+   */
+  private readonly inFlightExecutions = new Map<string, InFlightExecution>();
 
   /**
    * @param signer the keys for the records this PEP emits itself.
@@ -870,17 +917,97 @@ export class EvidenceStore {
     return record;
   }
 
-  /** @spec runtime-evidence#execution-evidence-object: sign and retain an Execution Evidence Object. */
+  /**
+   * @spec runtime-evidence#execution-evidence-object: sign and retain an
+   * Execution Evidence Object.
+   *
+   * "Exactly one Execution Evidence Object exists per final disposition of a
+   * permit, and delivery of that record is at-least-once, so a consumer MUST
+   * deduplicate on `execution_id`." A retry of a pending emission therefore
+   * supplies the SAME `execution_id` and gets the retained record back
+   * rather than a second row. A retry that supplies the same identity with a
+   * DIFFERENT disposition is not a retry: it throws, because silently
+   * returning the retained record would let a rejected replay report the
+   * original completed record as its own outcome (issue #786). Retention is
+   * append-only either way: no call replaces a retained record.
+   *
+   * The identity is RESERVED before the signature is awaited (PR #808
+   * review). A retained-row lookup alone leaves the whole signing await
+   * open: two emissions of one disposition, which the at-least-once retry
+   * path produces by construction, both miss the lookup and both retain,
+   * so one disposition ends up with two signed records under one identity.
+   * An emission in flight is held in {@link inFlightExecutions} from the
+   * same tick as the lookup, and a caller arriving under that identity
+   * joins it: same record, same signature, same `sequence`. A caller
+   * arriving with a DIFFERENT disposition throws exactly as it does
+   * against a retained row, so the in-flight window is no gap in that
+   * guarantee.
+   *
+   * Instance-level coalescing for the declared one-process topology, the
+   * shape the lifecycle outbox takes for overlapping drains. It is no lease
+   * and no distributed claim.
+   */
   async recordExecution(
     emitterId: string,
     role: "pep" | "executor",
     input: ExecutionEvidenceInput,
   ): Promise<ExecutionEvidence> {
     const signer = this.requireSigner(role === "executor" ? "executor" : "pep");
+    const identity = input.execution_id;
+    if (identity === undefined) {
+      return this.signAndRetainExecution(emitterId, role, signer, input);
+    }
+    // Retained first, in flight second, both read in ONE tick with no await
+    // between them and the reservation below: a record leaves
+    // `inFlightExecutions` only once it is in `records`, so this order sees
+    // every emission under this identity in either place.
+    const prior = this.records.find(
+      (e): e is ExecutionEvidence => e.kind === "execution" && e.content.execution_id === identity,
+    );
+    if (prior) {
+      return sameDisposition(prior.content, input) ? prior : refuseRedisposition(identity, "retained");
+    }
+    const inFlight = this.inFlightExecutions.get(identity);
+    if (inFlight) {
+      if (!sameDisposition(inFlight.disposition, input)) {
+        refuseRedisposition(identity, "in flight");
+      }
+      return inFlight.emission;
+    }
+    const emission = this.signAndRetainExecution(emitterId, role, signer, input);
+    this.inFlightExecutions.set(identity, {
+      disposition: {
+        evaluation_id: input.evaluation_id,
+        outcome: input.outcome,
+        ...(input.error !== undefined ? { error: input.error } : {}),
+      },
+      emission,
+    });
+    try {
+      return await emission;
+    } finally {
+      if (this.inFlightExecutions.get(identity)?.emission === emission) {
+        this.inFlightExecutions.delete(identity);
+      }
+    }
+  }
+
+  /**
+   * Build, sign and retain one Execution Evidence Object. Only {@link
+   * recordExecution} may call it, and only after the identity is reserved:
+   * `nextSequence` runs here, so a coalesced caller consumes no sequence
+   * number it will not emit.
+   */
+  private async signAndRetainExecution(
+    emitterId: string,
+    role: "pep" | "executor",
+    signer: EvidenceSigningKey,
+    input: ExecutionEvidenceInput,
+  ): Promise<ExecutionEvidence> {
     const sequence = this.nextSequence(input.mission_id, emitterId, role);
     const outcome_at = new Date().toISOString();
     const unsigned = {
-      execution_id: newRecordId("exe"),
+      execution_id: input.execution_id ?? newRecordId("exe"),
       evaluation_id: input.evaluation_id,
       mission_id: input.mission_id,
       audience: input.audience,

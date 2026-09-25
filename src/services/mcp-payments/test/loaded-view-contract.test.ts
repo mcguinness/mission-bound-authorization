@@ -24,6 +24,7 @@ import {
   Pep,
   type TokenFacts,
 } from "../src/index.js";
+import { testAttempt } from "./execution-attempt.js";
 
 // @spec runtime-evidence#decision-evidence-object (#741): one bundle per
 // test module. `signing`/`resolver` wire the PEP's store; `decide` is the
@@ -115,8 +116,32 @@ describe("a same-ID different-issuer collision is a miss for every loadView cons
       vendor_scope_source: "entry",
     });
     const wronglyConsumableDigest = parameterDigest(effective);
+    // What a fresh observation actually yields once the nonconforming view is
+    // rejected: no matched entry, so the unconstrained normal form.
+    const observed = parameterDigest(
+      buildListEffectiveParams({
+        action: "payments:invoice.list",
+        resource: CANONICAL_RESOURCE,
+        vendor_scope: [],
+        vendor_scope_source: "all",
+      }),
+    );
 
-    const ok = await pep.reverifyList(effective, wronglyConsumableDigest, WRONG_ISSUER_TOKEN);
-    expect(ok).toBe(false);
+    const outcome = await pep.reverifyList(
+      effective,
+      wronglyConsumableDigest,
+      WRONG_ISSUER_TOKEN,
+      // @spec runtime-evidence#execution-evidence-object (#786): the recheck
+      // now reloads the view against the ATTEMPT's governing Mission, which
+      // on this path is the credential's own (wrong-issuer) reference. The
+      // loaded-view check under test is unchanged.
+      testAttempt({
+        mission: WRONG_ISSUER_TOKEN.mission,
+        action: "payments:invoice.list",
+        authorizedParameterDigest: wronglyConsumableDigest,
+        observeEffectiveDigest: () => observed,
+      }),
+    );
+    expect(outcome.ok).toBe(false);
   });
 });

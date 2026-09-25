@@ -199,7 +199,7 @@ are referenced, not duplicated, here.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 94 conformance rows in conformance-manifest.json (45 tested, 11 partial, 38 todo).
+Implementation: 103 conformance rows in conformance-manifest.json (56 tested, 12 partial, 35 todo).
 Adopt when: Runtime enforcement is deployed and decisions need durable, verifiable records.
 Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements.
 Also requires, conditionally: Mission Cross-Domain Projection for OAuth 2.0 (when cross-domain projected decisions are recorded).
@@ -656,7 +656,18 @@ Evidence ({{execution-evidence-object}}), never a Refusal Record:
   reference where governance requires one, the Mission Reference
   Propagation channel's conflict rule,
   {{I-D.draft-mcguinness-mission-authority-server}}),
-  `channel_failure`, `pdp_unreachable`, or
+  `credential_authority_insufficient` (the presented credential's own
+  authority does not cover the request, as the PEP establishes it
+  before any decision request, including a delegation instance whose
+  authority has been withdrawn, which is distinct from a credential
+  that failed validation), `request_unsupported` (the
+  enforcement surface implements no such action), `target_unresolvable`
+  (the request names a target object the enforcement surface cannot
+  resolve), `capability_source_unresolvable` (the capability
+  definition the PEP must present could not be resolved),
+  `decision_evidence_unverifiable` (the Decision Evidence for a permit
+  was absent or did not verify, so no decision the PEP can rely on was
+  obtained), `channel_failure`, `pdp_unreachable`, or
   `state_unavailable` (where the deployment's state-source placement
   has the PEP supply state, and it cannot establish it). For a PDP
   refusal of an in-scope request that reaches it without the Mission
@@ -668,6 +679,20 @@ Evidence ({{execution-evidence-object}}), never a Refusal Record:
   {{I-D.draft-mcguinness-mission-authzen}}); a record that can
   populate the PDP-derived members of an evaluated decision is a
   Decision Evidence Object instead.
+
+  This member carries an enumerated value, never a deployment's own
+  diagnostic string. A deployment that surfaces a finer reason to the
+  caller MUST map that reason to the value naming the condition, and
+  MUST NOT place the diagnostic in this member. The caller-visible
+  reason and the signed value are separate surfaces, and only the
+  signed value is interoperable. A deployment publishes the mapping
+  it uses.
+
+  A response whose Decision Evidence the enforcing component could
+  not verify is not a decision that component obtained. It refuses
+  before accepting a permit, and records
+  `decision_evidence_unverifiable` here rather than Execution
+  Evidence for a permit it never accepted.
 
 `evaluated_at`:
 : REQUIRED. An RFC 3339 {{RFC3339}} timestamp.
@@ -1112,6 +1137,17 @@ tier ({{I-D.draft-mcguinness-mission-runtime}}).
   `permit_expired` (the permit's validity window had passed at
   execution), `permit_consumed` (re-presentation of an
   already-consumed single-use evaluation identifier),
+  `operation_already_claimed` (a different evaluation identifier
+  presented for an operation identity whose single claim is already
+  held), `operation_identity_conflict` (a single-use authorization
+  identifier presented for an operation identity other than the one
+  its use was taken under), `condition_unrecognized` (the permit
+  carried a decision condition the executing PEP does not recognize,
+  which makes the permit unusable), `consumption_unavailable` (the
+  store the executing PEP takes single use in could not be reached,
+  so exactly-once could not be established),
+  `capability_source_unresolvable` (the capability definition the
+  permit was decided against could not be re-resolved at execution),
   `obligation_unfulfilled` (a permit suppressed before release because
   an attached obligation could not be fulfilled; the failing entry is
   named in `obligation_outcomes`), and `kill_switch` (execution
@@ -1120,6 +1156,32 @@ tier ({{I-D.draft-mcguinness-mission-runtime}}).
   (a short name within a namespace the deployment controls, following
   the Collision-Resistant Name guidance of {{RFC7519}} Section 4.2) so
   they cannot collide with this set or another deployment's.
+
+  The three duplicate identifiers are distinct and MUST NOT be
+  substituted for one another. `permit_consumed` is the same
+  evaluation identifier presented twice. `operation_already_claimed`
+  is a fresh permit for an operation identity another permit already
+  claimed, which a deployment that keys single use on operation
+  identity rather than on the evaluation identifier reaches. Its
+  identity keying is the deployment's own, published with the
+  operation identity it uses. `operation_identity_conflict` is a
+  single-use authorization identifier turned to a different
+  operation. All three are post-permit dispositions on this carrier,
+  and none of them is the pre-permit denial a PDP records when it
+  refuses a duplicate or conflicting claim before deciding, carried
+  as `duplicate_suppressed` and `idempotency_conflict` in the AuthZEN
+  binding ({{I-D.draft-mcguinness-mission-authzen}}). A deployment
+  MUST NOT record a post-permit duplicate as a PDP denial reason, or
+  a pre-decision duplicate as an Execution Evidence `error`.
+
+  `capability_source_unresolvable` names a capability-source
+  resolution failure, and the carrier records where it happened: a
+  Refusal Record for a failure before the decision request
+  ({{pre-decision-refusal}}), Execution Evidence for a failure at use
+  under an obtained permit. It is never recorded as a parameter
+  comparison. A capability snapshot is not a request parameter, and
+  `parameter_mismatch` asserts a digest comparison that a resolution
+  failure never made.
 
 `obligation_outcomes`:
 : CONDITIONAL. An array of objects. REQUIRED when the linked Decision

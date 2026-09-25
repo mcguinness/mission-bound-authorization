@@ -16,7 +16,7 @@ import {
   PaymentsStore,
   Pep,
   type DecisionEvidence,
-  type RefusalRecord,
+  type ExecutionEvidence,
   type TokenFacts,
 } from "../src/index.js";
 
@@ -195,10 +195,25 @@ d("M4 core enforcement tier", () => {
     expect(res.ok).toBe(false);
     expect(res.refusal_reason).toBe("parameter_mismatch");
     const ev = evidence.forMission("msn_m4");
-    expect(ev.some((e) => e.kind === "refusal" && e.content.denial_reason === "parameter_mismatch")).toBe(true);
-    // The Refusal Record identifies its emitting enforcement point too.
-    const refusal = ev.find((e): e is RefusalRecord => e.kind === "refusal");
-    expect(refusal?.content.emitter).toEqual({ id: CANONICAL_RESOURCE, role: "pep" });
+    // @spec runtime-evidence#execution-evidence-object (#786): "when the
+    // executing PEP detects the deviation before acting, it MUST refuse the
+    // action and emit Execution Evidence with `outcome` `suppressed` and
+    // `error` `parameter_mismatch`". The permit was obtained, so this is that
+    // permit's disposition, not a pre-decision Refusal Record.
+    expect(ev.some((e) => e.kind === "refusal")).toBe(false);
+    const execution = ev.find((e): e is ExecutionEvidence => e.kind === "execution");
+    expect(execution?.content.outcome).toBe("suppressed");
+    expect(execution?.content.error).toBe("parameter_mismatch");
+    // The digest pair records the deviation itself: what the permit
+    // authorized, and what a fresh observation actually found.
+    expect(execution?.content.authorized_parameter_digest).toBeDefined();
+    expect(execution?.content.effective_parameter_digest).toBeDefined();
+    expect(execution?.content.effective_parameter_digest).not.toBe(
+      execution?.content.authorized_parameter_digest,
+    );
+    // The record identifies its emitting enforcement point too: nothing
+    // executed, so the PEP disposed of this permit, not the executor.
+    expect(execution?.content.emitter).toEqual({ id: CANONICAL_RESOURCE, role: "pep" });
   });
 
   it("over-cap invoice denied parameter_violation", async () => {

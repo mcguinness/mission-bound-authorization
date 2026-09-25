@@ -33,6 +33,7 @@ import {
   type Fga,
   type Freshness,
   type MissionView,
+  newRecordId,
   type OriginPrincipal,
   type PrincipalMappingResolver,
   relationForAction,
@@ -45,8 +46,9 @@ import {
   type ListEffectiveParams,
   parameterDigest,
 } from "./effective-params.js";
-import type { EvidenceStore } from "./evidence.js";
+import type { EvidenceStore, ExecutionEvidenceObject, RuntimeHopReference } from "./evidence.js";
 import type { PaymentsStore } from "./payments-store.js";
+import { operationKey } from "./transaction.js";
 import { signChallenge } from "./txn-challenge.js";
 import type { PendingOperation } from "./txn-store.js";
 import { PaymentsToolCatalog, type CapabilityCatalog, type CapabilitySnapshot } from "./tool-catalog.js";
@@ -586,6 +588,114 @@ export interface EnforceResult {
    * actually executes, not merely permits.
    */
   resolvedMission?: { id: string; issuer: string; authority_hash?: string };
+  /**
+   * @spec runtime-evidence#execution-evidence-object (issue #786) — present on
+   * every permit, built only after the permit's Decision Evidence verified and
+   * was retained. Every post-permit failure disposes through it, so the caller
+   * never assembles a record of its own.
+   */
+  attempt?: ExecutionAttempt;
+}
+
+/**
+ * @spec runtime-evidence#execution-evidence-object (issue #786): the
+ * post-permit disposition context. It is created ONCE per request, after the
+ * response and its Decision Evidence have been verified and retained, and
+ * carries only authorization facts copied from the retained Decision and the
+ * verified credential, never an agent argument or an unverified response
+ * member.
+ *
+ * `executionId` is the one execution identity of this disposition attempt:
+ * every emission retry reuses it, and a distinct attempt (a rejected replay
+ * included) carries its own, so no attempt can overwrite another's completed
+ * record. Durable capacity reservation and cross-restart dedup storage are
+ * #594 W4-4; this is the stable input they build on.
+ */
+export interface ExecutionAttempt {
+  /** The permit's authenticated evaluation identifier (`decision_id`). */
+  evaluationId: string;
+  /** The governing Mission, from `resolvedMission`, never `token.mission`. */
+  mission: { id: string; issuer: string; authority_hash?: string };
+  audience: string;
+  action: string;
+  /**
+   * @spec runtime-evidence#execution-evidence-object
+   * `authorized_parameter_digest`: taken from the RETAINED Decision Evidence,
+   * not from `decision.context.conditions`, since the member MUST be absent
+   * when the linked record carries no `parameter_digest`.
+   */
+  authorizedParameterDigest?: string;
+  /** One execution identity per disposition attempt; reused for emission retries. */
+  executionId: string;
+  /** Payments-domain join keys (reconcile.ts), not spec members. */
+  permitId: string;
+  joinKey: string;
+  hopReference?: RuntimeHopReference;
+  /**
+   * Re-observe this operation's effective parameter digest from CURRENT
+   * authoritative state, at the moment of the disposition. `undefined` means
+   * the operation binds no parameters, or its target can no longer be
+   * resolved; it is never a licence to repeat the authorized digest, which
+   * would assert an observation that was not made.
+   */
+  observeEffectiveDigest: () => string | undefined;
+}
+
+/**
+ * The result of one post-permit disposition. `recorded: false` carries the
+ * reason no valid record could be emitted: the disposition still refuses the
+ * action, and the gap is an open defect rather than a fabricated record.
+ */
+export type SuppressOutcome =
+  | { recorded: true }
+  | { recorded: false; gap: "effective_parameter_digest_unobservable" | "emission_failed" };
+
+/**
+ * The typed result of a pre-execution recheck. `error` names the gate that
+ * actually failed, so a caller cannot report a capability or lease failure as
+ * a parameter comparison. A failing recheck has already disposed through
+ * {@link Pep.suppressExecution}.
+ */
+export type ReverifyOutcome =
+  | { ok: true; effectiveParameterDigest?: string }
+  | { ok: false; error: string; disposition: SuppressOutcome };
+
+/**
+ * @spec runtime-evidence#pre-decision-refusal (issue #786) — the deployment's
+ * caller-visible refusal diagnostic mapped to the enumerated value the SIGNED
+ * Refusal Record carries. "This member carries an enumerated value, never a
+ * deployment's own diagnostic string ... A deployment publishes the mapping it
+ * uses": this constant is that mapping, and the two surfaces stay separate.
+ * A diagnostic absent from this table is already an enumerated value and is
+ * carried unchanged.
+ */
+export const PRE_DECISION_DENIAL_REASON: Readonly<Record<string, string>> = Object.freeze({
+  // No such action at this enforcement surface.
+  unknown_tool: "request_unsupported",
+  // The Mission the request names cannot be established from local state.
+  unknown_mission: "state_unavailable",
+  // The named target object does not resolve here.
+  unknown_invoice: "target_unresolvable",
+  unknown_vendor: "target_unresolvable",
+  // The acting credential's OWN authority does not cover the request (an
+  // attenuated leaf, or the baseline-Join rule-8 bound), determined before any
+  // decision request. Distinct from the PDP's evaluated `out_of_authority`
+  // denial, which this member must not duplicate.
+  out_of_authority: "credential_authority_insufficient",
+  // One instance of the delegation chain is revoked, so the credential's own
+  // authority no longer covers any request. Allocated to
+  // `credential_authority_insufficient`, whose definition is exactly an
+  // authority bound the PEP establishes before any decision request, NOT to
+  // `token_invalid`, which names a credential that failed validation. A
+  // revoked instance presents a well-formed credential whose authority was
+  // withdrawn, and an auditor must be able to tell those apart. The
+  // operator-facing distinction stays on the caller-visible diagnostic.
+  instance_revoked: "credential_authority_insufficient",
+});
+
+/** The enumerated Refusal Record `denial_reason` for a caller-visible diagnostic. */
+export function signedDenialReason(diagnostic: string): string {
+  return PRE_DECISION_DENIAL_REASON[diagnostic] ?? diagnostic;
 }
 
 /**
@@ -617,6 +727,33 @@ export function buildInsufficientAuthorization(authorizationDetails: AuthorityEn
     'error_description="the requested action is outside the Mission\'s Authority Set", ' +
     `authorization_remediation=${authorization_remediation}`;
   return { www_authenticate, authorization_remediation };
+}
+
+/**
+ * @spec runtime-evidence#execution-evidence-object `obligation_outcomes`:
+ * "one object per attached obligation, with `id` (REQUIRED ...), `type`
+ * (REQUIRED ...)". This PEP implements no obligation type, so every attached
+ * obligation is `unsupported`.
+ *
+ * Returns `undefined` when ANY attached obligation does not identify itself.
+ * Omitting one entry would break one-outcome-per-attached-obligation while
+ * still reading as a complete list, and `id`/`type` cannot be invented. That
+ * case is an outstanding representation gap (issue #786): the operation is
+ * still refused with zero effect, and the record carries no fabricated entry.
+ */
+function obligationOutcomes(
+  obligations: readonly unknown[],
+): ExecutionEvidenceObject["obligation_outcomes"] | undefined {
+  const named: NonNullable<ExecutionEvidenceObject["obligation_outcomes"]> = [];
+  for (const raw of obligations) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+    const { id, type } = raw as { id?: unknown; type?: unknown };
+    if (typeof id !== "string" || id.length === 0 || typeof type !== "string" || type.length === 0) {
+      return undefined;
+    }
+    named.push({ id, type, outcome: "unsupported", error: "no obligation type is implemented at this PEP" });
+  }
+  return named;
 }
 
 export class Pep {
@@ -1149,6 +1286,81 @@ export class Pep {
       return result;
     }
 
+    // @spec runtime-evidence#execution-evidence-object (issue #786) — the
+    // permit is in hand and its Decision Evidence verified and retained, so
+    // every failure from here on is a post-permit disposition, not a
+    // pre-decision refusal. The attempt context is built ONCE, here, and
+    // carries authorization facts from the RETAINED record (the authorized
+    // digest included) rather than from the response context or the request.
+    const retained = retention.retained ? retention.record.content : undefined;
+    const attempt: ExecutionAttempt = {
+      evaluationId: decision.context.decision_id as string,
+      mission: {
+        id: missionAnchor.id,
+        issuer: missionAnchor.issuer,
+        ...(missionAnchor.authority_hash !== undefined ? { authority_hash: missionAnchor.authority_hash } : {}),
+      },
+      audience: CANONICAL_RESOURCE,
+      action: mapping.action,
+      ...(retained?.parameter_digest !== undefined
+        ? { authorizedParameterDigest: retained.parameter_digest }
+        : {}),
+      executionId: newRecordId("exe"),
+      permitId: decision.context.decision_id as string,
+      // The digest-bound operation key where the operation binds parameters;
+      // a non-bound action supplies its own key rather than an operation key
+      // with an absent digest baked into it.
+      joinKey:
+        retained?.parameter_digest !== undefined
+          ? operationKey(missionAnchor.id, mapping.action, retained.parameter_digest)
+          : `op:${missionAnchor.id}:${mapping.action}`,
+      ...(token.jti !== undefined
+        ? {
+            hopReference: {
+              jti: token.jti,
+              mission_id: missionAnchor.id,
+              ...(token.identityContinuationHandle
+                ? { continuation_handle: token.identityContinuationHandle }
+                : {}),
+            },
+          }
+        : {}),
+      observeEffectiveDigest: () => {
+        if (effective) {
+          const invoice = this.deps.payments.getInvoice(effective.invoice_id);
+          const vendor = invoice ? this.deps.payments.getVendor(invoice.vendor_id) : undefined;
+          // The target is gone: no digest over "the parameters actually
+          // attempted" exists to observe. Declining is the honest answer.
+          if (!invoice || !vendor) return undefined;
+          const fresh = buildEffectiveParams({
+            action: effective.action,
+            invoice,
+            vendor,
+            resource: effective.resource,
+          });
+          return parameterDigest(fresh);
+        }
+        if (listEffective) {
+          const loaded = loadCheckedView(this.deps.loadView, {
+            id: missionAnchor.id,
+            issuer: missionAnchor.issuer,
+          });
+          const entry = loaded?.view.authority_set.find(
+            (e) => e.resource === listEffective.resource && e.actions.includes(listEffective.action),
+          );
+          const requestedVendorId =
+            listEffective.vendor_scope_source === "requested" ? listEffective.vendor_scope[0] : undefined;
+          const fresh = buildListEffectiveParams({
+            action: listEffective.action,
+            resource: listEffective.resource,
+            ...deriveVendorScope(entry, requestedVendorId),
+          });
+          return parameterDigest(fresh);
+        }
+        return undefined;
+      },
+    };
+
     // @spec authzen#response-context, runtime#decision-output: "a condition
     // the enforcing component does not recognize makes the permit unusable."
     // The check is scoped to `decision.context.conditions` ONLY (the
@@ -1164,7 +1376,10 @@ export class Pep {
       ? Object.keys(conditions).filter((k) => !RECOGNIZED_CONDITIONS.has(k))
       : [];
     if (unrecognizedConditions.length > 0) {
-      await this.recordRefusal(token, "unrecognized_condition", mapping.action, view);
+      // Post-permit: a permit was obtained and is unusable, so this is a
+      // suppressed disposition of that permit, never a Refusal Record
+      // (@spec runtime-evidence#pre-decision-refusal boundary rule).
+      await this.suppressExecution(attempt, "condition_unrecognized");
       return { permitted: false, refusal_reason: "unrecognized_condition" };
     }
 
@@ -1178,13 +1393,22 @@ export class Pep {
     // conditions refusal reason above (a distinct rule, a distinct reason).
     const obligations = decision.context.obligations as unknown[] | undefined;
     if (obligations && obligations.length > 0) {
-      await this.recordRefusal(token, "unfulfillable_obligation", mapping.action, view);
+      // @spec runtime-evidence#execution-evidence-object `obligation_outcomes`
+      // ("one object per attached obligation"): the failing entries are named
+      // when every attached obligation identifies itself, and the member is
+      // omitted entirely when one does not. A partial list would read as
+      // complete, and `id`/`type` are REQUIRED and cannot be invented.
+      const outcomes = obligationOutcomes(obligations);
+      await this.suppressExecution(attempt, "obligation_unfulfilled", {
+        ...(outcomes ? { obligationOutcomes: outcomes } : {}),
+      });
       return { permitted: false, refusal_reason: "unfulfillable_obligation" };
     }
 
     return {
       permitted: true,
       decision,
+      attempt,
       resolvedMission: {
         id: missionAnchor.id,
         issuer: missionAnchor.issuer,
@@ -1198,24 +1422,101 @@ export class Pep {
   }
 
   /**
+   * @spec runtime-evidence#execution-evidence-object (issue #786): the ONE
+   * post-permit disposition writer. Every exit that fails an obtained permit
+   * routes here, so error classification, evidence linkage and the
+   * caller-visible failure have a single owner, and no exit assembles a
+   * record of its own or emits a Refusal Record for a permit it held.
+   *
+   * The record links to the retained Decision by `evaluation_id`, and its
+   * authorization facts come from {@link ExecutionAttempt}, never from the
+   * agent's arguments or an unverified response. `role` is `pep`: nothing
+   * executed, so the executor did not dispose of this permit.
+   *
+   * The effective digest is OBSERVED here, at the disposition, and the record
+   * is not emitted at all when an authorized digest is present and no
+   * observation can be made ({@link SuppressOutcome} `gap`). Emitting a
+   * sentinel would fabricate an observation; emitting the record without the
+   * member would be invalid under the present schema. That case is #786's
+   * declared outstanding defect, joint with #594.
+   *
+   * Emission is awaited so signing and retention complete before the caller
+   * learns the outcome, and one retry reuses the same execution identity. A
+   * durable queue for a still-failing emission is #594 W4-4.
+   */
+  async suppressExecution(
+    attempt: ExecutionAttempt,
+    error: string,
+    opts: { obligationOutcomes?: ExecutionEvidenceObject["obligation_outcomes"] } = {},
+  ): Promise<SuppressOutcome> {
+    const observed = attempt.observeEffectiveDigest();
+    if (attempt.authorizedParameterDigest !== undefined && observed === undefined) {
+      return { recorded: false, gap: "effective_parameter_digest_unobservable" };
+    }
+    const input = {
+      permitId: attempt.permitId,
+      opKey: attempt.joinKey,
+      execution_id: attempt.executionId,
+      evaluation_id: attempt.evaluationId,
+      mission_id: attempt.mission.id,
+      audience: attempt.audience,
+      // The pair is carried together or not at all: the authorized member MUST
+      // be absent when the linked Decision Evidence carries no
+      // `parameter_digest`, and an effective digest alone commits nothing.
+      ...(attempt.authorizedParameterDigest !== undefined && observed !== undefined
+        ? {
+            authorized_parameter_digest: attempt.authorizedParameterDigest,
+            effective_parameter_digest: observed,
+          }
+        : {}),
+      outcome: "suppressed" as const,
+      error,
+      ...(opts.obligationOutcomes ? { obligation_outcomes: opts.obligationOutcomes } : {}),
+      ...(attempt.hopReference ? { hop_reference: attempt.hopReference } : {}),
+    };
+    for (let tries = 0; tries < 2; tries += 1) {
+      try {
+        await this.deps.evidence.recordExecution(CANONICAL_RESOURCE, "pep", input);
+        return { recorded: true };
+      } catch {
+        /* one retry, on the SAME execution identity: a retained record is
+           returned rather than duplicated, so this cannot double-emit. */
+      }
+    }
+    return { recorded: false, gap: "emission_failed" };
+  }
+
+  /**
    * @spec operation-profile (parameter binding / TOCTOU): re-verify the
    * effective parameters immediately before execution. A digest mismatch
-   * (record changed under us) is a refusal, not an execution.
+   * (record changed under us) suppresses the permit, it never executes.
+   * The result names the gate that failed, so a caller cannot report a
+   * capability failure as a parameter comparison.
    */
-  async reverify(effective: EffectiveParams, expectedDigest: string, token: TokenFacts): Promise<boolean> {
-    if (!(await this.reverifyCapability(effective.capability_snapshot, token, effective.action))) return false;
+  async reverify(
+    effective: EffectiveParams,
+    expectedDigest: string,
+    token: TokenFacts,
+    attempt: ExecutionAttempt,
+  ): Promise<ReverifyOutcome> {
+    const capability = await this.reverifyCapability(effective.capability_snapshot, token, effective.action, attempt);
+    if (!capability.ok) return capability;
     const invoice = this.deps.payments.getInvoice(effective.invoice_id);
     const vendor = invoice ? this.deps.payments.getVendor(invoice.vendor_id) : undefined;
     if (!invoice || !vendor) {
-      await this.recordRefusal(token, "parameter_mismatch", effective.action);
-      return false;
+      // The permit's target no longer resolves. The parameters it bound cannot
+      // be met, so the disposition is a parameter mismatch; the record itself
+      // is the outstanding case above (no effective digest is observable).
+      const disposition = await this.suppressExecution(attempt, "parameter_mismatch");
+      return { ok: false, error: "parameter_mismatch", disposition };
     }
     const fresh = buildEffectiveParams({ action: effective.action, invoice, vendor, resource: effective.resource });
-    if (parameterDigest(fresh) !== expectedDigest) {
-      await this.recordRefusal(token, "parameter_mismatch", effective.action);
-      return false;
+    const freshDigest = parameterDigest(fresh);
+    if (freshDigest !== expectedDigest) {
+      const disposition = await this.suppressExecution(attempt, "parameter_mismatch");
+      return { ok: false, error: "parameter_mismatch", disposition };
     }
-    return true;
+    return { ok: true, effectiveParameterDigest: freshDigest };
   }
 
   /**
@@ -1232,18 +1533,24 @@ export class Pep {
    * (present, as `vendor_scope[0]`, exactly when `vendor_scope_source` is
    * `"requested"`), so no separate input needs to be threaded through.
    */
-  async reverifyList(effective: ListEffectiveParams, expectedDigest: string, token: TokenFacts): Promise<boolean> {
-    if (!(await this.reverifyCapability(effective.capability_snapshot, token, effective.action))) return false;
-    // @spec authority-server#mission-join (#557): the baseline-Join gateway
-    // path is not wired into read-binding reverification (a documented
-    // remainder -- doing so needs the resolved Mission anchor threaded back
-    // through the caller's post-decision call, which this PR does not
-    // build). Fails closed rather than dereferencing an absent claim.
-    if (!token.mission) {
-      await this.recordRefusal(token, "parameter_mismatch", effective.action);
-      return false;
-    }
-    const loaded = loadCheckedView(this.deps.loadView, { id: token.mission.id, issuer: token.mission.issuer });
+  async reverifyList(
+    effective: ListEffectiveParams,
+    expectedDigest: string,
+    token: TokenFacts,
+    attempt: ExecutionAttempt,
+  ): Promise<ReverifyOutcome> {
+    const capability = await this.reverifyCapability(effective.capability_snapshot, token, effective.action, attempt);
+    if (!capability.ok) return capability;
+    // @spec authority-server#mission-join (#557): the CURRENT view, reloaded
+    // against the ATTEMPT's governing Mission, so a baseline-Join read
+    // reverifies against the reference the Join resolved. The former
+    // fallback recorded a parameter mismatch for a credential carrying no
+    // `mission` claim without comparing any digest, a false reason issue
+    // #786 removes rather than reclassifies.
+    const loaded = loadCheckedView(this.deps.loadView, {
+      id: attempt.mission.id,
+      issuer: attempt.mission.issuer,
+    });
     const entry = loaded?.view.authority_set.find(
       (e) => e.resource === effective.resource && e.actions.includes(effective.action),
     );
@@ -1254,21 +1561,40 @@ export class Pep {
       resource: effective.resource,
       ...deriveVendorScope(entry, requestedVendorId),
     });
-    if (parameterDigest(fresh) !== expectedDigest) {
-      await this.recordRefusal(token, "parameter_mismatch", effective.action);
-      return false;
+    const freshDigest = parameterDigest(fresh);
+    if (freshDigest !== expectedDigest) {
+      const disposition = await this.suppressExecution(attempt, "parameter_mismatch");
+      return { ok: false, error: "parameter_mismatch", disposition };
     }
-    return true;
+    return { ok: true, effectiveParameterDigest: freshDigest };
   }
 
-  async reverifyCapability(snapshot: CapabilitySnapshot | undefined, token: TokenFacts, action: string): Promise<boolean> {
-    if (!snapshot) return true;
+  /**
+   * @spec capability-binding#context-capability-source — re-resolve the
+   * capability definition the permit was decided against, immediately before
+   * the action. A moved or unresolvable snapshot is its OWN error: the
+   * snapshot is excluded from `parameter_digest` (effective-params.ts), so
+   * reporting a parameter mismatch would assert a comparison that never
+   * failed.
+   *
+   * This is the POST-PERMIT call site, which is why it suppresses. The
+   * pre-decision resolution failure is a different call site
+   * (`enforceInner`'s catch), keeps its Refusal Record, and the two are
+   * separated by call site, never by the reason string they share.
+   */
+  async reverifyCapability(
+    snapshot: CapabilitySnapshot | undefined,
+    token: TokenFacts,
+    action: string,
+    attempt: ExecutionAttempt,
+  ): Promise<ReverifyOutcome> {
+    if (!snapshot) return { ok: true };
     try {
       const current = this.capabilityCatalog.resolve(snapshot.tool);
-      if (current.catalog_sourced && current.snapshot.id === snapshot.id) return true;
+      if (current.catalog_sourced && current.snapshot.id === snapshot.id) return { ok: true };
     } catch { /* unavailable at invocation is also a refusal */ }
-    await this.recordRefusal(token, "capability_source_unresolvable", action);
-    return false;
+    const disposition = await this.suppressExecution(attempt, "capability_source_unresolvable");
+    return { ok: false, error: "capability_source_unresolvable", disposition };
   }
 
   private async refuse(
@@ -1296,6 +1622,13 @@ export class Pep {
    * timeline bucket a pre-establishment refusal under the mission the
    * caller named, without the signed record itself asserting that
    * reference was ever verified.
+   *
+   * `reason` is the caller-visible diagnostic; the signed record carries the
+   * enumerated pre-decision value {@link signedDenialReason} maps it to
+   * (@spec runtime-evidence#pre-decision-refusal: "this member carries an
+   * enumerated value, never a deployment's own diagnostic string"). The two
+   * surfaces are deliberately separate, and only the signed one is
+   * interoperable.
    */
   private async recordRefusal(
     token: TokenFacts,
@@ -1309,7 +1642,7 @@ export class Pep {
       missionId,
       audience: CANONICAL_RESOURCE,
       action: { name: action },
-      denial_reason: reason,
+      denial_reason: signedDenialReason(reason),
       subject: { id: token.sub, ...(token.iss !== undefined ? { properties: { iss: token.iss } } : {}) },
       ...(view !== undefined
         ? { mission: { id: view.id, issuer: view.issuer, authority_hash: view.authority_hash } }
