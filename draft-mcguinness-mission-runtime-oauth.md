@@ -350,7 +350,7 @@ concrete instantiations of that dial:
 |---|---|---|---|---|---|
 | Token-lifetime expiry | lifecycle-gated | maximum token lifetime | local clock check | nothing beyond the token | suspend, complete, or any revocation inside the lifetime |
 | State-gated refresh | lifecycle-gated | token lifetime (the refresh interval) | none at action time | the issuer at each refresh | anything between refreshes |
-| Token introspection ({{RFC7662}}) | state-observable | published staleness bound | one lookup within the bound, cacheable to `fresh_until` | issuer availability | revocation inside the bound |
+| Token introspection ({{RFC7662}}) at the Mission issuer | state-observable | the interval from the lookup to the action it serves | one lookup per use; the issuance profile defines no caching for the `mission` member | issuer availability | reuse of one response across decisions |
 | Mission Status operation ({{I-D.draft-mcguinness-oauth-mission-status}}) | state-observable | published staleness bound | one lookup within the bound, cacheable to `fresh_until` | status surface availability | revocation inside the bound |
 | Mission Status List ({{I-D.draft-mcguinness-oauth-mission-status-list}}) | state-observable | Status List Token TTL | local bit read | one list fetch per window | terminal-state detail; a non-VALID bit sends the consumer to the authoritative surface |
 | Mission Lifecycle Signals ({{I-D.draft-mcguinness-oauth-mission-signals}}) | state-observable | delivery latency within the verified stream | none (event-driven) | stream liveness | the pull floor; a dead stream is stale state |
