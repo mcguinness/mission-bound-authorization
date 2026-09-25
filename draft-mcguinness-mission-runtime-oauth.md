@@ -73,6 +73,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-status-list:
+    title: "Mission Status List for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status-list.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 informative:
   I-D.draft-mcguinness-oauth-mission-issuance-grant:
@@ -86,14 +94,6 @@ informative:
   I-D.draft-mcguinness-oauth-mission-resource-access:
     title: "Mission Resource Access Profile for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-oauth-mission-status-list:
-    title: "Mission Status List for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status-list.html
     author:
       -
         ins: K. McGuinness
@@ -377,45 +377,55 @@ evaluate the action under that type's documented runtime semantics, the
 runtime core's fail-closed rule governing what it does not understand
 or cannot enforce.
 
-# State Sourcing {#state-sourcing}
+## Mission State Sources {#state-sourcing}
 
 The runtime core defines an abstract freshness dial running from
-credential-lifetime expiry to a queried or event-driven active
-source, and requires a deployment to declare its position per action
-class ({{I-D.draft-mcguinness-mission-runtime}}). This binding's
-concrete instantiations of that dial:
+credential-lifetime expiry to a queried or event-driven active source,
+and requires a deployment to declare its position per action class
+({{I-D.draft-mcguinness-mission-runtime}}). On this profile the dial
+has two parts that bound different things. Token validity bounds how
+long a credential stays usable with no state check at all:
 
-| State source | Capability | Exposure bound | Per-action cost | Depends on | Cannot provide |
-|---|---|---|---|---|---|
-| Token-lifetime expiry | lifecycle-gated | maximum token lifetime | local clock check | nothing beyond the token | suspend, complete, or any revocation inside the lifetime |
-| State-gated refresh | lifecycle-gated | token lifetime (the refresh interval) | none at action time | the issuer at each refresh | anything between refreshes |
-| Token introspection ({{RFC7662}}) at the Mission issuer | state-observable | the interval from the lookup to the action it serves | one lookup per use; the issuance profile defines no caching for the `mission` member | issuer availability | reuse of one response across decisions |
-| Mission Status operation ({{I-D.draft-mcguinness-oauth-mission-status}}) | state-observable | published staleness bound | one lookup within the bound, cacheable to `fresh_until` | status surface availability | revocation inside the bound |
-| Mission Status List ({{I-D.draft-mcguinness-oauth-mission-status-list}}) | state-observable | Status List Token TTL | local bit read | one list fetch per window | terminal-state detail; a non-VALID bit sends the consumer to the authoritative surface |
-| Mission Lifecycle Signals ({{I-D.draft-mcguinness-oauth-mission-signals}}) | state-observable | delivery latency within the verified stream | none (event-driven) | stream liveness | the pull floor; a dead stream is stale state |
-
-When the credential issuer also holds the Mission, a PDP on this
-binding learns state through token introspection ({{RFC7662}}) at the
-issuer per {{I-D.draft-mcguinness-oauth-mission}}. A non-issuer
-Resource AS introspecting a local token
-({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) cannot report
-current Mission state that way; it can establish local token
-validity, but not issuer-side Mission freshness.
-
-For the high-consequence classes, the runtime core requires an active
-freshness mechanism that reflects a revocation within the staleness
-bound ({{I-D.draft-mcguinness-mission-runtime}}); on this binding,
-that is token introspection, the Mission Status profile, a Mission
-Status List whose Status List Token TTL is within the bound (the
-Status List companion's swarm-scale pull floor,
-{{I-D.draft-mcguinness-oauth-mission-status-list}}), or Mission
-Lifecycle Signals.
+| Mechanism | Revocation latency floor | Per-action cost | Cannot provide |
+|---|---|---|---|
+| Token-lifetime expiry | maximum token lifetime | local clock check | suspend, complete, or any revocation inside the lifetime |
+| State-gated refresh | the refresh interval, at most the token lifetime | none at action time | anything between refreshes |
 
 Where derivation and refresh of a Mission-bound token are gated on
 `active` ({{I-D.draft-mcguinness-oauth-mission}}), token-lifetime
 expiry and the refresh cycle each conform to the runtime core's
 Credential-lifetime freshness and refresh-gated active source rules,
 at the token lifetime as their revocation latency floor.
+
+Mission freshness bounds how stale an observation of Mission state can
+be:
+
+| State source | Exposure bound | Per-action cost | Depends on | Cannot provide |
+|---|---|---|---|---|
+| Token introspection ({{RFC7662}}) at the Mission issuer | the interval from the lookup to the action it serves | one lookup per use; the issuance profile defines no caching for the `mission` member | issuer availability | reuse of one response across decisions |
+| Mission Status operation ({{I-D.draft-mcguinness-oauth-mission-status}}) | published staleness bound | one lookup within the bound, cacheable to `fresh_until` | status surface availability | revocation inside the bound |
+| Mission Status List ({{I-D.draft-mcguinness-oauth-mission-status-list}}) | Status List Token TTL | local bit read | one list fetch per window | terminal-state detail; a non-VALID bit sends the consumer to the authoritative surface |
+| Mission Lifecycle Signals ({{I-D.draft-mcguinness-oauth-mission-signals}}) | delivery latency within the verified stream | none (event-driven) | stream liveness | the pull floor; a dead stream is stale state |
+
+Each Mission-freshness source is a separate mechanism whose
+requirements its own specification defines. A deployment adopts the
+sources its Enforcement Scope Statement declares; a normative reference
+here does not require a deployment to implement every source.
+
+Only the Mission issuer reports Mission state through introspection
+({{I-D.draft-mcguinness-oauth-mission}}). A non-issuer Resource AS
+introspecting a local token
+({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) can establish
+local token validity, but not issuer-side Mission freshness.
+
+For the high-consequence classes, the runtime core requires an active
+freshness mechanism that reflects a revocation within the staleness
+bound ({{I-D.draft-mcguinness-mission-runtime}}); on this profile,
+that is token introspection at the Mission issuer, the Mission Status
+profile, a Mission Status List whose Status List Token TTL is within
+the bound (the Status List companion's swarm-scale pull floor,
+{{I-D.draft-mcguinness-oauth-mission-status-list}}), or Mission
+Lifecycle Signals.
 
 # Resource-Owner Class Floors {#class-floors}
 
