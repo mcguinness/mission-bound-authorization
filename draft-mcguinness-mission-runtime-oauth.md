@@ -145,8 +145,8 @@ active predicate and freshness bound, a subject and actor, an action
 and resource with normalized parameters, local-policy intersection, an
 authenticated permit or deny, an execution boundary, and fail-closed
 behavior on anything the deployment does not understand. It names
-these as abstract roles and carries no OAuth claim or endpoint
-vocabulary. Mission-Bound Authorization for OAuth 2.0
+these as abstract roles, so a non-OAuth binding can implement it
+without importing OAuth semantics. Mission-Bound Authorization for OAuth 2.0
 {{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile")
 defines the Mission-bound access token: its claims, its issuance and
 delegation, and the validation a Resource Server applies to it.
@@ -197,7 +197,8 @@ Server", "client", "protected resource", "resource owner", and
 "Resource Server" from OAuth 2.0 {{RFC6749}} through the terminology
 incorporated by {{I-D.draft-mcguinness-oauth-mission}}. It uses Policy
 Enforcement Point (PEP), Policy Decision Point (PDP), established
-Mission, decision, Resource policy, consequential action, and the
+Mission, decision, Resource policy, consequential action,
+high-consequence class, Enforcement Scope Statement, and the
 action-class names as defined by the runtime core
 ({{I-D.draft-mcguinness-mission-runtime}}).
 
@@ -286,19 +287,19 @@ complete, normative realization on this profile. Each value is read
 from the validated credential context ({{token-validation}}): a JWT
 claim, or the introspection response member of the same name.
 
-| Runtime-core role | OAuth realization |
+| Runtime-core role or input | OAuth realization |
 |---|---|
 | Established Mission reference | The `mission` claim's `id` and `issuer` {{I-D.draft-mcguinness-oauth-mission}}, or an externally established reference ({{token-validation}}) |
 | Authenticated subject | `sub` |
 | Client or immediate-actor identity | `client_id` names the client; when `act` is present, the immediate actor is the current actor in `act` |
 | Actor-delegation chain | `act`, when delegation is in effect |
 | Sender-constraint confirmation | `cnf`, verified during validation ({{token-validation}}) |
-| Token audience or protected-resource reference | The protected resource the PEP guards; validation has established that `aud` names it |
-| Authority entry | The credential authority ({{authorization-details-mapping}}) |
+| Credential audience or protected resource | The protected resource the PEP guards; validation has established that `aud` names it |
+| Authority entry | The applicable entry of the credential authority ({{authorization-details-mapping}}) |
 | Current effective authority | The approved Authority Set as narrowed, from a source that reports the narrowing ({{authorization-details-mapping}}) |
-| Token issuer | `iss` |
-| Token expiry | `exp` |
-| Mission expiry | The `mission` claim's `expires_at` member where present, or a Mission state source that reports the Mission's expiry |
+| Credential issuer | `iss` |
+| Credential expiry | `exp` |
+| The Mission's `expires_at` (time input) | The `mission` claim's `expires_at` member where present, or a Mission state source that reports the Mission's expiry |
 
 Four pairs in the table are related but distinct inputs:
 
@@ -316,7 +317,7 @@ Four pairs in the table are related but distinct inputs:
   resource, the target of the action.
 - The credential authority and the current effective authority. The
   action falls within both ({{authorization-details-mapping}}).
-- Token expiry and Mission expiry. The PDP MUST refuse if the decision
+- Credential expiry and Mission expiry. The PDP MUST refuse if the decision
   context indicates the token is expired (`exp`). Where the validated
   `mission` claim carries the `expires_at` member, the PEP or PDP MAY
   refuse actions past that instant without consulting a state source:
@@ -336,15 +337,16 @@ Four pairs in the table are related but distinct inputs:
   ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}), lets a
   validator check that cap directly.
 
-These realize the runtime core's actor and time inputs
+These realize the runtime core's decision inputs
 ({{I-D.draft-mcguinness-mission-runtime}}); the requirements
 themselves, including that no runtime input expands authority beyond
 the issued authority, are the runtime core's.
 
 The Mission reference is `id` and `issuer`. `authority_hash` is not
 part of the baseline reference; a deployment that needs it as a
-commitment proof rather than an audit correlator carries it under the
-issuance profile's Local Approved-Set Verification profile
+commitment proof rather than an audit correlator obtains it from the
+Mission issuer under the issuance profile's Local Approved-Set
+Verification profile
 ({{I-D.draft-mcguinness-oauth-mission}}). The runtime core's permit
 binding and required decision evidence record the roles above; their
 serialization is defined by the runtime core and the decision-API
@@ -401,18 +403,19 @@ credential-lifetime expiry to a queried or event-driven active source,
 and requires a deployment to declare its position per action class
 ({{I-D.draft-mcguinness-mission-runtime}}). On this profile the dial
 has two parts that bound different things. Token validity bounds how
-long a credential stays usable with no state check at all:
+long a credential stays usable with no state check at action time:
 
 | Mechanism | Revocation latency floor | Per-action cost | Cannot provide |
 |---|---|---|---|
 | Token-lifetime expiry | maximum token lifetime | local clock check | suspend, complete, or any revocation inside the lifetime |
-| State-gated refresh | the refresh interval, at most the token lifetime | none at action time | anything between refreshes |
+| Refresh gated on `active` | the token lifetime | none at action time | anything between refreshes |
 
 Where derivation and refresh of a Mission-bound token are gated on
 `active` ({{I-D.draft-mcguinness-oauth-mission}}), token-lifetime
-expiry and the refresh cycle each conform to the runtime core's
-Credential-lifetime freshness and refresh-gated active source rules,
-at the token lifetime as their revocation latency floor.
+expiry conforms to the runtime core's Credential-lifetime freshness
+rule, and the refresh cycle to its rule for a refresh cycle gated on
+live Mission state, each at the token lifetime as its revocation
+latency floor.
 
 Mission freshness bounds how stale an observation of Mission state can
 be:
@@ -420,8 +423,8 @@ be:
 | State source | Exposure bound | Per-action cost | Depends on | Cannot provide |
 |---|---|---|---|---|
 | Token introspection ({{RFC7662}}) at the Mission issuer | the interval from the lookup to the action it serves | one lookup per use; the issuance profile defines no caching for the `mission` member | issuer availability | reuse of one response across decisions |
-| Mission Status operation ({{I-D.draft-mcguinness-oauth-mission-status}}) | published staleness bound | one lookup within the bound, cacheable to `fresh_until` | status surface availability | revocation inside the bound |
-| Mission Status List ({{I-D.draft-mcguinness-oauth-mission-status-list}}) | Status List Token TTL | local bit read | one list fetch per window | terminal-state detail; a non-VALID bit sends the consumer to the authoritative surface |
+| Mission Status profile ({{I-D.draft-mcguinness-oauth-mission-status}}) | published staleness bound | one lookup within the bound, cacheable to `fresh_until` | status surface availability | revocation inside the bound |
+| Mission Status List ({{I-D.draft-mcguinness-oauth-mission-status-list}}) | Status List Token TTL | local bit read, plus one list fetch per window | list publisher availability | terminal-state detail; a non-VALID bit sends the consumer to the authoritative surface |
 | Mission Lifecycle Signals ({{I-D.draft-mcguinness-oauth-mission-signals}}) | delivery latency within the verified stream | none (event-driven) | stream liveness | the pull floor; a dead stream is stale state |
 
 Each Mission-freshness source is a separate mechanism whose
@@ -467,8 +470,10 @@ realization of the runtime core's classification-floor rule
   floor for every action in the family. Each value is the minimum
   runtime action class for the mapped action: one of
   `consequential_read`, `consequential_write`, `irreversible_action`,
-  `external_commitment`, or `privileged_administration`, naming the
-  runtime core's classes.
+  `external_commitment`, or `privileged_administration`: this
+  document's identifiers for the runtime core's Consequential read,
+  Consequential write, Irreversible action, External commitment, and
+  Privileged administration classes.
 
 A PDP with access to the resource's metadata MUST NOT classify a mapped
 action below its floor. The member is the interoperable carriage of the
@@ -528,8 +533,8 @@ directly, rather than the minimum credential-derived claims a PEP needs
 to convey, MUST treat it as a credential, protect it against
 disclosure, and MUST NOT use it outside the declared enforcement scope.
 
-Evaluating an action against Mission authority in place of the
-credential authority would let a narrowed token act with its Mission's
+Evaluating an action against the approved Authority Set in place of
+the credential authority would let a narrowed token act with its Mission's
 broader authority, undoing the narrowing the issuance profile applied;
 {{authorization-details-mapping}} requires both bounds for that reason.
 
