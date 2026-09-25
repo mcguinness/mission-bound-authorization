@@ -314,12 +314,15 @@ Four pairs in the table are related but distinct inputs:
   reports the Mission `expired`, or exposes the Mission's `expires_at`,
   the PDP MUST refuse on it independent of the token's own `exp`: the
   baseline `mission` claim need not carry `expires_at`, and OAuth token
-  introspection {{RFC7662}} does not itself surface it. A profile that
-  makes `expires_at` REQUIRED for the credentials it governs, such as
-  the Issuance Grant profile
-  ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}), also caps
-  `exp` at it under that profile's own rule, never reducing the Mission
-  expiry check to `exp` alone.
+  introspection {{RFC7662}} does not itself surface it. The issuance
+  profile caps the `exp` of every token the Mission Issuer derives at
+  the Mission's `expires_at` ({{I-D.draft-mcguinness-oauth-mission}},
+  Section "Mission-Bound Access Tokens"), so the `exp` check enforces
+  the Mission's expiry transitively, as the runtime core's time input
+  expects. A profile that makes the `expires_at` member REQUIRED for
+  the credentials it governs, such as the Issuance Grant profile
+  ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}), lets a
+  validator check that cap directly.
 
 These realize the runtime core's actor and time inputs
 ({{I-D.draft-mcguinness-mission-runtime}}); the requirements
