@@ -88,6 +88,8 @@ interface Harness {
   suspendMission: () => void;
   /** Drop a tool from the Operation Profile, so its phase is unestablishable. */
   dropFromProfile: (tool: string) => void;
+  /** Put a dropped tool back, so the profile places its phase again. */
+  restoreToProfile: (tool: string) => void;
   digest: () => string;
 }
 
@@ -116,6 +118,18 @@ function harness(
         id: "inv-1",
         vendor_id: "acme",
         amount: "125.00",
+        currency: "USD",
+        payee_account: "acct-acme",
+        status: "payable",
+      },
+      // A second payable invoice of the same vendor, so a crossing refused at
+      // the pre-effect boundary can be followed by a legitimate crossing of a
+      // DISTINCT operation identity against this same store. The commit path
+      // needs that: its refused attempt had already taken its own single use.
+      {
+        id: "inv-2",
+        vendor_id: "acme",
+        amount: "75.00",
         currency: "USD",
         payee_account: "acct-acme",
         status: "payable",
@@ -203,6 +217,9 @@ function harness(
     dropFromProfile: (tool) => {
       dropped.add(tool);
     },
+    restoreToProfile: (tool) => {
+      dropped.delete(tool);
+    },
     digest: () => {
       const invoice = payments.getInvoice("inv-1");
       const vendor = invoice ? payments.getVendor(invoice.vendor_id) : undefined;
@@ -240,8 +257,9 @@ async function cross(
   h: Harness,
   crossing: (typeof crossings)[number],
   hook?: () => void,
+  invoiceId = "inv-1",
 ): Promise<{ ok: boolean; refusal_reason?: string; denial_reason?: string; result?: unknown }> {
-  const args = { invoice_id: "inv-1" };
+  const args = { invoice_id: invoiceId };
   if (crossing.call === "read") return h.server.callReadTool(crossing.tool, args, TOKEN, hook);
   if (crossing.call === "write") return h.server.callWriteTool(crossing.tool, args, TOKEN, hook);
   return h.server.callTransactionTool(crossing.tool, args, TOKEN, hook);
@@ -380,6 +398,53 @@ describe("compound-action phases (@spec runtime#compound-actions)", () => {
     expect(refused.ok).toBe(false);
     expect(refused.refusal_reason).toBe("phase_mismatch");
     expect(h.connectors.ledgerEntries("msn_252")).toHaveLength(0);
+  });
+
+  it("refuses a crossing dropped from the Operation Profile after admission, on every dispatch path", async () => {
+    // The Operation Profile is live, so admission is not the last word on it.
+    // The hook runs in the same decision-to-effect window the expiry case
+    // uses, after admission and while the awaited capability and parameter
+    // reads are still ahead: the crossing's phase stops being establishable
+    // there, and the permit must be refused at the final boundary rather than
+    // released on the strength of the earlier comparison.
+    for (const crossing of crossings) {
+      const h = harness();
+      const refused = await cross(h, crossing, () => h.dropFromProfile(crossing.tool));
+      expect(refused.ok, crossing.tool).toBe(false);
+      expect(refused.refusal_reason, crossing.tool).toBe("phase_mismatch");
+      expect(refused.result, crossing.tool).toBeUndefined();
+      expect(h.connectors.ledgerEntries("msn_252"), crossing.tool).toHaveLength(0);
+      const suppressed = executions(h).filter((e) => e.content.outcome === "suppressed");
+      expect(suppressed.map((e) => e.content.error), crossing.tool).toEqual(["phase_mismatch"]);
+      if (crossing.call === "transaction") {
+        // The attempt had started, so its own redemption is spent and its
+        // operation row is abandoned; nothing crossed to the connector.
+        const opKey = operationKey("msn_252", "payments:payment.execute", h.digest(), "commit");
+        expect(h.engine.state(opKey)).toBe("abandoned");
+      }
+    }
+  });
+
+  it("lets a legitimate crossing through against the same store after a pre-effect profile refusal", async () => {
+    // The pre-effect comparison is not a blanket refusal: with the profile
+    // whole again, the next crossing of the same phase executes against the
+    // store the refused one left behind.
+    for (const crossing of crossings) {
+      const h = harness();
+      const refused = await cross(h, crossing, () => h.dropFromProfile(crossing.tool));
+      expect(refused.refusal_reason, crossing.tool).toBe("phase_mismatch");
+      h.restoreToProfile(crossing.tool);
+      // The commit path's refused attempt took its own single use before the
+      // boundary (D28), so the legitimate commit is a DISTINCT operation
+      // identity on the same store, never a replay of the abandoned one.
+      const invoiceId = crossing.call === "transaction" ? "inv-2" : "inv-1";
+      const allowed = await cross(h, crossing, undefined, invoiceId);
+      expect(allowed.ok, `${crossing.tool}: ${JSON.stringify(allowed)}`).toBe(true);
+      expect(allowed.result, crossing.tool).toBeDefined();
+      expect(h.connectors.ledgerEntries("msn_252"), crossing.tool).toHaveLength(
+        crossing.call === "transaction" ? 1 : 0,
+      );
+    }
   });
 
   it("ignores an agent-supplied action_phase argument and uses the catalog phase", async () => {
