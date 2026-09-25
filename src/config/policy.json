@@ -54,5 +54,6 @@
     "payments:payment.execute",
     "payments:remittance.send"
   ],
-  "max_mission_lifetime_s": null
+  "max_mission_lifetime_s": null,
+  "audit_horizon_s": 31536000
 }
