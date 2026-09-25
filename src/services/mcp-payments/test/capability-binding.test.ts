@@ -16,7 +16,10 @@ function fixture(source: () => string = () => text) {
   const keys = createEphemeralEvidenceKeys();
   const evidence = new EvidenceStore(keys.signing, keys.resolver);
   const view: MissionView = { id: token.mission.id, issuer: token.mission.issuer, authority_hash: token.mission.authority_hash!, state: "active", version: 1,
-    authority_set: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: TOOLS.map(t => t.action), constraints: { vendors: ["acme"] } }],
+    // Deduped: several served tools now share one action identifier (@spec
+    // runtime#compound-actions), and an Authority Set entry names each action
+    // once.
+    authority_set: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: [...new Set(TOOLS.map(t => t.action))], constraints: { vendors: ["acme"] } }],
     subject: { iss: token.mission.issuer, sub: "alice" }, client_id: "ap-agent" };
   const loadView = () => ({ view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } });
   const requests: EvaluationRequest[] = [];

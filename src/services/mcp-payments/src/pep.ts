@@ -13,6 +13,8 @@
 import { randomUUID } from "node:crypto";
 import { type ActObject, buildContextActor, flattenActChain } from "@mission/actor-chain";
 import {
+  type ActionPhase,
+  isActionPhase,
   type JsonValue,
   type PropagatedMissionReference,
   TXN_AUTHORIZATION_REQUIRED,
@@ -206,6 +208,19 @@ export type TokenFacts = MissionBoundTokenFacts | OrdinaryTokenFacts;
 export interface ActionMapping {
   action: string;
   actionClass?: "irreversible_action" | "external_commitment";
+  /**
+   * @spec runtime#compound-actions — the phase of the crossing this tool
+   * makes, when the Operation Profile places the operation in a compound
+   * action. Absent for an ordinary operation that is no phase of one.
+   *
+   * This is the AUTHORITATIVE value: the PEP supplies it on the decision
+   * request and compares the permit's `conditions.action_phase` against it at
+   * use, and it MUST NOT be taken from an agent-supplied argument. It is
+   * pinned against the trusted catalog's own per-tool declaration
+   * (`CATALOG_TOOL_BINDINGS`) by a consistency test, so the profile and the
+   * served catalog cannot drift.
+   */
+  phase?: ActionPhase;
   needsInvoice: boolean;
   /**
    * @spec runtime#read-binding — this action's unfiltered form requests a
@@ -219,12 +234,27 @@ export interface ActionMapping {
   bindsVendorScope?: boolean;
 }
 
+/**
+ * The enforcement surface's trusted Operation Profile.
+ *
+ * @spec runtime#compound-actions — `payments:payment.execute` is a compound
+ * action whose three crossings SHARE that one action identifier:
+ * `check_transfer` (preflight, no reservation and no external effect),
+ * `hold_transfer` (prepare, a hold that is state and never commit authority),
+ * and `execute_wire_transfer` (commit, the irreversible effect). All three
+ * normalize the SAME effect inputs over the same invoice, so they produce one
+ * identical `parameter_digest`: the phase is the only thing distinguishing a
+ * prepare permit from a commit permit, which is exactly what the phase
+ * binding exists to catch.
+ */
 const TOOL_ACTIONS: Record<string, ActionMapping> = {
   list_invoices: { action: "payments:invoice.list", needsInvoice: false, bindsVendorScope: true },
   get_invoice: { action: "payments:invoice.read", needsInvoice: true },
   lookup_vendor: { action: "payments:vendor.read", needsInvoice: false },
   schedule_payment: { action: "payments:payment.schedule", needsInvoice: true },
-  execute_wire_transfer: { action: "payments:payment.execute", actionClass: "irreversible_action", needsInvoice: true },
+  check_transfer: { action: "payments:payment.execute", phase: "preflight", needsInvoice: true },
+  hold_transfer: { action: "payments:payment.execute", phase: "prepare", needsInvoice: true },
+  execute_wire_transfer: { action: "payments:payment.execute", phase: "commit", actionClass: "irreversible_action", needsInvoice: true },
   send_remittance_email: { action: "payments:remittance.send", actionClass: "external_commitment", needsInvoice: true },
 };
 
@@ -283,7 +313,99 @@ function deriveVendorScope(
  * rule for an unrecognized member is scoped to `conditions` alone, never to
  * the whole response context.
  */
-const RECOGNIZED_CONDITIONS = new Set(["parameter_digest", "valid_until", "use_limit"]);
+/**
+ * @spec authzen#response-context — the permit's decision conditions live
+ * NESTED under `decision.context.conditions`. One accessor, so no site
+ * re-derives the nesting.
+ */
+function conditionsOf(decision: Decision | undefined): Record<string, unknown> | undefined {
+  return decision?.context.conditions as Record<string, unknown> | undefined;
+}
+
+const RECOGNIZED_CONDITIONS: ReadonlySet<string> = new Set([
+  "parameter_digest",
+  "valid_until",
+  "use_limit",
+  // @spec runtime#compound-actions, authzen#response-context `action_phase` —
+  // this PEP recognizes and ENFORCES the phase condition (Pep.verifyPermitAtUse
+  // compares it against the crossing's own Operation Profile phase at use).
+  // Recognition has to land with, or before, the comparison: a PEP that
+  // enforced the condition without recognizing it would refuse every permit
+  // carrying one as an unrecognized member instead.
+  "action_phase",
+]);
+
+/**
+ * One condition comparison the executing PEP makes before releasing an
+ * effect. EVERY row runs at EVERY use of the permit: no row may opt out of
+ * the last one, because the comparison a row skips there is a comparison the
+ * crossing was never held to. The rows carried a `timeSensitive` flag that
+ * excused `action_phase` from the pre-effect stage on the premise that a
+ * phase cannot move while an awaited read is pending; the Operation Profile
+ * is live, so it can, and a crossing removed from it after admission was
+ * released on the strength of a comparison that no longer held.
+ *
+ * Every comparator is therefore SYNCHRONOUS over state already in hand (the
+ * clock, the retained attempt, the in-memory Operation Profile). That is what
+ * makes running the whole table at the final boundary free: it adds no
+ * awaited read, so it cannot widen the window between the last check and the
+ * effect. A comparator that needed an awaited read would have to be ordered
+ * ahead of the time comparison below rather than admitted here as it stands.
+ *
+ * `failure` returns the enumerated Execution Evidence `error` for a failed
+ * comparison, or `undefined` when it holds. Every value here is already in
+ * that closed set (@spec runtime-evidence#execution-evidence-object); this
+ * seam adds none.
+ */
+interface PermitUseCheck {
+  name: string;
+  failure: (
+    attempt: ExecutionAttempt,
+    ctx: { now: Date; profile: ActionMapping | undefined },
+  ) => string | undefined;
+}
+
+const PERMIT_USE_CHECKS: readonly PermitUseCheck[] = [
+  {
+    // @spec runtime#compound-actions — "The executing PEP MUST compare the
+    // permit's bound phase with the phase of the crossing before releasing an
+    // effect. Unequal phases, an absent binding where the Operation Profile
+    // identifies a phase, or a phase that cannot be established MUST cause
+    // refusal, fail closed". The converse is the AuthZEN rule that a phase
+    // condition on a crossing whose profile declares no phase "is invalid
+    // there", which is the last arm below.
+    name: "action_phase",
+    failure: (attempt, { profile }) => {
+      // The profile no longer places this tool at all: the crossing's phase
+      // cannot be established at use, which refuses rather than defaulting to
+      // "no phase" and letting a phase-bound permit through. The profile is
+      // re-read at each use, never snapshotted at admission: a snapshot would
+      // still answer with the phase the crossing has since lost.
+      if (!profile) return "phase_mismatch";
+      const crossing = profile.phase;
+      const bound = attempt.permitBoundPhase;
+      if (crossing === undefined) return bound === undefined ? undefined : "phase_mismatch";
+      // Absent where required, and unknown or malformed where required, are
+      // the same refusal: neither establishes the phase the permit bound.
+      if (!isActionPhase(bound)) return "phase_mismatch";
+      return bound === crossing ? undefined : "phase_mismatch";
+    },
+  },
+  {
+    // @spec authzen#response-context, runtime-evidence#execution-evidence-object
+    // `permit_expired` — the permit authorizes INITIATION within its validity
+    // bound. `valid_until` is REQUIRED on a permit, so an absent or
+    // unparseable bound establishes no live window at all and is treated as
+    // elapsed: the fail-closed reading, never a permit relied on without one.
+    name: "valid_until",
+    failure: (attempt, { now }) => {
+      const validUntilMs =
+        typeof attempt.permitValidUntil === "string" ? Date.parse(attempt.permitValidUntil) : Number.NaN;
+      if (!Number.isFinite(validUntilMs)) return "permit_expired";
+      return now.getTime() <= validUntilMs ? undefined : "permit_expired";
+    },
+  },
+];
 
 /**
  * @spec runtime#state-freshness: a loaded MissionView paired with the
@@ -356,6 +478,26 @@ export interface PepDeps {
   now?: () => Date;
   /** Trusted catalog serving this executor, never a caller-supplied digest. */
   capabilityCatalog?: CapabilityCatalog;
+  /**
+   * @spec runtime#compound-actions — the trusted Operation Profile this PEP
+   * derives each crossing's action and phase from, resolved on EVERY lookup
+   * so a configuration change between a Decision and its use is observed
+   * rather than cached. Defaults to this module's {@link TOOL_ACTIONS}.
+   *
+   * Injectable so a conformance test can prove the phase comes from here and
+   * nowhere else: an agent-supplied `action_phase` argument cannot move it,
+   * and a crossing whose profile entry is gone at use has no establishable
+   * phase and refuses rather than releasing an effect.
+   */
+  operationProfile?: () => Record<string, ActionMapping>;
+  /**
+   * @spec authzen#response-context — the permit `conditions` members this PEP
+   * recognizes. Defaults to {@link RECOGNIZED_CONDITIONS}. Injectable so a
+   * conformance test can stand up a PEP whose recognized set LACKS
+   * `action_phase` and observe the must-understand rule: such a PEP treats a
+   * permit carrying the condition as invalid rather than executing it.
+   */
+  recognizedConditions?: ReadonlySet<string>;
   /** Deployment policy: which actions require an action-bound approval (M6). */
   requiresActionApproval?: (action: string, actionClass: string | undefined) => boolean;
   maxApprovalAgeSeconds?: number;
@@ -619,6 +761,26 @@ export interface ExecutionAttempt {
   audience: string;
   action: string;
   /**
+   * The tool whose crossing this attempt is about to make. The PEP re-derives
+   * the crossing's authoritative phase from its own Operation Profile under
+   * this name at every check, so a profile that no longer places the tool
+   * leaves the phase unestablishable at use.
+   */
+  tool: string;
+  /**
+   * @spec authzen#response-context — the permit's `conditions.action_phase`
+   * EXACTLY as the verified decision carried it, unnarrowed: a missing,
+   * unknown or malformed value has to stay distinguishable from a valid one,
+   * so the comparison at use can refuse it rather than coerce it.
+   */
+  permitBoundPhase?: unknown;
+  /**
+   * @spec authzen#response-context — the permit's `conditions.valid_until`,
+   * the validity bound on INITIATING an effect under it. Copied from the
+   * verified decision, never recomputed locally and never extended.
+   */
+  permitValidUntil?: unknown;
+  /**
    * @spec runtime-evidence#execution-evidence-object
    * `authorized_parameter_digest`: taken from the RETAINED Decision Evidence,
    * not from `decision.context.conditions`, since the member MUST be absent
@@ -764,8 +926,20 @@ export class Pep {
     this.now = deps.now ?? (() => new Date());
   }
 
+  /**
+   * @spec runtime#compound-actions — "The PEP derives the crossing's phase
+   * from its trusted Operation Profile". Every read of a crossing's action,
+   * class and phase goes through here, and the profile is resolved on each
+   * call rather than captured once, so a Decision and its use always ask the
+   * profile as it is at that moment.
+   */
   toolAction(tool: string): ActionMapping | undefined {
-    return TOOL_ACTIONS[tool];
+    return (this.deps.operationProfile?.() ?? TOOL_ACTIONS)[tool];
+  }
+
+  /** The permit `conditions` members this PEP recognizes (@spec authzen#response-context). */
+  private recognizedConditions(): ReadonlySet<string> {
+    return this.deps.recognizedConditions ?? RECOGNIZED_CONDITIONS;
   }
 
   /**
@@ -1087,6 +1261,11 @@ export class Pep {
         ...(listDigest ? { parameter_digest: listDigest } : {}),
         ...(amount ? { amount } : {}),
         ...(mapping.actionClass ? { action_class: mapping.actionClass } : {}),
+        // @spec authzen#context-action-phase — supplied from THIS surface's
+        // trusted Operation Profile (`mapping.phase`), never from `args`: an
+        // agent-supplied `action_phase` argument is not read anywhere on this
+        // path, so it cannot select or move the phase of a crossing.
+        ...(mapping.phase !== undefined ? { action_phase: mapping.phase } : {}),
         ...(actionApproval ? { action_approval: actionApproval } : {}),
         // @spec authority-server#mission-join (#557 review point 1) —
         // present exactly on the baseline-Join path: tells the PDP to
@@ -1302,6 +1481,18 @@ export class Pep {
       },
       audience: CANONICAL_RESOURCE,
       action: mapping.action,
+      tool,
+      // @spec authzen#response-context — the permit's own bound conditions,
+      // copied from the VERIFIED decision at the one point the permit is in
+      // hand. `verifyPermitAtUse` compares only these retained values against
+      // the crossing it is about to make, so no later step reconstructs
+      // authorization from an agent argument or from retrospective evidence.
+      ...(conditionsOf(decision)?.action_phase !== undefined
+        ? { permitBoundPhase: conditionsOf(decision)?.action_phase }
+        : {}),
+      ...(conditionsOf(decision)?.valid_until !== undefined
+        ? { permitValidUntil: conditionsOf(decision)?.valid_until }
+        : {}),
       ...(retained?.parameter_digest !== undefined
         ? { authorizedParameterDigest: retained.parameter_digest }
         : {}),
@@ -1312,7 +1503,7 @@ export class Pep {
       // with an absent digest baked into it.
       joinKey:
         retained?.parameter_digest !== undefined
-          ? operationKey(missionAnchor.id, mapping.action, retained.parameter_digest)
+          ? operationKey(missionAnchor.id, mapping.action, retained.parameter_digest, mapping.phase)
           : `op:${missionAnchor.id}:${mapping.action}`,
       ...(token.jti !== undefined
         ? {
@@ -1372,8 +1563,9 @@ export class Pep {
     // so the permit it rides on is unusable: refuse with zero effect, never
     // ignore.
     const conditions = decision.context.conditions as Record<string, unknown> | undefined;
+    const recognized = this.recognizedConditions();
     const unrecognizedConditions = conditions
-      ? Object.keys(conditions).filter((k) => !RECOGNIZED_CONDITIONS.has(k))
+      ? Object.keys(conditions).filter((k) => !recognized.has(k))
       : [];
     if (unrecognizedConditions.length > 0) {
       // Post-permit: a permit was obtained and is unusable, so this is a
@@ -1484,6 +1676,58 @@ export class Pep {
       }
     }
     return { recorded: false, gap: "emission_failed" };
+  }
+
+  /**
+   * @spec runtime#compound-actions, runtime#execution-reverification — the ONE
+   * pre-effect verification seam, called from every dispatch path.
+   *
+   * Both phase MUSTs are unconditional, and this deployment has three dispatch
+   * paths (`callReadTool`, `callWriteTool`, `callTransactionTool`), only the
+   * last of which reaches a connector. A preflight crossing releases no
+   * connector effect and still MUST refuse a `commit` permit, so the
+   * comparison belongs here, in front of every crossing, rather than beside
+   * the one commit point.
+   *
+   * Every dispatch path calls it TWICE, and both calls run the WHOLE table:
+   *
+   * - at admission, BEFORE any state the crossing would burn (the transaction
+   *   path's single-use permit redemption included) and before any awaited
+   *   capability, parameter or resource read. A wrong-phase or expired
+   *   presentation therefore consumes nothing, and the legitimate crossing
+   *   that follows still finds its own redemption available.
+   * - again after the last awaited read and immediately before the effect is
+   *   released. Both the clock and the Operation Profile can move while a
+   *   resolver call is pending, so the admission call is never the last word
+   *   on either: the permit is held to the same comparisons at the boundary
+   *   it crosses. Moving a comparison earlier must not enlarge the unchecked
+   *   interval, which is why the earlier call ADDS to the later one rather
+   *   than replacing part of it.
+   *
+   * Running the table is synchronous over state already in hand, so the
+   * second call opens no new awaited window before the effect. Within it, the
+   * rows run in table order and each reads the clock at its own turn, so the
+   * `valid_until` comparison is the LAST thing decided before release.
+   *
+   * What this seam governs is whether the permit may still INITIATE an
+   * effect. Once an effect has started, how long it may run is the execution
+   * lease's question (`executionLeaseMs` / `TransactionEngine.leaseValid`),
+   * and an expired permit is never permission to restart an operation whose
+   * effect already committed.
+   *
+   * Every comparator is a row in one table, so a coordinated condition added
+   * later (issue #773's `evaluation_context_digest`) joins this seam as
+   * another row rather than a competing check on another path.
+   */
+  async verifyPermitAtUse(attempt: ExecutionAttempt): Promise<ReverifyOutcome> {
+    for (const check of PERMIT_USE_CHECKS) {
+      const error = check.failure(attempt, { now: this.now(), profile: this.toolAction(attempt.tool) });
+      if (error !== undefined) {
+        const disposition = await this.suppressExecution(attempt, error);
+        return { ok: false, error, disposition };
+      }
+    }
+    return { ok: true };
   }
 
   /**

@@ -16,6 +16,7 @@ import {
   type EntitlementObservation,
   entitlementPermits,
   type EntitlementResolver,
+  isActionPhase,
   isValidAmount,
   MISSION_ORIGIN_SUBJECT_TYP,
   type OriginPrincipal,
@@ -45,6 +46,7 @@ import {
   policyViewId,
   vendorConstraintSatisfied,
 } from "./policy-view.js";
+import { permitDeadline } from "./permit-deadline.js";
 import { allowsNoActiveFreshness, type StalenessBound } from "./runtime-posture.js";
 
 export type { EntitlementObservation, EntitlementResolver, OriginPrincipal, PrincipalMappingObservation, PrincipalMappingResolver } from "@mission/core";
@@ -153,6 +155,19 @@ export interface EvaluationRequest {
     parameter_digest?: string;
     amount?: { amount: string; currency: string };
     action_class?: string;
+    /**
+     * @spec authzen#context-action-phase — CONDITIONAL: REQUIRED when the
+     * PEP's trusted Operation Profile identifies this operation as a phase of
+     * a compound action. Typed `string` deliberately: an untrusted or
+     * mistyped value must be REJECTED here, not admitted by the type system,
+     * so `evaluateInner` validates it against the closed set. The PEP derives
+     * it from its own profile and never from an agent-supplied argument.
+     *
+     * The request member communicates the phase being evaluated; the permit's
+     * `conditions.action_phase` is the live binding, and Decision Evidence's
+     * `action_phase` is retrospective. Neither substitutes for the condition.
+     */
+    action_phase?: string;
     action_approval?: ActionApproval;
     /**
      * @spec authority-server#mission-join (#557 review point 1) — present
@@ -451,6 +466,13 @@ async function emitDecisionEvidence(
     ...(req.context.action_class !== undefined
       ? { action_class: req.context.action_class as RuntimeActionClass }
       : {}),
+    // @spec runtime-evidence#decision-evidence-object `action_phase` — the
+    // VALIDATED phase from the evaluation context, recorded on a permit and
+    // on a denial alike. A denial has no permit condition to mirror, so the
+    // validated request phase stands on its own; a malformed value never
+    // reaches this point (evaluateInner rejects it), and the guard here keeps
+    // an unvalidated string out of a signed record either way.
+    ...(isActionPhase(req.context.action_phase) ? { action_phase: req.context.action_phase } : {}),
     ...(req.context.actor !== undefined ? { actor: req.context.actor } : {}),
     ...(req.context.credential !== undefined ? { credential: req.context.credential } : {}),
     ...(principal_mapping !== undefined ? { principal_mapping } : {}),
@@ -479,6 +501,11 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions, cont
   // here, ahead of `base`, so every earlier `deny()` (steps 1-3) closes over
   // the same binding without a temporal-dead-zone reference.
   let principalMapping: PrincipalMappingObservation | undefined;
+  // @spec runtime#state-freshness — the accepted Mission-state observation
+  // (epoch ms) the permit cap is computed from; set only by the freshness gate
+  // in step 3, and left `undefined` when the class's declared posture needed
+  // no observation and none was presented.
+  let acceptedObservationMs: number | undefined;
   // @spec authority-server#mission-join (#557 review point 1) — set once
   // step 4b below resolves the baseline Join, so `join_view_id` (below) is
   // present on the SAME decision's Decision Evidence/Refusal Record
@@ -523,6 +550,18 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions, cont
     decision: false,
     context: base({ denial_reason, reason: denial_reason }),
   });
+
+  // @spec authzen#context-action-phase — "The PDP MUST reject a value outside
+  // this set". A phase the PDP cannot place under any published compound-action
+  // rule is a request fault, and evaluating it as though a phase applied would
+  // broaden the declared scope, so it takes the same `out_of_authority`
+  // classification the undeclared-action-class fault already takes
+  // (@spec authzen#failure-condition-coverage: "or the request would broaden
+  // it"). The value is never coerced into the enum, and nothing downstream
+  // reads it except through `isActionPhase`.
+  if (req.context.action_phase !== undefined && !isActionPhase(req.context.action_phase)) {
+    return deny("out_of_authority");
+  }
 
   // 1. View consistency (@spec: view_inconsistent). `id`/`issuer` are the
   // mandatory identity check; `authority_hash` and `policy_view_id` (#702:
@@ -595,6 +634,13 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions, cont
       ) {
         return deny("stale_state");
       }
+      // @spec runtime#state-freshness — the observation this Decision is
+      // ACTUALLY taken against, recorded only now that it passed every gate
+      // above (parseable, inside the class window, from a declared source).
+      // The permit cap below reads this and nothing else: request freshness
+      // metadata the PDP rejected, or would have rejected, must never be able
+      // to buy a longer permit.
+      acceptedObservationMs = observedAtMs;
     } else if (actionClass !== undefined && HIGH_CONSEQUENCE_ACTION_CLASSES.has(actionClass)) {
       return deny("stale_state");
     }
@@ -1017,7 +1063,24 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions, cont
   // boolean `single_use`), and `parameter_digest` (CONDITIONAL, present
   // when the action was parameter-bound).
   const permitTtl = actionClass === "irreversible_action" ? 120 : 300;
-  const validUntil = new Date(now().getTime() + permitTtl * 1000).toISOString();
+  // @spec runtime#state-freshness — "A permit issued from that state view MUST
+  // expire no later than this state valid-through". ONE calculation owns every
+  // ceiling on a permit's validity (permit-deadline.ts), fed the observation
+  // step 3 actually accepted; #594 W4-13's authority, credential and policy
+  // ceilings extend that helper rather than competing with it.
+  //
+  // A ceiling already reached by the time evaluation completes yields no
+  // permit: an expired positive Decision would assert a window that had
+  // already closed, so this denies `stale_state`, the staleness-bound breach
+  // it actually is.
+  const deadline = permitDeadline({
+    nowMs: now().getTime(),
+    permitTtlSeconds: permitTtl,
+    stalenessBound: declaredStaleness,
+    ...(acceptedObservationMs !== undefined ? { stateObservedAtMs: acceptedObservationMs } : {}),
+  });
+  if (deadline.kind === "elapsed") return deny("stale_state");
+  const validUntil = deadline.validUntil;
   // @spec runtime#classification: the high-consequence classes are
   // irreversible_action, external_commitment, and privileged_administration
   // (this deployment defines no privileged_administration action), the same
@@ -1034,6 +1097,12 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions, cont
         valid_until: validUntil,
         ...(highConsequence ? { use_limit: 1 } : {}),
         ...(req.context.parameter_digest ? { parameter_digest: req.context.parameter_digest } : {}),
+        // @spec authzen#response-context `action_phase` — the LIVE permit
+        // binding: the validated request phase, echoed so the executing PEP
+        // compares it against its own Operation Profile at every use. Present
+        // exactly when the operation is a phase of a compound action; the
+        // request mirror and the evidence member never substitute for it.
+        ...(isActionPhase(req.context.action_phase) ? { action_phase: req.context.action_phase } : {}),
       },
     }),
   };
