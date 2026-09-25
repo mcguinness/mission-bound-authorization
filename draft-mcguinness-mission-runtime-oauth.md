@@ -466,14 +466,31 @@ For the ERP resource of the runtime core's worked examples:
 
 # Conformance {#conformance}
 
-A deployment conforms to this adapter only where it also conforms to
-the runtime core ({{I-D.draft-mcguinness-mission-runtime}}) and the
-issuance profile ({{I-D.draft-mcguinness-oauth-mission}}) for the same
-enforcement scope. This document adds no separate conformance tier: a
-deployment's Enforcement Scope Statement names the runtime core's
-requirements, and adopting this adapter is what makes "the Mission-bound
-credential is an OAuth access token" a true statement of that scope,
-rather than a second scope to separately declare.
+A deployment conforms to this profile where, for its declared
+enforcement scope, it:
+
+1. establishes the validated credential context before any
+   credential-derived value becomes a decision input
+   ({{token-validation}});
+2. realizes each runtime-core role as {{claims-mapping}} maps it;
+3. evaluates each action against both the credential authority and
+   the current effective authority ({{authorization-details-mapping}});
+4. establishes the Mission reference from the credential, or verifies
+   an externally established one where no resource requirement for
+   Mission-bound tokens applies ({{token-validation}});
+5. observes Mission state through sources from {{state-sourcing}}
+   that satisfy the runtime core's freshness requirements it adopts
+   for each action class; and
+6. honors any classification floor it holds from protected resource
+   metadata ({{class-floors}}).
+
+It also conforms to the runtime core
+({{I-D.draft-mcguinness-mission-runtime}}) and the issuance profile
+({{I-D.draft-mcguinness-oauth-mission}}) for the same enforcement
+scope. This profile adds no separate conformance tier: adopting it is
+what makes "the Mission-bound credential is an OAuth access token" a
+true statement of the deployment's Enforcement Scope Statement, rather
+than a second scope to declare separately.
 
 # Security Considerations {#security-considerations}
 
@@ -481,15 +498,20 @@ The runtime core's Security Considerations
 ({{I-D.draft-mcguinness-mission-runtime}}) apply in full, including the
 remote decision-channel requirement on a PEP/PDP boundary that is not
 co-resident. General OAuth security guidance {{RFC9700}} applies to the
-credentials this adapter validates. A PDP that accepts an access token
+credentials this profile validates. A PDP that accepts an access token
 directly, rather than the minimum credential-derived claims a PEP needs
 to convey, MUST treat it as a credential, protect it against
 disclosure, and MUST NOT use it outside the declared enforcement scope.
 
+Evaluating an action against Mission authority in place of the
+credential authority would let a narrowed token act with its Mission's
+broader authority, undoing the narrowing the issuance profile applied;
+{{authorization-details-mapping}} requires both bounds for that reason.
+
 # Privacy Considerations {#privacy-considerations}
 
 This document defines no evidence content of its own; the runtime
-core's privacy guidance governs the claims this adapter maps into
+core's privacy guidance governs the claims this profile maps into
 decision inputs and evidence records
 ({{I-D.draft-mcguinness-mission-runtime}}).
 
