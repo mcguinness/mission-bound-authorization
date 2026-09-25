@@ -967,7 +967,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "the executing PEP compares the permit's bound phase against the crossing's phase and refuses, fail closed, before any effect is released",
-    "local": "asserted on all three dispatch paths, before permit redemption on the transaction path, so a refused crossing burns no redemption"
+    "local": "asserted on all three dispatch paths, at admission before permit redemption on the transaction path so a refused crossing burns no redemption, and again at the final boundary so a crossing the Operation Profile stops placing after admission is refused there"
    },
    "level": "unit",
    "coverage": "tested",
@@ -975,6 +975,18 @@
     {
      "file": "src/services/mcp-payments/test/compound-actions.test.ts",
      "name": "compound-action phases (@spec runtime#compound-actions) > compares the bound phase before any effect on all three dispatch paths",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > refuses a crossing dropped from the Operation Profile after admission, on every dispatch path",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > lets a legitimate crossing through against the same store after a pre-effect profile refusal",
      "level": "unit",
      "surface": "resource-operation"
     },
