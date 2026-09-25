@@ -19726,9 +19726,15 @@
      "name": "retention honors the declared audit window (@spec runtime-evidence#receipt-retention) > recovers the retained records, the emitter sequences and the key retirement metadata after a restart",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/decision-evidence-retention.test.ts",
+     "name": "the deployment's evidence declaration and published key sets (@spec runtime#runtime-conformance) > refuses to republish a kid over different material or bindings, and rotates under a new kid instead",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "#594 W4-8: retirement is anchored on the LAST artifact the key signed, not on its creation or its retirement instant, and the published document keeps the retired kid until that window elapses; a record signed before the rotation still verifies at the boundary and resolves key_not_resolvable one second past it. The retirement metadata is durable, so the anchor survives a restart."
+   "notes": "#594 W4-8: retirement is anchored on the LAST artifact the key signed, not on its creation or its retirement instant, and the published document keeps the retired kid until that window elapses; a record signed before the rotation still verifies at the boundary and resolves key_not_resolvable one second past it. The retirement metadata is durable, so the anchor survives a restart. A rotation is a NEW kid: republishing a published kid over different material or a different binding is refused, since accepting it would strand every record that kid signed inside the window."
   },
   {
    "id": "evidence.security.transport-tls-and-encryption-at-rest",

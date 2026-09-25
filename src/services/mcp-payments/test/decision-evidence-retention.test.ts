@@ -62,6 +62,7 @@ import {
   McpPaymentsServer,
   PaymentsStore,
   Pep,
+  publishedEvidenceJwk,
   REFUSAL_RECORD_MEDIA_TYPE,
   type TokenFacts,
   verifyEvidenceEnvelope,
@@ -874,6 +875,105 @@ describe("the deployment's evidence declaration and published key sets (@spec ru
       }),
     ).toThrow(/requires the audience/);
     expect(retention.publishedKeySet(EVIDENCE_KEY_SET_LOCATION).keys.map((k) => k.kid)).not.toContain("leaked");
+    retention.close();
+  });
+
+  it("refuses to republish a kid over different material or bindings, and rotates under a new kid instead", async () => {
+    let clock = NOW.getTime();
+    const { evidence, keys, retention } = retainingDeployment({ clock: () => clock });
+    const resolve = retention.resolver({ locations: [EVIDENCE_KEY_SET_LOCATION] });
+    const pep = keys.verification.find((k) => k.kid === "ephemeral-pep")!;
+    const retained = await evidence.recordRefusal(CANONICAL_RESOURCE, "pep", refusalInput(1));
+    const stillVerifies = async () =>
+      expect(await verifyEvidenceEnvelope(retained.content, REFUSAL_RECORD_MEDIA_TYPE, resolve)).toEqual({
+        valid: true,
+      });
+    await stillVerifies();
+
+    // Republishing the SAME key under the same kid is a no-op, not a
+    // replacement: a deployment that republishes its set must not be the
+    // thing that breaks its own retained evidence. The last form carries the
+    // same key as a member-reordered JWK, so the comparison is on the key
+    // rather than on the bytes it happened to be serialized as.
+    const jwk = publishedEvidenceJwk(pep.publicKey, pep.kid);
+    const reordered = Object.fromEntries(Object.entries(jwk).reverse());
+    for (const publicKey of [pep.publicKey, jwk, reordered]) {
+      expect(() =>
+        retention.publishKey({
+          location: EVIDENCE_KEY_SET_LOCATION,
+          kid: "ephemeral-pep",
+          emitterId: CANONICAL_RESOURCE,
+          role: "pep",
+          audience: CANONICAL_RESOURCE,
+          publicKey,
+        }),
+      ).not.toThrow();
+    }
+    expect(
+      retention.publishedKeySet(EVIDENCE_KEY_SET_LOCATION).keys.filter((k) => k.kid === "ephemeral-pep"),
+    ).toHaveLength(1);
+    await stillVerifies();
+
+    // Different material under a kid already published is REFUSED. Accepting
+    // it would turn every record that kid signed inside the window into
+    // signature_invalid, which is the retention window failing at the one
+    // thing it exists for.
+    const replacement = generateKeyPairSync("ec", { namedCurve: "P-256" });
+    expect(() =>
+      retention.publishKey({
+        location: EVIDENCE_KEY_SET_LOCATION,
+        kid: "ephemeral-pep",
+        emitterId: CANONICAL_RESOURCE,
+        role: "pep",
+        audience: CANONICAL_RESOURCE,
+        publicKey: replacement.publicKey,
+      }),
+    ).toThrow(/ephemeral-pep/);
+    await stillVerifies();
+    // A conflicting BINDING under identical material is refused on the same
+    // grounds: the binding is half of what resolution checks.
+    for (const conflict of [
+      { emitterId: "https://impostor.test/mcp", role: "pep" as const, audience: CANONICAL_RESOURCE },
+      { emitterId: CANONICAL_RESOURCE, role: "executor" as const, audience: CANONICAL_RESOURCE },
+      { emitterId: CANONICAL_RESOURCE, role: "pep" as const, audience: "https://other-scope.example.com" },
+    ]) {
+      expect(() =>
+        retention.publishKey({
+          location: EVIDENCE_KEY_SET_LOCATION,
+          kid: "ephemeral-pep",
+          publicKey: pep.publicKey,
+          ...conflict,
+        }),
+      ).toThrow(/ephemeral-pep/);
+    }
+    await stillVerifies();
+
+    // Rotation is a NEW kid, published alongside the old one, which is then
+    // retired and stays resolvable for the window past the last artifact it
+    // signed. Nothing the retired kid signed is stranded, and the new kid's
+    // records verify through the same published document.
+    retention.publishKey({
+      location: EVIDENCE_KEY_SET_LOCATION,
+      kid: "ephemeral-pep-2",
+      emitterId: CANONICAL_RESOURCE,
+      role: "pep",
+      audience: CANONICAL_RESOURCE,
+      publicKey: replacement.publicKey,
+    });
+    clock += 60_000;
+    retention.retireKey("ephemeral-pep");
+    const rotated = new EvidenceStore(
+      { ...keys.signing, pep: { kid: "ephemeral-pep-2", key: replacement.privateKey } },
+      resolve,
+      retention,
+    );
+    const afterRotation = await rotated.recordRefusal(CANONICAL_RESOURCE, "pep", refusalInput(2));
+    expect(retention.get("refusal", afterRotation.content.refusal_id)?.signing_kid).toBe("ephemeral-pep-2");
+    expect(retention.get("refusal", retained.content.refusal_id)?.signing_kid).toBe("ephemeral-pep");
+    await stillVerifies();
+    expect(await verifyEvidenceEnvelope(afterRotation.content, REFUSAL_RECORD_MEDIA_TYPE, resolve)).toEqual({
+      valid: true,
+    });
     retention.close();
   });
 });

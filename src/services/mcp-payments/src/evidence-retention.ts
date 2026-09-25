@@ -436,20 +436,58 @@ export class EvidenceRetentionStore {
     this.db.prepare("DELETE FROM retained_evidence WHERE kind = ? AND record_id = ?").run(kind, recordId);
   }
 
-  /** Publish one verification key at a declared key-set location. */
+  /**
+   * @spec runtime-evidence#evidence-integrity-signing-keys — publish one
+   * verification key at a declared key-set location. A `kid` is the name a
+   * retained record's envelope already committed to, so what it resolves to
+   * is APPEND-ONLY for as long as any record it signed is retained. Three
+   * rules follow:
+   *
+   *  - republishing the same `kid` with the same material and the same
+   *    `(emitter, role, audience)` binding is a NO-OP, so a deployment that
+   *    republishes its set on every boot is not the thing that breaks its own
+   *    evidence. Comparison is on the canonical key and binding, not on the
+   *    serialized bytes, and a retired key republished identically stays
+   *    retired: a no-op does not resurrect it.
+   *  - republishing the same `kid` over DIFFERENT material or a different
+   *    binding is REFUSED. Silently replacing it would turn every record that
+   *    `kid` signed inside the window into `signature_invalid`, which is a
+   *    retention window failing at the one thing it exists for.
+   *  - rotation is therefore a NEW `kid`, published alongside the old one,
+   *    which is then retired and stays resolvable for the window past the
+   *    last artifact it signed ({@link retireKey}).
+   */
   publishKey(input: PublishEvidenceKeyInput): void {
     if (input.role !== "receipt_issuer" && !input.audience) {
       throw new Error(`a published ${input.role} key requires the audience it is published for`);
     }
     const jwk = publishedEvidenceJwk(input.publicKey, input.kid);
-    this.db
-      .prepare(
-        `INSERT INTO published_evidence_keys (location, kid, emitter_id, role, audience, jwk_json, retired_at, last_signed_at)
-         VALUES (?, ?, ?, ?, ?, ?, NULL, NULL)
-         ON CONFLICT(location, kid) DO UPDATE SET emitter_id = excluded.emitter_id, role = excluded.role,
-           audience = excluded.audience, jwk_json = excluded.jwk_json`,
-      )
-      .run(input.location, input.kid, input.emitterId, input.role, input.audience ?? null, JSON.stringify(jwk));
+    const audience = input.audience ?? null;
+    withTransaction(this.db, () => {
+      const held = this.keyRow(input.location, input.kid);
+      if (held) {
+        const conflict =
+          held.emitter_id !== input.emitterId
+            ? `emitter "${held.emitter_id}"`
+            : held.role !== input.role
+              ? `role "${held.role}"`
+              : held.audience !== audience
+                ? `audience ${held.audience === null ? "(unbound)" : `"${held.audience}"`}`
+                : canonicalDigest(JSON.parse(held.jwk_json) as JsonValue) !== canonicalDigest(jwk as JsonValue)
+                  ? "different key material"
+                  : undefined;
+        if (conflict === undefined) return; // identical republication: a no-op.
+        throw new Error(
+          `EvidenceRetentionStore: kid "${input.kid}" is already published at ${input.location} with ${conflict}; republishing it would invalidate the retained evidence it signed (rotate under a new kid instead)`,
+        );
+      }
+      this.db
+        .prepare(
+          `INSERT INTO published_evidence_keys (location, kid, emitter_id, role, audience, jwk_json, retired_at, last_signed_at)
+           VALUES (?, ?, ?, ?, ?, ?, NULL, NULL)`,
+        )
+        .run(input.location, input.kid, input.emitterId, input.role, audience, JSON.stringify(jwk));
+    });
   }
 
   /**
