@@ -55,7 +55,22 @@ import { TemplateStore } from "./kernel/template-store.js";
 import { isActivatingCommit, TERMINAL_STATES } from "./kernel/types.js";
 import type { ActivatingLifecycleCommit, LifecycleCommit, MissionRecord } from "./kernel/types.js";
 
-export { MissionKernel, GateError, LifecycleConflictError } from "./kernel/kernel.js";
+export {
+  MissionKernel,
+  GateError,
+  LifecycleConflictError,
+  ObservationWatermarkError,
+  type ObservationWatermark,
+  type StatusObservation,
+  type StatusObservationOptions,
+} from "./kernel/kernel.js";
+export {
+  DerivationReservationStore,
+  type DerivationReservation,
+  type DerivationReservationResult,
+  type DerivationReservationState,
+} from "./kernel/derivation-reservations.js";
+
 export { MISSION_ID_ENTROPY_BYTES, newMissionId } from "./kernel/mission-id.js";
 export {
   attachCapabilitySources,
@@ -155,7 +170,10 @@ export {
   DischargeEventStore,
   LIFECYCLE_ENDPOINT_KEY,
   type LifecycleNonceKey,
+  type LifecycleResponseMaterial,
+  type LifecycleResponseState,
   LifecycleResponseStore,
+  type RetainedLifecycleResponse,
   type StoredDischargeEvent,
   type StoredLifecycleResponse,
 } from "./kernel/lifecycle-idempotency.js";
