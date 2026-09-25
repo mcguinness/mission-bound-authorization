@@ -337,8 +337,20 @@ const RECOGNIZED_CONDITIONS: ReadonlySet<string> = new Set([
 
 /**
  * One condition comparison the executing PEP makes before releasing an
- * effect. `timeSensitive` marks the ones that can change while an awaited
- * read is pending, which are the ones re-checked immediately before release.
+ * effect. EVERY row runs at EVERY use of the permit: no row may opt out of
+ * the last one, because the comparison a row skips there is a comparison the
+ * crossing was never held to. The rows carried a `timeSensitive` flag that
+ * excused `action_phase` from the pre-effect stage on the premise that a
+ * phase cannot move while an awaited read is pending; the Operation Profile
+ * is live, so it can, and a crossing removed from it after admission was
+ * released on the strength of a comparison that no longer held.
+ *
+ * Every comparator is therefore SYNCHRONOUS over state already in hand (the
+ * clock, the retained attempt, the in-memory Operation Profile). That is what
+ * makes running the whole table at the final boundary free: it adds no
+ * awaited read, so it cannot widen the window between the last check and the
+ * effect. A comparator that needed an awaited read would have to be ordered
+ * ahead of the time comparison below rather than admitted here as it stands.
  *
  * `failure` returns the enumerated Execution Evidence `error` for a failed
  * comparison, or `undefined` when it holds. Every value here is already in
@@ -347,7 +359,6 @@ const RECOGNIZED_CONDITIONS: ReadonlySet<string> = new Set([
  */
 interface PermitUseCheck {
   name: string;
-  timeSensitive: boolean;
   failure: (
     attempt: ExecutionAttempt,
     ctx: { now: Date; profile: ActionMapping | undefined },
@@ -364,11 +375,12 @@ const PERMIT_USE_CHECKS: readonly PermitUseCheck[] = [
     // condition on a crossing whose profile declares no phase "is invalid
     // there", which is the last arm below.
     name: "action_phase",
-    timeSensitive: false,
     failure: (attempt, { profile }) => {
       // The profile no longer places this tool at all: the crossing's phase
       // cannot be established at use, which refuses rather than defaulting to
-      // "no phase" and letting a phase-bound permit through.
+      // "no phase" and letting a phase-bound permit through. The profile is
+      // re-read at each use, never snapshotted at admission: a snapshot would
+      // still answer with the phase the crossing has since lost.
       if (!profile) return "phase_mismatch";
       const crossing = profile.phase;
       const bound = attempt.permitBoundPhase;
@@ -386,7 +398,6 @@ const PERMIT_USE_CHECKS: readonly PermitUseCheck[] = [
     // unparseable bound establishes no live window at all and is treated as
     // elapsed: the fail-closed reading, never a permit relied on without one.
     name: "valid_until",
-    timeSensitive: true,
     failure: (attempt, { now }) => {
       const validUntilMs =
         typeof attempt.permitValidUntil === "string" ? Date.parse(attempt.permitValidUntil) : Number.NaN;
@@ -1678,32 +1689,38 @@ export class Pep {
    * comparison belongs here, in front of every crossing, rather than beside
    * the one commit point.
    *
-   * Two stages, deliberately:
+   * Every dispatch path calls it TWICE, and both calls run the WHOLE table:
    *
-   * - `admission` runs BEFORE any state the crossing would burn (the
-   *   transaction path's single-use permit redemption included) and before any
-   *   awaited capability, parameter or resource read. A wrong-phase or expired
+   * - at admission, BEFORE any state the crossing would burn (the transaction
+   *   path's single-use permit redemption included) and before any awaited
+   *   capability, parameter or resource read. A wrong-phase or expired
    *   presentation therefore consumes nothing, and the legitimate crossing
    *   that follows still finds its own redemption available.
-   * - `pre-effect` runs after the last awaited read and immediately before the
-   *   effect is released, and re-checks only the TIME-SENSITIVE conditions: a
-   *   permit can expire while a resolver call is pending, and moving the
-   *   admission check earlier must not enlarge that unchecked interval.
+   * - again after the last awaited read and immediately before the effect is
+   *   released. Both the clock and the Operation Profile can move while a
+   *   resolver call is pending, so the admission call is never the last word
+   *   on either: the permit is held to the same comparisons at the boundary
+   *   it crosses. Moving a comparison earlier must not enlarge the unchecked
+   *   interval, which is why the earlier call ADDS to the later one rather
+   *   than replacing part of it.
    *
-   * The phase is not time-sensitive, so it is compared once, at admission;
-   * `valid_until` is compared at both. What this seam governs is whether the
-   * permit may still INITIATE an effect. Once an effect has started, how long
-   * it may run is the execution lease's question (`executionLeaseMs` /
-   * `TransactionEngine.leaseValid`), and an expired permit is never permission
-   * to restart an operation whose effect already committed.
+   * Running the table is synchronous over state already in hand, so the
+   * second call opens no new awaited window before the effect. Within it, the
+   * rows run in table order and each reads the clock at its own turn, so the
+   * `valid_until` comparison is the LAST thing decided before release.
+   *
+   * What this seam governs is whether the permit may still INITIATE an
+   * effect. Once an effect has started, how long it may run is the execution
+   * lease's question (`executionLeaseMs` / `TransactionEngine.leaseValid`),
+   * and an expired permit is never permission to restart an operation whose
+   * effect already committed.
    *
    * Every comparator is a row in one table, so a coordinated condition added
    * later (issue #773's `evaluation_context_digest`) joins this seam as
    * another row rather than a competing check on another path.
    */
-  async verifyPermitAtUse(attempt: ExecutionAttempt, stage: "admission" | "pre-effect"): Promise<ReverifyOutcome> {
+  async verifyPermitAtUse(attempt: ExecutionAttempt): Promise<ReverifyOutcome> {
     for (const check of PERMIT_USE_CHECKS) {
-      if (stage === "pre-effect" && !check.timeSensitive) continue;
       const error = check.failure(attempt, { now: this.now(), profile: this.toolAction(attempt.tool) });
       if (error !== undefined) {
         const disposition = await this.suppressExecution(attempt, error);

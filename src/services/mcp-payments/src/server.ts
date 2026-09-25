@@ -836,7 +836,7 @@ export class McpPaymentsServer {
     // crossing releases no external effect and still refuses a permit bound
     // to another phase, and it refuses an expired permit before it reads
     // anything.
-    const admitted = await this.deps.pep.verifyPermitAtUse(attempt, "admission");
+    const admitted = await this.deps.pep.verifyPermitAtUse(attempt);
     if (!admitted.ok) return { ok: false, refusal_reason: admitted.error };
     beforeReverify?.();
     const capability = await this.deps.pep.reverifyCapability(
@@ -862,11 +862,11 @@ export class McpPaymentsServer {
       const bound = await this.deps.pep.reverifyList(res.listEffective, digest, token, attempt);
       if (!bound.ok) return { ok: false, refusal_reason: bound.error };
     }
-    // Time-sensitive re-check after the awaited capability and parameter
-    // reads, immediately before release: the permit can expire while one of
-    // them is pending, and the admission check above must not be the last word
-    // on validity.
-    const live = await this.deps.pep.verifyPermitAtUse(attempt, "pre-effect");
+    // The whole seam again after the awaited capability and parameter reads,
+    // immediately before release: the permit can expire and the Operation
+    // Profile can stop placing this crossing while one of them is pending, so
+    // the admission call above is not the last word on either.
+    const live = await this.deps.pep.verifyPermitAtUse(attempt);
     if (!live.ok) return { ok: false, refusal_reason: live.error };
     return { ok: true, result: this.execute(tool, args, res.list_vendor_scope) };
   }
@@ -902,7 +902,7 @@ export class McpPaymentsServer {
     const attempt = res.attempt;
     if (!attempt) return { ok: false, refusal_reason: "state_unavailable" };
     // Admission, ahead of every awaited read (@spec runtime#compound-actions).
-    const admitted = await this.deps.pep.verifyPermitAtUse(attempt, "admission");
+    const admitted = await this.deps.pep.verifyPermitAtUse(attempt);
     if (!admitted.ok) return { ok: false, refusal_reason: admitted.error };
     beforeReverify?.();
     // A moved catalog snapshot is its own error, not a parameter mismatch:
@@ -917,8 +917,9 @@ export class McpPaymentsServer {
     const digest = permitConditions(res.decision)?.parameter_digest as string;
     const bound = await this.deps.pep.reverify(res.effective, digest, token, attempt);
     if (!bound.ok) return { ok: false, refusal_reason: bound.error };
-    // Time-sensitive re-check immediately before release.
-    const live = await this.deps.pep.verifyPermitAtUse(attempt, "pre-effect");
+    // The whole seam again immediately before release: both the clock and the
+    // Operation Profile can have moved during the reads above.
+    const live = await this.deps.pep.verifyPermitAtUse(attempt);
     if (!live.ok) return { ok: false, refusal_reason: live.error };
     return { ok: true, result: this.execute(tool, args) };
   }
@@ -998,7 +999,7 @@ export class McpPaymentsServer {
     // never rolled back on refusal, so a wrong-phase or expired presentation
     // checked after it would burn the claim and leave the legitimate crossing
     // reporting `permit_consumed`. Nothing here touches the store.
-    const admitted = await this.deps.pep.verifyPermitAtUse(attempt, "admission");
+    const admitted = await this.deps.pep.verifyPermitAtUse(attempt);
     if (!admitted.ok) return { ok: false, refusal_reason: admitted.error };
 
     // @spec runtime#execution-reverification — the connector operation this
@@ -1095,12 +1096,13 @@ export class McpPaymentsServer {
       return { ok: false, refusal_reason: bound.error };
     }
 
-    // @spec runtime#execution-reverification — the last time-sensitive check,
-    // after every awaited read and before anything irreversible: the single
-    // use taken below and the connector commit after it. A permit that expired
-    // while the capability or parameter reads were pending initiates nothing,
-    // and its refusal is a suppressed disposition, not a consumed txn.
-    const live = await this.deps.pep.verifyPermitAtUse(attempt, "pre-effect");
+    // @spec runtime#execution-reverification — the last check of all, after
+    // every awaited read and before anything irreversible: the single use
+    // taken below and the connector commit after it. A permit that expired,
+    // or a crossing the Operation Profile stopped placing, while the
+    // capability or parameter reads were pending initiates nothing, and its
+    // refusal is a suppressed disposition, not a consumed txn.
+    const live = await this.deps.pep.verifyPermitAtUse(attempt);
     if (!live.ok) {
       tx.engine.advance(opKey, "abandoned");
       return { ok: false, refusal_reason: live.error };
