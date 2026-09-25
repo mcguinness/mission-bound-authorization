@@ -265,48 +265,75 @@ requires Mission-bound tokens: a resource that advertises
 "Protected Resource Metadata"), whatever reference the deployment could
 establish externally.
 
-# Claims Mapping {#claims-mapping}
+# Runtime Input Mapping {#claims-mapping}
 
 The runtime core states its decision inputs, permit binding, and
-required evidence fields as abstract roles: the established Mission
-reference, the authenticated subject, the client or immediate-actor
-identity, the actor-delegation chain, the sender-constraint
-confirmation, and the token audience or protected-resource reference
-({{I-D.draft-mcguinness-mission-runtime}}). This section is the
-complete, normative realization of those roles for the OAuth binding:
+required evidence fields as abstract roles
+({{I-D.draft-mcguinness-mission-runtime}}). This section is their
+complete, normative realization on this profile. Each value is read
+from the validated credential context ({{token-validation}}): a JWT
+claim, or the introspection response member of the same name.
 
 | Runtime-core role | OAuth realization |
 |---|---|
-| Established Mission reference | The `mission` claim's baseline `id` and `issuer` {{I-D.draft-mcguinness-oauth-mission}}; `authority_hash` is not on the baseline claim, and where a deployment needs it as a commitment proof rather than an audit correlator, it is carried under the issuance profile's Local Approved-Set Verification profile |
+| Established Mission reference | The `mission` claim's `id` and `issuer` {{I-D.draft-mcguinness-oauth-mission}}, or an externally established reference ({{token-validation}}) |
 | Authenticated subject | `sub` |
-| Client or immediate-actor identity | `client_id` |
-| Actor-delegation chain | The `act` claim, evaluated together with the authenticated `client_id` when delegation is in effect |
-| Sender-constraint confirmation | `cnf`, verified under the issuance profile's proof-of-possession rules |
-| Token audience or protected-resource reference | `aud`, or the protected resource the token was presented to |
+| Client or immediate-actor identity | `client_id` names the client; when `act` is present, the immediate actor is the current actor in `act` |
+| Actor-delegation chain | `act`, when delegation is in effect |
+| Sender-constraint confirmation | `cnf`, verified during validation ({{token-validation}}) |
+| Token audience or protected-resource reference | The protected resource the PEP guards; validation has established that `aud` names it |
+| Authority entry | The credential authority ({{authorization-details-mapping}}) |
+| Current effective authority | Established from a Mission state source ({{authorization-details-mapping}}) |
 | Token issuer | `iss` |
-| Token expiry | `exp`; where a profile elevates the `mission` claim's OPTIONAL `expires_at` member to REQUIRED for the credentials it governs (for example, the Issuance Grant profile, {{I-D.draft-mcguinness-oauth-mission-issuance-grant}}), that value additionally caps token expiry under that profile's own rule, never as a silent baseline downgrade to `exp` alone |
+| Token expiry | `exp` |
+| Mission expiry | The `mission` claim's `expires_at` member where present, or a Mission state source that reports the Mission's expiry |
 
-When delegation is in effect, the PDP MUST evaluate the authenticated
-`act` claim as part of the runtime actor context and refuse a chain
-that is missing or malformed; when an `act` claim is present, the PDP
-MUST NOT treat `client_id` alone as the immediate actor. These are the
-OAuth realization of the runtime core's actor-context input
-({{I-D.draft-mcguinness-mission-runtime}}); the requirement itself,
-including that a history predicate or any other runtime input MUST NOT
-expand authority beyond the issued authority, is the runtime core's.
+Four pairs in the table are related but distinct inputs:
 
-The runtime core's permit binding and required decision evidence each
-bind or record the subject, client/actor identity, and sender-constraint
-confirmation as abstract roles; a deployment on this binding records
-them as `sub`, `client_id`, the `act` projection, and the `cnf`
-confirmation key respectively.
+- `client_id` and `act`. The issuance profile gives `client_id` its
+  ordinary meaning, the OAuth client that requested the token, and
+  carries delegation in `act` ({{I-D.draft-mcguinness-oauth-mission}},
+  Section "Resource Server Enforcement"). When delegation is in
+  effect, the PDP MUST evaluate the authenticated `act` claim as part
+  of the runtime actor context and refuse a chain that is missing or
+  malformed; when an `act` claim is present, the PDP MUST NOT treat
+  `client_id` alone as the immediate actor.
+- `aud` and the protected resource. Validation establishes that `aud`
+  names the protected resource the PEP guards; the decision, the
+  permit binding, and the evidence then identify that protected
+  resource, the target of the action.
+- The credential authority and the current effective authority. The
+  action falls within both ({{authorization-details-mapping}}).
+- Token expiry and Mission expiry. The PDP MUST refuse if the decision
+  context indicates the token is expired (`exp`). Where the validated
+  `mission` claim carries the `expires_at` member, the PEP or PDP MAY
+  refuse actions past that instant without consulting a state source:
+  the value is an immutable commitment and a ceiling only, carrying no
+  liveness, so the runtime core's only-`active` rule and freshness
+  requirements apply unchanged. Where a Mission state source separately
+  reports the Mission `expired`, or exposes the Mission's `expires_at`,
+  the PDP MUST refuse on it independent of the token's own `exp`: the
+  baseline `mission` claim need not carry `expires_at`, and OAuth token
+  introspection {{RFC7662}} does not itself surface it. A profile that
+  makes `expires_at` REQUIRED for the credentials it governs, such as
+  the Issuance Grant profile
+  ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}), also caps
+  `exp` at it under that profile's own rule, never reducing the Mission
+  expiry check to `exp` alone.
 
-The PDP MUST refuse if the decision context indicates the token is
-expired (`exp`). Where a Mission state source separately reports the
-Mission `expired`, or exposes the Mission's `expires_at`, the PDP MUST
-refuse on it independent of the token's own `exp`: the standard
-`mission` claim and OAuth token introspection {{RFC7662}} do not
-themselves surface `expires_at`.
+These realize the runtime core's actor and time inputs
+({{I-D.draft-mcguinness-mission-runtime}}); the requirements
+themselves, including that no runtime input expands authority beyond
+the issued authority, are the runtime core's.
+
+The Mission reference is `id` and `issuer`. `authority_hash` is not
+part of the baseline reference; a deployment that needs it as a
+commitment proof rather than an audit correlator carries it under the
+issuance profile's Local Approved-Set Verification profile
+({{I-D.draft-mcguinness-oauth-mission}}). The runtime core's permit
+binding and required decision evidence record the roles above; their
+serialization is defined by the runtime core and the decision-API
+profile in use, for example {{I-D.draft-mcguinness-mission-authzen}}.
 
 # Authorization Details Mapping {#authorization-details-mapping}
 
