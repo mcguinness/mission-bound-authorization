@@ -206,6 +206,32 @@ describe("control-plane lifecycle response boundary", () => {
     expect(await replay.text()).toBe(original);
   });
 
+  it("replays a retransmit whose retained response carries a validity that has passed", async () => {
+    const record = approveOnAs();
+    expect((await lifecycle(record.id, { operation: "suspend", nonce: freshNonce() })).status).toBe(
+      200,
+    );
+    const nonce = freshNonce();
+    const first = await lifecycle(record.id, { operation: "resume", nonce });
+    expect(first.status).toBe(200);
+    const original = await first.text();
+    // The retained row now carries a validity that has passed, as a signed
+    // envelope's does two minutes into this ten-minute window.
+    as.kernel.db
+      .prepare(
+        `UPDATE lifecycle_responses SET response_valid_until = ?
+         WHERE endpoint = ? AND principal = ? AND mission_id = ? AND nonce = ?`,
+      )
+      .run(Date.now() - 60_000, LIFECYCLE_ENDPOINT_KEY, "svc:console", record.id, nonce);
+
+    // @spec status#idempotency — the NONCE WINDOW decides, not the response's
+    // own validity. `resume` is legal only from `suspended`, so re-executing
+    // this retransmit would answer 409 for an operation that in fact succeeded.
+    const retry = await lifecycle(record.id, { operation: "resume", nonce });
+    expect(retry.status).toBe(200);
+    expect(await retry.text()).toBe(original);
+  });
+
   it("refuses a divergent retry without retaining it, leaving the committed success replayable", async () => {
     const record = approveOnAs();
     const nonce = freshNonce();

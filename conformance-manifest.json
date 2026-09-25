@@ -2001,6 +2001,12 @@
     },
     {
      "file": "src/services/authorization-server/test/control-plane-responses.test.ts",
+     "name": "control-plane lifecycle response boundary > replays a retransmit whose retained response carries a validity that has passed",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-responses.test.ts",
      "name": "control-plane lifecycle expiry under a refused operation > commits the expiry it discovered even when the operation it was asked for is refused",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
