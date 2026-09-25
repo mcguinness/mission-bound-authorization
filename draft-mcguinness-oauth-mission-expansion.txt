@@ -247,9 +247,9 @@ Table of Contents
 
    Role: companion.  Spec maturity: experimental.  Maintenance: active.
    Implementation: 3 conformance rows in conformance-manifest.json (3
-   todo).  Adopt when: Approved authority will predictably need to widen
-   mid-task via fresh approval.  Requires: Mission-Bound Authorization
-   for OAuth 2.0.
+   tested).  Adopt when: Approved authority will predictably need to
+   widen mid-task via fresh approval.  Requires: Mission-Bound
+   Authorization for OAuth 2.0.
 
 3.  Conventions and Terminology
 

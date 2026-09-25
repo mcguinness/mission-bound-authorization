@@ -1397,7 +1397,7 @@ are referenced, not duplicated, here.<a href="#section-1-6" class="pilcrow">¶</
 <a href="#section-2" class="section-number selfRef">2. </a><a href="#name-status-an-optional-profile" class="section-name selfRef">Status: An Optional Profile</a>
       </h2>
 <p id="section-2-1">Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 94 conformance rows in conformance-manifest.json (45 tested, 11 partial, 38 todo).
+Implementation: 103 conformance rows in conformance-manifest.json (60 tested, 12 partial, 31 todo).
 Adopt when: Runtime enforcement is deployed and decisions need durable, verifiable records.
 Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements.
 Also requires, conditionally: Mission Cross-Domain Projection for OAuth 2.0 (when cross-domain projected decisions are recorded).<a href="#section-2-1" class="pilcrow">¶</a></p>
@@ -2037,7 +2037,18 @@ sources naming different Missions, or an unusable propagated
 reference where governance requires one, the Mission Reference
 Propagation channel's conflict rule,
 <span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>),
-<code>channel_failure</code>, <code>pdp_unreachable</code>, or
+<code>credential_authority_insufficient</code> (the presented credential's own
+authority does not cover the request, as the PEP establishes it
+before any decision request, including a delegation instance whose
+authority has been withdrawn, which is distinct from a credential
+that failed validation), <code>request_unsupported</code> (the
+enforcement surface implements no such action), <code>target_unresolvable</code>
+(the request names a target object the enforcement surface cannot
+resolve), <code>capability_source_unresolvable</code> (the capability
+definition the PEP must present could not be resolved),
+<code>decision_evidence_unverifiable</code> (the Decision Evidence for a permit
+was absent or did not verify, so no decision the PEP can rely on was
+obtained), <code>channel_failure</code>, <code>pdp_unreachable</code>, or
 <code>state_unavailable</code> (where the deployment's state-source placement
 has the PEP supply state, and it cannot establish it). For a PDP
 refusal of an in-scope request that reaches it without the Mission
@@ -2049,6 +2060,18 @@ carried by the AuthZEN binding,
 <span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>); a record that can
 populate the PDP-derived members of an evaluated decision is a
 Decision Evidence Object instead.<a href="#section-5.2-4.12.1" class="pilcrow">¶</a></p>
+<p id="section-5.2-4.12.2">This member carries an enumerated value, never a deployment's own
+diagnostic string. A deployment that surfaces a finer reason to the
+caller <span class="bcp14">MUST</span> map that reason to the value naming the condition, and
+<span class="bcp14">MUST NOT</span> place the diagnostic in this member. The caller-visible
+reason and the signed value are separate surfaces, and only the
+signed value is interoperable. A deployment publishes the mapping
+it uses.<a href="#section-5.2-4.12.2" class="pilcrow">¶</a></p>
+<p id="section-5.2-4.12.3">A response whose Decision Evidence the enforcing component could
+not verify is not a decision that component obtained. It refuses
+before accepting a permit, and records
+<code>decision_evidence_unverifiable</code> here rather than Execution
+Evidence for a permit it never accepted.<a href="#section-5.2-4.12.3" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-5.2-4.13">
@@ -2587,6 +2610,17 @@ evaluation context differs or cannot be established at use),
 <code>permit_expired</code> (the permit's validity window had passed at
 execution), <code>permit_consumed</code> (re-presentation of an
 already-consumed single-use evaluation identifier),
+<code>operation_already_claimed</code> (a different evaluation identifier
+presented for an operation identity whose single claim is already
+held), <code>operation_identity_conflict</code> (a single-use authorization
+identifier presented for an operation identity other than the one
+its use was taken under), <code>condition_unrecognized</code> (the permit
+carried a decision condition the executing PEP does not recognize,
+which makes the permit unusable), <code>consumption_unavailable</code> (the
+store the executing PEP takes single use in could not be reached,
+so exactly-once could not be established),
+<code>capability_source_unresolvable</code> (the capability definition the
+permit was decided against could not be re-resolved at execution),
 <code>obligation_unfulfilled</code> (a permit suppressed before release because
 an attached obligation could not be fulfilled; the failing entry is
 named in <code>obligation_outcomes</code>), and <code>kill_switch</code> (execution
@@ -2595,6 +2629,30 @@ define additional values, which <span class="bcp14">MUST</span> be collision-res
 (a short name within a namespace the deployment controls, following
 the Collision-Resistant Name guidance of <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span> Section 4.2) so
 they cannot collide with this set or another deployment's.<a href="#section-6.1-1.22.1" class="pilcrow">¶</a></p>
+<p id="section-6.1-1.22.2">The three duplicate identifiers are distinct and <span class="bcp14">MUST NOT</span> be
+substituted for one another. <code>permit_consumed</code> is the same
+evaluation identifier presented twice. <code>operation_already_claimed</code>
+is a fresh permit for an operation identity another permit already
+claimed, which a deployment that keys single use on operation
+identity rather than on the evaluation identifier reaches. Its
+identity keying is the deployment's own, published with the
+operation identity it uses. <code>operation_identity_conflict</code> is a
+single-use authorization identifier turned to a different
+operation. All three are post-permit dispositions on this carrier,
+and none of them is the pre-permit denial a PDP records when it
+refuses a duplicate or conflicting claim before deciding, carried
+as <code>duplicate_suppressed</code> and <code>idempotency_conflict</code> in the AuthZEN
+binding (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). A deployment
+<span class="bcp14">MUST NOT</span> record a post-permit duplicate as a PDP denial reason, or
+a pre-decision duplicate as an Execution Evidence <code>error</code>.<a href="#section-6.1-1.22.2" class="pilcrow">¶</a></p>
+<p id="section-6.1-1.22.3"><code>capability_source_unresolvable</code> names a capability-source
+resolution failure, and the carrier records where it happened: a
+Refusal Record for a failure before the decision request
+(<a href="#pre-decision-refusal" class="auto internal xref">Section 5.2</a>), Execution Evidence for a failure at use
+under an obtained permit. It is never recorded as a parameter
+comparison. A capability snapshot is not a request parameter, and
+<code>parameter_mismatch</code> asserts a digest comparison that a resolution
+failure never made.<a href="#section-6.1-1.22.3" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-6.1-1.23">
