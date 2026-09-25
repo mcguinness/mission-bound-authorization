@@ -188,14 +188,33 @@ export async function deriveAttenuationRoot(
     throw new Error("attenuation: del_max_depth MUST be >= 0");
   }
 
-  // Derivation gate (D26 lifecycle): throws GateError when non-active/expired.
   // @spec control-plane#serialization — the artifact identity is minted BEFORE
   // the count, so the counted derivation and the artifact it pays for share
-  // one durable reservation; a recorded operation identity replays instead of
-  // counting again, and the reservation is released on acceptance below.
+  // one durable reservation.
   const jti = `aat_root_${randomBytes(12).toString("base64url")}`;
+  const operationId = input.operationId ?? jti;
+  // A PENDING RESERVATION IS EXCLUSIVE: signing is asynchronous, so two callers
+  // presenting one operation identity would otherwise both be admitted and mint
+  // two distinct roots against one counted derivation. One owner runs; the
+  // other awaits its outcome or recovers the recorded artifact.
+  return kernel.exclusiveDerivation(input.missionId, operationId, () =>
+    mintAttenuationRoot(kernel, signKey, kid, input, jti, operationId),
+  );
+}
+
+async function mintAttenuationRoot(
+  kernel: MissionKernel,
+  signKey: CryptoKey,
+  kid: string,
+  input: DeriveRootInput,
+  jti: string,
+  operationId: string,
+): Promise<{ root: string; jti: string; tools: AATTools }> {
+  // Derivation gate (D26 lifecycle): throws GateError when non-active/expired.
+  // A recorded operation identity replays instead of counting again, and the
+  // reservation is released on acceptance below.
   const admitted = kernel.reserveDerivation(input.missionId, {
-    operationId: input.operationId ?? jti,
+    operationId,
     artifactId: jti,
   });
   const replayed = replayRoot(admitted.reservation);
@@ -389,11 +408,25 @@ export async function deriveCrossOrgRoot(
   input: CrossOrgRootInput,
 ): Promise<{ root: string; jti: string; tools: AATTools; actorMapping: { client_id: string; actor: CrossOrgRootInput["actor"]; version: string } }> {
   // @spec control-plane#serialization — same reservation boundary as the
-  // in-org root: artifact identity first, count and reservation together, and
-  // release on acceptance.
+  // in-org root: artifact identity first, count and reservation together,
+  // release on acceptance, and ONE in-flight owner per operation identity.
   const jti = `aat_root_${randomBytes(12).toString("base64url")}`;
+  const operationId = input.operationId ?? jti;
+  return kernel.exclusiveDerivation(input.missionId, operationId, () =>
+    mintCrossOrgRoot(kernel, signKey, kid, input, jti, operationId),
+  );
+}
+
+async function mintCrossOrgRoot(
+  kernel: MissionKernel,
+  signKey: CryptoKey,
+  kid: string,
+  input: CrossOrgRootInput,
+  jti: string,
+  operationId: string,
+): Promise<{ root: string; jti: string; tools: AATTools; actorMapping: { client_id: string; actor: CrossOrgRootInput["actor"]; version: string } }> {
   const admitted = kernel.reserveDerivation(input.missionId, {
-    operationId: input.operationId ?? jti,
+    operationId,
     artifactId: jti,
   });
   if (admitted.reservation.kind === "replay" && admitted.reservation.reservation.completion) {

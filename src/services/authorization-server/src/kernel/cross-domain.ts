@@ -89,13 +89,29 @@ export async function issueCrossDomainGrant(
   kid: string,
   input: IssueGrantInput,
 ): Promise<{ grant: string; jti: string; audienceScoped: AuthorityEntry[] }> {
-  // Derivation gate: throws GateError when non-active/expired/cap-exhausted.
   // @spec control-plane#serialization — the grant identity is minted BEFORE the
   // count, so the counted derivation and the grant it pays for share one
-  // durable reservation, released on acceptance below.
+  // durable reservation, released on acceptance below, with ONE in-flight owner
+  // per operation identity: signing is asynchronous, so two callers presenting
+  // one identity would otherwise mint two grants against one counted derivation.
   const jti = `jag_${randomBytes(12).toString("base64url")}`;
+  const operationId = input.operationId ?? jti;
+  return kernel.exclusiveDerivation(input.missionId, operationId, () =>
+    mintCrossDomainGrant(kernel, signKey, kid, input, jti, operationId),
+  );
+}
+
+async function mintCrossDomainGrant(
+  kernel: MissionKernel,
+  signKey: CryptoKey,
+  kid: string,
+  input: IssueGrantInput,
+  jti: string,
+  operationId: string,
+): Promise<{ grant: string; jti: string; audienceScoped: AuthorityEntry[] }> {
+  // Derivation gate: throws GateError when non-active/expired/cap-exhausted.
   const admitted = kernel.reserveDerivation(input.missionId, {
-    operationId: input.operationId ?? jti,
+    operationId,
     artifactId: jti,
   });
   if (admitted.reservation.kind === "replay" && admitted.reservation.reservation.completion) {

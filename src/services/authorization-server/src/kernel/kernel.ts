@@ -200,7 +200,12 @@ export class GateError extends Error {
       // overlay taken away. Both refuse `invalid_grant` at the wire; the
       // Containment denial reason rides only the former.
       | "authority_contained"
-      | "authority_exhausted",
+      | "authority_exhausted"
+      // @spec control-plane#serialization (issue #250, owner review) — the
+      // operation identity was settled by an authoritative NON-acceptance and
+      // its count was returned. That identity is TERMINAL: retrying it would
+      // mint a second artifact for one operation, off a count nobody holds.
+      | "operation_refunded",
     message: string,
   ) {
     super(message);
@@ -438,6 +443,11 @@ export class MissionKernel {
    * tombstone, it does not own it).
    */
   readonly tombstones: MissionTombstoneStore;
+  /**
+   * @spec control-plane#serialization — the in-flight owner of each
+   * (mission, operation) identity; see {@link exclusiveDerivation}.
+   */
+  private readonly derivationsInFlight = new Map<string, Promise<unknown>>();
   private readonly now: () => Date;
   private readonly allocateStatusIndex: () => number;
 
@@ -2029,6 +2039,27 @@ export class MissionKernel {
   }
 
   /**
+   * @spec control-plane#serialization, mission#lifecycle — materialize the
+   * expiry clock in ITS OWN transaction, for a caller about to open the
+   * transaction its own operation commits in.
+   *
+   * The expiry clock MATERIALIZES a narrowing transition, and a refusal must
+   * never roll that back. {@link gateDerivable} already keeps the clock outside
+   * the counter's transaction for exactly this reason; a caller that wraps a
+   * requested transition in a transaction of its own needs the same discipline,
+   * because the transition it then asks for may be illegal FROM the state the
+   * expiry just committed, and rolling that refusal back would leave an expired
+   * Mission `active` with neither the transition nor its publication.
+   *
+   * Call it BEFORE opening that transaction, never inside one: a nested
+   * `withTransaction` is a savepoint, so an inner commit here would still
+   * unwind with the outer rollback.
+   */
+  materializeExpiry(id: string): MissionRecord {
+    return withTransaction(this.db, () => this.applyExpiry(this.mustGet(id)));
+  }
+
+  /**
    * @spec mission#lifecycle, child-delegation#child-state, mission-substrate#basic-gate: the shared active
    * gate for BOTH {@link gateDerivation} and {@link gateActive}: apply the expiry
    * clock, require the Mission itself `active`, and walk `parent` upward refusing
@@ -2141,6 +2172,9 @@ export class MissionKernel {
    * the reservation ({@link releaseDerivation}) when the artifact is accepted;
    * an unreleased reservation is ambiguous, never refunded, and settled only by
    * {@link reconcileDerivation}.
+   *
+   * A REFUNDED operation identity is TERMINAL and is refused here: see the
+   * `refunded` branch below.
    */
   reserveDerivation(
     id: string,
@@ -2148,6 +2182,20 @@ export class MissionKernel {
   ): { record: MissionRecord; reservation: DerivationReservationResult } {
     const current = this.mustGet(id);
     const recorded = this.derivationReservations.find(current.issuer, id, operation.operationId);
+    // @spec control-plane#serialization (issue #250, owner review) — a REFUNDED
+    // identity is TERMINAL, refused before every other branch. An authoritative
+    // non-acceptance returned this operation's count, so nothing is held to
+    // mint against: admitting the retry would either hand back an artifact the
+    // authority said was never accepted, or re-reserve and count again under
+    // one operation identity, which is how one operation ends up with two
+    // signed artifacts. The settlement is final; a genuinely new attempt needs
+    // a new operation identity.
+    if (recorded?.state === "refunded") {
+      throw new GateError(
+        "operation_refunded",
+        `operation ${operation.operationId} on mission ${id} was refunded and cannot be retried`,
+      );
+    }
     if (recorded?.completion) {
       // A COMMITTED operation whose artifact was retained is recognized before
       // the state gate: it already succeeded, and the caller replays that exact
@@ -2176,6 +2224,58 @@ export class MissionKernel {
       });
       return { record, reservation };
     });
+  }
+
+  /**
+   * @spec control-plane#serialization — a PENDING RESERVATION IS EXCLUSIVE
+   * (issue #250, owner review).
+   *
+   * {@link reserveDerivation} is synchronous, but the artifact it admits is
+   * signed asynchronously, so two callers presenting ONE operation identity
+   * could both be admitted while neither had released: the second found a
+   * reservation with nothing retained to replay, minted against the count the
+   * first had already spent, and one counted derivation became two distinct
+   * signed artifacts. The count was never wrong; the artifact identity was.
+   *
+   * At most one caller per (mission, operation) runs here. A caller arriving
+   * while that owner is in flight AWAITS ITS OUTCOME and returns it, so both
+   * callers receive the same artifact; a caller arriving after the owner
+   * finished finds nothing in flight and recovers the recorded artifact through
+   * {@link reserveDerivation}'s replay branch. If the owner FAILS it produced
+   * no artifact, so the next caller takes ownership and mints against the count
+   * that attempt already spent.
+   *
+   * `mint` MUST reserve the derivation itself: it is invoked synchronously, so
+   * its reservation commits before any other caller can interleave. This is
+   * instance-level serialization for the declared one-process, one-writer
+   * topology (the {@link LifecycleOutbox.drain} precedent); it is no
+   * distributed lease, and multi-process claiming stays behind #641.
+   */
+  async exclusiveDerivation<T>(
+    missionId: string,
+    operationId: string,
+    mint: () => Promise<T>,
+  ): Promise<T> {
+    const key = `${missionId}\u0000${operationId}`;
+    for (;;) {
+      const owner = this.derivationsInFlight.get(key) as Promise<T> | undefined;
+      if (!owner) break;
+      try {
+        return await owner;
+      } catch {
+        // The owner produced nothing. Clear its slot (its own cleanup may not
+        // have run yet) and take ownership rather than await a settled failure
+        // forever.
+        if (this.derivationsInFlight.get(key) === owner) this.derivationsInFlight.delete(key);
+      }
+    }
+    const attempt = mint();
+    this.derivationsInFlight.set(key, attempt);
+    try {
+      return await attempt;
+    } finally {
+      if (this.derivationsInFlight.get(key) === attempt) this.derivationsInFlight.delete(key);
+    }
   }
 
   /**
