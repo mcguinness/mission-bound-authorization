@@ -335,19 +335,30 @@ export interface ExpansionDeferredResult {
 }
 
 /**
- * A deferred-expansion initiation refusal. `carryover_plan_too_large` is the
- * subtree-size/transaction-budget refusal (@spec child-delegation#carryover):
- * an oversized widening proposal is refused at INTAKE, before approval, so the
- * approval event never names a plan the kernel cannot commit in one
- * transaction. Pre-decision (no Decision was reached), so it is a Refusal
- * Record at the enforcement point, never Execution Evidence.
+ * A deferred-expansion refusal. `predecessor_not_active` and
+ * `carryover_plan_too_large` refuse at INITIATION: an oversized widening
+ * proposal is refused at INTAKE, before approval, so the approval event never
+ * names a plan the kernel cannot commit in one transaction
+ * (@spec child-delegation#carryover). Both are pre-decision (no Decision was
+ * reached), so they are Refusal Records at the enforcement point, never
+ * Execution Evidence.
  *
- * LOCAL to this store's code union by design: it is deliberately NOT added to
- * any draft's Execution Evidence or Refusal Record enumeration.
+ * `carryover_disabled` refuses at COMPLETION, and is a DEPLOYMENT fault rather
+ * than a request refusal: the deferral carries a manifest the approval
+ * authenticated, and the switch that executes it is off. A committed manifest
+ * either executes intact or completion refuses; silently falling back to
+ * ordinary cascade would substitute one approved plan (widen and carry the
+ * subtree) for another (widen and tear the subtree down) on a feature-flag
+ * change, with the Approver's authenticated approval covering neither. The
+ * refusal leaves the deferral approved and unredeemed, so restoring the switch
+ * still completes the approved plan intact.
+ *
+ * LOCAL to this store's code union by design: none of these is added to any
+ * draft's Execution Evidence or Refusal Record enumeration.
  */
 export class ExpansionDeferralError extends Error {
   constructor(
-    readonly code: "predecessor_not_active" | "carryover_plan_too_large",
+    readonly code: "predecessor_not_active" | "carryover_plan_too_large" | "carryover_disabled",
     message: string,
   ) {
     super(message);
@@ -402,6 +413,23 @@ export class ExpansionDeferralStore {
     migrateExpansionDeferrals(this.db);
     this.creationIdempotency = new CreationIdempotencyStore(kernel);
     this.carryover = new CarryoverStore(kernel, now);
+  }
+
+  /**
+   * @spec child-delegation#carryover-commit — the deployment's carryover
+   * configuration, or a refusal. Called only where a committed manifest is
+   * about to be executed, so a disabled switch refuses the COMPLETION instead
+   * of quietly returning the deferral to ordinary cascade.
+   */
+  private requireCarryoverEnabled(): CarryoverConfig {
+    const config = this.carryoverConfig;
+    if (!config?.enabled) {
+      throw new ExpansionDeferralError(
+        "carryover_disabled",
+        "the approved expansion carries a committed Carryover Manifest and Child Mission Carryover is disabled",
+      );
+    }
+    return config;
   }
 
   /** The committed carryover batch result for a deferral, when one applied. */
@@ -812,6 +840,19 @@ export class ExpansionDeferralStore {
       const manifest = row.carryover_manifest_json
         ? (JSON.parse(row.carryover_manifest_json as string) as CarryoverManifest)
         : undefined;
+      // @spec child-delegation#carryover-commit — a committed manifest either
+      // executes INTACT or completion REFUSES. Where the switch is off the
+      // batch would be skipped and the supersession CAS's ordinary cascade
+      // would terminate the whole live subtree with no replacements: a
+      // different plan from the one the Approver authenticated, chosen by a
+      // deployment flag. The refusal happens BEFORE any write, so there is no
+      // successor, no replacement and above all no cascade, and the row stays
+      // approved and unredeemed, so restoring the switch still completes the
+      // approved plan as approved. Pairing the manifest with the config it runs
+      // under leaves NO branch in which a manifest is present and skipped.
+      const batch = manifest
+        ? { manifest, config: this.requireCarryoverEnabled() }
+        : undefined;
       const res = createExpansion(this.kernel, {
         predecessorId: row.predecessor_id as string,
         intent,
@@ -820,7 +861,7 @@ export class ExpansionDeferralStore {
         approvalEventId: row.approval_event_id as string,
         approvedUntil: row.approved_until as string,
         ...(submissionEvidence?.length ? { submissionEvidence } : {}),
-        ...(manifest ? { successorId: manifest.successor.mission_id } : {}),
+        ...(batch ? { successorId: batch.manifest.successor.mission_id } : {}),
       });
       if (creationRequestId) {
         this.creationIdempotency.completeInCallerTx(
@@ -838,11 +879,13 @@ export class ExpansionDeferralStore {
       // Carryover Evidence. Because the explicit traversal terminates every
       // descendant here, the `cascadeChildren` inside the supersession CAS below
       // is a genuine no-op rather than a second, outcome-less descent.
+      // A committed manifest reaching here is always executed: the disabled
+      // case refused above rather than falling through to ordinary cascade.
       let carryover: ApplyCarryoverOutcome | undefined;
-      if (manifest && this.carryoverConfig?.enabled) {
+      if (batch) {
         const applied = applyCarryoverInCallerTx(this.kernel, this.carryover, {
           planId: row.carryover_plan_id as string,
-          manifest,
+          manifest: batch.manifest,
           manifestHash: row.carryover_manifest_hash as string,
           successor: res.successor,
           approver,
@@ -851,7 +894,7 @@ export class ExpansionDeferralStore {
           // approval completion route; there is no policy-adjudicated
           // completion path into carryover to refuse from.
           directApproval: true,
-          config: this.carryoverConfig,
+          config: batch.config,
         });
         carryover = {
           planId: row.carryover_plan_id as string,

@@ -1011,6 +1011,78 @@ describe("Child Mission Carryover durable recovery (@spec child-delegation#carry
 });
 
 /**
+ * A committed Carryover Manifest either executes INTACT or completion refuses.
+ * The deployment switch decides whether a plan is ever PREPARED; it must never
+ * decide, after the Approver has authenticated a manifest, that the widening
+ * happens with the whole live subtree torn down instead. Skipping the batch and
+ * letting the supersession's ordinary cascade run would substitute one approved
+ * plan for another on a feature-flag change.
+ */
+describe("Child Mission Carryover with the switch turned off (@spec child-delegation#carryover-commit)", () => {
+  /** Run an approved carryover deferral through a store whose switch is off. */
+  const redeemWithCarryoverOff = (run: Run): unknown => {
+    const off = new ExpansionDeferralStore(kernel, () => clock, config({ enabled: false }));
+    try {
+      off.redeem(run.code);
+      return undefined;
+    } catch (e) {
+      return e;
+    }
+  };
+
+  it("refuses completion when a committed manifest meets a disabled switch, and cascades nothing", () => {
+    const pred = approvePredecessor();
+    const child = addChild(pred.id, "child-a");
+    const grandchild = addChild(child.id, "grandchild-a");
+    const run = openApproved(pred.id);
+    const manifest = manifestOf(run);
+
+    const error = redeemWithCarryoverOff(run);
+    expect(error).toBeInstanceOf(ExpansionDeferralError);
+    expect((error as ExpansionDeferralError).code).toBe("carryover_disabled");
+
+    // Nothing partial survives: no successor at the reserved identifier, no
+    // replacement, and the predecessor is untouched.
+    expect(kernel.get(manifest.successor.mission_id)).toBeUndefined();
+    for (const entry of manifest.entries) {
+      if (entry.replacement) expect(kernel.get(entry.replacement.replacement_id)).toBeUndefined();
+    }
+    expect(kernel.get(pred.id)?.state).toBe("active");
+    // Above all, the live subtree was NOT torn down in place of the approved
+    // plan, and no carried correlation was invented.
+    expect(kernel.get(child.id)?.state).toBe("active");
+    expect(kernel.get(child.id)?.carried_to).toBeUndefined();
+    expect(kernel.get(grandchild.id)?.state).toBe("active");
+    expect(commits.filter((c) => c.state === "cascaded")).toHaveLength(0);
+    // The approval is not consumed and not denied: it is still exactly what the
+    // Approver authenticated.
+    expect(
+      run.store.db
+        .prepare("SELECT state, redeemed FROM expansion_deferrals WHERE deferral_code = ?")
+        .get(run.code),
+    ).toMatchObject({ state: "approved", redeemed: 0 });
+  });
+
+  it("executes the same committed manifest intact once the switch is restored", () => {
+    const pred = approvePredecessor();
+    const child = addChild(pred.id, "child-a");
+    const run = openApproved(pred.id);
+    const manifest = manifestOf(run);
+    expect((redeemWithCarryoverOff(run) as ExpansionDeferralError).code).toBe("carryover_disabled");
+
+    // The refusal left the approved plan executable: the SAME manifest, the
+    // same reserved identifiers, the child carried rather than cascaded away.
+    const out = redeem(run) as { successor: MissionRecord; carryover: { manifestHash: string } };
+    expect("error" in out).toBe(false);
+    expect(out.successor.id).toBe(manifest.successor.mission_id);
+    expect(out.carryover.manifestHash).toBe(carryoverManifestHash(ISS, manifest));
+    const replacementId = manifest.entries[0]?.replacement?.replacement_id as string;
+    expect(kernel.get(replacementId)?.state).toBe("active");
+    expect(kernel.get(child.id)?.carried_to).toBe(replacementId);
+  });
+});
+
+/**
  * The two carryover correlation columns on `missions` and the four carryover
  * columns on `expansion_deferrals` are additive, and both schemas run only
  * `CREATE TABLE IF NOT EXISTS`. A file-backed store created before them keeps

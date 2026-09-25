@@ -2034,7 +2034,23 @@ async function pollDeferredExpansion(
     return;
   }
 
-  const r = store.redeem(deferralCode);
+  let r: ReturnType<typeof store.redeem>;
+  try {
+    r = store.redeem(deferralCode);
+  } catch (e) {
+    // @spec child-delegation#carryover-commit — the approval authenticated a
+    // Carryover Manifest this deployment can no longer execute. That is a
+    // DEPLOYMENT fault, never a Decision about this request, so it must not
+    // reach the client as `access_denied` (the kernel's own precedent for a
+    // misconfigured Authorization Server). Completion refused, nothing
+    // cascaded, and the deferral stays approved and unredeemed: restoring the
+    // switch completes the approved plan intact.
+    if (e instanceof ExpansionDeferralError && e.code === "carryover_disabled") {
+      txError(ctx, 500, "server_error", e.message);
+      return;
+    }
+    throw e;
+  }
   if ("error" in r) {
     switch (r.error) {
       case "authorization_pending":
