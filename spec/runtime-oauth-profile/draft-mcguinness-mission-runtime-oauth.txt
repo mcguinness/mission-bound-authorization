@@ -181,8 +181,11 @@ Table of Contents
       JWT access token, or the members of the introspection response for
       a presented opaque token.
 
-   Credential authority:  The authorization_details in the validated
-      credential context.
+   Credential authority:  The authority the presented token itself
+      carries: for a Mission-bound token, the authorization_details in
+      the validated credential context; for an ordinary token joined to
+      a Mission under an externally established reference, the authority
+      it carries as issued (Section 6.1).
 
    Current effective authority:  The Mission's approved Authority Set
       narrowed by whatever narrowing mechanism the deployment runs, as
@@ -217,12 +220,19 @@ Table of Contents
    Each value the runtime decision uses is read from the resulting
    validated credential context (Section 5).
 
-   Introspection freshness is per use under the issuance profile: each
-   response is an observation for one decision, not a cacheable state
-   assertion or authority record ([I-D.draft-mcguinness-oauth-mission],
-   Section "Mission State via Token Introspection").  The runtime core's
-   freshness rules do not relax that; a deployment that needs bounded-
-   staleness caching uses the Mission Status profile (Section 6.2).
+   Under the issuance profile alone, introspection freshness is per use:
+   each response is an observation for one decision, not a cacheable
+   state assertion ([I-D.draft-mcguinness-oauth-mission],
+   Section "Mission State via Token Introspection").  A deployment that
+   runs the Mission Status profile can have the Mission issuer's
+   introspection projection carry fresh_until, until which the reported
+   Mission state can be relied on without re-checking
+   ([I-D.draft-mcguinness-oauth-mission-status]).  That caches Mission
+   state only.  Token validation and the credential authority are not
+   cached: an opaque token is resolved by introspection before each use,
+   and each response remains one observation, never a cacheable
+   authority record ([I-D.draft-mcguinness-oauth-mission],
+   Section "Introspected Token Consumption").
 
    A PEP MUST NOT ask a PDP to authorize an action from unverified token
    claims.  If token validation fails, the PEP MUST refuse before
@@ -286,6 +296,8 @@ Table of Contents
    | resource           |                                              |
    +--------------------+----------------------------------------------+
    | Authority entry    | The applicable entry of the credential       |
+   |                    | authority for a Mission-bound token; under a |
+   |                    | join, the applicable entry of the Mission's  |
    |                    | authority (Section 6.1)                      |
    +--------------------+----------------------------------------------+
    | Current effective  | The approved Authority Set as narrowed, from |
@@ -373,16 +385,22 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-runtime]).  On this profile those are
    two inputs, and the action MUST fall within both:
 
-   *  the credential authority: the authorization_details of the
-      validated JWT or, for an opaque token, of its introspection
-      response; and
+   *  the credential authority: for a Mission-bound token, the
+      authorization_details of the validated JWT or, for an opaque
+      token, of its introspection response; for an ordinary token joined
+      to a Mission under an externally established reference
+      (Section 4), the authority that token carries as issued,
+      established and enforced as the join profile defines (the Mission
+      Authority Server enforces it at the Resource Server or gateway,
+      [I-D.draft-mcguinness-mission-authority-server]); and
 
    *  the current effective authority: the approved Authority Set,
-      narrowed by any narrowing mechanism the deployment runs.  With no
-      narrowing mechanism it is the approved set, which already bounds
-      the credential authority; with one, such as Containment or
-      discharge, it is established from a source that reports the
-      narrowing (Section 6.2).
+      narrowed by any narrowing mechanism the deployment runs.  For a
+      Mission-bound token with no narrowing mechanism running, the
+      approved set already bounds the credential authority, so this
+      bound needs no lookup.  Otherwise it is established from a source
+      that reports it (Section 6.2), and under a join the join profile
+      draws it from the Mission.
 
    A token narrowed below its Mission's approved Authority Set is
    evaluated at its own narrower entry.  The PDP MUST NOT substitute the
@@ -443,41 +461,49 @@ Table of Contents
    List ([I-D.draft-mcguinness-oauth-mission-status-list]), and Mission
    Lifecycle Signals ([I-D.draft-mcguinness-oauth-mission-signals]):
 
-   +=============+=========+===============+============+==============+
-   |State source |Exposure |Per-action     |Depends on  |Cannot provide|
-   |             |bound    |cost           |            |              |
-   +=============+=========+===============+============+==============+
-   |Issuer       |the      |one lookup per |issuer      |reuse of one  |
-   |introspection|interval |use; the       |availability|response      |
-   |             |from the |issuance       |            |across        |
-   |             |lookup to|profile        |            |decisions     |
-   |             |the      |defines no     |            |              |
-   |             |action it|caching for    |            |              |
-   |             |serves   |the mission    |            |              |
-   |             |         |member         |            |              |
-   +-------------+---------+---------------+------------+--------------+
-   |Mission      |published|one lookup     |status      |revocation    |
-   |Status       |staleness|within the     |surface     |inside the    |
-   |             |bound    |bound,         |availability|bound         |
-   |             |         |cacheable to   |            |              |
-   |             |         |fresh_until    |            |              |
-   +-------------+---------+---------------+------------+--------------+
-   |Status List  |Status   |local bit      |list        |terminal-state|
-   |             |List     |read, plus one |publisher   |detail; a non-|
-   |             |Token TTL|list fetch per |availability|VALID bit     |
-   |             |         |window         |            |sends the     |
-   |             |         |               |            |consumer to   |
-   |             |         |               |            |the           |
-   |             |         |               |            |authoritative |
-   |             |         |               |            |surface       |
-   +-------------+---------+---------------+------------+--------------+
-   |Lifecycle    |delivery |none (event-   |stream      |the pull      |
-   |Signals      |latency  |driven)        |liveness    |floor; a dead |
-   |             |within   |               |            |stream is     |
-   |             |the      |               |            |stale state   |
-   |             |verified |               |            |              |
-   |             |stream   |               |            |              |
-   +-------------+---------+---------------+------------+--------------+
+   +=============+===========+==============+============+=============+
+   |State source |Exposure   | Per-action   |Depends on  |Cannot       |
+   |             |bound      | cost         |            |provide      |
+   +=============+===========+==============+============+=============+
+   |Issuer       |the        | one lookup   |issuer      |reuse of one |
+   |introspection|interval   | per use      |availability|response     |
+   |             |from the   |              |            |across       |
+   |             |lookup to  |              |            |decisions    |
+   |             |the action |              |            |             |
+   |             |it serves  |              |            |             |
+   +-------------+-----------+--------------+------------+-------------+
+   |Issuer       |published  | one lookup   |issuer      |revocation   |
+   |introspection|staleness  | within the   |availability|inside the   |
+   |with Status  |bound, to  | bound for    |            |bound        |
+   |fresh_until  |fresh_until| Mission      |            |             |
+   |             |           | state; an    |            |             |
+   |             |           | opaque token |            |             |
+   |             |           | is still     |            |             |
+   |             |           | introspected |            |             |
+   |             |           | per use for  |            |             |
+   |             |           | its claims   |            |             |
+   +-------------+-----------+--------------+------------+-------------+
+   |Mission      |published  | one lookup   |status      |revocation   |
+   |Status       |staleness  | within the   |surface     |inside the   |
+   |             |bound      | bound,       |availability|bound        |
+   |             |           | cacheable to |            |             |
+   |             |           | fresh_until  |            |             |
+   +-------------+-----------+--------------+------------+-------------+
+   |Status List  |Status List| local bit    |list        |terminal-    |
+   |             |Token TTL  | read, plus   |publisher   |state detail;|
+   |             |           | one list     |availability|a non-VALID  |
+   |             |           | fetch per    |            |bit sends the|
+   |             |           | window       |            |consumer to  |
+   |             |           |              |            |the          |
+   |             |           |              |            |authoritative|
+   |             |           |              |            |surface      |
+   +-------------+-----------+--------------+------------+-------------+
+   |Lifecycle    |delivery   | none (event- |stream      |the pull     |
+   |Signals      |latency    | driven)      |liveness    |floor; a dead|
+   |             |within the |              |            |stream is    |
+   |             |verified   |              |            |stale state  |
+   |             |stream     |              |            |             |
+   +-------------+-----------+--------------+------------+-------------+
 
                                   Table 4
 

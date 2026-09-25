@@ -1324,7 +1324,11 @@ token.<a href="#section-3-3.2.1" class="pilcrow">¶</a></p>
         <dd class="break"></dd>
 <dt id="section-3-3.3">Credential authority:</dt>
         <dd style="margin-left: 1.5em" id="section-3-3.4">
-          <p id="section-3-3.4.1">The <code>authorization_details</code> in the validated credential context.<a href="#section-3-3.4.1" class="pilcrow">¶</a></p>
+          <p id="section-3-3.4.1">The authority the presented token itself carries: for a Mission-bound
+token, the <code>authorization_details</code> in the validated credential
+context; for an ordinary token joined to a Mission under an
+externally established reference, the authority it carries as issued
+(<a href="#authorization-details-mapping" class="auto internal xref">Section 6.1</a>).<a href="#section-3-3.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-3-3.5">Current effective authority:</dt>
@@ -1370,13 +1374,19 @@ Consumption").<a href="#section-4-3.2.1" class="pilcrow">¶</a></p>
       </ul>
 <p id="section-4-4">Each value the runtime decision uses is read from the resulting
 validated credential context (<a href="#claims-mapping" class="auto internal xref">Section 5</a>).<a href="#section-4-4" class="pilcrow">¶</a></p>
-<p id="section-4-5">Introspection freshness is per use under the issuance profile: each
-response is an observation for one decision, not a cacheable state
-assertion or authority record (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
-Section "Mission State via Token Introspection"). The runtime core's
-freshness rules do not relax that; a deployment that needs
-bounded-staleness caching uses the Mission Status profile
-(<a href="#state-sourcing" class="auto internal xref">Section 6.2</a>).<a href="#section-4-5" class="pilcrow">¶</a></p>
+<p id="section-4-5">Under the issuance profile alone, introspection freshness is per use:
+each response is an observation for one decision, not a cacheable state
+assertion (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission
+State via Token Introspection"). A deployment that runs the Mission
+Status profile can have the Mission issuer's introspection projection
+carry <code>fresh_until</code>, until which the reported Mission <code>state</code> can be
+relied on without re-checking
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). That caches Mission
+state only. Token validation and the credential authority are not
+cached: an opaque token is resolved by introspection before each use,
+and each response remains one observation, never a cacheable authority
+record (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Introspected
+Token Consumption").<a href="#section-4-5" class="pilcrow">¶</a></p>
 <p id="section-4-6">A PEP <span class="bcp14">MUST NOT</span> ask a PDP to authorize an action from unverified token
 claims. If token validation fails, the PEP <span class="bcp14">MUST</span> refuse before runtime
 Mission evaluation. When the PEP is an OAuth Resource Server, it uses
@@ -1455,7 +1465,7 @@ claim, or the introspection response member of the same name.<a href="#section-5
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Authority entry</td>
-            <td class="text-left" rowspan="1" colspan="1">The applicable entry of the credential authority (<a href="#authorization-details-mapping" class="auto internal xref">Section 6.1</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">The applicable entry of the credential authority for a Mission-bound token; under a join, the applicable entry of the Mission's authority (<a href="#authorization-details-mapping" class="auto internal xref">Section 6.1</a>)</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Current effective authority</td>
@@ -1559,17 +1569,23 @@ the PDP fail closed on an authority-entry type it does not understand
 two inputs, and the action <span class="bcp14">MUST</span> fall within both:<a href="#section-6.1-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-6.1-2.1">
-            <p id="section-6.1-2.1.1">the credential authority: the <code>authorization_details</code> of the
-validated JWT or, for an opaque token, of its introspection
-response; and<a href="#section-6.1-2.1.1" class="pilcrow">¶</a></p>
+            <p id="section-6.1-2.1.1">the credential authority: for a Mission-bound token, the
+<code>authorization_details</code> of the validated JWT or, for an opaque
+token, of its introspection response; for an ordinary token joined
+to a Mission under an externally established reference
+(<a href="#token-validation" class="auto internal xref">Section 4</a>), the authority that token carries as issued,
+established and enforced as the join profile defines (the Mission
+Authority Server enforces it at the Resource Server or gateway,
+<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>); and<a href="#section-6.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.1-2.2">
             <p id="section-6.1-2.2.1">the current effective authority: the approved Authority Set,
-narrowed by any narrowing mechanism the deployment runs. With no
-narrowing mechanism it is the approved set, which already bounds the
-credential authority; with one, such as Containment or discharge, it
-is established from a source that reports the narrowing
-(<a href="#state-sourcing" class="auto internal xref">Section 6.2</a>).<a href="#section-6.1-2.2.1" class="pilcrow">¶</a></p>
+narrowed by any narrowing mechanism the deployment runs. For a
+Mission-bound token with no narrowing mechanism running, the
+approved set already bounds the credential authority, so this bound
+needs no lookup. Otherwise it is established from a source that
+reports it (<a href="#state-sourcing" class="auto internal xref">Section 6.2</a>), and under a join the join profile
+draws it from the Mission.<a href="#section-6.1-2.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-6.1-3">A token narrowed below its Mission's approved Authority Set is
@@ -1655,9 +1671,18 @@ Lifecycle Signals (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" 
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Issuer introspection</td>
               <td class="text-left" rowspan="1" colspan="1">the interval from the lookup to the action it serves</td>
-              <td class="text-left" rowspan="1" colspan="1">one lookup per use; the issuance profile defines no caching for the <code>mission</code> member</td>
+              <td class="text-left" rowspan="1" colspan="1">one lookup per use</td>
               <td class="text-left" rowspan="1" colspan="1">issuer availability</td>
               <td class="text-left" rowspan="1" colspan="1">reuse of one response across decisions</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Issuer introspection with Status <code>fresh_until</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">published staleness bound, to <code>fresh_until</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">one lookup within the bound for Mission state; an opaque token is still introspected per use for its claims</td>
+              <td class="text-left" rowspan="1" colspan="1">issuer availability</td>
+              <td class="text-left" rowspan="1" colspan="1">revocation inside the bound</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Mission Status</td>
