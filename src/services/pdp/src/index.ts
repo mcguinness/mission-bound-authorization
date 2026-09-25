@@ -80,8 +80,11 @@ export { evaluateRemote, isDecisionChannelRefusal, type RemotePdpClientConfig } 
 export { channelDeadlineMs, createDecisionChannel } from "./decision-channel.js";
 export {
   claimsWithinScope,
+  evidenceDeclarationFindings,
   resourceDispositions,
+  retentionWindowSeconds,
   validateEnforcementScopeStatement,
+  type EvidenceDeclarationContext,
   type PerimeterDisposition,
   type ExcludedPathDisposition,
   type ResourceEntry,

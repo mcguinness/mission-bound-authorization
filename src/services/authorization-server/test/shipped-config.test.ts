@@ -30,6 +30,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  AUDIT_HORIZON_SECONDS,
   AUTHORITY_SOURCES,
   CANONICAL_RESOURCE,
   DEMO_AGENT_PROPOSAL,
@@ -217,6 +218,77 @@ describe("config/policy.json max_mission_lifetime_s (@spec mission#mission-recor
         /policy.max_mission_lifetime_s must be an integer >= 1, or null/,
       );
     }
+  });
+});
+
+/**
+ * @spec mission#mission-record (issue #594, W4-8) — the audit horizon, "the
+ * deployment-declared retention window for the Mission record and its
+ * evidence". REQUIRED, unlike the lifetime ceiling above: it is the floor the
+ * runtime profile puts under an evidence retention window
+ * (@spec runtime-evidence#execution-evidence-object), so a deployment that
+ * declares none has nothing to hold that window to and refuses at load rather
+ * than defaulting one. Where a lifetime ceiling IS declared, a horizon
+ * shorter than it could release a record while its Mission is still live.
+ */
+describe("config/policy.json audit_horizon_s (@spec mission#mission-record)", () => {
+  const dirs: string[] = [];
+  const original = process.env.MISSION_CONFIG_DIR;
+
+  afterEach(() => {
+    if (original === undefined) delete process.env.MISSION_CONFIG_DIR;
+    else process.env.MISSION_CONFIG_DIR = original;
+    vi.resetModules();
+    for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+  });
+
+  /** Load demo-data afresh over a copy of the shipped config with `policy.json` edited. */
+  async function loadPolicyWith(edit: (policy: Record<string, unknown>) => void): Promise<number> {
+    const dir = mkdtempSync(join(tmpdir(), "mission-horizon-"));
+    dirs.push(dir);
+    cpSync(SHIPPED_CONFIG_DIR, dir, { recursive: true });
+    const file = join(dir, "policy.json");
+    const policy = JSON.parse(readFileSync(file, "utf8")) as Record<string, unknown>;
+    edit(policy);
+    writeFileSync(file, JSON.stringify(policy, null, 2));
+    process.env.MISSION_CONFIG_DIR = dir;
+    vi.resetModules();
+    const mod = (await import("@mission/demo-data")) as typeof import("@mission/demo-data");
+    return mod.AUDIT_HORIZON_SECONDS;
+  }
+
+  it("the shipped value loads as this deployment's declared audit horizon, in seconds", () => {
+    expect(AUDIT_HORIZON_SECONDS).toBe(31_536_000);
+  });
+
+  it("an absent, zero, negative, non-integer or non-number horizon is a ConfigError", async () => {
+    await expect(
+      loadPolicyWith((policy) => {
+        delete policy.audit_horizon_s;
+      }),
+    ).rejects.toThrow(/policy.audit_horizon_s must be an integer >= 1/);
+    for (const bad of [0, -1, 1.5, "31536000", null]) {
+      await expect(
+        loadPolicyWith((policy) => {
+          policy.audit_horizon_s = bad;
+        }),
+      ).rejects.toThrow(/policy.audit_horizon_s must be an integer >= 1/);
+    }
+  });
+
+  it("a horizon shorter than the declared Mission lifetime ceiling is a ConfigError", async () => {
+    await expect(
+      loadPolicyWith((policy) => {
+        policy.max_mission_lifetime_s = 2_592_000;
+        policy.audit_horizon_s = 86_400;
+      }),
+    ).rejects.toThrow(/audit_horizon_s must be at least policy.max_mission_lifetime_s/);
+    await expect(
+      loadPolicyWith((policy) => {
+        policy.max_mission_lifetime_s = 2_592_000;
+        policy.audit_horizon_s = 2_592_000;
+      }),
+    ).resolves.toBe(2_592_000);
   });
 });
 
