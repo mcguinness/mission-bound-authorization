@@ -425,10 +425,18 @@ function claimingDeployment(overrides: Partial<EvidenceDeclaration> = {}): Enfor
     signing_key_locations: [EVIDENCE_KEY_SET_LOCATION],
     receipt_issuers: [{ emitter: PEP_LOCATION, key_set: EVIDENCE_KEY_SET_LOCATION }],
   };
+  // Derived FROM the shipped statement, so it keeps the shipped statement's own
+  // declarations rather than replacing the block: `transaction_assurance` ships
+  // the published execution lease maximum (#252 C1), and a mediated
+  // high-consequence class that publishes none is refused at load.
+  const shipped = structuredClone(SHIPPED) as EnforcementScopeStatement;
   return {
-    ...(structuredClone(SHIPPED) as EnforcementScopeStatement),
+    ...shipped,
     claims: ["evidence"],
-    extensions: { evidence: { ...declaration, ...overrides } as EvidenceDeclaration },
+    extensions: {
+      ...shipped.extensions,
+      evidence: { ...declaration, ...overrides } as EvidenceDeclaration,
+    },
   };
 }
 
@@ -753,7 +761,10 @@ describe("the deployment's evidence declaration and published key sets (@spec ru
   it("the shipped statement claims no Evidence capability, so this deployment designates no receipt issuer", () => {
     const { retention } = retainingDeployment();
     expect(SHIPPED.claims).toBeUndefined();
-    expect(SHIPPED.extensions).toBeUndefined();
+    // No EVIDENCE declaration, which is what this test is about. The shipped
+    // statement does carry a `transaction_assurance` declaration (#252 C1),
+    // published without being claimed.
+    expect(SHIPPED.extensions?.evidence).toBeUndefined();
     expect(SHIPPED.record_integrity_mechanism).toContain("full Evidence capability not claimed");
     expect(deploymentReceiptIssuerScope(SHIPPED, retention)).toBeUndefined();
     // The claiming TEST deployment, over the SAME published key sets, does
@@ -831,7 +842,12 @@ describe("the deployment's evidence declaration and published key sets (@spec ru
     expect(posture.extensions?.evidence?.receipt_issuers).toEqual([
       { emitter: PEP_LOCATION, key_set: EVIDENCE_KEY_SET_LOCATION },
     ]);
-    const leaseShaped = { ...structuredClone(SHIPPED), extensions: { transaction_assurance: [{ mediated_class_or_scope: "external_commitment", idempotency_claim_domain: "payments:operation" }] } };
+    // The shipped statement IS this shape: a declaration published under no
+    // claim. Taken from the config rather than hand-built, so it stays valid
+    // against the lease rules the same config declares (#252 C1).
+    const leaseShaped = structuredClone(SHIPPED) as EnforcementScopeStatement;
+    expect(leaseShaped.extensions?.transaction_assurance).toBeDefined();
+    expect(leaseShaped.claims).toBeUndefined();
     expect(() => loadRuntimePosture(leaseShaped)).not.toThrow();
     // Publishing is still not claiming: an unclaimed declaration designates
     // no receipt issuer, so receipt verification stays unreachable.
