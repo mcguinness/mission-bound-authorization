@@ -1075,7 +1075,7 @@
   {
    "file": "draft-mcguinness-mission-runtime-oauth.md",
    "slug": "draft-mcguinness-mission-runtime-oauth",
-   "title": "Mission Runtime OAuth Adapter",
+   "title": "Mission-Bound Runtime Enforcement: OAuth 2.0 Profile",
    "category": "std",
    "role": "companion",
    "spec_maturity": "experimental",

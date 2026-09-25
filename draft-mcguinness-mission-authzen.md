@@ -117,7 +117,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-mission-runtime-oauth:
-    title: "Mission Runtime OAuth Adapter"
+    title: "Mission-Bound Runtime Enforcement: OAuth 2.0 Profile"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-oauth.html
     author:
       -

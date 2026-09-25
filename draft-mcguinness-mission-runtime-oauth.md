@@ -1,6 +1,6 @@
 ---
-title: "Mission Runtime OAuth Adapter"
-abbrev: "Runtime OAuth Adapter"
+title: "Mission-Bound Runtime Enforcement: OAuth 2.0 Profile"
+abbrev: "Runtime OAuth Profile"
 category: std
 
 docname: draft-mcguinness-mission-runtime-oauth-latest
@@ -118,20 +118,13 @@ informative:
 
 --- abstract
 
-Mission-Bound Runtime Enforcement {{I-D.draft-mcguinness-mission-runtime}}
-(the "runtime core") specifies a binding-neutral decision contract for
-enforcing a Mission-bound credential at the point of use. This document
-is the OAuth 2.0 realization of that contract: how a PEP validates a
-Mission-bound access token before evaluation, how the runtime core's
-abstract subject, actor, sender-constraint, and audience roles map onto
-the `sub`, `act`, `cnf`, and `aud` claims and the `mission` claim,
-how an `authorization_details` entry realizes the runtime core's
-effective-authority-set input (including the `mission_resource_access`
-entry type), and how a resource owner carries a runtime classification
-floor through OAuth protected-resource metadata. It defines no
-enforcement semantics of its own: every invariant, failure mode, and
-evidence requirement it mentions is the runtime core's, cited and
-mapped, never restated with different force.
+This document profiles Mission-Bound Runtime Enforcement for OAuth 2.0
+access tokens. It specifies how validated token claims and token
+introspection results supply the runtime decision inputs, how OAuth
+mechanisms provide Mission state observations, and how protected
+resource metadata conveys runtime classification floors. Enforcement
+semantics are defined by Mission-Bound Runtime Enforcement; token
+semantics are defined by Mission-Bound Authorization for OAuth 2.0.
 
 --- middle
 
