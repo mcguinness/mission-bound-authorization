@@ -286,6 +286,22 @@ layer's territory; prompt injection is constrained
 (inert intent text, fixed authority), not prevented; and
 information-flow leakage within approved authority is out of scope.
 
+## Work, identity, and authority
+
+A governed agent action rests on three facts, each with its own owner:
+which governed principal is acting, what authority it holds, and whether
+approved work still justifies the action. Mission-Bound Authorization
+defines the work fact: a Mission is approved, projected across domains,
+enforced at each action, and ended on its own, reaching every boundary
+that checks work state.
+[Governed Agent Profiles](https://github.com/mcguinness/governed-agent-profiles)
+defines the identity and authority facts: the governed Agent Principal,
+its execution bindings, its client and delegation authority, and how each
+is withdrawn. The facts meet at the action decision, where the runtime
+contract evaluates work state alongside the identity and authority the
+credential carries. None stands in for another: ending the work denies
+the action while the agent's identity and authority remain valid.
+
 ## Composes with what you already run
 
 | You already run | The relationship |
