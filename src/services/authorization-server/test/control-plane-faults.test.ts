@@ -3,6 +3,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { withTransaction } from "@mission/store";
 import { DERIVATION_POLICY } from "@mission/demo-data";
 import {
+  deriveAttenuationRoot,
   LifecycleConflictError,
   MissionKernel,
   type MissionRecord,
@@ -371,6 +372,120 @@ describe("control-plane derivation reservations", () => {
         kernel.reconcileDerivation(reservationId, { accepted: false, authority: "svc:issuance-log" }),
       ).toBe(false);
       expect(kernel.get(record.id)?.derivation_count).toBe(0);
+    } finally {
+      kernel.db.close();
+    }
+  });
+
+  it("refuses a retry of a refunded operation identity rather than issue against a returned count", async () => {
+    const { kernel, record } = setup();
+    try {
+      const admitted = kernel.reserveDerivation(record.id, op(7));
+      expect(kernel.get(record.id)?.derivation_count).toBe(1);
+      // An authoritative non-acceptance returns the count. Nothing is held for
+      // this operation identity any more, and nothing was retained to replay.
+      expect(
+        kernel.reconcileDerivation(admitted.reservation.reservation.reservationId, {
+          accepted: false,
+          authority: "svc:issuance-log",
+        }),
+      ).toBe(true);
+      expect(kernel.get(record.id)?.derivation_count).toBe(0);
+
+      // The identity is TERMINAL. Admitting the retry would either mint against
+      // a derivation nobody is paying for, or re-reserve and count again under
+      // one identity, which is how one operation ends up with two artifacts.
+      await expect(
+        deriveAttenuationRoot(kernel, statusKey, "as-token", {
+          missionId: record.id,
+          aud: DERIVATION_POLICY.ceiling[0].resource,
+          clientId: "agent",
+          cnfJkt: "jkt-holder",
+          operationId: "op-7",
+        }),
+      ).rejects.toThrow("was refunded");
+      // No artifact, and the returned count stays returned.
+      expect(kernel.get(record.id)?.derivation_count).toBe(0);
+      expect(
+        kernel.derivationReservations.get(admitted.reservation.reservation.reservationId)?.state,
+      ).toBe("refunded");
+    } finally {
+      kernel.db.close();
+    }
+  });
+});
+
+/**
+ * @spec control-plane#serialization — A PENDING RESERVATION IS EXCLUSIVE.
+ *
+ * The reservation is taken synchronously and the artifact is signed
+ * asynchronously, so two callers presenting ONE operation identity could both
+ * be admitted before either released: the second found a reservation with
+ * nothing retained to replay and minted against the count the first had already
+ * spent, and one counted derivation became two distinct signed artifacts with
+ * different `jti`s. One in-flight owner per (mission, operation) closes it; the
+ * other caller awaits that owner's outcome or recovers the recorded artifact.
+ */
+describe("control-plane concurrent derivations under one operation identity", () => {
+  const rootInput = (missionId: string, operationId: string) => ({
+    missionId,
+    aud: DERIVATION_POLICY.ceiling[0].resource as string,
+    clientId: "agent",
+    cnfJkt: "jkt-holder",
+    operationId,
+  });
+
+  it("gives two overlapping callers the same artifact against one counted derivation", async () => {
+    const { kernel, record } = setup();
+    try {
+      const input = rootInput(record.id, "op-overlap");
+      // Both calls are in flight before either signature completes.
+      const owner = deriveAttenuationRoot(kernel, statusKey, "as-token", input);
+      const joiner = deriveAttenuationRoot(kernel, statusKey, "as-token", input);
+      // The joiner's result is consumed FIRST here, the owner's second: the
+      // outcome cannot depend on which caller reads it first.
+      const second = await joiner;
+      const first = await owner;
+      expect(second.jti).toBe(first.jti);
+      expect(second.root).toBe(first.root);
+      expect(kernel.get(record.id)?.derivation_count).toBe(1);
+      // The cap here is 1, so a second count would have refused outright; what
+      // the guard adds is that only ONE artifact exists for the one count.
+      expect(kernel.derivationReservations.find(record.issuer, record.id, "op-overlap")?.artifactId).toBe(
+        first.jti,
+      );
+    } finally {
+      kernel.db.close();
+    }
+  });
+
+  it("recovers the recorded artifact for a caller arriving after the owner completed", async () => {
+    const { kernel, record } = setup();
+    try {
+      const input = rootInput(record.id, "op-sequential");
+      const first = await deriveAttenuationRoot(kernel, statusKey, "as-token", input);
+      // Nothing is in flight now, so this caller takes the recorded-artifact
+      // path rather than joining an owner. Same artifact, same count.
+      const retry = await deriveAttenuationRoot(kernel, statusKey, "as-token", input);
+      expect(retry.jti).toBe(first.jti);
+      expect(retry.root).toBe(first.root);
+      expect(kernel.get(record.id)?.derivation_count).toBe(1);
+    } finally {
+      kernel.db.close();
+    }
+  });
+
+  it("hands ownership to the next caller when the in-flight owner fails", async () => {
+    const { kernel, record } = setup();
+    try {
+      // A failed owner produced no artifact, so the next caller must be able to
+      // run rather than wait forever on a settled failure.
+      const failing = kernel.exclusiveDerivation(record.id, "op-failed", async () => {
+        throw new Error("signing failed");
+      });
+      const next = kernel.exclusiveDerivation(record.id, "op-failed", async () => "the-artifact");
+      await expect(failing).rejects.toThrow("signing failed");
+      expect(await next).toBe("the-artifact");
     } finally {
       kernel.db.close();
     }

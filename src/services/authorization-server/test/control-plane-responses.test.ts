@@ -20,7 +20,13 @@
  *    exact bytes are already replayable;
  *  - replay lookup runs BEFORE any state-dependent check, so a request that
  *    already succeeded still replays its success after the Mission moves on;
- *  - a retained signed envelope past its own validity is never replayed.
+ *  - a retained response replays for the WHOLE nonce window, including a signed
+ *    envelope past its own validity: @spec status#idempotency requires the
+ *    original response on a byte-identical retransmit, and requires the window
+ *    to be at least that response's validity span;
+ *  - only the exchange that CLAIMED a nonce can finalize it, so a divergent
+ *    retry's refusal can neither overwrite a committed success nor be retained
+ *    in its place.
  */
 
 import { mkdtempSync, rmSync } from "node:fs";
@@ -35,6 +41,7 @@ import {
   type AuthorityEntry,
   type BuiltAs,
   buildAuthorizationServer,
+  type LifecycleCommit,
   LIFECYCLE_ENDPOINT_KEY,
   LifecycleResponseStore,
   MissionKernel,
@@ -57,9 +64,9 @@ const proposal = (): AuthorityEntry[] => [
   { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] },
 ];
 
-function approveOnAs(): MissionRecord {
+function approveOn(target: BuiltAs, issuer: string): MissionRecord {
   approvals += 1;
-  return as.kernel.approve({
+  return target.kernel.approve({
     intent: validateMissionIntent(
       JSON.stringify({
         goal: "Read invoices for the close",
@@ -68,19 +75,26 @@ function approveOnAs(): MissionRecord {
       }),
     ),
     proposedAuthority: proposal(),
-    subject: { iss: ISSUER, sub: "alice" },
-    approver: { iss: ISSUER, sub: "bob" },
+    subject: { iss: issuer, sub: "alice" },
+    approver: { iss: issuer, sub: "bob" },
     clientId: "ap-agent",
     approvalEventId: `apev-cpr-${approvals}`,
   });
 }
 
-const lifecycle = (missionId: string, body: unknown): Promise<Response> =>
-  fetch(`${ISSUER}/missions/${missionId}/lifecycle`, {
+function approveOnAs(): MissionRecord {
+  return approveOn(as, ISSUER);
+}
+
+const lifecycleOn = (issuer: string, missionId: string, body: unknown): Promise<Response> =>
+  fetch(`${issuer}/missions/${missionId}/lifecycle`, {
     method: "POST",
     headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
     body: JSON.stringify(body),
   });
+
+const lifecycle = (missionId: string, body: unknown): Promise<Response> =>
+  lifecycleOn(ISSUER, missionId, body);
 
 /** The retained row for one exchange, straight out of the kernel database. */
 const retained = (missionId: string, nonce: string): Record<string, unknown> | undefined =>
@@ -192,6 +206,39 @@ describe("control-plane lifecycle response boundary", () => {
     expect(await replay.text()).toBe(original);
   });
 
+  it("refuses a divergent retry without retaining it, leaving the committed success replayable", async () => {
+    const record = approveOnAs();
+    const nonce = freshNonce();
+    const first = await lifecycle(record.id, { operation: "suspend", nonce });
+    expect(first.status).toBe(200);
+    const original = await first.text();
+    // The bytes were lost between the commit and their retention. The claim and
+    // the committed outcome survive, under the ORIGINAL request's digest.
+    loseTheResponseBytes(record.id, nonce);
+    const claimed = retained(record.id, nonce);
+    expect(claimed?.state).toBe("committed");
+
+    // A DIFFERENT request reuses the nonce while the original response is still
+    // owed. It is refused, and written NOWHERE: it is refused precisely because
+    // a committed row with another digest holds this nonce, so it is not that
+    // nonce's response.
+    const divergent = await lifecycle(record.id, { operation: "resume", nonce });
+    expect(divergent.status).toBe(400);
+    expect(await divergent.json()).toMatchObject({ error: "invalid_request", nonce });
+    const afterRefusal = retained(record.id, nonce);
+    expect(afterRefusal?.state).toBe("committed");
+    expect(afterRefusal?.status).toBe(200);
+    expect(afterRefusal?.request_digest).toBe(claimed?.request_digest);
+    expect(afterRefusal?.body).toBe("");
+    // Nothing was executed either: the divergent `resume` never reached the
+    // state machine, so the Mission is still suspended.
+    expect(as.kernel.get(record.id)?.state).toBe("suspended");
+    // And the original retransmit still replays its success.
+    const retry = await lifecycle(record.id, { operation: "suspend", nonce });
+    expect(retry.status).toBe(200);
+    expect(await retry.text()).toBe(original);
+  });
+
   it("claims the containment outcome with the narrowing commit", async () => {
     const record = approveOnAs();
     const nonce = freshNonce();
@@ -216,6 +263,67 @@ describe("control-plane lifecycle response boundary", () => {
     expect(await retry.text()).toBe(original);
     // One narrowing, not two.
     expect(as.kernel.get(record.id)?.containment?.containment_version).toBe(1);
+  });
+});
+
+/**
+ * @spec control-plane#serialization, mission#lifecycle — THE EXPIRY CLOCK AND
+ * THE OPERATION'S TRANSACTION.
+ *
+ * The expiry clock MATERIALIZES a narrowing transition wherever a lifecycle
+ * request reads the record, and the operation the request then asks for may be
+ * illegal from the state that commit left. Running both inside one transaction
+ * makes the refusal roll the expiry back, leaving an expired Mission `active`
+ * with neither its transition nor its publication. The derivation gate already
+ * keeps the clock outside the counter's transaction; the lifecycle handler
+ * needs the same discipline, so its own AS is built here with a lifecycle-commit
+ * subscriber that witnesses the publication.
+ */
+describe("control-plane lifecycle expiry under a refused operation", () => {
+  const EXPIRY_PORT = 14562;
+  const EXPIRY_ISSUER = `http://localhost:${EXPIRY_PORT}`;
+  let expiryAs: BuiltAs;
+  let expiryServer: Server;
+  const commits: LifecycleCommit[] = [];
+
+  beforeAll(async () => {
+    expiryAs = await buildAuthorizationServer({
+      issuer: EXPIRY_ISSUER,
+      allowHeadlessAdjudication: true,
+      onLifecycleCommit: (commit) => commits.push(commit),
+    });
+    expiryServer = expiryAs.provider.listen(EXPIRY_PORT);
+  });
+  afterAll(() => {
+    expiryServer?.close();
+  });
+
+  it("commits the expiry it discovered even when the operation it was asked for is refused", async () => {
+    const record = approveOn(expiryAs, EXPIRY_ISSUER);
+    // Past the ceiling without touching the clock: the expiry clock reads the
+    // STORED `expires_at`, so moving that into the past is the same discovery a
+    // Mission that simply ran out of time presents.
+    expiryAs.kernel.db
+      .prepare("UPDATE missions SET expires_at = ? WHERE id = ?")
+      .run("2020-01-01T00:00:00Z", record.id);
+    commits.length = 0;
+
+    // `revoke` is legal from active and suspended, never from `expired`, so the
+    // request refuses on the state the expiry just committed.
+    const res = await lifecycleOn(EXPIRY_ISSUER, record.id, {
+      operation: "revoke",
+      nonce: freshNonce(),
+    });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ error: "conflict" });
+
+    // The expiry stays committed: fail closed means a refusal never rolls back
+    // a narrowing the request materialized.
+    const after = expiryAs.kernel.get(record.id);
+    expect(after?.state).toBe("expired");
+    expect(after?.version).toBe(record.version + 1);
+    // And it was PUBLISHED: the commit subscriber saw the expired transition.
+    expect(commits.map((c) => c.state)).toEqual(["expired"]);
   });
 });
 
@@ -298,7 +406,7 @@ describe("control-plane retained signed responses", () => {
     }
   });
 
-  it("stops replaying a retained signed response once it passes its own validity", async () => {
+  it("replays the retained bytes of a signed envelope past its own validity, for the whole nonce window", async () => {
     const { kernel, record, clock, store, key } = setup();
     try {
       const observed = kernel.statusObservation(record.id, { requester: "svc:close", nonce: key.nonce });
@@ -316,18 +424,21 @@ describe("control-plane retained signed responses", () => {
         contentType: "application/mission-status-response+jwt",
         body: jws,
       });
-      // Inside its own validity the retained envelope replays verbatim.
-      expect(store.find(key)?.replayable).toBe(true);
       expect(store.find(key)?.body).toBe(jws);
-      // Past it the bytes stop being deliverable: an expired observation is
-      // never handed back as though it were current. The ROW and its request
-      // digest are retained, so the divergent-retry refusal keeps the full
-      // ten-minute nonce window even though the envelope was only valid for
-      // sixty seconds.
-      clock.at = new Date((observed.exp + 1) * 1000);
-      const expired = store.find(key);
-      expect(expired?.replayable).toBe(false);
-      expect(expired?.requestDigest).toBe("sha-256:req");
+      // @spec status#idempotency — the envelope is valid for sixty seconds and
+      // the window is ten minutes, which is exactly what the profile permits:
+      // the window MUST be at least the response's validity span and MAY be
+      // longer. A byte-identical retransmit at two minutes still replays the
+      // ORIGINAL response. Replaying a retained acknowledgement of a completed
+      // operation is not a fresh observation, and the envelope's own `exp`
+      // already tells its consumer so.
+      clock.at = new Date((observed.exp + 60) * 1000);
+      const late = store.find(key);
+      expect(late?.state).toBe("final");
+      // The retained BYTES, not a re-signature: ECDSA re-signing the same
+      // observation yields different bytes every time.
+      expect(late?.body).toBe(jws);
+      expect(late?.requestDigest).toBe("sha-256:req");
       // Past the nonce window itself the row is gone and the nonce is free.
       clock.at = new Date(clock.at.getTime() + 600_001);
       expect(store.find(key)).toBeUndefined();
@@ -336,11 +447,51 @@ describe("control-plane retained signed responses", () => {
     }
   });
 
+  it("finalizes a claim only for the exchange that made it, never for a divergent retry", () => {
+    const { kernel, store, key } = setup();
+    try {
+      // The original exchange committed and claimed the nonce; its bytes are
+      // still being produced.
+      store.claimInCallerTx(key, {
+        requestDigest: "sha-256:original",
+        status: 200,
+        contentType: "application/json",
+        material: { kind: "json", body: { id: key.missionId, state: "suspended", version: 2 } },
+      });
+      // A DIFFERENT request reuses the nonce and is refused. Its bytes must not
+      // finalize the claim the original exchange made: the row belongs to the
+      // digest it was claimed under.
+      store.record(key, {
+        requestDigest: "sha-256:divergent",
+        status: 400,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "invalid_request" }),
+      });
+      const held = store.find(key);
+      expect(held?.state).toBe("committed");
+      expect(held?.status).toBe(200);
+      expect(held?.requestDigest).toBe("sha-256:original");
+      expect(held?.body).toBeUndefined();
+      // The original exchange still finalizes its own claim.
+      store.record(key, {
+        requestDigest: "sha-256:original",
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ id: key.missionId, state: "suspended", version: 2 }),
+      });
+      expect(store.find(key)).toMatchObject({
+        state: "final",
+        status: 200,
+        body: JSON.stringify({ id: key.missionId, state: "suspended", version: 2 }),
+      });
+    } finally {
+      kernel.db.close();
+    }
+  });
+
   it("keeps a plain JSON outcome replayable for the whole nonce window", () => {
     const { kernel, clock, store, key } = setup();
     try {
-      // A JSON outcome asserts no freshness, so no second clock applies: it
-      // stays replayable for the nonce retention window.
       store.claimInCallerTx(key, {
         requestDigest: "sha-256:req",
         status: 200,
@@ -355,7 +506,9 @@ describe("control-plane retained signed responses", () => {
       });
       clock.at = new Date(clock.at.getTime() + 120_000);
       expect(store.find(key)?.state).toBe("final");
-      expect(store.find(key)?.replayable).toBe(true);
+      expect(store.find(key)?.body).toBe(
+        JSON.stringify({ id: key.missionId, state: "revoked", version: 2 }),
+      );
       clock.at = new Date(clock.at.getTime() + 600_001);
       expect(store.find(key)).toBeUndefined();
     } finally {
@@ -476,7 +629,6 @@ CREATE TABLE IF NOT EXISTS lifecycle_responses (
         contentType: "application/json",
         requestDigest: "sha-256:legacy-json",
         body: JSON_BODY,
-        replayable: true,
       });
       expect(json?.material).toBeUndefined();
       const jws = store.find(legacyKey("nonce-legacy-jws"));
@@ -485,7 +637,6 @@ CREATE TABLE IF NOT EXISTS lifecycle_responses (
         contentType: "application/mission-status-response+jwt",
         requestDigest: "sha-256:legacy-jws",
         body: JWS_BODY,
-        replayable: true,
       });
     } finally {
       db.close();
@@ -525,27 +676,24 @@ CREATE TABLE IF NOT EXISTS lifecycle_responses (
     }
   });
 
-  it("replays a migrated row to the nonce window and applies the validity clock only to a recorded one", () => {
+  it("replays a migrated row and a post-migration row alike, for the whole nonce window", () => {
     const { dir, file } = seedLegacyFile();
     const clock = { at: START };
     const db = openStore(LEGACY_SCHEMA, { file });
     try {
       const store = new LifecycleResponseStore(db, { now: () => clock.at });
       // A legacy row records no response validity, and the migration must not
-      // invent one: it stays replayable for the whole nonce window it was
-      // written with, then the window frees the nonce.
+      // invent one: it replays for the whole nonce window it was written with,
+      // then the window frees the nonce.
       clock.at = new Date(START.getTime() + 540_000);
-      expect(store.find(legacyKey("nonce-legacy-jws"))).toMatchObject({
-        replayable: true,
-        body: JWS_BODY,
-      });
+      expect(store.find(legacyKey("nonce-legacy-jws"))).toMatchObject({ body: JWS_BODY });
       clock.at = new Date(START.getTime() + 600_001);
       expect(store.find(legacyKey("nonce-legacy-jws"))).toBeUndefined();
 
-      // A response CLAIMED after the migration, on the same file, carries its
-      // own validity: past that instant the bytes stop being deliverable while
-      // the row and its request digest are retained for the divergent-retry
-      // refusal.
+      // A response CLAIMED after the migration, on the same file, records its
+      // own validity. @spec status#idempotency — that validity is the FLOOR the
+      // window must clear, never a replay cutoff: past it the retained bytes
+      // still replay, for the whole window, with the request digest retained.
       const key = legacyKey("nonce-post-migration");
       const validUntil = clock.at.getTime() + 60_000;
       store.claimInCallerTx(key, {
@@ -561,10 +709,11 @@ CREATE TABLE IF NOT EXISTS lifecycle_responses (
         contentType: "application/mission-status-response+jwt",
         body: JWS_BODY,
       });
-      expect(store.find(key)).toMatchObject({ state: "final", replayable: true });
+      expect(store.find(key)).toMatchObject({ state: "final", body: JWS_BODY });
       clock.at = new Date(validUntil + 1);
       expect(store.find(key)).toMatchObject({
-        replayable: false,
+        state: "final",
+        body: JWS_BODY,
         requestDigest: "sha-256:post",
       });
     } finally {
