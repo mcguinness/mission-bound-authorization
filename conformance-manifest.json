@@ -1995,6 +1995,12 @@
     },
     {
      "file": "src/services/authorization-server/test/control-plane-responses.test.ts",
+     "name": "control-plane retained signed responses > raises a nonce window shorter than the response's own validity to that floor",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-responses.test.ts",
      "name": "control-plane lifecycle response boundary > refuses a divergent retry without retaining it, leaving the committed success replayable",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"

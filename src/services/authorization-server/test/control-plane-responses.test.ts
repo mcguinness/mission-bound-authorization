@@ -515,6 +515,37 @@ describe("control-plane retained signed responses", () => {
     }
   });
 
+  it("raises a nonce window shorter than the response's own validity to that floor", () => {
+    const { kernel, clock, key } = setup();
+    try {
+      // @spec status#idempotency — the window MUST be at least the validity
+      // span of the response the AS would replay. The recorded
+      // `response_valid_until` is that floor, never a replay cutoff: a
+      // deployment configured below it would free the nonce while the response
+      // it must replay is still live.
+      const store = new LifecycleResponseStore(kernel.db, {
+        now: () => clock.at,
+        retentionSeconds: 1,
+      });
+      const validUntil = clock.at.getTime() + 60_000;
+      store.claimInCallerTx(key, {
+        requestDigest: "sha-256:floor",
+        status: 200,
+        contentType: "application/mission-status-response+jwt",
+        material: { kind: "status-observation", observation: { mission_id: key.missionId } },
+        responseValidUntil: validUntil,
+      });
+      // Far past the one-second retention, still inside the response's validity.
+      clock.at = new Date(clock.at.getTime() + 30_000);
+      expect(store.find(key)?.requestDigest).toBe("sha-256:floor");
+      // Past the floor the window ends and the nonce is free again.
+      clock.at = new Date(validUntil + 1);
+      expect(store.find(key)).toBeUndefined();
+    } finally {
+      kernel.db.close();
+    }
+  });
+
   it("keeps a plain JSON outcome replayable for the whole nonce window", () => {
     const { kernel, clock, store, key } = setup();
     try {
