@@ -75,7 +75,7 @@ Conformance ledger (`conformance-manifest.json`): 735 requirement rows across 24
 | [Mission Consumption Metering](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-metering.html) | companion | experimental | govern | Runtime enforcement | Defines the cumulative consumption bounds a Mission Intent may carry (`max_budget`, `max_calls`, `max_duration`, `max_egress_volume`), the `exclusive` latch, and the runtime metering and AuthZEN wire binding that enforce them. | A Mission needs cumulative caps (budget, calls, duration, egress), not just scope. |
 | [Mission Orchestration and Unwinding](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-orchestration.html) | companion | experimental | run | Agent runtime | How a multi-step or multi-Mission workflow assigns a reversibility class to each step, records an unwind plan before dispatch, and unwinds in-flight work safely when a Mission stops. | In-flight work must unwind safely if the Mission ends mid-workflow. |
 | [Mission Runtime Evidence](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-runtime-evidence.html) | companion | experimental | enforce, prove | Runtime enforcement | The binding-neutral Decision Evidence, Execution Evidence, and Refusal Record objects a decision-API binding's PDP and PEP emit: their members, canonicalization, integrity envelope, media types, and retention. | Runtime enforcement is deployed and decisions need durable, verifiable records. |
-| [Mission-Bound Runtime Enforcement: OAuth 2.0 Profile](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-runtime-oauth.html) | companion | experimental | enforce | Runtime enforcement | The OAuth 2.0 realization of the runtime core's binding-neutral contract: token presentation and validation, the `mission`/`act`/`cnf`/`aud` claim mapping, the `authorization_details` and `mission_resource_access` authority-entry mapping, and Resource-Owner Class Floors through OAuth protected resource metadata. | The Mission-bound credential is an OAuth access token and the runtime core's abstract roles need their concrete OAuth realization. |
+| [Mission-Bound Runtime Enforcement: OAuth 2.0 Profile](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-runtime-oauth.html) | companion | experimental | enforce | Runtime enforcement | Profiles the runtime core for OAuth 2.0 access tokens: the validated credential context for JWT and introspected tokens, the runtime input mapping, credential and current effective authority as separate bounds, OAuth Mission state sources, and Resource-Owner Class Floors through protected resource metadata. | The Mission-bound credential is an OAuth access token and the runtime core's abstract roles need their concrete OAuth realization. |
 | [Mission-Bound Runtime Enforcement](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-runtime.html) | companion | experimental | enforce | Runtime enforcement | A binding-neutral decision contract for enforcing a Mission-bound credential at the point of use: within a declared enforcement scope, before each consequential action a Policy Enforcement Point obtains a permit from a Policy Decision Point that evaluates the action against the Mission. | Actions need a point-of-use check, not just issuance-time gating. |
 | [Mission Transaction Authorization Profile for OAuth 2.0](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-transaction-authorization.html) | companion | experimental | enforce | Runtime enforcement | Profiles the OAuth transaction authorization challenge for the Mission cross-domain case: a Transaction Authorization Server runs a fresh decision with a governed approval as input and issues a sender-constrained, single-use transaction token the resource verifies offline. | One action needs a fresh, portable, cross-org authorization with no live callback. |
 | [Mission Security Model](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-security-model.html) | guide | not applicable | analyze | Security model | A cross-cutting, Informational consolidation of the suite's trusted base. | Reviewing or auditing: the one consolidated trust and blast-radius view. |
@@ -446,15 +446,14 @@ portable.
 
 #### Mission-Bound Runtime Enforcement: OAuth 2.0 Profile
 
-The OAuth 2.0 realization of the runtime core's binding-neutral
-contract: token presentation and validation, the `mission`/`act`/`cnf`/
-`aud` claim mapping onto the runtime core's abstract subject, actor,
-sender-constraint, and audience roles, the `authorization_details` and
-`mission_resource_access` mapping onto the runtime core's
-effective-authority-set input, and Resource-Owner Class Floors carried
-through OAuth protected resource metadata. Adds no enforcement
-invariant of its own; every requirement it mentions is the runtime
-core's, cited and mapped.
+Profiles the runtime core for OAuth 2.0 access tokens: the validated
+credential context for JWT and introspected tokens, the mapping of
+validated token values onto the runtime core's abstract roles,
+credential authority and current effective authority as separate
+bounds, OAuth Mission state sources split into token-validity and
+Mission-freshness bounds, and Resource-Owner Class Floors carried
+through OAuth protected resource metadata. Enforcement semantics stay
+the runtime core's and token semantics the issuance profile's.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-runtime-oauth.html)
 
