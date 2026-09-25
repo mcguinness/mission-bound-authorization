@@ -55,5 +55,7 @@
     "payments:remittance.send"
   ],
   "max_mission_lifetime_s": null,
+  "child_mission_carryover": true,
+  "carryover_max_rows": 8,
   "audit_horizon_s": 31536000
 }

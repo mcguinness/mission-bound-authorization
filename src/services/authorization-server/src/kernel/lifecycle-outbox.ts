@@ -573,6 +573,19 @@ export class LifecycleOutbox {
   }
 
   /** Test and operator observation: committed events not yet published. */
+  /**
+   * @spec control-plane#fresh-observation — the kernel's durable commit
+   * sequence: the highest event `seq` committed. Monotonic, assigned inside the
+   * commit transaction, and therefore usable as the observation watermark a
+   * signed state observation is justified by.
+   */
+  commitSequence(): number {
+    const row = this.db.prepare("SELECT MAX(seq) AS seq FROM lifecycle_events").get() as
+      | { seq: number | null }
+      | undefined;
+    return row?.seq ?? 0;
+  }
+
   pendingEventCount(): number {
     return (
       this.db.prepare("SELECT COUNT(*) AS n FROM lifecycle_events WHERE published = 0").get() as {

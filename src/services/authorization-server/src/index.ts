@@ -5,6 +5,7 @@ import {
   ACTOR_PROFILES,
   AUTHORITY_SOURCES,
   CANONICAL_RESOURCE,
+  CHILD_MISSION_CARRYOVER,
   CONTAINMENT_POLICY,
   demoReconciliationTemplate,
   DERIVATION_POLICY,
@@ -29,6 +30,7 @@ import {
 import type { CrossOrgOptions } from "./adapters/cross-org-grant.js";
 import { IssuerEvidenceStore } from "./kernel/issuer-evidence.js";
 import { defaultSubjectResolver, type SubjectResolver } from "./adapters/continuation-grant.js";
+import type { CarryoverConfig } from "./kernel/carryover.js";
 import type { ContinuationIssuer } from "./kernel/continuation-assertion.js";
 import { ContinuationStore } from "./kernel/continuation-store.js";
 import { DelegationFamilyStore } from "./kernel/delegation-family-store.js";
@@ -53,7 +55,22 @@ import { TemplateStore } from "./kernel/template-store.js";
 import { isActivatingCommit, TERMINAL_STATES } from "./kernel/types.js";
 import type { ActivatingLifecycleCommit, LifecycleCommit, MissionRecord } from "./kernel/types.js";
 
-export { MissionKernel, GateError, LifecycleConflictError } from "./kernel/kernel.js";
+export {
+  MissionKernel,
+  GateError,
+  LifecycleConflictError,
+  ObservationWatermarkError,
+  type ObservationWatermark,
+  type StatusObservation,
+  type StatusObservationOptions,
+} from "./kernel/kernel.js";
+export {
+  DerivationReservationStore,
+  type DerivationReservation,
+  type DerivationReservationResult,
+  type DerivationReservationState,
+} from "./kernel/derivation-reservations.js";
+
 export { MISSION_ID_ENTROPY_BYTES, newMissionId } from "./kernel/mission-id.js";
 export {
   attachCapabilitySources,
@@ -153,7 +170,10 @@ export {
   DischargeEventStore,
   LIFECYCLE_ENDPOINT_KEY,
   type LifecycleNonceKey,
+  type LifecycleResponseMaterial,
+  type LifecycleResponseState,
   LifecycleResponseStore,
+  type RetainedLifecycleResponse,
   type StoredDischargeEvent,
   type StoredLifecycleResponse,
 } from "./kernel/lifecycle-idempotency.js";
@@ -274,6 +294,42 @@ export {
   type ChildResult,
 } from "./kernel/child-delegation.js";
 export {
+  applyCarryoverInCallerTx,
+  CARRYOVER_APPROVAL_EVENT_TYP,
+  CARRYOVER_CHANGE_CLASSES,
+  CARRYOVER_EVIDENCE_JWS_TYP,
+  CARRYOVER_EVIDENCE_MEDIA_TYPE,
+  CARRYOVER_EVIDENCE_TYP,
+  CARRYOVER_MANIFEST_TYP,
+  carryoverApprovalEventId,
+  carryoverEvidenceHash,
+  CarryoverError,
+  carryoverManifestHash,
+  CarryoverRetrievalError,
+  CarryoverStore,
+  commitCarryoverManifest,
+  decodeCarryoverEvidence,
+  prepareCarryover,
+  type ApplyCarryoverInput,
+  type ApplyCarryoverResult,
+  type CarryoverChangeClass,
+  type CarryoverCommittedResult,
+  type CarryoverConfig,
+  type CarryoverEntry,
+  type CarryoverEvidence,
+  type CarryoverExclusionPolicy,
+  type CarryoverExternalState,
+  type CarryoverExternalStateAdapter,
+  type CarryoverManifest,
+  type CarryoverMap,
+  type CarryoverMapRow,
+  type CarryoverPlan,
+  type CarryoverRef,
+  type CarryoverRefusalCode,
+  type CarryoverReplacementProposal,
+  type CarryoverReplacementRow,
+} from "./kernel/carryover.js";
+export {
   produceWorkProduct,
   ingestWorkProduct,
   bindWorkProduct,
@@ -336,6 +392,7 @@ export {
   DEFERRED_GRANT_TYPE,
   ExpansionDeferralStore,
   ExpansionDeferralError,
+  type ApplyCarryoverOutcome,
   type ExpansionApproval,
   type ExpansionDeferredResult,
   type DeferralPending,
@@ -525,6 +582,15 @@ export async function buildAuthorizationServer(opts: {
    * test exercise that path. It authorizes no second writer.
    */
   kernelStore?: { file?: string };
+  /**
+   * @spec child-delegation#carryover — override the deployment's Child Mission
+   * Carryover configuration (the capability on-switch, the plan cap, the
+   * committed exclusion policy, and the external meter/latch seam). Defaults to
+   * the config-shipped {@link CHILD_MISSION_CARRYOVER} (D25). A test that
+   * exercises a different exclusion policy, a smaller plan cap, or a real
+   * external-transfer adapter injects it here.
+   */
+  childMissionCarryover?: CarryoverConfig;
   /** Independent approver login integration; OAuth interaction cookies never establish this login. */
   approvalSessions?: ApprovalSessionStore;
   /**
@@ -865,7 +931,14 @@ export async function buildAuthorizationServer(opts: {
   const deferrals = new DeferralStore(kernel);
   // @spec expansion — the DTR deferred-completion store for Mission EXPANSION
   // (widening; distinct from AROP, which never widens).
-  const expansionDeferrals = new ExpansionDeferralStore(kernel);
+  // @spec child-delegation#carryover — the deployment's carryover configuration
+  // rides the same store: absent or disabled, no plan is prepared, no
+  // identifier is reserved, and ordinary cascade remains the default.
+  const expansionDeferrals = new ExpansionDeferralStore(
+    kernel,
+    () => kernel.nowDate(),
+    opts.childMissionCarryover ?? CHILD_MISSION_CARRYOVER,
+  );
   // @spec expansion#creation-request-id — the creation-idempotency store over
   // the kernel database (instances over the same kernel share the table; this
   // one is exposed for tests/exhibit to observe or perturb recorded operations).

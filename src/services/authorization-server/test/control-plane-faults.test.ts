@@ -1,8 +1,15 @@
-import { generateKeyPair } from "jose";
+import { decodeJwt, generateKeyPair } from "jose";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { withTransaction } from "@mission/store";
 import { DERIVATION_POLICY } from "@mission/demo-data";
-import { LifecycleConflictError, MissionKernel, type MissionRecord, validateMissionIntent } from "../src/index.js";
+import {
+  deriveAttenuationRoot,
+  LifecycleConflictError,
+  MissionKernel,
+  type MissionRecord,
+  ObservationWatermarkError,
+  validateMissionIntent,
+} from "../src/index.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 let statusKey: CryptoKey;
@@ -107,5 +114,380 @@ describe("single-process control-plane fault boundaries", () => {
       expect(a.kernel.get(a.record.id)?.state).toBe("active");
       expect(a.kernel.get(a.record.id)?.issuer).not.toBe(b.kernel.get(a.record.id)?.issuer);
     } finally { a.kernel.db.close(); b.kernel.db.close(); }
+  });
+});
+
+/**
+ * @spec control-plane#fresh-observation — the observation point.
+ *
+ * The property under test is NOT that a commit during the signature is a
+ * defect: an authenticated authoritative observation may be delivered inside
+ * its own validity, and a later commit makes the delivered snapshot OLDER
+ * without re-dating it. What must hold is that the timestamps belong to the
+ * observation, that a retained observation is never re-stamped, that expired
+ * signed output is never served as fresh, and that the serving path reads
+ * authoritative state.
+ */
+describe("control-plane state observations", () => {
+  it("stamps an observation with its own observation point, not the clock at signature time", async () => {
+    const { kernel, record, clock } = setup();
+    try {
+      const observed = kernel.statusObservation(record.id, { requester: "svc:reader" });
+      const observedAt = Math.floor(clock.at.getTime() / 1000);
+      expect(observed.iat).toBe(observedAt);
+      expect(observed.exp).toBeGreaterThan(observedAt);
+      // Two minutes pass before the signature is produced and delivered.
+      clock.at = new Date(clock.at.getTime() + 120_000);
+      const payload = decodeJwt(await kernel.signObservation(observed));
+      expect(payload.iat).toBe(observedAt);
+      expect(payload.exp).toBe(observed.exp);
+      expect((payload.mission as { fresh_until: string }).fresh_until).toBe(
+        new Date(observed.exp * 1000).toISOString(),
+      );
+      expect(payload.iat).not.toBe(Math.floor(clock.at.getTime() / 1000));
+    } finally {
+      kernel.db.close();
+    }
+  });
+
+  it("leaves a snapshot older when state commits during the signature, and re-dates nothing", async () => {
+    const { kernel, record, clock } = setup();
+    try {
+      const observed = kernel.statusObservation(record.id, { requester: "svc:reader" });
+      const at = kernel.observationWatermark(record.id);
+      expect(observed.watermark).toEqual(at);
+      // A narrowing transition commits while the signature is in flight.
+      kernel.transition(record.id, "suspend");
+      const now = kernel.observationWatermark(record.id);
+      expect(now.version).toBeGreaterThan(observed.watermark.version);
+      expect(now.commit).toBeGreaterThan(observed.watermark.commit);
+      clock.at = new Date(clock.at.getTime() + 5_000);
+      const payload = decodeJwt(await kernel.signObservation(observed));
+      // The delivered envelope reports the state it observed, at the instant it
+      // observed it. It is older than the current state; it is not re-dated,
+      // and it carries no freshness it did not have at the observation point.
+      expect(payload.iat).toBe(observed.iat);
+      expect(payload.exp).toBe(observed.exp);
+      expect(payload.mission).toMatchObject({ state: "active", version: observed.watermark.version });
+    } finally {
+      kernel.db.close();
+    }
+  });
+
+  it("observes authoritative state, committing an expiry the observation itself materialized", async () => {
+    const { kernel, record, commits, clock } = setup();
+    try {
+      clock.at = new Date("2027-02-01T00:00:00Z");
+      const observed = kernel.statusObservation(record.id, { requester: "svc:reader" });
+      // The observation read the stored row inside one transaction and the
+      // expiry clock materialized there, so the reported state is the one that
+      // committed, at the version that commit produced.
+      expect(observed.payload.mission).toMatchObject({
+        state: "expired",
+        version: record.version + 1,
+      });
+      const stored = kernel.get(record.id);
+      expect(stored?.state).toBe("expired");
+      expect(stored?.version).toBe(record.version + 1);
+      expect(observed.watermark.version).toBe(stored?.version);
+      expect(commits).toHaveBeenCalledTimes(1);
+      const payload = decodeJwt(await kernel.signObservation(observed));
+      expect(payload.mission).toMatchObject({ state: "expired" });
+    } finally {
+      kernel.db.close();
+    }
+  });
+
+  it("refuses an advanced observation only under the optional strict watermark policy", async () => {
+    const permissive = setup();
+    const strict = new MissionKernel({
+      issuer: "https://issuer-strict.test",
+      policy: DERIVATION_POLICY as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["agent"], ["bob"]),
+      statusKey,
+      statusKid: "status",
+      strictObservationWatermark: true,
+    });
+    try {
+      // Default policy: a commit during the signature does not refuse. The
+      // invariant permits delivering the authoritative observation that was
+      // taken, inside its own validity.
+      const observed = permissive.kernel.statusObservation(permissive.record.id, {
+        requester: "svc:reader",
+      });
+      permissive.kernel.transition(permissive.record.id, "suspend");
+      await expect(permissive.kernel.signObservation(observed)).resolves.toContain(".");
+
+      // Opt in, and the same sequence refuses instead. This is a deployment
+      // choice that trades churn and reader starvation for a narrower window.
+      const record = strict.approve({
+        intent: validateMissionIntent(
+          JSON.stringify({
+            goal: "Read an invoice",
+            target_resources: [DERIVATION_POLICY.ceiling[0].resource],
+            expires_at: "2027-01-01T00:00:00Z",
+          }),
+        ),
+        subject: { iss: "https://issuer-strict.test", sub: "alice" },
+        approver: { iss: "https://issuer-strict.test", sub: "bob" },
+        clientId: "agent",
+        approvalEventId: "approval-strict",
+      });
+      const strictObserved = strict.statusObservation(record.id, { requester: "svc:reader" });
+      strict.transition(record.id, "suspend");
+      await expect(strict.signObservation(strictObserved)).rejects.toThrow(ObservationWatermarkError);
+    } finally {
+      permissive.kernel.db.close();
+      strict.db.close();
+    }
+  });
+});
+
+/**
+ * @spec control-plane#serialization — the counter and its artifact.
+ *
+ * A conditional counter write stops cap overshoot; it does not couple the count
+ * to the artifact it paid for. These exercise the reservation ledger's durable
+ * operation and artifact identity and its recovery states. The rule under test
+ * is that "unreleased" is AMBIGUOUS, so a count is never returned merely
+ * because a local acknowledgement is missing.
+ */
+describe("control-plane derivation reservations", () => {
+  const op = (n: number) => ({ operationId: `op-${n}`, artifactId: `art-${n}` });
+
+  it("commits the count and its reservation as one unit", () => {
+    const { kernel, record } = setup();
+    try {
+      expect(() =>
+        withTransaction(kernel.db, () => {
+          kernel.reserveDerivation(record.id, op(1));
+          expect(kernel.get(record.id)?.derivation_count).toBe(1);
+          throw new Error("artifact construction failed");
+        }),
+      ).toThrow("artifact construction failed");
+      expect(kernel.get(record.id)?.derivation_count).toBe(0);
+      expect(kernel.derivationReservations.find(record.issuer, record.id, "op-1")).toBeUndefined();
+    } finally {
+      kernel.db.close();
+    }
+  });
+
+  it("never refunds a reservation that lost only its acknowledgement", async () => {
+    const { kernel, record } = setup();
+    try {
+      const admitted = kernel.reserveDerivation(record.id, op(2));
+      expect(admitted.reservation.kind).toBe("reserved");
+      expect(kernel.get(record.id)?.derivation_count).toBe(1);
+      // The process is lost before the artifact is acknowledged. Recovery
+      // records the ambiguity and KEEPS the count: no local acknowledgement is
+      // not evidence that no artifact was accepted.
+      await kernel.recoverAtBoot();
+      const recovered = kernel.derivationReservations.get(
+        admitted.reservation.reservation.reservationId,
+      );
+      expect(recovered?.state).toBe("unacknowledged");
+      expect(kernel.get(record.id)?.derivation_count).toBe(1);
+      expect(kernel.derivationReservations.unacknowledged()).toHaveLength(1);
+    } finally {
+      kernel.db.close();
+    }
+  });
+
+  it("replays a recorded artifact instead of counting a second derivation", () => {
+    const { kernel, record } = setup();
+    try {
+      const first = kernel.reserveDerivation(record.id, op(3));
+      kernel.releaseDerivation(first.reservation.reservation.reservationId, {
+        artifactId: "art-3",
+        completion: JSON.stringify({ grant: "the.signed.artifact" }),
+      });
+      expect(kernel.get(record.id)?.derivation_count).toBe(1);
+      // The same operation identity returns the recorded artifact, so a retry
+      // of a committed operation neither counts again nor mints a second
+      // artifact. The cap is 1 here, so a second count would refuse outright.
+      const retry = kernel.reserveDerivation(record.id, op(3));
+      expect(retry.reservation.kind).toBe("replay");
+      expect(retry.reservation.reservation.state).toBe("released");
+      expect(JSON.parse(retry.reservation.reservation.completion as string)).toEqual({
+        grant: "the.signed.artifact",
+      });
+      expect(kernel.get(record.id)?.derivation_count).toBe(1);
+    } finally {
+      kernel.db.close();
+    }
+  });
+
+  it("gates a replay that has no recorded artifact, and never counts it twice", () => {
+    const { kernel, record } = setup();
+    try {
+      // A reservation with nothing retained to replay: the count was spent, but
+      // no artifact was recorded, so a retry must still mint one.
+      kernel.reserveDerivation(record.id, { operationId: "op-6", artifactId: "art-6" });
+      expect(kernel.get(record.id)?.derivation_count).toBe(1);
+      // The Mission is revoked before the retry arrives. The retry is GATED,
+      // never admitted off an unvalidated record: only a recorded artifact is
+      // returned ungated, because returning one produces nothing new.
+      kernel.transition(record.id, "revoke");
+      expect(() => kernel.reserveDerivation(record.id, { operationId: "op-6" })).toThrow(
+        "is revoked",
+      );
+      expect(kernel.get(record.id)?.derivation_count).toBe(1);
+    } finally {
+      kernel.db.close();
+    }
+  });
+
+  it("returns a counted derivation only on an authoritative non-acceptance", async () => {
+    const { kernel, record } = setup();
+    try {
+      const admitted = kernel.reserveDerivation(record.id, op(4));
+      const reservationId = admitted.reservation.reservation.reservationId;
+      await kernel.recoverAtBoot();
+      expect(kernel.get(record.id)?.derivation_count).toBe(1);
+      // An authoritative acceptance settles the row and leaves the count spent.
+      const other = setup();
+      const accepted = other.kernel.reserveDerivation(other.record.id, op(5));
+      expect(
+        other.kernel.reconcileDerivation(accepted.reservation.reservation.reservationId, {
+          accepted: true,
+          authority: "svc:issuance-log",
+        }),
+      ).toBe(true);
+      expect(other.kernel.get(other.record.id)?.derivation_count).toBe(1);
+      other.kernel.db.close();
+      // An authoritative NON-acceptance is the only refund, and it is
+      // attributable to the source that asserted it.
+      expect(
+        kernel.reconcileDerivation(reservationId, {
+          accepted: false,
+          authority: "svc:issuance-log",
+        }),
+      ).toBe(true);
+      expect(kernel.get(record.id)?.derivation_count).toBe(0);
+      const settled = kernel.derivationReservations.get(reservationId);
+      expect(settled?.state).toBe("refunded");
+      expect(settled?.settledBy).toBe("svc:issuance-log");
+      // Settled once: a repeat neither refunds again nor moves the row.
+      expect(
+        kernel.reconcileDerivation(reservationId, { accepted: false, authority: "svc:issuance-log" }),
+      ).toBe(false);
+      expect(kernel.get(record.id)?.derivation_count).toBe(0);
+    } finally {
+      kernel.db.close();
+    }
+  });
+
+  it("refuses a retry of a refunded operation identity rather than issue against a returned count", async () => {
+    const { kernel, record } = setup();
+    try {
+      const admitted = kernel.reserveDerivation(record.id, op(7));
+      expect(kernel.get(record.id)?.derivation_count).toBe(1);
+      // An authoritative non-acceptance returns the count. Nothing is held for
+      // this operation identity any more, and nothing was retained to replay.
+      expect(
+        kernel.reconcileDerivation(admitted.reservation.reservation.reservationId, {
+          accepted: false,
+          authority: "svc:issuance-log",
+        }),
+      ).toBe(true);
+      expect(kernel.get(record.id)?.derivation_count).toBe(0);
+
+      // The identity is TERMINAL. Admitting the retry would either mint against
+      // a derivation nobody is paying for, or re-reserve and count again under
+      // one identity, which is how one operation ends up with two artifacts.
+      await expect(
+        deriveAttenuationRoot(kernel, statusKey, "as-token", {
+          missionId: record.id,
+          aud: DERIVATION_POLICY.ceiling[0].resource,
+          clientId: "agent",
+          cnfJkt: "jkt-holder",
+          operationId: "op-7",
+        }),
+      ).rejects.toThrow("was refunded");
+      // No artifact, and the returned count stays returned.
+      expect(kernel.get(record.id)?.derivation_count).toBe(0);
+      expect(
+        kernel.derivationReservations.get(admitted.reservation.reservation.reservationId)?.state,
+      ).toBe("refunded");
+    } finally {
+      kernel.db.close();
+    }
+  });
+});
+
+/**
+ * @spec control-plane#serialization — A PENDING RESERVATION IS EXCLUSIVE.
+ *
+ * The reservation is taken synchronously and the artifact is signed
+ * asynchronously, so two callers presenting ONE operation identity could both
+ * be admitted before either released: the second found a reservation with
+ * nothing retained to replay and minted against the count the first had already
+ * spent, and one counted derivation became two distinct signed artifacts with
+ * different `jti`s. One in-flight owner per (mission, operation) closes it; the
+ * other caller awaits that owner's outcome or recovers the recorded artifact.
+ */
+describe("control-plane concurrent derivations under one operation identity", () => {
+  const rootInput = (missionId: string, operationId: string) => ({
+    missionId,
+    aud: DERIVATION_POLICY.ceiling[0].resource as string,
+    clientId: "agent",
+    cnfJkt: "jkt-holder",
+    operationId,
+  });
+
+  it("gives two overlapping callers the same artifact against one counted derivation", async () => {
+    const { kernel, record } = setup();
+    try {
+      const input = rootInput(record.id, "op-overlap");
+      // Both calls are in flight before either signature completes.
+      const owner = deriveAttenuationRoot(kernel, statusKey, "as-token", input);
+      const joiner = deriveAttenuationRoot(kernel, statusKey, "as-token", input);
+      // The joiner's result is consumed FIRST here, the owner's second: the
+      // outcome cannot depend on which caller reads it first.
+      const second = await joiner;
+      const first = await owner;
+      expect(second.jti).toBe(first.jti);
+      expect(second.root).toBe(first.root);
+      expect(kernel.get(record.id)?.derivation_count).toBe(1);
+      // The cap here is 1, so a second count would have refused outright; what
+      // the guard adds is that only ONE artifact exists for the one count.
+      expect(kernel.derivationReservations.find(record.issuer, record.id, "op-overlap")?.artifactId).toBe(
+        first.jti,
+      );
+    } finally {
+      kernel.db.close();
+    }
+  });
+
+  it("recovers the recorded artifact for a caller arriving after the owner completed", async () => {
+    const { kernel, record } = setup();
+    try {
+      const input = rootInput(record.id, "op-sequential");
+      const first = await deriveAttenuationRoot(kernel, statusKey, "as-token", input);
+      // Nothing is in flight now, so this caller takes the recorded-artifact
+      // path rather than joining an owner. Same artifact, same count.
+      const retry = await deriveAttenuationRoot(kernel, statusKey, "as-token", input);
+      expect(retry.jti).toBe(first.jti);
+      expect(retry.root).toBe(first.root);
+      expect(kernel.get(record.id)?.derivation_count).toBe(1);
+    } finally {
+      kernel.db.close();
+    }
+  });
+
+  it("hands ownership to the next caller when the in-flight owner fails", async () => {
+    const { kernel, record } = setup();
+    try {
+      // A failed owner produced no artifact, so the next caller must be able to
+      // run rather than wait forever on a settled failure.
+      const failing = kernel.exclusiveDerivation(record.id, "op-failed", async () => {
+        throw new Error("signing failed");
+      });
+      const next = kernel.exclusiveDerivation(record.id, "op-failed", async () => "the-artifact");
+      await expect(failing).rejects.toThrow("signing failed");
+      expect(await next).toBe("the-artifact");
+    } finally {
+      kernel.db.close();
+    }
   });
 });

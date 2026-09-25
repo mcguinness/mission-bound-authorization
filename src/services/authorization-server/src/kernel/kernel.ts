@@ -4,7 +4,7 @@
  * oidc-provider types cross this boundary.
  */
 
-import { randomBytes, randomInt } from "node:crypto";
+import { KeyObject, randomBytes, randomInt, sign } from "node:crypto";
 import {
   type ApprovalContextManifestInput,
   authorityHash,
@@ -72,6 +72,11 @@ import {
   DischargeEventStore,
   type DischargeEventKey,
 } from "./lifecycle-idempotency.js";
+import {
+  type DerivationReservation,
+  type DerivationReservationResult,
+  DerivationReservationStore,
+} from "./derivation-reservations.js";
 import { type DurableCommitSubscriber, LifecycleOutbox } from "./lifecycle-outbox.js";
 import {
   DEFAULT_AUDIT_RETENTION_S,
@@ -161,6 +166,8 @@ CREATE TABLE IF NOT EXISTS missions (
   status_list_idx INTEGER UNIQUE,
   predecessor TEXT,
   successor TEXT,
+  related_to TEXT,
+  carried_to TEXT,
   parent_id TEXT,
   parent_json TEXT,
   template_id TEXT,
@@ -172,7 +179,39 @@ CREATE TABLE IF NOT EXISTS missions (
 ) STRICT;
 `;
 
+/**
+ * The Child Mission Carryover correlation columns are additive, and `openStore`
+ * only ever runs `CREATE TABLE IF NOT EXISTS`, so a kernel database created
+ * before them (a file-backed store opened again after the upgrade) keeps the
+ * older `missions` table and every approval INSERT naming `related_to` fails.
+ * They are added in place here, each guarded by a `PRAGMA table_info` snapshot
+ * so a second open is a no-op rather than a duplicate-column error. Precedent:
+ * the Mission Signals outbox key migration, and the lifecycle-response
+ * retention columns.
+ */
+function migrateMissions(db: Database): void {
+  const columns = new Set(
+    (db.prepare("PRAGMA table_info(missions)").all() as Array<{ name: string }>).map((c) => c.name),
+  );
+  // @spec child-delegation#carryover-records — both are nullable correlation
+  // strings with no default, so no existing row's meaning changes: a Mission
+  // that predates carryover correlates to nothing and is carried to nothing.
+  if (!columns.has("related_to")) {
+    db.exec("ALTER TABLE missions ADD COLUMN related_to TEXT");
+  }
+  if (!columns.has("carried_to")) {
+    db.exec("ALTER TABLE missions ADD COLUMN carried_to TEXT");
+  }
+}
+
 export class LifecycleConflictError extends Error {}
+/**
+ * @spec control-plane#fresh-observation — raised only under the OPTIONAL
+ * `strictObservationWatermark` policy: state advanced between the observation
+ * point and delivery, and this deployment chose refusal over delivering a
+ * still-valid older observation.
+ */
+export class ObservationWatermarkError extends Error {}
 export class GateError extends Error {
   constructor(
     readonly reason:
@@ -186,7 +225,12 @@ export class GateError extends Error {
       // overlay taken away. Both refuse `invalid_grant` at the wire; the
       // Containment denial reason rides only the former.
       | "authority_contained"
-      | "authority_exhausted",
+      | "authority_exhausted"
+      // @spec control-plane#serialization (issue #250, owner review) — the
+      // operation identity was settled by an authoritative NON-acceptance and
+      // its count was returned. That identity is TERMINAL: retrying it would
+      // mint a second artifact for one operation, off a count nobody holds.
+      | "operation_refunded",
     message: string,
   ) {
     super(message);
@@ -225,6 +269,51 @@ export interface ApproveInput {
    * member absent.
    */
   capabilityResolution?: CapabilitySourceResolution[];
+}
+
+/**
+ * @spec control-plane#fresh-observation — the request-scoped inputs a signed
+ * state observation is taken for.
+ */
+export interface StatusObservationOptions {
+  audience?: string;
+  requester: string;
+  nonce?: string;
+  freshnessSeconds?: number;
+  /**
+   * @spec discharge#discharge-result — the `discharge_result` object a
+   * `discharge` delivery's response carries as a SIBLING of `mission` in
+   * this same envelope. Absent on every other request, so the Status
+   * response shape is unchanged for them.
+   */
+  dischargeResult?: DischargeResult;
+}
+
+/**
+ * @spec control-plane#fresh-observation — the committed point an observation
+ * was taken at: the Mission's state `version` and the kernel's durable
+ * lifecycle-commit sequence. Both are monotonic, so a later value means state
+ * moved after the observation, never that the observation moved.
+ */
+export interface ObservationWatermark {
+  version: number;
+  commit: number;
+}
+
+/**
+ * An authoritative state observation, complete except for its signature. Its
+ * timestamps belong to the observation point and are never restamped: {@link
+ * MissionKernel.signObservation} signs exactly these bytes, and a response
+ * recovered from a retained observation carries the same `iat` and `exp` as
+ * the original.
+ */
+export interface StatusObservation {
+  mission_id: string;
+  audience: string;
+  iat: number;
+  exp: number;
+  watermark: ObservationWatermark;
+  payload: Record<string, unknown>;
 }
 
 export interface KernelOptions {
@@ -324,6 +413,17 @@ export interface KernelOptions {
    * deliveries. Tests shorten it; production takes the defaults.
    */
   outboxRetry?: { baseMs?: number; capMs?: number; maxAttempts?: number };
+  /**
+   * @spec control-plane#fresh-observation — OPTIONAL stricter observation
+   * policy, default off. When set, a signed state observation is refused
+   * ({@link ObservationWatermarkError}) if any commit landed between its
+   * observation point and its delivery. The invariant itself permits
+   * delivering an authenticated authoritative observation inside its own
+   * validity, so this is a deployment choice, not a defect fix: it trades
+   * churn on a busy Mission, and reader starvation under sustained writes,
+   * for a narrower delivery window.
+   */
+  strictObservationWatermark?: boolean;
 }
 
 export class MissionKernel {
@@ -355,12 +455,24 @@ export class MissionKernel {
    */
   readonly outbox: LifecycleOutbox;
   /**
+   * @spec control-plane#serialization — the derivation counter's reservation
+   * ledger: durable operation and artifact identity for every counted
+   * derivation, with named recovery states for the window between the count
+   * and the artifact's acceptance.
+   */
+  readonly derivationReservations: DerivationReservationStore;
+  /**
    * @spec control-plane#tombstones — the terminal-state tombstones, on this
    * kernel's database (rollback resistance and identifier nonreuse are issuer
    * duties the issuer answers from its own store; the audit surface mirrors a
    * tombstone, it does not own it).
    */
   readonly tombstones: MissionTombstoneStore;
+  /**
+   * @spec control-plane#serialization — the in-flight owner of each
+   * (mission, operation) identity; see {@link exclusiveDerivation}.
+   */
+  private readonly derivationsInFlight = new Map<string, Promise<unknown>>();
   private readonly now: () => Date;
   private readonly allocateStatusIndex: () => number;
 
@@ -380,6 +492,7 @@ export class MissionKernel {
     }
     validateAuthoritySourceCatalog(opts.authoritySourceCatalog);
     this.db = openStore(SCHEMA, opts.store ?? {});
+    migrateMissions(this.db);
     this.missionBoundGrants = new MissionBoundGrantStore(opts.now ?? (() => new Date()));
     this.now = opts.now ?? (() => new Date());
     this.allocateStatusIndex = opts.allocateStatusIndex ?? (() => randomInt(STATUS_LIST_SIZE));
@@ -423,6 +536,7 @@ export class MissionKernel {
       now: this.now,
       retentionSeconds: dischargeRetentionSeconds,
     });
+    this.derivationReservations = new DerivationReservationStore(this.db, { now: this.now });
     this.dischargePins = new DischargeMappingPinStore(this.db);
   }
 
@@ -828,9 +942,9 @@ export class MissionKernel {
            authority_hash, subject_iss, subject_sub, approver_iss, approver_sub,
            approval_basis_json, authority_source_json, client_id,
            policy_version, approval_event_id, created_at, expires_at, version, derivation_limit,
-           derivation_count, grant_id, predecessor, parent_id, parent_json, template_id,
+           derivation_count, grant_id, predecessor, related_to, parent_id, parent_json, template_id,
            template_json, projected_from, submission_evidence_json)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
           record.id,
@@ -865,6 +979,12 @@ export class MissionKernel {
           record.derivation_count,
           record.grant_id,
           record.predecessor ?? null,
+          // @spec child-delegation#carryover-records: `related_to` is a bare
+          // same-issuer correlation string, immutable after creation (the
+          // `predecessor` treatment), so it is written only here. `carried_to`
+          // is deliberately NOT written here: it lands on the OLD child at its
+          // committed carried cascade, never at a replacement's creation.
+          record.related_to ?? null,
           // @spec child-delegation#parent-member: `parent` is immutable after
           // creation (like `predecessor`), so it is written only here.
           record.parent?.id ?? null,
@@ -1066,6 +1186,121 @@ export class MissionKernel {
       }
     }
   }
+
+  /**
+   * @spec child-delegation#carryover-cas — the WHOLE current subtree rooted at
+   * `rootId`, in breadth-first generation order, in EVERY state (terminal rows
+   * included). Distinct from {@link findChildren}, which is one generation, and
+   * from {@link cascadeChildren}, whose walker visits only `active`/`suspended`
+   * rows and so cannot see a live descendant behind a terminal intermediate.
+   * Child Mission Carryover compares descendant-set MEMBERSHIP against its
+   * committed manifest, which per-row compare-and-set cannot do: a child or
+   * grandchild created after rendering has no rendered row to CAS against.
+   * Read-only; the root itself is not included.
+   */
+  descendantsOf(rootId: string): MissionRecord[] {
+    const out: MissionRecord[] = [];
+    const seen = new Set<string>([rootId]);
+    let frontier = [rootId];
+    while (frontier.length > 0) {
+      const next: string[] = [];
+      for (const id of frontier) {
+        // Deterministic generation-order enumeration: `created_at` then
+        // identifier byte order, the manifest's own row order rule.
+        const children = this.findChildren(id).sort((a, b) =>
+          a.created_at === b.created_at ? (a.id < b.id ? -1 : 1) : a.created_at < b.created_at ? -1 : 1,
+        );
+        for (const child of children) {
+          if (seen.has(child.id)) continue;
+          seen.add(child.id);
+          out.push(child);
+          next.push(child.id);
+        }
+      }
+      frontier = next;
+    }
+    return out;
+  }
+
+  /**
+   * @spec child-delegation#carryover-commit, #carryover-records — the ONE
+   * internal terminal-transition entry point Child Mission Carryover owns. It
+   * takes the manifest outcome (`carriedTo`, the committed replacement
+   * identifier, or nothing for an excluded row) and suppresses ONLY
+   * {@link setState}'s automatic {@link cascadeChildren} recursion, so the
+   * explicit whole-subtree traversal owns the generation-ordered descent and no
+   * terminal intermediate can hide a live descendant.
+   *
+   * It is not a second emission mechanism: the state write, its `carried_to`
+   * write, its durable outbox row and its terminal tombstone all go through
+   * {@link emitCommit} in the CALLER's transaction, exactly as `setState` does.
+   * An ALREADY-terminal row keeps its state and gets NO second transition
+   * (@spec child-delegation#carryover-cas), returning `undefined`.
+   */
+  carryTerminalInCallerTx(
+    record: MissionRecord,
+    outcome: { carriedTo?: string } = {},
+  ): MissionRecord | undefined {
+    if (!this.db.inTransaction) {
+      throw new Error("a carried terminal transition must run inside the completion transaction");
+    }
+    if (TERMINAL_STATES.has(record.state)) return undefined;
+    // setState's guarded CAS, verbatim: the transition is admitted from the
+    // stored row, never the caller's snapshot.
+    const changed = this.db
+      .prepare(
+        "UPDATE missions SET state = 'cascaded', version = version + 1, carried_to = ? WHERE id = ? AND version = ? AND state = ?",
+      )
+      .run(outcome.carriedTo ?? null, record.id, record.version, record.state);
+    if (changed.changes !== 1) {
+      throw new LifecycleConflictError(`stale lifecycle version for ${record.id}`);
+    }
+    const fresh = this.get(record.id);
+    if (fresh) this.emitCommit(fresh, record.state, undefined, false, false, outcome.carriedTo);
+    return fresh;
+  }
+
+  /**
+   * @spec child-delegation#carryover-records — re-run the ordinary
+   * source-ACTIVATION and source-CEILING checks against an already-RENDERED
+   * `authority_source`. A carryover replacement's approval basis is `direct`
+   * (its own child-specific approval event), so the drawdown treatment
+   * {@link assertInheritedAuthoritySource} applies, which is ceiling-only, is
+   * not sufficient: the approver must still be permitted to activate that
+   * source, the subject discipline must still hold, and the governed policy
+   * digest must still agree.
+   */
+  assertRenderedAuthoritySource(input: {
+    source: AuthoritySource;
+    subject: { iss: string; sub: string };
+    approver: { iss: string; sub: string };
+    authoritySet: readonly AuthorityEntry[];
+  }): void {
+    const entry = resolveDeclaredSource(this.opts.authoritySourceCatalog, input.source);
+    assertApproverMayActivate(entry, input.approver);
+    assertSubjectDiscipline(this.opts.authoritySourceCatalog, entry, input.subject);
+    assertPolicyDigestMatches(entry, authoritySourceOf(entry));
+    assertWithinSourceCeiling(entry, input.authoritySet);
+  }
+
+  /**
+   * @spec child-delegation#carryover-evidence — the issuer's Status signing
+   * material, as a SYNCHRONOUS signer. The completion transaction is
+   * synchronous (better-sqlite3), so authenticated Carryover Evidence that must
+   * be retained ATOMICALLY with the records cannot be produced by an awaited
+   * JWS builder. `KeyObject.from` plus `crypto.sign(..., ieee-p1363)` yields the
+   * same ES256 signature the asynchronous Status path produces, over the same
+   * key and `kid`, with no second key and no post-commit signing window.
+   */
+  statusSigner(): { sign: (input: string) => Buffer; kid: string } {
+    if (!this.syncStatusKey) this.syncStatusKey = KeyObject.from(this.opts.statusKey);
+    const key = this.syncStatusKey;
+    return {
+      kid: this.opts.statusKid,
+      sign: (input: string) => sign("sha256", Buffer.from(input, "utf8"), { key, dsaEncoding: "ieee-p1363" }),
+    };
+  }
+  private syncStatusKey?: KeyObject;
 
   /**
    * @spec child-delegation#cascade (reversible trigger), #child-state — project a
@@ -1830,6 +2065,27 @@ export class MissionKernel {
   }
 
   /**
+   * @spec control-plane#serialization, mission#lifecycle — materialize the
+   * expiry clock in ITS OWN transaction, for a caller about to open the
+   * transaction its own operation commits in.
+   *
+   * The expiry clock MATERIALIZES a narrowing transition, and a refusal must
+   * never roll that back. {@link gateDerivable} already keeps the clock outside
+   * the counter's transaction for exactly this reason; a caller that wraps a
+   * requested transition in a transaction of its own needs the same discipline,
+   * because the transition it then asks for may be illegal FROM the state the
+   * expiry just committed, and rolling that refusal back would leave an expired
+   * Mission `active` with neither the transition nor its publication.
+   *
+   * Call it BEFORE opening that transaction, never inside one: a nested
+   * `withTransaction` is a savepoint, so an inner commit here would still
+   * unwind with the outer rollback.
+   */
+  materializeExpiry(id: string): MissionRecord {
+    return withTransaction(this.db, () => this.applyExpiry(this.mustGet(id)));
+  }
+
+  /**
    * @spec mission#lifecycle, child-delegation#child-state, mission-substrate#basic-gate: the shared active
    * gate for BOTH {@link gateDerivation} and {@link gateActive}: apply the expiry
    * clock, require the Mission itself `active`, and walk `parent` upward refusing
@@ -1869,6 +2125,20 @@ export class MissionKernel {
    * count on success.
    */
   gateDerivation(id: string): MissionRecord {
+    this.gateDerivable(id);
+    return this.countDerivationInCallerTx(id);
+  }
+
+  /**
+   * The state half of the derivation gate: the expiry clock, the lineage walk
+   * and the effective-set gate, with NO counter write.
+   *
+   * Deliberately NOT inside the counter's transaction. The expiry clock
+   * MATERIALIZES a narrowing transition, and a refusal must never roll that
+   * back: fail closed means an expiry the gate discovered stays committed even
+   * though the operation it refused did not.
+   */
+  private gateDerivable(id: string): MissionRecord {
     const record = this.gateActiveLineage(id);
     // Effective Authority Set gate (#589): token derivation draws on the
     // EFFECTIVE set, so a Mission with nothing left in its current effective
@@ -1893,9 +2163,21 @@ export class MissionKernel {
       }
       throw new GateError("authority_contained", `mission ${id} effective authority is fully contained`);
     }
-    // @spec control-plane#serialization — count admission is conditional in
-    // the write. Callers still must couple it to artifact issuance; this CAS
-    // alone does not complete that broader atomic domain.
+    return record;
+  }
+
+  /**
+   * @spec control-plane#serialization — the counter write, conditional on the
+   * STORED count so a caller's stale snapshot can never overshoot the cap. Runs
+   * in the caller's transaction when there is one, so a reservation ({@link
+   * reserveDerivation}) commits with the count it pays for.
+   *
+   * A caller with a durable operation identity couples the count to its
+   * artifact through {@link reserveDerivation}; a caller without one (the
+   * synchronous provider token hook) leaves the count uncoupled, and this
+   * conditional write alone does not complete that broader atomic domain.
+   */
+  private countDerivationInCallerTx(id: string): MissionRecord {
     const changed = this.db
       .prepare("UPDATE missions SET derivation_count = derivation_count + 1 WHERE id = ? AND (derivation_limit IS NULL OR derivation_count < derivation_limit)")
       .run(id);
@@ -1903,6 +2185,157 @@ export class MissionKernel {
       throw new GateError("derivation_cap_exhausted", `mission ${id} derivation cap exhausted`);
     }
     return this.mustGet(id);
+  }
+
+  /**
+   * @spec control-plane#serialization — admit one derivation AGAINST A DURABLE
+   * OPERATION IDENTITY: the counter increment and the reservation that names
+   * the operation and its artifact commit in one transaction.
+   *
+   * A repeat of a recorded operation identity is recognized BEFORE the state
+   * and cap gates and replays that reservation, so a retry never counts twice
+   * and never converts a committed operation into a refusal. Callers release
+   * the reservation ({@link releaseDerivation}) when the artifact is accepted;
+   * an unreleased reservation is ambiguous, never refunded, and settled only by
+   * {@link reconcileDerivation}.
+   *
+   * A REFUNDED operation identity is TERMINAL and is refused here: see the
+   * `refunded` branch below.
+   */
+  reserveDerivation(
+    id: string,
+    operation: { operationId: string; artifactId?: string },
+  ): { record: MissionRecord; reservation: DerivationReservationResult } {
+    const current = this.mustGet(id);
+    const recorded = this.derivationReservations.find(current.issuer, id, operation.operationId);
+    // @spec control-plane#serialization (issue #250, owner review) — a REFUNDED
+    // identity is TERMINAL, refused before every other branch. An authoritative
+    // non-acceptance returned this operation's count, so nothing is held to
+    // mint against: admitting the retry would either hand back an artifact the
+    // authority said was never accepted, or re-reserve and count again under
+    // one operation identity, which is how one operation ends up with two
+    // signed artifacts. The settlement is final; a genuinely new attempt needs
+    // a new operation identity.
+    if (recorded?.state === "refunded") {
+      throw new GateError(
+        "operation_refunded",
+        `operation ${operation.operationId} on mission ${id} was refunded and cannot be retried`,
+      );
+    }
+    if (recorded?.completion) {
+      // A COMMITTED operation whose artifact was retained is recognized before
+      // the state gate: it already succeeded, and the caller replays that exact
+      // artifact rather than producing a new one. This is the only ungated
+      // branch, and it produces nothing new.
+      return { record: current, reservation: { kind: "replay", reservation: recorded } };
+    }
+    // The state gate runs BEFORE the transaction opens, for the same reason
+    // {@link gateDerivable} is not inside it: a refusal must not roll back an
+    // expiry the gate materialized.
+    const gated = this.gateDerivable(id);
+    if (recorded) {
+      // Counted once already, with nothing retained to replay: the caller mints
+      // against the count it spent. It is GATED first, so a Mission that has
+      // since been revoked, expired or fully contained refuses here rather than
+      // signing a fresh artifact off an unvalidated record (fail closed).
+      return { record: gated, reservation: { kind: "replay", reservation: recorded } };
+    }
+    return withTransaction(this.db, () => {
+      const record = this.countDerivationInCallerTx(id);
+      const reservation = this.derivationReservations.reserveInCallerTx({
+        issuer: record.issuer,
+        missionId: record.id,
+        operationId: operation.operationId,
+        ...(operation.artifactId ? { artifactId: operation.artifactId } : {}),
+      });
+      return { record, reservation };
+    });
+  }
+
+  /**
+   * @spec control-plane#serialization — a PENDING RESERVATION IS EXCLUSIVE
+   * (issue #250, owner review).
+   *
+   * {@link reserveDerivation} is synchronous, but the artifact it admits is
+   * signed asynchronously, so two callers presenting ONE operation identity
+   * could both be admitted while neither had released: the second found a
+   * reservation with nothing retained to replay, minted against the count the
+   * first had already spent, and one counted derivation became two distinct
+   * signed artifacts. The count was never wrong; the artifact identity was.
+   *
+   * At most one caller per (mission, operation) runs here. A caller arriving
+   * while that owner is in flight AWAITS ITS OUTCOME and returns it, so both
+   * callers receive the same artifact; a caller arriving after the owner
+   * finished finds nothing in flight and recovers the recorded artifact through
+   * {@link reserveDerivation}'s replay branch. If the owner FAILS it produced
+   * no artifact, so the next caller takes ownership and mints against the count
+   * that attempt already spent.
+   *
+   * `mint` MUST reserve the derivation itself: it is invoked synchronously, so
+   * its reservation commits before any other caller can interleave. This is
+   * instance-level serialization for the declared one-process, one-writer
+   * topology (the {@link LifecycleOutbox.drain} precedent); it is no
+   * distributed lease, and multi-process claiming stays behind #641.
+   */
+  async exclusiveDerivation<T>(
+    missionId: string,
+    operationId: string,
+    mint: () => Promise<T>,
+  ): Promise<T> {
+    const key = `${missionId}\u0000${operationId}`;
+    for (;;) {
+      const owner = this.derivationsInFlight.get(key) as Promise<T> | undefined;
+      if (!owner) break;
+      try {
+        return await owner;
+      } catch {
+        // The owner produced nothing. Clear its slot (its own cleanup may not
+        // have run yet) and take ownership rather than await a settled failure
+        // forever.
+        if (this.derivationsInFlight.get(key) === owner) this.derivationsInFlight.delete(key);
+      }
+    }
+    const attempt = mint();
+    this.derivationsInFlight.set(key, attempt);
+    try {
+      return await attempt;
+    } finally {
+      if (this.derivationsInFlight.get(key) === attempt) this.derivationsInFlight.delete(key);
+    }
+  }
+
+  /**
+   * @spec control-plane#serialization — the artifact was accepted: settle the
+   * reservation the count paid for.
+   */
+  releaseDerivation(
+    reservationId: string,
+    accepted: { artifactId: string; completion?: string },
+  ): void {
+    this.derivationReservations.release(reservationId, accepted);
+  }
+
+  /**
+   * @spec control-plane#serialization — settle an ambiguous reservation from an
+   * AUTHORITATIVE observation of the issuance outcome. Only an authoritative
+   * non-acceptance returns a counted derivation.
+   */
+  reconcileDerivation(
+    reservationId: string,
+    observation: { accepted: boolean; authority: string; artifactId?: string; completion?: string },
+  ): boolean {
+    return this.derivationReservations.reconcile(reservationId, observation);
+  }
+
+  /**
+   * @spec control-plane#serialization — boot recovery for the reservation
+   * ledger. Reservations this process left unreleased become `unacknowledged`
+   * and KEEP their count: a missing local acknowledgement is not evidence that
+   * no artifact was accepted. Returns the rows still owed an authoritative
+   * answer.
+   */
+  recoverDerivationReservations(): DerivationReservation[] {
+    return this.derivationReservations.recoverAtBoot();
   }
 
   /**
@@ -2034,6 +2467,13 @@ export class MissionKernel {
       ...(fresh.containment
         ? { containment_version: fresh.containment.containment_version }
         : {}),
+      // @spec child-delegation#carryover-evidence — the committed replacement
+      // correlation, present exactly when a replacement committed with this
+      // child's carried cascade and absent otherwise (an excluded child's
+      // `cascaded` state carries none).
+      ...(fresh.state === "cascaded" && fresh.carried_to
+        ? { carried_to: fresh.carried_to }
+        : {}),
       ...(caller.disclose.has("status_list") ? this.statusListRef(fresh) : {}),
     };
   }
@@ -2064,20 +2504,39 @@ export class MissionKernel {
    */
   async signedStatus(
     id: string,
-    opts: {
-      audience?: string;
-      requester: string;
-      nonce?: string;
-      freshnessSeconds?: number;
-      /**
-       * @spec discharge#discharge-result — the `discharge_result` object a
-       * `discharge` delivery's response carries as a SIBLING of `mission` in
-       * this same envelope. Absent on every other request, so the Status
-       * response shape is unchanged for them.
-       */
-      dischargeResult?: DischargeResult;
-    },
+    opts: StatusObservationOptions,
   ): Promise<string> {
+    return this.signObservation(this.statusObservation(id, opts));
+  }
+
+  /**
+   * @spec control-plane#fresh-observation — the OBSERVATION POINT of a signed
+   * state observation: one authoritative transactional read of the stored row,
+   * the expiry clock materialized inside that same transaction, and the clock
+   * read once, before the payload is built. Everything the response asserts
+   * about state is fixed here, and {@link signObservation} adds only a
+   * signature.
+   *
+   * The captured `watermark` is the justification the invariant asks for: the
+   * `(version, commit)` pair the observation was taken at, where `commit` is
+   * the kernel's durable lifecycle-commit sequence. A later commit advances the
+   * watermark; it does NOT re-date this observation, whose `iat`, `exp` and
+   * `fresh_until` stay tied to the point they were taken at. That is what makes
+   * a delayed delivery an OLDER observation rather than a manufactured one, and
+   * it is why the strict policy below is a deployment choice rather than a
+   * correctness requirement.
+   */
+  statusObservation(id: string, opts: StatusObservationOptions): StatusObservation {
+    return withTransaction(this.db, () => this.observeInCallerTx(id, opts));
+  }
+
+  /**
+   * The observation body, for a caller that already holds the kernel
+   * transaction: the committed operation and its observation are then one
+   * atomic domain, so no response can report an outcome that did not commit
+   * and no committed outcome can be reported at a state it never had.
+   */
+  observeInCallerTx(id: string, opts: StatusObservationOptions): StatusObservation {
     const record = this.applyExpiry(this.mustGet(id));
     const nowS = Math.floor(this.now().getTime() / 1000);
     const freshness = Math.min(
@@ -2105,19 +2564,71 @@ export class MissionKernel {
         ...(record.containment
           ? { containment_version: record.containment.containment_version }
           : {}),
+        // @spec status#mission-status-response — CONDITIONAL `carried_to`: the
+        // committed replacement identifier when reporting an old child's
+        // `cascaded` state, omitted when no replacement was committed.
+        ...(record.state === "cascaded" && record.carried_to
+          ? { carried_to: record.carried_to }
+          : {}),
         ...this.statusListRef(record),
       },
     };
     if (opts.nonce) payload.nonce = opts.nonce;
     if (scoped) payload.authorization_details = scoped;
     if (opts.dischargeResult) payload.discharge_result = opts.dischargeResult;
-    return new SignJWT(payload)
+    return {
+      mission_id: record.id,
+      audience: opts.audience ?? opts.requester,
+      iat: nowS,
+      exp: nowS + freshness,
+      watermark: { version: record.version, commit: this.outbox.commitSequence() },
+      payload,
+    };
+  }
+
+  /**
+   * The kernel's current observation watermark for a Mission: the committed
+   * `(version, commit)` pair an observation taken now would carry.
+   */
+  observationWatermark(id: string): ObservationWatermark {
+    return {
+      version: this.mustGet(id).version,
+      commit: this.outbox.commitSequence(),
+    };
+  }
+
+  /**
+   * @spec control-plane#fresh-observation — sign an observation WITHOUT
+   * re-dating it: `iat` and `exp` come from the observation point, never from
+   * the clock at signature time, so the envelope reports the moment its state
+   * was observed. Signature validity proves producer and integrity, not
+   * recency, and this method adds no recency it did not receive.
+   *
+   * OPTIONAL STRICTER POLICY (`strictObservationWatermark`, default off). A
+   * deployment may require that no commit landed between the observation point
+   * and delivery, and refuse rather than deliver a still-valid older
+   * observation. The invariant does not require it: an authenticated
+   * authoritative observation may be delivered inside its own validity. The
+   * cost is churn on a busy Mission and, under sustained writes, starvation of
+   * the reader, so it is a declared deployment choice.
+   */
+  async signObservation(observation: StatusObservation): Promise<string> {
+    const jws = await new SignJWT(observation.payload)
       .setProtectedHeader({ alg: "ES256", kid: this.opts.statusKid, typ: "mission-status-response+jwt" })
       .setIssuer(this.opts.issuer)
-      .setAudience(opts.audience ?? opts.requester)
-      .setIssuedAt(nowS)
-      .setExpirationTime(nowS + freshness)
+      .setAudience(observation.audience)
+      .setIssuedAt(observation.iat)
+      .setExpirationTime(observation.exp)
       .sign(this.opts.statusKey);
+    if (this.opts.strictObservationWatermark) {
+      const now = this.observationWatermark(observation.mission_id);
+      if (now.version !== observation.watermark.version || now.commit !== observation.watermark.commit) {
+        throw new ObservationWatermarkError(
+          `state advanced past the observation point for ${observation.mission_id}`,
+        );
+      }
+    }
+    return jws;
   }
 
   private setState(record: MissionRecord, to: MissionState, projectedFrom?: MissionState): MissionRecord {
@@ -2211,18 +2722,26 @@ export class MissionKernel {
   }
 
   /**
-   * @spec control-plane#fanout, control-plane#tombstones — boot recovery. Marks
-   * every pending delivery whose subscriber is no longer registered with the
-   * terminal `subscriber_removed` disposition, replays committed-but-unpublished
+   * @spec control-plane#fanout, control-plane#tombstones,
+   * control-plane#serialization — boot recovery. Marks every pending delivery
+   * whose subscriber is no longer registered with the terminal
+   * `subscriber_removed` disposition, replays committed-but-unpublished
    * transitions, drains runnable deliveries, prunes settled outbox rows past
-   * the composed retention horizon, and prunes tombstone DETAIL past that same
-   * horizon while keeping each identity row as the permanent nonreuse marker.
+   * the composed retention horizon, prunes tombstone DETAIL past that same
+   * horizon while keeping each identity row as the permanent nonreuse marker,
+   * and moves every unreleased derivation reservation to `unacknowledged`
+   * WITHOUT refunding its count.
    */
   async recoverAtBoot(): Promise<void> {
     this.outbox.reconcileRemovedSubscribers();
     await this.outbox.drain();
     this.outbox.pruneSettled(this.tombstones.retentionSeconds);
     this.tombstones.pruneDetails();
+    // @spec control-plane#serialization — an unreleased reservation is
+    // ambiguous, not evidence that no artifact was accepted, so recovery
+    // records the ambiguity and leaves the count spent. Only an authoritative
+    // reconciliation ({@link reconcileDerivation}) can return it.
+    this.derivationReservations.recoverAtBoot();
   }
 
   /**
@@ -2270,6 +2789,7 @@ export class MissionKernel {
     successor?: string,
     authorityChanged = false,
     containmentAdvanced = false,
+    carriedTo?: string,
   ): void {
     const event: LifecycleCommit = {
       id: record.id,
@@ -2285,6 +2805,12 @@ export class MissionKernel {
       client_id: record.client_id,
       ...(prior ? { prior_state: prior } : {}),
       ...(successor ? { successor } : {}),
+      // @spec child-delegation#carryover-evidence, status#mission-status-response,
+      // signals#lifecycle-event — the committed replacement identifier rides the
+      // old child's carried cascade. Supplied ONLY by
+      // {@link carryTerminalInCallerTx}, and only when a replacement committed in
+      // the same transaction: an excluded child's cascade carries nothing.
+      ...(carriedTo ? { carried_to: carriedTo } : {}),
       ...(authorityChanged ? { authority_changed: true } : {}),
       // @spec signals#discharge-compatibility — provenance, set ONLY by the
       // one funnel that advances containment_version (`contain`); the Signals
@@ -2355,6 +2881,8 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
     grant_id: (row.grant_id as string | null) ?? null,
     status_list_idx: (row.status_list_idx as number | null) ?? null,
     ...(row.predecessor ? { predecessor: row.predecessor as string } : {}),
+    ...(row.related_to ? { related_to: row.related_to as string } : {}),
+    ...(row.carried_to ? { carried_to: row.carried_to as string } : {}),
     ...(row.parent_json ? { parent: JSON.parse(row.parent_json as string) as ParentRef } : {}),
     ...(row.template_json
       ? { template: JSON.parse(row.template_json as string) as TemplateRef }

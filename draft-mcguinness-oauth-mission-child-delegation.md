@@ -215,7 +215,7 @@ back on the issuance profile.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 14 conformance rows in conformance-manifest.json (14 todo).
+Implementation: 14 conformance rows in conformance-manifest.json (11 tested, 2 partial, 1 todo).
 Adopt when: A sub-agent needs its own Mission outliving a call frame, with cascade termination.
 Requires: Mission-Bound Authorization for OAuth 2.0.
 Also requires, conditionally: Mission Expansion for OAuth 2.0 and Mission Status and Lifecycle for OAuth 2.0 (when cascade revocation reacts to parent lifecycle states); Mission Completion and Entry Discharge for OAuth 2.0 (when the deployment also runs the Entry Discharge companion).
