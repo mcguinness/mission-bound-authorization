@@ -1959,12 +1959,54 @@
     },
     {
      "file": "src/services/authorization-server/test/control-plane-responses.test.ts",
-     "name": "control-plane lifecycle response migration > replays a migrated row to the nonce window and applies the validity clock only to a recorded one",
+     "name": "control-plane lifecycle response migration > replays a migrated row and a post-migration row alike, for the whole nonce window",
      "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-faults.test.ts",
+     "name": "control-plane derivation reservations > refuses a retry of a refunded operation identity rather than issue against a returned count",
+     "level": "concurrency",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-faults.test.ts",
+     "name": "control-plane concurrent derivations under one operation identity > gives two overlapping callers the same artifact against one counted derivation",
+     "level": "concurrency",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-faults.test.ts",
+     "name": "control-plane concurrent derivations under one operation identity > recovers the recorded artifact for a caller arriving after the owner completed",
+     "level": "concurrency",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-faults.test.ts",
+     "name": "control-plane concurrent derivations under one operation identity > hands ownership to the next caller when the in-flight owner fails",
+     "level": "concurrency",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-responses.test.ts",
+     "name": "control-plane retained signed responses > finalizes a claim only for the exchange that made it, never for a divergent retry",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-responses.test.ts",
+     "name": "control-plane lifecycle response boundary > refuses a divergent retry without retaining it, leaving the committed success replayable",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-responses.test.ts",
+     "name": "control-plane lifecycle expiry under a refused operation > commits the expiry it discovered even when the operation it was asked for is refused",
+     "level": "endpoint",
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "Single-process fault coverage: conditional state/version and counter writes admitted from the stored row, rollback-safe nested publication, child fanout admission in the creation transaction, expansion deferral retirement with successor and supersession, and lifecycle state/version with durable publication work and the terminal tombstone in one transaction. The counter now carries a durable operation and artifact identity: the increment and its reservation commit together, a recorded operation identity replays its artifact instead of counting again, an unreleased reservation is never refunded because a missing local acknowledgement is not evidence that no artifact was accepted, and only an authoritative non-acceptance returns a count. The lifecycle nonce claim and its committed outcome now commit with the transition, with the exact response finalized and recovered outside that transaction. That claim store's additive schema migration is exercised on a file-backed database carrying the pre-migration shape: every retained outcome keeps its replay identity, and a reopen is a no-op. This does not reach tested in this slice: the artifact itself is still issued outside the kernel transaction (the provider access-token hook is synchronous and has no acceptance boundary), so authoritative issuance state and artifact material are not recorded transactionally before delivery. No multi-process claim."
+   "notes": "Single-process fault coverage: conditional state/version and counter writes admitted from the stored row, rollback-safe nested publication, child fanout admission in the creation transaction, expansion deferral retirement with successor and supersession, and lifecycle state/version with durable publication work and the terminal tombstone in one transaction. The counter now carries a durable operation and artifact identity: the increment and its reservation commit together, a recorded operation identity replays its artifact instead of counting again, an unreleased reservation is never refunded because a missing local acknowledgement is not evidence that no artifact was accepted, and only an authoritative non-acceptance returns a count. A refunded operation identity is terminal and refuses a retry, so nothing issues against a count that was returned; and a pending reservation is exclusive on this instance, so two overlapping callers under one operation identity receive one artifact rather than two against one count. The lifecycle nonce claim and its committed outcome now commit with the transition, with the exact response finalized and recovered outside that transaction, and finalization is guarded on the request digest the claim was made under so a divergent retry can neither overwrite a committed success nor be retained in its place. The expiry clock commits in its own transaction ahead of the requested transition, so refusing that transition never rolls back the expiry it discovered or the expiry's publication. That claim store's additive schema migration is exercised on a file-backed database carrying the pre-migration shape: every retained outcome keeps its replay identity, and a reopen is a no-op. This does not reach tested in this slice: the artifact itself is still issued outside the kernel transaction (the provider access-token hook is synchronous and has no acceptance boundary), so authoritative issuance state and artifact material are not recorded transactionally before delivery. No multi-process claim."
   },
   {
    "id": "control-plane.consistency.fresh-observation",
@@ -2036,12 +2078,12 @@
     },
     {
      "file": "src/services/authorization-server/test/control-plane-responses.test.ts",
-     "name": "control-plane retained signed responses > stops replaying a retained signed response once it passes its own validity",
+     "name": "control-plane retained signed responses > replays the retained bytes of a signed envelope past its own validity, for the whole nonce window",
      "level": "cross-component",
      "surface": "verification"
     }
    ],
-   "notes": "The Mission Status List publisher serves a signed token only inside the validity it carries, rebuilds from the authoritative record set rather than re-signing cached bits, keeps a failed rebuild from republishing the superseded token, and lets no older in-flight snapshot land after a newer commit. The signed Status observation is now taken in one authoritative transactional read that carries its own (version, commit) watermark, its timestamps belong to the observation point rather than to the clock at signature time, a recovered response is signed over the recorded observation and never re-dated, and a retained signed envelope past its own validity is no longer replayable while its row and request digest stay retained, so the divergent-retry refusal keeps its full nonce window. Refusing an observation whose commit point advanced is available as a declared optional policy, not a requirement: the invariant permits delivering an authenticated authoritative observation inside its own validity. The Status conditional-request surface and the remaining signed state observations are still unimplemented."
+   "notes": "The Mission Status List publisher serves a signed token only inside the validity it carries, rebuilds from the authoritative record set rather than re-signing cached bits, keeps a failed rebuild from republishing the superseded token, and lets no older in-flight snapshot land after a newer commit. The signed Status observation is now taken in one authoritative transactional read that carries its own (version, commit) watermark, its timestamps belong to the observation point rather than to the clock at signature time, and a recovered response is signed over the recorded observation and never re-dated. A retained signed envelope replays its exact retained bytes for the whole nonce window, including past its own validity: replaying a retained acknowledgement of a completed operation is a historical record, not a manufactured fresh observation, and the envelope's own `exp` states its span. Refusing an observation whose commit point advanced is available as a declared optional policy, not a requirement: the invariant permits delivering an authenticated authoritative observation inside its own validity. The Status conditional-request surface and the remaining signed state observations are still unimplemented."
   },
   {
    "id": "control-plane.consistency.state-surfaces",
