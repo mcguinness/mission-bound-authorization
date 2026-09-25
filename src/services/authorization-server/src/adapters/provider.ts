@@ -1937,6 +1937,24 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           // A request whose `nonce` is absent or malformed echoes none.
           ...(echoNonce && nonce ? { nonce } : {}),
         });
+      /**
+       * @spec status#idempotency — the DIVERGENT-RETRY refusal: delivered, and
+       * RETAINED NOWHERE (issue #250, owner review). This refusal exists
+       * precisely because a row claimed under a DIFFERENT request digest
+       * already holds this nonce, so the refusal is not that nonce's response
+       * and must never be written where the retained one belongs. Every other
+       * refusal goes through `send` and is retained first-writer-wins.
+       */
+      const sendDivergentRetry = (): void => {
+        ctx.status = 400;
+        ctx.set("content-type", "application/json");
+        ctx.set("cache-control", "no-store");
+        ctx.body = JSON.stringify({
+          error: "invalid_request",
+          error_description: "nonce was already used with a different request",
+          ...(nonce ? { nonce } : {}),
+        });
+      };
       // @spec status#idempotency, control-plane#serialization — the
       // retransmission rule, evaluated FIRST and BEFORE ANY STATE-DEPENDENT
       // CHECK: it governs the HTTP exchange, so a request that already
@@ -1945,24 +1963,28 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // belongs strictly AFTER this lookup, never in front of it.
       if (nonceKey) {
         const stored = lifecycleResponses.find(nonceKey);
-        // The DIGEST rule and the REPLAY rule run on two clocks. The digest
-        // comparison holds for the whole nonce window, so a divergent retry is
-        // always refused; the bytes stop being deliverable at the response's
-        // own validity, and past that the exchange is processed fresh below at
-        // a new observation point rather than replayed expired.
+        // ONE clock, the nonce window: both halves of the rule run on it. A
+        // divergent retry is refused for the whole window, and a byte-identical
+        // retransmit replays the original response for the whole window, which
+        // the profile requires and the window is sized to cover.
         if (stored?.requestDigest !== undefined && stored.requestDigest !== digest) {
-          // Never answered with the unrelated original response.
-          sendInvalidRequest("nonce was already used with a different request");
+          // Never answered with the unrelated original response, and never
+          // retained in its place.
+          sendDivergentRetry();
           return;
         }
-        if (stored?.replayable) {
+        if (stored) {
+          // @spec status#idempotency — a FINAL row replays its exact retained
+          // bytes: the profile says the ORIGINAL response, and re-signing an
+          // ECDSA envelope would produce different bytes every time.
+          //
           // @spec control-plane#serialization — RECOVERY ACROSS THE SIGNING
-          // BOUNDARY. A `committed` row is an operation that committed and a
-          // response whose bytes were never retained. It is finalized from the
-          // retained immutable material, never re-executed: for a signed
-          // envelope the recorded observation is signed again, carrying its
-          // ORIGINAL `iat` and `exp`, so recovery reports the state at the
-          // observation point and re-dates nothing.
+          // BOUNDARY, the crash case only. A `committed` row is an operation
+          // that committed and a response whose bytes were never retained. It
+          // is finalized from the retained immutable material, never
+          // re-executed: for a signed envelope the recorded observation is
+          // signed again, carrying its ORIGINAL `iat` and `exp`, so recovery
+          // reports the state at the observation point and re-dates nothing.
           const recovered =
             stored.state === "final"
               ? stored.body
@@ -2062,6 +2084,12 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
             observed_at: event.observed_at,
             event_id: event.event_id,
           };
+          // @spec control-plane#serialization — the expiry clock OUTSIDE the
+          // operation's transaction, for the same reason the derivation gate
+          // keeps it outside the counter's: `contain` is refused from a
+          // terminal state, and a refusal must never roll back the `expired`
+          // transition that discovering it committed.
+          kernel.materializeExpiry(missionId);
           const contained = withTransaction(kernel.db, () => {
             const { record, evidence } = kernel.contain(missionId, {
               event: containEvent,
@@ -2089,6 +2117,14 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           sendJson(200, contained.outcome);
           return;
         }
+        // @spec control-plane#serialization — the expiry clock runs FIRST, in
+        // its own transaction, and stays OUT of the transition's. The clock
+        // MATERIALIZES a narrowing transition; the operation then requested may
+        // be illegal from the state that commit left, and rolling the refusal
+        // back would leave an expired Mission `active`, without the expiry
+        // transition and without its publication. The counter path already
+        // keeps the gate outside its transaction for exactly this reason.
+        kernel.materializeExpiry(missionId);
         // @spec control-plane#serialization — the transition, the nonce claim
         // and the committed outcome are ONE transaction. Before this, a process
         // lost between the commit and the response answered a retry 409 for an
@@ -3380,8 +3416,8 @@ const RFC3339_RE = /^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[Zz]|[+-
  * rather than the operation re-executed. A JSON outcome re-serializes to the
  * same bytes. A signed envelope is signed again over the RECORDED observation,
  * so its `iat` and `exp` are the original observation point's and nothing is
- * re-dated; a recorded envelope already past its own validity never reaches
- * here, because the store stops replaying it.
+ * re-dated. Only this crash case re-signs: a response whose bytes ARE retained
+ * replays those exact bytes and never reaches here.
  */
 async function finalizeRetainedResponse(
   kernel: MissionKernel,

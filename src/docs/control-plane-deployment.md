@@ -89,26 +89,50 @@ commit with the transition; the exact bytes are retained before they are
 delivered. A retransmission that finds a committed outcome whose bytes were
 lost finalizes the response from that material instead of re-executing the
 operation, so a `resume` that in fact succeeded replays its success rather than
-answering a conflict. For a signed envelope the recorded observation is signed
-again with its original `iat` and `exp`, so recovery re-dates nothing. Replay
-lookup runs before any state-dependent check, which is where a future
-`expected_version` precondition must stay behind it.
+answering a conflict. That crash case is the only one that re-signs, and it
+signs the recorded observation with its original `iat` and `exp`, so recovery
+re-dates nothing; a response whose bytes were retained replays those exact
+bytes. Replay lookup runs before any state-dependent check, which is where a
+future `expected_version` precondition must stay behind it.
 
-Two clocks govern the retry key, and operators should read them separately. The
-divergent-retry refusal compares request digests for the whole ten-minute nonce
-window, so reusing a nonce with a different request stays `invalid_request` for
-ten minutes. Handing the retained BYTES back stops at the response's own
-validity, which for the signed `discharge` envelope is sixty seconds: past that
-instant the envelope would present an expired observation, so the exchange is
-processed fresh at a new observation point instead, which `discharge` is
-already idempotent under. Unsigned JSON outcomes assert no freshness and stay
-replayable for the full window.
+One clock governs the retry key: the ten-minute nonce window. For its whole
+length, reusing a nonce with a different request stays `invalid_request`, and a
+byte-identical retransmit replays the original response. That holds for a signed
+`discharge` envelope too, whose own validity is sixty seconds: the profile
+requires the window to be at least the response's validity span and permits it
+to be longer, so a retransmit at two minutes replays rather than re-executes.
+Replaying a retained acknowledgement of a completed operation is not a fresh
+observation, and the envelope's own `exp` tells its consumer so. A deployment
+that configures a window shorter than the response validity is raised to that
+floor rather than allowed to free the nonce early.
+
+The divergent-retry refusal is delivered and retained nowhere. It is refused
+precisely because a row claimed under a different request digest holds that
+nonce, so it is not that nonce's response; and finalization is guarded on the
+request digest the claim was made under, so only the exchange that claimed a
+nonce can fill in its bytes.
+
+The expiry clock runs in its own transaction, before the transaction a
+requested transition commits in. The clock materializes a narrowing transition
+wherever a lifecycle request reads the record, and the operation then requested
+may be illegal from the state that commit left; a refusal must never roll that
+expiry back, leaving an expired Mission `active` without its transition or its
+publication. The derivation gate follows the same rule.
 
 A reservation replay is the one ungated path, and only when an artifact was
 actually retained: returning a recorded artifact produces nothing new. A
 recorded operation identity with no retained artifact is gated like any fresh
 request, so a Mission revoked, expired or fully contained since the first
-attempt refuses rather than signing off an unvalidated record.
+attempt refuses rather than signing off an unvalidated record. An identity an
+authoritative non-acceptance refunded is terminal and refuses outright: its
+count was returned, so admitting a retry would issue against a derivation
+nobody is paying for. A new attempt needs a new operation identity.
+
+A pending reservation is exclusive. Signing is asynchronous, so at most one
+caller per (mission, operation) runs at a time on this instance; a caller
+arriving mid-flight receives that owner's artifact, and one arriving afterwards
+recovers the recorded one. Instance-level serialization for the declared
+one-process topology, like the outbox drain, not a distributed lease.
 
 The Mission Status List publisher answers only from a token still inside the
 validity that token was signed with. Past its own `exp`, and on any lifecycle

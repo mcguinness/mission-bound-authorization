@@ -72,17 +72,19 @@ CREATE TABLE IF NOT EXISTS discharge_events (
 `;
 
 /**
- * @spec status#idempotency — the replay window MUST be at least the validity
+ * @spec status#idempotency — the replay window. ONE clock governs the whole
+ * window: a byte-identical retransmit MUST replay the original response, and
+ * the same nonce with a different request MUST be refused `invalid_request`,
+ * for as long as the window lasts. The window MUST be at least the validity
  * span of the signed response the AS would replay (its `iat` to `exp`, 60s
- * here). Ten minutes is a deployment choice well above that floor.
+ * here) and MAY be longer; ten minutes is this deployment's choice.
  *
- * @spec control-plane#fresh-observation — the window governs TWO things, on two
- * clocks. The divergent-retry refusal compares request digests for this whole
- * window, so reusing a nonce with a different request stays `invalid_request`
- * for ten minutes. Handing the retained BYTES back stops at the response's own
- * validity, which for a signed envelope is 60s: past that instant the envelope
- * would present an expired observation, so the exchange is processed fresh
- * (idempotently, at a new observation point) instead of replayed.
+ * A retained response is therefore NOT cut off at its own validity (issue #250,
+ * owner review). Replaying a retained acknowledgement of a completed operation
+ * and making a fresh observation are separate concerns: the acknowledgement is
+ * historical by construction, and the envelope's own `exp` already tells its
+ * consumer it is not a fresh observation. Cutting the replay off at 60s inside
+ * a 600s window would re-execute a retransmit the profile says MUST replay.
  */
 export const DEFAULT_LIFECYCLE_NONCE_TTL_S = 600;
 
@@ -132,14 +134,13 @@ export interface StoredLifecycleResponse {
  *  2. `final` - written by {@link LifecycleResponseStore.record} once the exact
  *     bytes exist, BEFORE they are handed to the network.
  *
- * A retransmission that finds a `committed` row finalizes it from the retained
- * material rather than re-executing the operation. For a signed envelope that
- * means the recorded observation is signed again: the payload, including its
- * `iat` and `exp`, is the ORIGINAL observation's, so recovery never re-dates
- * it. A recorded envelope past its own validity is no longer replayable
- * ({@link RetainedLifecycleResponse.replayable} goes false while the row and
- * its request digest are retained), so expired signed output is never presented
- * as fresh and the divergent-retry rule keeps its full window.
+ * A retransmission that finds a `final` row is served THOSE EXACT BYTES: the
+ * profile says the original response, and re-signing an ECDSA envelope yields
+ * different bytes every time. Only a `committed` row, the crash case where
+ * finalization never happened, is reproduced from its retained material, and
+ * for a signed envelope that means the recorded observation is signed again:
+ * the payload, including its `iat` and `exp`, is the ORIGINAL observation's, so
+ * recovery never re-dates it.
  */
 export type LifecycleResponseState = "committed" | "final";
 
@@ -162,14 +163,6 @@ export interface RetainedLifecycleResponse {
   body?: string;
   /** The material a `committed` row is finalized from. */
   material?: LifecycleResponseMaterial;
-  /**
-   * @spec control-plane#fresh-observation — false once a response that carries
-   * its own validity (a signed envelope) has passed it. The ROW is retained
-   * either way, because the divergent-retry rule compares request digests for
-   * the whole nonce window; only the bytes stop being deliverable, since
-   * handing them back would present an expired observation as current.
-   */
-  replayable: boolean;
 }
 
 export class LifecycleResponseStore {
@@ -188,25 +181,22 @@ export class LifecycleResponseStore {
    * The response stored for this nonce, or undefined when none is live. A row
    * past its window is out of contract: it is purged, so the nonce is free.
    *
-   * @spec control-plane#fresh-observation — a SECOND, tighter clock applies to
-   * a row that carries its own validity (a signed envelope): past that instant
-   * the retained response is no longer replayable, because replaying it would
-   * present an expired observation. The store retention is deliberately longer
-   * than a response's validity, so this is the clock that decides. The row is
-   * purged and the request is processed fresh, which for the idempotent
-   * operations behind this endpoint yields a NEW observation at a new
-   * observation point rather than a re-dated old one.
+   * @spec status#idempotency — ONE clock, the nonce window. A retained response
+   * is replayable for the whole of it, whatever validity the response itself
+   * carries: the profile requires the ORIGINAL response on a byte-identical
+   * retransmit, and the window is required to be at least that validity span
+   * and permitted to be longer. A replayed acknowledgement is a historical
+   * record of a completed operation, not a fresh observation, and a signed
+   * envelope's own `exp` says so to its consumer.
    */
   find(key: LifecycleNonceKey): RetainedLifecycleResponse | undefined {
     const row = this.row(key);
     if (!row) return undefined;
-    const nowMs = this.options.now().getTime();
-    if (nowMs > (row.expires_at as number)) {
+    if (this.options.now().getTime() > (row.expires_at as number)) {
       this.purge(key);
       return undefined;
     }
-    const validUntil = row.response_valid_until as number | null;
-    return toRetained(row, validUntil === null || nowMs <= validUntil);
+    return toRetained(row);
   }
 
   /**
@@ -227,11 +217,21 @@ export class LifecycleResponseStore {
       status: number;
       contentType: string;
       material: LifecycleResponseMaterial;
-      /** The response's own validity end, in epoch ms; signed envelopes only. */
+      /**
+       * @spec status#idempotency — the response's own validity end, in epoch
+       * ms; signed envelopes only. It is NOT a replay cutoff: it is the FLOOR
+       * the nonce window must clear, because the profile requires a window at
+       * least as long as the validity span of the response the AS would replay.
+       * Recorded with the row, and honoured below.
+       */
       responseValidUntil?: number;
     },
   ): RetainedLifecycleResponse {
     const nowMs = this.options.now().getTime();
+    // The window is the deployment's retention, never shorter than the
+    // response's own validity span: a deployment configured below that floor
+    // would free the nonce while the response it must replay is still live.
+    const expiresAt = Math.max(nowMs + this.retentionMs, claim.responseValidUntil ?? 0);
     this.db
       .prepare(
         `DELETE FROM lifecycle_responses
@@ -254,30 +254,39 @@ export class LifecycleResponseStore {
         claim.status,
         claim.contentType,
         nowMs,
-        nowMs + this.retentionMs,
+        expiresAt,
         JSON.stringify(claim.material),
         claim.responseValidUntil ?? null,
       );
     const row = this.row(key);
     if (!row) throw new Error("lifecycle response claim vanished");
-    return toRetained(row, true);
+    return toRetained(row);
   }
 
   /**
    * Retain the exact bytes this exchange produced, BEFORE they are delivered.
    *
-   * A row this exchange already claimed is FINALIZED (the bytes fill in the
-   * committed outcome). Otherwise this is an unclaimed response, typically a
-   * refusal that committed nothing, and first writer wins: the PK conflict is
-   * ignored so a later divergent-retry refusal never overwrites the response a
-   * retransmission has to replay.
+   * A row THIS EXCHANGE claimed is FINALIZED (the bytes fill in the committed
+   * outcome). Otherwise this is an unclaimed response, typically a refusal that
+   * committed nothing, and first writer wins: the PK conflict is ignored so a
+   * later refusal never overwrites the response a retransmission has to replay.
+   *
+   * "This exchange" is what `request_digest` decides (issue #250, owner
+   * review). Matching on the committed STATE alone let another exchange's
+   * bytes land in this exchange's claim: while the original response was still
+   * being signed, a divergent retry's `400 invalid_request` finalized the
+   * committed row and became the response retained for that nonce, destroying a
+   * success that had already committed. The guard names BOTH the committed
+   * state and the request digest the claim was made under, so only the exchange
+   * that claimed the row can finalize it.
    */
   record(key: LifecycleNonceKey, response: StoredLifecycleResponse): void {
     const finalized = this.db
       .prepare(
         `UPDATE lifecycle_responses
          SET body = ?, status = ?, content_type = ?, state = 'final'
-         WHERE endpoint = ? AND principal = ? AND mission_id = ? AND nonce = ? AND state = 'committed'`,
+         WHERE endpoint = ? AND principal = ? AND mission_id = ? AND nonce = ?
+           AND state = 'committed' AND request_digest = ?`,
       )
       .run(
         response.body,
@@ -287,6 +296,7 @@ export class LifecycleResponseStore {
         key.principal,
         key.missionId,
         key.nonce,
+        response.requestDigest,
       );
     if (finalized.changes === 1) return;
     const nowMs = this.options.now().getTime();
@@ -338,7 +348,7 @@ export class LifecycleResponseStore {
   }
 }
 
-function toRetained(row: Record<string, unknown>, replayable: boolean): RetainedLifecycleResponse {
+function toRetained(row: Record<string, unknown>): RetainedLifecycleResponse {
   const state = (row.state as LifecycleResponseState) ?? "final";
   const material = row.material_json
     ? (JSON.parse(row.material_json as string) as LifecycleResponseMaterial)
@@ -348,7 +358,6 @@ function toRetained(row: Record<string, unknown>, replayable: boolean): Retained
     requestDigest: row.request_digest as string,
     status: row.status as number,
     contentType: row.content_type as string,
-    replayable,
     ...(state === "final" ? { body: row.body as string } : {}),
     ...(material ? { material } : {}),
   };
