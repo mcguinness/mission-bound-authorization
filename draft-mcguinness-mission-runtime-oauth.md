@@ -418,14 +418,18 @@ live Mission state, each at the token lifetime as its revocation
 latency floor.
 
 Mission freshness bounds how stale an observation of Mission state can
-be:
+be. The sources are token introspection {{RFC7662}} at the Mission
+issuer, the Mission Status profile
+({{I-D.draft-mcguinness-oauth-mission-status}}), the Mission Status List
+({{I-D.draft-mcguinness-oauth-mission-status-list}}), and Mission
+Lifecycle Signals ({{I-D.draft-mcguinness-oauth-mission-signals}}):
 
 | State source | Exposure bound | Per-action cost | Depends on | Cannot provide |
 |---|---|---|---|---|
-| Token introspection ({{RFC7662}}) at the Mission issuer | the interval from the lookup to the action it serves | one lookup per use; the issuance profile defines no caching for the `mission` member | issuer availability | reuse of one response across decisions |
-| Mission Status profile ({{I-D.draft-mcguinness-oauth-mission-status}}) | published staleness bound | one lookup within the bound, cacheable to `fresh_until` | status surface availability | revocation inside the bound |
-| Mission Status List ({{I-D.draft-mcguinness-oauth-mission-status-list}}) | Status List Token TTL | local bit read, plus one list fetch per window | list publisher availability | terminal-state detail; a non-VALID bit sends the consumer to the authoritative surface |
-| Mission Lifecycle Signals ({{I-D.draft-mcguinness-oauth-mission-signals}}) | delivery latency within the verified stream | none (event-driven) | stream liveness | the pull floor; a dead stream is stale state |
+| Issuer introspection | the interval from the lookup to the action it serves | one lookup per use; the issuance profile defines no caching for the `mission` member | issuer availability | reuse of one response across decisions |
+| Mission Status | published staleness bound | one lookup within the bound, cacheable to `fresh_until` | status surface availability | revocation inside the bound |
+| Status List | Status List Token TTL | local bit read, plus one list fetch per window | list publisher availability | terminal-state detail; a non-VALID bit sends the consumer to the authoritative surface |
+| Lifecycle Signals | delivery latency within the verified stream | none (event-driven) | stream liveness | the pull floor; a dead stream is stale state |
 
 Each Mission-freshness source is a separate mechanism whose
 requirements its own specification defines. A deployment adopts the
