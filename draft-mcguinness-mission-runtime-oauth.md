@@ -335,20 +335,40 @@ binding and required decision evidence record the roles above; their
 serialization is defined by the runtime core and the decision-API
 profile in use, for example {{I-D.draft-mcguinness-mission-authzen}}.
 
-# Authorization Details Mapping {#authorization-details-mapping}
+# Authority and State Sources {#authority-and-state}
+
+The runtime decision needs two kinds of input that OAuth supplies
+separately: the authority an action is checked against, and
+observations of Mission state.
+
+## Credential Authority and Current Effective Authority {#authorization-details-mapping}
 
 The runtime core requires that the action be authorized by an
-applicable authority entry, evaluated against the Mission's current
-effective authority, and that the PDP fail closed on an authority-entry
-type it does not understand ({{I-D.draft-mcguinness-mission-runtime}}).
-For this binding, that authority entry is an `authorization_details`
-entry carried by, or otherwise available for, the Mission-bound token
-(for example, through introspection when the authority is not
-represented inline).
+applicable authority entry the Mission-bound credential carries,
+evaluated against the Mission's current effective authority, and that
+the PDP fail closed on an authority-entry type it does not understand
+({{I-D.draft-mcguinness-mission-runtime}}). On this profile those are
+two inputs, and the action MUST fall within both:
 
-For an entry of type `mission_resource_access`, the action's `resource`
-and invoked action or tool identity MUST be within that entry's
-`resource` and `actions`, under the subset rule of
+- the credential authority: the `authorization_details` of the
+  validated JWT or, for an opaque token, of its introspection
+  response; and
+- the current effective authority: the approved Authority Set,
+  narrowed by any narrowing mechanism the deployment runs and then
+  established from a Mission state source that reports the narrowing
+  ({{state-sourcing}}).
+
+A token narrowed below its Mission's approved Authority Set is
+evaluated at its own narrower entry. The PDP MUST NOT substitute the
+approved Authority Set, or any other record of Mission authority, for
+the credential authority.
+
+Each entry is enforced under its type's own specification, as the
+issuance profile requires of a Resource Server
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Resource Server
+Enforcement"). For an entry of type `mission_resource_access`, the
+action's `resource` and invoked action or tool identity MUST be within
+that entry's `resource` and `actions`, under the subset rule of
 {{I-D.draft-mcguinness-oauth-mission-resource-access}}. The PEP asserts
 the capability identity (for example, the tool or function name) it
 will invoke, and the PDP MUST refuse an identity outside the approved
@@ -356,14 +376,6 @@ will invoke, and the PDP MUST refuse an identity outside the approved
 evaluate the action under that type's documented runtime semantics, the
 runtime core's fail-closed rule governing what it does not understand
 or cannot enforce.
-
-A deployment on this binding uses OAuth token introspection
-{{RFC7662}} or the Mission Status profile
-({{I-D.draft-mcguinness-oauth-mission-status}}) as Mission state
-sources under the runtime core's freshness discipline
-({{I-D.draft-mcguinness-mission-runtime}}); {{state-sourcing}}
-catalogs this binding's state sources against that discipline; this
-document defines no additional state source of its own.
 
 # State Sourcing {#state-sourcing}
 
