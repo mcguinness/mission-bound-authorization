@@ -19,7 +19,7 @@
 
 import { canonicalize, type JsonValue } from "@mission/core";
 import { DERIVATION_POLICY, TOPOLOGY } from "@mission/demo-data";
-import { withTransaction } from "@mission/store";
+import { type Database, openStore, withTransaction } from "@mission/store";
 import { compactVerify, type CryptoKey, generateKeyPair, jwtVerify } from "jose";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -1007,5 +1007,162 @@ describe("Child Mission Carryover durable recovery (@spec child-delegation#carry
     expect(canonicalize(persisted?.map as unknown as JsonValue)).toBe(
       canonicalize(committedResult?.map as unknown as JsonValue),
     );
+  });
+});
+
+/**
+ * The two carryover correlation columns on `missions` and the four carryover
+ * columns on `expansion_deferrals` are additive, and both schemas run only
+ * `CREATE TABLE IF NOT EXISTS`. A file-backed store created before them keeps
+ * the older tables, so without an in-place migration the first ORDINARY
+ * approval after the upgrade fails with `table missions has no column named
+ * related_to`, and the first deferred expansion fails the same way. The
+ * migration is guarded per column, so reopening the same file again is a no-op
+ * rather than a duplicate-column error.
+ */
+describe("Child Mission Carryover schema upgrade (@spec child-delegation#carryover-records)", () => {
+  /** The `missions` table exactly as it stood before the carryover columns. */
+  const LEGACY_MISSIONS_SCHEMA = `
+CREATE TABLE IF NOT EXISTS missions (
+  id TEXT PRIMARY KEY,
+  issuer TEXT NOT NULL,
+  state TEXT NOT NULL,
+  intent_json TEXT NOT NULL,
+  proposed_authority_json TEXT,
+  authority_set_json TEXT NOT NULL,
+  intent_hash TEXT NOT NULL,
+  proposal_hash TEXT,
+  authority_hash TEXT NOT NULL,
+  subject_iss TEXT NOT NULL,
+  subject_sub TEXT NOT NULL,
+  approver_iss TEXT NOT NULL,
+  approver_sub TEXT NOT NULL,
+  approval_basis_json TEXT NOT NULL,
+  authority_source_json TEXT NOT NULL,
+  client_id TEXT NOT NULL,
+  policy_version TEXT NOT NULL,
+  approval_event_id TEXT NOT NULL UNIQUE,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  version INTEGER NOT NULL DEFAULT 1,
+  derivation_limit INTEGER,
+  derivation_count INTEGER NOT NULL DEFAULT 0,
+  grant_id TEXT,
+  status_list_idx INTEGER UNIQUE,
+  predecessor TEXT,
+  successor TEXT,
+  parent_id TEXT,
+  parent_json TEXT,
+  template_id TEXT,
+  template_json TEXT,
+  projected_from TEXT,
+  containment_json TEXT,
+  discharged_json TEXT,
+  submission_evidence_json TEXT
+) STRICT;
+`;
+
+  /** `expansion_deferrals` exactly as it stood before the carryover columns. */
+  const LEGACY_EXPANSION_SCHEMA = `
+CREATE TABLE IF NOT EXISTS expansion_deferrals (
+  deferral_code TEXT PRIMARY KEY,
+  state TEXT NOT NULL,
+  predecessor_id TEXT NOT NULL,
+  intent_json TEXT NOT NULL,
+  client_id TEXT NOT NULL,
+  jkt TEXT NOT NULL,
+  creation_request_id TEXT,
+  pred_containment_version INTEGER NOT NULL,
+  submission_evidence_json TEXT,
+  approver_json TEXT,
+  approval_event_id TEXT,
+  approved_until TEXT,
+  redeemed INTEGER NOT NULL DEFAULT 0,
+  completion_released INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  last_polled_at INTEGER
+) STRICT;
+`;
+
+  const columnsOf = (db: Database, table: string): Set<string> =>
+    new Set(
+      (db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>).map(
+        (c) => c.name,
+      ),
+    );
+
+  /** A real file carrying only the pre-carryover tables, then closed. */
+  const seedLegacyFile = (): string => {
+    tmp = mkdtempSync(join(tmpdir(), "carryover-upgrade-"));
+    const file = join(tmp, "kernel.sqlite");
+    const db = openStore(LEGACY_MISSIONS_SCHEMA + LEGACY_EXPANSION_SCHEMA, { file });
+    try {
+      expect(columnsOf(db, "missions").has("related_to")).toBe(false);
+      expect(columnsOf(db, "expansion_deferrals").has("carryover_plan_id")).toBe(false);
+    } finally {
+      db.close();
+    }
+    return file;
+  };
+
+  it("approves a Mission after reopening a store whose missions table predates the carryover columns", () => {
+    const file = seedLegacyFile();
+    const upgraded = mkKernel({ file });
+    const columns = columnsOf(upgraded.db, "missions");
+    expect(columns.has("related_to")).toBe(true);
+    expect(columns.has("carried_to")).toBe(true);
+    // The ORDINARY approval path is what breaks without the migration: its
+    // INSERT names `related_to`.
+    const first = approvePredecessor(upgraded);
+    expect(upgraded.get(first.id)?.state).toBe("active");
+    expect(upgraded.get(first.id)?.related_to).toBeUndefined();
+    upgraded.db.close();
+
+    // A SECOND reopen is a no-op: the per-column guard must not re-run the
+    // ALTER, which would fail with `duplicate column name`.
+    const reopened = mkKernel({ file });
+    expect(columnsOf(reopened.db, "missions")).toEqual(columns);
+    const second = approvePredecessor(reopened);
+    expect(reopened.get(second.id)?.state).toBe("active");
+    // The row written before the reopen survives the migration untouched.
+    expect(reopened.get(first.id)?.state).toBe("active");
+    reopened.db.close();
+  });
+
+  it("opens a deferred expansion after reopening a store whose expansion_deferrals table predates the carryover columns", () => {
+    const file = seedLegacyFile();
+    const upgraded = mkKernel({ file });
+    const pred = approvePredecessor(upgraded);
+    const store = new ExpansionDeferralStore(upgraded, () => clock, config());
+    const columns = columnsOf(upgraded.db, "expansion_deferrals");
+    expect(columns.has("carryover_plan_id")).toBe(true);
+    expect(columns.has("carryover_manifest_hash")).toBe(true);
+    // The initiation INSERT names `carryover_plan_id` and `carryover_plan_json`.
+    const pending = store.open({
+      predecessorId: pred.id,
+      intent: widerIntent(),
+      proposedAuthority: widerProposal(),
+      clientId: "parent-agent",
+      jkt: "jkt-test",
+      creationRequestId: `crid-${seq++}`,
+    });
+    expect(pending.deferral_code).toMatch(/^xdfr_/);
+    upgraded.db.close();
+
+    // A second reopen adds nothing and refuses nothing.
+    const reopened = mkKernel({ file });
+    const again = new ExpansionDeferralStore(reopened, () => clock, config());
+    expect(columnsOf(reopened.db, "expansion_deferrals")).toEqual(columns);
+    const second = again.open({
+      predecessorId: pred.id,
+      intent: widerIntent(),
+      proposedAuthority: widerProposal(),
+      clientId: "parent-agent",
+      jkt: "jkt-test",
+      creationRequestId: `crid-${seq++}`,
+    });
+    expect(second.deferral_code).toMatch(/^xdfr_/);
+    expect(second.deferral_code).not.toBe(pending.deferral_code);
+    reopened.db.close();
   });
 });

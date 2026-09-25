@@ -272,6 +272,32 @@ CREATE TABLE IF NOT EXISTS expansion_deferrals (
 `;
 
 /**
+ * The four carryover columns are additive, and this schema only ever runs
+ * `CREATE TABLE IF NOT EXISTS`, so a kernel database created before them keeps
+ * the older `expansion_deferrals` table and the first deferred-expansion
+ * INSERT naming `carryover_plan_id` fails. They are added in place here, each
+ * guarded by a `PRAGMA table_info` snapshot so a second open is a no-op rather
+ * than a duplicate-column error. Same treatment as the `missions` correlation
+ * columns; all four are nullable with no default, so a deferral opened before
+ * carryover keeps its meaning: no plan, no manifest, ordinary cascade.
+ */
+function migrateExpansionDeferrals(db: Database): void {
+  const columns = new Set(
+    (db.prepare("PRAGMA table_info(expansion_deferrals)").all() as Array<{ name: string }>).map(
+      (c) => c.name,
+    ),
+  );
+  for (const column of [
+    "carryover_plan_id",
+    "carryover_plan_json",
+    "carryover_manifest_json",
+    "carryover_manifest_hash",
+  ]) {
+    if (!columns.has(column)) db.exec(`ALTER TABLE expansion_deferrals ADD COLUMN ${column} TEXT`);
+  }
+}
+
+/**
  * @spec child-delegation#carryover-evidence — the committed batch outcome a
  * completion returns: the plan identity, the committed manifest commitment, the
  * complete final map, and the authenticated Carryover Evidence.
@@ -373,6 +399,7 @@ export class ExpansionDeferralStore {
     // its successor must share the kernel transaction, not two databases.
     this.db = kernel.db;
     this.db.exec(EXPANSION_SCHEMA);
+    migrateExpansionDeferrals(this.db);
     this.creationIdempotency = new CreationIdempotencyStore(kernel);
     this.carryover = new CarryoverStore(kernel, now);
   }

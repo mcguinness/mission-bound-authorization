@@ -174,6 +174,31 @@ CREATE TABLE IF NOT EXISTS missions (
 ) STRICT;
 `;
 
+/**
+ * The Child Mission Carryover correlation columns are additive, and `openStore`
+ * only ever runs `CREATE TABLE IF NOT EXISTS`, so a kernel database created
+ * before them (a file-backed store opened again after the upgrade) keeps the
+ * older `missions` table and every approval INSERT naming `related_to` fails.
+ * They are added in place here, each guarded by a `PRAGMA table_info` snapshot
+ * so a second open is a no-op rather than a duplicate-column error. Precedent:
+ * the Mission Signals outbox key migration, and the lifecycle-response
+ * retention columns.
+ */
+function migrateMissions(db: Database): void {
+  const columns = new Set(
+    (db.prepare("PRAGMA table_info(missions)").all() as Array<{ name: string }>).map((c) => c.name),
+  );
+  // @spec child-delegation#carryover-records — both are nullable correlation
+  // strings with no default, so no existing row's meaning changes: a Mission
+  // that predates carryover correlates to nothing and is carried to nothing.
+  if (!columns.has("related_to")) {
+    db.exec("ALTER TABLE missions ADD COLUMN related_to TEXT");
+  }
+  if (!columns.has("carried_to")) {
+    db.exec("ALTER TABLE missions ADD COLUMN carried_to TEXT");
+  }
+}
+
 export class LifecycleConflictError extends Error {}
 export class GateError extends Error {
   constructor(
@@ -382,6 +407,7 @@ export class MissionKernel {
     }
     validateAuthoritySourceCatalog(opts.authoritySourceCatalog);
     this.db = openStore(SCHEMA, opts.store ?? {});
+    migrateMissions(this.db);
     this.missionBoundGrants = new MissionBoundGrantStore(opts.now ?? (() => new Date()));
     this.now = opts.now ?? (() => new Date());
     this.allocateStatusIndex = opts.allocateStatusIndex ?? (() => randomInt(STATUS_LIST_SIZE));
