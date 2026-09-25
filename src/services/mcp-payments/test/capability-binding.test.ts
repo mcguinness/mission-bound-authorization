@@ -16,7 +16,10 @@ function fixture(source: () => string = () => text) {
   const keys = createEphemeralEvidenceKeys();
   const evidence = new EvidenceStore(keys.signing, keys.resolver);
   const view: MissionView = { id: token.mission.id, issuer: token.mission.issuer, authority_hash: token.mission.authority_hash!, state: "active", version: 1,
-    authority_set: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: TOOLS.map(t => t.action), constraints: { vendors: ["acme"] } }],
+    // Deduped: several served tools now share one action identifier (@spec
+    // runtime#compound-actions), and an Authority Set entry names each action
+    // once.
+    authority_set: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: [...new Set(TOOLS.map(t => t.action))], constraints: { vendors: ["acme"] } }],
     subject: { iss: token.mission.issuer, sub: "alice" }, client_id: "ap-agent" };
   const loadView = () => ({ view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } });
   const requests: EvaluationRequest[] = [];
@@ -110,8 +113,13 @@ describe("one catalog snapshot from discovery to invocation", () => {
     expect(write.effective?.capability_snapshot).toEqual(write.capabilitySnapshot);
     expect(list.listEffective?.capability_snapshot).toEqual(list.capabilitySnapshot);
     current = text.replace("Read one invoice", "Changed while deciding");
-    expect(await f.pep.reverify(write.effective!, parameterDigest(write.effective!), token)).toBe(false);
-    expect(await f.pep.reverifyList(list.listEffective!, parameterDigest(list.listEffective!), token)).toBe(false);
+    // @spec runtime-evidence#execution-evidence-object (#786): the recheck
+    // returns the gate that failed, so neither caller can report a moved
+    // capability snapshot as a parameter comparison.
+    expect(await f.pep.reverify(write.effective!, parameterDigest(write.effective!), token, write.attempt!))
+      .toMatchObject({ ok: false, error: "capability_source_unresolvable" });
+    expect(await f.pep.reverifyList(list.listEffective!, parameterDigest(list.listEffective!), token, list.attempt!))
+      .toMatchObject({ ok: false, error: "capability_source_unresolvable" });
   });
 
   it("names the moved snapshot, not a parameter mismatch, when a write is refused at invocation", async () => {
@@ -121,9 +129,17 @@ describe("one catalog snapshot from discovery to invocation", () => {
       current = text.replace("Read one invoice", "Changed after the decision");
     });
     expect(result).toEqual({ ok: false, refusal_reason: "capability_source_unresolvable" });
-    const refusals = f.evidence
+    // @spec runtime-evidence#pre-decision-refusal boundary rule (#786): this
+    // failure happened AFTER a permit, so it is a suppressed disposition of
+    // that permit, carrying the same reason on the Execution Evidence
+    // carrier. No Refusal Record is emitted for it: the pre-decision
+    // resolution failure (the it.each case above) is the one that keeps one.
+    expect(f.evidence.forMission(token.mission.id).filter(r => r.kind === "refusal")).toHaveLength(0);
+    const executions = f.evidence
       .forMission(token.mission.id)
-      .filter(r => r.kind === "refusal") as { content: { denial_reason?: string } }[];
-    expect(refusals.map(r => r.content.denial_reason)).toEqual(["capability_source_unresolvable"]);
+      .filter(r => r.kind === "execution") as { content: { outcome: string; error?: string } }[];
+    expect(executions.map(r => [r.content.outcome, r.content.error])).toEqual([
+      ["suppressed", "capability_source_unresolvable"],
+    ]);
   });
 });

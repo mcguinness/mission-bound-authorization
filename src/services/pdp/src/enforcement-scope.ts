@@ -73,9 +73,31 @@ export type EnforcementExtensionName =
   | "high_assurance_agent"
   | "outcome_reconciliation";
 
+/**
+ * @spec runtime#execution-reverification — one `transaction_assurance`
+ * declaration: the mediated class or scope, its idempotency claim domain, and
+ * the PUBLISHED execution lease the clause requires for the high-consequence
+ * classes ("the Operation Profile MUST define an execution lease or a
+ * published maximum execution duration, and run-to-completion applies only
+ * within that bound").
+ *
+ * The lease members extend this declaration rather than replacing it, and
+ * they name their units and their consumer: `execution_lease_max_seconds` is
+ * whole seconds, and `execution_lease_consumer` is the
+ * `mediated_scope.pep_locations` entry that reads the bound and caps its own
+ * lease by it. `idempotency_claim_domain` says which component holds the
+ * claim; it does not assert a PDP-side domain a deployment does not implement.
+ */
+export interface TransactionAssuranceDeclaration {
+  mediated_class_or_scope: string;
+  idempotency_claim_domain: string;
+  execution_lease_max_seconds: number;
+  execution_lease_consumer: string;
+}
+
 export interface EnforcementExtensionDeclarations {
   custody?: ReadonlyArray<{ mediated_class: string; custody_mode: string }>;
-  transaction_assurance?: ReadonlyArray<{ mediated_class_or_scope: string; idempotency_claim_domain: string }>;
+  transaction_assurance?: ReadonlyArray<TransactionAssuranceDeclaration>;
   evidence?: {
     mechanism: string;
     retention_window: string;
@@ -253,6 +275,55 @@ export function validateEnforcementScopeStatement(
     }
   }
 
+  // The `transaction_assurance` declaration carries a published execution
+  // lease, so it is shape-validated wherever it appears: a declaration
+  // present without the claim still has to be well formed, and a member
+  // naming a class or a PEP the baseline does not declare is unresolvable and
+  // refused rather than read as a wider claim.
+  const txnAssurance = object(stmt.extensions) ? stmt.extensions.transaction_assurance : undefined;
+  if (txnAssurance !== undefined) {
+    if (!Array.isArray(txnAssurance)) {
+      push("extensions.transaction_assurance", "must be an array of per-class declarations");
+    } else {
+      const classes = scopeOk && object(scope) ? (scope.action_classes as readonly string[]) : [];
+      const peps = scopeOk && object(scope) ? (scope.pep_locations as readonly string[]) : [];
+      txnAssurance.forEach((raw, i) => {
+        const member = `extensions.transaction_assurance[${i}]`;
+        const decl = object(raw) ? raw : undefined;
+        if (!decl) {
+          push(member, "entry must be an object");
+          return;
+        }
+        if (!isNonEmptyString(decl.mediated_class_or_scope)) {
+          push(member, "missing the mediated class or scope this declaration covers");
+        } else if (!classes.includes(decl.mediated_class_or_scope)) {
+          push(
+            member,
+            `mediated_class_or_scope "${decl.mediated_class_or_scope}" is outside mediated_scope.action_classes`,
+          );
+        }
+        if (!isNonEmptyString(decl.idempotency_claim_domain)) {
+          push(member, "missing the idempotency claim domain and the component that holds it");
+        }
+        if (
+          typeof decl.execution_lease_max_seconds !== "number" ||
+          !Number.isSafeInteger(decl.execution_lease_max_seconds) ||
+          decl.execution_lease_max_seconds <= 0
+        ) {
+          push(member, "execution_lease_max_seconds must be a positive whole number of seconds");
+        }
+        if (!isNonEmptyString(decl.execution_lease_consumer)) {
+          push(member, "missing the execution_lease_consumer that reads this published bound");
+        } else if (!peps.includes(decl.execution_lease_consumer)) {
+          push(
+            member,
+            `execution_lease_consumer "${decl.execution_lease_consumer}" is not a declared mediated_scope.pep_locations entry`,
+          );
+        }
+      });
+    }
+  }
+
   return findings;
 }
 
@@ -299,4 +370,151 @@ export function claimsWithinScope(input: unknown, claim: EnforcementClaim): bool
     return false;
   }
   return true;
+}
+
+/**
+ * The number of seconds an ISO 8601 duration names, or `undefined` when it
+ * names no fixed number of them. Days and below only (`P[nD][T[nH][nM][nS]]`):
+ * years and months are calendar-relative, so they resolve to no fixed count
+ * and are refused rather than approximated. A retention window the deployment
+ * cannot resolve to seconds cannot be compared against an audit horizon, and a
+ * declaration is validated against that horizon, never as a non-empty string
+ * (@spec runtime-evidence#execution-evidence-object).
+ */
+export function retentionWindowSeconds(value: unknown): number | undefined {
+  if (typeof value !== "string") return undefined;
+  const parts = /^P(?!$)(?:(\d{1,6})D)?(?:T(?!$)(?:(\d{1,6})H)?(?:(\d{1,6})M)?(?:(\d{1,6})S)?)?$/.exec(value);
+  if (!parts) return undefined;
+  const seconds =
+    Number(parts[1] ?? 0) * 86400 + Number(parts[2] ?? 0) * 3600 + Number(parts[3] ?? 0) * 60 + Number(parts[4] ?? 0);
+  return Number.isSafeInteger(seconds) && seconds > 0 ? seconds : undefined;
+}
+
+/**
+ * The deployment-external facts the evidence declaration is checked against:
+ * the Mission audit horizon, "the deployment-declared retention window for
+ * the Mission record and its evidence" (@spec mission#mission-record), which
+ * the runtime profile makes the floor under an evidence retention window
+ * (@spec runtime-evidence#execution-evidence-object).
+ */
+export interface EvidenceDeclarationContext {
+  auditHorizonSeconds: number;
+}
+
+/**
+ * Validates the `evidence` extension declaration against this deployment's
+ * own scope and audit horizon: the checks that need facts beyond the
+ * statement's internal completeness, so {@link validateEnforcementScopeStatement}
+ * stays the pure structural pass.
+ *
+ * A claimed capability with no declaration is incomplete, and is refused: that
+ * is the direction that would otherwise let a false assertion stand. The
+ * converse is NOT an error. A declaration asserts nothing on its own, so a
+ * deployment may publish one while withholding the claim, which is the honest
+ * shape for a capability whose applicable obligations are not all met yet: it
+ * publishes the value a peer needs without asserting conformance it does not
+ * have. `transaction_assurance` ships exactly this shape for the published
+ * execution lease maximum (issue #252 C1), and the `evidence` block is
+ * intended to reach it the same way (issue #594 W4-8). Refusing it would
+ * leave a deployment choosing between asserting a capability it does not meet
+ * and publishing nothing at all. Only `claims` asserts.
+ *
+ * Every named location and emitter must resolve inside this statement,
+ * claimed or not: a receipt issuer that is not a declared PDP or PEP location,
+ * or a key set that is not a declared signing-key location, names something
+ * unresolvable and is refused at load. So is a retention window shorter than
+ * the audit horizon, whose floor binds every runtime-enforced deployment
+ * independently of any claim.
+ */
+export function evidenceDeclarationFindings(
+  input: unknown,
+  ctx: EvidenceDeclarationContext,
+): EnforcementScopeFinding[] {
+  const stmt = object(input) ? input : {};
+  const findings: EnforcementScopeFinding[] = [];
+  const push = (member: string, problem: string): void => {
+    findings.push({ member, problem });
+  };
+  const declared = object(stmt.extensions) ? stmt.extensions.evidence : undefined;
+  const claimed = Array.isArray(stmt.claims) && stmt.claims.includes("evidence");
+  if (declared === undefined) {
+    if (claimed) push("extensions.evidence", "the evidence capability is claimed with no attached declaration");
+    return findings;
+  }
+  // A declaration under no claim is a published value, not an assertion, and
+  // loads. Everything below still applies to it: what it names has to resolve.
+  if (!object(declared)) {
+    push("extensions.evidence", "declaration must be an object");
+    return findings;
+  }
+  if (!isNonEmptyString(declared.mechanism)) {
+    push("extensions.evidence.mechanism", "missing the append-only integrity mechanism for retained records");
+  }
+  const horizon = ctx.auditHorizonSeconds;
+  const window = retentionWindowSeconds(declared.retention_window);
+  if (window === undefined) {
+    push(
+      "extensions.evidence.retention_window",
+      "must name a duration in seconds resolvable from an ISO 8601 duration of days or below",
+    );
+  } else if (!Number.isSafeInteger(horizon) || horizon <= 0) {
+    push(
+      "extensions.evidence.retention_window",
+      "the deployment declares no resolvable Mission audit horizon to check it against",
+    );
+  } else if (window < horizon) {
+    push(
+      "extensions.evidence.retention_window",
+      `${window}s is shorter than the ${horizon}s Mission audit horizon this deployment declares`,
+    );
+  }
+  if (!isNonEmptyStringArray(declared.signing_key_locations)) {
+    push(
+      "extensions.evidence.signing_key_locations",
+      "missing the published location or locations of the evidence signing key sets",
+    );
+  }
+  const locations = isNonEmptyStringArray(declared.signing_key_locations) ? declared.signing_key_locations : [];
+  const scope = object(stmt.mediated_scope) ? stmt.mediated_scope : {};
+  const components = new Set<string>([
+    ...(isNonEmptyStringArray(stmt.pdps) ? stmt.pdps : []),
+    ...(isNonEmptyStringArray(scope.pep_locations) ? scope.pep_locations : []),
+  ]);
+  if (declared.receipt_issuers !== undefined) {
+    if (!Array.isArray(declared.receipt_issuers)) {
+      push("extensions.evidence.receipt_issuers", "must be an array of {emitter, key_set} designations");
+    } else {
+      declared.receipt_issuers.forEach((entry, i) => {
+        const member = `extensions.evidence.receipt_issuers[${i}]`;
+        if (!object(entry) || !isNonEmptyString(entry.emitter) || !isNonEmptyString(entry.key_set)) {
+          push(member, "designation requires a non-empty emitter and key set");
+          return;
+        }
+        if (!components.has(entry.emitter)) {
+          push(member, `emitter "${entry.emitter}" is not a declared PDP or PEP location of this scope`);
+        }
+        if (!locations.includes(entry.key_set)) {
+          push(member, `key set "${entry.key_set}" is not a declared signing-key location`);
+        }
+      });
+    }
+  }
+  if (declared.agent_isolated_evidence_emission !== undefined) {
+    if (!Array.isArray(declared.agent_isolated_evidence_emission)) {
+      push(
+        "extensions.evidence.agent_isolated_evidence_emission",
+        "must be an array of {emitter, declaration} entries",
+      );
+    } else {
+      declared.agent_isolated_evidence_emission.forEach((entry, i) => {
+        const member = `extensions.evidence.agent_isolated_evidence_emission[${i}]`;
+        if (!object(entry) || !isNonEmptyString(entry.emitter) || !isNonEmptyString(entry.declaration)) {
+          push(member, "entry requires a non-empty emitter and declaration");
+        } else if (!components.has(entry.emitter)) {
+          push(member, `emitter "${entry.emitter}" is not a declared PDP or PEP location of this scope`);
+        }
+      });
+    }
+  }
+  return findings;
 }

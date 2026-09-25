@@ -45,6 +45,11 @@ export {
   type OrdinaryTokenFacts,
   type TxnCredential,
   type EnforceResult,
+  type ExecutionAttempt,
+  type ReverifyOutcome,
+  type SuppressOutcome,
+  PRE_DECISION_DENIAL_REASON,
+  signedDenialReason,
   type ActionApprovalInput,
   buildInsufficientAuthorization,
   type InsufficientAuthorization,
@@ -54,6 +59,7 @@ export {
   type ActionMapping,
 } from "./pep.js";
 export {
+  CONNECTOR_TOOLS,
   McpPaymentsServer,
   TOOLS,
   type ToolDef,
@@ -83,6 +89,20 @@ export { TransactionEngine, operationKey, type OpState } from "./transaction.js"
 export { reconcile, type ReconciliationReport } from "./reconcile.js";
 export type { ExecutionEvidence } from "./evidence.js";
 export { createEphemeralEvidenceKeys, type EphemeralEvidenceKeys } from "./ephemeral-signer.js";
+export {
+  deploymentReceiptIssuerScope,
+  deploymentRetentionWindowSeconds,
+  EVIDENCE_KEY_SET_LOCATION,
+  EVIDENCE_RETENTION_SCHEMA,
+  EvidenceRetentionStore,
+  publishedEvidenceJwk,
+  type EvidenceRetentionOptions,
+  type PublishEvidenceKeyInput,
+  type PublishedKeyRole,
+  type RetainedEvidenceKind,
+  type RetainedEvidenceRow,
+  type RetainEvidenceInput,
+} from "./evidence-retention.js";
 /**
  * @spec runtime-evidence#decision-evidence-object (#741, PR #753 review): the
  * PDP's Decision Evidence emission path is deliberately NOT re-exported here.
@@ -120,6 +140,7 @@ export {
   type EvidenceEnvelope,
   type EvidenceKeyLike,
   type EvidenceKeyResolver,
+  type EvidenceRetentionBackend,
   type EvidenceSigningConfig,
   type EvidenceSigningKey,
   type EvidenceVerificationKey,

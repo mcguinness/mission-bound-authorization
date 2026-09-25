@@ -1,5 +1,9 @@
-import { RUNTIME_SCOPE_CONFIG } from "@mission/demo-data";
-import { type EnforcementScopeStatement, validateEnforcementScopeStatement } from "./enforcement-scope.js";
+import { AUDIT_HORIZON_SECONDS, RUNTIME_SCOPE_CONFIG } from "@mission/demo-data";
+import {
+  type EnforcementScopeStatement,
+  evidenceDeclarationFindings,
+  validateEnforcementScopeStatement,
+} from "./enforcement-scope.js";
 
 /**
  * The action classes this deployment declares a freshness posture for: the
@@ -42,6 +46,13 @@ export function allowsNoActiveFreshness(actionClass: string | undefined): boolea
   return actionClass === "audit_only" || actionClass === "non_consequential";
 }
 
+/**
+ * @spec runtime#classification, runtime#execution-reverification — the three
+ * classes for which the Operation Profile MUST define an execution lease or a
+ * published maximum execution duration.
+ */
+export const LEASE_REQUIRED_CLASSES = ["irreversible_action", "external_commitment", "privileged_administration"] as const;
+
 /** Fail-fast load-time configuration error (demo-data's ConfigError style). */
 export class PostureConfigError extends Error {
   constructor(why: string) {
@@ -57,11 +68,29 @@ function freeze<T>(v: T): T {
   return v;
 }
 
-/** @spec runtime#runtime-operational, status#status-operational — executable,
- * published deployment policy, not evidence of implementing optional modes. */
-export function loadRuntimePosture(input: unknown): RuntimePosture {
+/**
+ * @spec runtime#runtime-operational, status#status-operational — executable,
+ * published deployment policy, not evidence of implementing optional modes.
+ *
+ * `auditHorizonSeconds` is the floor an attached `evidence` declaration's
+ * retention window is checked against; it defaults to the deployment's own
+ * declared Mission audit horizon, and a caller loading some OTHER
+ * deployment's statement supplies that deployment's horizon.
+ */
+export function loadRuntimePosture(
+  input: unknown,
+  options: { auditHorizonSeconds?: number } = {},
+): RuntimePosture {
   const findings = validateEnforcementScopeStatement(input);
   if (findings.length) throw new PostureConfigError(JSON.stringify(findings));
+  // @spec runtime-evidence#execution-evidence-object — a retention window
+  // shorter than the audit horizon, or a receipt issuer or key set naming
+  // something this scope does not declare, is refused HERE rather than
+  // discovered when a verifier needs the key.
+  const evidence = evidenceDeclarationFindings(input, {
+    auditHorizonSeconds: options.auditHorizonSeconds ?? AUDIT_HORIZON_SECONDS,
+  });
+  if (evidence.length) throw new PostureConfigError(JSON.stringify(evidence));
   const state = (input as EnforcementScopeStatement).state_source as unknown as Record<string, unknown>;
   const fail = (why: string): never => { throw new PostureConfigError(why); };
   if (state.pdp_unavailability_posture !== "deny") fail("only deny is implemented; bounded permit reuse is not available");
@@ -94,6 +123,20 @@ export function loadRuntimePosture(input: unknown): RuntimePosture {
     if (!positive(declared.max_staleness_seconds) || (declared.max_staleness_seconds as number) > (state.max_staleness_seconds as number)
       || !positive(declared.recovery_objective_seconds) || declared.beyond_bound !== "deny") fail(`invalid class bound: ${name}`);
   }
+  // @spec runtime#execution-reverification — "For the irreversible-action,
+  // external-commitment, and privileged-administration classes the Operation
+  // Profile MUST define an execution lease or a published maximum execution
+  // duration". A deployment that MEDIATES one of those classes therefore
+  // publishes its bound here, or this statement is refused at load: an
+  // unpublished lease is exactly the gap the clause closes, and the executing
+  // PEP has no bound to cap itself by.
+  const scope = (input as EnforcementScopeStatement).mediated_scope;
+  const declarations = (input as EnforcementScopeStatement).extensions?.transaction_assurance ?? [];
+  for (const name of LEASE_REQUIRED_CLASSES) {
+    if (!scope.action_classes.includes(name)) continue;
+    const declared = declarations.find((d) => d.mediated_class_or_scope === name);
+    if (!declared) fail(`mediated high-consequence class publishes no execution lease maximum: ${name}`);
+  }
   return freeze(structuredClone(input) as RuntimePosture);
 }
 
@@ -109,6 +152,22 @@ export const RUNTIME_POSTURE = loadRuntimePosture(RUNTIME_SCOPE_CONFIG);
  * it never inherits the least restrictive class and is never reported as a
  * staleness fact.
  */
+/**
+ * @spec runtime#execution-reverification — the PUBLISHED execution lease
+ * maximum, in whole seconds, for one action class. `undefined` means this
+ * statement publishes no bound for the class, which the loader already
+ * refused for the three classes that require one; a class with no declaration
+ * has no lease bound to cap by, and the executing PEP must not invent one.
+ *
+ * Read from the SAME statement object `protectedResourceMetadata()`
+ * publishes, so "published" and "consumed" cannot diverge.
+ */
+export function executionLeaseMaxSeconds(posture: RuntimePosture, actionClass: string | undefined): number | undefined {
+  if (actionClass === undefined) return undefined;
+  return posture.extensions?.transaction_assurance?.find((d) => d.mediated_class_or_scope === actionClass)
+    ?.execution_lease_max_seconds;
+}
+
 export function postureStalenessBound(posture: RuntimePosture, actionClass: string | undefined): StalenessBound {
   const name = actionClass ?? "consequential_read";
   if (!Object.hasOwn(posture.state_source.per_class, name)) return { kind: "undeclared" };

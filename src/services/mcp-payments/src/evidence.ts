@@ -663,6 +663,47 @@ export interface EvidenceSigningKey {
  */
 export type EvidenceSigningConfig = Partial<Record<"pep" | "executor" | "receipt_issuer", EvidenceSigningKey>>;
 
+/**
+ * @spec runtime-evidence#execution-evidence-object (Retention), issue #594
+ * (W4-8): the durable retention backend {@link EvidenceStore} writes through,
+ * implemented by `evidence-retention.ts`'s `EvidenceRetentionStore`.
+ *
+ * Declared structurally, and OPTIONAL, so this module depends on the
+ * retention CONTRACT rather than on a SQLite repository, and a store with no
+ * backend keeps exactly its previous process-local behavior. What the backend
+ * adds is the part a process-local array cannot answer: survival across a
+ * restart, restart-monotone sequences for the records this store EMITS (the
+ * PDP's own Decision Evidence counter stays on the PDP's emission path), the
+ * retirement anchor for the key that signed each record, and refusal to
+ * release a record before the declared window does.
+ */
+export interface EvidenceRetentionBackend {
+  nextSequence(missionId: string, emitterId: string, role: string): number;
+  retain(input: {
+    kind: "decision" | "execution" | "refusal";
+    record_id: string;
+    mission_id: string;
+    emitter_id: string;
+    emitter_role: string;
+    signing_kid: string;
+    row: JsonValue;
+    record: JsonValue;
+  }): unknown;
+  retained(): ReadonlyArray<{ row: JsonValue }>;
+}
+
+/** The `kid` in a signed envelope's protected header: the key whose retirement anchor this record moves. */
+function envelopeKid(envelope: EvidenceEnvelope): string {
+  try {
+    const header = JSON.parse(Buffer.from(envelope.value.split(".")[0] ?? "", "base64url").toString("utf8")) as {
+      kid?: unknown;
+    };
+    return typeof header.kid === "string" ? header.kid : "";
+  } catch {
+    return "";
+  }
+}
+
 /** Input to {@link EvidenceStore.recordRefusal}. `missionId` is store-level correlation only (see the file header note); `mission` is the spec's own OPTIONAL, established-only reference. */
 export interface RefusalRecordInput {
   missionId: string;
@@ -683,6 +724,16 @@ export interface RefusalRecordInput {
 export interface ExecutionEvidenceInput {
   permitId: string;
   opKey: string;
+  /**
+   * @spec runtime-evidence#execution-evidence-object `execution_id`: "unique
+   * execution identifier, stable across delivery retries of this record".
+   * The caller supplies it so ONE identity covers one disposition attempt and
+   * every emission retry of that attempt (issue #786); absent, the store
+   * allocates a fresh one. A distinct attempt MUST supply a distinct value:
+   * that is what keeps a rejected replay from presenting itself as the
+   * original completed record.
+   */
+  execution_id?: string;
   evaluation_id: string;
   mission_id: string;
   audience: string;
@@ -699,9 +750,44 @@ export interface ExecutionEvidenceInput {
 }
 
 /**
+ * The final disposition one `execution_id` names. Two emissions carrying
+ * this same triple are retries of one disposition; a third value under the
+ * same identity is a different disposition, which is refused.
+ */
+type ExecutionDisposition = Pick<ExecutionEvidenceInput, "evaluation_id" | "outcome" | "error">;
+
+/** An Execution Evidence emission whose signature has not yet been retained. */
+interface InFlightExecution {
+  disposition: ExecutionDisposition;
+  emission: Promise<ExecutionEvidence>;
+}
+
+/** Whether an emission repeats the disposition an identity already carries. */
+function sameDisposition(held: ExecutionDisposition, input: ExecutionEvidenceInput): boolean {
+  return (
+    held.evaluation_id === input.evaluation_id && held.outcome === input.outcome && held.error === input.error
+  );
+}
+
+/**
+ * One identity, one disposition. Raised the same way whether the identity is
+ * already `retained` or still `in flight`: a rejected replay presenting a
+ * completed record's identity is refused in both windows.
+ */
+function refuseRedisposition(identity: string, held: "retained" | "in flight"): never {
+  throw new Error(
+    `EvidenceStore.recordExecution(): execution_id "${identity}" is already ${held} for a different disposition (fail closed: one identity per disposition, retries only)`,
+  );
+}
+
+/**
  * @spec runtime-evidence#decision-evidence-object, runtime-evidence#pre-decision-refusal,
  * runtime-evidence#execution-evidence-object, runtime-evidence#decision-evidence-integrity
- * (issue #649): an append-only, in-memory, per-attempt retained store.
+ * (issue #649): an append-only, per-attempt retained store. Its own array is
+ * process-local; the audit retention window, the restart-monotone sequences
+ * and the published-key retirement anchors live in the OPTIONAL durable
+ * backend ({@link EvidenceRetentionBackend}, issue #594 W4-8), which a
+ * deployment configures and every signed record is written through to.
  * `recordRefusal`/`recordExecution` build the current spec-native closed
  * object for the records this PEP EMITS, allocate a cryptographically
  * random record id and a monotonically increasing per-(mission, emitter)
@@ -723,6 +809,12 @@ export interface ExecutionEvidenceInput {
 export class EvidenceStore {
   private readonly records: Evidence[] = [];
   private readonly sequences = new Map<string, number>();
+  /**
+   * The Execution Evidence emission in flight under each caller-supplied
+   * `execution_id`, held from the tick the identity is taken until the
+   * signed record is retained ({@link EvidenceStore.recordExecution}).
+   */
+  private readonly inFlightExecutions = new Map<string, InFlightExecution>();
 
   /**
    * @param signer the keys for the records this PEP emits itself.
@@ -734,7 +826,16 @@ export class EvidenceStore {
   constructor(
     private readonly signer?: EvidenceSigningConfig,
     private readonly resolveDecisionEvidenceKey?: EvidenceKeyResolver,
-  ) {}
+    private readonly retention?: EvidenceRetentionBackend,
+  ) {
+    // Startup recovery (#594 W4-8): a store over a durable backend comes up
+    // holding what the previous process retained, so a record inside the
+    // audit window survives a restart and a delivery retry that arrives after
+    // one still deduplicates against the original disposition.
+    for (const entry of retention?.retained() ?? []) {
+      this.records.push(deepFreeze(entry.row as unknown as Evidence));
+    }
+  }
 
   /**
    * `"pdp"` is accepted as a parameter only because {@link
@@ -764,10 +865,41 @@ export class EvidenceStore {
    * explicitly in the issue #649 PR body for an owner ruling.
    */
   private nextSequence(missionId: string, emitterId: string, role: string): number {
+    if (this.retention) return this.retention.nextSequence(missionId, emitterId, role);
     const key = `${missionId} ${emitterId} ${role}`;
     const n = this.sequences.get(key) ?? 0;
     this.sequences.set(key, n + 1);
     return n;
+  }
+
+  /**
+   * Write one signed record through to the durable retention backend, if the
+   * deployment configured one, and retain it in this process's own array.
+   * `record` is the complete signed spec object (what a receipt's digest
+   * commits to); `row` is the retained wrapper.
+   *
+   * Durable first, deliberately: a backend that refuses the write (at
+   * capacity, with every retained record still inside the audit window) fails
+   * the whole retention closed, rather than leaving this process reporting a
+   * record no auditor will ever be able to read.
+   */
+  private retainDurably(
+    kind: "decision" | "execution" | "refusal",
+    recordId: string,
+    row: Evidence,
+    record: { emitter: { id: string; role: string }; evidence_envelope: EvidenceEnvelope },
+  ): void {
+    this.retention?.retain({
+      kind,
+      record_id: recordId,
+      mission_id: row.mission_id,
+      emitter_id: record.emitter.id,
+      emitter_role: record.emitter.role,
+      signing_kid: envelopeKid(record.evidence_envelope),
+      row: row as unknown as JsonValue,
+      record: record as unknown as JsonValue,
+    });
+    this.records.push(row);
   }
 
   /**
@@ -784,8 +916,20 @@ export class EvidenceStore {
    * object and the signed payload BEFORE the signature is checked, then the
    * signature and protected header, then the key-to-emitter and
    * key-to-audience binding through {@link resolveDecisionEvidenceKey}. The
-   * record is retained exactly as verified, never re-serialized, so what a
-   * later verifier reads is the same bytes the PDP signed.
+   * record this process retains is the verified object ITSELF, never a
+   * reconstruction of it, so what a later verifier reads is the same bytes the
+   * PDP signed.
+   *
+   * The durable copy (#594 W4-8) is stored as JSON and recovered as a fresh
+   * object after a restart: byte-equal under the JCS canonicalization the
+   * envelope commits to, and so still verifiable, but not identical by
+   * reference the way the in-process retention is. The reopen test asserts the
+   * property that matters, that the recovered record still verifies under its
+   * own envelope.
+   *
+   * This method allocates no sequence: Decision Evidence carries the PDP's
+   * own per-Mission counter, from the PDP's emission path. Only the records
+   * this store EMITS take their sequence from the durable counter.
    */
   async retainDecision(record: DecisionEvidenceObject): Promise<DecisionEvidenceRetention> {
     if (!this.resolveDecisionEvidenceKey) {
@@ -815,7 +959,7 @@ export class EvidenceStore {
       at: record.evaluated_at,
       content: deepFreeze(record),
     });
-    this.records.push(row);
+    this.retainDurably("decision", record.evidence_id, row, record);
     return { retained: true, record: row };
   }
 
@@ -866,21 +1010,101 @@ export class EvidenceStore {
       at: evaluated_at,
       content,
     });
-    this.records.push(record);
+    this.retainDurably("refusal", content.refusal_id, record, content);
     return record;
   }
 
-  /** @spec runtime-evidence#execution-evidence-object: sign and retain an Execution Evidence Object. */
+  /**
+   * @spec runtime-evidence#execution-evidence-object: sign and retain an
+   * Execution Evidence Object.
+   *
+   * "Exactly one Execution Evidence Object exists per final disposition of a
+   * permit, and delivery of that record is at-least-once, so a consumer MUST
+   * deduplicate on `execution_id`." A retry of a pending emission therefore
+   * supplies the SAME `execution_id` and gets the retained record back
+   * rather than a second row. A retry that supplies the same identity with a
+   * DIFFERENT disposition is not a retry: it throws, because silently
+   * returning the retained record would let a rejected replay report the
+   * original completed record as its own outcome (issue #786). Retention is
+   * append-only either way: no call replaces a retained record.
+   *
+   * The identity is RESERVED before the signature is awaited (PR #808
+   * review). A retained-row lookup alone leaves the whole signing await
+   * open: two emissions of one disposition, which the at-least-once retry
+   * path produces by construction, both miss the lookup and both retain,
+   * so one disposition ends up with two signed records under one identity.
+   * An emission in flight is held in {@link inFlightExecutions} from the
+   * same tick as the lookup, and a caller arriving under that identity
+   * joins it: same record, same signature, same `sequence`. A caller
+   * arriving with a DIFFERENT disposition throws exactly as it does
+   * against a retained row, so the in-flight window is no gap in that
+   * guarantee.
+   *
+   * Instance-level coalescing for the declared one-process topology, the
+   * shape the lifecycle outbox takes for overlapping drains. It is no lease
+   * and no distributed claim.
+   */
   async recordExecution(
     emitterId: string,
     role: "pep" | "executor",
     input: ExecutionEvidenceInput,
   ): Promise<ExecutionEvidence> {
     const signer = this.requireSigner(role === "executor" ? "executor" : "pep");
+    const identity = input.execution_id;
+    if (identity === undefined) {
+      return this.signAndRetainExecution(emitterId, role, signer, input);
+    }
+    // Retained first, in flight second, both read in ONE tick with no await
+    // between them and the reservation below: a record leaves
+    // `inFlightExecutions` only once it is in `records`, so this order sees
+    // every emission under this identity in either place.
+    const prior = this.records.find(
+      (e): e is ExecutionEvidence => e.kind === "execution" && e.content.execution_id === identity,
+    );
+    if (prior) {
+      return sameDisposition(prior.content, input) ? prior : refuseRedisposition(identity, "retained");
+    }
+    const inFlight = this.inFlightExecutions.get(identity);
+    if (inFlight) {
+      if (!sameDisposition(inFlight.disposition, input)) {
+        refuseRedisposition(identity, "in flight");
+      }
+      return inFlight.emission;
+    }
+    const emission = this.signAndRetainExecution(emitterId, role, signer, input);
+    this.inFlightExecutions.set(identity, {
+      disposition: {
+        evaluation_id: input.evaluation_id,
+        outcome: input.outcome,
+        ...(input.error !== undefined ? { error: input.error } : {}),
+      },
+      emission,
+    });
+    try {
+      return await emission;
+    } finally {
+      if (this.inFlightExecutions.get(identity)?.emission === emission) {
+        this.inFlightExecutions.delete(identity);
+      }
+    }
+  }
+
+  /**
+   * Build, sign and retain one Execution Evidence Object. Only {@link
+   * recordExecution} may call it, and only after the identity is reserved:
+   * `nextSequence` runs here, so a coalesced caller consumes no sequence
+   * number it will not emit.
+   */
+  private async signAndRetainExecution(
+    emitterId: string,
+    role: "pep" | "executor",
+    signer: EvidenceSigningKey,
+    input: ExecutionEvidenceInput,
+  ): Promise<ExecutionEvidence> {
     const sequence = this.nextSequence(input.mission_id, emitterId, role);
     const outcome_at = new Date().toISOString();
     const unsigned = {
-      execution_id: newRecordId("exe"),
+      execution_id: input.execution_id ?? newRecordId("exe"),
       evaluation_id: input.evaluation_id,
       mission_id: input.mission_id,
       audience: input.audience,
@@ -913,7 +1137,7 @@ export class EvidenceStore {
       at: outcome_at,
       content,
     });
-    this.records.push(record);
+    this.retainDurably("execution", content.execution_id, record, content);
     return record;
   }
 

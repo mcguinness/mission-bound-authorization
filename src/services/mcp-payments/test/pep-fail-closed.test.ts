@@ -31,7 +31,7 @@ import {
   PaymentsStore,
   Pep,
   type DecisionEvidence,
-  type RefusalRecord,
+  type ExecutionEvidence,
   type TokenFacts,
 } from "../src/index.js";
 
@@ -470,7 +470,11 @@ describe("GAP 2: an unrecognized decision-context member makes a permit unusable
    * exercise the member enumeration they are about rather than the retention
    * gate.
    */
-  const permitContext = async (extra: Record<string, unknown> = {}) => {
+  const permitContext = async (
+    extra: Record<string, unknown> = {},
+    conditions: Record<string, unknown> = FULLY_RECOGNIZED_CONTEXT.conditions,
+  ) => {
+    const parameter_digest = conditions.parameter_digest as string | undefined;
     const decision_evidence = await PDP.emitter.emit({
       mission: { id: missionId, issuer: ISSUER, policy_view_id: "pv_1", authority_hash: view.authority_hash },
       subject: { id: TOKEN.sub },
@@ -482,10 +486,22 @@ describe("GAP 2: an unrecognized decision-context member makes a permit unusable
       evaluated_at: new Date().toISOString(),
       action_class: "irreversible_action",
       entry_digest: "sha-256:fixture-entry",
-      parameter_digest: FULLY_RECOGNIZED_CONTEXT.conditions.parameter_digest,
-      conditions: FULLY_RECOGNIZED_CONTEXT.conditions,
+      // @spec runtime-evidence#execution-evidence-object (#786): carried only
+      // when this permit's conditions bind one. `lookup_vendor` is not a
+      // parameter-bound action, so the suppression cases below use a permit
+      // with no parameter binding at all, exactly as the real decision point
+      // produces for it. That also exercises the rule that the authorized
+      // digest MUST be absent when the linked record carries none.
+      ...(parameter_digest !== undefined ? { parameter_digest } : {}),
+      conditions: conditions as never,
     });
-    return { ...FULLY_RECOGNIZED_CONTEXT, ...extra, decision_evidence };
+    return { ...FULLY_RECOGNIZED_CONTEXT, conditions, ...extra, decision_evidence };
+  };
+
+  /** A non-parameter-bound permit's conditions: no `parameter_digest`. */
+  const UNBOUND_CONDITIONS = {
+    valid_until: new Date(Date.now() + 120_000).toISOString(),
+    use_limit: 1,
   };
 
   it("a permit whose context carries only recognized members is granted", async () => {
@@ -500,16 +516,27 @@ describe("GAP 2: an unrecognized decision-context member makes a permit unusable
     const { pep, evidence } = build();
     decide.mockResolvedValueOnce({
       decision: true,
-      context: await permitContext({
-        conditions: { ...FULLY_RECOGNIZED_CONTEXT.conditions, require_step_up: true },
-      }),
+      context: await permitContext({}, { ...UNBOUND_CONDITIONS, require_step_up: true }),
     });
     const res = await pep.enforce("lookup_vendor", { vendor_id: "acme" }, TOKEN);
     expect(res.permitted).toBe(false);
     expect(res.refusal_reason).toBe("unrecognized_condition");
-    const refusal = evidence.forMission(missionId).find((e): e is RefusalRecord => e.kind === "refusal");
-    expect(refusal?.content.denial_reason).toBe("unrecognized_condition");
-    expect(refusal?.content.emitter).toEqual({ id: CANONICAL_RESOURCE, role: "pep" });
+    // @spec runtime-evidence#pre-decision-refusal boundary rule (#786): a
+    // permit WAS obtained, so its unusability is a suppressed disposition of
+    // that permit and never a Refusal Record. The caller-visible diagnostic
+    // stays `unrecognized_condition`; the signed record carries the closed-set
+    // value `condition_unrecognized`.
+    expect(evidence.forMission(missionId).some((e) => e.kind === "refusal")).toBe(false);
+    const execution = evidence.forMission(missionId).find((e): e is ExecutionEvidence => e.kind === "execution");
+    expect(execution?.content.outcome).toBe("suppressed");
+    expect(execution?.content.error).toBe("condition_unrecognized");
+    expect(execution?.content.evaluation_id).toBe("dec_1");
+    // Nothing executed, so the executor did not dispose of this permit.
+    expect(execution?.content.emitter).toEqual({ id: CANONICAL_RESOURCE, role: "pep" });
+    // The linked Decision Evidence carries no parameter_digest, so neither
+    // execution digest member is present, and none is invented.
+    expect(execution?.content.authorized_parameter_digest).toBeUndefined();
+    expect(execution?.content.effective_parameter_digest).toBeUndefined();
   });
 
   it("a permit whose context carries an UNKNOWN top-level member (outside conditions) is still granted: the must-understand rule is scoped to conditions, never the whole response context", async () => {
@@ -527,13 +554,58 @@ describe("GAP 2: an unrecognized decision-context member makes a permit unusable
     const { pep, evidence } = build();
     decide.mockResolvedValueOnce({
       decision: true,
-      context: await permitContext({ obligations: [{ type: "step_up" }] }),
+      context: await permitContext({ obligations: [{ id: "obl_1", type: "step_up" }] }, UNBOUND_CONDITIONS),
     });
     const res = await pep.enforce("lookup_vendor", { vendor_id: "acme" }, TOKEN);
     expect(res.permitted).toBe(false);
     expect(res.refusal_reason).toBe("unfulfillable_obligation");
-    const refusal = evidence.forMission(missionId).find((e): e is RefusalRecord => e.kind === "refusal");
-    expect(refusal?.content.denial_reason).toBe("unfulfillable_obligation");
+    expect(evidence.forMission(missionId).some((e) => e.kind === "refusal")).toBe(false);
+    const execution = evidence.forMission(missionId).find((e): e is ExecutionEvidence => e.kind === "execution");
+    expect(execution?.content.outcome).toBe("suppressed");
+    expect(execution?.content.error).toBe("obligation_unfulfilled");
+    // @spec runtime-evidence#execution-evidence-object `obligation_outcomes`:
+    // "one object per attached obligation", each identifying itself, so the
+    // failing entry is named rather than merely implied by the error value.
+    expect(execution?.content.obligation_outcomes).toEqual([
+      { id: "obl_1", type: "step_up", outcome: "unsupported", error: "no obligation type is implemented at this PEP" },
+    ]);
+  });
+
+  it("an obligation that does not identify itself is still refused with zero effect, and no entry is invented for it", async () => {
+    const { pep, evidence } = build();
+    // The decision returned an obligation with no `id`. `obligation_outcomes`
+    // requires `id` and `type` on every entry, and omitting the entry would
+    // break one-outcome-per-attached-obligation while still reading as a
+    // complete list. So the member is omitted entirely and nothing is
+    // fabricated. #786 records the representation of an unidentifiable
+    // obligation as an outstanding defect: this test pins the fail-closed
+    // behavior meanwhile.
+    decide.mockResolvedValueOnce({
+      decision: true,
+      context: await permitContext({ obligations: [{ type: "step_up" }] }, UNBOUND_CONDITIONS),
+    });
+    const res = await pep.enforce("lookup_vendor", { vendor_id: "acme" }, TOKEN);
+    expect(res.permitted).toBe(false);
+    expect(res.refusal_reason).toBe("unfulfillable_obligation");
+    const execution = evidence.forMission(missionId).find((e): e is ExecutionEvidence => e.kind === "execution");
+    expect(execution?.content.outcome).toBe("suppressed");
+    expect(execution?.content.error).toBe("obligation_unfulfilled");
+    expect(execution?.content.obligation_outcomes).toBeUndefined();
+  });
+
+  it("a mixed obligation set with one unidentifiable member names none of them, rather than a partial list that reads as complete", async () => {
+    const { pep, evidence } = build();
+    decide.mockResolvedValueOnce({
+      decision: true,
+      context: await permitContext(
+        { obligations: [{ id: "obl_1", type: "step_up" }, { type: "notify" }] },
+        UNBOUND_CONDITIONS,
+      ),
+    });
+    const res = await pep.enforce("lookup_vendor", { vendor_id: "acme" }, TOKEN);
+    expect(res.refusal_reason).toBe("unfulfillable_obligation");
+    const execution = evidence.forMission(missionId).find((e): e is ExecutionEvidence => e.kind === "execution");
+    expect(execution?.content.obligation_outcomes).toBeUndefined();
   });
 
   it("a DENY decision (no permit) is unaffected by the recognized-member enumeration", async () => {

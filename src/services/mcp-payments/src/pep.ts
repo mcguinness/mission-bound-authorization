@@ -13,6 +13,8 @@
 import { randomUUID } from "node:crypto";
 import { type ActObject, buildContextActor, flattenActChain } from "@mission/actor-chain";
 import {
+  type ActionPhase,
+  isActionPhase,
   type JsonValue,
   type PropagatedMissionReference,
   TXN_AUTHORIZATION_REQUIRED,
@@ -33,6 +35,7 @@ import {
   type Fga,
   type Freshness,
   type MissionView,
+  newRecordId,
   type OriginPrincipal,
   type PrincipalMappingResolver,
   relationForAction,
@@ -45,8 +48,9 @@ import {
   type ListEffectiveParams,
   parameterDigest,
 } from "./effective-params.js";
-import type { EvidenceStore } from "./evidence.js";
+import type { EvidenceStore, ExecutionEvidenceObject, RuntimeHopReference } from "./evidence.js";
 import type { PaymentsStore } from "./payments-store.js";
+import { operationKey } from "./transaction.js";
 import { signChallenge } from "./txn-challenge.js";
 import type { PendingOperation } from "./txn-store.js";
 import { PaymentsToolCatalog, type CapabilityCatalog, type CapabilitySnapshot } from "./tool-catalog.js";
@@ -204,6 +208,19 @@ export type TokenFacts = MissionBoundTokenFacts | OrdinaryTokenFacts;
 export interface ActionMapping {
   action: string;
   actionClass?: "irreversible_action" | "external_commitment";
+  /**
+   * @spec runtime#compound-actions — the phase of the crossing this tool
+   * makes, when the Operation Profile places the operation in a compound
+   * action. Absent for an ordinary operation that is no phase of one.
+   *
+   * This is the AUTHORITATIVE value: the PEP supplies it on the decision
+   * request and compares the permit's `conditions.action_phase` against it at
+   * use, and it MUST NOT be taken from an agent-supplied argument. It is
+   * pinned against the trusted catalog's own per-tool declaration
+   * (`CATALOG_TOOL_BINDINGS`) by a consistency test, so the profile and the
+   * served catalog cannot drift.
+   */
+  phase?: ActionPhase;
   needsInvoice: boolean;
   /**
    * @spec runtime#read-binding — this action's unfiltered form requests a
@@ -217,12 +234,27 @@ export interface ActionMapping {
   bindsVendorScope?: boolean;
 }
 
+/**
+ * The enforcement surface's trusted Operation Profile.
+ *
+ * @spec runtime#compound-actions — `payments:payment.execute` is a compound
+ * action whose three crossings SHARE that one action identifier:
+ * `check_transfer` (preflight, no reservation and no external effect),
+ * `hold_transfer` (prepare, a hold that is state and never commit authority),
+ * and `execute_wire_transfer` (commit, the irreversible effect). All three
+ * normalize the SAME effect inputs over the same invoice, so they produce one
+ * identical `parameter_digest`: the phase is the only thing distinguishing a
+ * prepare permit from a commit permit, which is exactly what the phase
+ * binding exists to catch.
+ */
 const TOOL_ACTIONS: Record<string, ActionMapping> = {
   list_invoices: { action: "payments:invoice.list", needsInvoice: false, bindsVendorScope: true },
   get_invoice: { action: "payments:invoice.read", needsInvoice: true },
   lookup_vendor: { action: "payments:vendor.read", needsInvoice: false },
   schedule_payment: { action: "payments:payment.schedule", needsInvoice: true },
-  execute_wire_transfer: { action: "payments:payment.execute", actionClass: "irreversible_action", needsInvoice: true },
+  check_transfer: { action: "payments:payment.execute", phase: "preflight", needsInvoice: true },
+  hold_transfer: { action: "payments:payment.execute", phase: "prepare", needsInvoice: true },
+  execute_wire_transfer: { action: "payments:payment.execute", phase: "commit", actionClass: "irreversible_action", needsInvoice: true },
   send_remittance_email: { action: "payments:remittance.send", actionClass: "external_commitment", needsInvoice: true },
 };
 
@@ -281,7 +313,99 @@ function deriveVendorScope(
  * rule for an unrecognized member is scoped to `conditions` alone, never to
  * the whole response context.
  */
-const RECOGNIZED_CONDITIONS = new Set(["parameter_digest", "valid_until", "use_limit"]);
+/**
+ * @spec authzen#response-context — the permit's decision conditions live
+ * NESTED under `decision.context.conditions`. One accessor, so no site
+ * re-derives the nesting.
+ */
+function conditionsOf(decision: Decision | undefined): Record<string, unknown> | undefined {
+  return decision?.context.conditions as Record<string, unknown> | undefined;
+}
+
+const RECOGNIZED_CONDITIONS: ReadonlySet<string> = new Set([
+  "parameter_digest",
+  "valid_until",
+  "use_limit",
+  // @spec runtime#compound-actions, authzen#response-context `action_phase` —
+  // this PEP recognizes and ENFORCES the phase condition (Pep.verifyPermitAtUse
+  // compares it against the crossing's own Operation Profile phase at use).
+  // Recognition has to land with, or before, the comparison: a PEP that
+  // enforced the condition without recognizing it would refuse every permit
+  // carrying one as an unrecognized member instead.
+  "action_phase",
+]);
+
+/**
+ * One condition comparison the executing PEP makes before releasing an
+ * effect. EVERY row runs at EVERY use of the permit: no row may opt out of
+ * the last one, because the comparison a row skips there is a comparison the
+ * crossing was never held to. The rows carried a `timeSensitive` flag that
+ * excused `action_phase` from the pre-effect stage on the premise that a
+ * phase cannot move while an awaited read is pending; the Operation Profile
+ * is live, so it can, and a crossing removed from it after admission was
+ * released on the strength of a comparison that no longer held.
+ *
+ * Every comparator is therefore SYNCHRONOUS over state already in hand (the
+ * clock, the retained attempt, the in-memory Operation Profile). That is what
+ * makes running the whole table at the final boundary free: it adds no
+ * awaited read, so it cannot widen the window between the last check and the
+ * effect. A comparator that needed an awaited read would have to be ordered
+ * ahead of the time comparison below rather than admitted here as it stands.
+ *
+ * `failure` returns the enumerated Execution Evidence `error` for a failed
+ * comparison, or `undefined` when it holds. Every value here is already in
+ * that closed set (@spec runtime-evidence#execution-evidence-object); this
+ * seam adds none.
+ */
+interface PermitUseCheck {
+  name: string;
+  failure: (
+    attempt: ExecutionAttempt,
+    ctx: { now: Date; profile: ActionMapping | undefined },
+  ) => string | undefined;
+}
+
+const PERMIT_USE_CHECKS: readonly PermitUseCheck[] = [
+  {
+    // @spec runtime#compound-actions — "The executing PEP MUST compare the
+    // permit's bound phase with the phase of the crossing before releasing an
+    // effect. Unequal phases, an absent binding where the Operation Profile
+    // identifies a phase, or a phase that cannot be established MUST cause
+    // refusal, fail closed". The converse is the AuthZEN rule that a phase
+    // condition on a crossing whose profile declares no phase "is invalid
+    // there", which is the last arm below.
+    name: "action_phase",
+    failure: (attempt, { profile }) => {
+      // The profile no longer places this tool at all: the crossing's phase
+      // cannot be established at use, which refuses rather than defaulting to
+      // "no phase" and letting a phase-bound permit through. The profile is
+      // re-read at each use, never snapshotted at admission: a snapshot would
+      // still answer with the phase the crossing has since lost.
+      if (!profile) return "phase_mismatch";
+      const crossing = profile.phase;
+      const bound = attempt.permitBoundPhase;
+      if (crossing === undefined) return bound === undefined ? undefined : "phase_mismatch";
+      // Absent where required, and unknown or malformed where required, are
+      // the same refusal: neither establishes the phase the permit bound.
+      if (!isActionPhase(bound)) return "phase_mismatch";
+      return bound === crossing ? undefined : "phase_mismatch";
+    },
+  },
+  {
+    // @spec authzen#response-context, runtime-evidence#execution-evidence-object
+    // `permit_expired` — the permit authorizes INITIATION within its validity
+    // bound. `valid_until` is REQUIRED on a permit, so an absent or
+    // unparseable bound establishes no live window at all and is treated as
+    // elapsed: the fail-closed reading, never a permit relied on without one.
+    name: "valid_until",
+    failure: (attempt, { now }) => {
+      const validUntilMs =
+        typeof attempt.permitValidUntil === "string" ? Date.parse(attempt.permitValidUntil) : Number.NaN;
+      if (!Number.isFinite(validUntilMs)) return "permit_expired";
+      return now.getTime() <= validUntilMs ? undefined : "permit_expired";
+    },
+  },
+];
 
 /**
  * @spec runtime#state-freshness: a loaded MissionView paired with the
@@ -354,6 +478,26 @@ export interface PepDeps {
   now?: () => Date;
   /** Trusted catalog serving this executor, never a caller-supplied digest. */
   capabilityCatalog?: CapabilityCatalog;
+  /**
+   * @spec runtime#compound-actions — the trusted Operation Profile this PEP
+   * derives each crossing's action and phase from, resolved on EVERY lookup
+   * so a configuration change between a Decision and its use is observed
+   * rather than cached. Defaults to this module's {@link TOOL_ACTIONS}.
+   *
+   * Injectable so a conformance test can prove the phase comes from here and
+   * nowhere else: an agent-supplied `action_phase` argument cannot move it,
+   * and a crossing whose profile entry is gone at use has no establishable
+   * phase and refuses rather than releasing an effect.
+   */
+  operationProfile?: () => Record<string, ActionMapping>;
+  /**
+   * @spec authzen#response-context — the permit `conditions` members this PEP
+   * recognizes. Defaults to {@link RECOGNIZED_CONDITIONS}. Injectable so a
+   * conformance test can stand up a PEP whose recognized set LACKS
+   * `action_phase` and observe the must-understand rule: such a PEP treats a
+   * permit carrying the condition as invalid rather than executing it.
+   */
+  recognizedConditions?: ReadonlySet<string>;
   /** Deployment policy: which actions require an action-bound approval (M6). */
   requiresActionApproval?: (action: string, actionClass: string | undefined) => boolean;
   maxApprovalAgeSeconds?: number;
@@ -586,6 +730,134 @@ export interface EnforceResult {
    * actually executes, not merely permits.
    */
   resolvedMission?: { id: string; issuer: string; authority_hash?: string };
+  /**
+   * @spec runtime-evidence#execution-evidence-object (issue #786) — present on
+   * every permit, built only after the permit's Decision Evidence verified and
+   * was retained. Every post-permit failure disposes through it, so the caller
+   * never assembles a record of its own.
+   */
+  attempt?: ExecutionAttempt;
+}
+
+/**
+ * @spec runtime-evidence#execution-evidence-object (issue #786): the
+ * post-permit disposition context. It is created ONCE per request, after the
+ * response and its Decision Evidence have been verified and retained, and
+ * carries only authorization facts copied from the retained Decision and the
+ * verified credential, never an agent argument or an unverified response
+ * member.
+ *
+ * `executionId` is the one execution identity of this disposition attempt:
+ * every emission retry reuses it, and a distinct attempt (a rejected replay
+ * included) carries its own, so no attempt can overwrite another's completed
+ * record. Durable capacity reservation and cross-restart dedup storage are
+ * #594 W4-4; this is the stable input they build on.
+ */
+export interface ExecutionAttempt {
+  /** The permit's authenticated evaluation identifier (`decision_id`). */
+  evaluationId: string;
+  /** The governing Mission, from `resolvedMission`, never `token.mission`. */
+  mission: { id: string; issuer: string; authority_hash?: string };
+  audience: string;
+  action: string;
+  /**
+   * The tool whose crossing this attempt is about to make. The PEP re-derives
+   * the crossing's authoritative phase from its own Operation Profile under
+   * this name at every check, so a profile that no longer places the tool
+   * leaves the phase unestablishable at use.
+   */
+  tool: string;
+  /**
+   * @spec authzen#response-context — the permit's `conditions.action_phase`
+   * EXACTLY as the verified decision carried it, unnarrowed: a missing,
+   * unknown or malformed value has to stay distinguishable from a valid one,
+   * so the comparison at use can refuse it rather than coerce it.
+   */
+  permitBoundPhase?: unknown;
+  /**
+   * @spec authzen#response-context — the permit's `conditions.valid_until`,
+   * the validity bound on INITIATING an effect under it. Copied from the
+   * verified decision, never recomputed locally and never extended.
+   */
+  permitValidUntil?: unknown;
+  /**
+   * @spec runtime-evidence#execution-evidence-object
+   * `authorized_parameter_digest`: taken from the RETAINED Decision Evidence,
+   * not from `decision.context.conditions`, since the member MUST be absent
+   * when the linked record carries no `parameter_digest`.
+   */
+  authorizedParameterDigest?: string;
+  /** One execution identity per disposition attempt; reused for emission retries. */
+  executionId: string;
+  /** Payments-domain join keys (reconcile.ts), not spec members. */
+  permitId: string;
+  joinKey: string;
+  hopReference?: RuntimeHopReference;
+  /**
+   * Re-observe this operation's effective parameter digest from CURRENT
+   * authoritative state, at the moment of the disposition. `undefined` means
+   * the operation binds no parameters, or its target can no longer be
+   * resolved; it is never a licence to repeat the authorized digest, which
+   * would assert an observation that was not made.
+   */
+  observeEffectiveDigest: () => string | undefined;
+}
+
+/**
+ * The result of one post-permit disposition. `recorded: false` carries the
+ * reason no valid record could be emitted: the disposition still refuses the
+ * action, and the gap is an open defect rather than a fabricated record.
+ */
+export type SuppressOutcome =
+  | { recorded: true }
+  | { recorded: false; gap: "effective_parameter_digest_unobservable" | "emission_failed" };
+
+/**
+ * The typed result of a pre-execution recheck. `error` names the gate that
+ * actually failed, so a caller cannot report a capability or lease failure as
+ * a parameter comparison. A failing recheck has already disposed through
+ * {@link Pep.suppressExecution}.
+ */
+export type ReverifyOutcome =
+  | { ok: true; effectiveParameterDigest?: string }
+  | { ok: false; error: string; disposition: SuppressOutcome };
+
+/**
+ * @spec runtime-evidence#pre-decision-refusal (issue #786) — the deployment's
+ * caller-visible refusal diagnostic mapped to the enumerated value the SIGNED
+ * Refusal Record carries. "This member carries an enumerated value, never a
+ * deployment's own diagnostic string ... A deployment publishes the mapping it
+ * uses": this constant is that mapping, and the two surfaces stay separate.
+ * A diagnostic absent from this table is already an enumerated value and is
+ * carried unchanged.
+ */
+export const PRE_DECISION_DENIAL_REASON: Readonly<Record<string, string>> = Object.freeze({
+  // No such action at this enforcement surface.
+  unknown_tool: "request_unsupported",
+  // The Mission the request names cannot be established from local state.
+  unknown_mission: "state_unavailable",
+  // The named target object does not resolve here.
+  unknown_invoice: "target_unresolvable",
+  unknown_vendor: "target_unresolvable",
+  // The acting credential's OWN authority does not cover the request (an
+  // attenuated leaf, or the baseline-Join rule-8 bound), determined before any
+  // decision request. Distinct from the PDP's evaluated `out_of_authority`
+  // denial, which this member must not duplicate.
+  out_of_authority: "credential_authority_insufficient",
+  // One instance of the delegation chain is revoked, so the credential's own
+  // authority no longer covers any request. Allocated to
+  // `credential_authority_insufficient`, whose definition is exactly an
+  // authority bound the PEP establishes before any decision request, NOT to
+  // `token_invalid`, which names a credential that failed validation. A
+  // revoked instance presents a well-formed credential whose authority was
+  // withdrawn, and an auditor must be able to tell those apart. The
+  // operator-facing distinction stays on the caller-visible diagnostic.
+  instance_revoked: "credential_authority_insufficient",
+});
+
+/** The enumerated Refusal Record `denial_reason` for a caller-visible diagnostic. */
+export function signedDenialReason(diagnostic: string): string {
+  return PRE_DECISION_DENIAL_REASON[diagnostic] ?? diagnostic;
 }
 
 /**
@@ -619,6 +891,33 @@ export function buildInsufficientAuthorization(authorizationDetails: AuthorityEn
   return { www_authenticate, authorization_remediation };
 }
 
+/**
+ * @spec runtime-evidence#execution-evidence-object `obligation_outcomes`:
+ * "one object per attached obligation, with `id` (REQUIRED ...), `type`
+ * (REQUIRED ...)". This PEP implements no obligation type, so every attached
+ * obligation is `unsupported`.
+ *
+ * Returns `undefined` when ANY attached obligation does not identify itself.
+ * Omitting one entry would break one-outcome-per-attached-obligation while
+ * still reading as a complete list, and `id`/`type` cannot be invented. That
+ * case is an outstanding representation gap (issue #786): the operation is
+ * still refused with zero effect, and the record carries no fabricated entry.
+ */
+function obligationOutcomes(
+  obligations: readonly unknown[],
+): ExecutionEvidenceObject["obligation_outcomes"] | undefined {
+  const named: NonNullable<ExecutionEvidenceObject["obligation_outcomes"]> = [];
+  for (const raw of obligations) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+    const { id, type } = raw as { id?: unknown; type?: unknown };
+    if (typeof id !== "string" || id.length === 0 || typeof type !== "string" || type.length === 0) {
+      return undefined;
+    }
+    named.push({ id, type, outcome: "unsupported", error: "no obligation type is implemented at this PEP" });
+  }
+  return named;
+}
+
 export class Pep {
   readonly capabilityCatalog: CapabilityCatalog;
   private readonly now: () => Date;
@@ -627,8 +926,20 @@ export class Pep {
     this.now = deps.now ?? (() => new Date());
   }
 
+  /**
+   * @spec runtime#compound-actions — "The PEP derives the crossing's phase
+   * from its trusted Operation Profile". Every read of a crossing's action,
+   * class and phase goes through here, and the profile is resolved on each
+   * call rather than captured once, so a Decision and its use always ask the
+   * profile as it is at that moment.
+   */
   toolAction(tool: string): ActionMapping | undefined {
-    return TOOL_ACTIONS[tool];
+    return (this.deps.operationProfile?.() ?? TOOL_ACTIONS)[tool];
+  }
+
+  /** The permit `conditions` members this PEP recognizes (@spec authzen#response-context). */
+  private recognizedConditions(): ReadonlySet<string> {
+    return this.deps.recognizedConditions ?? RECOGNIZED_CONDITIONS;
   }
 
   /**
@@ -950,6 +1261,11 @@ export class Pep {
         ...(listDigest ? { parameter_digest: listDigest } : {}),
         ...(amount ? { amount } : {}),
         ...(mapping.actionClass ? { action_class: mapping.actionClass } : {}),
+        // @spec authzen#context-action-phase — supplied from THIS surface's
+        // trusted Operation Profile (`mapping.phase`), never from `args`: an
+        // agent-supplied `action_phase` argument is not read anywhere on this
+        // path, so it cannot select or move the phase of a crossing.
+        ...(mapping.phase !== undefined ? { action_phase: mapping.phase } : {}),
         ...(actionApproval ? { action_approval: actionApproval } : {}),
         // @spec authority-server#mission-join (#557 review point 1) —
         // present exactly on the baseline-Join path: tells the PDP to
@@ -1149,6 +1465,93 @@ export class Pep {
       return result;
     }
 
+    // @spec runtime-evidence#execution-evidence-object (issue #786) — the
+    // permit is in hand and its Decision Evidence verified and retained, so
+    // every failure from here on is a post-permit disposition, not a
+    // pre-decision refusal. The attempt context is built ONCE, here, and
+    // carries authorization facts from the RETAINED record (the authorized
+    // digest included) rather than from the response context or the request.
+    const retained = retention.retained ? retention.record.content : undefined;
+    const attempt: ExecutionAttempt = {
+      evaluationId: decision.context.decision_id as string,
+      mission: {
+        id: missionAnchor.id,
+        issuer: missionAnchor.issuer,
+        ...(missionAnchor.authority_hash !== undefined ? { authority_hash: missionAnchor.authority_hash } : {}),
+      },
+      audience: CANONICAL_RESOURCE,
+      action: mapping.action,
+      tool,
+      // @spec authzen#response-context — the permit's own bound conditions,
+      // copied from the VERIFIED decision at the one point the permit is in
+      // hand. `verifyPermitAtUse` compares only these retained values against
+      // the crossing it is about to make, so no later step reconstructs
+      // authorization from an agent argument or from retrospective evidence.
+      ...(conditionsOf(decision)?.action_phase !== undefined
+        ? { permitBoundPhase: conditionsOf(decision)?.action_phase }
+        : {}),
+      ...(conditionsOf(decision)?.valid_until !== undefined
+        ? { permitValidUntil: conditionsOf(decision)?.valid_until }
+        : {}),
+      ...(retained?.parameter_digest !== undefined
+        ? { authorizedParameterDigest: retained.parameter_digest }
+        : {}),
+      executionId: newRecordId("exe"),
+      permitId: decision.context.decision_id as string,
+      // The digest-bound operation key where the operation binds parameters;
+      // a non-bound action supplies its own key rather than an operation key
+      // with an absent digest baked into it.
+      joinKey:
+        retained?.parameter_digest !== undefined
+          ? operationKey(missionAnchor.id, mapping.action, retained.parameter_digest, mapping.phase)
+          : `op:${missionAnchor.id}:${mapping.action}`,
+      ...(token.jti !== undefined
+        ? {
+            hopReference: {
+              jti: token.jti,
+              mission_id: missionAnchor.id,
+              ...(token.identityContinuationHandle
+                ? { continuation_handle: token.identityContinuationHandle }
+                : {}),
+            },
+          }
+        : {}),
+      observeEffectiveDigest: () => {
+        if (effective) {
+          const invoice = this.deps.payments.getInvoice(effective.invoice_id);
+          const vendor = invoice ? this.deps.payments.getVendor(invoice.vendor_id) : undefined;
+          // The target is gone: no digest over "the parameters actually
+          // attempted" exists to observe. Declining is the honest answer.
+          if (!invoice || !vendor) return undefined;
+          const fresh = buildEffectiveParams({
+            action: effective.action,
+            invoice,
+            vendor,
+            resource: effective.resource,
+          });
+          return parameterDigest(fresh);
+        }
+        if (listEffective) {
+          const loaded = loadCheckedView(this.deps.loadView, {
+            id: missionAnchor.id,
+            issuer: missionAnchor.issuer,
+          });
+          const entry = loaded?.view.authority_set.find(
+            (e) => e.resource === listEffective.resource && e.actions.includes(listEffective.action),
+          );
+          const requestedVendorId =
+            listEffective.vendor_scope_source === "requested" ? listEffective.vendor_scope[0] : undefined;
+          const fresh = buildListEffectiveParams({
+            action: listEffective.action,
+            resource: listEffective.resource,
+            ...deriveVendorScope(entry, requestedVendorId),
+          });
+          return parameterDigest(fresh);
+        }
+        return undefined;
+      },
+    };
+
     // @spec authzen#response-context, runtime#decision-output: "a condition
     // the enforcing component does not recognize makes the permit unusable."
     // The check is scoped to `decision.context.conditions` ONLY (the
@@ -1160,11 +1563,15 @@ export class Pep {
     // so the permit it rides on is unusable: refuse with zero effect, never
     // ignore.
     const conditions = decision.context.conditions as Record<string, unknown> | undefined;
+    const recognized = this.recognizedConditions();
     const unrecognizedConditions = conditions
-      ? Object.keys(conditions).filter((k) => !RECOGNIZED_CONDITIONS.has(k))
+      ? Object.keys(conditions).filter((k) => !recognized.has(k))
       : [];
     if (unrecognizedConditions.length > 0) {
-      await this.recordRefusal(token, "unrecognized_condition", mapping.action, view);
+      // Post-permit: a permit was obtained and is unusable, so this is a
+      // suppressed disposition of that permit, never a Refusal Record
+      // (@spec runtime-evidence#pre-decision-refusal boundary rule).
+      await this.suppressExecution(attempt, "condition_unrecognized");
       return { permitted: false, refusal_reason: "unrecognized_condition" };
     }
 
@@ -1178,13 +1585,22 @@ export class Pep {
     // conditions refusal reason above (a distinct rule, a distinct reason).
     const obligations = decision.context.obligations as unknown[] | undefined;
     if (obligations && obligations.length > 0) {
-      await this.recordRefusal(token, "unfulfillable_obligation", mapping.action, view);
+      // @spec runtime-evidence#execution-evidence-object `obligation_outcomes`
+      // ("one object per attached obligation"): the failing entries are named
+      // when every attached obligation identifies itself, and the member is
+      // omitted entirely when one does not. A partial list would read as
+      // complete, and `id`/`type` are REQUIRED and cannot be invented.
+      const outcomes = obligationOutcomes(obligations);
+      await this.suppressExecution(attempt, "obligation_unfulfilled", {
+        ...(outcomes ? { obligationOutcomes: outcomes } : {}),
+      });
       return { permitted: false, refusal_reason: "unfulfillable_obligation" };
     }
 
     return {
       permitted: true,
       decision,
+      attempt,
       resolvedMission: {
         id: missionAnchor.id,
         issuer: missionAnchor.issuer,
@@ -1198,24 +1614,153 @@ export class Pep {
   }
 
   /**
+   * @spec runtime-evidence#execution-evidence-object (issue #786): the ONE
+   * post-permit disposition writer. Every exit that fails an obtained permit
+   * routes here, so error classification, evidence linkage and the
+   * caller-visible failure have a single owner, and no exit assembles a
+   * record of its own or emits a Refusal Record for a permit it held.
+   *
+   * The record links to the retained Decision by `evaluation_id`, and its
+   * authorization facts come from {@link ExecutionAttempt}, never from the
+   * agent's arguments or an unverified response. `role` is `pep`: nothing
+   * executed, so the executor did not dispose of this permit.
+   *
+   * The effective digest is OBSERVED here, at the disposition, and the record
+   * is not emitted at all when an authorized digest is present and no
+   * observation can be made ({@link SuppressOutcome} `gap`). Emitting a
+   * sentinel would fabricate an observation; emitting the record without the
+   * member would be invalid under the present schema. That case is #786's
+   * declared outstanding defect, joint with #594.
+   *
+   * Emission is awaited so signing and retention complete before the caller
+   * learns the outcome, and one retry reuses the same execution identity. A
+   * durable queue for a still-failing emission is #594 W4-4.
+   */
+  async suppressExecution(
+    attempt: ExecutionAttempt,
+    error: string,
+    opts: { obligationOutcomes?: ExecutionEvidenceObject["obligation_outcomes"] } = {},
+  ): Promise<SuppressOutcome> {
+    const observed = attempt.observeEffectiveDigest();
+    if (attempt.authorizedParameterDigest !== undefined && observed === undefined) {
+      return { recorded: false, gap: "effective_parameter_digest_unobservable" };
+    }
+    const input = {
+      permitId: attempt.permitId,
+      opKey: attempt.joinKey,
+      execution_id: attempt.executionId,
+      evaluation_id: attempt.evaluationId,
+      mission_id: attempt.mission.id,
+      audience: attempt.audience,
+      // The pair is carried together or not at all: the authorized member MUST
+      // be absent when the linked Decision Evidence carries no
+      // `parameter_digest`, and an effective digest alone commits nothing.
+      ...(attempt.authorizedParameterDigest !== undefined && observed !== undefined
+        ? {
+            authorized_parameter_digest: attempt.authorizedParameterDigest,
+            effective_parameter_digest: observed,
+          }
+        : {}),
+      outcome: "suppressed" as const,
+      error,
+      ...(opts.obligationOutcomes ? { obligation_outcomes: opts.obligationOutcomes } : {}),
+      ...(attempt.hopReference ? { hop_reference: attempt.hopReference } : {}),
+    };
+    for (let tries = 0; tries < 2; tries += 1) {
+      try {
+        await this.deps.evidence.recordExecution(CANONICAL_RESOURCE, "pep", input);
+        return { recorded: true };
+      } catch {
+        /* one retry, on the SAME execution identity: a retained record is
+           returned rather than duplicated, so this cannot double-emit. */
+      }
+    }
+    return { recorded: false, gap: "emission_failed" };
+  }
+
+  /**
+   * @spec runtime#compound-actions, runtime#execution-reverification — the ONE
+   * pre-effect verification seam, called from every dispatch path.
+   *
+   * Both phase MUSTs are unconditional, and this deployment has three dispatch
+   * paths (`callReadTool`, `callWriteTool`, `callTransactionTool`), only the
+   * last of which reaches a connector. A preflight crossing releases no
+   * connector effect and still MUST refuse a `commit` permit, so the
+   * comparison belongs here, in front of every crossing, rather than beside
+   * the one commit point.
+   *
+   * Every dispatch path calls it TWICE, and both calls run the WHOLE table:
+   *
+   * - at admission, BEFORE any state the crossing would burn (the transaction
+   *   path's single-use permit redemption included) and before any awaited
+   *   capability, parameter or resource read. A wrong-phase or expired
+   *   presentation therefore consumes nothing, and the legitimate crossing
+   *   that follows still finds its own redemption available.
+   * - again after the last awaited read and immediately before the effect is
+   *   released. Both the clock and the Operation Profile can move while a
+   *   resolver call is pending, so the admission call is never the last word
+   *   on either: the permit is held to the same comparisons at the boundary
+   *   it crosses. Moving a comparison earlier must not enlarge the unchecked
+   *   interval, which is why the earlier call ADDS to the later one rather
+   *   than replacing part of it.
+   *
+   * Running the table is synchronous over state already in hand, so the
+   * second call opens no new awaited window before the effect. Within it, the
+   * rows run in table order and each reads the clock at its own turn, so the
+   * `valid_until` comparison is the LAST thing decided before release.
+   *
+   * What this seam governs is whether the permit may still INITIATE an
+   * effect. Once an effect has started, how long it may run is the execution
+   * lease's question (`executionLeaseMs` / `TransactionEngine.leaseValid`),
+   * and an expired permit is never permission to restart an operation whose
+   * effect already committed.
+   *
+   * Every comparator is a row in one table, so a coordinated condition added
+   * later (issue #773's `evaluation_context_digest`) joins this seam as
+   * another row rather than a competing check on another path.
+   */
+  async verifyPermitAtUse(attempt: ExecutionAttempt): Promise<ReverifyOutcome> {
+    for (const check of PERMIT_USE_CHECKS) {
+      const error = check.failure(attempt, { now: this.now(), profile: this.toolAction(attempt.tool) });
+      if (error !== undefined) {
+        const disposition = await this.suppressExecution(attempt, error);
+        return { ok: false, error, disposition };
+      }
+    }
+    return { ok: true };
+  }
+
+  /**
    * @spec operation-profile (parameter binding / TOCTOU): re-verify the
    * effective parameters immediately before execution. A digest mismatch
-   * (record changed under us) is a refusal, not an execution.
+   * (record changed under us) suppresses the permit, it never executes.
+   * The result names the gate that failed, so a caller cannot report a
+   * capability failure as a parameter comparison.
    */
-  async reverify(effective: EffectiveParams, expectedDigest: string, token: TokenFacts): Promise<boolean> {
-    if (!(await this.reverifyCapability(effective.capability_snapshot, token, effective.action))) return false;
+  async reverify(
+    effective: EffectiveParams,
+    expectedDigest: string,
+    token: TokenFacts,
+    attempt: ExecutionAttempt,
+  ): Promise<ReverifyOutcome> {
+    const capability = await this.reverifyCapability(effective.capability_snapshot, token, effective.action, attempt);
+    if (!capability.ok) return capability;
     const invoice = this.deps.payments.getInvoice(effective.invoice_id);
     const vendor = invoice ? this.deps.payments.getVendor(invoice.vendor_id) : undefined;
     if (!invoice || !vendor) {
-      await this.recordRefusal(token, "parameter_mismatch", effective.action);
-      return false;
+      // The permit's target no longer resolves. The parameters it bound cannot
+      // be met, so the disposition is a parameter mismatch; the record itself
+      // is the outstanding case above (no effective digest is observable).
+      const disposition = await this.suppressExecution(attempt, "parameter_mismatch");
+      return { ok: false, error: "parameter_mismatch", disposition };
     }
     const fresh = buildEffectiveParams({ action: effective.action, invoice, vendor, resource: effective.resource });
-    if (parameterDigest(fresh) !== expectedDigest) {
-      await this.recordRefusal(token, "parameter_mismatch", effective.action);
-      return false;
+    const freshDigest = parameterDigest(fresh);
+    if (freshDigest !== expectedDigest) {
+      const disposition = await this.suppressExecution(attempt, "parameter_mismatch");
+      return { ok: false, error: "parameter_mismatch", disposition };
     }
-    return true;
+    return { ok: true, effectiveParameterDigest: freshDigest };
   }
 
   /**
@@ -1232,18 +1777,24 @@ export class Pep {
    * (present, as `vendor_scope[0]`, exactly when `vendor_scope_source` is
    * `"requested"`), so no separate input needs to be threaded through.
    */
-  async reverifyList(effective: ListEffectiveParams, expectedDigest: string, token: TokenFacts): Promise<boolean> {
-    if (!(await this.reverifyCapability(effective.capability_snapshot, token, effective.action))) return false;
-    // @spec authority-server#mission-join (#557): the baseline-Join gateway
-    // path is not wired into read-binding reverification (a documented
-    // remainder -- doing so needs the resolved Mission anchor threaded back
-    // through the caller's post-decision call, which this PR does not
-    // build). Fails closed rather than dereferencing an absent claim.
-    if (!token.mission) {
-      await this.recordRefusal(token, "parameter_mismatch", effective.action);
-      return false;
-    }
-    const loaded = loadCheckedView(this.deps.loadView, { id: token.mission.id, issuer: token.mission.issuer });
+  async reverifyList(
+    effective: ListEffectiveParams,
+    expectedDigest: string,
+    token: TokenFacts,
+    attempt: ExecutionAttempt,
+  ): Promise<ReverifyOutcome> {
+    const capability = await this.reverifyCapability(effective.capability_snapshot, token, effective.action, attempt);
+    if (!capability.ok) return capability;
+    // @spec authority-server#mission-join (#557): the CURRENT view, reloaded
+    // against the ATTEMPT's governing Mission, so a baseline-Join read
+    // reverifies against the reference the Join resolved. The former
+    // fallback recorded a parameter mismatch for a credential carrying no
+    // `mission` claim without comparing any digest, a false reason issue
+    // #786 removes rather than reclassifies.
+    const loaded = loadCheckedView(this.deps.loadView, {
+      id: attempt.mission.id,
+      issuer: attempt.mission.issuer,
+    });
     const entry = loaded?.view.authority_set.find(
       (e) => e.resource === effective.resource && e.actions.includes(effective.action),
     );
@@ -1254,21 +1805,40 @@ export class Pep {
       resource: effective.resource,
       ...deriveVendorScope(entry, requestedVendorId),
     });
-    if (parameterDigest(fresh) !== expectedDigest) {
-      await this.recordRefusal(token, "parameter_mismatch", effective.action);
-      return false;
+    const freshDigest = parameterDigest(fresh);
+    if (freshDigest !== expectedDigest) {
+      const disposition = await this.suppressExecution(attempt, "parameter_mismatch");
+      return { ok: false, error: "parameter_mismatch", disposition };
     }
-    return true;
+    return { ok: true, effectiveParameterDigest: freshDigest };
   }
 
-  async reverifyCapability(snapshot: CapabilitySnapshot | undefined, token: TokenFacts, action: string): Promise<boolean> {
-    if (!snapshot) return true;
+  /**
+   * @spec capability-binding#context-capability-source — re-resolve the
+   * capability definition the permit was decided against, immediately before
+   * the action. A moved or unresolvable snapshot is its OWN error: the
+   * snapshot is excluded from `parameter_digest` (effective-params.ts), so
+   * reporting a parameter mismatch would assert a comparison that never
+   * failed.
+   *
+   * This is the POST-PERMIT call site, which is why it suppresses. The
+   * pre-decision resolution failure is a different call site
+   * (`enforceInner`'s catch), keeps its Refusal Record, and the two are
+   * separated by call site, never by the reason string they share.
+   */
+  async reverifyCapability(
+    snapshot: CapabilitySnapshot | undefined,
+    token: TokenFacts,
+    action: string,
+    attempt: ExecutionAttempt,
+  ): Promise<ReverifyOutcome> {
+    if (!snapshot) return { ok: true };
     try {
       const current = this.capabilityCatalog.resolve(snapshot.tool);
-      if (current.catalog_sourced && current.snapshot.id === snapshot.id) return true;
+      if (current.catalog_sourced && current.snapshot.id === snapshot.id) return { ok: true };
     } catch { /* unavailable at invocation is also a refusal */ }
-    await this.recordRefusal(token, "capability_source_unresolvable", action);
-    return false;
+    const disposition = await this.suppressExecution(attempt, "capability_source_unresolvable");
+    return { ok: false, error: "capability_source_unresolvable", disposition };
   }
 
   private async refuse(
@@ -1296,6 +1866,13 @@ export class Pep {
    * timeline bucket a pre-establishment refusal under the mission the
    * caller named, without the signed record itself asserting that
    * reference was ever verified.
+   *
+   * `reason` is the caller-visible diagnostic; the signed record carries the
+   * enumerated pre-decision value {@link signedDenialReason} maps it to
+   * (@spec runtime-evidence#pre-decision-refusal: "this member carries an
+   * enumerated value, never a deployment's own diagnostic string"). The two
+   * surfaces are deliberately separate, and only the signed one is
+   * interoperable.
    */
   private async recordRefusal(
     token: TokenFacts,
@@ -1309,7 +1886,7 @@ export class Pep {
       missionId,
       audience: CANONICAL_RESOURCE,
       action: { name: action },
-      denial_reason: reason,
+      denial_reason: signedDenialReason(reason),
       subject: { id: token.sub, ...(token.iss !== undefined ? { properties: { iss: token.iss } } : {}) },
       ...(view !== undefined
         ? { mission: { id: view.id, issuer: view.issuer, authority_hash: view.authority_hash } }
