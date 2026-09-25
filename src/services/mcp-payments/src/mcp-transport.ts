@@ -88,7 +88,16 @@ async function route(
   if (mapping?.actionClass && paymentsServer.hasTransactionTier()) {
     return paymentsServer.callTransactionTool(name, args, token, undefined, signals);
   }
-  if (name === "schedule_payment" || (mapping?.actionClass && !paymentsServer.hasTransactionTier())) {
+  // @spec runtime#compound-actions — a `prepare` crossing creates state, so it
+  // takes the write path; a `preflight` crossing creates none and takes the
+  // read path. Both are consequential enough to reach a Decision and both go
+  // through the same pre-effect phase comparison, which is exactly why the
+  // comparison cannot live on the connector path alone.
+  if (
+    name === "schedule_payment" ||
+    mapping?.phase === "prepare" ||
+    (mapping?.actionClass && !paymentsServer.hasTransactionTier())
+  ) {
     return paymentsServer.callWriteTool(name, args, token, undefined, signals);
   }
   return paymentsServer.callReadTool(name, args, token, undefined, signals);

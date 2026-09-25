@@ -10,9 +10,12 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  ACTION_PHASES,
+  type ActionPhase,
   type AuthorityEntry,
   computeAnchor,
   GOVERNED_POLICY_TYP,
+  isActionPhase,
   isAuthorityEntry,
 } from "@mission/core";
 import { exportJWK, generateKeyPair } from "jose";
@@ -447,6 +450,35 @@ export interface CatalogActionSeed {
   id: string;
   amount_bearing: boolean;
   tool_name?: string;
+  /**
+   * @spec runtime#compound-actions — the phases of a compound action whose
+   * crossings share ONE action identifier. Present instead of `tool_name`,
+   * never beside it: a service declaring both leaves the phase of a crossing
+   * ambiguous, and this loader refuses that configuration rather than picking
+   * one ({@link parseCatalogActions}).
+   */
+  tools?: CatalogActionToolSeed[];
+}
+
+/**
+ * @spec runtime#compound-actions — one served tool of a compound action, with
+ * the phase the deployment's trusted Operation Profile assigns its crossing.
+ * The phase is enforcement policy the executing surface owns, so it is
+ * declared here and never taken from a request argument.
+ */
+export interface CatalogActionToolSeed {
+  tool_name: string;
+  action_phase: ActionPhase;
+}
+
+/**
+ * The resolved (action, phase) a served tool crosses at, across every catalog
+ * service: the trusted Operation Profile's own tool-to-phase mapping, which
+ * the enforcement surface's mapping is pinned against.
+ */
+export interface CatalogToolBinding {
+  action: string;
+  action_phase?: ActionPhase;
 }
 
 /** Validate one catalog service's OPTIONAL `actions` member (shared by the action schema and the catalog loader). */
@@ -459,20 +491,123 @@ function parseCatalogActions(
   const seen = new Set<string>();
   return asArray(file, svc.actions, `${ctx}.actions`).map((raw, j) => {
     const a = asObject(file, raw, `${ctx}.actions[${j}]`);
-    const id = reqString(file, a, "id", `${ctx}.actions[${j}]`);
+    const actionCtx = `${ctx}.actions[${j}]`;
+    const id = reqString(file, a, "id", actionCtx);
     if (typeof a.amount_bearing !== "boolean") {
-      throw new ConfigError(file, `${ctx}.actions[${j}].amount_bearing must be a boolean`);
+      throw new ConfigError(file, `${actionCtx}.amount_bearing must be a boolean`);
     }
     if (seen.has(id)) throw new ConfigError(file, `${ctx}.actions declares ${id} twice`);
     seen.add(id);
-    if (a.tool_name !== undefined) reqString(file, a, "tool_name", `${ctx}.actions[${j}]`);
+    // @spec runtime#compound-actions — "Reject ambiguous single-tool/multi-tool
+    // configuration": one action declares its served tools in exactly one
+    // shape. Both members present would leave two answers to "which tool, at
+    // which phase, is this crossing", and the phase MUST be establishable.
+    if (a.tool_name !== undefined && a.tools !== undefined) {
+      throw new ConfigError(
+        file,
+        `${actionCtx} declares both tool_name and tools; use exactly one`,
+      );
+    }
+    if (a.tool_name !== undefined) reqString(file, a, "tool_name", actionCtx);
+    const tools =
+      a.tools === undefined ? undefined : parseCatalogActionTools(file, a.tools, actionCtx);
     return {
       id,
       amount_bearing: a.amount_bearing,
       ...(a.tool_name !== undefined ? { tool_name: a.tool_name as string } : {}),
+      ...(tools !== undefined ? { tools } : {}),
     };
   });
 }
+
+/**
+ * @spec runtime#compound-actions — validate the per-tool phase list.
+ *
+ * Refused: an empty list (an action declaring `tools` serves at least one), a
+ * phase outside the closed four-value vocabulary, and one tool declared twice
+ * under the same action, which is the ambiguous phase selection the rule
+ * forbids. NOT refused: two tools sharing this action AND this phase. The
+ * merged contract binds a permit to a phase, not to a tool, so two legitimate
+ * aliases at one phase are indistinguishable to it by design and inventing a
+ * uniqueness rule here would reject a conforming deployment.
+ */
+function parseCatalogActionTools(file: string, raw: unknown, ctx: string): CatalogActionToolSeed[] {
+  const entries = asArray(file, raw, `${ctx}.tools`);
+  if (entries.length === 0)
+    throw new ConfigError(file, `${ctx}.tools must declare at least one tool`);
+  const names = new Set<string>();
+  return entries.map((entry, k) => {
+    const toolCtx = `${ctx}.tools[${k}]`;
+    const tool = asObject(file, entry, toolCtx);
+    const tool_name = reqString(file, tool, "tool_name", toolCtx);
+    const action_phase = reqString(file, tool, "action_phase", toolCtx);
+    if (!isActionPhase(action_phase)) {
+      throw new ConfigError(
+        file,
+        `${toolCtx}.action_phase must be one of ${ACTION_PHASES.join(", ")}`,
+      );
+    }
+    if (names.has(tool_name)) {
+      throw new ConfigError(
+        file,
+        `${ctx}.tools declares ${tool_name} twice, leaving its phase ambiguous`,
+      );
+    }
+    names.add(tool_name);
+    return { tool_name, action_phase };
+  });
+}
+
+/**
+ * @spec runtime#compound-actions — the served-tool index the trusted Operation
+ * Profile is pinned against, keyed by tool name across the whole catalog.
+ *
+ * One tool name resolving to two different (action, phase) pairs is refused:
+ * the phase of that crossing could not be established, and the profile MUST
+ * fail closed rather than pick one. An identical repetition collapses.
+ */
+function loadCatalogToolBindings(): Map<string, CatalogToolBinding> {
+  const file = "catalog.json";
+  const out = new Map<string, CatalogToolBinding>();
+  asArray(file, readJson(file), "catalog").forEach((raw, i) => {
+    const svc = asObject(file, raw, `catalog[${i}]`);
+    for (const action of parseCatalogActions(file, svc, `catalog[${i}]`) ?? []) {
+      const declared: Array<[string, CatalogToolBinding]> = [
+        ...(action.tool_name !== undefined
+          ? ([[action.tool_name, { action: action.id }]] as Array<[string, CatalogToolBinding]>)
+          : []),
+        ...(action.tools ?? []).map((t): [string, CatalogToolBinding] => [
+          t.tool_name,
+          { action: action.id, action_phase: t.action_phase },
+        ]),
+      ];
+      for (const [tool, binding] of declared) {
+        const prior = out.get(tool);
+        if (
+          prior &&
+          (prior.action !== binding.action || prior.action_phase !== binding.action_phase)
+        ) {
+          throw new ConfigError(
+            file,
+            `tool ${tool} resolves to two different (action, phase) pairs; its crossing's phase is not establishable`,
+          );
+        }
+        out.set(tool, binding);
+      }
+    }
+  });
+  return out;
+}
+
+/**
+ * @spec runtime#compound-actions — the deployment's tool-to-(action, phase)
+ * mapping, from the trusted catalog. The enforcement surface's own Operation
+ * Profile is pinned against this by a consistency test, so the phase the PDP
+ * validates and the phase the executing PEP compares at use come from one
+ * declaration.
+ */
+export const CATALOG_TOOL_BINDINGS: ReadonlyMap<string, CatalogToolBinding> =
+  loadCatalogToolBindings();
 
 function loadActionSchema(): Map<string, boolean> {
   const file = "catalog.json";

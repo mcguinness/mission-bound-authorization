@@ -23,22 +23,33 @@ export function trustedCapabilityResolver(
         if (!service) continue; // first-party/unclaimed source
         const catalog = catalogs.find(c => c.service_id === service.id && c.resource === entry.resource);
         for (const action of entry.actions) {
-          const key = JSON.stringify([entry.resource, action]);
-          if (seen.has(key)) continue;
-          seen.add(key);
-          const resolution: CapabilitySourceResolution = { resource: entry.resource, action };
-          try {
-            const tool = service.actions?.find(a => a.id === action)?.tool_name;
-            if (!catalog || !tool) throw new Error("trusted source has no action definition");
-            const definition = extractMcpToolDefinition(catalog.text, tool);
-            resolution.binding = {
-              action, tool_id: `mcp://${service.id}.demo/tools/${tool}`,
-              source_uri: catalog.source_uri,
-              source_digest: capabilitySourceDigest(definition), operation_ref: tool,
-            };
-            // The selected definition, not the whole catalog, is the trust unit.
-          } catch { /* present without binding means fail closed at establishment */ }
-          resolutions.push(resolution);
+          const declared = service.actions?.find(a => a.id === action);
+          // @spec runtime#compound-actions — an action whose phases share one
+          // identifier serves SEVERAL tools, so it resolves one binding per
+          // (action, tool): `normalizeCapabilitySources` keys uniqueness on
+          // the (action, tool_id) pair, and the PDP's committed-binding check
+          // is membership over that set, so the crossing's own tool must be
+          // among the recorded bindings rather than collapsed into one.
+          const tools = declared?.tools?.map(t => t.tool_name) ?? (declared?.tool_name !== undefined ? [declared.tool_name] : []);
+          // An unresolvable action still yields ONE resolution with no
+          // binding, which is what fails the derivation closed.
+          for (const tool of tools.length ? tools : [undefined]) {
+            const key = JSON.stringify([entry.resource, action, tool ?? null]);
+            if (seen.has(key)) continue;
+            seen.add(key);
+            const resolution: CapabilitySourceResolution = { resource: entry.resource, action };
+            try {
+              if (!catalog || !tool) throw new Error("trusted source has no action definition");
+              const definition = extractMcpToolDefinition(catalog.text, tool);
+              resolution.binding = {
+                action, tool_id: `mcp://${service.id}.demo/tools/${tool}`,
+                source_uri: catalog.source_uri,
+                source_digest: capabilitySourceDigest(definition), operation_ref: tool,
+              };
+              // The selected definition, not the whole catalog, is the trust unit.
+            } catch { /* present without binding means fail closed at establishment */ }
+            resolutions.push(resolution);
+          }
         }
       }
       return resolutions;

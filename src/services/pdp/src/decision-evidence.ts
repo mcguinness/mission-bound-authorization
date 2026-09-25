@@ -20,7 +20,7 @@
 
 import { randomBytes } from "node:crypto";
 import type { ContextActor } from "@mission/actor-chain";
-import { canonicalDigest, type JsonValue } from "@mission/core";
+import { type ActionPhase, canonicalDigest, isActionPhase, type JsonValue } from "@mission/core";
 import {
   DECISION_EVIDENCE_MEDIA_TYPE,
   type EvidenceEnvelope,
@@ -98,11 +98,19 @@ function runtimeActorOf(value: unknown): ContextActor | undefined {
   return Object.keys(out).length ? out : undefined;
 }
 
-/** @spec runtime-evidence#decision-evidence-object `conditions` (normalized permit form). */
+/**
+ * @spec runtime-evidence#decision-evidence-object `conditions` — the permit's
+ * conditions AS RECEIVED on the wire (@spec authzen#response-context), which
+ * the emitter normalizes: the record's `conditions` carries `valid_until` and
+ * `use_limit` only, while `parameter_digest` and `action_phase` are each
+ * "recorded once" as their own top-level members, under those members' own
+ * equality rules.
+ */
 export interface RuntimeConditions {
   valid_until: string;
   use_limit?: number;
   parameter_digest?: string;
+  action_phase?: ActionPhase;
 }
 
 /** @spec runtime-evidence#decision-evidence-object `action_class` (runtime profile's classes). */
@@ -176,6 +184,14 @@ export interface DecisionEvidenceObject {
   subject: RuntimeSubjectRef;
   resource: RuntimeResourceRef;
   action: RuntimeActionRef;
+  /**
+   * @spec runtime-evidence#decision-evidence-object `action_phase` —
+   * CONDITIONAL, REQUIRED when the evaluated operation is a phase of a
+   * compound action. Recorded once here, never inside `conditions`.
+   * Retrospective evidence, never a substitute for the live permit condition
+   * or the PEP's comparison at use.
+   */
+  action_phase?: ActionPhase;
   audience: string;
   action_class: RuntimeActionClass;
   class_source: RuntimeClassSource;
@@ -245,6 +261,13 @@ export interface DecisionEvidenceEmissionInput {
   decision: "permit" | "deny";
   evaluated_at: string;
   action_class?: RuntimeActionClass;
+  /**
+   * The VALIDATED phase from the evaluation context, on a permit and on a
+   * denial alike: a denial has no permit condition to mirror, so it records
+   * the request phase the PDP validated. Malformed input is omitted by the
+   * caller and re-checked here; it is never cast into the enum.
+   */
+  action_phase?: ActionPhase;
   actor?: ContextActor;
   credential?: RuntimeCredentialRef;
   principal_mapping?: RuntimePrincipalMapping;
@@ -317,6 +340,14 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
       if (input.conditions?.parameter_digest !== input.parameter_digest && input.decision === "permit") {
         throw new Error("Decision Evidence parameter binding differs from wire conditions");
       }
+      // @spec runtime-evidence#decision-evidence-object `action_phase`: "On a
+      // permit, the producer MUST ensure it equals the live permit's phase
+      // condition." The parameter-binding rule above is the same duty for the
+      // digest; a denial carries no condition to compare against, so the rule
+      // is scoped to a permit exactly as that one is.
+      if (input.decision === "permit" && input.conditions?.action_phase !== input.action_phase) {
+        throw new Error("Decision Evidence phase binding differs from wire conditions");
+      }
       if (input.decision === "permit" && classes.slice(2).includes(action_class) && input.conditions?.use_limit !== 1) {
         throw new Error("Decision Evidence high-consequence permit requires use_limit 1");
       }
@@ -351,6 +382,9 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
         },
         resource: { type: requiredString(input.resource.type), id: requiredString(input.resource.id) },
         action: { name: requiredString(input.action.name) },
+        // Recorded once, top-level, and only for a validated value: an
+        // unvalidated or malformed phase is OMITTED rather than signed.
+        ...(isActionPhase(input.action_phase) ? { action_phase: input.action_phase } : {}),
         audience: input.audience,
         action_class,
         class_source,

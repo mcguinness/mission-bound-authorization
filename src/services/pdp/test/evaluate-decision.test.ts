@@ -300,3 +300,120 @@ describe("a bound bulk read's Resource-policy check covers every returned vendor
     expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
   });
 });
+
+describe("a permit expires no later than the state view it was decided against (@spec runtime#state-freshness)", () => {
+  const EXEC_RESOURCE = "http://localhost:4403/mcp";
+  const execView = (): MissionView => ({
+    id: "msn_test_1",
+    issuer: "https://as.test",
+    state: "active",
+    version: 1,
+    authority_hash: "sha-256:testhash",
+    authority_set: [
+      { type: "mission_resource_access", resource: EXEC_RESOURCE, actions: ["payments:payment.execute"] },
+    ],
+    subject: { iss: "https://as.test", sub: "alice" },
+    client_id: "ap-agent",
+  });
+  const execReq = (observedAt: string): EvaluationRequest => ({
+    subject: { id: "alice" },
+    resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
+    action: { name: "payments:payment.execute" },
+    context: {
+      audience: EXEC_RESOURCE,
+      mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
+      action_class: "irreversible_action",
+      parameter_digest: "sha-256:pd",
+      freshness: { observed_at: observedAt, source: "load_view" },
+    },
+  });
+  const execOpts = (now: Date) => ({
+    view: execView(),
+    fga: alwaysAllowFga,
+    modelId: "unit-test-model",
+    now: () => now,
+    stalenessBound,
+    relationForAction,
+    allowedFreshnessSources: new Set(["load_view"]),
+  });
+
+  it("caps valid_until at the state observation plus the class staleness bound", async () => {
+    // The irreversible-action class publishes a 30-second bound, so a permit
+    // decided against an observation taken 10 seconds ago is valid through
+    // observation+30s, not the 120-second permit lifetime.
+    const observedAt = new Date(NOW.getTime() - 10_000).toISOString();
+    const dec = await evaluate(execReq(observedAt), execOpts(NOW));
+    expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
+    const conditions = dec.context.conditions as { valid_until: string };
+    expect(conditions.valid_until).toBe(new Date(NOW.getTime() + 20_000).toISOString());
+    // The uncapped lifetime would have been 120 seconds out.
+    expect(Date.parse(conditions.valid_until)).toBeLessThan(NOW.getTime() + 120_000);
+  });
+
+  it("denies stale_state rather than issuing a permit whose window has already closed", async () => {
+    // The observation is exactly at the class bound when evaluation
+    // completes: there is no window left, and an expired positive Decision
+    // must not escape.
+    const observedAt = new Date(NOW.getTime() - 30_000).toISOString();
+    const dec = await evaluate(execReq(observedAt), execOpts(NOW));
+    expect(dec.decision).toBe(false);
+    expect(dec.context.denial_reason).toBe("stale_state");
+    expect(dec.context.conditions).toBeUndefined();
+  });
+});
+
+describe("compound-action phase carriers on the decision (@spec authzen#context-action-phase, response-context)", () => {
+  const PHASE_RESOURCE = "http://localhost:4403/mcp";
+  const phaseView = (): MissionView => ({
+    id: "msn_test_1",
+    issuer: "https://as.test",
+    state: "active",
+    version: 1,
+    authority_hash: "sha-256:testhash",
+    authority_set: [
+      { type: "mission_resource_access", resource: PHASE_RESOURCE, actions: ["payments:payment.execute"] },
+    ],
+    subject: { iss: "https://as.test", sub: "alice" },
+    client_id: "ap-agent",
+  });
+  const phaseReq = (actionPhase: string | undefined): EvaluationRequest => ({
+    subject: { id: "alice" },
+    resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
+    action: { name: "payments:payment.execute" },
+    context: {
+      audience: PHASE_RESOURCE,
+      mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
+      parameter_digest: "sha-256:pd",
+      ...(actionPhase !== undefined ? { action_phase: actionPhase } : {}),
+    },
+  });
+  const phaseOpts = () => ({
+    view: phaseView(),
+    fga: alwaysAllowFga,
+    modelId: "unit-test-model",
+    now: () => NOW,
+    stalenessBound,
+    relationForAction,
+  });
+
+  it("echoes the validated request phase as the permit's conditions.action_phase", async () => {
+    const dec = await evaluate(phaseReq("prepare"), phaseOpts());
+    expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
+    expect((dec.context.conditions as { action_phase?: string }).action_phase).toBe("prepare");
+  });
+
+  it("carries no phase condition for an operation the request places at no phase", async () => {
+    const dec = await evaluate(phaseReq(undefined), phaseOpts());
+    expect(dec.decision).toBe(true);
+    expect((dec.context.conditions as { action_phase?: string }).action_phase).toBeUndefined();
+  });
+
+  it("rejects a context.action_phase outside the closed set instead of echoing it", async () => {
+    for (const bad of ["settle", "COMMIT", "", "prepare "]) {
+      const dec = await evaluate(phaseReq(bad), phaseOpts());
+      expect(dec.decision, bad).toBe(false);
+      expect(dec.context.denial_reason, bad).toBe("out_of_authority");
+      expect(dec.context.conditions, bad).toBeUndefined();
+    }
+  });
+});

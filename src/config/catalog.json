@@ -13,7 +13,15 @@
       { "id": "payments:invoice.read", "amount_bearing": true, "tool_name": "get_invoice" },
       { "id": "payments:vendor.read", "amount_bearing": false, "tool_name": "lookup_vendor" },
       { "id": "payments:payment.schedule", "amount_bearing": true, "tool_name": "schedule_payment" },
-      { "id": "payments:payment.execute", "amount_bearing": true, "tool_name": "execute_wire_transfer" },
+      {
+        "id": "payments:payment.execute",
+        "amount_bearing": true,
+        "tools": [
+          { "tool_name": "check_transfer", "action_phase": "preflight" },
+          { "tool_name": "hold_transfer", "action_phase": "prepare" },
+          { "tool_name": "execute_wire_transfer", "action_phase": "commit" }
+        ]
+      },
       { "id": "payments:remittance.send", "amount_bearing": true, "tool_name": "send_remittance_email" }
     ],
     "connection": { "profile": "oauth", "type": "authorization_code" },
