@@ -71,8 +71,8 @@ export interface SignLifecycleOptions {
  * `aud` (the consumer), `iat`, `jti`, and a `sub_id` opaque Subject Identifier
  * whose `id` is the Mission Identifier; body carries the event under the
  * event-type URI with the Mission identity, `state`, optional `prior_state`,
- * `version`, `committed_at`, `expires_at`, optional `successor`, and optional
- * `containment_version` and `authority_changed`.
+ * `version`, `committed_at`, `expires_at`, optional `successor`, optional
+ * `carried_to`, and optional `containment_version` and `authority_changed`.
  *
  * @spec containment#propagation — `containment_version` rides the same
  * event (no dedicated containment event type): when the kernel commit carries
@@ -101,6 +101,12 @@ export async function signLifecycleEvent(
     committed_at: commit.committed_at,
     expires_at: commit.expires_at,
     ...(commit.successor ? { successor: commit.successor } : {}),
+    // @spec signals#lifecycle-event — CONDITIONAL `carried_to`: the committed
+    // replacement Mission identifier on an old child's `cascaded` event,
+    // omitted when no replacement was committed. Qualified by this event's own
+    // Mission issuer (the envelope `iss`), relayed from the kernel commit
+    // unchanged; correlation, never authority.
+    ...(commit.carried_to ? { carried_to: commit.carried_to } : {}),
     ...(commit.containment_version !== undefined
       ? { containment_version: commit.containment_version }
       : {}),

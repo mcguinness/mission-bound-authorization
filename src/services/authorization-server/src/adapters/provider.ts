@@ -1097,6 +1097,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
       "predecessor",
       "creation_request_id",
       "deferral_code",
+      // @spec child-delegation#carryover-commit — the carryover result
+      // retrieval mode of the child-creation completion surface (no new
+      // endpoint and no new metadata member).
+      "carryover_replacement",
     ]),
   );
 
