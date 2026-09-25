@@ -81,19 +81,19 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-
-informative:
-  I-D.draft-mcguinness-oauth-mission-issuance-grant:
-    title: "Mission Issuance Grant for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
+  I-D.draft-mcguinness-oauth-mission-resource-access:
+    title: "Mission Resource Access Profile for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
     author:
       -
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-oauth-mission-resource-access:
-    title: "Mission Resource Access Profile for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
+
+informative:
+  I-D.draft-mcguinness-oauth-mission-issuance-grant:
+    title: "Mission Issuance Grant for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
     author:
       -
         ins: K. McGuinness
@@ -447,8 +447,8 @@ realization of the runtime core's classification-floor rule
 `mission_action_class_floors`:
 : OPTIONAL JSON object. Each member name is an action identifier from
   the resource's `actions` vocabulary
-  ({{I-D.draft-mcguinness-oauth-mission}}); an action-family
-  identifier, in the issuance profile's action-family form, sets the
+  ({{I-D.draft-mcguinness-oauth-mission-resource-access}}); an
+  action-family identifier, in that profile's action-family form, sets the
   floor for every action in the family. Each value is the minimum
   runtime action class for the mapped action: one of
   `consequential_read`, `consequential_write`, `irreversible_action`,
