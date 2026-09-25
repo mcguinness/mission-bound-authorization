@@ -131,48 +131,44 @@ semantics are defined by Mission-Bound Authorization for OAuth 2.0.
 # Introduction
 
 Mission-Bound Runtime Enforcement {{I-D.draft-mcguinness-mission-runtime}}
-(the "runtime core") defines a binding-neutral semantic contract: an
+(the "runtime core") defines a binding-neutral decision contract: an
 established Mission reference, an effective-authority source, an
 active predicate and freshness bound, a subject and actor, an action
 and resource with normalized parameters, local-policy intersection, an
 authenticated permit or deny, an execution boundary, and fail-closed
-behavior on anything the deployment does not understand. It deliberately
-carries no OAuth claim or endpoint vocabulary, so a non-OAuth binding
-can implement it without importing OAuth semantics.
+behavior on anything the deployment does not understand. It names
+these as abstract roles and carries no OAuth claim or endpoint
+vocabulary. Mission-Bound Authorization for OAuth 2.0
+{{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile")
+defines the Mission-bound access token: its claims, its issuance and
+delegation, and the validation a Resource Server applies to it.
 
-This document is the OAuth 2.0 adapter: it names the concrete claims
-and metadata that satisfy the runtime core's abstract roles for a
-deployment whose Mission-bound credential is the OAuth binding's access
-token {{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile").
-It is normatively dependent on both the runtime core and the issuance
-profile, and it adds no enforcement invariant, failure mode, or
-evidence requirement beyond what the runtime core already states; where
-this document uses a normative keyword, it is realizing a runtime-core
-requirement in OAuth terms, not creating a new one.
+Neither says which validated token values supply which runtime
+inputs, which OAuth mechanisms observe Mission state, or how a
+protected resource publishes its classification floor. This document
+answers those three questions for a deployment whose Mission-bound
+credential is an OAuth access token. Three specifications divide the
+work:
 
-The adapter's scope is exactly four things:
+| Specification | Owns |
+|---|---|
+| Issuance profile {{I-D.draft-mcguinness-oauth-mission}} | Token claims, issuance, delegation, and baseline Resource Server validation |
+| Runtime core {{I-D.draft-mcguinness-mission-runtime}} | Decision inputs, enforcement, freshness requirements, permits, and evidence obligations |
+| This document | The mapping between them, OAuth state-source integration, and classification metadata |
 
-1. token presentation and validation: how the PEP establishes that an
-   OAuth access token is valid before any of its claims become
-   decision inputs ({{token-validation}});
-2. the claim mapping: which OAuth claims realize the runtime core's
-   subject, actor, sender-constraint, audience, and Mission-reference
-   roles ({{claims-mapping}});
-3. the authorization-details mapping: how an `authorization_details`
-   entry, including the `mission_resource_access` type, realizes the
-   runtime core's effective-authority-set input
-   ({{authorization-details-mapping}}); and
-4. protected-resource metadata: how a resource owner carries a runtime
-   classification floor to any PDP through OAuth protected-resource
-   metadata {{RFC9728}} ({{class-floors}}).
+This document defines the processing rules that mapping needs and one
+protected resource metadata member ({{class-floors}}). It cites the
+runtime core's invariants, failure modes, and evidence requirements
+and the issuance profile's token validation rather than restating
+them.
 
-A deployment on a different Mission substrate defines its own adapter
-for these four things and uses the runtime core unchanged
-({{I-D.draft-mcguinness-mission-substrate}}). A decision-API binding
-(for example, the AuthZEN profile, {{I-D.draft-mcguinness-mission-authzen}})
-is an orthogonal axis: it wires the runtime core's abstract decision
-onto a wire protocol and remains unaware of which credential adapter
-supplied the claims it carries.
+A decision API is a separate choice. The AuthZEN profile
+({{I-D.draft-mcguinness-mission-authzen}}) carries the runtime core's
+decision between a PEP and a PDP whatever credential supplied its
+inputs, and a deployment using this document does not need it. A
+deployment on a different Mission substrate supplies its own
+credential profile and uses the runtime core unchanged
+({{I-D.draft-mcguinness-mission-substrate}}).
 
 # Status: An Optional Profile {#doc-status}
 
@@ -196,6 +192,22 @@ Enforcement Point (PEP), Policy Decision Point (PDP), established
 Mission, decision, Resource policy, consequential action, and the
 action-class names as defined by the runtime core
 ({{I-D.draft-mcguinness-mission-runtime}}).
+
+Validated credential context:
+: The values a PEP has established for a presented access token under
+  {{token-validation}}: the claims of a validated JWT access token, or
+  the members of the introspection response for a presented opaque
+  token.
+
+Credential authority:
+: The `authorization_details` in the validated credential context.
+
+Current effective authority:
+: The Mission's approved Authority Set narrowed by whatever narrowing
+  mechanism the deployment runs, as the runtime core's authority input
+  defines it; the issuance profile's Status companion names it the
+  Effective Authority Set
+  ({{I-D.draft-mcguinness-oauth-mission-status}}).
 
 # Token Presentation and Validation {#token-validation}
 
