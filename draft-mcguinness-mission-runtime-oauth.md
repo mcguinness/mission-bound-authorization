@@ -209,7 +209,11 @@ Validated credential context:
   token.
 
 Credential authority:
-: The `authorization_details` in the validated credential context.
+: The authority the presented token itself carries: for a Mission-bound
+  token, the `authorization_details` in the validated credential
+  context; for an ordinary token joined to a Mission under an
+  externally established reference, the authority it carries as issued
+  ({{authorization-details-mapping}}).
 
 Current effective authority:
 : The Mission's approved Authority Set narrowed by whatever narrowing
@@ -295,7 +299,7 @@ claim, or the introspection response member of the same name.
 | Actor-delegation chain | `act`, when delegation is in effect |
 | Sender-constraint confirmation | `cnf`, verified during validation ({{token-validation}}) |
 | Credential audience or protected resource | The protected resource the PEP guards; validation has established that `aud` names it |
-| Authority entry | The applicable entry of the credential authority ({{authorization-details-mapping}}) |
+| Authority entry | The applicable entry of the credential authority for a Mission-bound token; under a join, the applicable entry of the Mission's authority ({{authorization-details-mapping}}) |
 | Current effective authority | The approved Authority Set as narrowed, from a source that reports the narrowing ({{authorization-details-mapping}}) |
 | Credential issuer | `iss` |
 | Credential expiry | `exp` |
@@ -367,15 +371,21 @@ the PDP fail closed on an authority-entry type it does not understand
 ({{I-D.draft-mcguinness-mission-runtime}}). On this profile those are
 two inputs, and the action MUST fall within both:
 
-- the credential authority: the `authorization_details` of the
-  validated JWT or, for an opaque token, of its introspection
-  response; and
+- the credential authority: for a Mission-bound token, the
+  `authorization_details` of the validated JWT or, for an opaque
+  token, of its introspection response; for an ordinary token joined
+  to a Mission under an externally established reference
+  ({{token-validation}}), the authority that token carries as issued,
+  established and enforced as the join profile defines (the Mission
+  Authority Server enforces it at the Resource Server or gateway,
+  {{I-D.draft-mcguinness-mission-authority-server}}); and
 - the current effective authority: the approved Authority Set,
-  narrowed by any narrowing mechanism the deployment runs. With no
-  narrowing mechanism it is the approved set, which already bounds the
-  credential authority; with one, such as Containment or discharge, it
-  is established from a source that reports the narrowing
-  ({{state-sourcing}}).
+  narrowed by any narrowing mechanism the deployment runs. For a
+  Mission-bound token with no narrowing mechanism running, the
+  approved set already bounds the credential authority, so this bound
+  needs no lookup. Otherwise it is established from a source that
+  reports it ({{state-sourcing}}), and under a join the join profile
+  draws it from the Mission.
 
 A token narrowed below its Mission's approved Authority Set is
 evaluated at its own narrower entry. The PDP MUST NOT substitute the
