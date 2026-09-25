@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-09-25T17:33:19Z
-Source repository commit: c01bd4eb232418ddd4f4f393e2ce180053990f17
+Generated: 2026-09-25T18:51:52Z
+Source repository commit: e7f8fc668d5519ba4a6040bd40b712b6da33d69f
 Member count: 7
 
 Reading order:
@@ -16518,8 +16518,8 @@ Table of Contents
 3.  Status: An Optional Profile
 
    Role: companion.  Spec maturity: experimental.  Maintenance: active.
-   Implementation: 152 conformance rows in conformance-manifest.json (37
-   tested, 22 partial, 90 todo, 3 blocked).  Adopt when: Actions need a
+   Implementation: 152 conformance rows in conformance-manifest.json (35
+   tested, 22 partial, 92 todo, 3 blocked).  Adopt when: Actions need a
    point-of-use check, not just issuance-time gating.  Requires: Mission
    Substrate Requirements.  Also requires, conditionally: Mission-Bound
    Authorization for OAuth 2.0 and Mission Runtime OAuth Adapter (when
