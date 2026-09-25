@@ -19,8 +19,8 @@
     "content_sha256": "68c25433a790617562f6ab3d906c61c887c117ef224afcbf394e16d33c3dd8d4"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "8f356e9b1dc37c1a1451c86fc707d3e1b58729af",
-    "content_sha256": "4a3c7ec8c63dfc303da57118edf84745f8ce8c9bbe608101bd23d258a3de29b4"
+    "revision": "b46a33c28365cc7a7e7748ebb3ab0332d1b822e2",
+    "content_sha256": "230c5d1a6efcb9187c0aa3ca3bde9f3894054aa251a611eb64c03ad0fc2710e0"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "cf1c3d4fe0d05b3dc193538e256d401b0cfb0eb9",
@@ -8969,7 +8969,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Deployment-declaration duty (AS role), same artifact gap as runtime.conformance.no-claim-outside-declared-scope: no Enforcement Scope Statement exists to check the MUST NOT against. Vacuously true of this reference deployment on inspection: TOOL_ACTIONS in mcp-payments/src/pep.ts routes all six tools through the same enforce() dispatch, so none bypasses a PEP by construction. runtime.classification.high-consequence-must-be-gated demonstrates that directly for the two high-consequence entries (execute_wire_transfer, send_remittance_email); runtime.rs-profile.no-claim-without-pep is no longer cited here (author review finding 2 downgraded it to partial: its mappings cover one of the six declared operations and inspect no RS conformance claim, so it is not itself direct demonstration for the other four). A vacuous antecedent is not evidence for the declaration duty itself."
+   "notes": "Deployment-declaration duty (AS role), same artifact gap as runtime.conformance.no-claim-outside-declared-scope: an Enforcement Scope Statement artifact does exist (src/config/enforcement-scope.json, validated at load through loadRuntimePosture's validateEnforcementScopeStatement), but it declares no claims or extensions and nothing checks this MUST NOT against it. Vacuously true of this reference deployment on inspection: TOOL_ACTIONS in mcp-payments/src/pep.ts routes all six tools through the same enforce() dispatch, so none bypasses a PEP by construction. runtime.classification.high-consequence-must-be-gated demonstrates that directly for the two high-consequence entries (execute_wire_transfer, send_remittance_email); runtime.rs-profile.no-claim-without-pep is no longer cited here (author review finding 2 downgraded it to partial: its mappings cover one of the six declared operations and inspect no RS conformance claim, so it is not itself direct demonstration for the other four). A vacuous antecedent is not evidence for the declaration duty itself."
   },
   {
    "id": "runtime.custody.mediated-credential-sender-constrained",
@@ -10851,15 +10851,9 @@
     "normative": "the PDP's idempotency-scope claim and the PEP's use-limited permit consumption are each a single linearizable operation; two replicas never both succeed in claiming or consuming the same key"
    },
    "level": "concurrency",
-   "coverage": "tested",
-   "tests": [
-    {
-     "file": "src/services/mcp-payments/test/transaction.test.ts",
-     "name": "M5 transaction-assurance tier > consumes a txn exactly once when two replicas are presented distinct token jtis simultaneously",
-     "level": "concurrency",
-     "surface": "resource-operation"
-    }
-   ]
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Re-audited (#302): this row was tested against src/services/mcp-payments/test/transaction.test.ts \"M5 transaction-assurance tier > consumes a txn exactly once when two replicas are presented distinct token jtis simultaneously\", a PEP/resource-side test, which is not a witness for this row's PDP role. What that test establishes is single-winner consumption of a resource-issued txn across two replicas over one shared store; what this row demands, per its role, is the PDP's atomic claim of the (idempotency scope, `idempotency_key`) pair as a single linearizable operation before permit issuance. No PDP-side claim store exists: src/services/pdp has none, and enforcement-scope.ts:78's transaction_assurance/idempotency_claim_domain field is declared but never read. The misattribution arose because the quoted `text` is the sentence from the Permit replay prevention (PEP) paragraph while the row carries role PDP, and the observation conjoins both duties; the PEP conjunct is separately traced at runtime.single-use.store-durability-and-multi-instance-sharing (PEP, tested) and the resource-side conjunct at txn-authorization.consumption.linearizable-cross-replica and txn-authorization.consumption.two-jti-one-txn-rejected (RS, tested), so the citation moves nowhere: it already stands under the roles it proves. Nothing PDP-side is witnessed, so todo, not partial."
   },
   {
    "id": "runtime.idempotency.scope-published-and-no-volatile-members",
@@ -10900,15 +10894,9 @@
     "normative": "for the high-consequence classes, the deployment retains a durable consumed-key tombstone for at least its declared idempotency horizon, a claim against it inside that horizon is refused, never treated as fresh, and outside the high-consequence classes the deployment publishes which retention posture applies"
    },
    "level": "concurrency",
-   "coverage": "tested",
-   "tests": [
-    {
-     "file": "src/services/mcp-payments/test/transaction.test.ts",
-     "name": "the crash window between consumption and the effect (@spec txn-authorization#offline-verification) > refuses a DIFFERENT operation presented under an already-consumed txn",
-     "level": "concurrency",
-     "surface": "resource-operation"
-    }
-   ]
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Re-audited (#302): this row was tested against src/services/mcp-payments/test/transaction.test.ts \"the crash window between consumption and the effect (@spec txn-authorization#offline-verification) > refuses a DIFFERENT operation presented under an already-consumed txn\", a PEP/resource-side test, which is not a witness for this row's PDP role. That test asserts that a different operation presented under an in-window consumed txn is refused with duplicate_suppressed and leaves the stored consumption record untouched. It witnesses no part of this row: there is no durable consumed-key tombstone retained for a declared idempotency horizon, no PDP claim evaluated against one, and no published retention posture for keys outside the high-consequence classes. The consumed-txn refusal it does prove is traced at txn-authorization.consumption.two-jti-one-txn-rejected (RS, tested), so the citation stays where it belongs and is not carried here. The PDP-side claim store this row presupposes is unbuilt (src/services/pdp has no claim store; enforcement-scope.ts:78's idempotency_claim_domain field is declared but never read)."
   },
   {
    "id": "runtime.idempotency.claim-exact-enforcement-only",
@@ -10978,7 +10966,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "No Enforcement Scope Statement artifact exists anywhere in this codebase to check a claim against (grep -rln \"Enforcement Scope Statement\" src finds only comments referencing the concept), the same gap runtime.conformance.no-claim-outside-declared-scope already records. Nothing to assert without fabricating the artifact this row presupposes; not specific to #648."
+   "notes": "Corrected (#302): an Enforcement Scope Statement artifact does exist, src/config/enforcement-scope.json, read as RUNTIME_SCOPE_CONFIG by src/packages/demo-data/src/index.ts and validated at load by src/services/pdp/src/runtime-posture.ts's loadRuntimePosture, which applies validateEnforcementScopeStatement from src/services/pdp/src/enforcement-scope.ts (RUNTIME_POSTURE = loadRuntimePosture(RUNTIME_SCOPE_CONFIG) at runtime-posture.ts:100, asserted in src/services/pdp/test/runtime-posture.test.ts; the validator's own rules are tested in src/services/pdp/test/enforcement-scope.test.ts). The claim-domain member is declared at enforcement-scope.ts:78 as transaction_assurance[].idempotency_claim_domain. The row stays todo because none of that names an Exact claim domain: the artifact declares no claims or extensions at all, so it carries no transaction_assurance entry, nothing reads the field, and no test asserts a declaration per mediated action class or idempotency scope. Not specific to #648."
   },
   {
    "id": "runtime.idempotency.reversible-write-pep-reserve-and-retain",
