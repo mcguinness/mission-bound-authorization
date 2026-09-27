@@ -1094,8 +1094,8 @@ refusal.
 
 | Condition | Required behavior |
 |---|---|
-| Token validation fails, including sender-constraint verification | Refuse before runtime Mission evaluation |
-| Mission governance is required but the token lacks a `mission` claim | Refuse before runtime Mission evaluation, unless the Mission binding is externally established ({{mission-binding}}) |
+| Credential validation fails, including sender-constraint verification | Refuse before runtime Mission evaluation |
+| Mission governance is required but the credential carries no Mission reference | Refuse before runtime Mission evaluation, unless the Mission binding is externally established ({{mission-binding}}) |
 | PEP-PDP channel authentication or integrity protection fails | Fail closed |
 | Mission state cannot be established within the staleness bound | Fail closed for consequential actions |
 | A policy-required history predicate cannot be established, or the evidence store cannot be consulted ({{input-history}}) | Fail closed |
@@ -2865,16 +2865,15 @@ MUST NOT advertise consumption enforcement it does not perform.
 
 Every PDP decision on a consequential action MUST produce a runtime
 enforcement evidence record. A PEP refusal for a consequential action,
-whether before a PDP decision (for example, token validation failure
-or PDP unreachability) or after a PDP permit (for example, a
+whether before a PDP decision (for example, credential-validation
+failure or PDP unreachability) or after a PDP permit (for example, a
 `parameter_digest` mismatch), MUST likewise produce a runtime
 enforcement evidence record with the available fields and the failure
 condition. This document fixes the minimum record content and local
 integrity requirements; the concrete record schemas, canonical byte
 representation, and integrity envelope, together with the Mission
-Receipt's portable schema ({{mission-receipt}}), are defined by
-Mission Runtime Evidence
-({{I-D.draft-mcguinness-mission-runtime-evidence}}).
+Receipt's portable schema ({{mission-receipt}}), are defined by Mission
+Runtime Evidence ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 A record captures decision inputs, the applicable policy and
 authority references, the result, and the failure condition. No

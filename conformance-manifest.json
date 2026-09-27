@@ -11762,7 +11762,7 @@
    "id": "runtime.evidence.decision-and-refusal-must-produce-record",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "evidence",
-   "text": "Every PDP decision on a consequential action MUST produce a runtime enforcement evidence record. A PEP refusal for a consequential action, whether before a PDP decision (for example, token validation failure or PDP unreachability) or after a PDP permit (for example, a `parameter_digest` mismatch), MUST likewise produce a runtime enforcement evidence record with the available fields and the failure condition.",
+   "text": "Every PDP decision on a consequential action MUST produce a runtime enforcement evidence record. A PEP refusal for a consequential action, whether before a PDP decision (for example, credential-validation failure or PDP unreachability) or after a PDP permit (for example, a `parameter_digest` mismatch), MUST likewise produce a runtime enforcement evidence record with the available fields and the failure condition.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
