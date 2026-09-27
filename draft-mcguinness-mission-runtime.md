@@ -736,35 +736,43 @@ deployment declares it.
 
 ### Authority {#input-authority}
 
-The action MUST be authorized by an applicable authority entry the
-Mission-bound credential carries, or that is otherwise available to
-the PEP or PDP for that credential under the binding's own rules (for
-example, through introspection when the authority is not represented
-inline).
+The action MUST fall within both of the following authority bounds:
 
-This input is the Mission's current effective authority: the approved
-set the credential's authority entry names at face value, narrowed by
-whatever narrowing mechanism the deployment runs. A deployment that
-runs no narrowing mechanism evaluates an effective authority equal to
-the approved set. A deployment that runs one, for example discharge or
-the Containment profile, does not. The OAuth binding formalizes this
-as the Effective Authority Set, defined by its Status profile
-({{I-D.draft-mcguinness-oauth-mission-status}}).
+- the credential authority: the authority the acting credential
+  carries, or that is otherwise available to the PEP or PDP for that
+  credential under its credential profile's rules; for a credential
+  joined to an externally established Mission reference
+  ({{mission-binding}}), the authority it carries as issued, as the
+  join defines; and
+- the current effective authority: the Mission's approved Authority
+  Set, narrowed by whatever narrowing mechanism the deployment runs. A
+  deployment that runs no narrowing mechanism evaluates an effective
+  authority equal to the approved set. A deployment that runs one, for
+  example discharge or containment, does not.
+
+The PDP MUST NOT substitute the approved Authority Set, or any other
+record of Mission authority, for the credential authority: a
+credential narrowed below its Mission's approved set is evaluated at
+its own narrower authority. The OAuth realization of both bounds is
+{{I-D.draft-mcguinness-mission-runtime-oauth}}, Section "Credential
+Authority and Current Effective Authority".
 
 Where the deployment runs the Entry Discharge companion's discharge
-mechanism ({{I-D.draft-mcguinness-oauth-mission-discharge}}), this
-input excludes a discharged entry once the PDP can establish discharge
-state from its Mission state source. A PDP that recognizes
-`terminal_when` SHOULD refuse an action within a discharged entry at
-the point of use, learning discharge state from the surfaces that
-report it ({{I-D.draft-mcguinness-oauth-mission-discharge}}, Section
+mechanism ({{I-D.draft-mcguinness-oauth-mission-discharge}}), the
+current effective authority excludes a discharged entry once the PDP
+can establish discharge state from its Mission state source. A PDP
+that recognizes an entry's discharge condition SHOULD refuse an action
+within a discharged entry at the point of use, learning discharge
+state from the surfaces that report it
+({{I-D.draft-mcguinness-oauth-mission-discharge}}, Section
 "Relationship to Runtime Enforcement").
 
 Where a Mission participates in the Containment profile
-({{I-D.draft-mcguinness-oauth-mission-containment}}), this input
-excludes contained capability as well. The PDP MUST refuse an action
-within an entry that is currently contained even though a token
-issued before the contain transition still carries it, established
+({{I-D.draft-mcguinness-oauth-mission-containment}}), the current
+effective authority excludes contained capability as well. The PDP
+MUST refuse an action within an entry that is currently contained
+even though a credential issued before the contain transition still
+carries it, established
 from the same Mission state source and freshness bound that governs
 the `active` check ({{state-freshness}}); a Mission stays `active`
 while contained, so this check, not the state check, is what a

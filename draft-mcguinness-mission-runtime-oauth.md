@@ -378,12 +378,12 @@ observations of Mission state.
 
 ## Credential Authority and Current Effective Authority {#authorization-details-mapping}
 
-The runtime core requires that the action be authorized by an
-applicable authority entry the Mission-bound credential carries,
-evaluated against the Mission's current effective authority, and that
-the PDP fail closed on an authority-entry type it does not understand
-({{I-D.draft-mcguinness-mission-runtime}}). On this profile those are
-two inputs, and the action MUST fall within both:
+The runtime core requires that the action fall within both the
+credential authority and the current effective authority, that the PDP
+never substitute the second for the first, and that the PDP fail
+closed on an authority-entry type it does not understand
+({{I-D.draft-mcguinness-mission-runtime}}). On this profile the two
+bounds are:
 
 - the credential authority: for a Mission-bound token, the
   `authorization_details` of the validated JWT or, for an opaque
@@ -402,9 +402,7 @@ two inputs, and the action MUST fall within both:
   draws it from the Mission.
 
 A token narrowed below its Mission's approved Authority Set is
-evaluated at its own narrower entry. The PDP MUST NOT substitute the
-approved Authority Set, or any other record of Mission authority, for
-the credential authority.
+therefore evaluated at its own narrower entry.
 
 Each entry is enforced under its type's own specification, as the
 issuance profile requires of a Resource Server

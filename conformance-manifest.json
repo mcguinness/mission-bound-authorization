@@ -10166,7 +10166,7 @@
    "id": "runtime.decision-inputs.authority-entry-and-subset-required",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "input-authority",
-   "text": "The action MUST be authorized by an applicable authority entry the Mission-bound credential carries, or that is otherwise available to the PEP or PDP for that credential",
+   "text": "The action MUST fall within both of the following authority bounds",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -10178,10 +10178,10 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "an action with no applicable authorization_details entry, or whose resource and invoked identity fall outside the entry's resource and actions, is refused"
+    "normative": "an action outside the applicable entry of the credential authority, or outside the Mission's current effective authority, is refused"
    },
    "level": "endpoint",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/pdp/test/evaluate.test.ts",
@@ -10196,13 +10196,36 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "The endpoint-level test needs live OpenFGA and sandbox-skip locally; the unit-level test runs unconditionally against a stub Fga and proves the same 'no applicable entry -> refused' rule for an action absent from the policy's action map entirely, so this row has non-skipping local coverage too. 'vendor outside the constraint -> deny parameter_violation (entry matched, constraint fails)' (same file) is no longer cited here (#801): a vendors constraint that excludes the target is a matched entry whose constraint fails, not an entry falling outside this row's resource/actions match, so it no longer supports this row's claim."
+   "notes": "Partial (#846): the cited tests witness the current-effective-authority bound only (an action outside the Mission's approved set is refused). The credential-authority bound, a credential narrowed below its Mission evaluated at its own narrower entry, is unwitnessed: #825 demonstrated that the resource path drops authorization_details and evaluates the Mission's broader set. The endpoint-level test needs live OpenFGA and sandbox-skip locally; the unit-level test runs unconditionally against a stub Fga and proves the same 'no applicable entry -> refused' rule for an action absent from the policy's action map entirely, so this row has non-skipping local coverage too. 'vendor outside the constraint -> deny parameter_violation (entry matched, constraint fails)' (same file) is no longer cited here (#801): a vendors constraint that excludes the target is a matched entry whose constraint fails, not an entry falling outside this row's resource/actions match, so it no longer supports this row's claim."
+  },
+  {
+   "id": "runtime.decision-inputs.no-substitute-approved-set",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "input-authority",
+   "text": "The PDP MUST NOT substitute the approved Authority Set, or any other record of Mission authority, for the credential authority",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a credential narrowed below its Mission's approved set is refused an action the Mission allows but the credential's own authority omits"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#846 specification slice. The implementation defect is #825: the resource path drops the token's authorization_details and evaluates the Mission's broader authority_set, so no test can witness this row until that fix lands."
   },
   {
    "id": "runtime.decision-inputs.discharge-excludes-authority",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "input-authority",
-   "text": "A PDP that recognizes `terminal_when` SHOULD refuse an action within a discharged entry at the point of use",
+   "text": "A PDP that recognizes an entry's discharge condition SHOULD refuse an action within a discharged entry at the point of use",
    "role": "PDP",
    "strength": "SHOULD",
    "applicability": {
@@ -10245,7 +10268,7 @@
    "id": "runtime.decision-inputs.containment-excludes-authority",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "input-authority",
-   "text": "The PDP MUST refuse an action within an entry that is currently contained even though a token issued before the contain transition still carries it",
+   "text": "The PDP MUST refuse an action within an entry that is currently contained even though a credential issued before the contain transition still carries it",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -10258,7 +10281,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "a contained entry is refused at the point of use regardless of whether the presented token predates the contain transition"
+    "normative": "a contained entry is refused at the point of use regardless of whether the presented credential predates the contain transition"
    },
    "level": "endpoint",
    "coverage": "tested",
