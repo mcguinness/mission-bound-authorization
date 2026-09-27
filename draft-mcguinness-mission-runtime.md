@@ -1184,15 +1184,13 @@ Also requires, conditionally: Mission-Bound Authorization for OAuth 2.0 and Miss
 
 This specification defines its own architectural roles (PEP, PDP,
 Resource Server, Resource policy) rather than importing them from a
-credential binding, so that the contract it states is readable
-without reference to any one binding's wire format. It uses the
-Mission, Mission Intent, Mission Issuer, and Authority Set
-terminology of {{I-D.draft-mcguinness-mission-substrate}}. Where a
-binding realizes these roles concretely, this document says so: the
-OAuth binding realizes them per {{I-D.draft-mcguinness-oauth-mission}}
-and {{I-D.draft-mcguinness-mission-runtime-oauth}}, including its
-`client`, `resource owner`, `authorization_details`, `mission` claim,
-Effective Authority Set, and discharge terms.
+credential binding, so that the contract it states is readable without
+reference to any one binding's wire format. It uses the Mission, Mission
+Intent, Mission Issuer, and Authority Set terminology of
+{{I-D.draft-mcguinness-mission-substrate}}. A credential profile maps
+these roles onto one credential type; the OAuth 2.0 mapping is
+{{I-D.draft-mcguinness-mission-runtime-oauth}}, Section "Runtime Input
+Mapping".
 
 Policy Enforcement Point (PEP):
 : The component that can prevent a consequential action and that
@@ -1275,6 +1273,11 @@ Mission-bound credential:
   one ({{mission-binding}}). The OAuth realization is an access token
   carrying `authorization_details` and a `mission` claim
   ({{I-D.draft-mcguinness-oauth-mission}}).
+
+Credential profile:
+: A companion that realizes this document's roles, decision inputs,
+  and state sources for one credential type. The OAuth 2.0 one is
+  {{I-D.draft-mcguinness-mission-runtime-oauth}}.
 
 # Mission Substrate {#mission-substrate}
 
