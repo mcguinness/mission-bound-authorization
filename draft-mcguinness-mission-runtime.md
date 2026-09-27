@@ -757,6 +757,13 @@ its own narrower authority. The OAuth realization of both bounds is
 {{I-D.draft-mcguinness-mission-runtime-oauth}}, Section "Credential
 Authority and Current Effective Authority".
 
+Where the deployment enforces a narrowing mechanism at action time,
+the PDP MUST establish the current effective authority from a source
+that reports that mechanism's narrowing, within the staleness bound
+that governs the `active` check ({{state-freshness}}). A source that
+reports only lifecycle state does not qualify: a narrowed Mission
+stays `active`.
+
 Where the deployment runs the Entry Discharge companion's discharge
 mechanism ({{I-D.draft-mcguinness-oauth-mission-discharge}}), the
 current effective authority excludes a discharged entry once the PDP
@@ -1311,7 +1318,7 @@ It consumes these optional capabilities:
 | Structured Authority | required | The decision contract materializes and evaluates the effective Authority Set, with its subset rule and Common Constraints ({{input-authority}}, {{policy-view}}); as the substrate's composition rule warns, a Mission reference alone is not structured authority |
 | Lifecycle-Gated Authorization | required | Every Runtime Decision gates on the only-`active`-permits rule ({{decision}}) |
 | State-Observable | required when the enforcement scope's staleness bound is tighter than the credential lifetime | An authenticated freshness source with a stated staleness bound, consumed wherever an enforcement scope's published staleness bound is tighter than the credential lifetime ({{state-freshness}}) |
-| Monotonic Derivation | required when delegation, attenuation, or containment narrowing is enforced at action time | Consumed where delegation, attenuation, or containment narrowing is enforced at action time through effective-set evaluation ({{input-authority}}) |
+| Monotonic Derivation | required when delegation or attenuation is enforced at action time | Consumed where delegation or attenuation is enforced at action time through effective-set evaluation ({{input-authority}}); observing a later narrowing, such as containment, is not a derivation property, and {{input-authority}} requires a source that reports it |
 | Credential-Bound | required when the binding provides the Mission-bound credential | Consumed when the binding provides the Mission-bound credential carrying the `mission` claim; a binding that does not provide it supplies an externally established Mission reference instead, under the binding-establishment step of {{mission-binding}} |
 | Independently Verifiable | not consumed | Offline verification is the audit profile's concern ({{I-D.draft-mcguinness-mission-audit}}); the runtime evidence companion defines the records and their scoped verification ({{I-D.draft-mcguinness-mission-runtime-evidence}}) |
 | Portable Evidence | not consumed | Evidence portability is the audit profile's concern ({{I-D.draft-mcguinness-mission-audit}}); the records themselves are the runtime evidence companion's ({{I-D.draft-mcguinness-mission-runtime-evidence}}) |
