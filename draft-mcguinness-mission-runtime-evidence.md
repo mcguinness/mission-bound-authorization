@@ -413,10 +413,11 @@ canonicalization, and integrity envelope a deployment emits.
   for the live permit condition or the PEP's comparison at use.
 
 `audience`:
-: REQUIRED. A string. The audience the PDP evaluated: the runtime
-  profile's audience input to the Decision Output
-  ({{I-D.draft-mcguinness-mission-runtime}}), as carried by the
-  deployment's decision-API binding (for example, the AuthZEN
+: REQUIRED. A string. The audience or protected-resource identifier
+  of the enforcement boundary, as the PDP established it, which a
+  permit binds ({{I-D.draft-mcguinness-mission-runtime}}, Section
+  "Permit Binding"), as carried by the deployment's decision-API
+  binding (for example, the AuthZEN
   binding's decision-API request's audience member,
   {{I-D.draft-mcguinness-mission-authzen}}).
 
