@@ -1202,6 +1202,11 @@ Policy Decision Point (PDP):
   Mission and returns permit or deny. Its placement is a deployment
   choice ({{decision}}).
 
+Resource Server:
+: The component that hosts the protected resources an action targets
+  and applies Resource policy to them, whichever credential type it
+  accepts.
+
 Resource policy:
 : Local policy of the Resource Server or protected resource, including
   object-level authorization, tenant configuration, legal holds,
@@ -1737,10 +1742,10 @@ action. A deployment claiming this profile MUST observe these rules:
 - The PEP MUST sit at the last controllable boundary before the
   action. A permit checked further upstream does not survive
   parameter changes, retries, or routing that happen after the check.
-- A token-issuance decision does not replace execution-time
-  authorization. A token-only Resource Server cannot claim runtime
-  enforcement; the issuance gate is governance, the runtime gate is
-  enforcement.
+- A credential-issuance decision does not replace execution-time
+  authorization. A Resource Server that only validates credentials
+  cannot claim runtime enforcement; the issuance gate is governance, the
+  runtime gate is enforcement.
 - A tool-catalog filter does not replace per-call authorization.
   Filtering a tool list by the caller's authority is exposure
   control; every consequential tool call MUST still pass the runtime
@@ -2038,8 +2043,8 @@ A Resource Server that claims conformance to this runtime
 profile MUST publish or otherwise make available a Resource Server
 runtime profile for the protected resources and operations in scope.
 The Resource Server runtime profile is a deployment conformance
-statement, not an OAuth Authorization Server metadata extension and
-not a new access token format. It is the family's enforcement
+statement, not a discovery-metadata extension and not a new
+credential format. It is the family's enforcement
 adapter contract for a resource integration: the artifact two
 independent implementations name and version to agree on a
 resource's action identifiers, parameter semantics, and enforcement
