@@ -413,10 +413,11 @@ canonicalization, and integrity envelope a deployment emits.
   for the live permit condition or the PEP's comparison at use.
 
 `audience`:
-: REQUIRED. A string. The audience the PDP evaluated: the runtime
-  profile's audience input to the Decision Output
-  ({{I-D.draft-mcguinness-mission-runtime}}), as carried by the
-  deployment's decision-API binding (for example, the AuthZEN
+: REQUIRED. A string. The audience or protected-resource identifier
+  of the enforcement boundary, as the PDP established it, which a
+  permit binds ({{I-D.draft-mcguinness-mission-runtime}}, Section
+  "Permit Binding"), as carried by the deployment's decision-API
+  binding (for example, the AuthZEN
   binding's decision-API request's audience member,
   {{I-D.draft-mcguinness-mission-authzen}}).
 
@@ -724,10 +725,10 @@ Evidence ({{execution-evidence-object}}), never a Refusal Record:
   {{decision-evidence-object}} defines (for example, as carried in the
   AuthZEN binding's decision-API request,
   {{I-D.draft-mcguinness-mission-authzen}}). A PEP populates them from
-  its own token validation; a PDP populates them from the request
+  its own credential validation; a PDP populates them from the request
   context it received, never asserting a check only the other role
-  can perform. For a token-validation failure, the record MUST NOT
-  describe unverified token claims as authenticated facts
+  can perform. For a credential-validation failure, the record MUST
+  NOT describe unverified credential claims as authenticated facts
   ({{I-D.draft-mcguinness-mission-runtime}}).
 
 `sequence`:

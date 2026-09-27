@@ -91,6 +91,15 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-oauth-ai-agent-instance:
+  I-D.draft-mcguinness-oauth-mission-containment:
+    title: "Mission Containment for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
@@ -301,8 +310,10 @@ claim, or the introspection response member of the same name.
 |---|---|
 | Established Mission reference | The `mission` claim's `id` and `issuer` {{I-D.draft-mcguinness-oauth-mission}}, or an externally established reference ({{token-validation}}) |
 | Authenticated subject | `sub` |
-| Client or immediate-actor identity | `client_id` names the client; when `act` is present, the immediate actor is the current actor in `act` |
+| Client identity | `client_id` |
+| Immediate actor | The current actor in `act` when `act` is present; otherwise the client `client_id` names |
 | Actor-delegation chain | `act`, when delegation is in effect |
+| Attester-verified actor context | Claims verified under the AI-agent-instance profile, such as `agent_instance_id` and `agent_model` ({{I-D.draft-mcguinness-oauth-ai-agent-instance}}) |
 | Sender-constraint confirmation | `cnf`, verified during validation ({{token-validation}}) |
 | Credential audience or protected resource | The protected resource the PEP guards; validation has established that `aud` names it |
 | Authority entry | The applicable entry of the credential authority for a Mission-bound token; under a join, the applicable entry of the Mission's authority ({{authorization-details-mapping}}) |
@@ -310,6 +321,7 @@ claim, or the introspection response member of the same name.
 | Credential issuer | `iss` |
 | Credential expiry | `exp` |
 | The Mission's `expires_at` (time input) | The `mission` claim's `expires_at` member where present, or a Mission state source that reports the Mission's expiry |
+| Mission state version (`mission_state_version`) | The Mission Status `version` member, the Mission's state version ({{I-D.draft-mcguinness-oauth-mission-status}}) |
 
 Four pairs in the table are related but distinct inputs:
 
@@ -352,15 +364,19 @@ These realize the runtime core's decision inputs
 themselves, including that no runtime input expands authority beyond
 the issued authority, are the runtime core's.
 
-The Mission reference is `id` and `issuer`. `authority_hash` is not
-part of the baseline reference; a deployment that needs it as a
-commitment proof rather than an audit correlator obtains it from the
-Mission issuer under the issuance profile's Local Approved-Set
-Verification profile
-({{I-D.draft-mcguinness-oauth-mission}}). The runtime core's permit
-binding and required decision evidence record the roles above; their
-serialization is defined by the runtime core and the decision-API
-profile in use, for example {{I-D.draft-mcguinness-mission-authzen}}.
+The Mission reference is `id` and `issuer`. Neither `authority_hash` nor
+`intent_hash` is carried on the baseline `mission` claim or the default
+introspection projection, so a PDP has them for the runtime core's
+evidence only with direct Mission-record access, introspection's
+`authority_hash` disclosure privilege, or the issuance profile's Local
+Approved-Set Verification profile
+({{I-D.draft-mcguinness-oauth-mission}}). A deployment that needs
+`authority_hash` as a commitment proof rather than an audit correlator
+obtains it from the Mission issuer under the last of these. The runtime
+core's permit binding and required decision evidence record the roles
+above; their serialization is defined by the runtime core and the
+decision-API profile in use, for example
+{{I-D.draft-mcguinness-mission-authzen}}.
 
 # Authority and State Sources {#authority-and-state}
 
@@ -370,12 +386,12 @@ observations of Mission state.
 
 ## Credential Authority and Current Effective Authority {#authorization-details-mapping}
 
-The runtime core requires that the action be authorized by an
-applicable authority entry the Mission-bound credential carries,
-evaluated against the Mission's current effective authority, and that
-the PDP fail closed on an authority-entry type it does not understand
-({{I-D.draft-mcguinness-mission-runtime}}). On this profile those are
-two inputs, and the action MUST fall within both:
+The runtime core requires that the action fall within both the
+credential authority and the current effective authority, that the PDP
+never substitute the second for the first, and that the PDP fail
+closed on an authority-entry type it does not understand
+({{I-D.draft-mcguinness-mission-runtime}}). On this profile the two
+bounds are:
 
 - the credential authority: for a Mission-bound token, the
   `authorization_details` of the validated JWT or, for an opaque
@@ -394,9 +410,7 @@ two inputs, and the action MUST fall within both:
   draws it from the Mission.
 
 A token narrowed below its Mission's approved Authority Set is
-evaluated at its own narrower entry. The PDP MUST NOT substitute the
-approved Authority Set, or any other record of Mission authority, for
-the credential authority.
+therefore evaluated at its own narrower entry.
 
 Each entry is enforced under its type's own specification, as the
 issuance profile requires of a Resource Server
@@ -456,10 +470,12 @@ here does not require a deployment to implement every source.
 A lifecycle observation is not by itself a source for the current
 effective authority. A contained Mission stays `active`, so an `active`
 observation, including an unchanged Mission Status List bit, says
-nothing about contained capability. The runtime core names the sources
-that do report it: full Mission Status or introspection carrying
-`containment_version`, or Mission Lifecycle Signals carrying the
-overlay change ({{I-D.draft-mcguinness-mission-runtime}}).
+nothing about contained capability. On this profile the sources
+that do report it are full Mission Status or introspection carrying
+`containment_version`, and Mission Lifecycle Signals carrying the
+overlay change ({{I-D.draft-mcguinness-oauth-mission-containment}},
+Section "Visibility"); each is a containment-aware source in the
+runtime core's sense ({{I-D.draft-mcguinness-mission-runtime}}).
 
 Only the Mission issuer reports Mission state through introspection
 ({{I-D.draft-mcguinness-oauth-mission}}). A non-issuer Resource AS
@@ -591,3 +607,5 @@ This document extracts the OAuth-specific realization of
 Mission-Bound Runtime Enforcement so that document can state a
 binding-neutral contract. The author thanks reviewers of the runtime
 core for pressing on the substrate-neutrality claim until it was true.
+It builds on the OAuth 2.0 Rich Authorization Requests and JWT access
+token specifications.
