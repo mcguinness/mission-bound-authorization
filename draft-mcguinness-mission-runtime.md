@@ -1767,31 +1767,29 @@ and runtime gates do not make the agent trustworthy; they bound what it
 can do. A deployment lowers that bound further by not letting the agent
 hold the authority whose misuse is unacceptable.
 
-Mission-bound credentials are sender-constrained
-({{I-D.draft-mcguinness-oauth-mission}}): whoever holds the
-sender-constraint private key the credential's confirmation binds can
-present the credential. **Mediated execution** is a PEP placement that
-uses this: for the
-action classes a deployment mediates, the sender-constraint private key
-is held by the PEP that sits at the last controllable boundary
-({{pep-placement}}), not by the agent component. The agent therefore
-cannot present the Mission-bound credential directly; to act, it asks
-the mediating PEP, which runs the decision of {{decision}} and only then
-uses the key.
+Whoever holds the private key a sender-constrained credential's
+confirmation binds can present the credential. **Mediated execution** is
+a PEP placement that uses this: for the action classes a deployment
+mediates, the sender-constraint private key is held by the PEP that sits
+at the last controllable boundary ({{pep-placement}}), not by the agent
+component. The agent therefore cannot present the Mission-bound
+credential directly; to act, it asks the mediating PEP, which runs the
+decision of {{decision}} and only then uses the key.
 
 No new token type, credential handle, or wire protocol is
 introduced: this is a custody and placement property of the existing
 sender-constraint key. The mediating PEP is a co-trusted process in the
-agent's own trust domain, not a delegate: the token is unchanged, the
-agent remains the principal of record (`client_id` still attributes the
-action to the agent), and no `act`-chain entry is added.
+agent's own trust domain, not a delegate: the credential is unchanged,
+the agent remains the principal of record (its client identity still
+attributes the action to it), and no actor-delegation chain entry is
+added.
 
 ~~~
  Agent                Mediating PEP              Resource
-   |                  (holds cnf key)               |
+   |                  (holds the key)               |
    |-- request ------>|                             |
    |                  | run the decision;           |
-   |                  | present token with key ---->|
+   |                  | presents credential ------->|
    |                  |<---------- result ----------|
    |<---- result -----|                             |
    |                                                |
@@ -3043,7 +3041,7 @@ deployment claiming it SHOULD demonstrate, per covered emitter:
 | Agent submits a complete evidence object, or a raw digest, for signature | Refused |
 | An authenticated emitter requests a signature for a different record type, role, scope, or audience | Refused |
 | One emitter identity invokes another emitter's key or emission path | Refused |
-| A separated evidence key is presented for use as a `cnf` or token-issuance key | Refused, where the deployment claims key separation |
+| A separated evidence key is presented for use as a sender-constraint or credential-issuance key | Refused, where the deployment claims key separation |
 | The evidence signer is unavailable | No fallback to an agent-held key, an unsigned record represented as verified, or an unconstrained signing path |
 
 These tests demonstrate the exposed control surface; they do not
