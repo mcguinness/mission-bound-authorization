@@ -2161,14 +2161,13 @@ grants, widens, or restores another.
 
 A PDP evaluates a Mission against an action through a **materialized
 policy view**: the reproducible, evaluable form of the Mission's
-approved authority, produced by the issuing Authorization Server or a
-trusted compiler and loaded by the PDP. A **trusted compiler** is a
-component the deployment trusts to materialize the Mission's approved
-authority faithfully and reproducibly; it is in the deployment's trust
-domain and its output is bound by the content-addressed
-`policy_view_id` below. The view is substrate-independent runtime
-machinery; a decision-API binding carries only its identifier on the
-wire ({{authzen}}).
+approved authority, produced by the Mission Issuer or a trusted compiler
+and loaded by the PDP. A **trusted compiler** is a component the
+deployment trusts to materialize the Mission's approved authority
+faithfully and reproducibly; it is in the deployment's trust domain and
+its output is bound by the content-addressed `policy_view_id` below. The
+view is substrate-independent runtime machinery; a decision-API binding
+carries only its identifier on the wire ({{authzen}}).
 
 The materialized policy view MUST satisfy three properties:
 
