@@ -1056,7 +1056,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 29 March 2027</td>
+<td class="center">Expires 31 March 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1069,12 +1069,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-runtime-oauth-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-09-25" class="published">25 September 2026</time>
+<time datetime="2026-09-27" class="published">27 September 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-03-29">29 March 2027</time></dd>
+<dd class="expires"><time datetime="2027-03-31">31 March 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1125,7 +1125,7 @@ semantics are defined by Mission-Bound Authorization for OAuth 2.0.<a href="#sec
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 29 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 31 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1444,15 +1444,23 @@ claim, or the introspection response member of the same name.<a href="#section-5
 </td>
           </tr>
           <tr>
-            <td class="text-left" rowspan="1" colspan="1">Client or immediate-actor identity</td>
+            <td class="text-left" rowspan="1" colspan="1">Client identity</td>
             <td class="text-left" rowspan="1" colspan="1">
-              <code>client_id</code> names the client; when <code>act</code> is present, the immediate actor is the current actor in <code>act</code>
+              <code>client_id</code>
 </td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Immediate actor</td>
+            <td class="text-left" rowspan="1" colspan="1">The current actor in <code>act</code> when <code>act</code> is present; otherwise the client <code>client_id</code> names</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Actor-delegation chain</td>
             <td class="text-left" rowspan="1" colspan="1">
               <code>act</code>, when delegation is in effect</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Attester-verified actor context</td>
+            <td class="text-left" rowspan="1" colspan="1">Claims verified under the AI-agent-instance profile, such as <code>agent_instance_id</code> and <code>agent_model</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-ai-agent-instance" class="cite xref">I-D.draft-mcguinness-oauth-ai-agent-instance</a>]</span>)</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Sender-constraint confirmation</td>
@@ -1486,6 +1494,10 @@ claim, or the introspection response member of the same name.<a href="#section-5
           <tr>
             <td class="text-left" rowspan="1" colspan="1">The Mission's <code>expires_at</code> (time input)</td>
             <td class="text-left" rowspan="1" colspan="1">The <code>mission</code> claim's <code>expires_at</code> member where present, or a Mission state source that reports the Mission's expiry</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Mission state version (<code>mission_state_version</code>)</td>
+            <td class="text-left" rowspan="1" colspan="1">The Mission Status <code>version</code> member, the Mission's state version (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>)</td>
           </tr>
         </tbody>
       </table>
@@ -1537,15 +1549,19 @@ validator check that cap directly.<a href="#section-5-4.4.1" class="pilcrow">¶<
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); the requirements
 themselves, including that no runtime input expands authority beyond
 the issued authority, are the runtime core's.<a href="#section-5-5" class="pilcrow">¶</a></p>
-<p id="section-5-6">The Mission reference is <code>id</code> and <code>issuer</code>. <code>authority_hash</code> is not
-part of the baseline reference; a deployment that needs it as a
-commitment proof rather than an audit correlator obtains it from the
-Mission issuer under the issuance profile's Local Approved-Set
-Verification profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). The runtime core's permit
-binding and required decision evidence record the roles above; their
-serialization is defined by the runtime core and the decision-API
-profile in use, for example <span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>.<a href="#section-5-6" class="pilcrow">¶</a></p>
+<p id="section-5-6">The Mission reference is <code>id</code> and <code>issuer</code>. Neither <code>authority_hash</code> nor
+<code>intent_hash</code> is carried on the baseline <code>mission</code> claim or the default
+introspection projection, so a PDP has them for the runtime core's
+evidence only with direct Mission-record access, introspection's
+<code>authority_hash</code> disclosure privilege, or the issuance profile's Local
+Approved-Set Verification profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). A deployment that needs
+<code>authority_hash</code> as a commitment proof rather than an audit correlator
+obtains it from the Mission issuer under the last of these. The runtime
+core's permit binding and required decision evidence record the roles
+above; their serialization is defined by the runtime core and the
+decision-API profile in use, for example
+<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>.<a href="#section-5-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authority-and-state">
@@ -1561,12 +1577,12 @@ observations of Mission state.<a href="#section-6-1" class="pilcrow">¶</a></p>
         <h3 id="name-credential-authority-and-cu">
 <a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-credential-authority-and-cu" class="section-name selfRef">Credential Authority and Current Effective Authority</a>
         </h3>
-<p id="section-6.1-1">The runtime core requires that the action be authorized by an
-applicable authority entry the Mission-bound credential carries,
-evaluated against the Mission's current effective authority, and that
-the PDP fail closed on an authority-entry type it does not understand
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). On this profile those are
-two inputs, and the action <span class="bcp14">MUST</span> fall within both:<a href="#section-6.1-1" class="pilcrow">¶</a></p>
+<p id="section-6.1-1">The runtime core requires that the action fall within both the
+credential authority and the current effective authority, that the PDP
+never substitute the second for the first, and that the PDP fail
+closed on an authority-entry type it does not understand
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). On this profile the two
+bounds are:<a href="#section-6.1-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-6.1-2.1">
             <p id="section-6.1-2.1.1">the credential authority: for a Mission-bound token, the
@@ -1589,9 +1605,7 @@ draws it from the Mission.<a href="#section-6.1-2.2.1" class="pilcrow">¶</a></p
 </li>
         </ul>
 <p id="section-6.1-3">A token narrowed below its Mission's approved Authority Set is
-evaluated at its own narrower entry. The PDP <span class="bcp14">MUST NOT</span> substitute the
-approved Authority Set, or any other record of Mission authority, for
-the credential authority.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
+therefore evaluated at its own narrower entry.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
 <p id="section-6.1-4">Each entry is enforced under its type's own specification, as the
 issuance profile requires of a Resource Server
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Resource Server
@@ -1715,10 +1729,12 @@ here does not require a deployment to implement every source.<a href="#section-6
 <p id="section-6.2-7">A lifecycle observation is not by itself a source for the current
 effective authority. A contained Mission stays <code>active</code>, so an <code>active</code>
 observation, including an unchanged Mission Status List bit, says
-nothing about contained capability. The runtime core names the sources
-that do report it: full Mission Status or introspection carrying
-<code>containment_version</code>, or Mission Lifecycle Signals carrying the
-overlay change (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6.2-7" class="pilcrow">¶</a></p>
+nothing about contained capability. On this profile the sources
+that do report it are full Mission Status or introspection carrying
+<code>containment_version</code>, and Mission Lifecycle Signals carrying the
+overlay change (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>,
+Section "Visibility"); each is a containment-aware source in the
+runtime core's sense (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6.2-7" class="pilcrow">¶</a></p>
 <p id="section-6.2-8">Only the Mission issuer reports Mission state through introspection
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). A non-issuer Resource AS
 introspecting a local token
@@ -1978,6 +1994,14 @@ action identifiers to minimum runtime action classes.<a href="#section-11.1-2.2.
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement: AuthZEN Profile"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-ai-agent-instance">[I-D.draft-mcguinness-oauth-ai-agent-instance]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth 2.0 AI Agent Instance Profile"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-ai-agent-instance-00</span>, <time datetime="2026-07-04" class="refDate">4 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-ai-agent-instance-00">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-ai-agent-instance-00</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-containment">[I-D.draft-mcguinness-oauth-mission-containment]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Containment for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-cross-domain">[I-D.draft-mcguinness-oauth-mission-cross-domain]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Cross-Domain Projection for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html</a>&gt;</span>. </dd>
@@ -1999,7 +2023,9 @@ action identifiers to minimum runtime action classes.<a href="#section-11.1-2.2.
 <p id="appendix-A-1">This document extracts the OAuth-specific realization of
 Mission-Bound Runtime Enforcement so that document can state a
 binding-neutral contract. The author thanks reviewers of the runtime
-core for pressing on the substrate-neutrality claim until it was true.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+core for pressing on the substrate-neutrality claim until it was true.
+It builds on the OAuth 2.0 Rich Authorization Requests and JWT access
+token specifications.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authors-addresses">

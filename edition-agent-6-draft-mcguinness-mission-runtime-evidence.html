@@ -1062,7 +1062,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 29 March 2027</td>
+<td class="center">Expires 31 March 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1078,12 +1078,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-runtime-evidence-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-09-25" class="published">25 September 2026</time>
+<time datetime="2026-09-27" class="published">27 September 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-03-29">29 March 2027</time></dd>
+<dd class="expires"><time datetime="2027-03-31">31 March 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1140,7 +1140,7 @@ records; the OpenID AuthZEN binding is one such producer.<a href="#section-abstr
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 29 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 31 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1717,10 +1717,11 @@ for the live permit condition or the PEP's comparison at use.<a href="#section-5
 <dt id="section-5.1-1.15">
 <code>audience</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-5.1-1.16">
-            <p id="section-5.1-1.16.1"><span class="bcp14">REQUIRED</span>. A string. The audience the PDP evaluated: the runtime
-profile's audience input to the Decision Output
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), as carried by the
-deployment's decision-API binding (for example, the AuthZEN
+            <p id="section-5.1-1.16.1"><span class="bcp14">REQUIRED</span>. A string. The audience or protected-resource identifier
+of the enforcement boundary, as the PDP established it, which a
+permit binds (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>, Section
+"Permit Binding"), as carried by the deployment's decision-API
+binding (for example, the AuthZEN
 binding's decision-API request's audience member,
 <span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-5.1-1.16.1" class="pilcrow">¶</a></p>
 </dd>
@@ -2121,10 +2122,9 @@ since that is exactly what the request lacked.<a href="#section-5.2-4.20.1" clas
 <a href="#decision-evidence-object" class="auto internal xref">Section 5</a> defines (for example, as carried in the
 AuthZEN binding's decision-API request,
 <span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). A PEP populates them from
-its own token validation; a PDP populates them from the request
+its own credential validation; a PDP populates them from the request
 context it received, never asserting a check only the other role
-can perform. For a token-validation failure, the record <span class="bcp14">MUST NOT</span>
-describe unverified token claims as authenticated facts
+can perform. For a credential-validation failure, the record <span class="bcp14">MUST NOT</span> describe unverified credential claims as authenticated facts
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-5.2-4.22.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
