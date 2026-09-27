@@ -846,40 +846,42 @@ disclosure-only treatment.
 ### Actor {#input-actor}
 
 When delegation is in effect, the PDP MUST evaluate the authenticated
-actor-delegation chain as part of the runtime actor context and refuse
-a chain that is missing or malformed. When an actor-delegation chain
-is present, the PDP MUST NOT treat the client or immediate-actor
-identity alone as the immediate actor. The binding's realization of
-the actor-delegation chain and the client or immediate-actor identity
-is defined by its own adapter (the OAuth realization is `act` and
-`client_id`, {{I-D.draft-mcguinness-mission-runtime-oauth}}).
+actor-delegation chain as part of the runtime actor context and refuse a
+chain that is missing or malformed. The client identity and the
+immediate actor are distinct inputs: the client identity names the
+client that obtained the credential, and the immediate actor is the
+current actor of the actor-delegation chain when one is present, and
+otherwise that client. When an actor-delegation chain is present, the
+PDP MUST NOT treat the client identity alone as the immediate actor. The
+credential profile maps the client identity and the chain (the OAuth
+mapping is `client_id` and `act`,
+{{I-D.draft-mcguinness-mission-runtime-oauth}}).
 
 Runtime enforcement consumes the actor context that results from the
-issuance profile's delegation checks; it does not recompute the
-issuance-time subset validation. The runtime decision MUST NOT
-expand authority beyond the issued authority. The issuance profile's
-delegation constraints are not re-applied here unless the deployment
-documents them as runtime Resource policy, but a deployment MAY apply
-additional actor-sensitive Resource policy ({{input-resource-policy}}).
+issuance-and-derivation layer's delegation checks; it does not recompute
+the issuance-time subset validation. The runtime decision MUST NOT
+expand authority beyond the issued authority. That layer's delegation
+constraints are not re-applied here unless the deployment documents them
+as runtime Resource policy, but a deployment MAY apply additional
+actor-sensitive Resource policy ({{input-resource-policy}}).
 
-Credential claims the AS verified under an attested-instance profile,
-such as `agent_instance_id` and `agent_model`
-({{I-D.draft-mcguinness-oauth-ai-agent-instance}}), are verified
-actor context a deployment's Resource policy MAY evaluate; unlike a
-self-asserted model or instance label, they are attester-backed
-facts.
+A credential issuer can verify actor attributes under an
+attested-instance profile (the OAuth one is
+{{I-D.draft-mcguinness-oauth-ai-agent-instance}}). Such
+attester-verified actor context is input a deployment's Resource
+policy MAY evaluate; unlike a self-asserted model or instance label,
+it is attester-backed.
 
-Where the deployment operates an agent registry, the immediate
-actor's registry state (status, revocation, approved deployment
-version) is further actor context Resource policy MAY require. A
-deployment that declares agent-state evaluation in its Enforcement
-Scope Statement treats the registry as a state source under this
-profile's freshness discipline: a declared staleness bound, and
-refusal when the acting agent or its deployment version is revoked
-or the state cannot be established within the bound
-({{state-freshness}}). The agent, Mission, and credential lifecycles
-gate conjunctively; a valid token never overrides a revoked agent or
-a non-active Mission
+Where the deployment operates an agent registry, the immediate actor's
+registry state (status, revocation, approved deployment version) is
+further actor context Resource policy MAY require. A deployment that
+declares agent-state evaluation in its Enforcement Scope Statement
+treats the registry as a state source under this profile's freshness
+discipline: a declared staleness bound, and refusal when the acting
+agent or its deployment version is revoked or the state cannot be
+established within the bound ({{state-freshness}}). The agent, Mission,
+and credential lifecycles gate conjunctively; a valid credential never
+overrides a revoked agent or a non-active Mission
 ({{I-D.draft-mcguinness-mission-architecture}}).
 
 ### Time {#input-time}
@@ -982,8 +984,8 @@ Beyond the `parameter_digest`, the permit MUST also bind:
 - the credential issuer, when available;
 - the credential audience or protected resource;
 - the authenticated subject identifier;
-- the client or immediate-actor identity;
-- the actor context;
+- the client identity;
+- the actor context, including the immediate actor;
 - the sender-constraint confirmation key, when present;
 - the action;
 - the action phase, when the action is a phase of a compound action
@@ -998,10 +1000,9 @@ A permit is bound to the full set of authorization-relevant inputs it
 was issued for: the authorization binding, which a decision-API
 binding realizes as one normalized projection over those inputs,
 never as an enumerated subset of fields
-({{I-D.draft-mcguinness-mission-authzen}}). The OAuth binding's
-realization of the subject, client/actor, and confirmation roles is
-`sub`, `client_id`, and `cnf`
-({{I-D.draft-mcguinness-mission-runtime-oauth}}).
+({{I-D.draft-mcguinness-mission-authzen}}). The credential
+profile maps these roles onto its credential
+({{I-D.draft-mcguinness-mission-runtime-oauth}} for OAuth).
 
 The permit lifetime control is set by action class:
 
@@ -1137,11 +1138,10 @@ and trusted for the refusal or decision path:
   participating in the Local Approved-Set Verification profile;
 - the credential issuer and audience or protected-resource identifier
   when available;
-- the authenticated subject identifier, the client or immediate-actor
-  identity, a client-instance identifier (a deployment-defined
-  correlator) when present, the sender-constraint confirmation key
-  when present, and the actor-delegation chain projection when
-  delegation applies;
+- the authenticated subject identifier, the client identity, a
+  client-instance identifier (a deployment-defined correlator) when
+  present, the sender-constraint confirmation key when present, and the
+  actor-delegation chain projection when delegation applies;
 - the action and resource identifiers (and the asserted capability
   identity when applicable);
 - the authority-entry type and authorizing entry, or a digest of that

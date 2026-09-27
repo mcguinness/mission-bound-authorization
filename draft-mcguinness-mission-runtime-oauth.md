@@ -91,6 +91,7 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-oauth-ai-agent-instance:
   I-D.draft-mcguinness-oauth-mission-containment:
     title: "Mission Containment for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
@@ -309,8 +310,10 @@ claim, or the introspection response member of the same name.
 |---|---|
 | Established Mission reference | The `mission` claim's `id` and `issuer` {{I-D.draft-mcguinness-oauth-mission}}, or an externally established reference ({{token-validation}}) |
 | Authenticated subject | `sub` |
-| Client or immediate-actor identity | `client_id` names the client; when `act` is present, the immediate actor is the current actor in `act` |
+| Client identity | `client_id` |
+| Immediate actor | The current actor in `act` when `act` is present; otherwise the client `client_id` names |
 | Actor-delegation chain | `act`, when delegation is in effect |
+| Attester-verified actor context | Claims verified under the AI-agent-instance profile, such as `agent_instance_id` and `agent_model` ({{I-D.draft-mcguinness-oauth-ai-agent-instance}}) |
 | Sender-constraint confirmation | `cnf`, verified during validation ({{token-validation}}) |
 | Credential audience or protected resource | The protected resource the PEP guards; validation has established that `aud` names it |
 | Authority entry | The applicable entry of the credential authority for a Mission-bound token; under a join, the applicable entry of the Mission's authority ({{authorization-details-mapping}}) |
