@@ -607,3 +607,5 @@ This document extracts the OAuth-specific realization of
 Mission-Bound Runtime Enforcement so that document can state a
 binding-neutral contract. The author thanks reviewers of the runtime
 core for pressing on the substrate-neutrality claim until it was true.
+It builds on the OAuth 2.0 Rich Authorization Requests and JWT access
+token specifications.

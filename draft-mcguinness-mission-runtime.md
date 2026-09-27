@@ -3743,7 +3743,7 @@ worked example shows the concrete record
 # Acknowledgments
 {:numbered="false"}
 
-This document is the runtime companion to Mission-Bound Authorization
-for OAuth 2.0 and builds on the OpenID AuthZEN Authorization API and
-the OAuth 2.0 Rich Authorization Requests and JWT access token
+This document builds on the Mission Substrate and the OpenID AuthZEN
+Authorization API. Its OAuth 2.0 profile carries the realization built
+on the OAuth 2.0 Rich Authorization Requests and JWT access token
 specifications.
