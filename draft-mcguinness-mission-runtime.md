@@ -2941,19 +2941,17 @@ the Mission itself.
 A Mission Receipt MUST identify the Mission the action was authorized
 under, as `mission.id` and `mission.issuer`; a verifiable Mission
 projection such as the cross-domain grant's `mission` claim
-({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) travels beside
-the receipt at its carriage layer, never in place of the tuple. It
-MAY project
-the policy decision (the decision identifier and result), the policy
-state it was decided under (the PDP's policy-view version and the
-Mission's `policy_version`), the
-executor (the authenticated actor and any `act` chain), the custody
-boundary (whether a mediating PEP held the credential, {{custody}},
-carried as a profiled issuer assertion),
-the downstream target (the resource and audience), the outcome, the
-timestamps, and, where a deployment chains receipts, the digest of a
-predecessor Mission Receipt. The portable schema, receipt kinds,
-evidence references, verification, and chaining are defined by
+({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) travels beside the
+receipt at its carriage layer, never in place of the tuple. It MAY
+project the policy decision (the decision identifier and result), the
+policy state it was decided under (the PDP's policy-view version and the
+Mission's `policy_version`), the executor (the authenticated actor and
+any actor-delegation chain), the custody boundary (whether a mediating
+PEP held the credential, {{custody}}, carried as a profiled issuer
+assertion), the downstream target (the resource and audience), the
+outcome, the timestamps, and, where a deployment chains receipts, the
+digest of a predecessor Mission Receipt. The portable schema, receipt
+kinds, evidence references, verification, and chaining are defined by
 {{I-D.draft-mcguinness-mission-runtime-evidence}}, which fixes the
 minimum join and integrity core every Mission Receipt carries; the
 members above are what a receipt MAY project beyond that core.
@@ -3275,14 +3273,14 @@ work and are not required to enforce it:
 - cross-format capability-source binding beyond per-capability
   definition-digest drift (signed capability manifests, cross-catalog
   identity);
-- actor provenance beyond the `act` chain and attestation of the
-  execution environment: actor-signed hop proofs
+- actor provenance beyond the actor-delegation chain and attestation of
+  the execution environment: actor-signed hop proofs
   ({{I-D.draft-mcguinness-oauth-actor-proofs}}), issuer-signed hop
-  receipts ({{I-D.draft-mcguinness-oauth-actor-receipts}}), and
-  attested agent-instance identity
-  ({{I-D.draft-mcguinness-oauth-ai-agent-instance}}) specify these,
-  and this profile consumes their results as token-derived facts
-  where present;
+  receipts ({{I-D.draft-mcguinness-oauth-actor-receipts}}), and attested
+  agent-instance identity
+  ({{I-D.draft-mcguinness-oauth-ai-agent-instance}}) specify these, and
+  this profile consumes their results as credential-derived facts where
+  present;
 - a purpose registry;
 - compilation of the Mission into an engine-native policy artifact
   (Cedar, OpenFGA, or equivalent) and standardization of PDP
