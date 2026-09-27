@@ -39,14 +39,6 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-oauth-mission-status:
-    title: "Mission Status and Lifecycle for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
 
 informative:
   I-D.draft-mcguinness-mission-control-plane:
@@ -2232,11 +2224,11 @@ The committed manifest MUST carry:
   standardize.
 
 The manifest MUST NOT embed Mission lifecycle state: three independent
-values govern reliance, and conflating them is the common
-implementation error. `policy_view_id` is the content identity of the
-compiled authority and the cache key. A `mission_state_version`, where
-the deployment serves one ({{I-D.draft-mcguinness-oauth-mission-status}}),
-versions the mutable lifecycle state the decision consulted. The state
+values govern reliance, and conflating them is the common implementation
+error. `policy_view_id` is the content identity of the compiled
+authority and the cache key. A `mission_state_version`, the state
+version a Mission state source reports where it reports one, versions
+the mutable lifecycle state the decision consulted. The state
 observation's freshness or lease bounds how long that consultation
 stands ({{state-freshness}}). A state transition invalidates reliance
 through the version and freshness values without re-identifying the
@@ -2245,12 +2237,11 @@ when the authority it compiles, or the compiler that compiled it,
 changes. A consistency check between a decision request's Mission
 reference and the loaded view is therefore an equality test: the
 request's Mission `id` and `authority_hash` either equal the committed
-values or the view does not apply. Because `policy_view_id` is a
-content hash, any change to the manifest yields a new `policy_view_id`,
-so equality on `policy_view_id` is the cache identity; it is never the
-freshness test. This document defines no second canonicalization and
-no policy-language wire form for `policy_ir` or the engine-native
-artifact.
+values or the view does not apply. Because `policy_view_id` is a content
+hash, any change to the manifest yields a new `policy_view_id`, so
+equality on `policy_view_id` is the cache identity; it is never the
+freshness test. This document defines no second canonicalization and no
+policy-language wire form for `policy_ir` or the engine-native artifact.
 
 ## Semantic Evaluators {#semantic-evaluators}
 

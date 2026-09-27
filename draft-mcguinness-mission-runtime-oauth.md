@@ -318,6 +318,7 @@ claim, or the introspection response member of the same name.
 | Credential issuer | `iss` |
 | Credential expiry | `exp` |
 | The Mission's `expires_at` (time input) | The `mission` claim's `expires_at` member where present, or a Mission state source that reports the Mission's expiry |
+| Mission state version (`mission_state_version`) | The Mission Status `version` member, the Mission's state version ({{I-D.draft-mcguinness-oauth-mission-status}}) |
 
 Four pairs in the table are related but distinct inputs:
 
