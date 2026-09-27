@@ -1360,16 +1360,16 @@ The inputs the decision evaluates are defined in {{decision}}.
 
 ## Enforcement Scope and Conformance {#runtime-conformance}
 
-This profile is implemented by a runtime deployment, not by an issuing
-Authorization Server alone. Three things conform, at different
-granularities: the **runtime deployment** (this section), the
-**Resource Server runtime profile** for the protected resources it
-mediates ({{rs-runtime-profile}}), and the **PEP/PDP decision path**
-for each consequential action ({{decision}}). Conformance is not global
-to a product, Authorization Server, Resource Server, or PDP: a
-deployment conforms to this profile only for the resources, action
-classes, execution paths, and authority-entry types named in its
-enforcement scope.
+This profile is implemented by a runtime deployment, not by a credential
+issuer alone. Three things conform, at different granularities: the
+**runtime deployment** (this section), the **Resource Server runtime
+profile** for the protected resources it mediates
+({{rs-runtime-profile}}), and the **PEP/PDP decision path** for each
+consequential action ({{decision}}). Conformance is not global to a
+product, credential issuer, Resource Server, or PDP: a deployment
+conforms to this profile only for the resources, action classes,
+execution paths, and authority-entry types named in its enforcement
+scope.
 
 A deployment that claims conformance to this profile MUST publish an
 **Enforcement Scope Statement**: the structured, referenceable
@@ -1486,14 +1486,13 @@ declaration is never optional.
 
 A deployment MUST NOT claim runtime enforcement for a resource, action
 class, authority-entry type, or execution path outside that declared
-scope. A Mission Issuer conforms to the issuance profile; it
-does not become a runtime-conforming deployment merely by issuing
-Mission-bound credentials. The converse is a stated posture, not a
-failure: a resource or class outside the declared scope relies on
-issuance gating and token-lifetime freshness ({{state-freshness}}),
-and the Enforcement Scope Statement says so. This profile does not
-require every resource to evaluate Mission state; it requires the
-deployment to say which do.
+scope. A Mission Issuer conforms to its binding; it does not become a
+runtime-conforming deployment merely by issuing Mission-bound
+credentials. The converse is a stated posture, not a failure: a resource
+or class outside the declared scope relies on issuance gating and
+credential-lifetime freshness ({{state-freshness}}), and the Enforcement
+Scope Statement says so. This profile does not require every resource to
+evaluate Mission state; it requires the deployment to say which do.
 
 Within the declared scope the duties tier by action class, and the
 tiers have names; the Enforcement Scope Statement names which tier
@@ -1524,8 +1523,8 @@ exactly-once execution, which exists only where the resource itself
 supports idempotency, as its Operation Profile records
 ({{rs-runtime-profile}}).
 
-The enforcement scope is a deployment conformance statement, not an
-OAuth Authorization Server metadata extension. This document defines no
+The enforcement scope is a deployment conformance statement, not a
+discovery-metadata extension. This document defines no
 discovery mechanism, registry, or wire format for publishing it.
 Different deployments can document scope through configuration,
 operational policy, resource-server metadata defined elsewhere, or a
