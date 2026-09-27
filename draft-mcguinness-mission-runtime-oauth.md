@@ -91,6 +91,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-oauth-mission-containment:
+    title: "Mission Containment for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
@@ -456,10 +464,12 @@ here does not require a deployment to implement every source.
 A lifecycle observation is not by itself a source for the current
 effective authority. A contained Mission stays `active`, so an `active`
 observation, including an unchanged Mission Status List bit, says
-nothing about contained capability. The runtime core names the sources
-that do report it: full Mission Status or introspection carrying
-`containment_version`, or Mission Lifecycle Signals carrying the
-overlay change ({{I-D.draft-mcguinness-mission-runtime}}).
+nothing about contained capability. On this profile the sources
+that do report it are full Mission Status or introspection carrying
+`containment_version`, and Mission Lifecycle Signals carrying the
+overlay change ({{I-D.draft-mcguinness-oauth-mission-containment}},
+Section "Visibility"); each is a containment-aware source in the
+runtime core's sense ({{I-D.draft-mcguinness-mission-runtime}}).
 
 Only the Mission issuer reports Mission state through introspection
 ({{I-D.draft-mcguinness-oauth-mission}}). A non-issuer Resource AS

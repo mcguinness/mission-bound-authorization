@@ -580,10 +580,7 @@ class whose bound demands that.
   is not an acceptable state source for these classes: it bounds
   staleness only by the lifetime, so a revoked Mission keeps deriving
   consequence until credentials age out, which is the ambient-authority
-  gap this profile exists to close. {{I-D.draft-mcguinness-mission-runtime-oauth}}
-  catalogs the OAuth binding's active mechanisms (token introspection,
-  the Mission Status profile, Mission Status Lists, and Mission
-  Lifecycle Signals) and their exposure bounds.
+  gap this profile exists to close.
 
 An informative worked example of the latency arithmetic: for a
 PDP-gated class with a published staleness bound of 60 seconds and a
@@ -634,11 +631,12 @@ call: the tightest posture costs one lookup per staleness bound,
 amortized by caching, and the loosest costs a clock. The dial is the
 architecture's freshness dial made concrete
 ({{I-D.draft-mcguinness-mission-architecture}}), and the Enforcement
-Scope Statement records the chosen position per class. A binding's
-adapter catalogs its concrete state sources against this dial, each
-with its capability class, exposure bound, per-action cost, and what
-it cannot provide; the OAuth binding's catalog is in
-{{I-D.draft-mcguinness-mission-runtime-oauth}}.
+Scope Statement records the chosen position per class. A credential
+profile catalogs its binding's concrete state sources against this
+dial, each with its capability class, exposure bound, per-action cost,
+and what it cannot provide; the OAuth catalog is
+{{I-D.draft-mcguinness-mission-runtime-oauth}}, Section "Mission State
+Sources".
 
 The following are the RECOMMENDED default freshness postures per
 class, adopted absent a documented, consequence-specific analysis:
@@ -657,23 +655,23 @@ in its Enforcement Scope Statement.
 
 For a Mission carrying a nonzero containment overlay
 ({{I-D.draft-mcguinness-oauth-mission-containment}}), the RECOMMENDED
-posture for a consequential read whose authorizing entry or action
-class intersects the overlay tightens to a containment-aware state
-source, for the remainder of that Mission: the overlay never clears
-on the same Mission, and restoration is a successor Mission's own
-approval ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section
-"Restoration Through Expansion"). A deployment adopting this
-tightening MUST name a containment-aware state source, not merely an
-active one: a contained Mission stays `active`, so a Mission Status
-List bit does not move
+posture for a consequential read whose authorizing entry or action class
+intersects the overlay tightens to a containment-aware state source, for
+the remainder of that Mission: the overlay never clears on the same
+Mission, and restoration is a successor Mission's own approval
+({{I-D.draft-mcguinness-oauth-mission-containment}}, Section
+"Restoration Through Expansion"). A deployment adopting this tightening
+MUST name a containment-aware state source, not merely an active one: a
+contained Mission stays `active`, so a source that reports only
+lifecycle state does not change
 ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section
 "Propagation").
 
-A containment-aware source is full Status or
-introspection carrying `containment_version`, or Mission Lifecycle
-Signals carrying the overlay change
+A containment-aware source reports the containment overlay or its
+changes, not only lifecycle state
 ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section
-"Visibility"). A fresh derivation narrows what it mints and can
+"Visibility"); the credential profile names which of its sources
+qualify. A fresh derivation narrows what it mints and can
 shorten the residual, but it checks nothing at action time, so it
 carries Baseline, not Runtime-Enforced, and is not a containment-aware
 source for this tightening
