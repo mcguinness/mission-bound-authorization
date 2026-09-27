@@ -11842,7 +11842,7 @@
    "id": "runtime.evidence.no-describing-unverified-claims-as-authenticated",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "required-decision-evidence",
-   "text": "For a token-validation failure, the record MUST NOT describe unverified token claims as authenticated facts.",
+   "text": "For a credential-validation failure, the record MUST NOT describe unverified credential claims as authenticated facts.",
    "role": "PDP",
    "strength": "MUST NOT",
    "applicability": {
@@ -11854,7 +11854,7 @@
    "surface": "evidence-emission",
    "assertion": "privacy",
    "observation": {
-    "normative": "an evidence record for a token-validation failure never presents the token's unverified claims as authenticated facts"
+    "normative": "an evidence record for a credential-validation failure never presents the credential's unverified claims as authenticated facts"
    },
    "level": "unit",
    "coverage": "todo",
@@ -17868,7 +17868,7 @@
    "id": "evidence.refusal.no-unverified-claims-as-authenticated",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "pre-decision-refusal",
-   "text": "For a token-validation failure, the record MUST NOT describe unverified token claims as authenticated facts",
+   "text": "For a credential-validation failure, the record MUST NOT describe unverified credential claims as authenticated facts",
    "role": "PEP",
    "strength": "MUST NOT",
    "applicability": {

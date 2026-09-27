@@ -364,15 +364,19 @@ These realize the runtime core's decision inputs
 themselves, including that no runtime input expands authority beyond
 the issued authority, are the runtime core's.
 
-The Mission reference is `id` and `issuer`. `authority_hash` is not
-part of the baseline reference; a deployment that needs it as a
-commitment proof rather than an audit correlator obtains it from the
-Mission issuer under the issuance profile's Local Approved-Set
-Verification profile
-({{I-D.draft-mcguinness-oauth-mission}}). The runtime core's permit
-binding and required decision evidence record the roles above; their
-serialization is defined by the runtime core and the decision-API
-profile in use, for example {{I-D.draft-mcguinness-mission-authzen}}.
+The Mission reference is `id` and `issuer`. Neither `authority_hash` nor
+`intent_hash` is carried on the baseline `mission` claim or the default
+introspection projection, so a PDP has them for the runtime core's
+evidence only with direct Mission-record access, introspection's
+`authority_hash` disclosure privilege, or the issuance profile's Local
+Approved-Set Verification profile
+({{I-D.draft-mcguinness-oauth-mission}}). A deployment that needs
+`authority_hash` as a commitment proof rather than an audit correlator
+obtains it from the Mission issuer under the last of these. The runtime
+core's permit binding and required decision evidence record the roles
+above; their serialization is defined by the runtime core and the
+decision-API profile in use, for example
+{{I-D.draft-mcguinness-mission-authzen}}.
 
 # Authority and State Sources {#authority-and-state}
 

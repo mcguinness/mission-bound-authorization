@@ -724,10 +724,10 @@ Evidence ({{execution-evidence-object}}), never a Refusal Record:
   {{decision-evidence-object}} defines (for example, as carried in the
   AuthZEN binding's decision-API request,
   {{I-D.draft-mcguinness-mission-authzen}}). A PEP populates them from
-  its own token validation; a PDP populates them from the request
+  its own credential validation; a PDP populates them from the request
   context it received, never asserting a check only the other role
-  can perform. For a token-validation failure, the record MUST NOT
-  describe unverified token claims as authenticated facts
+  can perform. For a credential-validation failure, the record MUST
+  NOT describe unverified credential claims as authenticated facts
   ({{I-D.draft-mcguinness-mission-runtime}}).
 
 `sequence`:

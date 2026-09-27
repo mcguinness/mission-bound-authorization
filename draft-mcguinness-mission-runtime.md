@@ -1129,13 +1129,11 @@ A record MUST also contain the following fields when they are available
 and trusted for the refusal or decision path:
 
 - the Mission reference (`mission.id`, `mission.issuer`) and, when
-  available, the `authority_hash` and `intent_hash` it operated under:
-  neither is carried on the issuance profile's baseline `mission`
-  claim or default introspection projection
-  ({{I-D.draft-mcguinness-oauth-mission}}), so both are available only
-  to a PDP with direct Mission-record access, one holding
-  introspection's `authority_hash` disclosure privilege, or one
-  participating in the Local Approved-Set Verification profile;
+  available, the `authority_hash` and `intent_hash` it operated under: a
+  credential need not carry either, so a PDP has them only through a
+  source its credential profile names
+  ({{I-D.draft-mcguinness-mission-runtime-oauth}} names the OAuth
+  sources);
 - the credential issuer and audience or protected-resource identifier
   when available;
 - the authenticated subject identifier, the client identity, a
@@ -1156,19 +1154,16 @@ and trusted for the refusal or decision path:
   identifier it reverses, so a compensation can be reconciled against
   the action it undoes.
 
-The OAuth binding's realization of the subject, client/actor,
-sender-constraint, and authority-entry roles above is `sub`,
-`client_id`, `cnf`, the `act` chain, and `authorization_details`
-({{I-D.draft-mcguinness-mission-runtime-oauth}}); the Mission
-reference is `mission.id` and `mission.issuer`.
+The credential profile maps the roles above onto its credential
+({{I-D.draft-mcguinness-mission-runtime-oauth}} for OAuth).
 
-For a token-validation failure, the record MUST NOT describe
-unverified token claims as authenticated facts. It MAY include a digest
-of the presented token or rejected claim set for correlation and
-forensics, subject to the privacy requirements below.
+For a credential-validation failure, the record MUST NOT describe
+unverified credential claims as authenticated facts. It MAY include a
+digest of the presented credential or rejected claim set for correlation
+and forensics, subject to the privacy requirements below.
 
 The `authority_hash` and `intent_hash` in a record are the
-originating AS's commitments, cited as anchors; the PDP does not
+Mission Issuer's commitments, cited as anchors; the PDP does not
 recompute them and is not required to hold the full Authority Set to
 record them, consistent with {{I-D.draft-mcguinness-oauth-mission}}.
 
