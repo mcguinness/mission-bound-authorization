@@ -345,24 +345,23 @@ credential joined to an externally established Mission under
 {{mission-binding}}. It does not place any new requirement back on the
 issuance-and-derivation layer; it reads only the credential's
 established Mission reference, effective authority, subject and actor
-context, and sender-constraint confirmation, each realized concretely
-by the binding's own adapter. It obtains any value the credential does
-not carry (the current Mission lifecycle state, or a materialized
+context, and sender-constraint confirmation, each realized concretely by
+the binding's credential profile. It obtains any value the credential
+does not carry (the current Mission lifecycle state, or a materialized
 policy-view version) at runtime as described below, never by requiring
 the issuance-and-derivation layer to add a field.
 
 For the OAuth binding, that issuance-and-derivation layer is
 Mission-Bound Authorization for OAuth 2.0
 {{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile"), and
-the concrete claim mapping (`mission`, `authorization_details`, `act`,
-`iss`, `aud`, `sub`, `client_id`, `exp`, and `cnf`) is defined by the
-runtime OAuth 2.0 profile ({{I-D.draft-mcguinness-mission-runtime-oauth}}).
-The Resource Server enforcement rules in the issuance profile remain
-the baseline for every Mission-bound access token; this document adds
-an optional runtime conformance profile for deployments that claim
-execution-time Mission enforcement, and does not weaken the issuance
-profile's stateless token-validation, subset, delegation, or
-constraint-enforcement requirements.
+its credential profile is the runtime OAuth 2.0 profile
+({{I-D.draft-mcguinness-mission-runtime-oauth}}). The
+issuance-and-derivation layer's own credential validation remains the
+baseline for every Mission-bound credential; this document adds an
+optional runtime conformance profile for deployments that claim
+execution-time Mission enforcement, and does not weaken that layer's
+credential-validation, subset, delegation, or constraint-enforcement
+requirements.
 
 # Runtime Core {#runtime-core}
 
