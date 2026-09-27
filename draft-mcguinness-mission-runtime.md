@@ -3503,9 +3503,10 @@ retain this residual and the operational mitigations above.
 
 ## Confused Deputy Across Resources
 
-The permit binding of {{parameter-binding}} ties a decision to the
-Mission, the token audience or protected resource, `sub`, `client_id`,
-actor context, action, and resource it evaluated. It follows that a PDP
+The permit binding of {{permit-binding}} ties a decision to the
+Mission, the credential audience or protected resource, the subject,
+the client identity, the actor context, the action, and the resource
+it evaluated. It follows that a PDP
 decision for one protected resource, audience, tenant, or operation is
 not reusable at another: the executing PEP, which reverifies those
 bindings before acting ({{parameter-binding}}), refuses a permit whose
