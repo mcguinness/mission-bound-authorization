@@ -106,8 +106,7 @@ normative:
 informative:
   RFC9457:
   RFC9470:
-  I-D.draft-mcguinness-oauth-client-instance-assertion:
-  I-D.draft-mcguinness-oauth-ai-agent-instance:
+  I-D.draft-mcguinness-oauth-client-instance-id:
   I-D.draft-mcguinness-mission-runtime-evidence:
     title: "Mission Runtime Evidence"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html
@@ -736,13 +735,16 @@ the PDP evaluates the `act` chain as defined by the runtime profile,
 and provenance is recorded in dedicated evidence fields where the
 deployment captures it.
 
-Where tokens carry instance identity
-({{I-D.draft-mcguinness-oauth-client-instance-assertion}}), the `act`
-entry this projection already copies carries the instance identifier
-and, under the agent profile
-({{I-D.draft-mcguinness-oauth-ai-agent-instance}}), issuer-minted
-provenance such as `agent_instance_id` and `agent_model`. Fleet
-deployments therefore get which-instance-acted attribution in Decision
+Where tokens carry Instance Context
+({{I-D.draft-mcguinness-oauth-client-instance-id}}), the PEP can set
+`client_instance_id` from it once it has validated that context as a
+Context Consumer ({{I-D.draft-mcguinness-oauth-client-instance-id}},
+Section 7.5); the context identifies an instance only together with its
+`iss`, so a PEP accepting context from more than one issuer qualifies
+the correlator by it. Attributing the presentation to that instance also
+requires a sender-constraint key unique to the instance
+({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 7.3). Fleet
+deployments then get which-instance-acted attribution in Decision
 Evidence and, through the `evaluation_id` link, in Execution Evidence,
 without new members.
 
