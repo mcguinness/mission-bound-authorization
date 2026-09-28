@@ -6113,11 +6113,11 @@ the following:<a href="#section-12-3" class="pilcrow">¶</a></p>
 token is the <code>subject_token</code>, with <code>subject_token_type</code> of
 <code>urn:ietf:params:oauth:token-type:access_token</code>. The delegate is
 identified by an <code>actor_token</code> (with its <code>actor_token_type</code>) or by its
-own client authentication (for example, a client instance presenting a
-Client Attestation that carries its <code>client_instance_id</code>,
-<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>), and the AS asserts
-the actor itself (<a href="#delegation-constraints" class="auto internal xref">Section 12.3</a>); a
-<code>requested_token_type</code> of
+own client authentication, and the AS asserts the actor itself
+(<a href="#delegation-constraints" class="auto internal xref">Section 12.3</a>). A client instance's Client Attestation
+(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>) authenticates the
+instance, not the actor it represents; establishing that actor is a
+separate step, described below. A <code>requested_token_type</code> of
 <code>urn:ietf:params:oauth:token-type:access_token</code> is used. The response
 carries the matching <code>issued_token_type</code> and a <code>token_type</code> for the
 issued access token, per <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> Section 2.2.1.<a href="#section-12-4.1.1" class="pilcrow">¶</a></p>
@@ -6190,15 +6190,19 @@ subset relations prove that (<a href="#subset" class="auto internal xref">Sectio
 <p id="section-12-6">Where a deployment authenticates client instances
 (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>, with attesters a
 client endorses under <span>[<a href="#I-D.draft-mcguinness-oauth-client-attesters" class="cite xref">I-D.draft-mcguinness-oauth-client-attesters</a>]</span>),
-the delegate identified by the outermost <code>act</code> can be the concrete
-instance. The delegated token's top-level <code>cnf</code> is then an
+the delegate identified by the outermost <code>act</code> can be an actor that an
+authenticated instance represents. The instance evidence does not
+establish that actor: <span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>,
+Section 5, forbids adding an <code>act</code> claim or extending an actor chain
+solely from it, so the AS establishes the delegate's actor identity, and
+that actor's trusted association with the authenticated instance,
+separately. The delegated token's top-level <code>cnf</code> is then an
 instance-possessed key by construction: this profile sender-constrains a
 delegated token to the delegate's own key, and the Actor Profile makes
 the top-level <code>cnf</code>, not a member inside <code>act</code>, the current presenter's
-key (<span>[<a href="#I-D.draft-mcguinness-oauth-actor-profile" class="cite xref">I-D.draft-mcguinness-oauth-actor-profile</a>]</span>). This document does
-not carry the attester-assigned <code>client_instance_id</code> in <code>act</code>; carrying
-the instance in a delegated token's <code>client_instance</code> claim needs a
-consuming profile under
+key (<span>[<a href="#I-D.draft-mcguinness-oauth-actor-profile" class="cite xref">I-D.draft-mcguinness-oauth-actor-profile</a>]</span>). Carrying the
+instance itself in a delegated token's <code>client_instance</code> claim is a
+separate question: it needs a consuming profile under
 <span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>, Section 7.4, and this
 document defines none. An <code>allowed_delegates</code> matcher selects delegates
 by actor type (<a href="#delegation-constraints" class="auto internal xref">Section 12.3</a>), for example <code>{
@@ -9772,7 +9776,9 @@ carried in its attestation-based client authentication) and
 example no longer cites the retired <code>client-instance-jwt</code> token type.
 The instance-delegate paragraph names the top-level <code>cnf</code> as the
 presenter's key, as the Actor Profile requires, instead of <code>act.cnf</code>,
-and no longer states that <code>act.sub</code> carries the instance identifier.
+and no longer states that <code>act.sub</code> carries the instance identifier or
+that instance evidence alone identifies the delegate (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>,
+Section 5).
 draft-mcguinness-oauth-ai-agent-instance is deprecated and no longer
 cited; the instance-delegate matcher example uses <code>ai_agent</code>, the
 actor type the Actor Profile uses, instead of <code>client_instance</code>, which

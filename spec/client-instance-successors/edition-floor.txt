@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-09-28T21:40:08Z
-Source repository commit: e5adefe9471fdd185fb835c8d3e8f93cf5ee126b
+Generated: 2026-09-28T21:50:32Z
+Source repository commit: 52034c3b3488faf3c760cca1cc57ebe5f6b9426f
 Member count: 7
 
 Reading order:
@@ -10121,11 +10121,11 @@ Table of Contents
       token is the subject_token, with subject_token_type of
       urn:ietf:params:oauth:token-type:access_token.  The delegate is
       identified by an actor_token (with its actor_token_type) or by its
-      own client authentication (for example, a client instance
-      presenting a Client Attestation that carries its
-      client_instance_id,
-      [I-D.draft-mcguinness-oauth-client-instance-id]), and the AS
-      asserts the actor itself (Section 12.3); a requested_token_type of
+      own client authentication, and the AS asserts the actor itself
+      (Section 12.3).  A client instance's Client Attestation
+      ([I-D.draft-mcguinness-oauth-client-instance-id]) authenticates
+      the instance, not the actor it represents; establishing that actor
+      is a separate step, described below.  A requested_token_type of
       urn:ietf:params:oauth:token-type:access_token is used.  The
       response carries the matching issued_token_type and a token_type
       for the issued access token, per [RFC8693] Section 2.2.1.
@@ -10191,15 +10191,20 @@ Table of Contents
    Where a deployment authenticates client instances
    ([I-D.draft-mcguinness-oauth-client-instance-id], with attesters a
    client endorses under [I-D.draft-mcguinness-oauth-client-attesters]),
-   the delegate identified by the outermost act can be the concrete
-   instance.  The delegated token's top-level cnf is then an instance-
-   possessed key by construction: this profile sender-constrains a
-   delegated token to the delegate's own key, and the Actor Profile
-   makes the top-level cnf, not a member inside act, the current
-   presenter's key ([I-D.draft-mcguinness-oauth-actor-profile]).  This
-   document does not carry the attester-assigned client_instance_id in
-   act; carrying the instance in a delegated token's client_instance
-   claim needs a consuming profile under
+   the delegate identified by the outermost act can be an actor that an
+   authenticated instance represents.  The instance evidence does not
+   establish that actor:
+   [I-D.draft-mcguinness-oauth-client-instance-id], Section 5, forbids
+   adding an act claim or extending an actor chain solely from it, so
+   the AS establishes the delegate's actor identity, and that actor's
+   trusted association with the authenticated instance, separately.  The
+   delegated token's top-level cnf is then an instance-possessed key by
+   construction: this profile sender-constrains a delegated token to the
+   delegate's own key, and the Actor Profile makes the top-level cnf,
+   not a member inside act, the current presenter's key
+   ([I-D.draft-mcguinness-oauth-actor-profile]).  Carrying the instance
+   itself in a delegated token's client_instance claim is a separate
+   question: it needs a consuming profile under
    [I-D.draft-mcguinness-oauth-client-instance-id], Section 7.4, and
    this document defines none.  An allowed_delegates matcher selects
    delegates by actor type (Section 12.3), for example { "sub_profile":
@@ -13318,10 +13323,12 @@ Appendix E.  Document History
       type.  The instance-delegate paragraph names the top-level cnf as
       the presenter's key, as the Actor Profile requires, instead of
       act.cnf, and no longer states that act.sub carries the instance
-      identifier. draft-mcguinness-oauth-ai-agent-instance is deprecated
-      and no longer cited; the instance-delegate matcher example uses
-      ai_agent, the actor type the Actor Profile uses, instead of
-      client_instance, which only that draft defined.
+      identifier or that instance evidence alone identifies the delegate
+      ([I-D.draft-mcguinness-oauth-client-instance-id], Section 5).
+      draft-mcguinness-oauth-ai-agent-instance is deprecated and no
+      longer cited; the instance-delegate matcher example uses ai_agent,
+      the actor type the Actor Profile uses, instead of client_instance,
+      which only that draft defined.
 
    -00
 
