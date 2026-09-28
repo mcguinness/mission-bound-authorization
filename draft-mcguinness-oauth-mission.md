@@ -4101,7 +4101,7 @@ the following:
   ({{delegation-constraints}}). A client instance's Client Attestation
   ({{I-D.draft-mcguinness-oauth-client-instance-id}}) authenticates the
   instance, not the actor it represents; establishing that actor is a
-  separate step ({{delegation}}). A `requested_token_type` of
+  separate step, described below. A `requested_token_type` of
   `urn:ietf:params:oauth:token-type:access_token` is used. The response
   carries the matching `issued_token_type` and a `token_type` for the
   issued access token, per {{RFC8693}} Section 2.2.1.
