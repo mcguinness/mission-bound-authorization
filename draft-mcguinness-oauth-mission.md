@@ -130,7 +130,7 @@ informative:
     author:
       - org: OpenID Foundation
     date: 2023
-  I-D.draft-klrc-aiagent-auth:
+  I-D.draft-ietf-wimse-aims:
   I-D.draft-ietf-oauth-transaction-tokens:
   I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
   I-D.draft-cecchetti-oauth-rar-cedar:
@@ -318,7 +318,7 @@ separate, optional layer.
 
 # Introduction {#introduction}
 
-Agent-identity work such as {{I-D.draft-klrc-aiagent-auth}}
+Agent-identity work such as {{I-D.draft-ietf-wimse-aims}}
 establishes how an AI agent authenticates and how a user delegates
 authority to it: the agent is an OAuth 2.0 {{RFC6749}} client
 identified by `client_id`, the delegating user is the access token
@@ -419,12 +419,12 @@ data. It records consent to authority but carries no task, no integrity
 commitment, and no derivation gating; a deployment MAY surface Mission
 revocation through a grant-management-style API.
 
-{{I-D.draft-klrc-aiagent-auth}} names the agent's mission and leaves its
-translation into authorization out of scope; this document specifies
-that translation, reusing its agent-as-client and
+{{I-D.draft-ietf-wimse-aims}} names the agent's mission and leaves its
+translation into authorization requirements out of scope; this document
+specifies that translation, reusing its agent-as-client and
 delegating-principal-as-token-`sub` assignments unchanged
-({{principal-model}}), and an agent authenticated and delegated per
-it uses the mechanisms here to obtain Mission-bound tokens.
+({{principal-model}}), and an agent authenticated and delegated per it
+uses the mechanisms here to obtain Mission-bound tokens.
 
 Decision-layer access-request and approval workflows,
 such as the OpenID AuthZEN Access Request and Approval Profile
@@ -630,9 +630,8 @@ considered and where it belongs, not that it was overlooked.
   Mission across more than one trust-domain boundary, and the
   verifiable provenance that would require, are future work.
 - **Decentralized agent identity.** Agent identity and credentialing
-  are out of scope ({{I-D.draft-klrc-aiagent-auth}}, and workload
-  identity efforts such as WIMSE,
-  {{I-D.draft-ietf-wimse-arch}}); this profile governs the
+  are out of scope ({{I-D.draft-ietf-wimse-aims}} and the WIMSE
+  architecture, {{I-D.draft-ietf-wimse-arch}}); this profile governs the
   approved-task artifact those identities act within, not the
   identities themselves.
 - **Cross-audience unlinkability.** A single canonical Mission
@@ -659,7 +658,7 @@ member definitions in the surrounding text are authoritative.
 Agent (Client):
 : The OAuth client acting for the Mission's Subject, identified by
   `client_id`. Agent identity is established per
-  {{I-D.draft-klrc-aiagent-auth}} or ordinary OAuth client
+  {{I-D.draft-ietf-wimse-aims}} or ordinary OAuth client
   authentication.
 
 Subject:
@@ -760,7 +759,7 @@ This document maps principals onto native OAuth constructs:
 
 - The **Agent** is the OAuth client, referenced by `client_id`. Agent
   identity and credentialing are out of scope (see
-  {{I-D.draft-klrc-aiagent-auth}}).
+  {{I-D.draft-ietf-wimse-aims}}).
 - The **Subject** and **Approver** are each an (`iss`,
   `sub`) pair, matching the access token `sub` model of {{RFC9068}}.
   The Approver is the accountable consent principal whose approval
@@ -5643,7 +5642,7 @@ This appendix walks one Mission from an agent through Mission
 creation, token issuance, and Resource Server enforcement in a single
 trust domain. It is illustrative and adds no normative requirements.
 The OAuth pieces use the rules in this document; the identity setup is
-by reference to {{I-D.draft-klrc-aiagent-auth}}. Identifiers and hash
+by reference to {{I-D.draft-ietf-wimse-aims}}. Identifiers and hash
 values are illustrative and are not computed from the displayed JSON.
 
 This walkthrough is the baseline issuance path: stateless enforcement
@@ -5662,7 +5661,7 @@ a workload identity established using WIMSE or SPIFFE,
 {{I-D.draft-ietf-wimse-arch}},
 {{I-D.draft-ietf-oauth-spiffe-client-auth}}), and `alice` has delegated to it through an
 ordinary authorization-code flow, per
-{{I-D.draft-klrc-aiagent-auth}}: `client_id` is the agent and the
+{{I-D.draft-ietf-wimse-aims}}: `client_id` is the agent and the
 token `sub` is `alice`. This document adds the Mission layer on top of
 that identity; Stage 0 is otherwise unchanged from that specification.
 
@@ -6728,6 +6727,13 @@ Cross-Domain:
   `approval_basis.consent_principal`, normatively equal to it; its
   removal is deferred to the same future breaking-change window.
 
+- References: the agent-identity reference
+  draft-klrc-aiagent-auth is replaced by its successor,
+  {{I-D.draft-ietf-wimse-aims}}, which names the agent's mission and
+  leaves its translation into authorization requirements out of scope
+  (Section 10.1) and covers user delegation through the authorization
+  code grant (Section 10.4.1).
+
 -00
 
 - Initial individual draft.
@@ -6738,4 +6744,4 @@ Cross-Domain:
 This work builds on the OAuth 2.0 Rich Authorization Requests, Pushed
 Authorization Requests, and JWT access token specifications, and is
 intended to complement agent-identity work including
-{{I-D.draft-klrc-aiagent-auth}}.
+{{I-D.draft-ietf-wimse-aims}}.
