@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       27 September 2026
-Expires: 31 March 2027
+Intended status: Standards Track                       28 September 2026
+Expires: 1 April 2027
 
 
              Mission Resource Access Profile for OAuth 2.0
@@ -14,8 +14,8 @@ Expires: 31 March 2027
 Abstract
 
    Mission-Bound Authorization for OAuth 2.0 (the "issuance profile")
-   derives a Mission's Authority Set as one or more Rich Authorization
-   Requests [RFC9396] authorization_details entries, of any
+   derives a Mission's Authority Set as one or more OAuth 2.0 Rich
+   Authorization Requests (RAR) authorization_details entries, of any
    Authorization Server-supported type, and is type-agnostic toward that
    type's own semantics.  This document defines mission_resource_access:
    a general-purpose, cross-resource authorization_details type carrying
@@ -27,7 +27,7 @@ Abstract
    defines this type's scope-projection safety conditions and its
    declaration under the issuance profile's machine-readable
    transformation-capability map.  This document is a profile of the
-   issuance profile; a deployment MAY support mission_resource_access,
+   issuance profile; a deployment can support mission_resource_access,
    another AS-supported authorization_details type, or both.
 
 About This Document
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 31 March 2027.
+   This Internet-Draft will expire on 1 April 2027.
 
 Copyright Notice
 
@@ -96,11 +96,11 @@ Table of Contents
      8.1.  The Mission Resource Access Authorization Details Type
      8.2.  OAuth Protected Resource Metadata Registration
      8.3.  Common Constraints Registry
-   9.  Document History
+   9.  References
+     9.1.  Normative References
+     9.2.  Informative References
+   Appendix A.  Document History
    Acknowledgments
-   References
-     Normative References
-     Informative References
    Author's Address
 
 1.  Introduction
@@ -1087,53 +1087,9 @@ Table of Contents
    registry, and any other name is either collision-resistant or remains
    deployment-defined and outside the registry.
 
-9.  Document History
+9.  References
 
-   [[ To be removed from the final specification ]]
-
-   -00
-
-   *  Controls taxonomy retirement (#636): the AS-side no-registered-
-      narrowing failure-closed cross-reference updated from an
-      unrecognized resources value to an unrecognized target_resources
-      value, matching the issuance profile's rename.  No entry-level
-      constraints reference changed; this document's own constraints is
-      the RAR entry-level object, unaffected by the retirement of the
-      Mission Intent's separate controls bucket.
-
-   *  Review response (#637): relocated the Resource Server enforcement
-      duties (exact/prefix resource matching, action matching, per-entry
-      constraints enforcement) and the mission_constraints_supported
-      protected-resource metadata member (definition and IANA
-      registration) from the issuance profile, which had continued to
-      interpret this type's members directly in its generic Resource
-      Server contract.  Split the Conformance section by role
-      (Authorization Server vs. Resource Server) so an RS is not
-      measured against issuer-only duties (subset/intersection, delegate
-      eligibility, Transformation Capabilities declaration) it has no
-      reason to implement.  Adds this document's conformance-manifest
-      source pin and its own requirement rows.
-
-   *  Initial version: mission_resource_access, its resource and action
-      matching, generic constraints, the Common Constraints registry,
-      the delegation policy and delegate-matching rules, the subset and
-      intersection algebra, and the Resource Boundary Canonicalization
-      security analysis, relocated without change from
-      [I-D.draft-mcguinness-oauth-mission], where they were previously
-      defined inline (#637).  Adds this type's concrete Scope Projection
-      safety conditions and issuance-algorithm interlock (#698), and its
-      Transformation Capabilities declaration for the issuance profile's
-      machine-readable per-type capability map (#645).
-
-Acknowledgments
-
-   This document was split from Mission-Bound Authorization for OAuth
-   2.0 [I-D.draft-mcguinness-oauth-mission], where
-   mission_resource_access was originally defined.
-
-References
-
-Normative References
+9.1.  Normative References
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
@@ -1196,7 +1152,7 @@ Normative References
               DOI 10.17487/RFC9728, April 2025,
               <https://www.rfc-editor.org/rfc/rfc9728>.
 
-Informative References
+9.2.  Informative References
 
    [I-D.draft-mcguinness-oauth-mission-cross-domain]
               McGuinness, K., "Mission Cross-Domain Projection for OAuth
@@ -1211,13 +1167,6 @@ Informative References
               2026, <https://datatracker.ietf.org/doc/html/draft-
               niyikiza-oauth-attenuating-agent-tokens-01>.
 
-   [I-D.draft-zehavi-oauth-rar-metadata]
-              Zehavi, Y., "OAuth 2.0 RAR Metadata and Error
-              Remediation", Work in Progress, Internet-Draft, draft-
-              zehavi-oauth-rar-metadata-06, 9 August 2026,
-              <https://datatracker.ietf.org/doc/html/draft-zehavi-oauth-
-              rar-metadata-06>.
-
    [MCP]      Model Context Protocol Project, "Model Context Protocol:
               Authorization", 2026, <https://modelcontextprotocol.io/
               specification/2026-07-28/basic/authorization>.
@@ -1226,6 +1175,54 @@ Informative References
               Writing an IANA Considerations Section in RFCs", BCP 26,
               RFC 8126, DOI 10.17487/RFC8126, June 2017,
               <https://www.rfc-editor.org/rfc/rfc8126>.
+
+Appendix A.  Document History
+
+   [[ To be removed from the final specification ]]
+
+   -00
+
+   *  Controls taxonomy retirement (#636): the AS-side no-registered-
+      narrowing failure-closed cross-reference updated from an
+      unrecognized resources value to an unrecognized target_resources
+      value, matching the issuance profile's rename.  No entry-level
+      constraints reference changed; this document's own constraints is
+      the RAR entry-level object, unaffected by the retirement of the
+      Mission Intent's separate controls bucket.
+
+   *  Review response (#637): relocated the Resource Server enforcement
+      duties (exact/prefix resource matching, action matching, per-entry
+      constraints enforcement) and the mission_constraints_supported
+      protected-resource metadata member (definition and IANA
+      registration) from the issuance profile, which had continued to
+      interpret this type's members directly in its generic Resource
+      Server contract.  Split the Conformance section by role
+      (Authorization Server vs. Resource Server) so an RS is not
+      measured against issuer-only duties (subset/intersection, delegate
+      eligibility, Transformation Capabilities declaration) it has no
+      reason to implement.  Adds this document's conformance-manifest
+      source pin and its own requirement rows.
+
+   *  Initial version: mission_resource_access, its resource and action
+      matching, generic constraints, the Common Constraints registry,
+      the delegation policy and delegate-matching rules, the subset and
+      intersection algebra, and the Resource Boundary Canonicalization
+      security analysis, relocated without change from
+      [I-D.draft-mcguinness-oauth-mission], where they were previously
+      defined inline (#637).  Adds this type's concrete Scope Projection
+      safety conditions and issuance-algorithm interlock (#698), and its
+      Transformation Capabilities declaration for the issuance profile's
+      machine-readable per-type capability map (#645).
+
+   *  The abstract names Rich Authorization Requests without a citation
+      and states deployment choice without a BCP 14 keyword; the uncited
+      RAR metadata reference is removed.
+
+Acknowledgments
+
+   This document was split from Mission-Bound Authorization for OAuth
+   2.0 [I-D.draft-mcguinness-oauth-mission], where
+   mission_resource_access was originally defined.
 
 Author's Address
 

@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-09-27T04:33:17Z
-Source repository commit: b694cf7427e17cfacded4690022539bce6cd2922
+Generated: 2026-09-28T21:31:36Z
+Source repository commit: 25e2887efc4b8d41b1a144bef691d7a6fdfb9b7d
 Member count: 7
 
 Reading order:
@@ -28,8 +28,8 @@ Reading order:
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                         27 September 2026
-Expires: 31 March 2027
+Intended status: Informational                         28 September 2026
+Expires: 1 April 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -82,7 +82,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 31 March 2027.
+   This Internet-Draft will expire on 1 April 2027.
 
 Copyright Notice
 
@@ -4452,8 +4452,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       27 September 2026
-Expires: 31 March 2027
+Intended status: Standards Track                       28 September 2026
+Expires: 1 April 2027
 
 
                      Mission Substrate Requirements
@@ -4511,7 +4511,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 31 March 2027.
+   This Internet-Draft will expire on 1 April 2027.
 
 Copyright Notice
 
@@ -5995,8 +5995,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       27 September 2026
-Expires: 31 March 2027
+Intended status: Standards Track                       28 September 2026
+Expires: 1 April 2027
 
 
                Mission-Bound Authorization for OAuth 2.0
@@ -6055,7 +6055,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 31 March 2027.
+   This Internet-Draft will expire on 1 April 2027.
 
 Copyright Notice
 
@@ -6193,7 +6193,7 @@ Table of Contents
 
 1.  Introduction
 
-   Agent-identity work such as [I-D.draft-klrc-aiagent-auth] establishes
+   Agent-identity work such as [I-D.draft-ietf-wimse-aims] establishes
    how an AI agent authenticates and how a user delegates authority to
    it: the agent is an OAuth 2.0 [RFC6749] client identified by
    client_id, the delegating user is the access token sub, and the agent
@@ -6298,9 +6298,9 @@ Table of Contents
    deployment MAY surface Mission revocation through a grant-management-
    style API.
 
-   [I-D.draft-klrc-aiagent-auth] names the agent's mission and leaves
-   its translation into authorization out of scope; this document
-   specifies that translation, reusing its agent-as-client and
+   [I-D.draft-ietf-wimse-aims] names the agent's mission and leaves its
+   translation into authorization requirements out of scope; this
+   document specifies that translation, reusing its agent-as-client and
    delegating-principal-as-token-sub assignments unchanged
    (Section 3.1), and an agent authenticated and delegated per it uses
    the mechanisms here to obtain Mission-bound tokens.
@@ -6512,10 +6512,10 @@ Table of Contents
       verifiable provenance that would require, are future work.
 
    *  *Decentralized agent identity.* Agent identity and credentialing
-      are out of scope ([I-D.draft-klrc-aiagent-auth], and workload
-      identity efforts such as WIMSE, [I-D.draft-ietf-wimse-arch]); this
-      profile governs the approved-task artifact those identities act
-      within, not the identities themselves.
+      are out of scope ([I-D.draft-ietf-wimse-aims] and the WIMSE
+      architecture, [I-D.draft-ietf-wimse-arch]); this profile governs
+      the approved-task artifact those identities act within, not the
+      identities themselves.
 
    *  *Cross-audience unlinkability.* A single canonical Mission
       Identifier deliberately lets any party holding a token correlate a
@@ -6544,7 +6544,7 @@ Table of Contents
 
    Agent (Client):  The OAuth client acting for the Mission's Subject,
       identified by client_id.  Agent identity is established per
-      [I-D.draft-klrc-aiagent-auth] or ordinary OAuth client
+      [I-D.draft-ietf-wimse-aims] or ordinary OAuth client
       authentication.
 
    Subject:  The user, workload, or organizational principal on whose
@@ -6635,7 +6635,7 @@ Table of Contents
 
    *  The *Agent* is the OAuth client, referenced by client_id.  Agent
       identity and credentialing are out of scope (see
-      [I-D.draft-klrc-aiagent-auth]).
+      [I-D.draft-ietf-wimse-aims]).
 
    *  The *Subject* and *Approver* are each an (iss, sub) pair, matching
       the access token sub model of [RFC9068].  The Approver is the
@@ -9306,7 +9306,7 @@ Table of Contents
    *  *Insufficient carried authority.* The action is outside the
       token's carried authority: the RS challenges with
       insufficient_scope ([RFC6750]), or the RAR-remediation challenge
-      where [I-D.draft-zehavi-oauth-rar-metadata] is deployed
+      where [I-D.draft-ietf-oauth-rar-metadata-remediation] is deployed
       (Section 9.5); more requires a new approval or an expansion where
       that companion is deployed.
 
@@ -9528,37 +9528,37 @@ Table of Contents
    This document's own grain is mission_denial above: which path a
    denial leads into.
 
-   +==========================+======================+======================================+
-   |Grain                     |Carriage              |Defined by                            |
-   +==========================+======================+======================================+
-   |mission_denial            |WWW-Authenticate      |This document (Section 9.3)           |
-   |                          |attribute             |                                      |
-   +--------------------------+----------------------+--------------------------------------+
-   |insufficient_authorization|WWW-Authenticate error|[I-D.draft-zehavi-oauth-rar-metadata] |
-   |with                      |code and parameter    |                                      |
-   |authorization_remediation |                      |                                      |
-   +--------------------------+----------------------+--------------------------------------+
-   |Requestable denial        |AuthZEN denial        |[AuthZEN.ARAP], profiled by           |
-   |                          |response:             |[I-D.draft-mcguinness-mission-authzen]|
-   |                          |context.access_request|                                      |
-   |                          |with next_action:     |                                      |
-   |                          |request               |                                      |
-   +--------------------------+----------------------+--------------------------------------+
+   +==========================+======================+===============================================+
+   |Grain                     |Carriage              |Defined by                                     |
+   +==========================+======================+===============================================+
+   |mission_denial            |WWW-Authenticate      |This document (Section 9.3)                    |
+   |                          |attribute             |                                               |
+   +--------------------------+----------------------+-----------------------------------------------+
+   |insufficient_authorization|WWW-Authenticate error|[I-D.draft-ietf-oauth-rar-metadata-remediation]|
+   |with                      |code and parameter    |                                               |
+   |authorization_remediation |                      |                                               |
+   +--------------------------+----------------------+-----------------------------------------------+
+   |Requestable denial        |AuthZEN denial        |[AuthZEN.ARAP], profiled by                    |
+   |                          |response:             |[I-D.draft-mcguinness-mission-authzen]         |
+   |                          |context.access_request|                                               |
+   |                          |with next_action:     |                                               |
+   |                          |request               |                                               |
+   +--------------------------+----------------------+-----------------------------------------------+
 
                    Table 3: The three remediation grains
 
    A Resource Server MAY compose a second grain with it: the
    insufficient_authorization WWW-Authenticate error code and its
    authorization_remediation parameter, defined by
-   [I-D.draft-zehavi-oauth-rar-metadata]. authorization_remediation is a
-   base64url-encoded JSON object naming the actionable
-   authorization_details the caller lacks, with an OPTIONAL
-   authorization_reference letting the client match a previously issued
-   token to that same gap.  It names what mission_denial:
-   insufficient_authority only points at.  This document does not fold
-   that grain into mission_denial's carriage, nor redefine either
-   grain's response status: each rides the wire shape its own defining
-   document gives it.
+   [I-D.draft-ietf-oauth-rar-metadata-remediation].
+   authorization_remediation is a base64url-encoded JSON object naming
+   the actionable authorization_details the caller lacks, with an
+   OPTIONAL authorization_reference letting the client match a
+   previously issued token to that same gap.  It names what
+   mission_denial: insufficient_authority only points at.  This document
+   does not fold that grain into mission_denial's carriage, nor redefine
+   either grain's response status: each rides the wire shape its own
+   defining document gives it.
 
    A client that decodes authorization_remediation proposes the carried
    entries back on the standard authorization_details parameter
@@ -10563,10 +10563,10 @@ Table of Contents
 
    An AS that advertises mission_bound_authorization_supported: true
    SHOULD also advertise authorization_details_types_metadata_endpoint
-   [I-D.draft-zehavi-oauth-rar-metadata] where it implements that
-   endpoint; the endpoint is defined by an individual draft without
-   formal standing, and conformance to this document does not depend on
-   it.  The stable baseline is [RFC9396]:
+   [I-D.draft-ietf-oauth-rar-metadata-remediation] where it implements
+   that endpoint; the endpoint is defined by an OAuth working group
+   draft still in progress, and conformance to this document does not
+   depend on it.  The stable baseline is [RFC9396]:
    authorization_details_types_supported listing at least one AS-
    supported type (a MUST for an advertising AS, above); where
    mission_resource_access is among them, the Mission Resource Access
@@ -10575,14 +10575,14 @@ Table of Contents
 
    Where the endpoint IS advertised: its response is a JSON object keyed
    by authorization_details type identifier, each value carrying, per
-   [I-D.draft-zehavi-oauth-rar-metadata], a JSON Schema for exactly one
-   authorization_details object of that type (schema or schema_uri) and
-   optionally version, description, documentation_uri, and examples; its
-   key set is then the source of truth for which types the AS supports,
-   and authorization_details_types_supported, where the AS also
-   advertises it, mirrors those keys and MUST NOT list a type absent
-   from them; and the AS MUST publish, within that response, an entry
-   for every supported type whose schema validates that type's
+   [I-D.draft-ietf-oauth-rar-metadata-remediation], a JSON Schema for
+   exactly one authorization_details object of that type (schema or
+   schema_uri) and optionally version, description, documentation_uri,
+   and examples; its key set is then the source of truth for which types
+   the AS supports, and authorization_details_types_supported, where the
+   AS also advertises it, mirrors those keys and MUST NOT list a type
+   absent from them; and the AS MUST publish, within that response, an
+   entry for every supported type whose schema validates that type's
    documented object shape.  For mission_resource_access, that shape,
    including the Common Constraints structure, is the Mission Resource
    Access Profile's
@@ -11775,10 +11775,6 @@ Table of Contents
 
 21.1.  Normative References
 
-   [ISO4217]  International Organization for Standardization, "ISO
-              4217:2015, Codes for the representation of currencies and
-              funds", ISO 4217:2015, August 2015.
-
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
               DOI 10.17487/RFC2119, March 1997,
@@ -11787,11 +11783,6 @@ Table of Contents
    [RFC3339]  Klyne, G. and C. Newman, "Date and Time on the Internet:
               Timestamps", RFC 3339, DOI 10.17487/RFC3339, July 2002,
               <https://www.rfc-editor.org/rfc/rfc3339>.
-
-   [RFC3986]  Berners-Lee, T., Fielding, R., and L. Masinter, "Uniform
-              Resource Identifier (URI): Generic Syntax", STD 66,
-              RFC 3986, DOI 10.17487/RFC3986, January 2005,
-              <https://www.rfc-editor.org/rfc/rfc3986>.
 
    [RFC4648]  Josefsson, S., "The Base16, Base32, and Base64 Data
               Encodings", RFC 4648, DOI 10.17487/RFC4648, October 2006,
@@ -11939,6 +11930,13 @@ Table of Contents
               <https://datatracker.ietf.org/doc/html/draft-cecchetti-
               oauth-rar-cedar-02>.
 
+   [I-D.draft-ietf-oauth-rar-metadata-remediation]
+              Zehavi, Y., "OAuth 2.0 RAR Metadata and Error
+              Remediation", Work in Progress, Internet-Draft, draft-
+              ietf-oauth-rar-metadata-remediation-00, 23 August 2026,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
+              rar-metadata-remediation-00>.
+
    [I-D.draft-ietf-oauth-spiffe-client-auth]
               Schwenkschuster, A., Kasselman, P., Rose, S., Thorgersen,
               S., and N. Cam-Winget, "OAuth SPIFFE Client
@@ -11954,6 +11952,14 @@ Table of Contents
               <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
               transaction-tokens-11>.
 
+   [I-D.draft-ietf-wimse-aims]
+              Kasselman, P., Lombardo, J., Rosomakho, Y., Campbell, B.,
+              Steele, N., and A. Parecki, "AI Identity Management
+              System", Work in Progress, Internet-Draft, draft-ietf-
+              wimse-aims-00, 15 September 2026,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-wimse-
+              aims-00>.
+
    [I-D.draft-ietf-wimse-arch]
               Salowey, J. A., Rosomakho, Y., and H. Tschofenig,
               "Workload Identity in a Multi System Environment (WIMSE)
@@ -11961,14 +11967,6 @@ Table of Contents
               ietf-wimse-arch-08, 6 July 2026,
               <https://datatracker.ietf.org/doc/html/draft-ietf-wimse-
               arch-08>.
-
-   [I-D.draft-klrc-aiagent-auth]
-              Kasselman, P., Lombardo, J., Rosomakho, Y., Campbell, B.,
-              Steele, N., and A. Parecki, "AI Agent Authentication and
-              Authorization", Work in Progress, Internet-Draft, draft-
-              klrc-aiagent-auth-03, 6 July 2026,
-              <https://datatracker.ietf.org/doc/html/draft-klrc-aiagent-
-              auth-03>.
 
    [I-D.draft-mcguinness-mission-approval-governance]
               McGuinness, K., "Mission Approval Governance", 2026,
@@ -12123,17 +12121,6 @@ Table of Contents
               2026, <https://datatracker.ietf.org/doc/html/draft-
               niyikiza-oauth-attenuating-agent-tokens-01>.
 
-   [I-D.draft-zehavi-oauth-rar-metadata]
-              Zehavi, Y., "OAuth 2.0 RAR Metadata and Error
-              Remediation", Work in Progress, Internet-Draft, draft-
-              zehavi-oauth-rar-metadata-06, 9 August 2026,
-              <https://datatracker.ietf.org/doc/html/draft-zehavi-oauth-
-              rar-metadata-06>.
-
-   [MCP]      Model Context Protocol Project, "Model Context Protocol:
-              Authorization", 2026, <https://modelcontextprotocol.io/
-              specification/2026-07-28/basic/authorization>.
-
    [OpenID.Core]
               OpenID Foundation, "OpenID Connect Core 1.0 incorporating
               errata set 2", 2023,
@@ -12169,9 +12156,8 @@ Appendix A.  End-to-End Example (Non-Normative)
    creation, token issuance, and Resource Server enforcement in a single
    trust domain.  It is illustrative and adds no normative requirements.
    The OAuth pieces use the rules in this document; the identity setup
-   is by reference to [I-D.draft-klrc-aiagent-auth].  Identifiers and
-   hash values are illustrative and are not computed from the displayed
-   JSON.
+   is by reference to [I-D.draft-ietf-wimse-aims].  Identifiers and hash
+   values are illustrative and are not computed from the displayed JSON.
 
    This walkthrough is the baseline issuance path: stateless enforcement
    bounded only by token lifetime.  No stage calls back to the AS for
@@ -12190,8 +12176,8 @@ A.1.  Stage 0: Agent Identity (by Reference)
    [I-D.draft-ietf-wimse-arch],
    [I-D.draft-ietf-oauth-spiffe-client-auth]), and alice has delegated
    to it through an ordinary authorization-code flow, per
-   [I-D.draft-klrc-aiagent-auth]: client_id is the agent and the token
-   sub is alice.  This document adds the Mission layer on top of that
+   [I-D.draft-ietf-wimse-aims]: client_id is the agent and the token sub
+   is alice.  This document adds the Mission layer on top of that
    identity; Stage 0 is otherwise unchanged from that specification.
 
 A.2.  Stage 1: Mission Creation
@@ -13299,6 +13285,24 @@ Appendix E.  Document History
       for approval_basis.consent_principal, normatively equal to it; its
       removal is deferred to the same future breaking-change window.
 
+   *  References: the agent-identity reference draft-klrc-aiagent-auth
+      is replaced by its successor, [I-D.draft-ietf-wimse-aims], which
+      names the agent's mission and leaves its translation into
+      authorization requirements out of scope (Section 10.1) and covers
+      user delegation through the authorization code grant
+      (Section 10.4.1).
+
+   *  References: removed three references the text no longer cites
+      (MCP, ISO 4217, and RFC 3986).
+
+   *  References: draft-zehavi-oauth-rar-metadata is replaced by its
+      working-group successor,
+      [I-D.draft-ietf-oauth-rar-metadata-remediation], which keeps the
+      insufficient_authorization error, the authorization_remediation
+      parameter, and the authorization_details_types_metadata_endpoint
+      member this document cites; the endpoint is no longer described as
+      lacking formal standing.
+
    -00
 
    *  Initial individual draft.
@@ -13308,7 +13312,7 @@ Acknowledgments
    This work builds on the OAuth 2.0 Rich Authorization Requests, Pushed
    Authorization Requests, and JWT access token specifications, and is
    intended to complement agent-identity work including
-   [I-D.draft-klrc-aiagent-auth].
+   [I-D.draft-ietf-wimse-aims].
 
 Author's Address
 
@@ -13321,8 +13325,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       27 September 2026
-Expires: 31 March 2027
+Intended status: Standards Track                       28 September 2026
+Expires: 1 April 2027
 
 
                Mission Status and Lifecycle for OAuth 2.0
@@ -13374,7 +13378,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 31 March 2027.
+   This Internet-Draft will expire on 1 April 2027.
 
 Copyright Notice
 
@@ -15319,8 +15323,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       27 September 2026
-Expires: 31 March 2027
+Intended status: Standards Track                       28 September 2026
+Expires: 1 April 2027
 
 
                    Mission-Bound Runtime Enforcement
@@ -15379,7 +15383,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 31 March 2027.
+   This Internet-Draft will expire on 1 April 2027.
 
 Copyright Notice
 
@@ -19749,8 +19753,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       27 September 2026
-Expires: 31 March 2027
+Intended status: Standards Track                       28 September 2026
+Expires: 1 April 2027
 
 
                         Mission Runtime Evidence
@@ -19800,7 +19804,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 31 March 2027.
+   This Internet-Draft will expire on 1 April 2027.
 
 Copyright Notice
 
@@ -22309,8 +22313,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       27 September 2026
-Expires: 31 March 2027
+Intended status: Standards Track                       28 September 2026
+Expires: 1 April 2027
 
 
            Mission-Bound Runtime Enforcement: AuthZEN Profile
@@ -22366,7 +22370,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 31 March 2027.
+   This Internet-Draft will expire on 1 April 2027.
 
 Copyright Notice
 

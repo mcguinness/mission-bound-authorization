@@ -7,11 +7,11 @@
 <title>Mission Resource Access Profile for OAuth 2.0</title>
 <meta content="Karl McGuinness" name="author">
 <meta content="
-       Mission-Bound Authorization for OAuth 2.0 (the &quot;issuance profile&quot;) derives
-a Mission's Authority Set as one or more Rich Authorization Requests
-   authorization_details  entries, of any Authorization
-Server-supported type, and is type-agnostic toward that type's own
-semantics. This document defines  mission_resource_access : a
+       Mission-Bound Authorization for OAuth 2.0 (the &quot;issuance profile&quot;)
+derives a Mission's Authority Set as one or more OAuth 2.0 Rich
+Authorization Requests (RAR)  authorization_details  entries, of any
+Authorization Server-supported type, and is type-agnostic toward that
+type's own semantics. This document defines  mission_resource_access : a
 general-purpose, cross-resource  authorization_details  type carrying a
 resource identifier matched exactly or by path prefix, an action
 namespace with wildcard families, machine-actionable constraints
@@ -20,7 +20,7 @@ delegation policy, together with the subset and intersection algebra a
 deployment uses to compare and narrow two entries. It also defines this
 type's scope-projection safety conditions and its declaration under the
 issuance profile's machine-readable transformation-capability map. This
-document is a profile of the issuance profile; a deployment  MAY  support
+document is a profile of the issuance profile; a deployment can support
  mission_resource_access , another AS-supported  authorization_details 
 type, or both. 
     " name="description">
@@ -1064,7 +1064,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 31 March 2027</td>
+<td class="center">Expires 1 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1077,12 +1077,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-resource-access-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-09-27" class="published">27 September 2026</time>
+<time datetime="2026-09-28" class="published">28 September 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-03-31">31 March 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-01">1 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1095,11 +1095,11 @@ svg {
 <h1 id="title">Mission Resource Access Profile for OAuth 2.0</h1>
 <section id="section-abstract">
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
-<p id="section-abstract-1">Mission-Bound Authorization for OAuth 2.0 (the "issuance profile") derives
-a Mission's Authority Set as one or more Rich Authorization Requests
-<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> <code>authorization_details</code> entries, of any Authorization
-Server-supported type, and is type-agnostic toward that type's own
-semantics. This document defines <code>mission_resource_access</code>: a
+<p id="section-abstract-1">Mission-Bound Authorization for OAuth 2.0 (the "issuance profile")
+derives a Mission's Authority Set as one or more OAuth 2.0 Rich
+Authorization Requests (RAR) <code>authorization_details</code> entries, of any
+Authorization Server-supported type, and is type-agnostic toward that
+type's own semantics. This document defines <code>mission_resource_access</code>: a
 general-purpose, cross-resource <code>authorization_details</code> type carrying a
 resource identifier matched exactly or by path prefix, an action
 namespace with wildcard families, machine-actionable constraints
@@ -1108,7 +1108,7 @@ delegation policy, together with the subset and intersection algebra a
 deployment uses to compare and narrow two entries. It also defines this
 type's scope-projection safety conditions and its declaration under the
 issuance profile's machine-readable transformation-capability map. This
-document is a profile of the issuance profile; a deployment <span class="bcp14">MAY</span> support
+document is a profile of the issuance profile; a deployment can support
 <code>mission_resource_access</code>, another AS-supported <code>authorization_details</code>
 type, or both.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
@@ -1142,7 +1142,7 @@ type, or both.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 31 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 1 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1238,24 +1238,24 @@ type, or both.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
-            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-document-history" class="internal xref">Document History</a></p>
-</li>
-          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
-            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
-</li>
-          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
-            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref"></a><a href="#name-references" class="internal xref">References</a></p>
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-references" class="internal xref">References</a></p>
 <ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.1">
-                <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref"></a><a href="#name-normative-references" class="internal xref">Normative References</a></p>
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1">
+                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
 </li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.2">
-                <p id="section-toc.1-1.11.2.2.1"><a href="#section-11.2" class="auto internal xref"></a><a href="#name-informative-references" class="internal xref">Informative References</a></p>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2">
+                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
 </li>
             </ul>
 </li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-document-history" class="internal xref">Document History</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
-            <p id="section-toc.1-1.12.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+            <p id="section-toc.1-1.12.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -2532,71 +2532,15 @@ registry.<a href="#section-8.3-6" class="pilcrow">¶</a></p>
 </div>
 </section>
 </div>
-<div id="document-history">
-<section id="section-9">
-      <h2 id="name-document-history">
-<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
-      </h2>
-<p id="section-9-1">[[ To be removed from the final specification ]]<a href="#section-9-1" class="pilcrow">¶</a></p>
-<p id="section-9-2">-00<a href="#section-9-2" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-9-3.1">
-          <p id="section-9-3.1.1">Controls taxonomy retirement (#636): the AS-side no-registered-
-narrowing failure-closed cross-reference updated from an
-unrecognized <code>resources</code> value to an unrecognized <code>target_resources</code>
-value, matching the issuance profile's rename. No entry-level
-<code>constraints</code> reference changed; this document's own <code>constraints</code>
-is the RAR entry-level object, unaffected by the retirement of the
-Mission Intent's separate <code>controls</code> bucket.<a href="#section-9-3.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-9-3.2">
-          <p id="section-9-3.2.1">Review response (#637): relocated the Resource Server enforcement
-duties (exact/prefix resource matching, action matching,
-per-entry <code>constraints</code> enforcement) and the
-<code>mission_constraints_supported</code> protected-resource metadata member
-(definition and IANA registration) from the issuance profile, which
-had continued to interpret this type's members directly in its
-generic Resource Server contract. Split the Conformance section by
-role (Authorization Server vs. Resource Server) so an RS is not
-measured against issuer-only duties (subset/intersection, delegate
-eligibility, Transformation Capabilities declaration) it has no
-reason to implement. Adds this document's conformance-manifest
-source pin and its own requirement rows.<a href="#section-9-3.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-9-3.3">
-          <p id="section-9-3.3.1">Initial version: <code>mission_resource_access</code>, its resource and action
-matching, generic constraints, the Common Constraints registry, the
-delegation policy and delegate-matching rules, the subset and
-intersection algebra, and the Resource Boundary Canonicalization
-security analysis, relocated without change from
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, where they were previously
-defined inline (#637). Adds this type's concrete Scope Projection
-safety conditions and issuance-algorithm interlock (#698), and its
-Transformation Capabilities declaration for the issuance profile's
-machine-readable per-type capability map (#645).<a href="#section-9-3.3.1" class="pilcrow">¶</a></p>
-</li>
-      </ul>
-</section>
-</div>
-<div id="acknowledgments">
-<section id="section-10">
-      <h2 id="name-acknowledgments">
-<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
-      </h2>
-<p id="section-10-1">This document was split from Mission-Bound Authorization for OAuth 2.0
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, where <code>mission_resource_access</code>
-was originally defined.<a href="#section-10-1" class="pilcrow">¶</a></p>
-</section>
-</div>
 <div id="sec-combined-references">
-<section id="section-11">
+<section id="section-9">
       <h2 id="name-references">
-<a href="#name-references" class="section-name selfRef">References</a>
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-references" class="section-name selfRef">References</a>
       </h2>
 <div id="sec-normative-references">
-<section id="section-11.1">
+<section id="section-9.1">
         <h3 id="name-normative-references">
-<a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
 <dl class="references">
 <dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
@@ -2655,9 +2599,9 @@ was originally defined.<a href="#section-10-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="sec-informative-references">
-<section id="section-11.2">
+<section id="section-9.2">
         <h3 id="name-informative-references">
-<a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
 <dt id="I-D.draft-mcguinness-oauth-mission-cross-domain">[I-D.draft-mcguinness-oauth-mission-cross-domain]</dt>
@@ -2667,10 +2611,6 @@ was originally defined.<a href="#section-10-1" class="pilcrow">¶</a></p>
 <dt id="I-D.draft-niyikiza-oauth-attenuating-agent-tokens">[I-D.draft-niyikiza-oauth-attenuating-agent-tokens]</dt>
         <dd>
 <span class="refAuthor">Aimable, N.</span>, <span class="refTitle">"Attenuating Authorization Tokens for Agentic Delegation Chains"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-niyikiza-oauth-attenuating-agent-tokens-01</span>, <time datetime="2026-06-15" class="refDate">15 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-01">https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-01</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.draft-zehavi-oauth-rar-metadata">[I-D.draft-zehavi-oauth-rar-metadata]</dt>
-        <dd>
-<span class="refAuthor">Zehavi, Y.</span>, <span class="refTitle">"OAuth 2.0 RAR Metadata and Error Remediation"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-zehavi-oauth-rar-metadata-06</span>, <time datetime="2026-08-09" class="refDate">9 August 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-zehavi-oauth-rar-metadata-06">https://datatracker.ietf.org/doc/html/draft-zehavi-oauth-rar-metadata-06</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="MCP">[MCP]</dt>
         <dd>
@@ -2685,8 +2625,69 @@ was originally defined.<a href="#section-10-1" class="pilcrow">¶</a></p>
 </div>
 </section>
 </div>
-<div id="authors-addresses">
+<div id="document-history">
 <section id="appendix-A">
+      <h2 id="name-document-history">
+<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
+      </h2>
+<p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<p id="appendix-A-2">-00<a href="#appendix-A-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="appendix-A-3.1">
+          <p id="appendix-A-3.1.1">Controls taxonomy retirement (#636): the AS-side no-registered-
+narrowing failure-closed cross-reference updated from an
+unrecognized <code>resources</code> value to an unrecognized <code>target_resources</code>
+value, matching the issuance profile's rename. No entry-level
+<code>constraints</code> reference changed; this document's own <code>constraints</code>
+is the RAR entry-level object, unaffected by the retirement of the
+Mission Intent's separate <code>controls</code> bucket.<a href="#appendix-A-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-3.2">
+          <p id="appendix-A-3.2.1">Review response (#637): relocated the Resource Server enforcement
+duties (exact/prefix resource matching, action matching,
+per-entry <code>constraints</code> enforcement) and the
+<code>mission_constraints_supported</code> protected-resource metadata member
+(definition and IANA registration) from the issuance profile, which
+had continued to interpret this type's members directly in its
+generic Resource Server contract. Split the Conformance section by
+role (Authorization Server vs. Resource Server) so an RS is not
+measured against issuer-only duties (subset/intersection, delegate
+eligibility, Transformation Capabilities declaration) it has no
+reason to implement. Adds this document's conformance-manifest
+source pin and its own requirement rows.<a href="#appendix-A-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-3.3">
+          <p id="appendix-A-3.3.1">Initial version: <code>mission_resource_access</code>, its resource and action
+matching, generic constraints, the Common Constraints registry, the
+delegation policy and delegate-matching rules, the subset and
+intersection algebra, and the Resource Boundary Canonicalization
+security analysis, relocated without change from
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, where they were previously
+defined inline (#637). Adds this type's concrete Scope Projection
+safety conditions and issuance-algorithm interlock (#698), and its
+Transformation Capabilities declaration for the issuance profile's
+machine-readable per-type capability map (#645).<a href="#appendix-A-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-3.4">
+          <p id="appendix-A-3.4.1">The abstract names Rich Authorization Requests without a citation
+and states deployment choice without a BCP 14 keyword; the uncited
+RAR metadata reference is removed.<a href="#appendix-A-3.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-B">
+      <h2 id="name-acknowledgments">
+<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="appendix-B-1">This document was split from Mission-Bound Authorization for OAuth 2.0
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, where <code>mission_resource_access</code>
+was originally defined.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-C">
       <h2 id="name-authors-address">
 <a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
       </h2>

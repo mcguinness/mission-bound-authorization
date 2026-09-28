@@ -1070,7 +1070,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 31 March 2027</td>
+<td class="center">Expires 1 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1086,12 +1086,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-09-27" class="published">27 September 2026</time>
+<time datetime="2026-09-28" class="published">28 September 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-03-31">31 March 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-01">1 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1156,7 +1156,7 @@ separate, optional layer.<a href="#section-abstract-2" class="pilcrow">¶</a></p
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 31 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 1 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1590,7 +1590,7 @@ separate, optional layer.<a href="#section-abstract-2" class="pilcrow">¶</a></p
       <h2 id="name-introduction">
 <a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
       </h2>
-<p id="section-1-1">Agent-identity work such as <span>[<a href="#I-D.draft-klrc-aiagent-auth" class="cite xref">I-D.draft-klrc-aiagent-auth</a>]</span>
+<p id="section-1-1">Agent-identity work such as <span>[<a href="#I-D.draft-ietf-wimse-aims" class="cite xref">I-D.draft-ietf-wimse-aims</a>]</span>
 establishes how an AI agent authenticates and how a user delegates
 authority to it: the agent is an OAuth 2.0 <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> client
 identified by <code>client_id</code>, the delegating user is the access token
@@ -1709,12 +1709,12 @@ is a durable, queryable, revocable container of consented authorization
 data. It records consent to authority but carries no task, no integrity
 commitment, and no derivation gating; a deployment <span class="bcp14">MAY</span> surface Mission
 revocation through a grant-management-style API.<a href="#section-1.2-1" class="pilcrow">¶</a></p>
-<p id="section-1.2-2"><span>[<a href="#I-D.draft-klrc-aiagent-auth" class="cite xref">I-D.draft-klrc-aiagent-auth</a>]</span> names the agent's mission and leaves its
-translation into authorization out of scope; this document specifies
-that translation, reusing its agent-as-client and
+<p id="section-1.2-2"><span>[<a href="#I-D.draft-ietf-wimse-aims" class="cite xref">I-D.draft-ietf-wimse-aims</a>]</span> names the agent's mission and leaves its
+translation into authorization requirements out of scope; this document
+specifies that translation, reusing its agent-as-client and
 delegating-principal-as-token-<code>sub</code> assignments unchanged
-(<a href="#principal-model" class="auto internal xref">Section 3.1</a>), and an agent authenticated and delegated per
-it uses the mechanisms here to obtain Mission-bound tokens.<a href="#section-1.2-2" class="pilcrow">¶</a></p>
+(<a href="#principal-model" class="auto internal xref">Section 3.1</a>), and an agent authenticated and delegated per it
+uses the mechanisms here to obtain Mission-bound tokens.<a href="#section-1.2-2" class="pilcrow">¶</a></p>
 <p id="section-1.2-3">Decision-layer access-request and approval workflows,
 such as the OpenID AuthZEN Access Request and Approval Profile
 <span>[<a href="#AuthZEN.ARAP" class="cite xref">AuthZEN.ARAP</a>]</span>, manage approval tasks but define no issuance binding;
@@ -1944,9 +1944,8 @@ verifiable provenance that would require, are future work.<a href="#section-1.6-
 </li>
           <li class="normal" id="section-1.6-2.6">
             <p id="section-1.6-2.6.1"><strong>Decentralized agent identity.</strong> Agent identity and credentialing
-are out of scope (<span>[<a href="#I-D.draft-klrc-aiagent-auth" class="cite xref">I-D.draft-klrc-aiagent-auth</a>]</span>, and workload
-identity efforts such as WIMSE,
-<span>[<a href="#I-D.draft-ietf-wimse-arch" class="cite xref">I-D.draft-ietf-wimse-arch</a>]</span>); this profile governs the
+are out of scope (<span>[<a href="#I-D.draft-ietf-wimse-aims" class="cite xref">I-D.draft-ietf-wimse-aims</a>]</span> and the WIMSE
+architecture, <span>[<a href="#I-D.draft-ietf-wimse-arch" class="cite xref">I-D.draft-ietf-wimse-arch</a>]</span>); this profile governs the
 approved-task artifact those identities act within, not the
 identities themselves.<a href="#section-1.6-2.6.1" class="pilcrow">¶</a></p>
 </li>
@@ -1986,7 +1985,7 @@ member definitions in the surrounding text are authoritative.<a href="#section-2
         <dd style="margin-left: 1.5em" id="section-2-3.2">
           <p id="section-2-3.2.1">The OAuth client acting for the Mission's Subject, identified by
 <code>client_id</code>. Agent identity is established per
-<span>[<a href="#I-D.draft-klrc-aiagent-auth" class="cite xref">I-D.draft-klrc-aiagent-auth</a>]</span> or ordinary OAuth client
+<span>[<a href="#I-D.draft-ietf-wimse-aims" class="cite xref">I-D.draft-ietf-wimse-aims</a>]</span> or ordinary OAuth client
 authentication.<a href="#section-2-3.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
@@ -2126,7 +2125,7 @@ Mission data without the gates is not Mission-bound
 <li class="normal" id="section-3.1-2.1">
             <p id="section-3.1-2.1.1">The <strong>Agent</strong> is the OAuth client, referenced by <code>client_id</code>. Agent
 identity and credentialing are out of scope (see
-<span>[<a href="#I-D.draft-klrc-aiagent-auth" class="cite xref">I-D.draft-klrc-aiagent-auth</a>]</span>).<a href="#section-3.1-2.1.1" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-ietf-wimse-aims" class="cite xref">I-D.draft-ietf-wimse-aims</a>]</span>).<a href="#section-3.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-3.1-2.2">
             <p id="section-3.1-2.2.1">The <strong>Subject</strong> and <strong>Approver</strong> are each an (<code>iss</code>,
@@ -5157,7 +5156,7 @@ authentication repairs a missing or wrong key.<a href="#section-9.3-7.2.1" class
             <p id="section-9.3-7.3.1"><strong>Insufficient carried authority.</strong> The action is outside the
 token's carried authority: the RS challenges with
 <code>insufficient_scope</code> (<span>[<a href="#RFC6750" class="cite xref">RFC6750</a>]</span>), or the RAR-remediation
-challenge where <span>[<a href="#I-D.draft-zehavi-oauth-rar-metadata" class="cite xref">I-D.draft-zehavi-oauth-rar-metadata</a>]</span> is deployed
+challenge where <span>[<a href="#I-D.draft-ietf-oauth-rar-metadata-remediation" class="cite xref">I-D.draft-ietf-oauth-rar-metadata-remediation</a>]</span> is deployed
 (<a href="#remediation-grains" class="auto internal xref">Section 9.5</a>); more requires a new approval or an
 expansion where that companion is deployed.<a href="#section-9.3-7.3.1" class="pilcrow">¶</a></p>
 </li>
@@ -5430,7 +5429,7 @@ denial leads into.<a href="#section-9.5-1" class="pilcrow">¶</a></p>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>WWW-Authenticate</code> error code and parameter</td>
               <td class="text-left" rowspan="1" colspan="1">
-                <span>[<a href="#I-D.draft-zehavi-oauth-rar-metadata" class="cite xref">I-D.draft-zehavi-oauth-rar-metadata</a>]</span>
+                <span>[<a href="#I-D.draft-ietf-oauth-rar-metadata-remediation" class="cite xref">I-D.draft-ietf-oauth-rar-metadata-remediation</a>]</span>
 </td>
             </tr>
             <tr>
@@ -5446,7 +5445,7 @@ denial leads into.<a href="#section-9.5-1" class="pilcrow">¶</a></p>
 <p id="section-9.5-3">A Resource Server <span class="bcp14">MAY</span> compose a second grain with it: the
 <code>insufficient_authorization</code> <code>WWW-Authenticate</code> error code and its
 <code>authorization_remediation</code> parameter, defined by
-<span>[<a href="#I-D.draft-zehavi-oauth-rar-metadata" class="cite xref">I-D.draft-zehavi-oauth-rar-metadata</a>]</span>. <code>authorization_remediation</code>
+<span>[<a href="#I-D.draft-ietf-oauth-rar-metadata-remediation" class="cite xref">I-D.draft-ietf-oauth-rar-metadata-remediation</a>]</span>. <code>authorization_remediation</code>
 is a base64url-encoded JSON object naming the actionable
 <code>authorization_details</code> the caller lacks, with an <span class="bcp14">OPTIONAL</span>
           <code>authorization_reference</code> letting the client match a previously
@@ -6613,18 +6612,18 @@ Issuer binding is the governed alternative
 (<a href="#submission-via-par" class="auto internal xref">Section 4.1</a>).<a href="#section-14-8" class="pilcrow">¶</a></p>
 <p id="section-14-9">An AS that advertises <code>mission_bound_authorization_supported: true</code>
         <span class="bcp14">SHOULD</span> also advertise <code>authorization_details_types_metadata_endpoint</code>
-        <span>[<a href="#I-D.draft-zehavi-oauth-rar-metadata" class="cite xref">I-D.draft-zehavi-oauth-rar-metadata</a>]</span> where it implements that
-endpoint; the endpoint is defined by an individual draft without
-formal standing, and conformance to this document does not depend on
+        <span>[<a href="#I-D.draft-ietf-oauth-rar-metadata-remediation" class="cite xref">I-D.draft-ietf-oauth-rar-metadata-remediation</a>]</span> where it implements
+that endpoint; the endpoint is defined by an OAuth working group draft
+still in progress, and conformance to this document does not depend on
 it. The stable baseline is <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>:
 <code>authorization_details_types_supported</code> listing at least one
 AS-supported type (a <span class="bcp14">MUST</span> for an advertising AS, above); where
 <code>mission_resource_access</code> is among them, the Mission Resource Access
-Profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>) is
-its normative definition.<a href="#section-14-9" class="pilcrow">¶</a></p>
+Profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>) is its
+normative definition.<a href="#section-14-9" class="pilcrow">¶</a></p>
 <p id="section-14-10">Where the endpoint IS advertised: its response is a JSON
 object keyed by <code>authorization_details</code> type identifier, each value
-carrying, per <span>[<a href="#I-D.draft-zehavi-oauth-rar-metadata" class="cite xref">I-D.draft-zehavi-oauth-rar-metadata</a>]</span>, a JSON Schema
+carrying, per <span>[<a href="#I-D.draft-ietf-oauth-rar-metadata-remediation" class="cite xref">I-D.draft-ietf-oauth-rar-metadata-remediation</a>]</span>, a JSON Schema
 for exactly one <code>authorization_details</code> object of that type
 (<code>schema</code> or <code>schema_uri</code>) and optionally <code>version</code>, <code>description</code>,
 <code>documentation_uri</code>, and <code>examples</code>; its key set is then the source
@@ -8141,10 +8140,6 @@ registry's policy until it is published.<a href="#section-20.8-8" class="pilcrow
 <a href="#section-21.1" class="section-number selfRef">21.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
 <dl class="references">
-<dt id="ISO4217">[ISO4217]</dt>
-        <dd>
-<span class="refAuthor">International Organization for Standardization</span>, <span class="refTitle">"ISO 4217:2015, Codes for the representation of currencies and funds"</span>, <span class="seriesInfo">ISO 4217:2015</span>, <time datetime="2015-08" class="refDate">August 2015</time>. </dd>
-<dd class="break"></dd>
 <dt id="RFC2119">[RFC2119]</dt>
         <dd>
 <span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119" class="reader-edition-ext-link" target="_blank" rel="noopener">https://www.rfc-editor.org/rfc/rfc2119</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
@@ -8152,10 +8147,6 @@ registry's policy until it is published.<a href="#section-20.8-8" class="pilcrow
 <dt id="RFC3339">[RFC3339]</dt>
         <dd>
 <span class="refAuthor">Klyne, G.</span> and <span class="refAuthor">C. Newman</span>, <span class="refTitle">"Date and Time on the Internet: Timestamps"</span>, <span class="seriesInfo">RFC 3339</span>, <span class="seriesInfo">DOI 10.17487/RFC3339</span>, <time datetime="2002-07" class="refDate">July 2002</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc3339" class="reader-edition-ext-link" target="_blank" rel="noopener">https://www.rfc-editor.org/rfc/rfc3339</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="RFC3986">[RFC3986]</dt>
-        <dd>
-<span class="refAuthor">Berners-Lee, T.</span>, <span class="refAuthor">Fielding, R.</span>, and <span class="refAuthor">L. Masinter</span>, <span class="refTitle">"Uniform Resource Identifier (URI): Generic Syntax"</span>, <span class="seriesInfo">STD 66</span>, <span class="seriesInfo">RFC 3986</span>, <span class="seriesInfo">DOI 10.17487/RFC3986</span>, <time datetime="2005-01" class="refDate">January 2005</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc3986" class="reader-edition-ext-link" target="_blank" rel="noopener">https://www.rfc-editor.org/rfc/rfc3986</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC4648">[RFC4648]</dt>
         <dd>
@@ -8286,6 +8277,10 @@ registry's policy until it is published.<a href="#section-20.8-8" class="pilcrow
         <dd>
 <span class="refAuthor">Cecchetti, S.</span>, <span class="refTitle">"Cedar Profile for OAuth 2.0 Rich Authorization Requests"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-cecchetti-oauth-rar-cedar-02</span>, <time datetime="2024-02-21" class="refDate">21 February 2024</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-cecchetti-oauth-rar-cedar-02" class="reader-edition-ext-link" target="_blank" rel="noopener">https://datatracker.ietf.org/doc/html/draft-cecchetti-oauth-rar-cedar-02</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-ietf-oauth-rar-metadata-remediation">[I-D.draft-ietf-oauth-rar-metadata-remediation]</dt>
+        <dd>
+<span class="refAuthor">Zehavi, Y.</span>, <span class="refTitle">"OAuth 2.0 RAR Metadata and Error Remediation"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-rar-metadata-remediation-00</span>, <time datetime="2026-08-23" class="refDate">23 August 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-rar-metadata-remediation-00" class="reader-edition-ext-link" target="_blank" rel="noopener">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-rar-metadata-remediation-00</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-ietf-oauth-spiffe-client-auth">[I-D.draft-ietf-oauth-spiffe-client-auth]</dt>
         <dd>
 <span class="refAuthor">Schwenkschuster, A.</span>, <span class="refAuthor">Kasselman, P.</span>, <span class="refAuthor">Rose, S.</span>, <span class="refAuthor">Thorgersen, S.</span>, and <span class="refAuthor">N. Cam-Winget</span>, <span class="refTitle">"OAuth SPIFFE Client Authentication"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-spiffe-client-auth-02</span>, <time datetime="2026-06-15" class="refDate">15 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-spiffe-client-auth-02" class="reader-edition-ext-link" target="_blank" rel="noopener">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-spiffe-client-auth-02</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
@@ -8294,13 +8289,13 @@ registry's policy until it is published.<a href="#section-20.8-8" class="pilcrow
         <dd>
 <span class="refAuthor">Tulshibagwale, A.</span>, <span class="refAuthor">Fletcher, G.</span>, and <span class="refAuthor">P. Kasselman</span>, <span class="refTitle">"Transaction Tokens"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-transaction-tokens-11</span>, <time datetime="2026-07-30" class="refDate">30 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-transaction-tokens-11" class="reader-edition-ext-link" target="_blank" rel="noopener">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-transaction-tokens-11</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-ietf-wimse-aims">[I-D.draft-ietf-wimse-aims]</dt>
+        <dd>
+<span class="refAuthor">Kasselman, P.</span>, <span class="refAuthor">Lombardo, J.</span>, <span class="refAuthor">Rosomakho, Y.</span>, <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Steele, N.</span>, and <span class="refAuthor">A. Parecki</span>, <span class="refTitle">"AI Identity Management System"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-wimse-aims-00</span>, <time datetime="2026-09-15" class="refDate">15 September 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-wimse-aims-00" class="reader-edition-ext-link" target="_blank" rel="noopener">https://datatracker.ietf.org/doc/html/draft-ietf-wimse-aims-00</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-ietf-wimse-arch">[I-D.draft-ietf-wimse-arch]</dt>
         <dd>
 <span class="refAuthor">Salowey, J. A.</span>, <span class="refAuthor">Rosomakho, Y.</span>, and <span class="refAuthor">H. Tschofenig</span>, <span class="refTitle">"Workload Identity in a Multi System Environment (WIMSE) Architecture"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-wimse-arch-08</span>, <time datetime="2026-07-06" class="refDate">6 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-wimse-arch-08" class="reader-edition-ext-link" target="_blank" rel="noopener">https://datatracker.ietf.org/doc/html/draft-ietf-wimse-arch-08</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.draft-klrc-aiagent-auth">[I-D.draft-klrc-aiagent-auth]</dt>
-        <dd>
-<span class="refAuthor">Kasselman, P.</span>, <span class="refAuthor">Lombardo, J.</span>, <span class="refAuthor">Rosomakho, Y.</span>, <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Steele, N.</span>, and <span class="refAuthor">A. Parecki</span>, <span class="refTitle">"AI Agent Authentication and Authorization"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-klrc-aiagent-auth-03</span>, <time datetime="2026-07-06" class="refDate">6 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-klrc-aiagent-auth-03" class="reader-edition-ext-link" target="_blank" rel="noopener">https://datatracker.ietf.org/doc/html/draft-klrc-aiagent-auth-03</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-approval-governance">[I-D.draft-mcguinness-mission-approval-governance]</dt>
         <dd>
@@ -8410,14 +8405,6 @@ registry's policy until it is published.<a href="#section-20.8-8" class="pilcrow
         <dd>
 <span class="refAuthor">Aimable, N.</span>, <span class="refTitle">"Attenuating Authorization Tokens for Agentic Delegation Chains"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-niyikiza-oauth-attenuating-agent-tokens-01</span>, <time datetime="2026-06-15" class="refDate">15 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-01" class="reader-edition-ext-link" target="_blank" rel="noopener">https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-01</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
 <dd class="break"></dd>
-<dt id="I-D.draft-zehavi-oauth-rar-metadata">[I-D.draft-zehavi-oauth-rar-metadata]</dt>
-        <dd>
-<span class="refAuthor">Zehavi, Y.</span>, <span class="refTitle">"OAuth 2.0 RAR Metadata and Error Remediation"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-zehavi-oauth-rar-metadata-06</span>, <time datetime="2026-08-09" class="refDate">9 August 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-zehavi-oauth-rar-metadata-06" class="reader-edition-ext-link" target="_blank" rel="noopener">https://datatracker.ietf.org/doc/html/draft-zehavi-oauth-rar-metadata-06</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="MCP">[MCP]</dt>
-        <dd>
-<span class="refAuthor">Model Context Protocol Project</span>, <span class="refTitle">"Model Context Protocol: Authorization"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization" class="reader-edition-ext-link" target="_blank" rel="noopener">https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
-<dd class="break"></dd>
 <dt id="OpenID.Core">[OpenID.Core]</dt>
         <dd>
 <span class="refAuthor">OpenID Foundation</span>, <span class="refTitle">"OpenID Connect Core 1.0 incorporating errata set 2"</span>, <time datetime="2023" class="refDate">2023</time>, <span>&lt;<a href="https://openid.net/specs/openid-connect-core-1_0.html" class="reader-edition-ext-link" target="_blank" rel="noopener">https://openid.net/specs/openid-connect-core-1_0.html</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
@@ -8456,7 +8443,7 @@ registry's policy until it is published.<a href="#section-20.8-8" class="pilcrow
 creation, token issuance, and Resource Server enforcement in a single
 trust domain. It is illustrative and adds no normative requirements.
 The OAuth pieces use the rules in this document; the identity setup is
-by reference to <span>[<a href="#I-D.draft-klrc-aiagent-auth" class="cite xref">I-D.draft-klrc-aiagent-auth</a>]</span>. Identifiers and hash
+by reference to <span>[<a href="#I-D.draft-ietf-wimse-aims" class="cite xref">I-D.draft-ietf-wimse-aims</a>]</span>. Identifiers and hash
 values are illustrative and are not computed from the displayed JSON.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <p id="appendix-A-2">This walkthrough is the baseline issuance path: stateless enforcement
 bounded only by token lifetime. No stage calls back to the AS for
@@ -8476,7 +8463,7 @@ a workload identity established using WIMSE or SPIFFE,
 <span>[<a href="#I-D.draft-ietf-wimse-arch" class="cite xref">I-D.draft-ietf-wimse-arch</a>]</span>,
 <span>[<a href="#I-D.draft-ietf-oauth-spiffe-client-auth" class="cite xref">I-D.draft-ietf-oauth-spiffe-client-auth</a>]</span>), and <code>alice</code> has delegated to it through an
 ordinary authorization-code flow, per
-<span>[<a href="#I-D.draft-klrc-aiagent-auth" class="cite xref">I-D.draft-klrc-aiagent-auth</a>]</span>: <code>client_id</code> is the agent and the
+<span>[<a href="#I-D.draft-ietf-wimse-aims" class="cite xref">I-D.draft-ietf-wimse-aims</a>]</span>: <code>client_id</code> is the agent and the
 token <code>sub</code> is <code>alice</code>. This document adds the Mission layer on top of
 that identity; Stage 0 is otherwise unchanged from that specification.<a href="#appendix-A.1-1" class="pilcrow">¶</a></p>
 </section>
@@ -9753,6 +9740,27 @@ DEPRECATED as a compatibility alias for
 <code>approval_basis.consent_principal</code>, normatively equal to it; its
 removal is deferred to the same future breaking-change window.<a href="#appendix-E-3.28.1" class="pilcrow">¶</a></p>
 </li>
+        <li class="normal" id="appendix-E-3.29">
+          <p id="appendix-E-3.29.1">References: the agent-identity reference
+draft-klrc-aiagent-auth is replaced by its successor,
+<span>[<a href="#I-D.draft-ietf-wimse-aims" class="cite xref">I-D.draft-ietf-wimse-aims</a>]</span>, which names the agent's mission and
+leaves its translation into authorization requirements out of scope
+(Section 10.1) and covers user delegation through the authorization
+code grant (Section 10.4.1).<a href="#appendix-E-3.29.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-E-3.30">
+          <p id="appendix-E-3.30.1">References: removed three references the text no longer cites
+(MCP, ISO 4217, and RFC 3986).<a href="#appendix-E-3.30.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-E-3.31">
+          <p id="appendix-E-3.31.1">References: draft-zehavi-oauth-rar-metadata is replaced by its
+working-group successor, <span>[<a href="#I-D.draft-ietf-oauth-rar-metadata-remediation" class="cite xref">I-D.draft-ietf-oauth-rar-metadata-remediation</a>]</span>,
+which keeps the <code>insufficient_authorization</code> error, the
+<code>authorization_remediation</code> parameter, and the
+<code>authorization_details_types_metadata_endpoint</code> member this document
+cites; the endpoint is no longer described as lacking formal
+standing.<a href="#appendix-E-3.31.1" class="pilcrow">¶</a></p>
+</li>
       </ul>
 <p id="appendix-E-4">-00<a href="#appendix-E-4" class="pilcrow">¶</a></p>
 <ul class="normal">
@@ -9770,7 +9778,7 @@ removal is deferred to the same future breaking-change window.<a href="#appendix
 <p id="appendix-F-1">This work builds on the OAuth 2.0 Rich Authorization Requests, Pushed
 Authorization Requests, and JWT access token specifications, and is
 intended to complement agent-identity work including
-<span>[<a href="#I-D.draft-klrc-aiagent-auth" class="cite xref">I-D.draft-klrc-aiagent-auth</a>]</span>.<a href="#appendix-F-1" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-ietf-wimse-aims" class="cite xref">I-D.draft-ietf-wimse-aims</a>]</span>.<a href="#appendix-F-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authors-addresses">
