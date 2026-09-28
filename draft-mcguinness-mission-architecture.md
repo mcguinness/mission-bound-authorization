@@ -2901,12 +2901,14 @@ token- and key-specific `credential-correlated`, still never issuance; a
 trusted harness supplies `work-item-bound` where its attacher
 requirements hold; a native or issuance-grant-derived token is
 `credential-mission-bound`, and `presenter-key-bound` where its
-confirmation binding is in force end to end; validated Instance Context
-bound to an instance-unique confirmation key
+confirmation binding is in force end to end; Instance Context whose
+association with the presenter is established, over an instance-unique
+confirmation key and, for context preserved from an input token,
+authenticated provenance
 ({{I-D.draft-mcguinness-oauth-client-instance-id}}, Sections 7.3 and
-7.5) is what makes a path `instance-bound`; a verified transaction token
-is the portable `action-bound` form, and an AuthZEN runtime permit is
-the channel-bound form under that binding's conditions.
+7.5), is what makes a path `instance-bound`; a verified transaction
+token is the portable `action-bound` form, and an AuthZEN runtime permit
+is the channel-bound form under that binding's conditions.
 
 The property names above are stable identifiers, and a claim is a
 per-path declaration, not prose: each claimed property or

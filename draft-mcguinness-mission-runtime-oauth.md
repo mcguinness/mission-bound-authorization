@@ -313,7 +313,7 @@ claim, or the introspection response member of the same name.
 | Client identity | `client_id` |
 | Immediate actor | The current actor in `act` when `act` is present; otherwise the client `client_id` names |
 | Actor-delegation chain | `act`, when delegation is in effect |
-| Attester-verified actor context | Instance Context: the `client_instance` claim or introspection member ({{I-D.draft-mcguinness-oauth-client-instance-id}}), validated as that profile's Context Consumer requires; it identifies the instance that obtained the token and grants no authority, and attributing a presentation to it requires a sender-constraint key unique to the instance ({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 7.3) |
+| Attester-verified actor context | Instance Context: the `client_instance` claim or introspection member ({{I-D.draft-mcguinness-oauth-client-instance-id}}), validated as that profile's Context Consumer requires; it identifies the instance that obtained the token and grants no authority, and attributing a presentation to it requires the presenter association of {{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 7.5: an instance-unique key under direct Client Attestation validation, and authenticated provenance for context preserved from an input token |
 | Sender-constraint confirmation | `cnf`, verified during validation ({{token-validation}}) |
 | Credential audience or protected resource | The protected resource the PEP guards; validation has established that `aud` names it |
 | Authority entry | The applicable entry of the credential authority for a Mission-bound token; under a join, the applicable entry of the Mission's authority ({{authorization-details-mapping}}) |

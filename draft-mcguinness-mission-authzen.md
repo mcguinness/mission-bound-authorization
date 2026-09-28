@@ -742,11 +742,14 @@ Context Consumer ({{I-D.draft-mcguinness-oauth-client-instance-id}},
 Section 7.5); the context identifies an instance only together with its
 `iss`, so a PEP accepting context from more than one issuer qualifies
 the correlator by it. Attributing the presentation to that instance also
-requires a sender-constraint key unique to the instance
-({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 7.3). Fleet
-deployments then get which-instance-acted attribution in Decision
-Evidence and, through the `evaluation_id` link, in Execution Evidence,
-without new members.
+requires the association with the presenter that Section 7.5
+establishes: a sender-constraint key unique to the instance
+({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 7.3) where
+the token issuer conveys context only from direct Client Attestation
+validation, and authenticated provenance where it may preserve context
+from an input token. Fleet deployments then get which-instance-acted
+attribution in Decision Evidence and, through the `evaluation_id` link,
+in Execution Evidence, without new members.
 
 ## Credential Decision Context {#context-credential}
 

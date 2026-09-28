@@ -1405,14 +1405,18 @@ Where the deployment's Authorization Server conveys Instance Context in
 its tokens ({{I-D.draft-mcguinness-oauth-client-instance-id}}: the
 `client_instance` claim or introspection member), the acting credential
 identifies a concrete runtime instance once the PDP has validated that
-context and its association with the presenter, which requires a
-sender-constraint key unique to the instance
-({{I-D.draft-mcguinness-oauth-client-instance-id}}, Sections 7.3 and
-7.5). The PDP SHOULD include that instance in the join, so the client
-join binds (subject, client, instance) rather than (subject, client).
-This restores per-instance granularity behind a shared gateway
-`client_id`: the validated instance joins, not every workload in the
-`client_id` equivalence class.
+context and established its association with the presenter as a Context
+Consumer ({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section
+7.5). A sender-constraint key unique to the instance (Section 7.3)
+establishes that association only where the token issuer conveys context
+solely from direct Client Attestation validation; context an issuer may
+have preserved from an input token also needs a profile that
+authenticates its provenance, since such a token can carry one
+instance's context while bound to another's key. The PDP SHOULD include
+that instance in the join, so the client join binds (subject, client,
+instance) rather than (subject, client). This restores per-instance
+granularity behind a shared gateway `client_id`: the validated instance
+joins, not every workload in the `client_id` equivalence class.
 
 # Mission Reference Propagation {#reference-propagation}
 
@@ -1752,8 +1756,10 @@ sender-constrained to a key unique to the instance
 ({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 7.3), the
 `jkt` binding names one runtime instance, not any holder of a
 client-shared key, so the assertion's token binding is materially
-stronger; an instance-bound join on this path takes the instance from
-the Instance Context the PEP validated ({{mission-join}}).
+stronger; an instance-bound join on this path takes the instance only
+from Instance Context whose association with the presenter has been
+established ({{mission-join}}); the token digest and `jkt` alone do not
+establish it.
 
 The endpoint returns HTTP 200 with a JSON object whose `assertion`
 member carries the JWT. Each minting is a join evidence event: the MAS
@@ -1972,13 +1978,13 @@ Levels under the MAS binding, with the obligations below
   - The Enterprise claim is made per covered Authorization Server,
     resource, and action path; a mixed estate's weaker paths never
     inherit it from the deployment's name.
-- **Instance-bound joins.** Where the acting credential carries
-  validated Instance Context
-  ({{I-D.draft-mcguinness-oauth-client-instance-id}}), a
-  high-consequence join MUST bind (`subject`, `client`, `instance`), not
-  (`subject`, `client`), so a single workload joins rather than every
-  workload sharing a gateway `client_id`. Client-instance identity rests
-  on an unratified individual draft
+- **Instance-bound joins.** Where the acting credential carries Instance
+  Context ({{I-D.draft-mcguinness-oauth-client-instance-id}}) whose
+  association with the presenter is established as {{mission-join}}
+  describes, a high-consequence join MUST bind (`subject`, `client`,
+  `instance`), not (`subject`, `client`), so a single workload joins
+  rather than every workload sharing a gateway `client_id`.
+  Client-instance identity rests on an unratified individual draft
   ({{I-D.draft-mcguinness-oauth-client-instance-id}}); where a
   deployment has no instance-identity substrate, the high-consequence
   join binds only (`subject`, `client`), and the shared-`client_id`
@@ -2545,8 +2551,10 @@ document requests no IANA action for it.
   {I-D.draft-mcguinness-oauth-client-instance-id}, and the
   deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
   cited. The Mission Join binds the
-  instance from validated Instance Context with an instance-unique key
-  rather than from an `act` entry; the Join Assertion carries no
+  instance from Instance Context whose association with the presenter is
+  established (an instance-unique key, plus authenticated provenance for
+  context preserved from an input token) rather than from an `act`
+  entry; the Join Assertion carries no
   instance identifier, so an instance-bound join on that path takes the
   instance from the Instance Context the PEP validated, and the MAS
   records the token's Instance Context in its join evidence where it
