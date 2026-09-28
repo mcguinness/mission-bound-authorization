@@ -7,12 +7,12 @@
     "content_sha256": "9bff622c97ce5d02e6d5204472ffe001ed97121e7c56bcc9432757ab1a53c822"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "c7cef66b5a730c972e901b2cb97c39dbd9e81eb4",
-    "content_sha256": "eeaf94b0706fff0a2a25f036f843ad45fe9a3c412c813262beeef4880c30d572"
+    "revision": "452215268aa286cd6a6b14db190381b7697cd28e",
+    "content_sha256": "f885b8b296545d36f2d22c3a71217503ee31eb590b28566180efeb78f5f41001"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "c7cef66b5a730c972e901b2cb97c39dbd9e81eb4",
-    "content_sha256": "9ea83690ff932df616d672615d43efe8d57e00ac1a7b40231e1e28917248317c"
+    "revision": "452215268aa286cd6a6b14db190381b7697cd28e",
+    "content_sha256": "a56d4345b8ce787fee4aa2f6b61c3758e869520ae446ab7e2c7aa1f0877eceab"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
     "revision": "63cd39ab6afc4a678f8d02170af539177c86004e",
@@ -23,8 +23,8 @@
     "content_sha256": "733c3c3c736314e8f2dca8f3f2551e9f3b4e4dc830eb20340b57346a95169311"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
-    "revision": "c7cef66b5a730c972e901b2cb97c39dbd9e81eb4",
-    "content_sha256": "52fd83214a21deb68f332931ec28463773458e857fdc71d7a4244c94f741db01"
+    "revision": "452215268aa286cd6a6b14db190381b7697cd28e",
+    "content_sha256": "7244864a4ef5cf6b4a1e80aa1f326cd542f65936b6c2e70c87309afc064358f8"
    },
    "draft-mcguinness-mission-substrate.md": {
     "revision": "7f5cbd57769ea4a004d8c05d2b66456901994f22",
@@ -59,8 +59,8 @@
     "content_sha256": "58fe82b35e8de7df774c9eb8e183b8a14dd8724a8c4fca7793f1b72f925ffce1"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "2cdf0c5676c98777ff948923147c6d353aa0da0a",
-    "content_sha256": "817ae2f0945dcf57a5134964661d922fbdd5fb4127a0cafe71a4ffa24420f138"
+    "revision": "452215268aa286cd6a6b14db190381b7697cd28e",
+    "content_sha256": "04a9b6414b13ab6e7943e677b56bccbfcb6924ff550562cf9650175f0d59fab6"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "d57d490d93e9f59e4ee33e23c6d0791896dbe547",
@@ -205,7 +205,10 @@
    "authzen.arap",
    "authzen.batch",
    "approval-context.manifest",
-   "child-delegation.carryover"
+   "child-delegation.carryover",
+   "core.instance-context",
+   "runtime.instance-context",
+   "mas.instance-bound-join"
   ]
  },
  "profiles": [
@@ -23364,6 +23367,138 @@
     }
    ],
    "notes": "Predecessor supersession, successor activation and the whole old subtree's terminal transitions commit together. The explicit whole-subtree traversal owns the generation-ordered descent through one internal carried-terminal entry point that suppresses only `setState`'s automatic recursion, so a terminal intermediate cannot hide a live descendant and an already-terminal row keeps its state with no second transition."
+  },
+  {
+   "id": "core.instance-context.current-presenter-binding",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegated-instance-context",
+   "text": "When issuing context under this composition, the AS MUST validate the presenting instance's Client Attestation and proof for the exchange, establish its trusted association with the separately authenticated delegate, and bind the output token to an instance-unique key whose possession it verified in that exchange.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.instance-context"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "An authorized A-to-B exchange emits context for attested B and a token bound to B's verified unique key; actor authentication and trusted instance association are independently required."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Specification-only instance-context composition. Optional capability; not claimed by the reference deployment. Positive and negative implementation coverage remains to be added."
+  },
+  {
+   "id": "core.instance-context.no-input-substitution",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegated-instance-context",
+   "text": "The AS MUST NOT use context copied or remapped from an input token as a substitute for the presenting instance's evidence.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.instance-context"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "Input context for A cannot stand in for missing current-instance evidence for B, even if the input context is valid or remapped into the output issuer namespace."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Specification-only instance-context composition. Optional capability; not claimed by the reference deployment. Positive and negative implementation coverage remains to be added."
+  },
+  {
+   "id": "core.instance-context.required-attribution-refusal",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegated-instance-context",
+   "text": "Where deployment policy requires instance attribution, the AS MUST refuse the exchange if the required instance evidence or its association with the delegate and output key cannot be established.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.instance-context"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A path requiring attribution issues no token without the required evidence and actor/key association; attestation failures use invalid_client_attestation and other association failures use invalid_request."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Specification-only instance-context composition. Optional capability; not claimed by the reference deployment. Positive and negative implementation coverage remains to be added."
+  },
+  {
+   "id": "runtime.oauth.required-instance-attribution",
+   "spec": "draft-mcguinness-mission-runtime-oauth.md",
+   "anchor": "instance-attribution",
+   "text": "Where the path requires instance attribution, the PEP MUST refuse the request if context is absent or invalid, or if its association with the current presenter cannot be established.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.instance-context"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A required-attribution path rejects missing or invalid context, shared-key attribution, and upstream A context with B's proof but no authenticated presenter association; valid direct B context and proof remain eligible for ordinary policy evaluation."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Specification-only instance-context composition. Optional capability; not claimed by the reference deployment. Positive and negative implementation coverage remains to be added."
+  },
+  {
+   "id": "mas.instance-join.no-coarse-fallback",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-join",
+   "text": "Where the mapping contract requires an instance-bound join, the PDP MUST deny with `mission_mismatch` if the established instance is absent or does not match that contract, without falling back to a subject-and-client-only join.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.instance-bound-join"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A required instance mapping must match even when the subject/client mapping or Join Assertion succeeds; absence or mismatch denies mission_mismatch."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Specification-only instance-context composition. Optional capability; not claimed by the reference deployment. Positive and negative implementation coverage remains to be added."
+  },
+  {
+   "id": "authzen.instance-context.no-upstream-actor",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-actor",
+   "text": "The PEP MUST NOT populate `context.actor.client_instance_id` from context that establishes only upstream instance participation.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.instance-context"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "An upstream participant is never projected as the current actor instance without an established presenter association; qualified correlators remain distinct across Instance Context Authorities used by different PEPs."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Specification-only instance-context composition. Optional capability; not claimed by the reference deployment. Positive and negative implementation coverage remains to be added."
   }
  ]
 }
