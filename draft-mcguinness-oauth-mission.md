@@ -57,7 +57,7 @@ normative:
   RFC9728:
 
 informative:
-  I-D.draft-zehavi-oauth-rar-metadata:
+  I-D.draft-ietf-oauth-rar-metadata-remediation:
   I-D.draft-ietf-wimse-arch:
   I-D.draft-ietf-oauth-spiffe-client-auth:
   RFC8126:
@@ -3355,7 +3355,7 @@ failure-stage mapping normatively):
 - **Insufficient carried authority.** The action is outside the
   token's carried authority: the RS challenges with
   `insufficient_scope` ({{RFC6750}}), or the RAR-remediation
-  challenge where {{I-D.draft-zehavi-oauth-rar-metadata}} is deployed
+  challenge where {{I-D.draft-ietf-oauth-rar-metadata-remediation}} is deployed
   ({{remediation-grains}}); more requires a new approval or an
   expansion where that companion is deployed.
 - **Unenforceable constraint.** An applicable entry carries a
@@ -3578,14 +3578,14 @@ denial leads into.
 | Grain | Carriage | Defined by |
 | --- | --- | --- |
 | `mission_denial` | `WWW-Authenticate` attribute | This document ({{rs-enforcement}}) |
-| `insufficient_authorization` with `authorization_remediation` | `WWW-Authenticate` error code and parameter | {{I-D.draft-zehavi-oauth-rar-metadata}} |
+| `insufficient_authorization` with `authorization_remediation` | `WWW-Authenticate` error code and parameter | {{I-D.draft-ietf-oauth-rar-metadata-remediation}} |
 | Requestable denial | AuthZEN denial response: `context.access_request` with `next_action: request` | {{AuthZEN.ARAP}}, profiled by {{I-D.draft-mcguinness-mission-authzen}} |
 {: title="The three remediation grains"}
 
 A Resource Server MAY compose a second grain with it: the
 `insufficient_authorization` `WWW-Authenticate` error code and its
 `authorization_remediation` parameter, defined by
-{{I-D.draft-zehavi-oauth-rar-metadata}}. `authorization_remediation`
+{{I-D.draft-ietf-oauth-rar-metadata-remediation}}. `authorization_remediation`
 is a base64url-encoded JSON object naming the actionable
 `authorization_details` the caller lacks, with an OPTIONAL
 `authorization_reference` letting the client match a previously
@@ -4537,19 +4537,19 @@ MUST also publish `pushed_authorization_request_endpoint`
 
 An AS that advertises `mission_bound_authorization_supported: true`
 SHOULD also advertise `authorization_details_types_metadata_endpoint`
-{{I-D.draft-zehavi-oauth-rar-metadata}} where it implements that
-endpoint; the endpoint is defined by an individual draft without
-formal standing, and conformance to this document does not depend on
+{{I-D.draft-ietf-oauth-rar-metadata-remediation}} where it implements
+that endpoint; the endpoint is defined by an OAuth working group draft
+still in progress, and conformance to this document does not depend on
 it. The stable baseline is {{RFC9396}}:
 `authorization_details_types_supported` listing at least one
 AS-supported type (a MUST for an advertising AS, above); where
 `mission_resource_access` is among them, the Mission Resource Access
-Profile ({{I-D.draft-mcguinness-oauth-mission-resource-access}}) is
-its normative definition.
+Profile ({{I-D.draft-mcguinness-oauth-mission-resource-access}}) is its
+normative definition.
 
 Where the endpoint IS advertised: its response is a JSON
 object keyed by `authorization_details` type identifier, each value
-carrying, per {{I-D.draft-zehavi-oauth-rar-metadata}}, a JSON Schema
+carrying, per {{I-D.draft-ietf-oauth-rar-metadata-remediation}}, a JSON Schema
 for exactly one `authorization_details` object of that type
 (`schema` or `schema_uri`) and optionally `version`, `description`,
 `documentation_uri`, and `examples`; its key set is then the source
@@ -6722,6 +6722,14 @@ Cross-Domain:
 
 - References: removed three references the text no longer cites
   (MCP, ISO 4217, and RFC 3986).
+
+- References: draft-zehavi-oauth-rar-metadata is replaced by its
+  working-group successor, {{I-D.draft-ietf-oauth-rar-metadata-remediation}},
+  which keeps the `insufficient_authorization` error, the
+  `authorization_remediation` parameter, and the
+  `authorization_details_types_metadata_endpoint` member this document
+  cites; the endpoint is no longer described as lacking formal
+  standing.
 
 -00
 
