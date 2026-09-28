@@ -45,8 +45,8 @@ informative:
   RFC9396:
   RFC9943:
   RFC8693:
-  I-D.draft-mcguinness-oauth-client-instance-assertion:
-  I-D.draft-mcguinness-oauth-ai-agent-instance:
+  I-D.draft-mcguinness-oauth-client-instance-id:
+  I-D.draft-mcguinness-oauth-client-attesters:
   I-D.draft-ietf-oauth-attestation-based-client-auth:
   I-D.draft-ietf-oauth-spiffe-client-auth:
   I-D.draft-mcguinness-oauth-mission-cross-domain:
@@ -1384,18 +1384,22 @@ Agent (client):
   base and assumed compromisable
   ({{I-D.draft-mcguinness-oauth-mission}}).
 
-  A deployment may authenticate concrete agent instances under the
-  client-instance-assertion profile and its AI-agent profile
-  ({{I-D.draft-mcguinness-oauth-client-instance-assertion}},
-  {{I-D.draft-mcguinness-oauth-ai-agent-instance}}), which sharpens
-  delegation chains, joins, and evidence attribution to instance
-  granularity without touching the Mission model.
-  Attestation-based client authentication and SPIFFE
-  ({{I-D.draft-ietf-oauth-attestation-based-client-auth}},
-  {{I-D.draft-ietf-oauth-spiffe-client-auth}}) can supply
-  client-instance authentication and workload credentials beneath
-  these profiles; they do not define the Mission actor, delegation,
-  intent, lifecycle, or evidence semantics defined here.
+  A deployment may authenticate concrete agent instances with client
+  instance identification for attestation-based client authentication,
+  endorsing its attesters in client metadata
+  ({{I-D.draft-mcguinness-oauth-client-instance-id}},
+  {{I-D.draft-mcguinness-oauth-client-attesters}}), which sharpens joins
+  and evidence attribution to instance granularity without touching the
+  Mission model; instance evidence alone identifies no actor or delegate
+  ({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 5).
+  Attestation-based client authentication
+  ({{I-D.draft-ietf-oauth-attestation-based-client-auth}}) is the
+  substrate that profile extends, and SPIFFE
+  ({{I-D.draft-ietf-oauth-spiffe-client-auth}}) supplies workload
+  credentials that on their own convey no instance identity under it
+  ({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 8.2); none
+  of them defines the Mission actor, delegation, intent, lifecycle, or
+  evidence semantics defined here.
 
 Subject:
 : The user or system on whose behalf the Mission is approved, an
@@ -1611,11 +1615,11 @@ owner, lifecycle, and revocation, and the model stays clean only
 while none absorbs another's job:
 
 Agent identity (who is acting):
-: The logical agent and, where the instance profiles are deployed,
-  the concrete instance ({{components}}). Owned by the deployment's
-  agent IAM, a registry or directory outside this family, and
-  consumed as the `client_id`, the instance assertion, and verified
-  instance claims.
+: The logical agent and, where client instance identification is
+  deployed, the concrete instance ({{components}}). Owned by the
+  deployment's agent IAM, a registry or directory outside this family,
+  and consumed as the `client_id`, the client-instance attestation, and
+  validated Instance Context.
 
 Agent Deployment (what is running):
 : The approved behavioral version of the agent: its code, model,
@@ -1664,12 +1668,12 @@ validity, and each gates independently. A valid credential never
 overrides a revoked agent or a non-active Mission, and a live agent
 under an active Mission still fails on an expired credential.
 
-The assurance levels add binding strength in the same order a
-deployment adds it: authority is issued to an authenticated client;
-instance assertion pins the concrete instance; sender-constraint
-keys pin possession; attested runtimes pin the execution
-environment; and an Agent Deployment pin holds the behavioral
-version ({{assurance-levels}}).
+The assurance levels add binding strength in the same order a deployment
+adds it: authority is issued to an authenticated client; client-instance
+attestation pins the concrete instance; sender-constraint keys pin
+possession; attested runtimes pin the execution environment; and an
+Agent Deployment pin holds the behavioral version
+({{assurance-levels}}).
 
 The division of labor with agent IAM is one sentence: agent identity
 preserves who is acting, and the Mission preserves why their
@@ -1686,28 +1690,28 @@ Mission pinned to an Agent Deployment class or version, executed
 concurrently by N attested instances of that Deployment, is
 multiplication, not delegation: no `act` hop, no Child Mission, no
 attenuation chain, because authority never moves between principals.
-This pin is a named architectural pattern, not a wire member the
-OAuth binding currently defines: that document reserves no Intent
-member for it and points forward to a dedicated Agent Deployment
-Binding profile that a deployment wanting this pin implements
-({{I-D.draft-mcguinness-oauth-mission}}). Late binding is
-attestation: an instance joins the work by
-authenticating as the pinned Deployment under the instance profiles
-({{I-D.draft-mcguinness-oauth-client-instance-assertion}},
-{{I-D.draft-mcguinness-oauth-ai-agent-instance}}), not by receiving
-a credential from a peer. The invariant is class-grain
-authorization, instance-grain attribution: the class, the Agent
-Deployment projected as `client_id`, is an authorization subject,
-never an attribution subject, and attribution stays per-instance
-through the instance substrate, which forbids a sender-constraint
-key shared across a client's instances. The OAuth binding's
-`derivation_limit` is not a fan-out or concurrency ceiling: it counts
-issuance events, not instances, and a single instance refreshing
-repeatedly consumes it exactly as one selector among N instances
-deriving once each would. What actually bounds a swarm's aggregate
-consumption is the metering profile's Mission-grain budget: consumption
-bounds attach to the Mission, not to any one instance, so a swarm of
-instances shares one budget ({{I-D.draft-mcguinness-mission-metering}}).
+This pin is a named architectural pattern, not a wire member the OAuth
+binding currently defines: that document reserves no Intent member for
+it and points forward to a dedicated Agent Deployment Binding profile
+that a deployment wanting this pin implements
+({{I-D.draft-mcguinness-oauth-mission}}). Late binding is attestation:
+an instance joins the work by authenticating as the pinned Deployment
+with its own Client Attestation
+({{I-D.draft-mcguinness-oauth-client-instance-id}}), not by receiving a
+credential from a peer. The invariant is class-grain authorization,
+instance-grain attribution: the class, the Agent Deployment projected as
+`client_id`, is an authorization subject, never an attribution subject,
+and attribution stays per-instance through the instance substrate, which
+attributes a presentation to an instance only under a sender-constraint
+key unique to it ({{I-D.draft-mcguinness-oauth-client-instance-id}},
+Section 7.3). The OAuth binding's `derivation_limit` is not a fan-out or
+concurrency ceiling: it counts issuance events, not instances, and a
+single instance refreshing repeatedly consumes it exactly as one
+selector among N instances deriving once each would. What actually
+bounds a swarm's aggregate consumption is the metering profile's
+Mission-grain budget: consumption bounds attach to the Mission, not to
+any one instance, so a swarm of instances shares one budget
+({{I-D.draft-mcguinness-mission-metering}}).
 
 The decision ladder:
 
@@ -2890,19 +2894,19 @@ tamper-resistant work-item identifier the harness recorded; no
 family carrier supplies that today, so a deployment claims the two
 properties separately and nothing more.
 
-The mechanism mapping is conservative: a propagated
-Mission-Reference is selection only; a mapping join is
-`credential-correlated`, with its equivalence-class ambiguity; a
-Mission Join Assertion is a stronger, token- and key-specific
-`credential-correlated`, still never issuance; a trusted harness
-supplies `work-item-bound` where its attacher requirements hold; a
-native or issuance-grant-derived token is
+The mechanism mapping is conservative: a propagated Mission-Reference is
+selection only; a mapping join is `credential-correlated`, with its
+equivalence-class ambiguity; a Mission Join Assertion is a stronger,
+token- and key-specific `credential-correlated`, still never issuance; a
+trusted harness supplies `work-item-bound` where its attacher
+requirements hold; a native or issuance-grant-derived token is
 `credential-mission-bound`, and `presenter-key-bound` where its
-confirmation binding is in force end to end; an authenticated
-client-instance assertion with a verified key binding is what makes
-a path `instance-bound`; a verified transaction token is the
-portable `action-bound` form, and an AuthZEN runtime permit is the
-channel-bound form under that binding's conditions.
+confirmation binding is in force end to end; validated Instance Context
+bound to an instance-unique confirmation key
+({{I-D.draft-mcguinness-oauth-client-instance-id}}, Sections 7.3 and
+7.5) is what makes a path `instance-bound`; a verified transaction token
+is the portable `action-bound` form, and an AuthZEN runtime permit is
+the channel-bound form under that binding's conditions.
 
 The property names above are stable identifiers, and a claim is a
 per-path declaration, not prose: each claimed property or
@@ -3512,6 +3516,16 @@ This document makes no IANA request.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Client-instance references follow their successors:
+  draft-mcguinness-oauth-client-instance-assertion is replaced by
+  {I-D.draft-mcguinness-oauth-client-instance-id} and
+  {{I-D.draft-mcguinness-oauth-client-attesters}}, and the
+  deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
+  cited. Instance identity is
+  a client-instance attestation and validated Instance Context,
+  attribution needs an instance-unique key, and instance evidence
+  identifies no actor. No requirement changed.
 
 - Linked the OAuth binding's informative derivation-policy appendix
   from the authority derivation boundary (#309).
