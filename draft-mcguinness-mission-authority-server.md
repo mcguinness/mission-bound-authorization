@@ -27,6 +27,7 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  I-D.draft-mcguinness-oauth-client-instance-id:
   RFC3339:
   RFC6838:
   RFC7519:
@@ -133,7 +134,6 @@ informative:
   RFC8414:
   RFC8693:
   RFC9635:
-  I-D.draft-mcguinness-oauth-client-instance-id:
   I-D.draft-mcguinness-mission-harness:
     title: "Mission-Aware Agent Harnesses"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html
@@ -323,7 +323,7 @@ the bindings rather than a maturity one.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: adapter-binding. Spec maturity: experimental. Maintenance: active.
-Implementation: 26 conformance rows in conformance-manifest.json (13 tested, 13 todo).
+Implementation: 27 conformance rows in conformance-manifest.json (13 tested, 14 todo).
 Adopt when: The AS cannot change: run Mission governance as a standalone control plane.
 Requires: Mission Substrate Requirements; Mission-Bound Authorization for OAuth 2.0; Mission Status and Lifecycle for OAuth 2.0.
 Also requires, conditionally: Mission Approval Governance (when an approval-governance recording trigger holds); Mission-Bound Runtime Enforcement and Mission-Bound Runtime Enforcement: AuthZEN Profile (when runtime enforcement covers consequential paths); Mission Runtime Evidence (when the AuthZEN binding emits Decision Evidence); Mission Child Delegation for OAuth 2.0 and Mission Expansion for OAuth 2.0 (when the Expansion and Child Creation capability is claimed).
@@ -1418,6 +1418,20 @@ instance) rather than (subject, client). This restores per-instance
 granularity behind a shared gateway `client_id`: the validated instance
 joins, not every workload in the `client_id` equivalence class.
 
+In the PEP/PDP split, the PEP performs the credential, context, and
+presenter-proof validation and supplies the established instance through
+the authenticated decision context; the PDP relies on that PEP under
+the decision API's trust boundary. The mapping contract states which
+paths require an instance-bound join and how the established instance
+maps to the Mission's permitted parties. Where the mapping contract
+requires an instance-bound join, the PDP MUST deny with
+`mission_mismatch` if the established instance is absent or does not
+match that contract, without falling back to a subject-and-client-only
+join. A PEP unable to validate required instance attribution refuses
+before requesting a decision, using the instance specification's Section
+7.6 credential error and the runtime profile's pre-decision refusal
+evidence ({{I-D.draft-mcguinness-mission-runtime}}).
+
 # Mission Reference Propagation {#reference-propagation}
 
 The Mission Join consumes a Mission reference the PEP supplies, and
@@ -1766,8 +1780,11 @@ member carries the JWT. Each minting is a join evidence event: the MAS
 records the Mission reference, the token digest and thumbprint, the
 authenticated caller, the mapping version where one is published
 ({{mapping-contract}}), the token's Instance Context where the MAS
-received it ({{I-D.draft-mcguinness-oauth-client-instance-id}}), and the
-validity window, retained for the audit horizon.
+validated it as a Context Consumer
+({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 7.5), and
+the validity window, retained for the audit horizon. Context for which
+the MAS has established only instance participation is recorded as
+participation, not as proof of which instance presented the credential.
 
 Example claims:
 
@@ -1808,6 +1825,12 @@ Every other join rule holds unchanged: the PDP resolves Mission state
 at the MAS under the runtime profile's freshness rules, denies with
 `mission_mismatch` when any check above fails, and draws authority
 from the Mission.
+
+For an instance-bound join, the PDP also applies {{mission-join}}'s
+instance mapping to the validated presenter context supplied by the
+PEP. The Join Assertion replaces only the subject and client mapping
+checks; its signature, token digest, and key thumbprint cannot replace
+the instance check or satisfy a missing required instance association.
 
 For the high-consequence action classes
 ({{I-D.draft-mcguinness-mission-runtime}}) in MAS mode, the
@@ -2545,6 +2568,11 @@ document requests no IANA action for it.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Specify the PEP/PDP responsibilities for required instance-bound joins
+  and their refusal behavior. Join Assertions continue to carry no
+  instance identifier and do not replace the instance association check;
+  MAS evidence distinguishes participation from presenter attribution.
 
 - Client-instance references follow their successors:
   draft-mcguinness-oauth-client-instance-assertion is replaced by
