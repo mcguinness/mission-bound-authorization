@@ -961,6 +961,8 @@ coordinated through this registry, and any other name is either
 collision-resistant or remains deployment-defined and outside the
 registry.
 
+--- back
+
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
