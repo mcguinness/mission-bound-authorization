@@ -29,7 +29,6 @@ author:
 
 normative:
   RFC3339:
-  RFC3986:
   RFC4648:
   RFC5646:
   RFC6234:
@@ -56,13 +55,6 @@ normative:
   RFC8414:
   RFC7519:
   RFC9728:
-  ISO4217:
-    title: "ISO 4217:2015, Codes for the representation of currencies and funds"
-    author:
-      org: International Organization for Standardization
-    date: 2015-08
-    seriesinfo:
-      ISO: "4217:2015"
 
 informative:
   I-D.draft-zehavi-oauth-rar-metadata:
@@ -112,12 +104,6 @@ informative:
     author:
       - org: OpenID Foundation
     date: 2022
-  MCP:
-    title: "Model Context Protocol: Authorization"
-    target: https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization
-    author:
-      - org: Model Context Protocol Project
-    date: 2026
   AuthZEN.ARAP:
     title: "OpenID AuthZEN Access Request and Approval Profile 1.0"
     target: https://openid.github.io/authzen/authzen-access-request-approval-profile-1_0.html
@@ -6733,6 +6719,9 @@ Cross-Domain:
   leaves its translation into authorization requirements out of scope
   (Section 10.1) and covers user delegation through the authorization
   code grant (Section 10.4.1).
+
+- References: removed three references the text no longer cites
+  (MCP, ISO 4217, and RFC 3986).
 
 -00
 
