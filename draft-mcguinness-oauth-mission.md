@@ -120,8 +120,8 @@ informative:
   I-D.draft-ietf-oauth-transaction-tokens:
   I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
   I-D.draft-cecchetti-oauth-rar-cedar:
-  I-D.draft-mcguinness-oauth-client-instance-assertion:
-  I-D.draft-mcguinness-oauth-ai-agent-instance:
+  I-D.draft-mcguinness-oauth-client-instance-id:
+  I-D.draft-mcguinness-oauth-client-attesters:
   I-D.draft-mcguinness-oauth-mission-status:
     title: "Mission Status and Lifecycle for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html
@@ -970,22 +970,23 @@ narrowed `scope`. It has the following members:
   its omission semantics, its rendering, and its enforcement are
   defined once, in {{derivation-issuance-policy}}.
 
-This document defines no Agent Deployment Binding. Pinning a Mission
-to an approved agent deployment class or version, and verifying at
-every derivation that the presenting instance belongs to it, needs
-two distinct objects (a committed approval-context pin, and
+This document defines no Agent Deployment Binding. Pinning a Mission to
+an approved agent deployment class or version, and verifying at every
+derivation that the presenting instance belongs to it, needs two
+distinct objects (a committed approval-context pin, and
 presenter-instance evidence checked at issuance), not a single
-machine-actionable Intent member, and this document reserves no
-Intent member for either. A profile that defines this binding owns:
-the request carriage for the pin; its resolution to an AS-approved
-deployment identifier; the immutable Mission Record extension and its
-approval rendering; the instance assertion or attestation format and
-the presenter-binding check performed at every derivation, building
-where useful on the client-instance-assertion family
-({{I-D.draft-mcguinness-oauth-client-instance-assertion}},
-{{I-D.draft-mcguinness-oauth-ai-agent-instance}}); and fail-closed
-behavior when the binding is requested but the client cannot prove
-it. No such profile is defined in this document series today.
+machine-actionable Intent member, and this document reserves no Intent
+member for either. A profile that defines this binding owns: the request
+carriage for the pin; its resolution to an AS-approved deployment
+identifier; the immutable Mission Record extension and its approval
+rendering; the instance assertion or attestation format and the
+presenter-binding check performed at every derivation, building where
+useful on client instance identification and attester endorsement for
+attestation-based client authentication
+({{I-D.draft-mcguinness-oauth-client-instance-id}},
+{{I-D.draft-mcguinness-oauth-client-attesters}}); and fail-closed
+behavior when the binding is requested but the client cannot prove it.
+No such profile is defined in this document series today.
 
 This document defines no cumulative consumption bounds (for example, a
 budget, call-count, or activity-duration cap): every bound this
@@ -4095,15 +4096,15 @@ the following:
 - **The exchange is explicit.** The delegating Mission-bound access
   token is the `subject_token`, with `subject_token_type` of
   `urn:ietf:params:oauth:token-type:access_token`. The delegate is
-  identified by an `actor_token` (with its `actor_token_type`; for
-  example, an attested client-instance assertion presented as
-  `urn:ietf:params:oauth:token-type:client-instance-jwt`
-  ({{I-D.draft-mcguinness-oauth-client-instance-assertion}})) or by
-  its own client authentication, and the AS asserts the actor itself
-  ({{delegation-constraints}}); a `requested_token_type` of
-  `urn:ietf:params:oauth:token-type:access_token` is used. The
-  response carries the matching `issued_token_type` and a `token_type`
-  for the issued access token, per {{RFC8693}} Section 2.2.1.
+  identified by an `actor_token` (with its `actor_token_type`) or by its
+  own client authentication, and the AS asserts the actor itself
+  ({{delegation-constraints}}). A client instance's Client Attestation
+  ({{I-D.draft-mcguinness-oauth-client-instance-id}}) authenticates the
+  instance, not the actor it represents; establishing that actor is a
+  separate step, described below. A `requested_token_type` of
+  `urn:ietf:params:oauth:token-type:access_token` is used. The response
+  carries the matching `issued_token_type` and a `token_type` for the
+  issued access token, per {{RFC8693}} Section 2.2.1.
 - **Subject is stable.** `sub` remains the Mission's Subject. The
   delegate is an actor, not the subject.
 - **`client_id` keeps its ordinary meaning.** A delegated token's
@@ -4157,21 +4158,27 @@ chain as proof that authority narrowed; the `authorization_details`
 subset relations prove that ({{subset}}).
 
 Where a deployment authenticates client instances
-({{I-D.draft-mcguinness-oauth-client-instance-assertion}}; for AI
-agents, its agent profile
-{{I-D.draft-mcguinness-oauth-ai-agent-instance}}), the delegate
-identified by the outermost `act` is the concrete instance: `act.sub`
-is the instance identifier and `act.cnf` is the instance-specific
-key. This profile's requirement that a delegated token be
-sender-constrained to the delegate's own key then lands on an
-instance-possessed key by construction. An `allowed_delegates`
-matcher can select instance-grade actors
-({{delegation-constraints}}), for example
-`{ "sub_profile": "client_instance" }`. The `sub_profile` values
-used here (`ai_agent`, `client_instance`) are drawn from the
-entity-profiles vocabulary those instance profiles use; the Actor
-Profile {{I-D.draft-mcguinness-oauth-actor-profile}} remains the
-structural reference for the actor object.
+({{I-D.draft-mcguinness-oauth-client-instance-id}}, with attesters a
+client endorses under {{I-D.draft-mcguinness-oauth-client-attesters}}),
+the delegate identified by the outermost `act` can be an actor that an
+authenticated instance represents. The instance evidence does not
+establish that actor: {{I-D.draft-mcguinness-oauth-client-instance-id}},
+Section 5, forbids adding an `act` claim or extending an actor chain
+solely from it, so the AS establishes the delegate's actor identity, and
+that actor's trusted association with the authenticated instance,
+separately. The delegated token's top-level `cnf` is then an
+instance-possessed key by construction: this profile sender-constrains a
+delegated token to the delegate's own key, and the Actor Profile makes
+the top-level `cnf`, not a member inside `act`, the current presenter's
+key ({{I-D.draft-mcguinness-oauth-actor-profile}}). Carrying the
+instance itself in a delegated token's `client_instance` claim is a
+separate question: it needs a consuming profile under
+{{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 7.4, and this
+document defines none. An `allowed_delegates` matcher selects delegates
+by actor type ({{delegation-constraints}}), for example `{
+"sub_profile": "ai_agent" }`; the Actor Profile
+{{I-D.draft-mcguinness-oauth-actor-profile}} is the structural reference
+for the actor object and its `sub_profile` classification.
 
 ## Adopted Model: client_id Names the Requesting Client {#client-id-rebinding}
 
@@ -6249,12 +6256,12 @@ For the kernel:
 2. The Controller is the Mission Issuer (the Authorization Server),
    established through `mission.issuer` and the deployment's issuer
    trust (AS metadata and published keys).
-3. The Actor handle is the authenticated OAuth client at approval;
-   the external Subject is fixed by this document's injective mapping;
+3. The Actor handle is the authenticated OAuth client at approval; the
+   external Subject is fixed by this document's injective mapping;
    delegates ride the `act` chain; child and successor lineage is
    recorded through the parent and predecessor members; actor-type
-   classification uses `sub_profile` and instance assertions where
-   deployed.
+   classification uses `sub_profile` and client-instance attestations
+   where deployed.
 4. The Approved Context is the Mission Intent recorded verbatim, the
    recorded authority proposal where one was submitted, and the
    derived Authority Set; the immutable boundary is the record's
@@ -6730,6 +6737,21 @@ Cross-Domain:
   `authorization_details_types_metadata_endpoint` member this document
   cites; the endpoint is no longer described as lacking formal
   standing.
+
+- References: draft-mcguinness-oauth-client-instance-assertion is
+  replaced by its two successors, {{I-D.draft-mcguinness-oauth-client-instance-id}} (a client instance's identifier
+  carried in its attestation-based client authentication) and
+  {{I-D.draft-mcguinness-oauth-client-attesters}} (the client's endorsement of its attesters). The Token Exchange
+  example no longer cites the retired `client-instance-jwt` token type.
+  The instance-delegate paragraph names the top-level `cnf` as the
+  presenter's key, as the Actor Profile requires, instead of `act.cnf`,
+  and no longer states that `act.sub` carries the instance identifier or
+  that instance evidence alone identifies the delegate ({{I-D.draft-mcguinness-oauth-client-instance-id}},
+  Section 5).
+  draft-mcguinness-oauth-ai-agent-instance is deprecated and no longer
+  cited; the instance-delegate matcher example uses `ai_agent`, the
+  actor type the Actor Profile uses, instead of `client_instance`, which
+  only that draft defined.
 
 -00
 
