@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-09-28T22:02:32Z
-Source repository commit: fff5238b282a54b75be0825d96e7f193ebb52c34
+Generated: 2026-09-28T22:16:52Z
+Source repository commit: 9a99d8e3044b6ff60362c70babc03d87b23c7c29
 Member count: 9
 
 Reading order:
@@ -7872,12 +7872,13 @@ Table of Contents
    An authorization request whose scope includes openid [OpenID.Core]
    asks for an ID Token about the End-User the approval interaction
    authenticates, who is the Approver.  When the Approver is not the
-   Subject established at step 2 of Section 6, the AS MUST refuse the
+   Subject established at step 2 of Section 6, the AS MUST refuse such a
    request, without creating the Mission, with the invalid_scope error
-   ([RFC6749] Section 4.1.2.1).  An approval interaction authenticates
-   the Approver only: the AS MUST NOT issue an ID Token, serve UserInfo,
-   or establish an authentication session for the Subject as a result of
-   it.  When the Approver is the Subject, openid, acr_values, and
+   ([RFC6749] Section 4.1.2.1).  When the Approver is not the Subject,
+   whether or not openid was requested, the AS MUST NOT issue an ID
+   Token, serve UserInfo, or establish an authentication session for the
+   Subject solely as a result of the Approver's authentication or
+   approval.  When the Approver is the Subject, openid, acr_values, and
    max_age keep their [OpenID.Core] meaning, which then describes the
    same authentication this document requires; prompt, login_hint, and
    id_token_hint likewise concern the Approver in every approval
@@ -13349,9 +13350,11 @@ Appendix E.  Document History
    *  Approver Authentication Strength composes with OpenID Connect
       (Section 6.1): a request carrying openid asks for an ID Token
       about the authenticated Approver, so when the Approver is not the
-      Subject the AS refuses it with invalid_scope, and an approval
-      interaction never yields an ID Token, UserInfo, or authentication
-      session for the Subject (#826).
+      Subject the AS refuses it with invalid_scope; and when the
+      Approver is not the Subject, whether or not openid was requested,
+      the Approver's authentication or approval never yields an ID
+      Token, UserInfo, or authentication session for the Subject.  Self-
+      approval keeps its ordinary OpenID Connect behavior (#826).
 
    -00
 

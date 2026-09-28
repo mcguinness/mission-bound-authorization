@@ -3495,11 +3495,11 @@ mapping (this document defines no global ordering of <code>acr</code> values);
           <span>[<a href="#OpenID.Core" class="cite xref">OpenID.Core</a>]</span> asks for an ID Token about the End-User the approval
 interaction authenticates, who is the Approver. When the Approver is
 not the Subject established at step 2 of <a href="#approval-event" class="auto internal xref">Section 6</a>, the AS
-<span class="bcp14">MUST</span> refuse the request, without creating the Mission, with the
-<code>invalid_scope</code> error (<span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> Section 4.1.2.1). An approval
-interaction authenticates the Approver only: the AS <span class="bcp14">MUST NOT</span> issue an
-ID Token, serve UserInfo, or establish an authentication session for
-the Subject as a result of it. When the Approver is the Subject,
+<span class="bcp14">MUST</span> refuse such a request, without creating the Mission, with the
+<code>invalid_scope</code> error (<span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> Section 4.1.2.1). When the Approver
+is not the Subject, whether or not <code>openid</code> was requested, the AS <span class="bcp14">MUST NOT</span> issue an ID Token, serve UserInfo, or establish an authentication
+session for the Subject solely as a result of the Approver's
+authentication or approval. When the Approver is the Subject,
 <code>openid</code>, <code>acr_values</code>, and <code>max_age</code> keep their <span>[<a href="#OpenID.Core" class="cite xref">OpenID.Core</a>]</span>
 meaning, which then describes the same authentication this document
 requires; <code>prompt</code>, <code>login_hint</code>, and <code>id_token_hint</code> likewise concern
@@ -9798,9 +9798,11 @@ only that draft defined.<a href="#appendix-E-3.32.1" class="pilcrow">¶</a></p>
           <p id="appendix-E-3.33.1">Approver Authentication Strength composes with OpenID Connect
 (<a href="#approval-authentication" class="auto internal xref">Section 6.1</a>): a request carrying <code>openid</code> asks for an
 ID Token about the authenticated Approver, so when the Approver is not
-the Subject the AS refuses it with <code>invalid_scope</code>, and an approval
-interaction never yields an ID Token, UserInfo, or authentication
-session for the Subject (#826).<a href="#appendix-E-3.33.1" class="pilcrow">¶</a></p>
+the Subject the AS refuses it with <code>invalid_scope</code>; and when the
+Approver is not the Subject, whether or not <code>openid</code> was requested,
+the Approver's authentication or approval never yields an ID Token,
+UserInfo, or authentication session for the Subject. Self-approval
+keeps its ordinary OpenID Connect behavior (#826).<a href="#appendix-E-3.33.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-E-4">-00<a href="#appendix-E-4" class="pilcrow">¶</a></p>
