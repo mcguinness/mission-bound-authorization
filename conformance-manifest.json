@@ -4341,7 +4341,7 @@
    "id": "core.approval-authentication.openid-refused-when-approver-not-subject",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "approval-authentication",
-   "text": "When the Approver is not the Subject established at step 2 of {{approval-event}}, the AS MUST refuse the request, without creating the Mission, with the `invalid_scope` error",
+   "text": "When the Approver is not the Subject established at step 2 of {{approval-event}}, the AS MUST refuse such a request, without creating the Mission, with the `invalid_scope` error",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -4364,7 +4364,7 @@
    "id": "core.approval-authentication.no-subject-authentication-from-approval",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "approval-authentication",
-   "text": "the AS MUST NOT issue an ID Token, serve UserInfo, or establish an authentication session for the Subject as a result of it",
+   "text": "When the Approver is not the Subject, whether or not `openid` was requested, the AS MUST NOT issue an ID Token, serve UserInfo, or establish an authentication session for the Subject solely as a result of the Approver's authentication or approval.",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -4376,7 +4376,7 @@
    "surface": "authorization-endpoint",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "an approval by another principal yields no ID Token, no UserInfo response, and no authentication session for the Subject; a later prompt=none request for the Subject is not satisfied by it"
+    "normative": "when another principal approves for the Subject, with or without openid, no ID Token, UserInfo response, or authentication session for the Subject results from that approval; a later prompt=none request for the Subject is not satisfied by it; self-approval with openid still yields the ordinary ID Token"
    },
    "level": "endpoint",
    "coverage": "todo",

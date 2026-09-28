@@ -1958,11 +1958,12 @@ An authorization request whose `scope` includes `openid`
 {{OpenID.Core}} asks for an ID Token about the End-User the approval
 interaction authenticates, who is the Approver. When the Approver is
 not the Subject established at step 2 of {{approval-event}}, the AS
-MUST refuse the request, without creating the Mission, with the
-`invalid_scope` error ({{RFC6749}} Section 4.1.2.1). An approval
-interaction authenticates the Approver only: the AS MUST NOT issue an
-ID Token, serve UserInfo, or establish an authentication session for
-the Subject as a result of it. When the Approver is the Subject,
+MUST refuse such a request, without creating the Mission, with the
+`invalid_scope` error ({{RFC6749}} Section 4.1.2.1). When the Approver
+is not the Subject, whether or not `openid` was requested, the AS MUST
+NOT issue an ID Token, serve UserInfo, or establish an authentication
+session for the Subject solely as a result of the Approver's
+authentication or approval. When the Approver is the Subject,
 `openid`, `acr_values`, and `max_age` keep their {{OpenID.Core}}
 meaning, which then describes the same authentication this document
 requires; `prompt`, `login_hint`, and `id_token_hint` likewise concern
@@ -6770,9 +6771,11 @@ Cross-Domain:
 - Approver Authentication Strength composes with OpenID Connect
   ({{approval-authentication}}): a request carrying `openid` asks for an
   ID Token about the authenticated Approver, so when the Approver is not
-  the Subject the AS refuses it with `invalid_scope`, and an approval
-  interaction never yields an ID Token, UserInfo, or authentication
-  session for the Subject (#826).
+  the Subject the AS refuses it with `invalid_scope`; and when the
+  Approver is not the Subject, whether or not `openid` was requested,
+  the Approver's authentication or approval never yields an ID Token,
+  UserInfo, or authentication session for the Subject. Self-approval
+  keeps its ordinary OpenID Connect behavior (#826).
 
 -00
 
