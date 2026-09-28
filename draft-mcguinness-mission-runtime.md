@@ -101,8 +101,7 @@ informative:
     date: 2026
   RFC9470:
   I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
-  I-D.draft-mcguinness-oauth-client-instance-assertion:
-  I-D.draft-mcguinness-oauth-ai-agent-instance:
+  I-D.draft-mcguinness-oauth-client-instance-id:
   I-D.draft-ietf-oauth-attestation-based-client-auth:
   I-D.draft-ietf-oauth-spiffe-client-auth:
   I-D.draft-mcguinness-oauth-actor-receipts:
@@ -865,12 +864,13 @@ constraints are not re-applied here unless the deployment documents them
 as runtime Resource policy, but a deployment MAY apply additional
 actor-sensitive Resource policy ({{input-resource-policy}}).
 
-A credential issuer can verify actor attributes under an
+A credential issuer can verify instance attributes under an
 attested-instance profile (the OAuth one is
-{{I-D.draft-mcguinness-oauth-ai-agent-instance}}). Such
-attester-verified actor context is input a deployment's Resource
-policy MAY evaluate; unlike a self-asserted model or instance label,
-it is attester-backed.
+{{I-D.draft-mcguinness-oauth-client-instance-id}}, whose Instance
+Context identifies an instance and grants no authority). Such
+attester-verified actor context is input a deployment's Resource policy
+MAY evaluate; unlike a self-asserted model or instance label, it is
+attester-backed.
 
 Where the deployment operates an agent registry, the immediate actor's
 registry state (status, revocation, approved deployment version) is
@@ -1834,21 +1834,22 @@ claim's home: the custody properties above belong to a deployment
 built this way, and a developer laptop with a shell is outside them
 by construction, not by configuration.
 
-Where the deployment issues tokens under the client-instance-assertion
-profile ({{I-D.draft-mcguinness-oauth-client-instance-assertion}}),
-the sender-constraint key is instance-specific: that profile forbids a
-key shared across a client's instances. Mediated custody composes with
-that rule in either of two shapes:
+Where the deployment attributes presentations to client instances
+({{I-D.draft-mcguinness-oauth-client-instance-id}}), the
+sender-constraint key is instance-specific: that profile attributes a
+presentation to an instance only under a key unique to it
+({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 7.3).
+Mediated custody composes with that rule in either of two shapes:
 
 - the mediating PEP holds
   per-instance keys, taking custody of each instance's key rather than
   one shared key; or
-- the mediating PEP is itself the attested instance
-  that obtained the token, presenting the instance assertion and holding
-  the instance key.
+- the mediating PEP is itself the attested instance that obtained the
+  token, presenting its own Client Attestation and holding the instance
+  key.
 
-In both shapes that profile's no-shared-key rule and
-this section's custody rules are satisfied together.
+In both shapes that profile's instance-unique key and this section's
+custody rules are satisfied together.
 
 Attestation-based client authentication and SPIFFE
 ({{I-D.draft-ietf-oauth-attestation-based-client-auth}},
@@ -2826,25 +2827,23 @@ Scope Statement claims. Evidence that is unknown, stale, or
 unverifiable for a required condition makes the named claim
 unavailable.
 
-For each condition this table assigns to EAT evidence, the
-Enforcement Scope Statement MUST select the claim or profile
-identifiers the attestation carries, the expected measurements or
-reference values it is appraised against, the appraisal policy
-applied, the attester identity, and a checkable nonce, timestamp, or
-session-binding freshness rule. Entity Attestation Token
-({{RFC9711}}) evidence, carried under the AI-agent-instance profile
-({{I-D.draft-mcguinness-oauth-ai-agent-instance}}), establishes the
+For each condition this table assigns to EAT evidence, the Enforcement
+Scope Statement MUST select the claim or profile identifiers the
+attestation carries, the expected measurements or reference values it is
+appraised against, the appraisal policy applied, the attester identity,
+and a checkable nonce, timestamp, or session-binding freshness rule.
+Entity Attestation Token ({{RFC9711}}) evidence establishes the
 execution-environment fact a row assigns to it only against those
-selections; where a selection this paragraph names is absent, the
-token is a declaration or evidence input, not proof, and the named
-claim is unavailable on the same terms. Verified EAT evidence does
-not by itself establish the exposure, approval, rendering, freshness,
-path, or topology facts the table assigns elsewhere, and a deployment
-MUST NOT represent EAT evidence alone as satisfying those. The
-requirement is scoped to these two High-Assurance Agent claims; base
-runtime conformance does not require this evidence map, and a
-deployment claiming only the base profile MAY publish its scope
-statement unattested.
+selections; where a selection this paragraph names is absent, the token
+is a declaration or evidence input, not proof, and the named claim is
+unavailable on the same terms. Verified EAT evidence does not by itself
+establish the exposure, approval, rendering, freshness, path, or
+topology facts the table assigns elsewhere, and a deployment MUST NOT
+represent EAT evidence alone as satisfying those. The requirement is
+scoped to these two High-Assurance Agent claims; base runtime
+conformance does not require this evidence map, and a deployment
+claiming only the base profile MAY publish its scope statement
+unattested.
 
 # Consumption Bounds Fail Closed {#metering}
 
@@ -3281,8 +3280,8 @@ work and are not required to enforce it:
   the execution environment: actor-signed hop proofs
   ({{I-D.draft-mcguinness-oauth-actor-proofs}}), issuer-signed hop
   receipts ({{I-D.draft-mcguinness-oauth-actor-receipts}}), and attested
-  agent-instance identity
-  ({{I-D.draft-mcguinness-oauth-ai-agent-instance}}) specify these, and
+  client-instance identity
+  ({{I-D.draft-mcguinness-oauth-client-instance-id}}) specify these, and
   this profile consumes their results as credential-derived facts where
   present;
 - a purpose registry;
@@ -3710,6 +3709,16 @@ worked example shows the concrete record
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Client-instance references follow their successors:
+  draft-mcguinness-oauth-client-instance-assertion is replaced by
+  {I-D.draft-mcguinness-oauth-client-instance-id}, and the
+  deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
+  cited. Attester-verified
+  context is instance identity that grants no authority, custody's
+  per-instance key follows the successor's instance-unique key for
+  attribution, and EAT evidence is no longer tied to a carrier
+  profile. No requirement changed.
 
 - Added approval-resolution rule 5, the agent-invokable approval bypass,
   and its negative-conformance case (#759). Observing or requesting an
