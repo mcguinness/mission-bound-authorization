@@ -122,7 +122,6 @@ informative:
   I-D.draft-cecchetti-oauth-rar-cedar:
   I-D.draft-mcguinness-oauth-client-instance-id:
   I-D.draft-mcguinness-oauth-client-attesters:
-  I-D.draft-mcguinness-oauth-ai-agent-instance:
   I-D.draft-mcguinness-oauth-mission-status:
     title: "Mission Status and Lifecycle for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html
@@ -985,8 +984,7 @@ presenter-binding check performed at every derivation, building where
 useful on client instance identification and attester endorsement for
 attestation-based client authentication
 ({{I-D.draft-mcguinness-oauth-client-instance-id}},
-{{I-D.draft-mcguinness-oauth-client-attesters}}) and, for AI agents,
-{{I-D.draft-mcguinness-oauth-ai-agent-instance}}; and fail-closed
+{{I-D.draft-mcguinness-oauth-client-attesters}}); and fail-closed
 behavior when the binding is requested but the client cannot prove it.
 No such profile is defined in this document series today.
 
@@ -4161,25 +4159,22 @@ subset relations prove that ({{subset}}).
 
 Where a deployment authenticates client instances
 ({{I-D.draft-mcguinness-oauth-client-instance-id}}, with attesters a
-client endorses under {{I-D.draft-mcguinness-oauth-client-attesters}};
-for AI agents, {{I-D.draft-mcguinness-oauth-ai-agent-instance}}), the
-delegate identified by the outermost `act` can be the concrete instance.
-The delegated token's top-level `cnf` is then an instance-possessed key
-by construction: this profile sender-constrains a delegated token to the
-delegate's own key, and the Actor Profile makes the top-level `cnf`, not
-a member inside `act`, the current presenter's key
-({{I-D.draft-mcguinness-oauth-actor-profile}}). This document does not
-carry the attester-assigned `client_instance_id` in `act`; carrying the
-instance in a delegated token's `client_instance` claim needs a
+client endorses under {{I-D.draft-mcguinness-oauth-client-attesters}}),
+the delegate identified by the outermost `act` can be the concrete
+instance. The delegated token's top-level `cnf` is then an
+instance-possessed key by construction: this profile sender-constrains a
+delegated token to the delegate's own key, and the Actor Profile makes
+the top-level `cnf`, not a member inside `act`, the current presenter's
+key ({{I-D.draft-mcguinness-oauth-actor-profile}}). This document does
+not carry the attester-assigned `client_instance_id` in `act`; carrying
+the instance in a delegated token's `client_instance` claim needs a
 consuming profile under
 {{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 7.4, and this
-document defines none. An `allowed_delegates` matcher can select
-instance-grade actors ({{delegation-constraints}}), for example `{
-"sub_profile": "client_instance" }`. The `sub_profile` values used here
-(`ai_agent`, `client_instance`) are drawn from the entity-profiles
-vocabulary {{I-D.draft-mcguinness-oauth-ai-agent-instance}} uses; the
-Actor Profile {{I-D.draft-mcguinness-oauth-actor-profile}} remains the
-structural reference for the actor object.
+document defines none. An `allowed_delegates` matcher selects delegates
+by actor type ({{delegation-constraints}}), for example `{
+"sub_profile": "ai_agent" }`; the Actor Profile
+{{I-D.draft-mcguinness-oauth-actor-profile}} is the structural reference
+for the actor object and its `sub_profile` classification.
 
 ## Adopted Model: client_id Names the Requesting Client {#client-id-rebinding}
 
@@ -6747,6 +6742,10 @@ Cross-Domain:
   The instance-delegate paragraph names the top-level `cnf` as the
   presenter's key, as the Actor Profile requires, instead of `act.cnf`,
   and no longer states that `act.sub` carries the instance identifier.
+  draft-mcguinness-oauth-ai-agent-instance is deprecated and no longer
+  cited; the instance-delegate matcher example uses `ai_agent`, the
+  actor type the Actor Profile uses, instead of `client_instance`, which
+  only that draft defined.
 
 -00
 
