@@ -1747,23 +1747,21 @@ claims:
   contract, so each join is attributable to the mapping that
   produced it.
 
-When the introspected token carries Instance Context
-({{I-D.draft-mcguinness-oauth-client-instance-id}}), the MAS SHOULD
-include it in the `token` object as a `client_instance` member, subject
-to that profile's mapping and preservation rules
-({{I-D.draft-mcguinness-oauth-client-instance-id}}, Sections 7.1 and
-7.4). Where the token is sender-constrained to a key unique to the
-instance ({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section
-7.3), the `jkt` binding names one runtime instance, not any holder of a
+The assertion carries no instance identifier. Where the acting token is
+sender-constrained to a key unique to the instance
+({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 7.3), the
+`jkt` binding names one runtime instance, not any holder of a
 client-shared key, so the assertion's token binding is materially
-stronger.
+stronger; an instance-bound join on this path takes the instance from
+the Instance Context the PEP validated ({{mission-join}}).
 
 The endpoint returns HTTP 200 with a JSON object whose `assertion`
 member carries the JWT. Each minting is a join evidence event: the MAS
 records the Mission reference, the token digest and thumbprint, the
 authenticated caller, the mapping version where one is published
-({{mapping-contract}}), and the validity window, retained for the
-audit horizon.
+({{mapping-contract}}), the token's Instance Context where the MAS
+received it ({{I-D.draft-mcguinness-oauth-client-instance-id}}), and the
+validity window, retained for the audit horizon.
 
 Example claims:
 
@@ -2548,8 +2546,11 @@ document requests no IANA action for it.
   deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
   cited. The Mission Join binds the
   instance from validated Instance Context with an instance-unique key
-  rather than from an `act` entry; the Join Assertion carries the
-  token's Instance Context as a `client_instance` member of `token`;
+  rather than from an `act` entry; the Join Assertion carries no
+  instance identifier, so an instance-bound join on that path takes the
+  instance from the Instance Context the PEP validated, and the MAS
+  records the token's Instance Context in its join evidence where it
+  received it;
   and the Enterprise instance-bound join applies where the acting
   credential carries validated Instance Context.
 
