@@ -2029,11 +2029,14 @@ Context Consumer (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id
 Section 7.5); the context identifies an instance only together with its
 <code>iss</code>, so a PEP accepting context from more than one issuer qualifies
 the correlator by it. Attributing the presentation to that instance also
-requires a sender-constraint key unique to the instance
-(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>, Section 7.3). Fleet
-deployments then get which-instance-acted attribution in Decision
-Evidence and, through the <code>evaluation_id</code> link, in Execution Evidence,
-without new members.<a href="#section-7.3-4" class="pilcrow">¶</a></p>
+requires the association with the presenter that Section 7.5
+establishes: a sender-constraint key unique to the instance
+(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>, Section 7.3) where
+the token issuer conveys context only from direct Client Attestation
+validation, and authenticated provenance where it may preserve context
+from an input token. Fleet deployments then get which-instance-acted
+attribution in Decision Evidence and, through the <code>evaluation_id</code> link,
+in Execution Evidence, without new members.<a href="#section-7.3-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="context-credential">

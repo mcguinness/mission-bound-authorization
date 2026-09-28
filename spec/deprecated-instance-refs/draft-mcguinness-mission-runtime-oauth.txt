@@ -292,10 +292,13 @@ Table of Contents
    |                       |validated as that profile's Context Consumer      |
    |                       |requires; it identifies the instance that obtained|
    |                       |the token and grants no authority, and attributing|
-   |                       |a presentation to it requires a sender-constraint |
-   |                       |key unique to the instance                        |
-   |                       |([I-D.draft-mcguinness-oauth-client-instance-id], |
-   |                       |Section 7.3)                                      |
+   |                       |a presentation to it requires the presenter       |
+   |                       |association of                                    |
+   |                       |[I-D.draft-mcguinness-oauth-client-instance-id],  |
+   |                       |Section 7.5: an instance-unique key under direct  |
+   |                       |Client Attestation validation, and authenticated  |
+   |                       |provenance for context preserved from an input    |
+   |                       |token                                             |
    +-----------------------+--------------------------------------------------+
    |Sender-constraint      |cnf, verified during validation (Section 4)       |
    |confirmation           |                                                  |

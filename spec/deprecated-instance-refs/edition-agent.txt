@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-09-28T22:33:53Z
-Source repository commit: e98cf5ac0484af88bba2d33d4fa87a8c8c5b367d
+Generated: 2026-09-28T23:26:10Z
+Source repository commit: 7a7e2b672ce12aa5c9a0a675b94876aadbbf6c95
 Member count: 9
 
 Reading order:
@@ -3055,10 +3055,12 @@ Table of Contents
    a trusted harness supplies work-item-bound where its attacher
    requirements hold; a native or issuance-grant-derived token is
    credential-mission-bound, and presenter-key-bound where its
-   confirmation binding is in force end to end; validated Instance
-   Context bound to an instance-unique confirmation key
+   confirmation binding is in force end to end; Instance Context whose
+   association with the presenter is established, over an instance-
+   unique confirmation key and, for context preserved from an input
+   token, authenticated provenance
    ([I-D.draft-mcguinness-oauth-client-instance-id], Sections 7.3 and
-   7.5) is what makes a path instance-bound; a verified transaction
+   7.5), is what makes a path instance-bound; a verified transaction
    token is the portable action-bound form, and an AuthZEN runtime
    permit is the channel-bound form under that binding's conditions.
 
@@ -23068,11 +23070,14 @@ Table of Contents
    Section 7.5); the context identifies an instance only together with
    its iss, so a PEP accepting context from more than one issuer
    qualifies the correlator by it.  Attributing the presentation to that
-   instance also requires a sender-constraint key unique to the instance
-   ([I-D.draft-mcguinness-oauth-client-instance-id], Section 7.3).
-   Fleet deployments then get which-instance-acted attribution in
-   Decision Evidence and, through the evaluation_id link, in Execution
-   Evidence, without new members.
+   instance also requires the association with the presenter that
+   Section 7.5 establishes: a sender-constraint key unique to the
+   instance ([I-D.draft-mcguinness-oauth-client-instance-id],
+   Section 7.3) where the token issuer conveys context only from direct
+   Client Attestation validation, and authenticated provenance where it
+   may preserve context from an input token.  Fleet deployments then get
+   which-instance-acted attribution in Decision Evidence and, through
+   the evaluation_id link, in Execution Evidence, without new members.
 
 7.4.  Credential Decision Context
 
@@ -26385,10 +26390,14 @@ Table of Contents
    a which-runtime dimension: which concrete instance was asked to stop,
    and which confirmed.
 
-   Sub-agent chains under the agent instance profile cannot shed
-   identity, which strengthens the fail-closed rule above: an
-   unconfirmed stop names the exact instance the harness treats as still
-   running.
+   Where the harness also keeps a durable association between each sub-
+   agent handle and the instance it validated, an unconfirmed stop names
+   the exact instance the harness treats as still running, which
+   strengthens the fail-closed rule above.  Instance Context does not
+   provide that association by itself: it is optional, an issuer may
+   omit it, and it identifies one instance, not a chain
+   ([I-D.draft-mcguinness-oauth-client-instance-id], Sections 7.1 and
+   7.4).
 
 13.  Harness Execution States
 
@@ -27357,7 +27366,10 @@ Appendix B.  Document History
       draft-mcguinness-oauth-ai-agent-instance is no longer cited.  The
       harness records the instance identifier it validated, for example
       an Instance Context's iss and id, instead of agent_instance_id or
-      an instance sub.
+      an instance sub.  The retired profile's guarantee that sub-agent
+      chains cannot shed identity now depends on the harness's own
+      durable association between each sub-agent handle and its
+      instance.
 
    *  Linked the limits of provenance-backed taint control to the
       Security Model's Enforcement Perimeter and distinguished the per-

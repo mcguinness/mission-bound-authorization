@@ -2954,14 +2954,18 @@ prove.<a href="#section-11-18" class="pilcrow">¶</a></p>
 its tokens (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>: the
 <code>client_instance</code> claim or introspection member), the acting credential
 identifies a concrete runtime instance once the PDP has validated that
-context and its association with the presenter, which requires a
-sender-constraint key unique to the instance
-(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>, Sections 7.3 and
-7.5). The PDP <span class="bcp14">SHOULD</span> include that instance in the join, so the client
-join binds (subject, client, instance) rather than (subject, client).
-This restores per-instance granularity behind a shared gateway
-<code>client_id</code>: the validated instance joins, not every workload in the
-<code>client_id</code> equivalence class.<a href="#section-11-19" class="pilcrow">¶</a></p>
+context and established its association with the presenter as a Context
+Consumer (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>, Section
+7.5). A sender-constraint key unique to the instance (Section 7.3)
+establishes that association only where the token issuer conveys context
+solely from direct Client Attestation validation; context an issuer may
+have preserved from an input token also needs a profile that
+authenticates its provenance, since such a token can carry one
+instance's context while bound to another's key. The PDP <span class="bcp14">SHOULD</span> include
+that instance in the join, so the client join binds (subject, client,
+instance) rather than (subject, client). This restores per-instance
+granularity behind a shared gateway <code>client_id</code>: the validated instance
+joins, not every workload in the <code>client_id</code> equivalence class.<a href="#section-11-19" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="reference-propagation">
@@ -3391,22 +3395,22 @@ produced it.<a href="#section-13.2-2.14.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-13.2-3">When the introspected token carries Instance Context
-(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>), the MAS <span class="bcp14">SHOULD</span>
-include it in the <code>token</code> object as a <code>client_instance</code> member, subject
-to that profile's mapping and preservation rules
-(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>, Sections 7.1 and
-7.4). Where the token is sender-constrained to a key unique to the
-instance (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>, Section
-7.3), the <code>jkt</code> binding names one runtime instance, not any holder of a
+<p id="section-13.2-3">The assertion carries no instance identifier. Where the acting token is
+sender-constrained to a key unique to the instance
+(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>, Section 7.3), the
+<code>jkt</code> binding names one runtime instance, not any holder of a
 client-shared key, so the assertion's token binding is materially
-stronger.<a href="#section-13.2-3" class="pilcrow">¶</a></p>
+stronger; an instance-bound join on this path takes the instance only
+from Instance Context whose association with the presenter has been
+established (<a href="#mission-join" class="auto internal xref">Section 11</a>); the token digest and <code>jkt</code> alone do not
+establish it.<a href="#section-13.2-3" class="pilcrow">¶</a></p>
 <p id="section-13.2-4">The endpoint returns HTTP 200 with a JSON object whose <code>assertion</code>
 member carries the JWT. Each minting is a join evidence event: the MAS
 records the Mission reference, the token digest and thumbprint, the
 authenticated caller, the mapping version where one is published
-(<a href="#mapping-contract" class="auto internal xref">Section 15.3</a>), and the validity window, retained for the
-audit horizon.<a href="#section-13.2-4" class="pilcrow">¶</a></p>
+(<a href="#mapping-contract" class="auto internal xref">Section 15.3</a>), the token's Instance Context where the MAS
+received it (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>), and the
+validity window, retained for the audit horizon.<a href="#section-13.2-4" class="pilcrow">¶</a></p>
 <p id="section-13.2-5">Example claims:<a href="#section-13.2-5" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-13.2-6">
 <pre>
@@ -3655,13 +3659,13 @@ inherit it from the deployment's name.<a href="#section-15-4.4.2.4.1" class="pil
           </ul>
 </li>
         <li class="normal" id="section-15-4.5">
-          <p id="section-15-4.5.1"><strong>Instance-bound joins.</strong> Where the acting credential carries
-validated Instance Context
-(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>), a
-high-consequence join <span class="bcp14">MUST</span> bind (<code>subject</code>, <code>client</code>, <code>instance</code>), not
-(<code>subject</code>, <code>client</code>), so a single workload joins rather than every
-workload sharing a gateway <code>client_id</code>. Client-instance identity rests
-on an unratified individual draft
+          <p id="section-15-4.5.1"><strong>Instance-bound joins.</strong> Where the acting credential carries Instance
+Context (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>) whose
+association with the presenter is established as <a href="#mission-join" class="auto internal xref">Section 11</a>
+describes, a high-consequence join <span class="bcp14">MUST</span> bind (<code>subject</code>, <code>client</code>,
+<code>instance</code>), not (<code>subject</code>, <code>client</code>), so a single workload joins
+rather than every workload sharing a gateway <code>client_id</code>.
+Client-instance identity rests on an unratified individual draft
 (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>); where a
 deployment has no instance-identity substrate, the high-consequence
 join binds only (<code>subject</code>, <code>client</code>), and the shared-<code>client_id</code>
@@ -4737,9 +4741,14 @@ draft-mcguinness-oauth-client-instance-assertion is replaced by
 {I-D.draft-mcguinness-oauth-client-instance-id}, and the
 deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
 cited. The Mission Join binds the
-instance from validated Instance Context with an instance-unique key
-rather than from an <code>act</code> entry; the Join Assertion carries the
-token's Instance Context as a <code>client_instance</code> member of <code>token</code>;
+instance from Instance Context whose association with the presenter is
+established (an instance-unique key, plus authenticated provenance for
+context preserved from an input token) rather than from an <code>act</code>
+entry; the Join Assertion carries no
+instance identifier, so an instance-bound join on that path takes the
+instance from the Instance Context the PEP validated, and the MAS
+records the token's Instance Context in its join evidence where it
+received it;
 and the Enterprise instance-bound join applies where the acting
 credential carries validated Instance Context.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
