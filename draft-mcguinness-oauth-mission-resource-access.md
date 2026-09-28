@@ -54,7 +54,6 @@ normative:
 
 informative:
   RFC8126:
-  I-D.draft-zehavi-oauth-rar-metadata:
   I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
   MCP:
     title: "Model Context Protocol: Authorization"
