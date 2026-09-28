@@ -1954,6 +1954,20 @@ matches any one listed value, under the deployment's own policy
 mapping (this document defines no global ordering of `acr` values);
 `max_age` bounds the elapsed time since that authentication.
 
+An authorization request whose `scope` includes `openid`
+{{OpenID.Core}} asks for an ID Token about the End-User the approval
+interaction authenticates, who is the Approver. When the Approver is
+not the Subject established at step 2 of {{approval-event}}, the AS
+MUST refuse the request, without creating the Mission, with the
+`invalid_scope` error ({{RFC6749}} Section 4.1.2.1). An approval
+interaction authenticates the Approver only: the AS MUST NOT issue an
+ID Token, serve UserInfo, or establish an authentication session for
+the Subject as a result of it. When the Approver is the Subject,
+`openid`, `acr_values`, and `max_age` keep their {{OpenID.Core}}
+meaning, which then describes the same authentication this document
+requires; `prompt`, `login_hint`, and `id_token_hint` likewise concern
+the Approver in every approval interaction.
+
 Approval authentication for a high-risk Mission ({{approval-event}})
 MUST satisfy both the published floor and, where the client requested
 one, the `acr_values`/`max_age` carriage above; the floor is never
@@ -6752,6 +6766,13 @@ Cross-Domain:
   cited; the instance-delegate matcher example uses `ai_agent`, the
   actor type the Actor Profile uses, instead of `client_instance`, which
   only that draft defined.
+
+- Approver Authentication Strength composes with OpenID Connect
+  ({{approval-authentication}}): a request carrying `openid` asks for an
+  ID Token about the authenticated Approver, so when the Approver is not
+  the Subject the AS refuses it with `invalid_scope`, and an approval
+  interaction never yields an ID Token, UserInfo, or authentication
+  session for the Subject (#826).
 
 -00
 

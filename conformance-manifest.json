@@ -4338,6 +4338,52 @@
    "notes": "The same wire test both exercises the approver-scoped check AND decodes the issued access token to assert acr/amr/auth_time are absent at the top level and under the mission claim."
   },
   {
+   "id": "core.approval-authentication.openid-refused-when-approver-not-subject",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-authentication",
+   "text": "When the Approver is not the Subject established at step 2 of {{approval-event}}, the AS MUST refuse the request, without creating the Mission, with the `invalid_scope` error",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an authorization request whose scope includes openid is refused with invalid_scope, and no Mission is created, when the authenticated Approver is not the established Subject"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#826 specification slice. The reference AS currently issues an ID Token asserting the Subject's authentication when another principal approves for that Subject (reproduced in #826); the implementation half of #826 adds the HTTP regression tests, with and without openid, for delegated approval, self-approval, and an organizational workload Subject."
+  },
+  {
+   "id": "core.approval-authentication.no-subject-authentication-from-approval",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-authentication",
+   "text": "the AS MUST NOT issue an ID Token, serve UserInfo, or establish an authentication session for the Subject as a result of it",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "an approval by another principal yields no ID Token, no UserInfo response, and no authentication session for the Subject; a later prompt=none request for the Subject is not satisfied by it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#826 specification slice. The reference AS currently issues an ID Token asserting the Subject's authentication when another principal approves for that Subject (reproduced in #826); the implementation half of #826 adds the HTTP regression tests, with and without openid, for delegated approval, self-approval, and an organizational workload Subject."
+  },
+  {
    "id": "core.grant-binding.mission-id-inert",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "grant-binding",
