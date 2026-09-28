@@ -891,10 +891,14 @@ and in sub-agent termination evidence, giving stop propagation and its
 evidence a which-runtime dimension: which concrete instance was asked to
 stop, and which confirmed.
 
-Sub-agent chains under the agent instance profile cannot shed
-identity, which strengthens the fail-closed rule above: an
-unconfirmed stop names the exact instance the harness treats as still
-running.
+Where the harness also keeps a durable association between each
+sub-agent handle and the instance it validated, an unconfirmed stop
+names the exact instance the harness treats as still running, which
+strengthens the fail-closed rule above. Instance Context does not
+provide that association by itself: it is optional, an issuer may omit
+it, and it identifies one instance, not a chain
+({{I-D.draft-mcguinness-oauth-client-instance-id}}, Sections 7.1 and
+7.4).
 
 # Harness Execution States {#harness-states}
 
@@ -1736,7 +1740,10 @@ exists.
   cited. The harness records
   the instance identifier it validated, for example an Instance
   Context's `iss` and `id`, instead of `agent_instance_id` or an
-  instance `sub`.
+  instance `sub`. The retired profile's
+  guarantee that sub-agent chains cannot shed identity now depends on
+  the harness's own durable association between each sub-agent handle
+  and its instance.
 
 - Linked the limits of provenance-backed taint control to the Security
   Model's Enforcement Perimeter and distinguished the per-channel
