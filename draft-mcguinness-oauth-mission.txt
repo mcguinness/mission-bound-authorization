@@ -864,9 +864,10 @@ Table of Contents
    deployment identifier; the immutable Mission Record extension and its
    approval rendering; the instance assertion or attestation format and
    the presenter-binding check performed at every derivation, building
-   where useful on the client-instance-assertion family
-   ([I-D.draft-mcguinness-oauth-client-instance-assertion],
-   [I-D.draft-mcguinness-oauth-ai-agent-instance]); and fail-closed
+   where useful on client instance identification and attester
+   endorsement for attestation-based client authentication
+   ([I-D.draft-mcguinness-oauth-client-instance-id],
+   [I-D.draft-mcguinness-oauth-client-attesters]); and fail-closed
    behavior when the binding is requested but the client cannot prove
    it.  No such profile is defined in this document series today.
 
@@ -1874,6 +1875,21 @@ Table of Contents
    request when it matches any one listed value, under the deployment's
    own policy mapping (this document defines no global ordering of acr
    values); max_age bounds the elapsed time since that authentication.
+
+   An authorization request whose scope includes openid [OpenID.Core]
+   asks for an ID Token about the End-User the approval interaction
+   authenticates, who is the Approver.  When the Approver is not the
+   Subject established at step 2 of Section 6, the AS MUST refuse such a
+   request, without creating the Mission, with the invalid_scope error
+   ([RFC6749] Section 4.1.2.1).  When the Approver is not the Subject,
+   whether or not openid was requested, the AS MUST NOT issue an ID
+   Token, serve UserInfo, or establish an authentication session for the
+   Subject solely as a result of the Approver's authentication or
+   approval.  When the Approver is the Subject, openid, acr_values, and
+   max_age keep their [OpenID.Core] meaning, which then describes the
+   same authentication this document requires; prompt, login_hint, and
+   id_token_hint likewise concern the Approver in every approval
+   interaction.
 
    Approval authentication for a high-risk Mission (Section 6) MUST
    satisfy both the published floor and, where the client requested one,
@@ -4128,12 +4144,12 @@ Table of Contents
    *  *The exchange is explicit.* The delegating Mission-bound access
       token is the subject_token, with subject_token_type of
       urn:ietf:params:oauth:token-type:access_token.  The delegate is
-      identified by an actor_token (with its actor_token_type; for
-      example, an attested client-instance assertion presented as
-      urn:ietf:params:oauth:token-type:client-instance-jwt
-      ([I-D.draft-mcguinness-oauth-client-instance-assertion])) or by
-      its own client authentication, and the AS asserts the actor itself
-      (Section 12.3); a requested_token_type of
+      identified by an actor_token (with its actor_token_type) or by its
+      own client authentication, and the AS asserts the actor itself
+      (Section 12.3).  A client instance's Client Attestation
+      ([I-D.draft-mcguinness-oauth-client-instance-id]) authenticates
+      the instance, not the actor it represents; establishing that actor
+      is a separate step, described below.  A requested_token_type of
       urn:ietf:params:oauth:token-type:access_token is used.  The
       response carries the matching issued_token_type and a token_type
       for the issued access token, per [RFC8693] Section 2.2.1.
@@ -4197,20 +4213,28 @@ Table of Contents
    relations prove that (Section 5.1).
 
    Where a deployment authenticates client instances
-   ([I-D.draft-mcguinness-oauth-client-instance-assertion]; for AI
-   agents, its agent profile
-   [I-D.draft-mcguinness-oauth-ai-agent-instance]), the delegate
-   identified by the outermost act is the concrete instance: act.sub is
-   the instance identifier and act.cnf is the instance-specific key.
-   This profile's requirement that a delegated token be sender-
-   constrained to the delegate's own key then lands on an instance-
-   possessed key by construction.  An allowed_delegates matcher can
-   select instance-grade actors (Section 12.3), for example {
-   "sub_profile": "client_instance" }. The sub_profile values used here
-   (ai_agent, client_instance) are drawn from the entity-profiles
-   vocabulary those instance profiles use; the Actor Profile
-   [I-D.draft-mcguinness-oauth-actor-profile] remains the structural
-   reference for the actor object.
+   ([I-D.draft-mcguinness-oauth-client-instance-id], with attesters a
+   client endorses under [I-D.draft-mcguinness-oauth-client-attesters]),
+   the delegate identified by the outermost act can be an actor that an
+   authenticated instance represents.  The instance evidence does not
+   establish that actor:
+   [I-D.draft-mcguinness-oauth-client-instance-id], Section 5, forbids
+   adding an act claim or extending an actor chain solely from it, so
+   the AS establishes the delegate's actor identity, and that actor's
+   trusted association with the authenticated instance, separately.  The
+   delegated token's top-level cnf is then an instance-possessed key by
+   construction: this profile sender-constrains a delegated token to the
+   delegate's own key, and the Actor Profile makes the top-level cnf,
+   not a member inside act, the current presenter's key
+   ([I-D.draft-mcguinness-oauth-actor-profile]).  Carrying the instance
+   itself in a delegated token's client_instance claim is a separate
+   question: it needs a consuming profile under
+   [I-D.draft-mcguinness-oauth-client-instance-id], Section 7.4, and
+   this document defines none.  An allowed_delegates matcher selects
+   delegates by actor type (Section 12.3), for example { "sub_profile":
+   "ai_agent" }; the Actor Profile
+   [I-D.draft-mcguinness-oauth-actor-profile] is the structural
+   reference for the actor object and its sub_profile classification.
 
 12.1.  Adopted Model: client_id Names the Requesting Client
 
@@ -6031,19 +6055,20 @@ Table of Contents
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
               oauth-actor-profile-00>.
 
-   [I-D.draft-mcguinness-oauth-ai-agent-instance]
-              McGuinness, K., "OAuth 2.0 AI Agent Instance Profile",
+   [I-D.draft-mcguinness-oauth-client-attesters]
+              McGuinness, K., "OAuth 2.0 Client Attester Endorsement",
               Work in Progress, Internet-Draft, draft-mcguinness-oauth-
-              ai-agent-instance-00, 4 July 2026,
+              client-attesters-00, 28 September 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-ai-agent-instance-00>.
+              oauth-client-attesters-00>.
 
-   [I-D.draft-mcguinness-oauth-client-instance-assertion]
-              McGuinness, K., "OAuth 2.0 Client Instance Assertion",
-              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
-              client-instance-assertion-01, 24 June 2026,
+   [I-D.draft-mcguinness-oauth-client-instance-id]
+              McGuinness, K., "Client Instance Identification for
+              Attestation-Based Client Authentication", Work in
+              Progress, Internet-Draft, draft-mcguinness-oauth-client-
+              instance-id-00, 28 September 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-client-instance-assertion-01>.
+              oauth-client-instance-id-00>.
 
    [I-D.draft-mcguinness-oauth-mission-approval]
               McGuinness, K., "Mission Deferred Approval for OAuth 2.0",
@@ -6757,8 +6782,8 @@ Appendix D.  OAuth Binding Mapping Assessment
        the external Subject is fixed by this document's injective
        mapping; delegates ride the act chain; child and successor
        lineage is recorded through the parent and predecessor members;
-       actor-type classification uses sub_profile and instance
-       assertions where deployed.
+       actor-type classification uses sub_profile and client-instance
+       attestations where deployed.
 
    4.  The Approved Context is the Mission Intent recorded verbatim, the
        recorded authority proposal where one was submitted, and the
@@ -7311,6 +7336,32 @@ Appendix E.  Document History
       parameter, and the authorization_details_types_metadata_endpoint
       member this document cites; the endpoint is no longer described as
       lacking formal standing.
+
+   *  References: draft-mcguinness-oauth-client-instance-assertion is
+      replaced by its two successors,
+      [I-D.draft-mcguinness-oauth-client-instance-id] (a client
+      instance's identifier carried in its attestation-based client
+      authentication) and [I-D.draft-mcguinness-oauth-client-attesters]
+      (the client's endorsement of its attesters).  The Token Exchange
+      example no longer cites the retired client-instance-jwt token
+      type.  The instance-delegate paragraph names the top-level cnf as
+      the presenter's key, as the Actor Profile requires, instead of
+      act.cnf, and no longer states that act.sub carries the instance
+      identifier or that instance evidence alone identifies the delegate
+      ([I-D.draft-mcguinness-oauth-client-instance-id], Section 5).
+      draft-mcguinness-oauth-ai-agent-instance is deprecated and no
+      longer cited; the instance-delegate matcher example uses ai_agent,
+      the actor type the Actor Profile uses, instead of client_instance,
+      which only that draft defined.
+
+   *  Approver Authentication Strength composes with OpenID Connect
+      (Section 6.1): a request carrying openid asks for an ID Token
+      about the authenticated Approver, so when the Approver is not the
+      Subject the AS refuses it with invalid_scope; and when the
+      Approver is not the Subject, whether or not openid was requested,
+      the Approver's authentication or approval never yields an ID
+      Token, UserInfo, or authentication session for the Subject.  Self-
+      approval keeps its ordinary OpenID Connect behavior (#826).
 
    -00
 
