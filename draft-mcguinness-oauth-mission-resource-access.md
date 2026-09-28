@@ -54,7 +54,6 @@ normative:
 
 informative:
   RFC8126:
-  I-D.draft-zehavi-oauth-rar-metadata:
   I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
   MCP:
     title: "Model Context Protocol: Authorization"
@@ -73,11 +72,11 @@ informative:
 
 --- abstract
 
-Mission-Bound Authorization for OAuth 2.0 (the "issuance profile") derives
-a Mission's Authority Set as one or more Rich Authorization Requests
-{{RFC9396}} `authorization_details` entries, of any Authorization
-Server-supported type, and is type-agnostic toward that type's own
-semantics. This document defines `mission_resource_access`: a
+Mission-Bound Authorization for OAuth 2.0 (the "issuance profile")
+derives a Mission's Authority Set as one or more OAuth 2.0 Rich
+Authorization Requests (RAR) `authorization_details` entries, of any
+Authorization Server-supported type, and is type-agnostic toward that
+type's own semantics. This document defines `mission_resource_access`: a
 general-purpose, cross-resource `authorization_details` type carrying a
 resource identifier matched exactly or by path prefix, an action
 namespace with wildcard families, machine-actionable constraints
@@ -86,7 +85,7 @@ delegation policy, together with the subset and intersection algebra a
 deployment uses to compare and narrow two entries. It also defines this
 type's scope-projection safety conditions and its declaration under the
 issuance profile's machine-readable transformation-capability map. This
-document is a profile of the issuance profile; a deployment MAY support
+document is a profile of the issuance profile; a deployment can support
 `mission_resource_access`, another AS-supported `authorization_details`
 type, or both.
 
@@ -962,6 +961,8 @@ coordinated through this registry, and any other name is either
 collision-resistant or remains deployment-defined and outside the
 registry.
 
+--- back
+
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
@@ -998,6 +999,10 @@ registry.
   safety conditions and issuance-algorithm interlock (#698), and its
   Transformation Capabilities declaration for the issuance profile's
   machine-readable per-type capability map (#645).
+
+- The abstract names Rich Authorization Requests without a citation
+  and states deployment choice without a BCP 14 keyword; the uncited
+  RAR metadata reference is removed.
 
 # Acknowledgments
 {:numbered="false"}
