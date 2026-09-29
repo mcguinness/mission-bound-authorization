@@ -122,8 +122,6 @@ can never broaden it. Widening an approved Mission is a different
 operation with its own fresh approval
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 
-# Status: An Experimental Extension {#experimental-status}
-
 This document is optional and experimental: adopt it for
 evaluation, not as a stable interface. The stable path needs no
 revision mechanism at all. A deferred approval that cannot be granted
@@ -144,12 +142,6 @@ Like the deferred approval profile, this document tracks the
 in-progress deferred substrate
 ({{I-D.draft-gerber-oauth-deferred-token-response}}) and will track it
 as it evolves.
-
-<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Role: companion. Spec maturity: experimental. Maintenance: lab-best-effort.
-Adopt when: Reviewers routinely narrow a proposed Mission rather than approve or deny.
-Requires: Mission-Bound Authorization for OAuth 2.0; Mission Deferred Approval for OAuth 2.0.
-<!-- family-status: END -->
 
 # Relationship to the Deferred Approval Profile {#profile-relationship}
 

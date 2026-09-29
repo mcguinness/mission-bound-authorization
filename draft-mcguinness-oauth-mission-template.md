@@ -178,8 +178,6 @@ approved the template. The high-consequence classes stay on a fresh
 human decision, exactly as that verb requires
 ({{prohibited-classes}}).
 
-# Status: An Experimental Extension {#optional-status}
-
 This document is optional and experimental: adopt it for evaluation,
 not as a stable interface. It removes the per-dispatch human from a
 consented template, which is a high-consequence capability. This
@@ -193,12 +191,6 @@ A Mission Issuer that does not implement this document creates every
 Mission through a fresh human approval and is a fully conforming
 issuance-profile Mission Issuer ({{I-D.draft-mcguinness-oauth-mission}}).
 Nothing here places a new requirement back on the issuance profile.
-
-<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Role: companion. Spec maturity: experimental. Maintenance: lab-best-effort.
-Adopt when: Machine-speed dispatch makes per-run approval infeasible; consent once to a ceiling.
-Requires: Mission-Bound Runtime Enforcement; Mission-Bound Authorization for OAuth 2.0; Mission Consent Evidence for OAuth 2.0; Mission Expansion for OAuth 2.0.
-<!-- family-status: END -->
 
 # Relationship to Other Profiles {#relationship}
 

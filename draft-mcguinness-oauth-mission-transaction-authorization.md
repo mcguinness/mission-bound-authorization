@@ -259,8 +259,6 @@ This profile is the strict-delta consumer of the upstream protocol;
 engagement with that protocol's own evolution proceeds through the
 family's coordination process, outside this document.
 
-# Status: An Optional Extension {#optional-status}
-
 This document is optional. A deployment that satisfies action-bound
 approval by another means, a synchronous local decision, a bespoke
 callback, or no cross-organizational case at all, is fully conformant
@@ -290,12 +288,6 @@ the runtime profile, is the stable path; deploy this profile for
 evaluation rather than as a stable interface. This document is
 Experimental for that reason, tracking its substrate and crossing to
 the stable tier by reclassification when the substrate does.
-
-<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Role: companion. Spec maturity: experimental. Maintenance: active-experimental.
-Adopt when: One action needs a fresh, portable, cross-org authorization with no live callback.
-Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements; Mission-Bound Authorization for OAuth 2.0.
-<!-- family-status: END -->
 
 # Conventions and Terminology {#conventions}
 

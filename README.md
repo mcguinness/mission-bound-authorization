@@ -329,8 +329,8 @@ requested RFC category, never of WG adoption, approval, or publication
 state; **implementation/conformance**, derived per document from
 `conformance-manifest.json` and shown beside spec maturity rather than
 folded into it; and a **maintenance class**. A candidate document's own
-"# Status" section cannot claim, in prose, that its interface is
-unstable while the manifest calls it a candidate: that contradiction is
+Introduction cannot claim, in prose, that its interface is unstable
+while the manifest calls it a candidate: that contradiction is
 machine-checked. `DRAFTS.md` renders all five axes and their
 family-wide counts, generated from the manifest and the conformance
 ledger.
@@ -350,7 +350,7 @@ Validation:
 ```sh
 node scripts/check-family-manifest.mjs        # inventory, catalog, metadata, candidate gate (chains the Statement check)
 node scripts/check-conformance-manifest.mjs   # requirement rows against the spec texts
-node scripts/generate-drafts-index.mjs --check # DRAFTS.md's index, family-counts, and reference-stacks blocks; README's binding-packages block; every draft's family-status block
+node scripts/generate-drafts-index.mjs --check # DRAFTS.md's index, family-counts, and reference-stacks blocks; README's binding-packages block; no draft carries a Status section
 node scripts/test-family-manifest.mjs         # fixture tests: role derivation, each candidate-gate criterion, the two regex tripwires
 ```
 

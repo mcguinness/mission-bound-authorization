@@ -173,8 +173,6 @@ requires all three ({{mission-binding-check}}, {{kill-switch}}):
 - `authority_hash` rides the chain as a lineage anchor, not as the
   child's own authority commitment.
 
-# Status: An Experimental Extension {#optional-status}
-
 This document is optional and experimental: adopt it for
 evaluation, not as a stable interface. A deployment that narrows
 authority only
@@ -201,12 +199,6 @@ tracks that work as it evolves. Authorization-Server-mediated
 delegation, which depends only on ratified OAuth, is the stable path;
 a deployment uses offline attenuation where its substrate dependency is
 acceptable and treats the interface as tracking the substrate.
-
-<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Role: companion. Spec maturity: experimental. Maintenance: active.
-Adopt when: Deep fan-out makes an AS round-trip per narrowing too costly; mint offline.
-Requires: Mission-Bound Runtime Enforcement; Mission-Bound Authorization for OAuth 2.0.
-<!-- family-status: END -->
 
 # Relationship to the Issuance Profile {#issuance-relationship}
 

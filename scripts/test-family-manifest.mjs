@@ -21,7 +21,7 @@ import { test } from "node:test";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
-import { roleFor, maturityDisplay, CORE_SLUG, BINDING_SLUGS, validateCandidateGate, loadConformanceCounts, findStatusSection, validateFamilyStatusBlocks, writeFamilyStatusBlocks } from "./generate-drafts-index.mjs";
+import { roleFor, maturityDisplay, CORE_SLUG, BINDING_SLUGS, validateCandidateGate, loadConformanceCounts, validateNoStatusSections } from "./generate-drafts-index.mjs";
 import { HAND_TYPED_COUNT, UNSTABLE_SELF_CLAIM } from "./check-family-manifest.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -240,64 +240,35 @@ test("HAND_TYPED_COUNT: does NOT fire on a spelled-out count", () => {
 });
 
 // ---------------------------------------------------------------------
-// Family Status section placement
+// validateNoStatusSections(): retired Status content
 // ---------------------------------------------------------------------
 
-// A protocol section whose heading starts with "Status" (the AAuth
-// management draft's "# Status Operation") must never be taken for the
-// family Status section.
-// The protocol section comes first, the harder case: a pattern that takes
-// the first heading starting with "Status" writes the block into it.
-const PROTOCOL_STATUS_BODY = [
-  "# Introduction",
-  "",
-  "Intro.",
-  "",
-  "# Status Operation {#status}",
-  "",
-  "A caller reads status.",
-  "",
-  "# Status: An Optional Profile {#doc-status}",
-  "",
-  "<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->",
-  "stale",
-  "<!-- family-status: END -->",
-  "",
-].join("\n");
-
-test("findStatusSection: skips a protocol section whose heading only starts with Status", () => {
-  const protocolOnly = "# Introduction\n\nIntro.\n\n# Status Operation {#status}\n\nA caller reads status.\n";
-  assert.equal(findStatusSection(protocolOnly), null, "a draft whose only Status-like heading is a protocol section has no family Status section");
-  const bounds = findStatusSection(PROTOCOL_STATUS_BODY);
-  assert.ok(bounds, "expected the family section");
-  assert.ok(!PROTOCOL_STATUS_BODY.slice(bounds[0], bounds[1]).includes("A caller reads status"), "the family section must not extend into the protocol section");
-});
-
-test("writeFamilyStatusBlocks: writes into the family section, not a later protocol Status section", () => {
-  const { root, draftFile } = makeFixtureRepo({ draftBody: PROTOCOL_STATUS_BODY });
+test("validateNoStatusSections: a draft with no Status content passes, including a protocol section named Status", () => {
+  const { root } = makeFixtureRepo({ draftBody: "# Introduction\n\nIntro.\n\n# Status Operation {#status}\n\nA caller reads status.\n" });
   try {
-    writeFamilyStatusBlocks(root);
-    const text = fs.readFileSync(path.join(root, draftFile), "utf8");
-    const protocol = text.slice(text.indexOf("# Status Operation"), text.indexOf("# Status:"));
-    const family = text.slice(text.indexOf("# Status:"));
-    assert.ok(family.includes("Role: companion."), "the regenerated block belongs to the family section");
-    assert.ok(!protocol.includes("family-status"), "the protocol section carries no block");
-    assert.deepEqual(validateFamilyStatusBlocks(root), []);
+    assert.deepEqual(validateNoStatusSections(root), []);
   } finally {
     cleanup(root);
   }
 });
 
-test("validateFamilyStatusBlocks: a second copy of the block anywhere in the draft fails", () => {
-  const { root, draftFile } = makeFixtureRepo({ draftBody: PROTOCOL_STATUS_BODY });
+test("validateNoStatusSections: a family-status block or a \"# Status:\" section fails", () => {
+  const { root } = makeFixtureRepo({
+    draftBody: [
+      "# Introduction",
+      "",
+      "# Status: An Optional Profile {#doc-status}",
+      "",
+      "<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->",
+      "Role: companion.",
+      "<!-- family-status: END -->",
+      "",
+    ].join("\n"),
+  });
   try {
-    writeFamilyStatusBlocks(root);
-    const p = path.join(root, draftFile);
-    const text = fs.readFileSync(p, "utf8");
-    const block = text.slice(text.indexOf("<!-- family-status: BEGIN"), text.indexOf("<!-- family-status: END -->") + "<!-- family-status: END -->".length);
-    fs.writeFileSync(p, text + "\n" + block + "\n");
-    const findings = validateFamilyStatusBlocks(root);
-    assert.ok(findings.some((f) => f.includes("family-status blocks")), `expected a duplicate-block finding, got: ${JSON.stringify(findings)}`);
+    const findings = validateNoStatusSections(root);
+    assert.ok(findings.some((f) => f.includes("family-status block")), `expected a block finding, got: ${JSON.stringify(findings)}`);
+    assert.ok(findings.some((f) => f.includes("# Status:")), `expected a heading finding, got: ${JSON.stringify(findings)}`);
   } finally {
     cleanup(root);
   }

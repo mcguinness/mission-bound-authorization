@@ -223,8 +223,6 @@ the Mission Issuer is never on the partner's request path; the cost
 of that independence is a bounded revocation lease
 ({{cross-domain-revocation}}).
 
-# Status: An Optional Extension {#status}
-
 This document is the Cross-Domain capability named by the base
 profile's conformance model ({{I-D.draft-mcguinness-oauth-mission}},
 Section "Conformance"). The capability is optional: a deployment whose
@@ -244,12 +242,6 @@ The capability is orthogonal to the family's Mission Assurance Levels
 ({{I-D.draft-mcguinness-mission-architecture}}): projection changes
 where a Mission is honored, not the strength at which either domain
 enforces it. Each trust domain runs at its own level.
-
-<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Role: companion. Spec maturity: experimental. Maintenance: active.
-Adopt when: A Mission from one trust domain must be honored by an AS in another (also the floor's conditional dependency).
-Requires: Mission-Bound Authorization for OAuth 2.0.
-<!-- family-status: END -->
 
 # Conventions and Terminology {#conventions-and-terminology}
 

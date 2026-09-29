@@ -129,8 +129,6 @@ in-place narrowing-revision handshake over this profile
 approved Mission is a different operation with its own fresh approval
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 
-# Status: An Optional Extension {#optional-status}
-
 This document is optional. A deployment that obtains Mission approvals
 synchronously is fully conformant to the issuance profile and is
 unaffected by this document. It places no new requirement on the
@@ -156,13 +154,6 @@ issuance profile, is the stable path; deploy deferred approval for
 evaluation rather than as a stable interface. This document is
 Standards Track despite that posture because it tracks its substrate
 and stabilizes with it.
-
-<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Role: companion. Spec maturity: experimental. Maintenance: active.
-Adopt when: Approval is asynchronous: a human review queue, not an immediate decision.
-Requires: Mission-Bound Authorization for OAuth 2.0.
-Also requires, conditionally: Mission Approval Governance (when an Approval Governance Record is recorded).
-<!-- family-status: END -->
 
 # Relationship to the Issuance Profile {#issuance-relationship}
 

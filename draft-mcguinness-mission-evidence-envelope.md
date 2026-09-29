@@ -164,14 +164,6 @@ existence, that an existing evidence kind's current media type is
 deprecated: it is not, unless and until that kind's own specification
 says so.
 
-# Status: An Optional, Experimental Mechanism {#doc-status}
-
-<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Role: companion. Spec maturity: sketch. Maintenance: lab-best-effort.
-Adopt when: A new evidence kind is being designed and a deployment wants to avoid minting another bespoke media type, or Intent Admission Evidence's inbound assertion and emitted attestation are needed.
-Requires: nothing beyond its listed references.
-<!-- family-status: END -->
-
 This document is Experimental. It has no known implementation, no
 migrated evidence kind, and no adopter commitment on record. A
 deployment MAY implement the envelope and the Intent Admission payload

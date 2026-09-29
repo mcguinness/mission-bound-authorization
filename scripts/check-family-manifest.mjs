@@ -39,8 +39,8 @@
 //   (l) drafts-index          - DRAFTS.md's generated index or family-counts block is stale
 //                                against the manifest and conformance ledger (see
 //                                scripts/generate-drafts-index.mjs --check; reference-stacks is
-//                                (v), README.md's binding-packages block is (u), and a draft's own
-//                                family-status block is (r)), or a draft's `spec_maturity` has no
+//                                (v), README.md's binding-packages block is (u), and (r) holds
+//                                that no draft carries a Status section), or a draft's `spec_maturity` has no
 //                                display word for the index
 //   (m) readme-curated        - README.md does not link DRAFTS.md and DEPENDENCIES.md, a
 //                                backtick-quoted `draft-...` token in README.md is not a
@@ -89,7 +89,7 @@
 //   (x) spec-maturity axis    - a draft's `spec_maturity` is not one of
 //                                candidate/experimental/sketch/not_applicable
 //   (y) candidate honesty     - a draft whose `spec_maturity` is "candidate" contains prose in its
-//                                own "# Status" section admitting its own interface is not yet
+//                                own Introduction admitting its own interface is not yet
 //                                stable (the #707 ruling's contradiction class: a manifest claiming
 //                                more than the draft's own text does); a contradiction tripwire on
 //                                top of (z), not the gate itself
@@ -116,7 +116,7 @@ import {
   validateReferenceStacks,
   validateBindingPackages,
   validateFamilyCounts,
-  validateFamilyStatusBlocks,
+  validateNoStatusSections,
   validateCandidateGate,
   roleFor,
   CORE_SLUG,
@@ -898,19 +898,13 @@ function main() {
     }
   }
 
-  // (r) Family Status skeleton, manifest-synchronized (#643 review; #707
-  // extension): every draft except the published core carries a top-level
-  // "# Status" section holding a generated family-status block whose
-  // content exact-matches the manifest's role, spec maturity,
-  // maintenance, pull trigger, adoption_requires, and conditional
-  // requires_when (derived ledger coverage is DRAFTS.md's Implementation
-  // column, so no draft's bytes depend on the ledger that pins them).
-  // Bespoke prose lives
-  // outside the block; the block cannot drift from the manifest. The
-  // rendering itself lives in scripts/generate-drafts-index.mjs
-  // (renderFamilyStatusBlock), shared with its writer, so the checker and
-  // the generator cannot silently disagree on the block's shape.
-  for (const e of validateFamilyStatusBlocks(ROOT)) fail("doc-status", e);
+  // (r) No Status sections (#643 introduced them; retired since): a
+  // draft's standing (role, maturity, maintenance, adoption trigger,
+  // requires) is catalog metadata in DRAFTS.md's generated index, and its
+  // applicability is stated in its Introduction. No draft carries a
+  // family-status block or a top-level "# Status:" section
+  // (validateNoStatusSections in scripts/generate-drafts-index.mjs).
+  for (const e of validateNoStatusSections(ROOT)) fail("doc-status", e);
 
   // (w) Role axis (#707 ruling): `role` must be one of
   // core/adapter-binding/companion/guide, and must match its derivation
@@ -958,7 +952,7 @@ function main() {
 
   // (y) Candidate honesty (#707 ruling, the review's named contradiction
   // class): a document claiming `spec_maturity: "candidate"` must not
-  // contain prose, inside its own "# Status" section, admitting that its
+  // contain prose, inside its own Introduction, admitting that its
   // own interface is not yet stable. Scoped to a self-referential subject
   // ("this document/profile/specification/binding/draft ... is ...") so a
   // criterion-5 disclosure about an EXTERNAL dependency's instability (e.g.
@@ -968,11 +962,10 @@ function main() {
   for (const d of drafts) {
     if (d.spec_maturity !== "candidate") continue;
     const text = readFile(path.join(ROOT, d.file), d.file);
-    const head = text.match(/^# Status:[^\n]*$/m);
-    // No "# Status:" heading at all (true today only for the published OAuth
-    // binding, FAMILY_STATUS_EXEMPT_FILE, which (r) exempts from the block
-    // requirement) means nothing to scan; skip rather than exempt by name,
-    // so this check still applies the day that file gains a Status section.
+    const head = text.match(/^# Introduction[^\n]*$/m);
+    // The Introduction is where a draft states its applicability, so it is
+    // where a self-claim of instability would sit. No Introduction means
+    // nothing to scan.
     if (!head) continue;
     const start = text.indexOf(head[0]) + head[0].length;
     const rest = text.slice(start);
@@ -982,7 +975,7 @@ function main() {
     if (m) {
       fail(
         "candidate-honesty",
-        `${d.file}: spec_maturity is "candidate" but its own Status section admits its interface is not stable ("...${section.slice(Math.max(0, m.index - 30), m.index + m[0].length + 20)}..."); either the prose is stale or the manifest overclaims`,
+        `${d.file}: spec_maturity is "candidate" but its own Introduction admits its interface is not stable ("...${section.slice(Math.max(0, m.index - 30), m.index + m[0].length + 20)}..."); either the prose is stale or the manifest overclaims`,
       );
     }
   }

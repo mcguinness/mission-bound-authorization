@@ -266,14 +266,6 @@ This document does NOT define:
   document alone, every expansion is adjudicated by a fresh human
   approval.
 
-# Status: An Optional Profile {#doc-status}
-
-<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Role: companion. Spec maturity: experimental. Maintenance: active.
-Adopt when: Approved authority will predictably need to widen mid-task via fresh approval.
-Requires: Mission-Bound Authorization for OAuth 2.0.
-<!-- family-status: END -->
-
 # Conventions and Terminology {#conventions-and-terminology}
 
 {::boilerplate bcp14-tagged}

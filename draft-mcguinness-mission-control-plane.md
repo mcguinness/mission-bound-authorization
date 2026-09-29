@@ -83,14 +83,6 @@ owns its delivery protocol ({{I-D.draft-mcguinness-oauth-mission-signals}}), and
 Runtime owns point-of-use bounded reliance
 ({{I-D.draft-mcguinness-mission-runtime}}).
 
-# Status: An Optional Profile {#doc-status}
-
-<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Role: companion. Spec maturity: experimental. Maintenance: lab-best-effort.
-Adopt when: A deployment claims testable control-plane consistency across replication, partition, and recovery.
-Requires: Mission-Bound Runtime Enforcement; Mission-Bound Authorization for OAuth 2.0; Mission Lifecycle Signals for OAuth 2.0; Mission Status and Lifecycle for OAuth 2.0.
-<!-- family-status: END -->
-
 This document has no implemented conformance coverage. Its fault cases
 and requirement rows are unimplemented, and its maintenance class reflects
 that absence of implementation evidence.

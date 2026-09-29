@@ -129,6 +129,10 @@ lifecycle state at all.  It makes AAuth missions' security and
 composition properties explicit and keeps an OAuth-specific authority
 model from being imposed on them.
 
+This binding is written against the AAuth editor's copy at commit
+`fc5e972c` (2026-08-14); the latest published revision is -10
+(2026-08-06).
+
 ## Contextual Governance, Not Portable Authority
 
 AAuth missions are not a machine-evaluable policy language.  The PS has
@@ -167,18 +171,6 @@ administrative termination, delegation-tree queries, portable evidence,
 or deterministic cross-resource permission semantics.  Those are
 possible AAuth companion specifications rather than requirements of this
 binding.
-
-# Status: An Optional Profile {#doc-status}
-
-<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Role: adapter-binding. Spec maturity: experimental. Maintenance: frozen-until-upstream-release.
-Adopt when: The substrate is AAuth: Mission context on its native propose/approve flow.
-Requires: Mission Substrate Requirements.
-<!-- family-status: END -->
-
-This binding is written against the AAuth editor's copy at commit
-`fc5e972c` (2026-08-14); the latest published revision is -10
-(2026-08-06).
 
 # Conventions and Terminology {#conventions-and-terminology}
 

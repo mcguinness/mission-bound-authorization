@@ -148,14 +148,6 @@ carrying `terminal_when`. The capability is newer and less exercised
 than baseline issuance and runtime enforcement, and is not required by
 any Mission Assurance Level; its details may change.
 
-# Status: An Optional Profile {#doc-status}
-
-<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Role: companion. Spec maturity: experimental. Maintenance: active.
-Adopt when: One Authority Set entry's task finishes before the rest of the Mission, and its authority should retire itself rather than wait for a Mission-level revoke, expiry, or complete.
-Requires: Mission-Bound Authorization for OAuth 2.0; Mission Resource Access Profile for OAuth 2.0; Mission Status and Lifecycle for OAuth 2.0.
-<!-- family-status: END -->
-
 # Conventions and Terminology {#conventions-and-terminology}
 
 {::boilerplate bcp14-tagged}
