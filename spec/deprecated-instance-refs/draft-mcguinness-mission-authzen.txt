@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       28 September 2026
-Expires: 1 April 2027
+Intended status: Standards Track                       29 September 2026
+Expires: 2 April 2027
 
 
            Mission-Bound Runtime Enforcement: AuthZEN Profile
@@ -61,7 +61,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 1 April 2027.
+   This Internet-Draft will expire on 2 April 2027.
 
 Copyright Notice
 
@@ -367,8 +367,8 @@ Table of Contents
 3.  Status: An Optional Profile
 
    Role: companion.  Spec maturity: experimental.  Maintenance: active.
-   Implementation: 89 conformance rows in conformance-manifest.json (17
-   tested, 7 partial, 65 todo).  Adopt when: The PDP speaks AuthZEN and
+   Implementation: 90 conformance rows in conformance-manifest.json (17
+   tested, 7 partial, 66 todo).  Adopt when: The PDP speaks AuthZEN and
    needs the decision-contract wire mapping.  Requires: Mission-Bound
    Runtime Enforcement; Mission Substrate Requirements.  Also requires,
    conditionally: Mission-Bound Authorization for OAuth 2.0 (when the
@@ -683,10 +683,14 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-client-instance-id]), the PEP can set
    client_instance_id from it once it has validated that context as a
    Context Consumer ([I-D.draft-mcguinness-oauth-client-instance-id],
-   Section 7.5); the context identifies an instance only together with
-   its iss, so a PEP accepting context from more than one issuer
-   qualifies the correlator by it.  Attributing the presentation to that
-   instance also requires the association with the presenter that
+   Section 7.5) and established its association with the current
+   presenter.  The PEP MUST NOT populate
+   context.actor.client_instance_id from context that establishes only
+   upstream instance participation.  The correlator represents the pair
+   (iss, id) without collisions across the Instance Context Authorities
+   accepted by the PDP and its evidence consumers, including when
+   separate PEPs each accept only one authority.  Attributing the
+   presentation requires the association with the presenter that
    Section 7.5 establishes: a sender-constraint key unique to the
    instance ([I-D.draft-mcguinness-oauth-client-instance-id],
    Section 7.3) where the token issuer conveys context only from direct
@@ -2900,6 +2904,14 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-substrate.html>.
 
+   [I-D.draft-mcguinness-oauth-client-instance-id]
+              McGuinness, K., "Client Instance Identification for
+              Attestation-Based Client Authentication", Work in
+              Progress, Internet-Draft, draft-mcguinness-oauth-client-
+              instance-id-00, 28 September 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-client-instance-id-00>.
+
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
@@ -2999,14 +3011,6 @@ Table of Contents
               2.0 Profile", 2026, <https://mcguinness.github.io/mission-
               bound-authorization/draft-mcguinness-mission-runtime-
               oauth.html>.
-
-   [I-D.draft-mcguinness-oauth-client-instance-id]
-              McGuinness, K., "Client Instance Identification for
-              Attestation-Based Client Authentication", Work in
-              Progress, Internet-Draft, draft-mcguinness-oauth-client-
-              instance-id-00, 28 September 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-client-instance-id-00>.
 
    [I-D.draft-mcguinness-oauth-mission-containment]
               McGuinness, K., "Mission Containment for OAuth 2.0", 2026,

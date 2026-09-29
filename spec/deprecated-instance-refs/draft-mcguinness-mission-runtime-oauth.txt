@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       28 September 2026
-Expires: 1 April 2027
+Intended status: Standards Track                       29 September 2026
+Expires: 2 April 2027
 
 
           Mission-Bound Runtime Enforcement: OAuth 2.0 Profile
@@ -49,7 +49,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 1 April 2027.
+   This Internet-Draft will expire on 2 April 2027.
 
 Copyright Notice
 
@@ -72,6 +72,7 @@ Table of Contents
    3.  Conventions and Terminology
    4.  Establishing Validated Credential Context
    5.  Runtime Input Mapping
+     5.1.  Required Instance Attribution
    6.  Authority and State Sources
      6.1.  Credential Authority and Current Effective Authority
      6.2.  Mission State Sources
@@ -149,8 +150,8 @@ Table of Contents
 2.  Status: An Optional Profile
 
    Role: companion.  Spec maturity: experimental.  Maintenance: active.
-   Implementation: 5 conformance rows in conformance-manifest.json (2
-   tested, 1 partial, 2 todo).  Adopt when: The Mission-bound credential
+   Implementation: 6 conformance rows in conformance-manifest.json (2
+   tested, 1 partial, 3 todo).  Adopt when: The Mission-bound credential
    is an OAuth access token and the runtime core's abstract roles need
    their concrete OAuth realization.  Requires: Mission-Bound Runtime
    Enforcement; Mission Substrate Requirements; Mission-Bound
@@ -387,6 +388,31 @@ Table of Contents
    the roles above; their serialization is defined by the runtime core
    and the decision-API profile in use, for example
    [I-D.draft-mcguinness-mission-authzen].
+
+5.1.  Required Instance Attribution
+
+   The instance specification defines how to validate context and
+   associate it with a presenter; this binding selects that association
+   when Resource policy or the Enforcement Scope Statement requires
+   instance attribution.  The PEP validates the credential, Instance
+   Context, and current proof under
+   [I-D.draft-mcguinness-oauth-client-instance-id], Sections 7.3 and
+   7.5, before supplying the resulting identity to the PDP.  The PDP
+   relies on that PEP only under the decision API's authenticated trust
+   boundary.  A policy match on the resulting identity still grants no
+   authority beyond the decision's other bounds.
+
+   Where the path requires instance attribution, the PEP MUST refuse the
+   request if context is absent or invalid, or if its association with
+   the current presenter cannot be established.  This is a credential-
+   validation failure, using the instance specification's Section 7.6
+   invalid_token response and the runtime profile's pre-decision refusal
+   evidence.  An instance-unique key alone does not establish the
+   association for upstream context.  Optional context that establishes
+   only participation can inform provenance evidence, but does not
+   identify the current actor instance.  This requirement is conditional
+   on the path's policy, not a requirement that every Mission deployment
+   use instance attribution.
 
 6.  Authority and State Sources
 
@@ -679,6 +705,14 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-substrate.html>.
 
+   [I-D.draft-mcguinness-oauth-client-instance-id]
+              McGuinness, K., "Client Instance Identification for
+              Attestation-Based Client Authentication", Work in
+              Progress, Internet-Draft, draft-mcguinness-oauth-client-
+              instance-id-00, 28 September 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-client-instance-id-00>.
+
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
@@ -754,14 +788,6 @@ Table of Contents
               AuthZEN Profile", 2026, <https://mcguinness.github.io/
               mission-bound-authorization/draft-mcguinness-mission-
               authzen.html>.
-
-   [I-D.draft-mcguinness-oauth-client-instance-id]
-              McGuinness, K., "Client Instance Identification for
-              Attestation-Based Client Authentication", Work in
-              Progress, Internet-Draft, draft-mcguinness-oauth-client-
-              instance-id-00, 28 September 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-client-instance-id-00>.
 
    [I-D.draft-mcguinness-oauth-mission-containment]
               McGuinness, K., "Mission Containment for OAuth 2.0", 2026,

@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-09-28T23:26:09Z
-Source repository commit: 7a7e2b672ce12aa5c9a0a675b94876aadbbf6c95
+Generated: 2026-09-29T04:19:53Z
+Source repository commit: 6508e56a90d57424cf7906f8725f0016eb5041ca
 Member count: 7
 
 Reading order:
@@ -28,8 +28,8 @@ Reading order:
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                         28 September 2026
-Expires: 1 April 2027
+Intended status: Informational                         29 September 2026
+Expires: 2 April 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -82,7 +82,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 1 April 2027.
+   This Internet-Draft will expire on 2 April 2027.
 
 Copyright Notice
 
@@ -4472,8 +4472,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       28 September 2026
-Expires: 1 April 2027
+Intended status: Standards Track                       29 September 2026
+Expires: 2 April 2027
 
 
                      Mission Substrate Requirements
@@ -4531,7 +4531,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 1 April 2027.
+   This Internet-Draft will expire on 2 April 2027.
 
 Copyright Notice
 
@@ -6015,8 +6015,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       28 September 2026
-Expires: 1 April 2027
+Intended status: Standards Track                       29 September 2026
+Expires: 2 April 2027
 
 
                Mission-Bound Authorization for OAuth 2.0
@@ -6075,7 +6075,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 1 April 2027.
+   This Internet-Draft will expire on 2 April 2027.
 
 Copyright Notice
 
@@ -6146,10 +6146,11 @@ Table of Contents
      11.4.  Introspected Token Consumption
      11.5.  Examples
    12. Delegation Within a Mission
-     12.1.  Adopted Model: client_id Names the Requesting Client
-     12.2.  Self-Exchange Down-Scoping
-     12.3.  Delegation Constraints
-     12.4.  Worked Example: Delegated Token
+     12.1.  Instance Context in Delegated Tokens
+     12.2.  Adopted Model: client_id Names the Requesting Client
+     12.3.  Self-Exchange Down-Scoping
+     12.4.  Delegation Constraints
+     12.5.  Worked Example: Delegated Token
    13. Extensibility
      13.1.  Namespace Taxonomy
    14. Authorization Server Metadata
@@ -7551,7 +7552,7 @@ Table of Contents
       the same way regardless of type;
 
    *  narrowing and delegation use the subset semantics the type defines
-      (Section 5.1, Section 12.3).  A type whose subset and delegation
+      (Section 5.1, Section 12.4).  A type whose subset and delegation
       semantics the AS does not understand MUST NOT be delegated,
       audience-projected to a Resource AS, or narrowed: the AS cannot
       prove a transformed copy is still a subset of what was approved.
@@ -7982,7 +7983,7 @@ Table of Contents
 
    A Token Exchange derivation ([RFC8693]) that returns only an access
    token establishes no new grant lineage: ordinary in-Mission
-   delegation (Section 12) and self-exchange down-scoping (Section 12.2)
+   delegation (Section 12) and self-exchange down-scoping (Section 12.3)
    both work this way, and the issued token is a derived token
    (Section 9.2) whose mission claim identifies the one Mission its
    subject_token's binding resolved to.  A Token Exchange that instead
@@ -9240,7 +9241,7 @@ Table of Contents
    *  MUST treat client_id per its ordinary meaning under [RFC8693]
       Section 4.3 and [RFC9068] Section 2.2: the OAuth client that
       requested this token.  This profile does not redefine it, on a
-      delegated token or otherwise (Section 12.1).  The Mission's
+      delegated token or otherwise (Section 12.2).  The Mission's
       originally-approved agent is not carried on the token; it is
       recorded in the Mission Record (Section 8) at the issuer, and a
       Resource Server MUST NOT infer that identity from client_id.
@@ -9623,82 +9624,95 @@ Table of Contents
    codes (Section 4.1, Section 5, Section 6.1, Section 10.2,
    Section 9.3) applies this mapping and does not restate it.
 
-   +=====================+================================+=================+
-   |Surface / failing    |Base OAuth error                |Optional detail  |
-   |input                |                                |                 |
-   +=====================+================================+=================+
-   |PAR: malformed       |invalid_request                 |safe             |
-   |Mission envelope or  |                                |error_description|
-   |Intent (schema,      |                                |                 |
-   |unknown member,      |                                |                 |
-   |invalid value)       |                                |                 |
-   +---------------------+--------------------------------+-----------------+
-   |PAR or authorization:|invalid_authorization_details   |RAR-defined      |
-   |malformed or         |([RFC9396])                     |detail           |
-   |unsupported actual   |                                |                 |
-   |RAR object (an entry |                                |                 |
-   |of a submitted       |                                |                 |
-   |authorization_details|                                |                 |
-   |proposal)            |                                |                 |
-   +---------------------+--------------------------------+-----------------+
-   |Authorization or     |invalid_target ([RFC8707])      |safe             |
-   |token request:       |                                |error_description|
-   |invalid, unknown, or |                                |                 |
-   |malformed actual RFC |                                |                 |
-   |8707 resource        |                                |                 |
-   |parameter            |                                |                 |
-   +---------------------+--------------------------------+-----------------+
-   |Authorization        |access_denied ([RFC6749])       |none unless a    |
-   |decision: the        |                                |defined extension|
-   |Approver declines,   |                                |applies          |
-   |approval             |                                |                 |
-   |authentication fails |                                |                 |
-   |the floor or a       |                                |                 |
-   |requested acr_values/|                                |                 |
-   |max_age, or a well-  |                                |                 |
-   |formed request       |                                |                 |
-   |(including           |                                |                 |
-   |configured-mapping   |                                |                 |
-   |mode) is refused by  |                                |                 |
-   |AS policy            |                                |                 |
-   +---------------------+--------------------------------+-----------------+
-   |Token endpoint: the  |invalid_grant                   |mission_error    |
-   |Mission is revoked,  |                                |(Section 20)     |
-   |expired, superseded, |                                |                 |
-   |or its               |                                |                 |
-   |derivation_limit is  |                                |                 |
-   |exhausted            |                                |                 |
-   +---------------------+--------------------------------+-----------------+
-   |Token endpoint: the  |invalid_authorization_details   |safe detail      |
-   |requested RAR subset |([RFC9396])                     |                 |
-   |exceeds the Mission's|                                |                 |
-   |granted authority    |                                |                 |
-   +---------------------+--------------------------------+-----------------+
-   |Protected resource:  |insufficient_user_authentication|acr_values/      |
-   |weak or stale token- |([RFC9470])                     |max_age          |
-   |associated user      |                                |                 |
-   |authentication       |                                |                 |
-   +---------------------+--------------------------------+-----------------+
-   |Protected resource:  |DPoP invalid_token challenge    |none             |
-   |DPoP proof missing,  |([RFC9449])                     |                 |
-   |invalid, or          |                                |                 |
-   |mismatched           |                                |                 |
-   +---------------------+--------------------------------+-----------------+
-   |Protected resource:  |DPoP use_dpop_nonce challenge   |fresh nonce      |
-   |DPoP nonce required, |([RFC9449])                     |                 |
-   |missing, or stale    |                                |                 |
-   +---------------------+--------------------------------+-----------------+
-   |Protected resource:  |Bearer invalid_token challenge  |none             |
-   |certificate-bound    |([RFC6750], per [RFC8705]       |                 |
-   |token's presented    |Section 3)                      |                 |
-   |certificate mismatch |                                |                 |
-   +---------------------+--------------------------------+-----------------+
-   |Protected resource:  |insufficient_scope ([RFC6750])  |mission_denial   |
-   |insufficient carried |or the RAR-remediation challenge|(Section 9.3),   |
-   |authority, or an     |(Section 9.5)                   |minimized        |
-   |unenforceable        |                                |                 |
-   |constraint           |                                |                 |
-   +---------------------+--------------------------------+-----------------+
+   +=====================+=================================================+=================+
+   |Surface / failing    |Base OAuth error                                 |Optional detail  |
+   |input                |                                                 |                 |
+   +=====================+=================================================+=================+
+   |PAR: malformed       |invalid_request                                  |safe             |
+   |Mission envelope or  |                                                 |error_description|
+   |Intent (schema,      |                                                 |                 |
+   |unknown member,      |                                                 |                 |
+   |invalid value)       |                                                 |                 |
+   +---------------------+-------------------------------------------------+-----------------+
+   |PAR or authorization:|invalid_authorization_details ([RFC9396])        |RAR-defined      |
+   |malformed or         |                                                 |detail           |
+   |unsupported actual   |                                                 |                 |
+   |RAR object (an entry |                                                 |                 |
+   |of a submitted       |                                                 |                 |
+   |authorization_details|                                                 |                 |
+   |proposal)            |                                                 |                 |
+   +---------------------+-------------------------------------------------+-----------------+
+   |Authorization or     |invalid_target ([RFC8707])                       |safe             |
+   |token request:       |                                                 |error_description|
+   |invalid, unknown, or |                                                 |                 |
+   |malformed actual RFC |                                                 |                 |
+   |8707 resource        |                                                 |                 |
+   |parameter            |                                                 |                 |
+   +---------------------+-------------------------------------------------+-----------------+
+   |Authorization        |access_denied ([RFC6749])                        |none unless a    |
+   |decision: the        |                                                 |defined extension|
+   |Approver declines,   |                                                 |applies          |
+   |approval             |                                                 |                 |
+   |authentication fails |                                                 |                 |
+   |the floor or a       |                                                 |                 |
+   |requested acr_values/|                                                 |                 |
+   |max_age, or a well-  |                                                 |                 |
+   |formed request       |                                                 |                 |
+   |(including           |                                                 |                 |
+   |configured-mapping   |                                                 |                 |
+   |mode) is refused by  |                                                 |                 |
+   |AS policy            |                                                 |                 |
+   +---------------------+-------------------------------------------------+-----------------+
+   |Token endpoint: the  |invalid_grant                                    |mission_error    |
+   |Mission is revoked,  |                                                 |(Section 20)     |
+   |expired, superseded, |                                                 |                 |
+   |or its               |                                                 |                 |
+   |derivation_limit is  |                                                 |                 |
+   |exhausted            |                                                 |                 |
+   +---------------------+-------------------------------------------------+-----------------+
+   |Token endpoint: the  |invalid_authorization_details ([RFC9396])        |safe detail      |
+   |requested RAR subset |                                                 |                 |
+   |exceeds the Mission's|                                                 |                 |
+   |granted authority    |                                                 |                 |
+   +---------------------+-------------------------------------------------+-----------------+
+   |Token exchange using |invalid_client_attestation                       |no instance-     |
+   |Section 12.1:        |([I-D.draft-mcguinness-oauth-client-instance-id],|identity         |
+   |required Client      |Section 5.2)                                     |disclosure       |
+   |Attestation fails    |                                                 |                 |
+   |validation           |                                                 |                 |
+   +---------------------+-------------------------------------------------+-----------------+
+   |Token exchange using |invalid_request ([RFC8693])                      |no instance-     |
+   |Section 12.1:        |                                                 |identity         |
+   |required instance-to-|                                                 |disclosure       |
+   |delegate or output-  |                                                 |                 |
+   |key association      |                                                 |                 |
+   |cannot be established|                                                 |                 |
+   +---------------------+-------------------------------------------------+-----------------+
+   |Protected resource:  |insufficient_user_authentication ([RFC9470])     |acr_values/      |
+   |weak or stale token- |                                                 |max_age          |
+   |associated user      |                                                 |                 |
+   |authentication       |                                                 |                 |
+   +---------------------+-------------------------------------------------+-----------------+
+   |Protected resource:  |DPoP invalid_token challenge ([RFC9449])         |none             |
+   |DPoP proof missing,  |                                                 |                 |
+   |invalid, or          |                                                 |                 |
+   |mismatched           |                                                 |                 |
+   +---------------------+-------------------------------------------------+-----------------+
+   |Protected resource:  |DPoP use_dpop_nonce challenge ([RFC9449])        |fresh nonce      |
+   |DPoP nonce required, |                                                 |                 |
+   |missing, or stale    |                                                 |                 |
+   +---------------------+-------------------------------------------------+-----------------+
+   |Protected resource:  |Bearer invalid_token challenge ([RFC6750], per   |none             |
+   |certificate-bound    |[RFC8705] Section 3)                             |                 |
+   |token's presented    |                                                 |                 |
+   |certificate mismatch |                                                 |                 |
+   +---------------------+-------------------------------------------------+-----------------+
+   |Protected resource:  |insufficient_scope ([RFC6750]) or the RAR-       |mission_denial   |
+   |insufficient carried |remediation challenge (Section 9.5)              |(Section 9.3),   |
+   |authority, or an     |                                                 |minimized        |
+   |unenforceable        |                                                 |                 |
+   |constraint           |                                                 |                 |
+   +---------------------+-------------------------------------------------+-----------------+
 
         Table 4: Endpoint x parameter x failure-stage error mapping
 
@@ -10157,7 +10171,7 @@ Table of Contents
       urn:ietf:params:oauth:token-type:access_token.  The delegate is
       identified by an actor_token (with its actor_token_type) or by its
       own client authentication, and the AS asserts the actor itself
-      (Section 12.3).  A client instance's Client Attestation
+      (Section 12.4).  A client instance's Client Attestation
       ([I-D.draft-mcguinness-oauth-client-instance-id]) authenticates
       the instance, not the actor it represents; establishing that actor
       is a separate step, described below.  A requested_token_type of
@@ -10218,7 +10232,7 @@ Table of Contents
    organization, network, or deployment topology by itself restarts or
    extends a chain.  The chain is attribution, never authority: an act
    entry names who acted, for audit and as policy input to the
-   eligibility matching of Section 12.3, while an asserted actor
+   eligibility matching of Section 12.4, while an asserted actor
    identity grants nothing, and a consumer MUST NOT treat the chain as
    proof that authority narrowed; the authorization_details subset
    relations prove that (Section 5.1).
@@ -10239,15 +10253,63 @@ Table of Contents
    not a member inside act, the current presenter's key
    ([I-D.draft-mcguinness-oauth-actor-profile]).  Carrying the instance
    itself in a delegated token's client_instance claim is a separate
-   question: it needs a consuming profile under
-   [I-D.draft-mcguinness-oauth-client-instance-id], Section 7.4, and
-   this document defines none.  An allowed_delegates matcher selects
-   delegates by actor type (Section 12.3), for example { "sub_profile":
-   "ai_agent" }; the Actor Profile
-   [I-D.draft-mcguinness-oauth-actor-profile] is the structural
+   question, addressed by the optional consuming rules in Section 12.1.
+   An allowed_delegates matcher selects delegates by actor type
+   (Section 12.4), for example { "sub_profile": "ai_agent" }; the Actor
+   Profile [I-D.draft-mcguinness-oauth-actor-profile] is the structural
    reference for the actor object and its sub_profile classification.
 
-12.1.  Adopted Model: client_id Names the Requesting Client
+12.1.  Instance Context in Delegated Tokens
+
+   A deployment MAY convey client_instance in delegated tokens under
+   [I-D.draft-mcguinness-oauth-client-instance-id].  This optional
+   composition selects the authenticated presenting instance for output
+   context.  The instance specification owns attestation validation,
+   instance-to-key association, audience-scoped mapping, and Context
+   Consumer validation; this section supplies the Mission-specific
+   authorization and context selection.  It introduces no request
+   parameter or discovery member, and deployments configure its use and
+   whether instance attribution is required.
+
+   When issuing context under this composition, the AS MUST validate the
+   presenting instance's Client Attestation and proof for the exchange,
+   establish its trusted association with the separately authenticated
+   delegate, and bind the output token to an instance-unique key whose
+   possession it verified in that exchange.  Context is mapped from that
+   validated instance into the output audience's Consumer Scope under
+   [I-D.draft-mcguinness-oauth-client-instance-id], Section 7.1.  The AS
+   MUST NOT use context copied or remapped from an input token as a
+   substitute for the presenting instance's evidence.  Thus, when
+   instance B is authorized to continue work from instance A, output
+   context names B; A's context does not become B's identity by
+   remapping it.
+
+   The actor authentication, delegation eligibility, subset, and
+   lifecycle checks of Section 12 and Section 12.4 still authorize the
+   exchange; instance evidence satisfies none of them by itself.  Where
+   deployment policy requires instance attribution, the AS MUST refuse
+   the exchange if the required instance evidence or its association
+   with the delegate and output key cannot be established.  Client
+   Attestation failures use the errors of
+   [I-D.draft-mcguinness-oauth-client-instance-id], Section 5.2; other
+   failures to establish the required association use invalid_request
+   ([RFC8693], Section 2.2.2).  If the exchange issues a refresh token,
+   the instance specification's Section 5.1 grant-continuity rules apply
+   alongside Section 6.2; instance continuity alone does not authorize
+   replacement of the recorded instance or key rebinding.
+
+   Consumers establish presenter attribution under
+   [I-D.draft-mcguinness-oauth-client-instance-id], Sections 7.3 and
+   7.5.  This composition does not add provenance to client_instance: a
+   consumer can use the direct-attestation trust configuration only when
+   the issuer meets that configuration's restriction against upstream
+   context.  An issuer also conveying upstream context needs a
+   separately specified, authenticated provenance mechanism before its
+   context can support presenter attribution.  A consumer requiring
+   attribution rejects unestablished associations under the instance
+   specification's Section 7.6.
+
+12.2.  Adopted Model: client_id Names the Requesting Client
 
    This profile keeps client_id's registered meaning, stated normatively
    in Section 9 and enforced in Section 9.3: the OAuth client that
@@ -10268,7 +10330,7 @@ Table of Contents
    process, a Mission-unaware Resource Server cannot opt into that need,
    and routing a delegated token to one therefore remains forbidden.
 
-12.2.  Self-Exchange Down-Scoping
+12.3.  Self-Exchange Down-Scoping
 
    An agent MAY present its own Mission-bound access token as the
    subject_token of a Token Exchange ([RFC8693]) with no actor, to
@@ -10284,7 +10346,7 @@ Table of Contents
    actor, it does not delegate: it re-scopes the agent's own authority
    downward.
 
-12.3.  Delegation Constraints
+12.4.  Delegation Constraints
 
    What may be delegated, how far, and to whom is governed per Authority
    Set entry by a type-defined delegation policy (Section 5.2) (for
@@ -10335,7 +10397,7 @@ Table of Contents
    already-narrowed authorization_details and enforces those as usual
    (Section 9).
 
-12.4.  Worked Example: Delegated Token
+12.5.  Worked Example: Delegated Token
 
    Suppose the Mission's Authority Set has two entries on the ERP:
    invoices.read, delegable to ai_agent actors through depth 2; and
@@ -10380,7 +10442,7 @@ Table of Contents
 
    sub is still the user. client_id is now tool-runner-7, the delegate
    that authenticated the Token Exchange and requested this token
-   (Section 12.1); client_id and the outermost act coincide here because
+   (Section 12.2); client_id and the outermost act coincide here because
    tool-runner-7 authenticated the exchange itself, not because this
    profile requires the two to match.  A deployment where a different,
    already-authenticated client requests the exchange on a delegate's
@@ -11103,7 +11165,7 @@ Table of Contents
    compromised actor can act only within the authority it was delegated,
    for the lifetime of the token it holds: the exposure of any actor is
    bounded by its narrowed authorization_details times its token
-   lifetime.  The per-entry delegation constraints (Section 12.3) bound
+   lifetime.  The per-entry delegation constraints (Section 12.4) bound
    this exposure at approval time: non-delegable entries never reach a
    delegate at all, max_depth caps how far an entry can propagate, and
    allowed_delegates restricts who may receive it.  Note that max_depth
@@ -11124,10 +11186,10 @@ Table of Contents
    as a subject_token, would launder into a fresh delegated credential
    bound to the presenter.  The gates above bound it: the exchange is a
    derivation gated on Mission state, the AS applies delegation-
-   authorization policy at every exchange (Section 12.3), the result is
+   authorization policy at every exchange (Section 12.4), the result is
    bound to the authenticated delegate's own key and narrowed by the
    subset rule, and a no-actor exchange is accepted only from the
-   Mission's approved agent (Section 12.2).  Sender-constraining the
+   Mission's approved agent (Section 12.3).  Sender-constraining the
    primary token (Section 9) closes the remaining gap, since a token
    stolen from an audience then fails presentation at the token
    endpoint.
@@ -11135,7 +11197,7 @@ Table of Contents
 17.4.3.  client_id Conformance and the Approved-Agent Residual
 
    Because this profile keeps client_id's ordinary [RFC9068] meaning
-   (Section 12.1), a generic [RFC9068] Resource Server, or a logging,
+   (Section 12.2), a generic [RFC9068] Resource Server, or a logging,
    SIEM, or audit pipeline built for ordinary OAuth tokens, that keys
    identity and attribution on client_id attributes a Mission-derived
    token, delegated or not, to the correct requesting client without
@@ -11219,7 +11281,7 @@ Table of Contents
 
 17.5.3.  Composition and the Effective Ceiling
 
-   Delegation depth (Section 12.3) resets to 0 at each cross-domain hop
+   Delegation depth (Section 12.4) resets to 0 at each cross-domain hop
    ([I-D.draft-mcguinness-oauth-mission-cross-domain]) and, where a
    deployment runs the child-delegation profile, at each child
    generation ([I-D.draft-mcguinness-oauth-mission-child-delegation]).
@@ -11819,6 +11881,14 @@ Table of Contents
 
 21.1.  Normative References
 
+   [I-D.draft-mcguinness-oauth-client-instance-id]
+              McGuinness, K., "Client Instance Identification for
+              Attestation-Based Client Authentication", Work in
+              Progress, Internet-Draft, draft-mcguinness-oauth-client-
+              instance-id-00, 28 September 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-client-instance-id-00>.
+
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
               DOI 10.17487/RFC2119, March 1997,
@@ -12072,14 +12142,6 @@ Table of Contents
               client-attesters-00, 28 September 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
               oauth-client-attesters-00>.
-
-   [I-D.draft-mcguinness-oauth-client-instance-id]
-              McGuinness, K., "Client Instance Identification for
-              Attestation-Based Client Authentication", Work in
-              Progress, Internet-Draft, draft-mcguinness-oauth-client-
-              instance-id-00, 28 September 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-client-instance-id-00>.
 
    [I-D.draft-mcguinness-oauth-mission-approval]
               McGuinness, K., "Mission Deferred Approval for OAuth 2.0",
@@ -12982,6 +13044,11 @@ Appendix E.  Document History
 
    -01
 
+   *  Define optional current-presenter Instance Context consumption for
+      delegated tokens.  Reuse the instance specification for validation
+      and mapping; retain Mission actor, authority, and lifecycle checks
+      for authorization.  Required attribution fails closed.
+
    *  Added an informative derivation-policy appendix with an admissible
       split-action worked rule, authoring fixtures and ownership
       guidance; no normative requirements were added.
@@ -13396,8 +13463,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       28 September 2026
-Expires: 1 April 2027
+Intended status: Standards Track                       29 September 2026
+Expires: 2 April 2027
 
 
                Mission Status and Lifecycle for OAuth 2.0
@@ -13449,7 +13516,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 1 April 2027.
+   This Internet-Draft will expire on 2 April 2027.
 
 Copyright Notice
 
@@ -15394,8 +15461,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       28 September 2026
-Expires: 1 April 2027
+Intended status: Standards Track                       29 September 2026
+Expires: 2 April 2027
 
 
                    Mission-Bound Runtime Enforcement
@@ -15454,7 +15521,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 1 April 2027.
+   This Internet-Draft will expire on 2 April 2027.
 
 Copyright Notice
 
@@ -19826,8 +19893,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       28 September 2026
-Expires: 1 April 2027
+Intended status: Standards Track                       29 September 2026
+Expires: 2 April 2027
 
 
                         Mission Runtime Evidence
@@ -19877,7 +19944,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 1 April 2027.
+   This Internet-Draft will expire on 2 April 2027.
 
 Copyright Notice
 
@@ -22386,8 +22453,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       28 September 2026
-Expires: 1 April 2027
+Intended status: Standards Track                       29 September 2026
+Expires: 2 April 2027
 
 
            Mission-Bound Runtime Enforcement: AuthZEN Profile
@@ -22443,7 +22510,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 1 April 2027.
+   This Internet-Draft will expire on 2 April 2027.
 
 Copyright Notice
 
@@ -22749,8 +22816,8 @@ Table of Contents
 3.  Status: An Optional Profile
 
    Role: companion.  Spec maturity: experimental.  Maintenance: active.
-   Implementation: 89 conformance rows in conformance-manifest.json (17
-   tested, 7 partial, 65 todo).  Adopt when: The PDP speaks AuthZEN and
+   Implementation: 90 conformance rows in conformance-manifest.json (17
+   tested, 7 partial, 66 todo).  Adopt when: The PDP speaks AuthZEN and
    needs the decision-contract wire mapping.  Requires: Mission-Bound
    Runtime Enforcement; Mission Substrate Requirements.  Also requires,
    conditionally: Mission-Bound Authorization for OAuth 2.0 (when the
@@ -23065,10 +23132,14 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-client-instance-id]), the PEP can set
    client_instance_id from it once it has validated that context as a
    Context Consumer ([I-D.draft-mcguinness-oauth-client-instance-id],
-   Section 7.5); the context identifies an instance only together with
-   its iss, so a PEP accepting context from more than one issuer
-   qualifies the correlator by it.  Attributing the presentation to that
-   instance also requires the association with the presenter that
+   Section 7.5) and established its association with the current
+   presenter.  The PEP MUST NOT populate
+   context.actor.client_instance_id from context that establishes only
+   upstream instance participation.  The correlator represents the pair
+   (iss, id) without collisions across the Instance Context Authorities
+   accepted by the PDP and its evidence consumers, including when
+   separate PEPs each accept only one authority.  Attributing the
+   presentation requires the association with the presenter that
    Section 7.5 establishes: a sender-constraint key unique to the
    instance ([I-D.draft-mcguinness-oauth-client-instance-id],
    Section 7.3) where the token issuer conveys context only from direct
@@ -25282,6 +25353,14 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-substrate.html>.
 
+   [I-D.draft-mcguinness-oauth-client-instance-id]
+              McGuinness, K., "Client Instance Identification for
+              Attestation-Based Client Authentication", Work in
+              Progress, Internet-Draft, draft-mcguinness-oauth-client-
+              instance-id-00, 28 September 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-client-instance-id-00>.
+
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
@@ -25381,14 +25460,6 @@ Table of Contents
               2.0 Profile", 2026, <https://mcguinness.github.io/mission-
               bound-authorization/draft-mcguinness-mission-runtime-
               oauth.html>.
-
-   [I-D.draft-mcguinness-oauth-client-instance-id]
-              McGuinness, K., "Client Instance Identification for
-              Attestation-Based Client Authentication", Work in
-              Progress, Internet-Draft, draft-mcguinness-oauth-client-
-              instance-id-00, 28 September 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-client-instance-id-00>.
 
    [I-D.draft-mcguinness-oauth-mission-containment]
               McGuinness, K., "Mission Containment for OAuth 2.0", 2026,
