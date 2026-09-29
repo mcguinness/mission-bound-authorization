@@ -6453,6 +6453,12 @@ Cross-Domain:
 
 -01
 
+- Stated in the Introduction and {{runtime-boundary}} that a
+  deployment can run this profile alone, with Resource Servers that
+  need not be Mission-aware outside delegation, and named the
+  action-class needs that warrant a runtime layer; no normative
+  requirements changed.
+
 - Define optional current-presenter Instance Context consumption for
   delegated tokens. Reuse the instance specification for validation and
   mapping; retain Mission actor, authority, and lifecycle checks for
