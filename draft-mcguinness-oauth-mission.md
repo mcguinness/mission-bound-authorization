@@ -356,13 +356,17 @@ needs that verification from a token holding only a narrowed subset
 adopts the Local Approved-Set Verification profile
 ({{local-approved-set-verification}}, {{consent-binding}}).
 
-This chain is the first of two deliberate enforcement layers. It gives
-task-bound issuance, auditability, and a revocation gate over future
-derivation, which is sufficient for a low-risk workflow whose exposure
-is bounded by short token lifetimes and narrow authority. It does not
-evaluate individual actions: an agent taking consequential autonomous
-actions needs the second layer, the runtime enforcement chokepoint
-({{runtime-boundary}}), specified separately.
+This chain is the first of two deliberate enforcement layers, and a
+deployment can run it alone: a Resource Server need not be
+Mission-aware unless it receives delegated tokens ({{rs-enforcement}}).
+It gives task-bound issuance, auditability, and a revocation gate over
+future derivation, and every token carries a subset of the approved
+Authority Set ({{subset}}) that no Resource Server over-grants on
+({{scope-projection}}). It does not evaluate individual actions, so
+token lifetime and narrow authority bound the exposure between
+issuance and use. The second layer, the runtime enforcement chokepoint
+({{runtime-boundary}}), specified separately, adds a per-action check
+for the action classes whose consequence needs one.
 
 A deployment chooses its
 layers deliberately, matching the enforcement it runs to the
@@ -5048,18 +5052,33 @@ individual runtime actions. In particular, it does not:
 - re-evaluate at execution time to close the
   approval-to-execution (time-of-check to time-of-use) gap.
 
-Mission governance is necessary but not sufficient. An active Mission
-still bounds a set of authority an agent may exercise freely within a
-token's lifetime, so an active Mission can become ambient authority
-for individual consequential actions. Preventing that requires a
-runtime enforcement layer that evaluates each consequential action
-against the Mission and records evidence; such a layer composes with
-this profile and is out of scope here.
+Run alone, this profile bounds authority at issuance: every derived
+token is a subset of the Authority Set ({{subset}}), no Resource
+Server receives a grant it would over-grant on ({{scope-projection}},
+{{rs-enforcement}}), and a Mission that is not `active` yields no
+further derivation or refresh ({{issuance-gating}}). A Resource Server
+need not be Mission-aware unless it receives delegated tokens
+({{rs-enforcement}}). Which party enforces each Mission-carried bound
+is summarized in the enforcement table ({{mission-intent}}).
 
-Which party enforces each
-Mission-carried bound is summarized in the enforcement table
-({{mission-intent}}). Short token lifetimes and
-narrow authority bound, but do not eliminate, this exposure.
+Within a token's lifetime an agent exercises the authority the token
+carries without a check of the individual action against the Mission,
+so an active Mission can become ambient authority for individual
+consequential actions. Short token lifetimes and narrow authority
+bound, but do not eliminate, this exposure. On the stateless path an
+outstanding token also stays usable until it expires after its
+Mission leaves `active`. Introspection ({{introspection}}) shortens
+that cutoff without a runtime layer: its composite result is
+`active: false` once the Mission is no longer `active`
+({{composite-active}}), so a Resource Server that introspects per
+request stops honoring the token at its next request. A runtime
+enforcement layer that evaluates each consequential action against
+the Mission and records evidence adds the per-action check, with
+parameter binding, for the actions it covers; such a layer composes
+with this profile and is out of scope here. A deployment adds it for
+an action class that needs per-action evaluation or evidence, approval
+bound to a single action, or a bound the receiving Resource Server
+cannot enforce, which this profile alone does not serve.
 
 Where
 the Resource Server or a composing runtime layer matches a concrete
@@ -6439,6 +6458,13 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Stated in the Introduction and {{runtime-boundary}} that a
+  deployment can run this profile alone, with Resource Servers that
+  need not be Mission-aware outside delegation, named introspection as
+  the cutoff shorter than a token lifetime that needs no runtime
+  layer, and named the action-class needs that warrant a runtime
+  layer; no normative requirements changed.
 
 - Define optional current-presenter Instance Context consumption for
   delegated tokens. Reuse the instance specification for validation and
