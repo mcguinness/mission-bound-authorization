@@ -20,6 +20,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { REGISTRY as SUBSTRATE_STATEMENT_REGISTRY } from "./check-substrate-statements.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -709,6 +710,21 @@ export function validateCandidateGate(root = ROOT) {
         if (typeof report.document_sha256 !== "string" || !/^[0-9a-f]{64}$/.test(report.document_sha256)) {
           findings.push(`${d.slug}: requirement_inventory.report.document_sha256 must be a 64-character lowercase hex sha256 digest`);
         } else {
+          // Pairing: document_sha256 is the audited document's digest as of
+          // the audit commit, so it must equal sha256 of the file at
+          // audited_by. Existence alone let the two fields drift apart
+          // (PR #857 review). audited_by is already known to resolve here,
+          // so a failed `git show` means the file did not exist at the
+          // audit commit: a finding, never a skip.
+          const shown = spawnSync("git", ["show", `${inv.audited_by}:${d.file}`], { cwd: root, maxBuffer: 64 * 1024 * 1024 });
+          if (shown.status !== 0) {
+            findings.push(`${d.slug}: ${d.file} does not exist at requirement_inventory.audited_by ${inv.audited_by.slice(0, 8)}, so no audited bytes pair with report.document_sha256`);
+          } else {
+            const atAudit = createHash("sha256").update(shown.stdout).digest("hex");
+            if (atAudit !== report.document_sha256) {
+              findings.push(`${d.slug}: requirement_inventory.report.document_sha256 (${report.document_sha256.slice(0, 16)}) is not sha256(${d.file}) at audited_by ${inv.audited_by.slice(0, 8)} (${atAudit.slice(0, 16)}); the two fields must name the same audited bytes`);
+            }
+          }
           // Staleness signal, deliberately non-fatal: a family-status regen
           // changes a candidate document's bytes (and hence content_sha256)
           // on every unrelated maturity flip anywhere in the family. Tying

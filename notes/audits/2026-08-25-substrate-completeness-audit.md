@@ -339,3 +339,23 @@ This correction does not change the audit's verdict (the substrate's
 requirement inventory was, and remains, assessed complete); it changes the
 reasoning: completeness here comes from those four clauses being rowed,
 not from a now-abandoned argument that they never needed to be.
+
+## (e) Re-review, 2026-09-29
+
+The substrate's bytes changed after this audit, to sha256
+`2a4bb05e01274421cd45b582467d36129e4d8c1c828b2e30ca733e93d34af7d3`
+(PR #856, merge `d0b43a4b`). The complete diff from the audited bytes
+at `7f5cbd57` is one removed line, the generated family-status
+`Implementation:` line, which #856 moved to `DRAFTS.md`:
+
+```
+-Implementation: 88 conformance rows in conformance-manifest.json (10 tested, 6 partial, 72 todo).
+```
+
+No BCP 14 keyword line changed, so the clause-level inventory in (a) is
+unaffected and no fresh audit is warranted. `candidate-gate.json` now
+attests the current bytes: `report.document_sha256` records them, and
+`audited_by` names the re-review commit `f27bfd2d`, where the substrate
+has those bytes, so the two fields still pair as that file defines them.
+The original audit stays recorded here: commit `7f5cbd57` and the (b)
+digest.
