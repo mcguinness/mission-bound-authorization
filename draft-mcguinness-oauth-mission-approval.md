@@ -159,7 +159,6 @@ and stabilizes with it.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: not yet in the conformance ledger (conformance-manifest.json).
 Adopt when: Approval is asynchronous: a human review queue, not an immediate decision.
 Requires: Mission-Bound Authorization for OAuth 2.0.
 Also requires, conditionally: Mission Approval Governance (when an Approval Governance Record is recorded).

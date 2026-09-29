@@ -247,7 +247,6 @@ enforces it. Each trust domain runs at its own level.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 8 conformance rows in conformance-manifest.json (4 tested, 2 partial, 2 todo).
 Adopt when: A Mission from one trust domain must be honored by an AS in another (also the floor's conditional dependency).
 Requires: Mission-Bound Authorization for OAuth 2.0.
 <!-- family-status: END -->

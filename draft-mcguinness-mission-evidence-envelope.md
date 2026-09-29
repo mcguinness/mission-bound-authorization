@@ -168,7 +168,6 @@ says so.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: sketch. Maintenance: lab-best-effort.
-Implementation: 23 conformance rows in conformance-manifest.json (23 todo).
 Adopt when: A new evidence kind is being designed and a deployment wants to avoid minting another bespoke media type, or Intent Admission Evidence's inbound assertion and emitted attestation are needed.
 Requires: nothing beyond its listed references.
 <!-- family-status: END -->

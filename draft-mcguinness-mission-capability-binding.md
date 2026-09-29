@@ -160,7 +160,6 @@ decision contract consumes an already established action identity.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 9 conformance rows in conformance-manifest.json (8 tested, 1 partial).
 Adopt when: Actions come from a discovered catalog where invoked identity can drift from approval.
 Requires: Mission-Bound Runtime Enforcement: AuthZEN Profile; Mission-Bound Runtime Enforcement; Mission Substrate Requirements.
 Also requires, conditionally: Mission-Bound Authorization for OAuth 2.0 (when the OAuth binding is the substrate).

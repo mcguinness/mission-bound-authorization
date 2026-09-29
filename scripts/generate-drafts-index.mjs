@@ -143,19 +143,23 @@ export function escapeCell(value) {
 // (#709 review, P2) is the same axis DRAFTS.md's "###" sections already
 // organize the prose catalog by, rendered here as data so the grouping shows
 // up in the generated table too, not only as an implicit heading structure.
-export function renderIndex(manifest) {
+// The Implementation column is each draft's derived ledger coverage, beside
+// spec maturity and never folded into it (#707 ruling). It lives here, not
+// in the drafts' own family-status blocks, so a coverage flip rewrites this
+// index and no draft's bytes.
+export function renderIndex(manifest, confBySpec) {
   const lines = [
     START_MARKER,
     "",
-    "| Document | Role | Spec maturity | Verbs | Group | Summary | Pull this in when |",
-    "|---|---|---|---|---|---|---|",
+    "| Document | Role | Spec maturity | Implementation | Verbs | Group | Summary | Pull this in when |",
+    "|---|---|---|---|---|---|---|---|",
   ];
   for (const d of manifest.drafts) {
     const maturity = maturityDisplay(d.spec_maturity) ?? d.spec_maturity;
     const verbs = (d.verbs || []).join(", ");
     const group = GROUP_SECTION_TITLES[d.group] ?? d.group;
     lines.push(
-      `| [${escapeCell(d.title)}](${editorsCopyUrl(d.slug)}) | ${d.role} | ${maturity} | ${verbs} | ${escapeCell(group)} | ${escapeCell(d.summary)} | ${escapeCell(d.pull_when)} |`
+      `| [${escapeCell(d.title)}](${editorsCopyUrl(d.slug)}) | ${d.role} | ${maturity} | ${conformanceCell(confBySpec, d.file)} | ${verbs} | ${escapeCell(group)} | ${escapeCell(d.summary)} | ${escapeCell(d.pull_when)} |`
     );
   }
   lines.push("", END_MARKER);
@@ -188,8 +192,9 @@ export function spliceIndex(text, block) {
   return spliceMarkedBlock(text, block, START_MARKER, END_MARKER, "DRAFTS.md");
 }
 
-// Returns [] when DRAFTS.md's generated block matches what the manifest would
-// produce, or a one-entry findings array when it does not. Never writes.
+// Returns [] when DRAFTS.md's generated block matches what the manifest and
+// conformance ledger would produce, or a one-entry findings array when it
+// does not. Never writes.
 export function validateDraftsIndex(root = ROOT) {
   const manifestPath = path.join(root, "family-manifest.json");
   const draftsPath = path.join(root, "DRAFTS.md");
@@ -207,7 +212,7 @@ export function validateDraftsIndex(root = ROOT) {
   }
   let expected;
   try {
-    expected = spliceIndex(text, renderIndex(manifest));
+    expected = spliceIndex(text, renderIndex(manifest, loadConformanceCounts(root)));
   } catch (e) {
     return [e.message];
   }
@@ -414,36 +419,35 @@ export function loadConformanceCounts(root = ROOT) {
   return bySpec;
 }
 
-// The derived implementation/conformance line (#707 ruling: "displayed beside
-// maturity, never encoded into it"). A draft with no rows in the audited
-// ledger says so plainly rather than rendering as a wall of zeros that reads
-// as failure: the ledger is a traceability record for what src/ has
-// undertaken, not a maturity signal, so its absence is a fact, not a fault.
-export function conformanceSummary(bySpec, file) {
+// The derived implementation/conformance cell of DRAFTS.md's index (#707
+// ruling: "displayed beside maturity, never encoded into it"). A draft with no
+// rows in the audited ledger says so plainly rather than rendering as a wall
+// of zeros that reads as failure: the ledger is a traceability record for
+// what src/ has undertaken, not a maturity signal, so its absence is a fact,
+// not a fault.
+export function conformanceCell(bySpec, file) {
   const c = bySpec.get(file);
-  if (!c || c.total === 0) {
-    return "not yet in the conformance ledger (conformance-manifest.json)";
-  }
+  if (!c || c.total === 0) return "not in the ledger";
   const parts = [];
   if (c.tested) parts.push(`${c.tested} tested`);
   if (c.partial) parts.push(`${c.partial} partial`);
   if (c.todo) parts.push(`${c.todo} todo`);
   if (c.blocked) parts.push(`${c.blocked} blocked`);
-  return `${c.total} conformance row${c.total === 1 ? "" : "s"} in conformance-manifest.json (${parts.join(", ")})`;
+  return `${c.total} row${c.total === 1 ? "" : "s"}: ${parts.join(", ")}`;
 }
 
 // The generated block, markers included, for one draft's own "# Status"
-// section (#643 origin, #707 extension): role, spec maturity, and derived
-// conformance coverage sit beside each other on their own lines, then
-// maintenance, adoption trigger, and typed requires edges as before. Never
-// encodes conformance into the maturity word itself (the #707 ruling's own
-// text): a candidate with an empty ledger and a candidate with heavy
-// coverage render the same spec_maturity, different Implementation lines.
-export function renderFamilyStatusBlock(d, bySlug, confBySpec) {
+// section (#643 origin, #707 extension): role, spec maturity, and
+// maintenance, then adoption trigger and typed requires edges. It renders
+// family-manifest.json facts only. Derived ledger coverage is DRAFTS.md's
+// Implementation column (renderIndex), never a line here: the conformance
+// ledger pins each draft's bytes, so a block that rendered ledger counts
+// would make every coverage flip rewrite the drafts it pins and force a
+// re-pin of each.
+export function renderFamilyStatusBlock(d, bySlug) {
   const lines = [
     FAMILY_STATUS_BEGIN,
     `Role: ${d.role}. Spec maturity: ${maturityDisplay(d.spec_maturity) ?? d.spec_maturity}. Maintenance: ${d.maintenance}.`,
-    `Implementation: ${conformanceSummary(confBySpec, d.file)}.`,
     `Adopt when: ${d.pull_when}`,
   ];
   const ar = d.adoption_requires || [];
@@ -472,12 +476,11 @@ function findStatusSection(text) {
 }
 
 // Returns [] when every non-exempt draft's family-status block matches what
-// the manifest and conformance ledger would produce, or one finding per
-// stale/missing block. Never writes.
+// the manifest would produce, or one finding per stale/missing block. Never
+// writes.
 export function validateFamilyStatusBlocks(root = ROOT) {
   const manifest = JSON.parse(fs.readFileSync(path.join(root, "family-manifest.json"), "utf8"));
   const bySlug = new Map(manifest.drafts.map((d) => [d.slug, d]));
-  const confBySpec = loadConformanceCounts(root);
   const findings = [];
   for (const d of manifest.drafts) {
     if (d.file === FAMILY_STATUS_EXEMPT_FILE) continue;
@@ -494,7 +497,7 @@ export function validateFamilyStatusBlocks(root = ROOT) {
       continue;
     }
     const section = text.slice(bounds[0], bounds[1]);
-    const expectedBlock = renderFamilyStatusBlock(d, bySlug, confBySpec);
+    const expectedBlock = renderFamilyStatusBlock(d, bySlug);
     const bm = section.match(/<!-- family-status: BEGIN[\s\S]*?END -->/);
     if (!bm) {
       findings.push(`${d.file}: family-status block missing from the Status section`);
@@ -511,7 +514,6 @@ export function validateFamilyStatusBlocks(root = ROOT) {
 export function writeFamilyStatusBlocks(root = ROOT) {
   const manifest = JSON.parse(fs.readFileSync(path.join(root, "family-manifest.json"), "utf8"));
   const bySlug = new Map(manifest.drafts.map((d) => [d.slug, d]));
-  const confBySpec = loadConformanceCounts(root);
   let changed = 0;
   for (const d of manifest.drafts) {
     if (d.file === FAMILY_STATUS_EXEMPT_FILE) continue;
@@ -520,7 +522,7 @@ export function writeFamilyStatusBlocks(root = ROOT) {
     const bounds = findStatusSection(text);
     if (!bounds) throw new Error(`${d.file}: missing the top-level "# Status" section (family skeleton)`);
     const [start, end] = bounds;
-    const block = renderFamilyStatusBlock(d, bySlug, confBySpec);
+    const block = renderFamilyStatusBlock(d, bySlug);
     const newSection = spliceMarkedBlock(text.slice(start, end), block, FAMILY_STATUS_BEGIN, FAMILY_STATUS_END, d.file);
     const newText = text.slice(0, start) + newSection + text.slice(end);
     if (newText !== text) {
@@ -784,7 +786,7 @@ function main() {
   const confBySpec = loadConformanceCounts(ROOT);
 
   let draftsText = fs.readFileSync(DRAFTS_PATH, "utf8");
-  const updatedIndex = spliceIndex(draftsText, renderIndex(manifest));
+  const updatedIndex = spliceIndex(draftsText, renderIndex(manifest, confBySpec));
   if (updatedIndex === draftsText) {
     console.log(`drafts-index: DRAFTS.md's index already current (${manifest.drafts.length} rows).`);
   } else {

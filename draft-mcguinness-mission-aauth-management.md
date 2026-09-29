@@ -492,7 +492,6 @@ enforces mission state itself.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: frozen-until-upstream-release.
-Implementation: not yet in the conformance ledger (conformance-manifest.json).
 Adopt when: Alongside the AAuth binding: status, termination, delegation-tree queries.
 Requires: nothing beyond its listed references.
 <!-- family-status: END -->

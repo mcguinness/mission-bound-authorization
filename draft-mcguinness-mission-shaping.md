@@ -220,7 +220,6 @@ implementation detail, not an interoperability contract.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: guide. Spec maturity: not applicable. Maintenance: active.
-Implementation: not yet in the conformance ledger (conformance-manifest.json).
 Adopt when: You need a defined client-side path from user prompt to candidate Mission Intent.
 Requires: nothing beyond its listed references.
 Also requires, conditionally: Mission Substrate Requirements (when shaping evidence digests are produced); Mission-Bound Authorization for OAuth 2.0 (when the OAuth binding is the substrate).
