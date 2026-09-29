@@ -133,6 +133,11 @@ function writeFixtureReport(root, relPath, content) {
 }
 const FIXTURE_REPORT_PATH = "notes/audits/fixture-completeness-audit.md";
 
+// The digest a fixture's report must record: makeFixtureRepo commits the
+// draft body in its first commit, which is the commit gate records cite as
+// audited_by, so sha256(draftBody) is the audited document's digest there.
+const sha256 = (s) => crypto.createHash("sha256").update(s).digest("hex");
+
 const CONFORMANT_BODY = [
   "# Fixture",
   "",
@@ -145,6 +150,7 @@ const CONFORMANT_BODY = [
   "~~~",
   "",
 ].join("\n");
+const CONFORMANT_SHA = sha256(CONFORMANT_BODY);
 
 // ---------------------------------------------------------------------
 // roleFor()
@@ -247,7 +253,7 @@ test("candidate-gate: passes when all five criteria are genuinely satisfied", ()
           requirement_inventory: {
             attested: true,
             audited_by: commit,
-            report: { path: FIXTURE_REPORT_PATH, document_sha256: "0".repeat(64) },
+            report: { path: FIXTURE_REPORT_PATH, document_sha256: CONFORMANT_SHA },
           },
           decide_resolutions: [],
           examples_waiver: null,
@@ -325,7 +331,7 @@ test("candidate-gate: a report naming a missing path fails", () => {
           requirement_inventory: {
             attested: true,
             audited_by: commit,
-            report: { path: "notes/audits/does-not-exist.md", document_sha256: "0".repeat(64) },
+            report: { path: "notes/audits/does-not-exist.md", document_sha256: CONFORMANT_SHA },
           },
           decide_resolutions: [],
           examples_waiver: null,
@@ -355,10 +361,11 @@ test("candidate-gate: a stale report document_sha256 warns but still passes", ()
           requirement_inventory: {
             attested: true,
             audited_by: commit,
-            // Well-formed, but deliberately does not equal the "0".repeat(64)
-            // conformance-manifest.json records for FIXTURE_FILE: the
-            // audited document has moved on since the report was written.
-            report: { path: FIXTURE_REPORT_PATH, document_sha256: "1".repeat(64) },
+            // True at the audit commit (it pairs with audited_by), but not
+            // the "0".repeat(64) conformance-manifest.json records for
+            // FIXTURE_FILE: the pinned document has moved on since the
+            // report was written.
+            report: { path: FIXTURE_REPORT_PATH, document_sha256: CONFORMANT_SHA },
           },
           decide_resolutions: [],
           examples_waiver: null,
@@ -378,6 +385,37 @@ test("candidate-gate: a stale report document_sha256 warns but still passes", ()
     assert.ok(warned, "expected a printed staleness warning");
   } finally {
     console.warn = originalWarn;
+    cleanup(root);
+  }
+});
+
+test("candidate-gate: a document_sha256 that is not the draft's digest at audited_by fails (PR #857 review)", () => {
+  const { root } = makeFixtureRepo({
+    draftBody: CONFORMANT_BODY,
+    conformanceRequirements: [{ spec: FIXTURE_FILE, coverage: "tested" }],
+    gateOverrides: (commit) => ({
+      documents: {
+        "draft-fixture-example": {
+          requirement_inventory: {
+            attested: true,
+            audited_by: commit,
+            // Well-formed, but not sha256 of the draft at the audit commit.
+            report: { path: FIXTURE_REPORT_PATH, document_sha256: "1".repeat(64) },
+          },
+          decide_resolutions: [],
+          examples_waiver: null,
+        },
+      },
+    }),
+  });
+  try {
+    writeFixtureReport(root, FIXTURE_REPORT_PATH, "fixture audit report body");
+    const findings = validateCandidateGate(root);
+    assert.ok(
+      findings.some((f) => f.includes("must name the same audited bytes")),
+      `expected a pairing finding, got: ${JSON.stringify(findings)}`,
+    );
+  } finally {
     cleanup(root);
   }
 });
@@ -481,7 +519,7 @@ test("candidate-gate: criterion 2 passes when the scoped issue is resolved_in_tr
           requirement_inventory: {
             attested: true,
             audited_by: commit,
-            report: { path: FIXTURE_REPORT_PATH, document_sha256: "0".repeat(64) },
+            report: { path: FIXTURE_REPORT_PATH, document_sha256: CONFORMANT_SHA },
           },
           decide_resolutions: [{ issue: 999, status: "resolved_in_tree", commit }],
           examples_waiver: null,
@@ -551,7 +589,7 @@ test("candidate-gate: criterion 4 passes with no examples but a recorded, non-em
           requirement_inventory: {
             attested: true,
             audited_by: commit,
-            report: { path: FIXTURE_REPORT_PATH, document_sha256: "0".repeat(64) },
+            report: { path: FIXTURE_REPORT_PATH, document_sha256: sha256("# Fixture\n\n# Conformance {#conformance}\n\nNo artwork block here.\n") },
           },
           decide_resolutions: [],
           examples_waiver: { reason: "Single-member format profile; proportionality." },
