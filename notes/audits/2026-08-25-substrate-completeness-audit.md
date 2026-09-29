@@ -353,6 +353,9 @@ at `7f5cbd57` is one removed line, the generated family-status
 ```
 
 No BCP 14 keyword line changed, so the clause-level inventory in (a) is
-unaffected and no fresh audit is warranted. `candidate-gate.json`'s
-`report.document_sha256` now records the current bytes; (b) keeps the
-digest the original audit was performed against.
+unaffected and no fresh audit is warranted. `candidate-gate.json` now
+attests the current bytes: `report.document_sha256` records them, and
+`audited_by` names the re-review commit `f27bfd2d`, where the substrate
+has those bytes, so the two fields still pair as that file defines them.
+The original audit stays recorded here: commit `7f5cbd57` and the (b)
+digest.
