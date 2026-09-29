@@ -147,10 +147,9 @@ Table of Contents
    its agents share durable work products.
 
    Role: companion.  Spec maturity: experimental.  Maintenance: lab-
-   best-effort.  Implementation: not yet in the conformance ledger
-   (conformance-manifest.json).  Adopt when: Artifacts cross into
-   another Mission and must carry provenance, never authority.
-   Requires: Mission-Bound Authorization for OAuth 2.0.
+   best-effort.  Adopt when: Artifacts cross into another Mission and
+   must carry provenance, never authority.  Requires: Mission-Bound
+   Authorization for OAuth 2.0.
 
 3.  Relationship to Other Profiles
 

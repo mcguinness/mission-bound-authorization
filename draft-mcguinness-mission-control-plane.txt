@@ -113,13 +113,11 @@ Table of Contents
 2.  Status: An Optional Profile
 
    Role: companion.  Spec maturity: experimental.  Maintenance: lab-
-   best-effort.  Implementation: 12 conformance rows in conformance-
-   manifest.json (2 tested, 4 partial, 6 todo).  Adopt when: A
-   deployment claims testable control-plane consistency across
-   replication, partition, and recovery.  Requires: Mission-Bound
-   Runtime Enforcement; Mission-Bound Authorization for OAuth 2.0;
-   Mission Lifecycle Signals for OAuth 2.0; Mission Status and Lifecycle
-   for OAuth 2.0.
+   best-effort.  Adopt when: A deployment claims testable control-plane
+   consistency across replication, partition, and recovery.  Requires:
+   Mission-Bound Runtime Enforcement; Mission-Bound Authorization for
+   OAuth 2.0; Mission Lifecycle Signals for OAuth 2.0; Mission Status
+   and Lifecycle for OAuth 2.0.
 
    This document has no implemented conformance coverage.  Its fault
    cases and requirement rows are unimplemented, and its maintenance

@@ -183,10 +183,9 @@ Table of Contents
    tracking the substrate.
 
    Role: companion.  Spec maturity: experimental.  Maintenance: active.
-   Implementation: not yet in the conformance ledger (conformance-
-   manifest.json).  Adopt when: Deep fan-out makes an AS round-trip per
-   narrowing too costly; mint offline.  Requires: Mission-Bound Runtime
-   Enforcement; Mission-Bound Authorization for OAuth 2.0.
+   Adopt when: Deep fan-out makes an AS round-trip per narrowing too
+   costly; mint offline.  Requires: Mission-Bound Runtime Enforcement;
+   Mission-Bound Authorization for OAuth 2.0.
 
 3.  Relationship to the Issuance Profile
 

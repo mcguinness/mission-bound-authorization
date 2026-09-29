@@ -531,10 +531,9 @@ Table of Contents
    mission state itself.
 
    Role: companion.  Spec maturity: experimental.  Maintenance: frozen-
-   until-upstream-release.  Implementation: not yet in the conformance
-   ledger (conformance-manifest.json).  Adopt when: Alongside the AAuth
-   binding: status, termination, delegation-tree queries.  Requires:
-   nothing beyond its listed references.
+   until-upstream-release.  Adopt when: Alongside the AAuth binding:
+   status, termination, delegation-tree queries.  Requires: nothing
+   beyond its listed references.
 
 7.  Terminate Operation
 

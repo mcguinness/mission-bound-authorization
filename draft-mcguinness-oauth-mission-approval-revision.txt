@@ -140,11 +140,9 @@ Table of Contents
    as it evolves.
 
    Role: companion.  Spec maturity: experimental.  Maintenance: lab-
-   best-effort.  Implementation: not yet in the conformance ledger
-   (conformance-manifest.json).  Adopt when: Reviewers routinely narrow
-   a proposed Mission rather than approve or deny.  Requires: Mission-
-   Bound Authorization for OAuth 2.0; Mission Deferred Approval for
-   OAuth 2.0.
+   best-effort.  Adopt when: Reviewers routinely narrow a proposed
+   Mission rather than approve or deny.  Requires: Mission-Bound
+   Authorization for OAuth 2.0; Mission Deferred Approval for OAuth 2.0.
 
 3.  Relationship to the Deferred Approval Profile
 

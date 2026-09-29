@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-09-29T22:29:55Z
-Source repository commit: 7c1ba26ca3e093dc730147a6c64123ca89cc2f45
+Generated: 2026-09-29T23:25:46Z
+Source repository commit: adcfcc6a058807496d23db61982e8a62052566bd
 Member count: 9
 
 Reading order:
@@ -256,10 +256,9 @@ Table of Contents
    Considerations remain normative over both.
 
    Role: guide.  Spec maturity: not applicable.  Maintenance: active.
-   Implementation: not yet in the conformance ledger (conformance-
-   manifest.json).  Adopt when: Before adopting anything: the Mission
-   model, invariants, and assurance levels the rest cite.  Requires:
-   nothing beyond its listed references.
+   Adopt when: Before adopting anything: the Mission model, invariants,
+   and assurance levels the rest cite.  Requires: nothing beyond its
+   listed references.
 
 3.  Conventions and Terminology
 
@@ -4681,11 +4680,10 @@ Table of Contents
 
 2.  Status: A Normative Contract for Bindings
 
-   Role: core.  Spec maturity: candidate.  Maintenance: active.
-   Implementation: 88 conformance rows in conformance-manifest.json (10
-   tested, 6 partial, 72 todo).  Adopt when: Runtime implementers
-   consume its commitment construction and kernel contract; binding
-   authors profile it.  Requires: nothing beyond its listed references.
+   Role: core.  Spec maturity: candidate.  Maintenance: active.  Adopt
+   when: Runtime implementers consume its commitment construction and
+   kernel contract; binding authors profile it.  Requires: nothing
+   beyond its listed references.
 
 3.  Conventions and Terminology
 
@@ -13648,10 +13646,9 @@ Table of Contents
 2.  Status: An Optional Profile
 
    Role: companion.  Spec maturity: experimental.  Maintenance: active.
-   Implementation: 6 conformance rows in conformance-manifest.json (5
-   tested, 1 todo).  Adopt when: You must observe or change Mission
-   state beyond token expiry (revoke, suspend, complete).  Requires:
-   Mission-Bound Authorization for OAuth 2.0.
+   Adopt when: You must observe or change Mission state beyond token
+   expiry (revoke, suspend, complete).  Requires: Mission-Bound
+   Authorization for OAuth 2.0.
 
 3.  Conventions and Terminology
 
@@ -16672,12 +16669,11 @@ Table of Contents
 3.  Status: An Optional Profile
 
    Role: companion.  Spec maturity: experimental.  Maintenance: active.
-   Implementation: 155 conformance rows in conformance-manifest.json (45
-   tested, 24 partial, 83 todo, 3 blocked).  Adopt when: Actions need a
-   point-of-use check, not just issuance-time gating.  Requires: Mission
-   Substrate Requirements.  Also requires, conditionally: Mission-Bound
-   Authorization for OAuth 2.0 and Mission-Bound Runtime Enforcement:
-   OAuth 2.0 Profile (when the OAuth binding is the substrate).
+   Adopt when: Actions need a point-of-use check, not just issuance-time
+   gating.  Requires: Mission Substrate Requirements.  Also requires,
+   conditionally: Mission-Bound Authorization for OAuth 2.0 and Mission-
+   Bound Runtime Enforcement: OAuth 2.0 Profile (when the OAuth binding
+   is the substrate).
 
 4.  Conventions and Terminology
 
@@ -20062,12 +20058,11 @@ Table of Contents
 2.  Status: An Optional Profile
 
    Role: companion.  Spec maturity: experimental.  Maintenance: active.
-   Implementation: 103 conformance rows in conformance-manifest.json (60
-   tested, 12 partial, 31 todo).  Adopt when: Runtime enforcement is
-   deployed and decisions need durable, verifiable records.  Requires:
-   Mission-Bound Runtime Enforcement; Mission Substrate Requirements.
-   Also requires, conditionally: Mission Cross-Domain Projection for
-   OAuth 2.0 (when cross-domain projected decisions are recorded).
+   Adopt when: Runtime enforcement is deployed and decisions need
+   durable, verifiable records.  Requires: Mission-Bound Runtime
+   Enforcement; Mission Substrate Requirements.  Also requires,
+   conditionally: Mission Cross-Domain Projection for OAuth 2.0 (when
+   cross-domain projected decisions are recorded).
 
 3.  Conventions and Terminology
 
@@ -22818,17 +22813,16 @@ Table of Contents
 3.  Status: An Optional Profile
 
    Role: companion.  Spec maturity: experimental.  Maintenance: active.
-   Implementation: 90 conformance rows in conformance-manifest.json (17
-   tested, 7 partial, 66 todo).  Adopt when: The PDP speaks AuthZEN and
-   needs the decision-contract wire mapping.  Requires: Mission-Bound
-   Runtime Enforcement; Mission Substrate Requirements.  Also requires,
-   conditionally: Mission-Bound Authorization for OAuth 2.0 (when the
-   OAuth binding is the substrate); Mission Cross-Domain Projection for
-   OAuth 2.0 (when cross-domain projected credentials are evaluated);
-   Mission Status and Lifecycle for OAuth 2.0 (when Status supplies
-   state and the Effective Authority Set); Mission Runtime Evidence
-   (when the deployment claims the Runtime Evidence feature profile,
-   rather than the Decision Base alone).
+   Adopt when: The PDP speaks AuthZEN and needs the decision-contract
+   wire mapping.  Requires: Mission-Bound Runtime Enforcement; Mission
+   Substrate Requirements.  Also requires, conditionally: Mission-Bound
+   Authorization for OAuth 2.0 (when the OAuth binding is the
+   substrate); Mission Cross-Domain Projection for OAuth 2.0 (when
+   cross-domain projected credentials are evaluated); Mission Status and
+   Lifecycle for OAuth 2.0 (when Status supplies state and the Effective
+   Authority Set); Mission Runtime Evidence (when the deployment claims
+   the Runtime Evidence feature profile, rather than the Decision Base
+   alone).
 
 4.  Conventions and Terminology
 
@@ -25668,15 +25662,14 @@ Table of Contents
 2.  Status: An Optional Profile
 
    Role: companion.  Spec maturity: experimental.  Maintenance: active.
-   Implementation: not yet in the conformance ledger (conformance-
-   manifest.json).  Adopt when: A harness holds session state across
-   restarts and must stop work when the Mission dies.  Requires:
-   Mission-Bound Runtime Enforcement; Mission Substrate Requirements.
-   Also requires, conditionally: Mission Authority Server (when a
-   gateway PEP outside the harness carries the Mission reference);
-   Mission-Bound Authorization for OAuth 2.0 (when the OAuth binding is
-   the substrate); Mission Status and Lifecycle for OAuth 2.0 (when
-   Status is the freshness source).
+   Adopt when: A harness holds session state across restarts and must
+   stop work when the Mission dies.  Requires: Mission-Bound Runtime
+   Enforcement; Mission Substrate Requirements.  Also requires,
+   conditionally: Mission Authority Server (when a gateway PEP outside
+   the harness carries the Mission reference); Mission-Bound
+   Authorization for OAuth 2.0 (when the OAuth binding is the
+   substrate); Mission Status and Lifecycle for OAuth 2.0 (when Status
+   is the freshness source).
 
 3.  Scope
 
@@ -27645,11 +27638,10 @@ Table of Contents
 2.  Status: An Optional Profile
 
    Role: companion.  Spec maturity: experimental.  Maintenance: active.
-   Implementation: not yet in the conformance ledger (conformance-
-   manifest.json).  Adopt when: You must prove what the Approver
-   actually saw, not only what was approved.  Requires: Mission-Bound
-   Authorization for OAuth 2.0.  Also requires, conditionally: Mission
-   Approval Governance (when an Approval Governance Record is recorded).
+   Adopt when: You must prove what the Approver actually saw, not only
+   what was approved.  Requires: Mission-Bound Authorization for OAuth
+   2.0.  Also requires, conditionally: Mission Approval Governance (when
+   an Approval Governance Record is recorded).
 
 3.  Scope
 

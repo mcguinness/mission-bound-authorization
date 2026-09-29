@@ -316,9 +316,8 @@ Table of Contents
    exercised machinery and stable surfaces, not adoption counts.
 
    Role: companion.  Spec maturity: experimental.  Maintenance: lab-
-   floor-referenced.  Implementation: not yet in the conformance ledger
-   (conformance-manifest.json).  Adopt when: A Mission needs cumulative
-   caps (budget, calls, duration, egress), not just scope.  Requires:
+   floor-referenced.  Adopt when: A Mission needs cumulative caps
+   (budget, calls, duration, egress), not just scope.  Requires:
    Mission-Bound Runtime Enforcement; Mission Runtime Evidence; Mission
    Substrate Requirements; Mission-Bound Authorization for OAuth 2.0.
    Also requires, conditionally: Mission-Bound Runtime Enforcement:

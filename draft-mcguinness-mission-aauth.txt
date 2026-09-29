@@ -196,10 +196,9 @@ Table of Contents
 2.  Status: An Optional Profile
 
    Role: adapter-binding.  Spec maturity: experimental.  Maintenance:
-   frozen-until-upstream-release.  Implementation: not yet in the
-   conformance ledger (conformance-manifest.json).  Adopt when: The
-   substrate is AAuth: Mission context on its native propose/approve
-   flow.  Requires: Mission Substrate Requirements.
+   frozen-until-upstream-release.  Adopt when: The substrate is AAuth:
+   Mission context on its native propose/approve flow.  Requires:
+   Mission Substrate Requirements.
 
    This binding is written against the AAuth editor's copy at commit
    fc5e972c (2026-08-14); the latest published revision is -10

@@ -147,8 +147,7 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-expansion]).
 
    Role: companion.  Spec maturity: experimental.  Maintenance: active-
-   experimental.  Implementation: 9 conformance rows in conformance-
-   manifest.json (9 tested).  Adopt when: An attenuation chain crosses
+   experimental.  Adopt when: An attenuation chain crosses
    organizational trust domains.  Requires: Mission Substrate
    Requirements; Mission-Bound Authorization for OAuth 2.0; Mission
    Offline Attenuation for OAuth 2.0; Mission Cross-Domain Projection

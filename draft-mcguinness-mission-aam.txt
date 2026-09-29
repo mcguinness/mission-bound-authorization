@@ -130,10 +130,9 @@ Table of Contents
 2.  Status: An Experimental Sketch
 
    Role: companion.  Spec maturity: sketch.  Maintenance: lab-best-
-   effort.  Implementation: not yet in the conformance ledger
-   (conformance-manifest.json).  Adopt when: Adopting Cloudflare's AAM
-   vocabulary and mapping it onto existing mechanisms.  Requires:
-   nothing beyond its listed references.
+   effort.  Adopt when: Adopting Cloudflare's AAM vocabulary and mapping
+   it onto existing mechanisms.  Requires: nothing beyond its listed
+   references.
 
 3.  Conventions and Terminology
 

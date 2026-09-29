@@ -112,11 +112,10 @@ Table of Contents
 2.  Status: An Optional Profile
 
    Role: companion.  Spec maturity: experimental.  Maintenance: active.
-   Implementation: not yet in the conformance ledger (conformance-
-   manifest.json).  Adopt when: A consumer relies on many Missions
-   concurrently and per-Mission status reads do not scale.  Requires:
-   Mission-Bound Authorization for OAuth 2.0; Mission Status and
-   Lifecycle for OAuth 2.0.
+   Adopt when: A consumer relies on many Missions concurrently and per-
+   Mission status reads do not scale.  Requires: Mission-Bound
+   Authorization for OAuth 2.0; Mission Status and Lifecycle for OAuth
+   2.0.
 
 3.  Conventions and Terminology
 

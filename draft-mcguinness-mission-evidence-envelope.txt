@@ -171,12 +171,10 @@ Table of Contents
 2.  Status: An Optional, Experimental Mechanism
 
    Role: companion.  Spec maturity: sketch.  Maintenance: lab-best-
-   effort.  Implementation: 23 conformance rows in conformance-
-   manifest.json (23 todo).  Adopt when: A new evidence kind is being
-   designed and a deployment wants to avoid minting another bespoke
-   media type, or Intent Admission Evidence's inbound assertion and
-   emitted attestation are needed.  Requires: nothing beyond its listed
-   references.
+   effort.  Adopt when: A new evidence kind is being designed and a
+   deployment wants to avoid minting another bespoke media type, or
+   Intent Admission Evidence's inbound assertion and emitted attestation
+   are needed.  Requires: nothing beyond its listed references.
 
    This document is Experimental.  It has no known implementation, no
    migrated evidence kind, and no adopter commitment on record.  A

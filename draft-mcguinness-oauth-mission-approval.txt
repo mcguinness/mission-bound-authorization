@@ -148,11 +148,10 @@ Table of Contents
    its substrate and stabilizes with it.
 
    Role: companion.  Spec maturity: experimental.  Maintenance: active.
-   Implementation: not yet in the conformance ledger (conformance-
-   manifest.json).  Adopt when: Approval is asynchronous: a human review
-   queue, not an immediate decision.  Requires: Mission-Bound
-   Authorization for OAuth 2.0.  Also requires, conditionally: Mission
-   Approval Governance (when an Approval Governance Record is recorded).
+   Adopt when: Approval is asynchronous: a human review queue, not an
+   immediate decision.  Requires: Mission-Bound Authorization for OAuth
+   2.0.  Also requires, conditionally: Mission Approval Governance (when
+   an Approval Governance Record is recorded).
 
 3.  Relationship to the Issuance Profile
 
