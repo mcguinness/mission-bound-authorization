@@ -463,11 +463,16 @@ export function renderFamilyStatusBlock(d, bySlug) {
   return lines.join("\n");
 }
 
-// Locates a draft's top-level "# Status" section and returns the [start, end)
-// byte offsets of everything between its heading and the next top-level
-// heading (or end of file). Returns null when the heading is missing.
-function findStatusSection(text) {
-  const head = text.match(/^# Status[^\n]*$/m);
+// Locates a draft's top-level family Status section and returns the
+// [start, end) byte offsets of everything between its heading and the next
+// top-level heading (or end of file). Returns null when the heading is
+// missing. The family heading is always "# Status: <standing>"; matching any
+// heading that merely starts with "Status" once found a protocol section
+// ("# Status Operation" in the AAuth management draft) and spliced the block
+// into that operation's specification.
+export const FAMILY_STATUS_HEADING = /^# Status:[^\n]*$/m;
+export function findStatusSection(text) {
+  const head = text.match(FAMILY_STATUS_HEADING);
   if (!head) return null;
   const start = text.indexOf(head[0]) + head[0].length;
   const rest = text.slice(start);
@@ -494,7 +499,14 @@ export function validateFamilyStatusBlocks(root = ROOT) {
     }
     const bounds = findStatusSection(text);
     if (!bounds) {
-      findings.push(`${d.file}: missing the top-level "# Status" section (family skeleton)`);
+      findings.push(`${d.file}: missing the top-level "# Status:" section (family skeleton)`);
+      continue;
+    }
+    // Exactly one block per draft: a second copy anywhere, or the only copy
+    // outside the Status section, is misplaced generated text.
+    const copies = text.split(FAMILY_STATUS_BEGIN).length - 1;
+    if (copies > 1) {
+      findings.push(`${d.file}: contains ${copies} family-status blocks; it must carry exactly one, inside its "# Status:" section`);
       continue;
     }
     const section = text.slice(bounds[0], bounds[1]);
@@ -521,7 +533,7 @@ export function writeFamilyStatusBlocks(root = ROOT) {
     const filePath = path.join(root, d.file);
     const text = fs.readFileSync(filePath, "utf8");
     const bounds = findStatusSection(text);
-    if (!bounds) throw new Error(`${d.file}: missing the top-level "# Status" section (family skeleton)`);
+    if (!bounds) throw new Error(`${d.file}: missing the top-level "# Status:" section (family skeleton)`);
     const [start, end] = bounds;
     const block = renderFamilyStatusBlock(d, bySlug);
     const newSection = spliceMarkedBlock(text.slice(start, end), block, FAMILY_STATUS_BEGIN, FAMILY_STATUS_END, d.file);

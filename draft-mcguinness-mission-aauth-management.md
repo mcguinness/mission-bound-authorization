@@ -140,6 +140,14 @@ the base protocol defines at `mission_endpoint`.  The approving PS
 remains the only server that can interpret the reference and change
 its state.
 
+# Status: An Optional Profile {#doc-status}
+
+<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
+Role: companion. Spec maturity: experimental. Maintenance: frozen-until-upstream-release.
+Adopt when: Alongside the AAuth binding: status, termination, delegation-tree queries.
+Requires: nothing beyond its listed references.
+<!-- family-status: END -->
+
 # Conventions and Terminology {#conventions}
 
 {::boilerplate bcp14-tagged}
@@ -489,12 +497,6 @@ the consumer MUST fail closed and MUST NOT treat the mission as
 initiating work when it receives `terminated`.  Polling is a
 freshness mechanism, not the safety floor: every PS endpoint still
 enforces mission state itself.
-
-<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Role: companion. Spec maturity: experimental. Maintenance: frozen-until-upstream-release.
-Adopt when: Alongside the AAuth binding: status, termination, delegation-tree queries.
-Requires: nothing beyond its listed references.
-<!-- family-status: END -->
 
 # Terminate Operation {#terminate}
 
