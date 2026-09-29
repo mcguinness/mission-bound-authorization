@@ -356,13 +356,17 @@ needs that verification from a token holding only a narrowed subset
 adopts the Local Approved-Set Verification profile
 ({{local-approved-set-verification}}, {{consent-binding}}).
 
-This chain is the first of two deliberate enforcement layers. It gives
-task-bound issuance, auditability, and a revocation gate over future
-derivation, which is sufficient for a low-risk workflow whose exposure
-is bounded by short token lifetimes and narrow authority. It does not
-evaluate individual actions: an agent taking consequential autonomous
-actions needs the second layer, the runtime enforcement chokepoint
-({{runtime-boundary}}), specified separately.
+This chain is the first of two deliberate enforcement layers, and a
+deployment can run it alone: a Resource Server need not be
+Mission-aware unless it receives delegated tokens ({{rs-enforcement}}).
+It gives task-bound issuance, auditability, and a revocation gate over
+future derivation, and every token carries a subset of the approved
+Authority Set ({{subset}}) that no Resource Server over-grants on
+({{scope-projection}}). It does not evaluate individual actions, so
+token lifetime and narrow authority bound the exposure between
+issuance and use. The second layer, the runtime enforcement chokepoint
+({{runtime-boundary}}), specified separately, adds a per-action check
+for the action classes whose consequence needs one.
 
 A deployment chooses its
 layers deliberately, matching the enforcement it runs to the
