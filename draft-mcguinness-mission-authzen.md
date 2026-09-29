@@ -26,6 +26,7 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  I-D.draft-mcguinness-oauth-client-instance-id:
   I-D.draft-mcguinness-oauth-mission-cross-domain:
     title: "Mission Cross-Domain Projection for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html
@@ -106,8 +107,6 @@ normative:
 informative:
   RFC9457:
   RFC9470:
-  I-D.draft-mcguinness-oauth-client-instance-assertion:
-  I-D.draft-mcguinness-oauth-ai-agent-instance:
   I-D.draft-mcguinness-mission-runtime-evidence:
     title: "Mission Runtime Evidence"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html
@@ -439,7 +438,7 @@ Batch:
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 89 conformance rows in conformance-manifest.json (17 tested, 7 partial, 65 todo).
+Implementation: 90 conformance rows in conformance-manifest.json (17 tested, 7 partial, 66 todo).
 Adopt when: The PDP speaks AuthZEN and needs the decision-contract wire mapping.
 Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements.
 Also requires, conditionally: Mission-Bound Authorization for OAuth 2.0 (when the OAuth binding is the substrate); Mission Cross-Domain Projection for OAuth 2.0 (when cross-domain projected credentials are evaluated); Mission Status and Lifecycle for OAuth 2.0 (when Status supplies state and the Effective Authority Set); Mission Runtime Evidence (when the deployment claims the Runtime Evidence feature profile, rather than the Decision Base alone).
@@ -736,15 +735,25 @@ the PDP evaluates the `act` chain as defined by the runtime profile,
 and provenance is recorded in dedicated evidence fields where the
 deployment captures it.
 
-Where tokens carry instance identity
-({{I-D.draft-mcguinness-oauth-client-instance-assertion}}), the `act`
-entry this projection already copies carries the instance identifier
-and, under the agent profile
-({{I-D.draft-mcguinness-oauth-ai-agent-instance}}), issuer-minted
-provenance such as `agent_instance_id` and `agent_model`. Fleet
-deployments therefore get which-instance-acted attribution in Decision
-Evidence and, through the `evaluation_id` link, in Execution Evidence,
-without new members.
+Where tokens carry Instance Context
+({{I-D.draft-mcguinness-oauth-client-instance-id}}), the PEP can set
+`client_instance_id` from it once it has validated that context as a
+Context Consumer ({{I-D.draft-mcguinness-oauth-client-instance-id}},
+Section 7.5) and established its association with the current presenter.
+The PEP MUST NOT populate `context.actor.client_instance_id` from
+context that establishes only upstream instance participation. The
+correlator represents the pair (`iss`, `id`) without collisions across
+the Instance Context Authorities accepted by the PDP and its evidence
+consumers, including when separate PEPs each accept only one authority.
+Attributing the presentation requires the association with the presenter
+that Section 7.5 establishes: a sender-constraint key unique to the
+instance
+({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 7.3) where
+the token issuer conveys context only from direct Client Attestation
+validation, and authenticated provenance where it may preserve context
+from an input token. Fleet deployments then get which-instance-acted
+attribution in Decision Evidence and, through the `evaluation_id` link,
+in Execution Evidence, without new members.
 
 ## Credential Decision Context {#context-credential}
 

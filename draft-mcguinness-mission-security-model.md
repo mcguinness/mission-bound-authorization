@@ -55,8 +55,8 @@ informative:
     date: 2026
   I-D.draft-mcguinness-oauth-id-assertion-framework:
   I-D.draft-mcguinness-oauth-domain-authorized-issuer:
-  I-D.draft-mcguinness-oauth-client-instance-assertion:
-  I-D.draft-mcguinness-oauth-ai-agent-instance:
+  I-D.draft-mcguinness-oauth-client-instance-id:
+  I-D.draft-mcguinness-oauth-client-attesters:
   I-D.draft-mcguinness-oauth-mission-cross-domain:
     title: "Mission Cross-Domain Projection for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html
@@ -688,15 +688,16 @@ Event source:
   ({{I-D.draft-mcguinness-oauth-mission-discharge}}, Section
   "Mission Completion and Entry Discharge").
 
-Instance identity is identity substrate, like agent identity
-generally. The instance issuer or agent attester that mints instance
-assertions ({{I-D.draft-mcguinness-oauth-client-instance-assertion}},
-{{I-D.draft-mcguinness-oauth-ai-agent-instance}}) sits outside this
-model's trusted base, and its compromise forges actor attribution (who
-executed) without forging Mission authority (what was approved). A
-deployment that relies on instance-grade joins or instance-attributed
-evidence extends its documented trust statement ({{documenting}}) to
-that issuer.
+Instance identity is identity substrate, like agent identity generally.
+The Client Attester that assigns instance identifiers
+({{I-D.draft-mcguinness-oauth-client-instance-id}}), and the client
+metadata that endorses it
+({{I-D.draft-mcguinness-oauth-client-attesters}}), sit outside this
+model's trusted base; an attester's compromise forges instance
+attribution (which instance executed) without forging Mission authority
+(what was approved). A deployment that relies on instance-grade joins or
+instance-attributed evidence extends its documented trust statement
+({{documenting}}) to that attester.
 
 # Cross-Cutting Assumptions {#cross-cutting}
 
@@ -1495,6 +1496,14 @@ model and pipeline layers, and saying so is the point:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Client-instance references follow their successors:
+  draft-mcguinness-oauth-client-instance-assertion is replaced by
+  {I-D.draft-mcguinness-oauth-client-instance-id} and
+  {{I-D.draft-mcguinness-oauth-client-attesters}}, and the
+  deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
+  cited. The trusted-base note
+  names the Client Attester and its endorsement.
 
 - Named agent-invokable approval resolution as a bypass distinct from
   evidence forgery or nominal principal equality (#759).

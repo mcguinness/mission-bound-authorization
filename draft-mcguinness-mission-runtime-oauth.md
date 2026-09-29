@@ -27,6 +27,7 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  I-D.draft-mcguinness-oauth-client-instance-id:
   RFC6749:
   RFC6750:
   RFC7662:
@@ -91,7 +92,6 @@ normative:
     date: 2026
 
 informative:
-  I-D.draft-mcguinness-oauth-ai-agent-instance:
   I-D.draft-mcguinness-oauth-mission-containment:
     title: "Mission Containment for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
@@ -191,7 +191,7 @@ credential profile and uses the runtime core unchanged
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 5 conformance rows in conformance-manifest.json (2 tested, 1 partial, 2 todo).
+Implementation: 6 conformance rows in conformance-manifest.json (2 tested, 1 partial, 3 todo).
 Adopt when: The Mission-bound credential is an OAuth access token and the runtime core's abstract roles need their concrete OAuth realization.
 Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements; Mission-Bound Authorization for OAuth 2.0.
 Also requires, conditionally: Mission Resource Access Profile for OAuth 2.0 (when the deployment maps a mission_resource_access authorization_details entry).
@@ -313,7 +313,7 @@ claim, or the introspection response member of the same name.
 | Client identity | `client_id` |
 | Immediate actor | The current actor in `act` when `act` is present; otherwise the client `client_id` names |
 | Actor-delegation chain | `act`, when delegation is in effect |
-| Attester-verified actor context | Claims verified under the AI-agent-instance profile, such as `agent_instance_id` and `agent_model` ({{I-D.draft-mcguinness-oauth-ai-agent-instance}}) |
+| Attester-verified actor context | Instance Context: the `client_instance` claim or introspection member ({{I-D.draft-mcguinness-oauth-client-instance-id}}), validated as that profile's Context Consumer requires; it identifies the instance that obtained the token and grants no authority, and attributing a presentation to it requires the presenter association of {{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 7.5: an instance-unique key under direct Client Attestation validation, and authenticated provenance for context preserved from an input token |
 | Sender-constraint confirmation | `cnf`, verified during validation ({{token-validation}}) |
 | Credential audience or protected resource | The protected resource the PEP guards; validation has established that `aud` names it |
 | Authority entry | The applicable entry of the credential authority for a Mission-bound token; under a join, the applicable entry of the Mission's authority ({{authorization-details-mapping}}) |
@@ -377,6 +377,29 @@ core's permit binding and required decision evidence record the roles
 above; their serialization is defined by the runtime core and the
 decision-API profile in use, for example
 {{I-D.draft-mcguinness-mission-authzen}}.
+
+## Required Instance Attribution {#instance-attribution}
+
+The instance specification defines how to validate context and associate
+it with a presenter; this binding selects that association when Resource
+policy or the Enforcement Scope Statement requires instance attribution.
+The PEP validates the credential, Instance Context, and current proof
+under {{I-D.draft-mcguinness-oauth-client-instance-id}}, Sections 7.3
+and 7.5, before supplying the resulting identity to the PDP. The PDP
+relies on that PEP only under the decision API's authenticated trust
+boundary. A policy match on the resulting identity still grants no
+authority beyond the decision's other bounds.
+
+Where the path requires instance attribution, the PEP MUST refuse the
+request if context is absent or invalid, or if its association with the
+current presenter cannot be established. This is a credential-validation
+failure, using the instance specification's Section 7.6 `invalid_token`
+response and the runtime profile's pre-decision refusal evidence. An
+instance-unique key alone does not establish the association for
+upstream context. Optional context that establishes only participation
+can inform provenance evidence, but does not identify the current actor
+instance. This requirement is conditional on the path's policy, not a
+requirement that every Mission deployment use instance attribution.
 
 # Authority and State Sources {#authority-and-state}
 

@@ -28,6 +28,7 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  I-D.draft-mcguinness-oauth-client-instance-id:
   RFC3339:
   RFC4648:
   RFC5646:
@@ -120,7 +121,6 @@ informative:
   I-D.draft-ietf-oauth-transaction-tokens:
   I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
   I-D.draft-cecchetti-oauth-rar-cedar:
-  I-D.draft-mcguinness-oauth-client-instance-id:
   I-D.draft-mcguinness-oauth-client-attesters:
   I-D.draft-mcguinness-oauth-mission-status:
     title: "Mission Status and Lifecycle for OAuth 2.0"
@@ -3648,6 +3648,8 @@ applies this mapping and does not restate it.
 | Authorization decision: the Approver declines, approval authentication fails the floor or a requested `acr_values`/`max_age`, or a well-formed request (including configured-mapping mode) is refused by AS policy | `access_denied` ({{RFC6749}}) | none unless a defined extension applies |
 | Token endpoint: the Mission is revoked, expired, superseded, or its `derivation_limit` is exhausted | `invalid_grant` | `mission_error` ({{iana}}) |
 | Token endpoint: the requested RAR subset exceeds the Mission's granted authority | `invalid_authorization_details` ({{RFC9396}}) | safe detail |
+| Token exchange using {{delegated-instance-context}}: required Client Attestation fails validation | `invalid_client_attestation` ({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 5.2) | no instance-identity disclosure |
+| Token exchange using {{delegated-instance-context}}: required instance-to-delegate or output-key association cannot be established | `invalid_request` ({{RFC8693}}) | no instance-identity disclosure |
 | Protected resource: weak or stale token-associated user authentication | `insufficient_user_authentication` ({{RFC9470}}) | `acr_values`/`max_age` |
 | Protected resource: DPoP proof missing, invalid, or mismatched | `DPoP` `invalid_token` challenge ({{RFC9449}}) | none |
 | Protected resource: DPoP nonce required, missing, or stale | `DPoP` `use_dpop_nonce` challenge ({{RFC9449}}) | fresh nonce |
@@ -4187,13 +4189,61 @@ delegated token to the delegate's own key, and the Actor Profile makes
 the top-level `cnf`, not a member inside `act`, the current presenter's
 key ({{I-D.draft-mcguinness-oauth-actor-profile}}). Carrying the
 instance itself in a delegated token's `client_instance` claim is a
-separate question: it needs a consuming profile under
-{{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 7.4, and this
-document defines none. An `allowed_delegates` matcher selects delegates
-by actor type ({{delegation-constraints}}), for example `{
+separate question, addressed by the optional consuming rules in
+{{delegated-instance-context}}. An `allowed_delegates` matcher selects
+delegates by actor type ({{delegation-constraints}}), for example `{
 "sub_profile": "ai_agent" }`; the Actor Profile
 {{I-D.draft-mcguinness-oauth-actor-profile}} is the structural reference
 for the actor object and its `sub_profile` classification.
+
+## Instance Context in Delegated Tokens {#delegated-instance-context}
+
+A deployment MAY convey `client_instance` in delegated tokens under
+{{I-D.draft-mcguinness-oauth-client-instance-id}}. This optional
+composition selects the authenticated presenting instance for output
+context. The instance specification owns attestation validation,
+instance-to-key association, audience-scoped mapping, and Context
+Consumer validation; this section supplies the Mission-specific
+authorization and context selection. It introduces no request parameter
+or discovery member, and deployments configure its use and whether
+instance attribution is required.
+
+When issuing context under this composition, the AS MUST validate the
+presenting instance's Client Attestation and proof for the exchange,
+establish its trusted association with the separately authenticated
+delegate, and bind the output token to an instance-unique key whose
+possession it verified in that exchange. Context is mapped from that
+validated instance into the output audience's Consumer Scope under
+{{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 7.1. The AS
+MUST NOT use context copied or remapped from an input token as a
+substitute for the presenting instance's evidence. Thus, when instance B
+is authorized to continue work from instance A, output context names B;
+A's context does not become B's identity by remapping it.
+
+The actor authentication, delegation eligibility, subset, and lifecycle
+checks of {{delegation}} and {{delegation-constraints}} still authorize
+the exchange; instance evidence satisfies none of them by itself.
+Where deployment policy requires instance attribution, the AS MUST
+refuse the exchange if the required instance evidence or its association
+with the delegate and output key cannot be established. Client
+Attestation failures use the errors of
+{{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 5.2; other
+failures to establish the required association use `invalid_request`
+({{RFC8693}}, Section 2.2.2). If the exchange issues a refresh token,
+the instance specification's Section 5.1 grant-continuity rules apply
+alongside {{grant-binding}}; instance continuity alone does not authorize
+replacement of the recorded instance or key rebinding.
+
+Consumers establish presenter attribution under
+{{I-D.draft-mcguinness-oauth-client-instance-id}}, Sections 7.3 and 7.5.
+This composition does not add provenance to `client_instance`: a
+consumer can use the direct-attestation trust configuration only when
+the issuer meets that configuration's restriction against upstream
+context. An issuer also conveying upstream context needs a separately
+specified, authenticated provenance mechanism before its context can
+support presenter attribution. A consumer requiring attribution rejects
+unestablished associations under the instance specification's Section
+7.6.
 
 ## Adopted Model: client_id Names the Requesting Client {#client-id-rebinding}
 
@@ -6389,6 +6439,11 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Define optional current-presenter Instance Context consumption for
+  delegated tokens. Reuse the instance specification for validation and
+  mapping; retain Mission actor, authority, and lifecycle checks for
+  authorization. Required attribution fails closed.
 
 - Added an informative derivation-policy appendix with an admissible
   split-action worked rule, authoring fixtures and ownership guidance;

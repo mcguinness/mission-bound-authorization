@@ -94,8 +94,7 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-oauth-client-instance-assertion:
-  I-D.draft-mcguinness-oauth-ai-agent-instance:
+  I-D.draft-mcguinness-oauth-client-instance-id:
 
 --- abstract
 
@@ -280,15 +279,12 @@ and presented by the executing component at request time in
   serves the capability at request time (for example, an MCP server
   instance), asserted by the PEP that authenticates it. It is a
   request-time fact, not part of the derived authority recorded at
-  derivation, and is recorded in Decision Evidence when present; it
-  is never an input to the `source_digest` or `catalog_digest`
-  comparison.
-  Where the executing component authenticates under an
-  attested-instance profile
-  ({{I-D.draft-mcguinness-oauth-client-instance-assertion}},
-  {{I-D.draft-mcguinness-oauth-ai-agent-instance}}), the deployment
-  SHOULD carry the attested instance identifier here rather than a
-  self-chosen label.
+  derivation, and is recorded in Decision Evidence when present; it is
+  never an input to the `source_digest` or `catalog_digest` comparison.
+  Where the executing component authenticates with an attested instance
+  identity ({{I-D.draft-mcguinness-oauth-client-instance-id}}), the
+  deployment SHOULD carry the attested instance identifier here rather
+  than a self-chosen label.
 
 Rules:
 

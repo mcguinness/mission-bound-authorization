@@ -75,8 +75,7 @@ normative:
 informative:
   RFC8126:
   I-D.draft-gerber-oauth-deferred-token-response:
-  I-D.draft-mcguinness-oauth-client-instance-assertion:
-  I-D.draft-mcguinness-oauth-ai-agent-instance:
+  I-D.draft-mcguinness-oauth-client-instance-id:
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
@@ -463,13 +462,14 @@ The child-creation token exchange carries:
 
   A `child_actor` MAY be identified at instance granularity where the
   deployment authenticates client instances
-  ({{I-D.draft-mcguinness-oauth-client-instance-assertion}}; for AI
-  agents, {{I-D.draft-mcguinness-oauth-ai-agent-instance}}): `sub`
-  carries the instance identifier and `sub_profile` the
-  space-separated value list (for example,
-  `ai_agent client_instance`). The child client-identity rule
-  ({{child-client-identity}}), under which child credentials never
-  transit the parent, composes naturally with instance-specific keys.
+  ({{I-D.draft-mcguinness-oauth-client-instance-id}}): the AS
+  establishes that actor's identity, and its association with the
+  authenticated instance, separately from the instance evidence
+  ({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 5), and
+  `sub_profile` carries the actor type (for example, `ai_agent`). The
+  child client-identity rule ({{child-client-identity}}), under which
+  child credentials never transit the parent, composes naturally with
+  instance-specific keys.
 
 `parent`:
 : OPTIONAL. A string. The `mission_id` of the Parent Mission, a
@@ -2118,6 +2118,16 @@ apply unchanged.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Client-instance references follow their successors:
+  draft-mcguinness-oauth-client-instance-assertion is replaced by
+  {I-D.draft-mcguinness-oauth-client-instance-id}, and the
+  deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
+  cited. An instance-granular
+  `child_actor` no longer carries the instance identifier in `sub`:
+  the successor forbids setting `sub` or an actor from instance
+  evidence alone (Section 5), and `client_instance` was a value only
+  the deprecated draft defined.
 
 - Added the capability-gated Child Mission Carryover foundation, including
   full snapshot and budget checks, committed exclusion semantics, fresh

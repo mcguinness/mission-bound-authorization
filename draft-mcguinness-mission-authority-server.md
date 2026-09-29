@@ -27,6 +27,7 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  I-D.draft-mcguinness-oauth-client-instance-id:
   RFC3339:
   RFC6838:
   RFC7519:
@@ -133,8 +134,6 @@ informative:
   RFC8414:
   RFC8693:
   RFC9635:
-  I-D.draft-mcguinness-oauth-client-instance-assertion:
-  I-D.draft-mcguinness-oauth-ai-agent-instance:
   I-D.draft-mcguinness-mission-harness:
     title: "Mission-Aware Agent Harnesses"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html
@@ -324,7 +323,7 @@ the bindings rather than a maturity one.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: adapter-binding. Spec maturity: experimental. Maintenance: active.
-Implementation: 26 conformance rows in conformance-manifest.json (13 tested, 13 todo).
+Implementation: 27 conformance rows in conformance-manifest.json (13 tested, 14 todo).
 Adopt when: The AS cannot change: run Mission governance as a standalone control plane.
 Requires: Mission Substrate Requirements; Mission-Bound Authorization for OAuth 2.0; Mission Status and Lifecycle for OAuth 2.0.
 Also requires, conditionally: Mission Approval Governance (when an approval-governance recording trigger holds); Mission-Bound Runtime Enforcement and Mission-Bound Runtime Enforcement: AuthZEN Profile (when runtime enforcement covers consequential paths); Mission Runtime Evidence (when the AuthZEN binding emits Decision Evidence); Mission Child Delegation for OAuth 2.0 and Mission Expansion for OAuth 2.0 (when the Expansion and Child Creation capability is claimed).
@@ -935,12 +934,12 @@ Mission-bound access token it holds and can prove control of
 ({{sec-native-binding}}).
 
 Where the deployment authenticates client instances
-({{I-D.draft-mcguinness-oauth-client-instance-assertion}}), the MAS
-SHOULD bind at instance granularity rather than at the bare
-`client_id`, and a Mission Join Assertion for the predecessor or
-parent ({{join-assertion}}), presented with the submission,
-strengthens the proof to a named runtime instance holding a
-sender-constrained credential that verifiably joins to that Mission.
+({{I-D.draft-mcguinness-oauth-client-instance-id}}), the MAS SHOULD bind
+at instance granularity rather than at the bare `client_id`, and a
+Mission Join Assertion for the predecessor or parent
+({{join-assertion}}), presented with the submission, strengthens the
+proof to a named runtime instance holding a sender-constrained
+credential that verifiably joins to that Mission.
 
 ## Expansion Semantics {#native-expansion}
 
@@ -1402,16 +1401,36 @@ MAS with the Mission Join Assertion ({{join-assertion}}). That
 upgrade strengthens who verifies the join, not what the join can
 prove.
 
-Where the deployment's Authorization Server issues tokens under the
-client-instance-assertion profile
-({{I-D.draft-mcguinness-oauth-client-instance-assertion}}), the acting
-credential identifies a concrete runtime instance: the token's `act`
-entry carries the instance `sub` and an instance-specific `cnf` key.
-The PDP SHOULD include that instance in the join, so the client join
-binds (subject, client, instance) rather than (subject, client). This
-restores per-instance granularity behind a shared gateway `client_id`:
-the validated instance joins, not every workload in the `client_id`
-equivalence class.
+Where the deployment's Authorization Server conveys Instance Context in
+its tokens ({{I-D.draft-mcguinness-oauth-client-instance-id}}: the
+`client_instance` claim or introspection member), the acting credential
+identifies a concrete runtime instance once the PDP has validated that
+context and established its association with the presenter as a Context
+Consumer ({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section
+7.5). A sender-constraint key unique to the instance (Section 7.3)
+establishes that association only where the token issuer conveys context
+solely from direct Client Attestation validation; context an issuer may
+have preserved from an input token also needs a profile that
+authenticates its provenance, since such a token can carry one
+instance's context while bound to another's key. The PDP SHOULD include
+that instance in the join, so the client join binds (subject, client,
+instance) rather than (subject, client). This restores per-instance
+granularity behind a shared gateway `client_id`: the validated instance
+joins, not every workload in the `client_id` equivalence class.
+
+In the PEP/PDP split, the PEP performs the credential, context, and
+presenter-proof validation and supplies the established instance through
+the authenticated decision context; the PDP relies on that PEP under
+the decision API's trust boundary. The mapping contract states which
+paths require an instance-bound join and how the established instance
+maps to the Mission's permitted parties. Where the mapping contract
+requires an instance-bound join, the PDP MUST deny with
+`mission_mismatch` if the established instance is absent or does not
+match that contract, without falling back to a subject-and-client-only
+join. A PEP unable to validate required instance attribution refuses
+before requesting a decision, using the instance specification's Section
+7.6 credential error and the runtime profile's pre-decision refusal
+evidence ({{I-D.draft-mcguinness-mission-runtime}}).
 
 # Mission Reference Propagation {#reference-propagation}
 
@@ -1746,22 +1765,26 @@ claims:
   contract, so each join is attributable to the mapping that
   produced it.
 
-When the introspected token carries instance identity
-({{I-D.draft-mcguinness-oauth-client-instance-assertion}}), the MAS
-SHOULD include the instance identifier in the `token` object: the
-`act` entry's `sub`, and the `agent_instance_id` where the agent
-profile ({{I-D.draft-mcguinness-oauth-ai-agent-instance}}) is in use.
-Under that profile the `cnf` key the `jkt` thumbprint binds is
-instance-specific, never shared across a client's instances, so the
-assertion's token binding is materially stronger: it names one runtime
-instance, not any holder of a client-shared key.
+The assertion carries no instance identifier. Where the acting token is
+sender-constrained to a key unique to the instance
+({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 7.3), the
+`jkt` binding names one runtime instance, not any holder of a
+client-shared key, so the assertion's token binding is materially
+stronger; an instance-bound join on this path takes the instance only
+from Instance Context whose association with the presenter has been
+established ({{mission-join}}); the token digest and `jkt` alone do not
+establish it.
 
 The endpoint returns HTTP 200 with a JSON object whose `assertion`
 member carries the JWT. Each minting is a join evidence event: the MAS
 records the Mission reference, the token digest and thumbprint, the
 authenticated caller, the mapping version where one is published
-({{mapping-contract}}), and the validity window, retained for the
-audit horizon.
+({{mapping-contract}}), the token's Instance Context where the MAS
+validated it as a Context Consumer
+({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 7.5), and
+the validity window, retained for the audit horizon. Context for which
+the MAS has established only instance participation is recorded as
+participation, not as proof of which instance presented the credential.
 
 Example claims:
 
@@ -1803,6 +1826,12 @@ at the MAS under the runtime profile's freshness rules, denies with
 `mission_mismatch` when any check above fails, and draws authority
 from the Mission.
 
+For an instance-bound join, the PDP also applies {{mission-join}}'s
+instance mapping to the validated presenter context supplied by the
+PEP. The Join Assertion replaces only the subject and client mapping
+checks; its signature, token digest, and key thumbprint cannot replace
+the instance check or satisfy a missing required instance association.
+
 For the high-consequence action classes
 ({{I-D.draft-mcguinness-mission-runtime}}) in MAS mode, the
 Enterprise profile requires Mission-bound issuance for the acting
@@ -1838,7 +1867,7 @@ Enforcement Scope Statement:
   issued under the Mission);
 - the subject and client mapping granularity, and whether instance
   identity is included in the join
-  ({{I-D.draft-mcguinness-oauth-client-instance-assertion}});
+  ({{I-D.draft-mcguinness-oauth-client-instance-id}});
 - whether Mission Join Assertions are required, which the Enterprise
   profile requires on joined, PDP-gated paths outside the
   irreversible, external-commitment, and privileged-administration
@@ -1972,14 +2001,14 @@ Levels under the MAS binding, with the obligations below
   - The Enterprise claim is made per covered Authorization Server,
     resource, and action path; a mixed estate's weaker paths never
     inherit it from the deployment's name.
-- **Instance-bound joins.** Where the acting credential carries a
-  client-instance identity
-  ({{I-D.draft-mcguinness-oauth-client-instance-assertion}}), a
-  high-consequence join MUST bind (`subject`, `client`, `instance`),
-  not (`subject`, `client`), so a single workload joins rather than
-  every workload sharing a gateway `client_id`. Client-instance
-  identity rests on an unratified individual draft
-  ({{I-D.draft-mcguinness-oauth-client-instance-assertion}}); where a
+- **Instance-bound joins.** Where the acting credential carries Instance
+  Context ({{I-D.draft-mcguinness-oauth-client-instance-id}}) whose
+  association with the presenter is established as {{mission-join}}
+  describes, a high-consequence join MUST bind (`subject`, `client`,
+  `instance`), not (`subject`, `client`), so a single workload joins
+  rather than every workload sharing a gateway `client_id`.
+  Client-instance identity rests on an unratified individual draft
+  ({{I-D.draft-mcguinness-oauth-client-instance-id}}); where a
   deployment has no instance-identity substrate, the high-consequence
   join binds only (`subject`, `client`), and the shared-`client_id`
   residual of {{join-spoofing}} remains, stated in the Mission
@@ -2295,11 +2324,10 @@ else's Mission fails with `mission_mismatch`. Three residuals remain:
   the mapping one-to-one for subjects that hold Missions, with the
   granularity recorded in its mapping contract ({{mapping-contract}}).
   The client join is coarse the same way where several workloads share
-  one `client_id`: any of them joins. Client instance assertions
-  ({{I-D.draft-mcguinness-oauth-client-instance-assertion}}) are the
-  standard fix: the join then binds the validated instance
-  ({{mission-join}}), and this residual remains only for deployments
-  without instance identity.
+  one `client_id`: any of them joins. Client instance identification
+  ({{I-D.draft-mcguinness-oauth-client-instance-id}}) is the fix: the
+  join then binds the validated instance ({{mission-join}}), and this
+  residual remains only for deployments without instance identity.
 - **Same-party misattribution.** Two Missions held by the same subject
   and client are distinguished only by the PEP-supplied reference, so
   a faulty or compromised PEP can attribute work to the wrong
@@ -2357,10 +2385,10 @@ access token would have limited it to the Missions whose token it holds
 and can prove control of. The mitigations:
 
 - Instance-grade binding
-  ({{I-D.draft-mcguinness-oauth-client-instance-assertion}}) shrinks
-  the `client_id` equivalence class to one runtime instance, and a
-  Mission Join Assertion presented with the submission makes that
-  instance a verified, token-bound party ({{native-binding}}).
+  ({{I-D.draft-mcguinness-oauth-client-instance-id}}) shrinks the
+  `client_id` equivalence class to one runtime instance, and a Mission
+  Join Assertion presented with the submission makes that instance a
+  verified, token-bound party ({{native-binding}}).
 - The expansion profile's fresh-approval requirement means no widening
   activates without the Approver, so a forged expansion request yields
   an approval prompt, not authority.
@@ -2540,6 +2568,27 @@ document requests no IANA action for it.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Specify the PEP/PDP responsibilities for required instance-bound joins
+  and their refusal behavior. Join Assertions continue to carry no
+  instance identifier and do not replace the instance association check;
+  MAS evidence distinguishes participation from presenter attribution.
+
+- Client-instance references follow their successors:
+  draft-mcguinness-oauth-client-instance-assertion is replaced by
+  {I-D.draft-mcguinness-oauth-client-instance-id}, and the
+  deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
+  cited. The Mission Join binds the
+  instance from Instance Context whose association with the presenter is
+  established (an instance-unique key, plus authenticated provenance for
+  context preserved from an input token) rather than from an `act`
+  entry; the Join Assertion carries no
+  instance identifier, so an instance-bound join on that path takes the
+  instance from the Instance Context the PEP validated, and the MAS
+  records the token's Instance Context in its join evidence where it
+  received it;
+  and the Enterprise instance-bound join applies where the acting
+  credential carries validated Instance Context.
 
 - Pointed MAS Availability at the Runtime and Status Operational
   Considerations sections for the dependency-specific outage, ride-through,

@@ -86,8 +86,7 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-oauth-client-instance-assertion:
-  I-D.draft-mcguinness-oauth-ai-agent-instance:
+  I-D.draft-mcguinness-oauth-client-instance-id:
   I-D.draft-mcguinness-oauth-mission-signals:
     title: "Mission Lifecycle Signals for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html
@@ -885,18 +884,21 @@ cancellation rule of the orchestration profile
 ({{I-D.draft-mcguinness-mission-orchestration}}).
 
 Where the deployment authenticates agent instances
-({{I-D.draft-mcguinness-oauth-client-instance-assertion}}; for AI
-agents, {{I-D.draft-mcguinness-oauth-ai-agent-instance}}), the harness
-SHOULD record the instance identifier (`agent_instance_id`, or the
-instance `sub`) in its Mission binding ({{mission-binding}}) and in
-sub-agent termination evidence, giving stop propagation and its
-evidence a which-runtime dimension: which concrete instance was asked
-to stop, and which confirmed.
+({{I-D.draft-mcguinness-oauth-client-instance-id}}), the harness SHOULD
+record the instance identifier it validated (for example, an Instance
+Context's `iss` and `id`) in its Mission binding ({{mission-binding}})
+and in sub-agent termination evidence, giving stop propagation and its
+evidence a which-runtime dimension: which concrete instance was asked to
+stop, and which confirmed.
 
-Sub-agent chains under the agent instance profile cannot shed
-identity, which strengthens the fail-closed rule above: an
-unconfirmed stop names the exact instance the harness treats as still
-running.
+Where the harness also keeps a durable association between each
+sub-agent handle and the instance it validated, an unconfirmed stop
+names the exact instance the harness treats as still running, which
+strengthens the fail-closed rule above. Instance Context does not
+provide that association by itself: it is optional, an issuer may omit
+it, and it identifies one instance, not a chain
+({{I-D.draft-mcguinness-oauth-client-instance-id}}, Sections 7.1 and
+7.4).
 
 # Harness Execution States {#harness-states}
 
@@ -1730,6 +1732,18 @@ exists.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Client-instance references follow their successors:
+  draft-mcguinness-oauth-client-instance-assertion is replaced by
+  {I-D.draft-mcguinness-oauth-client-instance-id}, and the
+  deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
+  cited. The harness records
+  the instance identifier it validated, for example an Instance
+  Context's `iss` and `id`, instead of `agent_instance_id` or an
+  instance `sub`. The retired profile's
+  guarantee that sub-agent chains cannot shed identity now depends on
+  the harness's own durable association between each sub-agent handle
+  and its instance.
 
 - Linked the limits of provenance-backed taint control to the Security
   Model's Enforcement Perimeter and distinguished the per-channel
