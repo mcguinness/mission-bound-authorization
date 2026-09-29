@@ -901,9 +901,11 @@ function main() {
   // (r) Family Status skeleton, manifest-synchronized (#643 review; #707
   // extension): every draft except the published core carries a top-level
   // "# Status" section holding a generated family-status block whose
-  // content exact-matches the manifest's role, spec maturity, derived
-  // conformance-manifest coverage, maintenance, pull trigger,
-  // adoption_requires, and conditional requires_when. Bespoke prose lives
+  // content exact-matches the manifest's role, spec maturity,
+  // maintenance, pull trigger, adoption_requires, and conditional
+  // requires_when (derived ledger coverage is DRAFTS.md's Implementation
+  // column, so no draft's bytes depend on the ledger that pins them).
+  // Bespoke prose lives
   // outside the block; the block cannot drift from the manifest. The
   // rendering itself lives in scripts/generate-drafts-index.mjs
   // (renderFamilyStatusBlock), shared with its writer, so the checker and

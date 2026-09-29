@@ -354,7 +354,6 @@ requirement of its own.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: guide. Spec maturity: not applicable. Maintenance: active.
-Implementation: not yet in the conformance ledger (conformance-manifest.json).
 Adopt when: Reviewing or auditing: the one consolidated trust and blast-radius view.
 Requires: nothing beyond its listed references.
 <!-- family-status: END -->

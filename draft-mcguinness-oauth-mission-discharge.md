@@ -152,7 +152,6 @@ any Mission Assurance Level; its details may change.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 18 conformance rows in conformance-manifest.json (16 tested, 2 partial).
 Adopt when: One Authority Set entry's task finishes before the rest of the Mission, and its authority should retire itself rather than wait for a Mission-level revoke, expiry, or complete.
 Requires: Mission-Bound Authorization for OAuth 2.0; Mission Resource Access Profile for OAuth 2.0; Mission Status and Lifecycle for OAuth 2.0.
 <!-- family-status: END -->

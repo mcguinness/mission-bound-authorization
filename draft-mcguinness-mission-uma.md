@@ -383,7 +383,6 @@ per-endpoint error taxonomy are deferred to a later revision.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: adapter-binding. Spec maturity: sketch. Maintenance: lab-best-effort.
-Implementation: not yet in the conformance ledger (conformance-manifest.json).
 Adopt when: Evaluating a UMA 2.0 deployment only.
 Requires: Mission Substrate Requirements.
 <!-- family-status: END -->

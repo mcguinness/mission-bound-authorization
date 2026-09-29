@@ -172,7 +172,6 @@ binding.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: adapter-binding. Spec maturity: experimental. Maintenance: frozen-until-upstream-release.
-Implementation: not yet in the conformance ledger (conformance-manifest.json).
 Adopt when: The substrate is AAuth: Mission context on its native propose/approve flow.
 Requires: Mission Substrate Requirements.
 <!-- family-status: END -->

@@ -134,7 +134,6 @@ resource, action, constraint, and delegation vocabulary instead.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 13 conformance rows in conformance-manifest.json (13 todo).
 Adopt when: The OAuth binding's supported authorization_details types include mission_resource_access, or you need its concrete subset/delegation/projection semantics.
 Requires: Mission-Bound Authorization for OAuth 2.0.
 <!-- family-status: END -->

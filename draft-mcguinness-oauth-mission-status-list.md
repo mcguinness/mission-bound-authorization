@@ -101,7 +101,6 @@ and the Mission Status Response are defined in
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: not yet in the conformance ledger (conformance-manifest.json).
 Adopt when: A consumer relies on many Missions concurrently and per-Mission status reads do not scale.
 Requires: Mission-Bound Authorization for OAuth 2.0; Mission Status and Lifecycle for OAuth 2.0.
 <!-- family-status: END -->

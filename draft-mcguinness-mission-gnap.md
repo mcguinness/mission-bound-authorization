@@ -384,7 +384,6 @@ noted in {{iana}} are deferred to a later revision.
 
 <!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
 Role: adapter-binding. Spec maturity: sketch. Maintenance: lab-best-effort.
-Implementation: not yet in the conformance ledger (conformance-manifest.json).
 Adopt when: Evaluating a GNAP deployment only.
 Requires: Mission Substrate Requirements.
 Also requires, conditionally: Mission Expansion for OAuth 2.0 (when grant modification creates an Expansion successor); Mission Containment for OAuth 2.0 (when Mission Containment is adopted); Mission Status and Lifecycle for OAuth 2.0 (when the Status profile is adopted).
