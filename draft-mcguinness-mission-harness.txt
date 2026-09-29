@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       28 September 2026
-Expires: 1 April 2027
+Intended status: Standards Track                       29 September 2026
+Expires: 2 April 2027
 
 
                      Mission-Aware Agent Harnesses
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 1 April 2027.
+   This Internet-Draft will expire on 2 April 2027.
 
 Copyright Notice
 
@@ -952,18 +952,21 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-orchestration]).
 
    Where the deployment authenticates agent instances
-   ([I-D.draft-mcguinness-oauth-client-instance-assertion]; for AI
-   agents, [I-D.draft-mcguinness-oauth-ai-agent-instance]), the harness
-   SHOULD record the instance identifier (agent_instance_id, or the
-   instance sub) in its Mission binding (Section 7) and in sub-agent
-   termination evidence, giving stop propagation and its evidence a
-   which-runtime dimension: which concrete instance was asked to stop,
+   ([I-D.draft-mcguinness-oauth-client-instance-id]), the harness SHOULD
+   record the instance identifier it validated (for example, an Instance
+   Context's iss and id) in its Mission binding (Section 7) and in sub-
+   agent termination evidence, giving stop propagation and its evidence
+   a which-runtime dimension: which concrete instance was asked to stop,
    and which confirmed.
 
-   Sub-agent chains under the agent instance profile cannot shed
-   identity, which strengthens the fail-closed rule above: an
-   unconfirmed stop names the exact instance the harness treats as still
-   running.
+   Where the harness also keeps a durable association between each sub-
+   agent handle and the instance it validated, an unconfirmed stop names
+   the exact instance the harness treats as still running, which
+   strengthens the fail-closed rule above.  Instance Context does not
+   provide that association by itself: it is optional, an issuer may
+   omit it, and it identifies one instance, not a chain
+   ([I-D.draft-mcguinness-oauth-client-instance-id], Sections 7.1 and
+   7.4).
 
 13.  Harness Execution States
 
@@ -1827,19 +1830,13 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-security-model.html>.
 
-   [I-D.draft-mcguinness-oauth-ai-agent-instance]
-              McGuinness, K., "OAuth 2.0 AI Agent Instance Profile",
-              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
-              ai-agent-instance-00, 4 July 2026,
+   [I-D.draft-mcguinness-oauth-client-instance-id]
+              McGuinness, K., "Client Instance Identification for
+              Attestation-Based Client Authentication", Work in
+              Progress, Internet-Draft, draft-mcguinness-oauth-client-
+              instance-id-00, 28 September 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-ai-agent-instance-00>.
-
-   [I-D.draft-mcguinness-oauth-client-instance-assertion]
-              McGuinness, K., "OAuth 2.0 Client Instance Assertion",
-              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
-              client-instance-assertion-01, 24 June 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-client-instance-assertion-01>.
+              oauth-client-instance-id-00>.
 
    [I-D.draft-mcguinness-oauth-mission-child-delegation]
               McGuinness, K., "Mission Child Delegation for OAuth 2.0",
@@ -1931,6 +1928,17 @@ Appendix A.  Mapping to Durable-Execution Engines
 Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Client-instance references follow their successors: draft-
+      mcguinness-oauth-client-instance-assertion is replaced by {I-
+      D.draft-mcguinness-oauth-client-instance-id}, and the deprecated
+      draft-mcguinness-oauth-ai-agent-instance is no longer cited.  The
+      harness records the instance identifier it validated, for example
+      an Instance Context's iss and id, instead of agent_instance_id or
+      an instance sub.  The retired profile's guarantee that sub-agent
+      chains cannot shed identity now depends on the harness's own
+      durable association between each sub-agent handle and its
+      instance.
 
    *  Linked the limits of provenance-backed taint control to the
       Security Model's Enforcement Perimeter and distinguished the per-

@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       28 September 2026
-Expires: 1 April 2027
+Intended status: Standards Track                       29 September 2026
+Expires: 2 April 2027
 
 
                  Mission Child Delegation for OAuth 2.0
@@ -55,7 +55,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 1 April 2027.
+   This Internet-Draft will expire on 2 April 2027.
 
 Copyright Notice
 
@@ -422,10 +422,11 @@ Table of Contents
 
       A child_actor MAY be identified at instance granularity where the
       deployment authenticates client instances
-      ([I-D.draft-mcguinness-oauth-client-instance-assertion]; for AI
-      agents, [I-D.draft-mcguinness-oauth-ai-agent-instance]): sub
-      carries the instance identifier and sub_profile the space-
-      separated value list (for example, ai_agent client_instance).  The
+      ([I-D.draft-mcguinness-oauth-client-instance-id]): the AS
+      establishes that actor's identity, and its association with the
+      authenticated instance, separately from the instance evidence
+      ([I-D.draft-mcguinness-oauth-client-instance-id], Section 5), and
+      sub_profile carries the actor type (for example, ai_agent).  The
       child client-identity rule (Section 6.1), under which child
       credentials never transit the parent, composes naturally with
       instance-specific keys.
@@ -2192,19 +2193,13 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-metering.html>.
 
-   [I-D.draft-mcguinness-oauth-ai-agent-instance]
-              McGuinness, K., "OAuth 2.0 AI Agent Instance Profile",
-              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
-              ai-agent-instance-00, 4 July 2026,
+   [I-D.draft-mcguinness-oauth-client-instance-id]
+              McGuinness, K., "Client Instance Identification for
+              Attestation-Based Client Authentication", Work in
+              Progress, Internet-Draft, draft-mcguinness-oauth-client-
+              instance-id-00, 28 September 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-ai-agent-instance-00>.
-
-   [I-D.draft-mcguinness-oauth-client-instance-assertion]
-              McGuinness, K., "OAuth 2.0 Client Instance Assertion",
-              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
-              client-instance-assertion-01, 24 June 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-client-instance-assertion-01>.
+              oauth-client-instance-id-00>.
 
    [I-D.draft-mcguinness-oauth-mission-approval]
               McGuinness, K., "Mission Deferred Approval for OAuth 2.0",
@@ -2314,6 +2309,15 @@ Appendix A.  Experimental Consumer-Verified Cascade Modes
 Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Client-instance references follow their successors: draft-
+      mcguinness-oauth-client-instance-assertion is replaced by {I-
+      D.draft-mcguinness-oauth-client-instance-id}, and the deprecated
+      draft-mcguinness-oauth-ai-agent-instance is no longer cited.  An
+      instance-granular child_actor no longer carries the instance
+      identifier in sub: the successor forbids setting sub or an actor
+      from instance evidence alone (Section 5), and client_instance was
+      a value only the deprecated draft defined.
 
    *  Added the capability-gated Child Mission Carryover foundation,
       including full snapshot and budget checks, committed exclusion

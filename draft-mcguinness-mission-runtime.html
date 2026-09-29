@@ -1071,7 +1071,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 1 April 2027</td>
+<td class="center">Expires 2 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1084,12 +1084,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-runtime-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-09-28" class="published">28 September 2026</time>
+<time datetime="2026-09-29" class="published">29 September 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-01">1 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-02">2 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1155,7 +1155,7 @@ agent-compromise-resistant enforcement and trifecta containment.<a href="#sectio
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 1 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 2 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -2200,12 +2200,13 @@ expand authority beyond the issued authority. That layer's delegation
 constraints are not re-applied here unless the deployment documents them
 as runtime Resource policy, but a deployment <span class="bcp14">MAY</span> apply additional
 actor-sensitive Resource policy (<a href="#input-resource-policy" class="auto internal xref">Section 2.7.3</a>).<a href="#section-2.7.5-2" class="pilcrow">¶</a></p>
-<p id="section-2.7.5-3">A credential issuer can verify actor attributes under an
+<p id="section-2.7.5-3">A credential issuer can verify instance attributes under an
 attested-instance profile (the OAuth one is
-<span>[<a href="#I-D.draft-mcguinness-oauth-ai-agent-instance" class="cite xref">I-D.draft-mcguinness-oauth-ai-agent-instance</a>]</span>). Such
-attester-verified actor context is input a deployment's Resource
-policy <span class="bcp14">MAY</span> evaluate; unlike a self-asserted model or instance label,
-it is attester-backed.<a href="#section-2.7.5-3" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>, whose Instance
+Context identifies an instance and grants no authority). Such
+attester-verified actor context is input a deployment's Resource policy
+<span class="bcp14">MAY</span> evaluate; unlike a self-asserted model or instance label, it is
+attester-backed.<a href="#section-2.7.5-3" class="pilcrow">¶</a></p>
 <p id="section-2.7.5-4">Where the deployment operates an agent registry, the immediate actor's
 registry state (status, revocation, approved deployment version) is
 further actor context Resource policy <span class="bcp14">MAY</span> require. A deployment that
@@ -3559,11 +3560,12 @@ and the agent receives no bearer credential at all. That shape is the
 claim's home: the custody properties above belong to a deployment
 built this way, and a developer laptop with a shell is outside them
 by construction, not by configuration.<a href="#section-6.6-10" class="pilcrow">¶</a></p>
-<p id="section-6.6-11">Where the deployment issues tokens under the client-instance-assertion
-profile (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>),
-the sender-constraint key is instance-specific: that profile forbids a
-key shared across a client's instances. Mediated custody composes with
-that rule in either of two shapes:<a href="#section-6.6-11" class="pilcrow">¶</a></p>
+<p id="section-6.6-11">Where the deployment attributes presentations to client instances
+(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>), the
+sender-constraint key is instance-specific: that profile attributes a
+presentation to an instance only under a key unique to it
+(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>, Section 7.3).
+Mediated custody composes with that rule in either of two shapes:<a href="#section-6.6-11" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-6.6-12.1">
             <p id="section-6.6-12.1.1">the mediating PEP holds
@@ -3571,13 +3573,13 @@ per-instance keys, taking custody of each instance's key rather than
 one shared key; or<a href="#section-6.6-12.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.6-12.2">
-            <p id="section-6.6-12.2.1">the mediating PEP is itself the attested instance
-that obtained the token, presenting the instance assertion and holding
-the instance key.<a href="#section-6.6-12.2.1" class="pilcrow">¶</a></p>
+            <p id="section-6.6-12.2.1">the mediating PEP is itself the attested instance that obtained the
+token, presenting its own Client Attestation and holding the instance
+key.<a href="#section-6.6-12.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-6.6-13">In both shapes that profile's no-shared-key rule and
-this section's custody rules are satisfied together.<a href="#section-6.6-13" class="pilcrow">¶</a></p>
+<p id="section-6.6-13">In both shapes that profile's instance-unique key and this section's
+custody rules are satisfied together.<a href="#section-6.6-13" class="pilcrow">¶</a></p>
 <p id="section-6.6-14">Attestation-based client authentication and SPIFFE
 (<span>[<a href="#I-D.draft-ietf-oauth-attestation-based-client-auth" class="cite xref">I-D.draft-ietf-oauth-attestation-based-client-auth</a>]</span>,
 <span>[<a href="#I-D.draft-ietf-oauth-spiffe-client-auth" class="cite xref">I-D.draft-ietf-oauth-spiffe-client-auth</a>]</span>) can supply the
@@ -4848,25 +4850,23 @@ to the evidence this table names, for each condition its Enforcement
 Scope Statement claims. Evidence that is unknown, stale, or
 unverifiable for a required condition makes the named claim
 unavailable.<a href="#section-10.5.2-8" class="pilcrow">¶</a></p>
-<p id="section-10.5.2-9">For each condition this table assigns to EAT evidence, the
-Enforcement Scope Statement <span class="bcp14">MUST</span> select the claim or profile
-identifiers the attestation carries, the expected measurements or
-reference values it is appraised against, the appraisal policy
-applied, the attester identity, and a checkable nonce, timestamp, or
-session-binding freshness rule. Entity Attestation Token
-(<span>[<a href="#RFC9711" class="cite xref">RFC9711</a>]</span>) evidence, carried under the AI-agent-instance profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-ai-agent-instance" class="cite xref">I-D.draft-mcguinness-oauth-ai-agent-instance</a>]</span>), establishes the
+<p id="section-10.5.2-9">For each condition this table assigns to EAT evidence, the Enforcement
+Scope Statement <span class="bcp14">MUST</span> select the claim or profile identifiers the
+attestation carries, the expected measurements or reference values it is
+appraised against, the appraisal policy applied, the attester identity,
+and a checkable nonce, timestamp, or session-binding freshness rule.
+Entity Attestation Token (<span>[<a href="#RFC9711" class="cite xref">RFC9711</a>]</span>) evidence establishes the
 execution-environment fact a row assigns to it only against those
-selections; where a selection this paragraph names is absent, the
-token is a declaration or evidence input, not proof, and the named
-claim is unavailable on the same terms. Verified EAT evidence does
-not by itself establish the exposure, approval, rendering, freshness,
-path, or topology facts the table assigns elsewhere, and a deployment
-<span class="bcp14">MUST NOT</span> represent EAT evidence alone as satisfying those. The
-requirement is scoped to these two High-Assurance Agent claims; base
-runtime conformance does not require this evidence map, and a
-deployment claiming only the base profile <span class="bcp14">MAY</span> publish its scope
-statement unattested.<a href="#section-10.5.2-9" class="pilcrow">¶</a></p>
+selections; where a selection this paragraph names is absent, the token
+is a declaration or evidence input, not proof, and the named claim is
+unavailable on the same terms. Verified EAT evidence does not by itself
+establish the exposure, approval, rendering, freshness, path, or
+topology facts the table assigns elsewhere, and a deployment <span class="bcp14">MUST NOT</span>
+represent EAT evidence alone as satisfying those. The requirement is
+scoped to these two High-Assurance Agent claims; base runtime
+conformance does not require this evidence map, and a deployment
+claiming only the base profile <span class="bcp14">MAY</span> publish its scope statement
+unattested.<a href="#section-10.5.2-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -5493,8 +5493,8 @@ identity);<a href="#section-17-2.2.1" class="pilcrow">¶</a></p>
 the execution environment: actor-signed hop proofs
 (<span>[<a href="#I-D.draft-mcguinness-oauth-actor-proofs" class="cite xref">I-D.draft-mcguinness-oauth-actor-proofs</a>]</span>), issuer-signed hop
 receipts (<span>[<a href="#I-D.draft-mcguinness-oauth-actor-receipts" class="cite xref">I-D.draft-mcguinness-oauth-actor-receipts</a>]</span>), and attested
-agent-instance identity
-(<span>[<a href="#I-D.draft-mcguinness-oauth-ai-agent-instance" class="cite xref">I-D.draft-mcguinness-oauth-ai-agent-instance</a>]</span>) specify these, and
+client-instance identity
+(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>) specify these, and
 this profile consumes their results as credential-derived facts where
 present;<a href="#section-17-2.3.1" class="pilcrow">¶</a></p>
 </li>
@@ -5956,13 +5956,9 @@ any decision-API wire members are defined by the decision-API binding
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth Actor Receipts for Delegation Provenance"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-actor-receipts-00</span>, <time datetime="2026-07-04" class="refDate">4 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-actor-receipts-00">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-actor-receipts-00</a>&gt;</span>. </dd>
 <dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-oauth-ai-agent-instance">[I-D.draft-mcguinness-oauth-ai-agent-instance]</dt>
+<dt id="I-D.draft-mcguinness-oauth-client-instance-id">[I-D.draft-mcguinness-oauth-client-instance-id]</dt>
         <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth 2.0 AI Agent Instance Profile"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-ai-agent-instance-00</span>, <time datetime="2026-07-04" class="refDate">4 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-ai-agent-instance-00">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-ai-agent-instance-00</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-oauth-client-instance-assertion">[I-D.draft-mcguinness-oauth-client-instance-assertion]</dt>
-        <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth 2.0 Client Instance Assertion"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-client-instance-assertion-01</span>, <time datetime="2026-06-24" class="refDate">24 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-assertion-01">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-assertion-01</a>&gt;</span>. </dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Client Instance Identification for Attestation-Based Client Authentication"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-client-instance-id-00</span>, <time datetime="2026-09-28" class="refDate">28 September 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-00">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-00</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
         <dd>
@@ -6190,34 +6186,45 @@ worked example shows the concrete record
 <p id="appendix-D-1">[[ To be removed from the final specification ]]<a href="#appendix-D-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-D-2.1">
-          <p id="appendix-D-2.1.1">Added approval-resolution rule 5, the agent-invokable approval bypass,
-and its negative-conformance case (#759). Observing or requesting an
-independent approval is distinct from resolving it.<a href="#appendix-D-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-2.1.1">Client-instance references follow their successors:
+draft-mcguinness-oauth-client-instance-assertion is replaced by
+{I-D.draft-mcguinness-oauth-client-instance-id}, and the
+deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
+cited. Attester-verified
+context is instance identity that grants no authority, custody's
+per-instance key follows the successor's instance-unique key for
+attribution, and EAT evidence is no longer tied to a carrier
+profile. No requirement changed.<a href="#appendix-D-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.2">
-          <p id="appendix-D-2.2.1">Defined compound-action phases, one Decision per consequential
+          <p id="appendix-D-2.2.1">Added approval-resolution rule 5, the agent-invokable approval bypass,
+and its negative-conformance case (#759). Observing or requesting an
+independent approval is distinct from resolving it.<a href="#appendix-D-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.3">
+          <p id="appendix-D-2.3.1">Defined compound-action phases, one Decision per consequential
 phase, a PEP-derived phase binding verified at permit use,
 phase-scoped idempotency where phases share an action identifier,
 and compensation correlation (#252). Strength change:
 <code>compensates_evaluation_id</code> on Decision Evidence moves from <span class="bcp14">OPTIONAL</span>
 to <span class="bcp14">REQUIRED</span> for a compensate-phase decision, <span class="bcp14">OPTIONAL</span> otherwise. The
 AuthZEN condition, the evidence member, and conformance coverage are
-specified separately.<a href="#appendix-D-2.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-D-2.3">
-          <p id="appendix-D-2.3.1">Added per-entry perimeter dispositions inside the existing
-mediated-scope declaration, its compatibility rule, and the
-prohibition on claiming reconstruction as mediation (#758).<a href="#appendix-D-2.3.1" class="pilcrow">¶</a></p>
+specified separately.<a href="#appendix-D-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.4">
-          <p id="appendix-D-2.4.1">Operational Considerations added (#310): a dependency-conditional outage
+          <p id="appendix-D-2.4.1">Added per-entry perimeter dispositions inside the existing
+mediated-scope declaration, its compatibility rule, and the
+prohibition on claiming reconstruction as mediation (#758).<a href="#appendix-D-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.5">
+          <p id="appendix-D-2.5.1">Operational Considerations added (#310): a dependency-conditional outage
 blast-radius table indexed by action class, the remaining-window
 ride-through, the declared positive break-glass mode with truthful
 emergency evidence, and the replication disclosure. The three operator
-declarations carry no implementation coverage.<a href="#appendix-D-2.4.1" class="pilcrow">¶</a></p>
+declarations carry no implementation coverage.<a href="#appendix-D-2.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-2.5">
-          <p id="appendix-D-2.5.1">Added the Evaluation-Context Binding named assurance extension (#773),
+        <li class="normal" id="appendix-D-2.6">
+          <p id="appendix-D-2.6.1">Added the Evaluation-Context Binding named assurance extension (#773),
 claimed per mediated action class: a versioned descriptor of
 decision-relevant resource-resolved facts, a salted PEP-computed
 context digest committed with that descriptor, reverification at use,
@@ -6225,7 +6232,7 @@ and the declared verified and enforced properties. The deferred
 evaluation-context bullet is struck and the TOCTOU considerations point
 at the extension, keeping the residual for uncovered facts and
 non-adopters. The wire condition, the evidence members, and conformance
-coverage are specified separately.<a href="#appendix-D-2.5.1" class="pilcrow">¶</a></p>
+coverage are specified separately.<a href="#appendix-D-2.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

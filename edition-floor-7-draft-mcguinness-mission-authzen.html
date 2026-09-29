@@ -1066,7 +1066,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 1 April 2027</td>
+<td class="center">Expires 2 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1082,12 +1082,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-authzen-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-09-28" class="published">28 September 2026</time>
+<time datetime="2026-09-29" class="published">29 September 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-01">1 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-02">2 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1149,7 +1149,7 @@ the capability-binding companion owns.<a href="#section-abstract-1" class="pilcr
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 1 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 2 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1636,7 +1636,7 @@ change in per-item enforcement semantics.<a href="#section-2-4.12.1" class="pilc
 <a href="#section-3" class="section-number selfRef">3. </a><a href="#name-status-an-optional-profile" class="section-name selfRef">Status: An Optional Profile</a>
       </h2>
 <p id="section-3-1">Role: companion. Spec maturity: experimental. Maintenance: active.
-Implementation: 89 conformance rows in conformance-manifest.json (17 tested, 7 partial, 65 todo).
+Implementation: 90 conformance rows in conformance-manifest.json (17 tested, 7 partial, 66 todo).
 Adopt when: The PDP speaks AuthZEN and needs the decision-contract wire mapping.
 Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements.
 Also requires, conditionally: Mission-Bound Authorization for OAuth 2.0 (when the OAuth binding is the substrate); Mission Cross-Domain Projection for OAuth 2.0 (when cross-domain projected credentials are evaluated); Mission Status and Lifecycle for OAuth 2.0 (when Status supplies state and the Effective Authority Set); Mission Runtime Evidence (when the deployment claims the Runtime Evidence feature profile, rather than the Decision Base alone).<a href="#section-3-1" class="pilcrow">¶</a></p>
@@ -2022,15 +2022,25 @@ step, a human approver) <span class="bcp14">MUST NOT</span> be encoded inside th
 the PDP evaluates the <code>act</code> chain as defined by the runtime profile,
 and provenance is recorded in dedicated evidence fields where the
 deployment captures it.<a href="#section-7.3-3" class="pilcrow">¶</a></p>
-<p id="section-7.3-4">Where tokens carry instance identity
-(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>), the <code>act</code>
-entry this projection already copies carries the instance identifier
-and, under the agent profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-ai-agent-instance" class="cite xref">I-D.draft-mcguinness-oauth-ai-agent-instance</a>]</span>), issuer-minted
-provenance such as <code>agent_instance_id</code> and <code>agent_model</code>. Fleet
-deployments therefore get which-instance-acted attribution in Decision
-Evidence and, through the <code>evaluation_id</code> link, in Execution Evidence,
-without new members.<a href="#section-7.3-4" class="pilcrow">¶</a></p>
+<p id="section-7.3-4">Where tokens carry Instance Context
+(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>), the PEP can set
+<code>client_instance_id</code> from it once it has validated that context as a
+Context Consumer (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>,
+Section 7.5) and established its association with the current presenter.
+The PEP <span class="bcp14">MUST NOT</span> populate <code>context.actor.client_instance_id</code> from
+context that establishes only upstream instance participation. The
+correlator represents the pair (<code>iss</code>, <code>id</code>) without collisions across
+the Instance Context Authorities accepted by the PDP and its evidence
+consumers, including when separate PEPs each accept only one authority.
+Attributing the presentation requires the association with the presenter
+that Section 7.5 establishes: a sender-constraint key unique to the
+instance
+(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>, Section 7.3) where
+the token issuer conveys context only from direct Client Attestation
+validation, and authenticated provenance where it may preserve context
+from an input token. Fleet deployments then get which-instance-acted
+attribution in Decision Evidence and, through the <code>evaluation_id</code> link,
+in Execution Evidence, without new members.<a href="#section-7.3-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="context-credential">
@@ -4763,6 +4773,10 @@ registered by <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite x
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Substrate Requirements"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="edition-floor-2-draft-mcguinness-mission-substrate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-client-instance-id">[I-D.draft-mcguinness-oauth-client-instance-id]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Client Instance Identification for Attestation-Based Client Authentication"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-client-instance-id-00</span>, <time datetime="2026-09-28" class="refDate">28 September 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-00" class="reader-edition-ext-link" target="_blank" rel="noopener">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-00</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="edition-floor-3-draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
@@ -4847,14 +4861,6 @@ registered by <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite x
 <dt id="I-D.draft-mcguinness-mission-runtime-oauth">[I-D.draft-mcguinness-mission-runtime-oauth]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement: OAuth 2.0 Profile"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-oauth.html" class="reader-edition-ext-link" target="_blank" rel="noopener">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-oauth.html</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-oauth-ai-agent-instance">[I-D.draft-mcguinness-oauth-ai-agent-instance]</dt>
-        <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth 2.0 AI Agent Instance Profile"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-ai-agent-instance-00</span>, <time datetime="2026-07-04" class="refDate">4 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-ai-agent-instance-00" class="reader-edition-ext-link" target="_blank" rel="noopener">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-ai-agent-instance-00</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-oauth-client-instance-assertion">[I-D.draft-mcguinness-oauth-client-instance-assertion]</dt>
-        <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth 2.0 Client Instance Assertion"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-client-instance-assertion-01</span>, <time datetime="2026-06-24" class="refDate">24 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-assertion-01" class="reader-edition-ext-link" target="_blank" rel="noopener">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-assertion-01</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-containment">[I-D.draft-mcguinness-oauth-mission-containment]</dt>
         <dd>

@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       28 September 2026
-Expires: 1 April 2027
+Intended status: Standards Track                       29 September 2026
+Expires: 2 April 2027
 
 
                        Mission Capability Binding
@@ -59,7 +59,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 1 April 2027.
+   This Internet-Draft will expire on 2 April 2027.
 
 Copyright Notice
 
@@ -253,9 +253,8 @@ Table of Contents
       recorded at derivation, and is recorded in Decision Evidence when
       present; it is never an input to the source_digest or
       catalog_digest comparison.  Where the executing component
-      authenticates under an attested-instance profile
-      ([I-D.draft-mcguinness-oauth-client-instance-assertion],
-      [I-D.draft-mcguinness-oauth-ai-agent-instance]), the deployment
+      authenticates with an attested instance identity
+      ([I-D.draft-mcguinness-oauth-client-instance-id]), the deployment
       SHOULD carry the attested instance identifier here rather than a
       self-chosen label.
 
@@ -530,19 +529,13 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-runtime-evidence.html>.
 
-   [I-D.draft-mcguinness-oauth-ai-agent-instance]
-              McGuinness, K., "OAuth 2.0 AI Agent Instance Profile",
-              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
-              ai-agent-instance-00, 4 July 2026,
+   [I-D.draft-mcguinness-oauth-client-instance-id]
+              McGuinness, K., "Client Instance Identification for
+              Attestation-Based Client Authentication", Work in
+              Progress, Internet-Draft, draft-mcguinness-oauth-client-
+              instance-id-00, 28 September 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-ai-agent-instance-00>.
-
-   [I-D.draft-mcguinness-oauth-client-instance-assertion]
-              McGuinness, K., "OAuth 2.0 Client Instance Assertion",
-              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
-              client-instance-assertion-01, 24 June 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-client-instance-assertion-01>.
+              oauth-client-instance-id-00>.
 
    [MCP-REGISTRY]
               Model Context Protocol Project, "The MCP Registry", 2026,

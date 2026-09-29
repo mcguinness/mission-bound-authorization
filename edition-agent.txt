@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-09-28T22:25:39Z
-Source repository commit: 763ceeff02affeb04e6232ae8bb1feba242e6532
+Generated: 2026-09-29T18:03:19Z
+Source repository commit: 1720f79b4bd1fdedb0a4346a06c2efa9eec25449
 Member count: 9
 
 Reading order:
@@ -30,8 +30,8 @@ Reading order:
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                         28 September 2026
-Expires: 1 April 2027
+Intended status: Informational                         29 September 2026
+Expires: 2 April 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -84,7 +84,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 1 April 2027.
+   This Internet-Draft will expire on 2 April 2027.
 
 Copyright Notice
 
@@ -1165,18 +1165,23 @@ Table of Contents
       outside the trusted base and assumed compromisable
       ([I-D.draft-mcguinness-oauth-mission]).
 
-      A deployment may authenticate concrete agent instances under the
-      client-instance-assertion profile and its AI-agent profile
-      ([I-D.draft-mcguinness-oauth-client-instance-assertion],
-      [I-D.draft-mcguinness-oauth-ai-agent-instance]), which sharpens
-      delegation chains, joins, and evidence attribution to instance
-      granularity without touching the Mission model.  Attestation-based
-      client authentication and SPIFFE
-      ([I-D.draft-ietf-oauth-attestation-based-client-auth],
-      [I-D.draft-ietf-oauth-spiffe-client-auth]) can supply client-
-      instance authentication and workload credentials beneath these
-      profiles; they do not define the Mission actor, delegation,
-      intent, lifecycle, or evidence semantics defined here.
+      A deployment may authenticate concrete agent instances with client
+      instance identification for attestation-based client
+      authentication, endorsing its attesters in client metadata
+      ([I-D.draft-mcguinness-oauth-client-instance-id],
+      [I-D.draft-mcguinness-oauth-client-attesters]), which sharpens
+      joins and evidence attribution to instance granularity without
+      touching the Mission model; instance evidence alone identifies no
+      actor or delegate
+      ([I-D.draft-mcguinness-oauth-client-instance-id], Section 5).
+      Attestation-based client authentication
+      ([I-D.draft-ietf-oauth-attestation-based-client-auth]) is the
+      substrate that profile extends, and SPIFFE
+      ([I-D.draft-ietf-oauth-spiffe-client-auth]) supplies workload
+      credentials that on their own convey no instance identity under it
+      ([I-D.draft-mcguinness-oauth-client-instance-id], Section 8.2);
+      none of them defines the Mission actor, delegation, intent,
+      lifecycle, or evidence semantics defined here.
 
    Subject:  The user or system on whose behalf the Mission is approved,
       an (iss, sub) pair recorded immutably at approval (the OAuth
@@ -1378,11 +1383,11 @@ Table of Contents
    Each has its own owner, lifecycle, and revocation, and the model
    stays clean only while none absorbs another's job:
 
-   Agent identity (who is acting):  The logical agent and, where the
-      instance profiles are deployed, the concrete instance (Section 9).
-      Owned by the deployment's agent IAM, a registry or directory
-      outside this family, and consumed as the client_id, the instance
-      assertion, and verified instance claims.
+   Agent identity (who is acting):  The logical agent and, where client
+      instance identification is deployed, the concrete instance
+      (Section 9).  Owned by the deployment's agent IAM, a registry or
+      directory outside this family, and consumed as the client_id, the
+      client-instance attestation, and validated Instance Context.
 
    Agent Deployment (what is running):  The approved behavioral version
       of the agent: its code, model, system prompt, tool allowlist, data
@@ -1435,9 +1440,10 @@ Table of Contents
 
    The assurance levels add binding strength in the same order a
    deployment adds it: authority is issued to an authenticated client;
-   instance assertion pins the concrete instance; sender-constraint keys
-   pin possession; attested runtimes pin the execution environment; and
-   an Agent Deployment pin holds the behavioral version (Section 13).
+   client-instance attestation pins the concrete instance; sender-
+   constraint keys pin possession; attested runtimes pin the execution
+   environment; and an Agent Deployment pin holds the behavioral version
+   (Section 13).
 
    The division of labor with agent IAM is one sentence: agent identity
    preserves who is acting, and the Mission preserves why their
@@ -1460,22 +1466,23 @@ Table of Contents
    Binding profile that a deployment wanting this pin implements
    ([I-D.draft-mcguinness-oauth-mission]).  Late binding is attestation:
    an instance joins the work by authenticating as the pinned Deployment
-   under the instance profiles
-   ([I-D.draft-mcguinness-oauth-client-instance-assertion],
-   [I-D.draft-mcguinness-oauth-ai-agent-instance]), not by receiving a
+   with its own Client Attestation
+   ([I-D.draft-mcguinness-oauth-client-instance-id]), not by receiving a
    credential from a peer.  The invariant is class-grain authorization,
    instance-grain attribution: the class, the Agent Deployment projected
    as client_id, is an authorization subject, never an attribution
    subject, and attribution stays per-instance through the instance
-   substrate, which forbids a sender-constraint key shared across a
-   client's instances.  The OAuth binding's derivation_limit is not a
-   fan-out or concurrency ceiling: it counts issuance events, not
-   instances, and a single instance refreshing repeatedly consumes it
-   exactly as one selector among N instances deriving once each would.
-   What actually bounds a swarm's aggregate consumption is the metering
-   profile's Mission-grain budget: consumption bounds attach to the
-   Mission, not to any one instance, so a swarm of instances shares one
-   budget ([I-D.draft-mcguinness-mission-metering]).
+   substrate, which attributes a presentation to an instance only under
+   a sender-constraint key unique to it
+   ([I-D.draft-mcguinness-oauth-client-instance-id], Section 7.3).  The
+   OAuth binding's derivation_limit is not a fan-out or concurrency
+   ceiling: it counts issuance events, not instances, and a single
+   instance refreshing repeatedly consumes it exactly as one selector
+   among N instances deriving once each would.  What actually bounds a
+   swarm's aggregate consumption is the metering profile's Mission-grain
+   budget: consumption bounds attach to the Mission, not to any one
+   instance, so a swarm of instances shares one budget
+   ([I-D.draft-mcguinness-mission-metering]).
 
    The decision ladder:
 
@@ -3048,11 +3055,14 @@ Table of Contents
    a trusted harness supplies work-item-bound where its attacher
    requirements hold; a native or issuance-grant-derived token is
    credential-mission-bound, and presenter-key-bound where its
-   confirmation binding is in force end to end; an authenticated client-
-   instance assertion with a verified key binding is what makes a path
-   instance-bound; a verified transaction token is the portable action-
-   bound form, and an AuthZEN runtime permit is the channel-bound form
-   under that binding's conditions.
+   confirmation binding is in force end to end; Instance Context whose
+   association with the presenter is established, over an instance-
+   unique confirmation key and, for context preserved from an input
+   token, authenticated provenance
+   ([I-D.draft-mcguinness-oauth-client-instance-id], Sections 7.3 and
+   7.5), is what makes a path instance-bound; a verified transaction
+   token is the portable action-bound form, and an AuthZEN runtime
+   permit is the channel-bound form under that binding's conditions.
 
    The property names above are stable identifiers, and a claim is a
    per-path declaration, not prose: each claimed property or composition
@@ -4196,19 +4206,20 @@ Table of Contents
               2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-mission-uma.html>.
 
-   [I-D.draft-mcguinness-oauth-ai-agent-instance]
-              McGuinness, K., "OAuth 2.0 AI Agent Instance Profile",
+   [I-D.draft-mcguinness-oauth-client-attesters]
+              McGuinness, K., "OAuth 2.0 Client Attester Endorsement",
               Work in Progress, Internet-Draft, draft-mcguinness-oauth-
-              ai-agent-instance-00, 4 July 2026,
+              client-attesters-00, 28 September 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-ai-agent-instance-00>.
+              oauth-client-attesters-00>.
 
-   [I-D.draft-mcguinness-oauth-client-instance-assertion]
-              McGuinness, K., "OAuth 2.0 Client Instance Assertion",
-              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
-              client-instance-assertion-01, 24 June 2026,
+   [I-D.draft-mcguinness-oauth-client-instance-id]
+              McGuinness, K., "Client Instance Identification for
+              Attestation-Based Client Authentication", Work in
+              Progress, Internet-Draft, draft-mcguinness-oauth-client-
+              instance-id-00, 28 September 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-client-instance-assertion-01>.
+              oauth-client-instance-id-00>.
 
    [I-D.draft-mcguinness-oauth-id-continuation-assertion]
               McGuinness, K., "Identity Continuation Assertion for OAuth
@@ -4366,6 +4377,15 @@ Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
 
+   *  Client-instance references follow their successors: draft-
+      mcguinness-oauth-client-instance-assertion is replaced by {I-
+      D.draft-mcguinness-oauth-client-instance-id} and
+      [I-D.draft-mcguinness-oauth-client-attesters], and the deprecated
+      draft-mcguinness-oauth-ai-agent-instance is no longer cited.
+      Instance identity is a client-instance attestation and validated
+      Instance Context, attribution needs an instance-unique key, and
+      instance evidence identifies no actor.  No requirement changed.
+
    *  Linked the OAuth binding's informative derivation-policy appendix
       from the authority derivation boundary (#309).
 
@@ -4454,8 +4474,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       28 September 2026
-Expires: 1 April 2027
+Intended status: Standards Track                       29 September 2026
+Expires: 2 April 2027
 
 
                      Mission Substrate Requirements
@@ -4513,7 +4533,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 1 April 2027.
+   This Internet-Draft will expire on 2 April 2027.
 
 Copyright Notice
 
@@ -5997,8 +6017,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       28 September 2026
-Expires: 1 April 2027
+Intended status: Standards Track                       29 September 2026
+Expires: 2 April 2027
 
 
                Mission-Bound Authorization for OAuth 2.0
@@ -6057,7 +6077,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 1 April 2027.
+   This Internet-Draft will expire on 2 April 2027.
 
 Copyright Notice
 
@@ -6128,10 +6148,11 @@ Table of Contents
      11.4.  Introspected Token Consumption
      11.5.  Examples
    12. Delegation Within a Mission
-     12.1.  Adopted Model: client_id Names the Requesting Client
-     12.2.  Self-Exchange Down-Scoping
-     12.3.  Delegation Constraints
-     12.4.  Worked Example: Delegated Token
+     12.1.  Instance Context in Delegated Tokens
+     12.2.  Adopted Model: client_id Names the Requesting Client
+     12.3.  Self-Exchange Down-Scoping
+     12.4.  Delegation Constraints
+     12.5.  Worked Example: Delegated Token
    13. Extensibility
      13.1.  Namespace Taxonomy
    14. Authorization Server Metadata
@@ -7533,7 +7554,7 @@ Table of Contents
       the same way regardless of type;
 
    *  narrowing and delegation use the subset semantics the type defines
-      (Section 5.1, Section 12.3).  A type whose subset and delegation
+      (Section 5.1, Section 12.4).  A type whose subset and delegation
       semantics the AS does not understand MUST NOT be delegated,
       audience-projected to a Resource AS, or narrowed: the AS cannot
       prove a transformed copy is still a subset of what was approved.
@@ -7964,7 +7985,7 @@ Table of Contents
 
    A Token Exchange derivation ([RFC8693]) that returns only an access
    token establishes no new grant lineage: ordinary in-Mission
-   delegation (Section 12) and self-exchange down-scoping (Section 12.2)
+   delegation (Section 12) and self-exchange down-scoping (Section 12.3)
    both work this way, and the issued token is a derived token
    (Section 9.2) whose mission claim identifies the one Mission its
    subject_token's binding resolved to.  A Token Exchange that instead
@@ -9222,7 +9243,7 @@ Table of Contents
    *  MUST treat client_id per its ordinary meaning under [RFC8693]
       Section 4.3 and [RFC9068] Section 2.2: the OAuth client that
       requested this token.  This profile does not redefine it, on a
-      delegated token or otherwise (Section 12.1).  The Mission's
+      delegated token or otherwise (Section 12.2).  The Mission's
       originally-approved agent is not carried on the token; it is
       recorded in the Mission Record (Section 8) at the issuer, and a
       Resource Server MUST NOT infer that identity from client_id.
@@ -9605,82 +9626,95 @@ Table of Contents
    codes (Section 4.1, Section 5, Section 6.1, Section 10.2,
    Section 9.3) applies this mapping and does not restate it.
 
-   +=====================+================================+=================+
-   |Surface / failing    |Base OAuth error                |Optional detail  |
-   |input                |                                |                 |
-   +=====================+================================+=================+
-   |PAR: malformed       |invalid_request                 |safe             |
-   |Mission envelope or  |                                |error_description|
-   |Intent (schema,      |                                |                 |
-   |unknown member,      |                                |                 |
-   |invalid value)       |                                |                 |
-   +---------------------+--------------------------------+-----------------+
-   |PAR or authorization:|invalid_authorization_details   |RAR-defined      |
-   |malformed or         |([RFC9396])                     |detail           |
-   |unsupported actual   |                                |                 |
-   |RAR object (an entry |                                |                 |
-   |of a submitted       |                                |                 |
-   |authorization_details|                                |                 |
-   |proposal)            |                                |                 |
-   +---------------------+--------------------------------+-----------------+
-   |Authorization or     |invalid_target ([RFC8707])      |safe             |
-   |token request:       |                                |error_description|
-   |invalid, unknown, or |                                |                 |
-   |malformed actual RFC |                                |                 |
-   |8707 resource        |                                |                 |
-   |parameter            |                                |                 |
-   +---------------------+--------------------------------+-----------------+
-   |Authorization        |access_denied ([RFC6749])       |none unless a    |
-   |decision: the        |                                |defined extension|
-   |Approver declines,   |                                |applies          |
-   |approval             |                                |                 |
-   |authentication fails |                                |                 |
-   |the floor or a       |                                |                 |
-   |requested acr_values/|                                |                 |
-   |max_age, or a well-  |                                |                 |
-   |formed request       |                                |                 |
-   |(including           |                                |                 |
-   |configured-mapping   |                                |                 |
-   |mode) is refused by  |                                |                 |
-   |AS policy            |                                |                 |
-   +---------------------+--------------------------------+-----------------+
-   |Token endpoint: the  |invalid_grant                   |mission_error    |
-   |Mission is revoked,  |                                |(Section 20)     |
-   |expired, superseded, |                                |                 |
-   |or its               |                                |                 |
-   |derivation_limit is  |                                |                 |
-   |exhausted            |                                |                 |
-   +---------------------+--------------------------------+-----------------+
-   |Token endpoint: the  |invalid_authorization_details   |safe detail      |
-   |requested RAR subset |([RFC9396])                     |                 |
-   |exceeds the Mission's|                                |                 |
-   |granted authority    |                                |                 |
-   +---------------------+--------------------------------+-----------------+
-   |Protected resource:  |insufficient_user_authentication|acr_values/      |
-   |weak or stale token- |([RFC9470])                     |max_age          |
-   |associated user      |                                |                 |
-   |authentication       |                                |                 |
-   +---------------------+--------------------------------+-----------------+
-   |Protected resource:  |DPoP invalid_token challenge    |none             |
-   |DPoP proof missing,  |([RFC9449])                     |                 |
-   |invalid, or          |                                |                 |
-   |mismatched           |                                |                 |
-   +---------------------+--------------------------------+-----------------+
-   |Protected resource:  |DPoP use_dpop_nonce challenge   |fresh nonce      |
-   |DPoP nonce required, |([RFC9449])                     |                 |
-   |missing, or stale    |                                |                 |
-   +---------------------+--------------------------------+-----------------+
-   |Protected resource:  |Bearer invalid_token challenge  |none             |
-   |certificate-bound    |([RFC6750], per [RFC8705]       |                 |
-   |token's presented    |Section 3)                      |                 |
-   |certificate mismatch |                                |                 |
-   +---------------------+--------------------------------+-----------------+
-   |Protected resource:  |insufficient_scope ([RFC6750])  |mission_denial   |
-   |insufficient carried |or the RAR-remediation challenge|(Section 9.3),   |
-   |authority, or an     |(Section 9.5)                   |minimized        |
-   |unenforceable        |                                |                 |
-   |constraint           |                                |                 |
-   +---------------------+--------------------------------+-----------------+
+   +=====================+=================================================+=================+
+   |Surface / failing    |Base OAuth error                                 |Optional detail  |
+   |input                |                                                 |                 |
+   +=====================+=================================================+=================+
+   |PAR: malformed       |invalid_request                                  |safe             |
+   |Mission envelope or  |                                                 |error_description|
+   |Intent (schema,      |                                                 |                 |
+   |unknown member,      |                                                 |                 |
+   |invalid value)       |                                                 |                 |
+   +---------------------+-------------------------------------------------+-----------------+
+   |PAR or authorization:|invalid_authorization_details ([RFC9396])        |RAR-defined      |
+   |malformed or         |                                                 |detail           |
+   |unsupported actual   |                                                 |                 |
+   |RAR object (an entry |                                                 |                 |
+   |of a submitted       |                                                 |                 |
+   |authorization_details|                                                 |                 |
+   |proposal)            |                                                 |                 |
+   +---------------------+-------------------------------------------------+-----------------+
+   |Authorization or     |invalid_target ([RFC8707])                       |safe             |
+   |token request:       |                                                 |error_description|
+   |invalid, unknown, or |                                                 |                 |
+   |malformed actual RFC |                                                 |                 |
+   |8707 resource        |                                                 |                 |
+   |parameter            |                                                 |                 |
+   +---------------------+-------------------------------------------------+-----------------+
+   |Authorization        |access_denied ([RFC6749])                        |none unless a    |
+   |decision: the        |                                                 |defined extension|
+   |Approver declines,   |                                                 |applies          |
+   |approval             |                                                 |                 |
+   |authentication fails |                                                 |                 |
+   |the floor or a       |                                                 |                 |
+   |requested acr_values/|                                                 |                 |
+   |max_age, or a well-  |                                                 |                 |
+   |formed request       |                                                 |                 |
+   |(including           |                                                 |                 |
+   |configured-mapping   |                                                 |                 |
+   |mode) is refused by  |                                                 |                 |
+   |AS policy            |                                                 |                 |
+   +---------------------+-------------------------------------------------+-----------------+
+   |Token endpoint: the  |invalid_grant                                    |mission_error    |
+   |Mission is revoked,  |                                                 |(Section 20)     |
+   |expired, superseded, |                                                 |                 |
+   |or its               |                                                 |                 |
+   |derivation_limit is  |                                                 |                 |
+   |exhausted            |                                                 |                 |
+   +---------------------+-------------------------------------------------+-----------------+
+   |Token endpoint: the  |invalid_authorization_details ([RFC9396])        |safe detail      |
+   |requested RAR subset |                                                 |                 |
+   |exceeds the Mission's|                                                 |                 |
+   |granted authority    |                                                 |                 |
+   +---------------------+-------------------------------------------------+-----------------+
+   |Token exchange using |invalid_client_attestation                       |no instance-     |
+   |Section 12.1:        |([I-D.draft-mcguinness-oauth-client-instance-id],|identity         |
+   |required Client      |Section 5.2)                                     |disclosure       |
+   |Attestation fails    |                                                 |                 |
+   |validation           |                                                 |                 |
+   +---------------------+-------------------------------------------------+-----------------+
+   |Token exchange using |invalid_request ([RFC8693])                      |no instance-     |
+   |Section 12.1:        |                                                 |identity         |
+   |required instance-to-|                                                 |disclosure       |
+   |delegate or output-  |                                                 |                 |
+   |key association      |                                                 |                 |
+   |cannot be established|                                                 |                 |
+   +---------------------+-------------------------------------------------+-----------------+
+   |Protected resource:  |insufficient_user_authentication ([RFC9470])     |acr_values/      |
+   |weak or stale token- |                                                 |max_age          |
+   |associated user      |                                                 |                 |
+   |authentication       |                                                 |                 |
+   +---------------------+-------------------------------------------------+-----------------+
+   |Protected resource:  |DPoP invalid_token challenge ([RFC9449])         |none             |
+   |DPoP proof missing,  |                                                 |                 |
+   |invalid, or          |                                                 |                 |
+   |mismatched           |                                                 |                 |
+   +---------------------+-------------------------------------------------+-----------------+
+   |Protected resource:  |DPoP use_dpop_nonce challenge ([RFC9449])        |fresh nonce      |
+   |DPoP nonce required, |                                                 |                 |
+   |missing, or stale    |                                                 |                 |
+   +---------------------+-------------------------------------------------+-----------------+
+   |Protected resource:  |Bearer invalid_token challenge ([RFC6750], per   |none             |
+   |certificate-bound    |[RFC8705] Section 3)                             |                 |
+   |token's presented    |                                                 |                 |
+   |certificate mismatch |                                                 |                 |
+   +---------------------+-------------------------------------------------+-----------------+
+   |Protected resource:  |insufficient_scope ([RFC6750]) or the RAR-       |mission_denial   |
+   |insufficient carried |remediation challenge (Section 9.5)              |(Section 9.3),   |
+   |authority, or an     |                                                 |minimized        |
+   |unenforceable        |                                                 |                 |
+   |constraint           |                                                 |                 |
+   +---------------------+-------------------------------------------------+-----------------+
 
         Table 4: Endpoint x parameter x failure-stage error mapping
 
@@ -10139,7 +10173,7 @@ Table of Contents
       urn:ietf:params:oauth:token-type:access_token.  The delegate is
       identified by an actor_token (with its actor_token_type) or by its
       own client authentication, and the AS asserts the actor itself
-      (Section 12.3).  A client instance's Client Attestation
+      (Section 12.4).  A client instance's Client Attestation
       ([I-D.draft-mcguinness-oauth-client-instance-id]) authenticates
       the instance, not the actor it represents; establishing that actor
       is a separate step, described below.  A requested_token_type of
@@ -10200,7 +10234,7 @@ Table of Contents
    organization, network, or deployment topology by itself restarts or
    extends a chain.  The chain is attribution, never authority: an act
    entry names who acted, for audit and as policy input to the
-   eligibility matching of Section 12.3, while an asserted actor
+   eligibility matching of Section 12.4, while an asserted actor
    identity grants nothing, and a consumer MUST NOT treat the chain as
    proof that authority narrowed; the authorization_details subset
    relations prove that (Section 5.1).
@@ -10221,15 +10255,63 @@ Table of Contents
    not a member inside act, the current presenter's key
    ([I-D.draft-mcguinness-oauth-actor-profile]).  Carrying the instance
    itself in a delegated token's client_instance claim is a separate
-   question: it needs a consuming profile under
-   [I-D.draft-mcguinness-oauth-client-instance-id], Section 7.4, and
-   this document defines none.  An allowed_delegates matcher selects
-   delegates by actor type (Section 12.3), for example { "sub_profile":
-   "ai_agent" }; the Actor Profile
-   [I-D.draft-mcguinness-oauth-actor-profile] is the structural
+   question, addressed by the optional consuming rules in Section 12.1.
+   An allowed_delegates matcher selects delegates by actor type
+   (Section 12.4), for example { "sub_profile": "ai_agent" }; the Actor
+   Profile [I-D.draft-mcguinness-oauth-actor-profile] is the structural
    reference for the actor object and its sub_profile classification.
 
-12.1.  Adopted Model: client_id Names the Requesting Client
+12.1.  Instance Context in Delegated Tokens
+
+   A deployment MAY convey client_instance in delegated tokens under
+   [I-D.draft-mcguinness-oauth-client-instance-id].  This optional
+   composition selects the authenticated presenting instance for output
+   context.  The instance specification owns attestation validation,
+   instance-to-key association, audience-scoped mapping, and Context
+   Consumer validation; this section supplies the Mission-specific
+   authorization and context selection.  It introduces no request
+   parameter or discovery member, and deployments configure its use and
+   whether instance attribution is required.
+
+   When issuing context under this composition, the AS MUST validate the
+   presenting instance's Client Attestation and proof for the exchange,
+   establish its trusted association with the separately authenticated
+   delegate, and bind the output token to an instance-unique key whose
+   possession it verified in that exchange.  Context is mapped from that
+   validated instance into the output audience's Consumer Scope under
+   [I-D.draft-mcguinness-oauth-client-instance-id], Section 7.1.  The AS
+   MUST NOT use context copied or remapped from an input token as a
+   substitute for the presenting instance's evidence.  Thus, when
+   instance B is authorized to continue work from instance A, output
+   context names B; A's context does not become B's identity by
+   remapping it.
+
+   The actor authentication, delegation eligibility, subset, and
+   lifecycle checks of Section 12 and Section 12.4 still authorize the
+   exchange; instance evidence satisfies none of them by itself.  Where
+   deployment policy requires instance attribution, the AS MUST refuse
+   the exchange if the required instance evidence or its association
+   with the delegate and output key cannot be established.  Client
+   Attestation failures use the errors of
+   [I-D.draft-mcguinness-oauth-client-instance-id], Section 5.2; other
+   failures to establish the required association use invalid_request
+   ([RFC8693], Section 2.2.2).  If the exchange issues a refresh token,
+   the instance specification's Section 5.1 grant-continuity rules apply
+   alongside Section 6.2; instance continuity alone does not authorize
+   replacement of the recorded instance or key rebinding.
+
+   Consumers establish presenter attribution under
+   [I-D.draft-mcguinness-oauth-client-instance-id], Sections 7.3 and
+   7.5.  This composition does not add provenance to client_instance: a
+   consumer can use the direct-attestation trust configuration only when
+   the issuer meets that configuration's restriction against upstream
+   context.  An issuer also conveying upstream context needs a
+   separately specified, authenticated provenance mechanism before its
+   context can support presenter attribution.  A consumer requiring
+   attribution rejects unestablished associations under the instance
+   specification's Section 7.6.
+
+12.2.  Adopted Model: client_id Names the Requesting Client
 
    This profile keeps client_id's registered meaning, stated normatively
    in Section 9 and enforced in Section 9.3: the OAuth client that
@@ -10250,7 +10332,7 @@ Table of Contents
    process, a Mission-unaware Resource Server cannot opt into that need,
    and routing a delegated token to one therefore remains forbidden.
 
-12.2.  Self-Exchange Down-Scoping
+12.3.  Self-Exchange Down-Scoping
 
    An agent MAY present its own Mission-bound access token as the
    subject_token of a Token Exchange ([RFC8693]) with no actor, to
@@ -10266,7 +10348,7 @@ Table of Contents
    actor, it does not delegate: it re-scopes the agent's own authority
    downward.
 
-12.3.  Delegation Constraints
+12.4.  Delegation Constraints
 
    What may be delegated, how far, and to whom is governed per Authority
    Set entry by a type-defined delegation policy (Section 5.2) (for
@@ -10317,7 +10399,7 @@ Table of Contents
    already-narrowed authorization_details and enforces those as usual
    (Section 9).
 
-12.4.  Worked Example: Delegated Token
+12.5.  Worked Example: Delegated Token
 
    Suppose the Mission's Authority Set has two entries on the ERP:
    invoices.read, delegable to ai_agent actors through depth 2; and
@@ -10362,7 +10444,7 @@ Table of Contents
 
    sub is still the user. client_id is now tool-runner-7, the delegate
    that authenticated the Token Exchange and requested this token
-   (Section 12.1); client_id and the outermost act coincide here because
+   (Section 12.2); client_id and the outermost act coincide here because
    tool-runner-7 authenticated the exchange itself, not because this
    profile requires the two to match.  A deployment where a different,
    already-authenticated client requests the exchange on a delegate's
@@ -11085,7 +11167,7 @@ Table of Contents
    compromised actor can act only within the authority it was delegated,
    for the lifetime of the token it holds: the exposure of any actor is
    bounded by its narrowed authorization_details times its token
-   lifetime.  The per-entry delegation constraints (Section 12.3) bound
+   lifetime.  The per-entry delegation constraints (Section 12.4) bound
    this exposure at approval time: non-delegable entries never reach a
    delegate at all, max_depth caps how far an entry can propagate, and
    allowed_delegates restricts who may receive it.  Note that max_depth
@@ -11106,10 +11188,10 @@ Table of Contents
    as a subject_token, would launder into a fresh delegated credential
    bound to the presenter.  The gates above bound it: the exchange is a
    derivation gated on Mission state, the AS applies delegation-
-   authorization policy at every exchange (Section 12.3), the result is
+   authorization policy at every exchange (Section 12.4), the result is
    bound to the authenticated delegate's own key and narrowed by the
    subset rule, and a no-actor exchange is accepted only from the
-   Mission's approved agent (Section 12.2).  Sender-constraining the
+   Mission's approved agent (Section 12.3).  Sender-constraining the
    primary token (Section 9) closes the remaining gap, since a token
    stolen from an audience then fails presentation at the token
    endpoint.
@@ -11117,7 +11199,7 @@ Table of Contents
 17.4.3.  client_id Conformance and the Approved-Agent Residual
 
    Because this profile keeps client_id's ordinary [RFC9068] meaning
-   (Section 12.1), a generic [RFC9068] Resource Server, or a logging,
+   (Section 12.2), a generic [RFC9068] Resource Server, or a logging,
    SIEM, or audit pipeline built for ordinary OAuth tokens, that keys
    identity and attribution on client_id attributes a Mission-derived
    token, delegated or not, to the correct requesting client without
@@ -11201,7 +11283,7 @@ Table of Contents
 
 17.5.3.  Composition and the Effective Ceiling
 
-   Delegation depth (Section 12.3) resets to 0 at each cross-domain hop
+   Delegation depth (Section 12.4) resets to 0 at each cross-domain hop
    ([I-D.draft-mcguinness-oauth-mission-cross-domain]) and, where a
    deployment runs the child-delegation profile, at each child
    generation ([I-D.draft-mcguinness-oauth-mission-child-delegation]).
@@ -11801,6 +11883,14 @@ Table of Contents
 
 21.1.  Normative References
 
+   [I-D.draft-mcguinness-oauth-client-instance-id]
+              McGuinness, K., "Client Instance Identification for
+              Attestation-Based Client Authentication", Work in
+              Progress, Internet-Draft, draft-mcguinness-oauth-client-
+              instance-id-00, 28 September 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-client-instance-id-00>.
+
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
               DOI 10.17487/RFC2119, March 1997,
@@ -12054,14 +12144,6 @@ Table of Contents
               client-attesters-00, 28 September 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
               oauth-client-attesters-00>.
-
-   [I-D.draft-mcguinness-oauth-client-instance-id]
-              McGuinness, K., "Client Instance Identification for
-              Attestation-Based Client Authentication", Work in
-              Progress, Internet-Draft, draft-mcguinness-oauth-client-
-              instance-id-00, 28 September 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-client-instance-id-00>.
 
    [I-D.draft-mcguinness-oauth-mission-approval]
               McGuinness, K., "Mission Deferred Approval for OAuth 2.0",
@@ -12964,6 +13046,11 @@ Appendix E.  Document History
 
    -01
 
+   *  Define optional current-presenter Instance Context consumption for
+      delegated tokens.  Reuse the instance specification for validation
+      and mapping; retain Mission actor, authority, and lifecycle checks
+      for authorization.  Required attribution fails closed.
+
    *  Added an informative derivation-policy appendix with an admissible
       split-action worked rule, authoring fixtures and ownership
       guidance; no normative requirements were added.
@@ -13378,8 +13465,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       28 September 2026
-Expires: 1 April 2027
+Intended status: Standards Track                       29 September 2026
+Expires: 2 April 2027
 
 
                Mission Status and Lifecycle for OAuth 2.0
@@ -13431,7 +13518,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 1 April 2027.
+   This Internet-Draft will expire on 2 April 2027.
 
 Copyright Notice
 
@@ -15376,8 +15463,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       28 September 2026
-Expires: 1 April 2027
+Intended status: Standards Track                       29 September 2026
+Expires: 2 April 2027
 
 
                    Mission-Bound Runtime Enforcement
@@ -15436,7 +15523,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 1 April 2027.
+   This Internet-Draft will expire on 2 April 2027.
 
 Copyright Notice
 
@@ -16168,12 +16255,13 @@ Table of Contents
    documents them as runtime Resource policy, but a deployment MAY apply
    additional actor-sensitive Resource policy (Section 2.7.3).
 
-   A credential issuer can verify actor attributes under an attested-
+   A credential issuer can verify instance attributes under an attested-
    instance profile (the OAuth one is
-   [I-D.draft-mcguinness-oauth-ai-agent-instance]).  Such attester-
-   verified actor context is input a deployment's Resource policy MAY
-   evaluate; unlike a self-asserted model or instance label, it is
-   attester-backed.
+   [I-D.draft-mcguinness-oauth-client-instance-id], whose Instance
+   Context identifies an instance and grants no authority).  Such
+   attester-verified actor context is input a deployment's Resource
+   policy MAY evaluate; unlike a self-asserted model or instance label,
+   it is attester-backed.
 
    Where the deployment operates an agent registry, the immediate
    actor's registry state (status, revocation, approved deployment
@@ -17323,21 +17411,21 @@ Table of Contents
    to a deployment built this way, and a developer laptop with a shell
    is outside them by construction, not by configuration.
 
-   Where the deployment issues tokens under the client-instance-
-   assertion profile
-   ([I-D.draft-mcguinness-oauth-client-instance-assertion]), the sender-
-   constraint key is instance-specific: that profile forbids a key
-   shared across a client's instances.  Mediated custody composes with
-   that rule in either of two shapes:
+   Where the deployment attributes presentations to client instances
+   ([I-D.draft-mcguinness-oauth-client-instance-id]), the sender-
+   constraint key is instance-specific: that profile attributes a
+   presentation to an instance only under a key unique to it
+   ([I-D.draft-mcguinness-oauth-client-instance-id], Section 7.3).
+   Mediated custody composes with that rule in either of two shapes:
 
    *  the mediating PEP holds per-instance keys, taking custody of each
       instance's key rather than one shared key; or
 
    *  the mediating PEP is itself the attested instance that obtained
-      the token, presenting the instance assertion and holding the
+      the token, presenting its own Client Attestation and holding the
       instance key.
 
-   In both shapes that profile's no-shared-key rule and this section's
+   In both shapes that profile's instance-unique key and this section's
    custody rules are satisfied together.
 
    Attestation-based client authentication and SPIFFE
@@ -18506,19 +18594,17 @@ Table of Contents
    reference values it is appraised against, the appraisal policy
    applied, the attester identity, and a checkable nonce, timestamp, or
    session-binding freshness rule.  Entity Attestation Token ([RFC9711])
-   evidence, carried under the AI-agent-instance profile
-   ([I-D.draft-mcguinness-oauth-ai-agent-instance]), establishes the
-   execution-environment fact a row assigns to it only against those
-   selections; where a selection this paragraph names is absent, the
-   token is a declaration or evidence input, not proof, and the named
-   claim is unavailable on the same terms.  Verified EAT evidence does
-   not by itself establish the exposure, approval, rendering, freshness,
-   path, or topology facts the table assigns elsewhere, and a deployment
-   MUST NOT represent EAT evidence alone as satisfying those.  The
-   requirement is scoped to these two High-Assurance Agent claims; base
-   runtime conformance does not require this evidence map, and a
-   deployment claiming only the base profile MAY publish its scope
-   statement unattested.
+   evidence establishes the execution-environment fact a row assigns to
+   it only against those selections; where a selection this paragraph
+   names is absent, the token is a declaration or evidence input, not
+   proof, and the named claim is unavailable on the same terms.
+   Verified EAT evidence does not by itself establish the exposure,
+   approval, rendering, freshness, path, or topology facts the table
+   assigns elsewhere, and a deployment MUST NOT represent EAT evidence
+   alone as satisfying those.  The requirement is scoped to these two
+   High-Assurance Agent claims; base runtime conformance does not
+   require this evidence map, and a deployment claiming only the base
+   profile MAY publish its scope statement unattested.
 
 11.  Consumption Bounds Fail Closed
 
@@ -19092,8 +19178,8 @@ Table of Contents
       of the execution environment: actor-signed hop proofs
       ([I-D.draft-mcguinness-oauth-actor-proofs]), issuer-signed hop
       receipts ([I-D.draft-mcguinness-oauth-actor-receipts]), and
-      attested agent-instance identity
-      ([I-D.draft-mcguinness-oauth-ai-agent-instance]) specify these,
+      attested client-instance identity
+      ([I-D.draft-mcguinness-oauth-client-instance-id]) specify these,
       and this profile consumes their results as credential-derived
       facts where present;
 
@@ -19523,19 +19609,13 @@ Table of Contents
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
               oauth-actor-receipts-00>.
 
-   [I-D.draft-mcguinness-oauth-ai-agent-instance]
-              McGuinness, K., "OAuth 2.0 AI Agent Instance Profile",
-              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
-              ai-agent-instance-00, 4 July 2026,
+   [I-D.draft-mcguinness-oauth-client-instance-id]
+              McGuinness, K., "Client Instance Identification for
+              Attestation-Based Client Authentication", Work in
+              Progress, Internet-Draft, draft-mcguinness-oauth-client-
+              instance-id-00, 28 September 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-ai-agent-instance-00>.
-
-   [I-D.draft-mcguinness-oauth-client-instance-assertion]
-              McGuinness, K., "OAuth 2.0 Client Instance Assertion",
-              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
-              client-instance-assertion-01, 24 June 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-client-instance-assertion-01>.
+              oauth-client-instance-id-00>.
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
@@ -19754,6 +19834,15 @@ Appendix D.  Document History
 
    [[ To be removed from the final specification ]]
 
+   *  Client-instance references follow their successors: draft-
+      mcguinness-oauth-client-instance-assertion is replaced by {I-
+      D.draft-mcguinness-oauth-client-instance-id}, and the deprecated
+      draft-mcguinness-oauth-ai-agent-instance is no longer cited.
+      Attester-verified context is instance identity that grants no
+      authority, custody's per-instance key follows the successor's
+      instance-unique key for attribution, and EAT evidence is no longer
+      tied to a carrier profile.  No requirement changed.
+
    *  Added approval-resolution rule 5, the agent-invokable approval
       bypass, and its negative-conformance case (#759).  Observing or
       requesting an independent approval is distinct from resolving it.
@@ -19806,8 +19895,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       28 September 2026
-Expires: 1 April 2027
+Intended status: Standards Track                       29 September 2026
+Expires: 2 April 2027
 
 
                         Mission Runtime Evidence
@@ -19857,7 +19946,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 1 April 2027.
+   This Internet-Draft will expire on 2 April 2027.
 
 Copyright Notice
 
@@ -22366,8 +22455,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       28 September 2026
-Expires: 1 April 2027
+Intended status: Standards Track                       29 September 2026
+Expires: 2 April 2027
 
 
            Mission-Bound Runtime Enforcement: AuthZEN Profile
@@ -22423,7 +22512,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 1 April 2027.
+   This Internet-Draft will expire on 2 April 2027.
 
 Copyright Notice
 
@@ -22729,8 +22818,8 @@ Table of Contents
 3.  Status: An Optional Profile
 
    Role: companion.  Spec maturity: experimental.  Maintenance: active.
-   Implementation: 89 conformance rows in conformance-manifest.json (17
-   tested, 7 partial, 65 todo).  Adopt when: The PDP speaks AuthZEN and
+   Implementation: 90 conformance rows in conformance-manifest.json (17
+   tested, 7 partial, 66 todo).  Adopt when: The PDP speaks AuthZEN and
    needs the decision-contract wire mapping.  Requires: Mission-Bound
    Runtime Enforcement; Mission Substrate Requirements.  Also requires,
    conditionally: Mission-Bound Authorization for OAuth 2.0 (when the
@@ -23041,15 +23130,25 @@ Table of Contents
    profile, and provenance is recorded in dedicated evidence fields
    where the deployment captures it.
 
-   Where tokens carry instance identity
-   ([I-D.draft-mcguinness-oauth-client-instance-assertion]), the act
-   entry this projection already copies carries the instance identifier
-   and, under the agent profile
-   ([I-D.draft-mcguinness-oauth-ai-agent-instance]), issuer-minted
-   provenance such as agent_instance_id and agent_model.  Fleet
-   deployments therefore get which-instance-acted attribution in
-   Decision Evidence and, through the evaluation_id link, in Execution
-   Evidence, without new members.
+   Where tokens carry Instance Context
+   ([I-D.draft-mcguinness-oauth-client-instance-id]), the PEP can set
+   client_instance_id from it once it has validated that context as a
+   Context Consumer ([I-D.draft-mcguinness-oauth-client-instance-id],
+   Section 7.5) and established its association with the current
+   presenter.  The PEP MUST NOT populate
+   context.actor.client_instance_id from context that establishes only
+   upstream instance participation.  The correlator represents the pair
+   (iss, id) without collisions across the Instance Context Authorities
+   accepted by the PDP and its evidence consumers, including when
+   separate PEPs each accept only one authority.  Attributing the
+   presentation requires the association with the presenter that
+   Section 7.5 establishes: a sender-constraint key unique to the
+   instance ([I-D.draft-mcguinness-oauth-client-instance-id],
+   Section 7.3) where the token issuer conveys context only from direct
+   Client Attestation validation, and authenticated provenance where it
+   may preserve context from an input token.  Fleet deployments then get
+   which-instance-acted attribution in Decision Evidence and, through
+   the evaluation_id link, in Execution Evidence, without new members.
 
 7.4.  Credential Decision Context
 
@@ -25256,6 +25355,14 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-substrate.html>.
 
+   [I-D.draft-mcguinness-oauth-client-instance-id]
+              McGuinness, K., "Client Instance Identification for
+              Attestation-Based Client Authentication", Work in
+              Progress, Internet-Draft, draft-mcguinness-oauth-client-
+              instance-id-00, 28 September 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-client-instance-id-00>.
+
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
@@ -25356,20 +25463,6 @@ Table of Contents
               bound-authorization/draft-mcguinness-mission-runtime-
               oauth.html>.
 
-   [I-D.draft-mcguinness-oauth-ai-agent-instance]
-              McGuinness, K., "OAuth 2.0 AI Agent Instance Profile",
-              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
-              ai-agent-instance-00, 4 July 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-ai-agent-instance-00>.
-
-   [I-D.draft-mcguinness-oauth-client-instance-assertion]
-              McGuinness, K., "OAuth 2.0 Client Instance Assertion",
-              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
-              client-instance-assertion-01, 24 June 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-client-instance-assertion-01>.
-
    [I-D.draft-mcguinness-oauth-mission-containment]
               McGuinness, K., "Mission Containment for OAuth 2.0", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
@@ -25413,8 +25506,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       28 September 2026
-Expires: 1 April 2027
+Intended status: Standards Track                       29 September 2026
+Expires: 2 April 2027
 
 
                      Mission-Aware Agent Harnesses
@@ -25466,7 +25559,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 1 April 2027.
+   This Internet-Draft will expire on 2 April 2027.
 
 Copyright Notice
 
@@ -26361,18 +26454,21 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-orchestration]).
 
    Where the deployment authenticates agent instances
-   ([I-D.draft-mcguinness-oauth-client-instance-assertion]; for AI
-   agents, [I-D.draft-mcguinness-oauth-ai-agent-instance]), the harness
-   SHOULD record the instance identifier (agent_instance_id, or the
-   instance sub) in its Mission binding (Section 7) and in sub-agent
-   termination evidence, giving stop propagation and its evidence a
-   which-runtime dimension: which concrete instance was asked to stop,
+   ([I-D.draft-mcguinness-oauth-client-instance-id]), the harness SHOULD
+   record the instance identifier it validated (for example, an Instance
+   Context's iss and id) in its Mission binding (Section 7) and in sub-
+   agent termination evidence, giving stop propagation and its evidence
+   a which-runtime dimension: which concrete instance was asked to stop,
    and which confirmed.
 
-   Sub-agent chains under the agent instance profile cannot shed
-   identity, which strengthens the fail-closed rule above: an
-   unconfirmed stop names the exact instance the harness treats as still
-   running.
+   Where the harness also keeps a durable association between each sub-
+   agent handle and the instance it validated, an unconfirmed stop names
+   the exact instance the harness treats as still running, which
+   strengthens the fail-closed rule above.  Instance Context does not
+   provide that association by itself: it is optional, an issuer may
+   omit it, and it identifies one instance, not a chain
+   ([I-D.draft-mcguinness-oauth-client-instance-id], Sections 7.1 and
+   7.4).
 
 13.  Harness Execution States
 
@@ -27236,19 +27332,13 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-security-model.html>.
 
-   [I-D.draft-mcguinness-oauth-ai-agent-instance]
-              McGuinness, K., "OAuth 2.0 AI Agent Instance Profile",
-              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
-              ai-agent-instance-00, 4 July 2026,
+   [I-D.draft-mcguinness-oauth-client-instance-id]
+              McGuinness, K., "Client Instance Identification for
+              Attestation-Based Client Authentication", Work in
+              Progress, Internet-Draft, draft-mcguinness-oauth-client-
+              instance-id-00, 28 September 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-ai-agent-instance-00>.
-
-   [I-D.draft-mcguinness-oauth-client-instance-assertion]
-              McGuinness, K., "OAuth 2.0 Client Instance Assertion",
-              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
-              client-instance-assertion-01, 24 June 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-client-instance-assertion-01>.
+              oauth-client-instance-id-00>.
 
    [I-D.draft-mcguinness-oauth-mission-child-delegation]
               McGuinness, K., "Mission Child Delegation for OAuth 2.0",
@@ -27341,6 +27431,17 @@ Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
 
+   *  Client-instance references follow their successors: draft-
+      mcguinness-oauth-client-instance-assertion is replaced by {I-
+      D.draft-mcguinness-oauth-client-instance-id}, and the deprecated
+      draft-mcguinness-oauth-ai-agent-instance is no longer cited.  The
+      harness records the instance identifier it validated, for example
+      an Instance Context's iss and id, instead of agent_instance_id or
+      an instance sub.  The retired profile's guarantee that sub-agent
+      chains cannot shed identity now depends on the harness's own
+      durable association between each sub-agent handle and its
+      instance.
+
    *  Linked the limits of provenance-backed taint control to the
       Security Model's Enforcement Perimeter and distinguished the per-
       channel egress disposition from the runtime profile's per-entry
@@ -27363,8 +27464,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       28 September 2026
-Expires: 1 April 2027
+Intended status: Standards Track                       29 September 2026
+Expires: 2 April 2027
 
 
                  Mission Consent Evidence for OAuth 2.0
@@ -27419,7 +27520,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 1 April 2027.
+   This Internet-Draft will expire on 2 April 2027.
 
 Copyright Notice
 

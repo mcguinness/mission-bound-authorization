@@ -1063,7 +1063,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 1 April 2027</td>
+<td class="center">Expires 2 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1076,12 +1076,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-architecture-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-09-28" class="published">28 September 2026</time>
+<time datetime="2026-09-29" class="published">29 September 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-01">1 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-02">2 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1141,7 +1141,7 @@ and every mechanism it names is defined by the profile it points to.<a href="#se
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 1 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 2 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -2550,18 +2550,22 @@ subject (<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="ci
 binding it holds derived Mission-bound tokens; outside the trusted
 base and assumed compromisable
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
-<p id="section-9-2.2.2">A deployment may authenticate concrete agent instances under the
-client-instance-assertion profile and its AI-agent profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>,
-<span>[<a href="#I-D.draft-mcguinness-oauth-ai-agent-instance" class="cite xref">I-D.draft-mcguinness-oauth-ai-agent-instance</a>]</span>), which sharpens
-delegation chains, joins, and evidence attribution to instance
-granularity without touching the Mission model.
-Attestation-based client authentication and SPIFFE
-(<span>[<a href="#I-D.draft-ietf-oauth-attestation-based-client-auth" class="cite xref">I-D.draft-ietf-oauth-attestation-based-client-auth</a>]</span>,
-<span>[<a href="#I-D.draft-ietf-oauth-spiffe-client-auth" class="cite xref">I-D.draft-ietf-oauth-spiffe-client-auth</a>]</span>) can supply
-client-instance authentication and workload credentials beneath
-these profiles; they do not define the Mission actor, delegation,
-intent, lifecycle, or evidence semantics defined here.<a href="#section-9-2.2.2" class="pilcrow">¶</a></p>
+<p id="section-9-2.2.2">A deployment may authenticate concrete agent instances with client
+instance identification for attestation-based client authentication,
+endorsing its attesters in client metadata
+(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-oauth-client-attesters" class="cite xref">I-D.draft-mcguinness-oauth-client-attesters</a>]</span>), which sharpens joins
+and evidence attribution to instance granularity without touching the
+Mission model; instance evidence alone identifies no actor or delegate
+(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>, Section 5).
+Attestation-based client authentication
+(<span>[<a href="#I-D.draft-ietf-oauth-attestation-based-client-auth" class="cite xref">I-D.draft-ietf-oauth-attestation-based-client-auth</a>]</span>) is the
+substrate that profile extends, and SPIFFE
+(<span>[<a href="#I-D.draft-ietf-oauth-spiffe-client-auth" class="cite xref">I-D.draft-ietf-oauth-spiffe-client-auth</a>]</span>) supplies workload
+credentials that on their own convey no instance identity under it
+(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>, Section 8.2); none
+of them defines the Mission actor, delegation, intent, lifecycle, or
+evidence semantics defined here.<a href="#section-9-2.2.2" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-9-2.3">Subject:</dt>
@@ -2830,11 +2834,11 @@ while none absorbs another's job:<a href="#section-9.2-1" class="pilcrow">¶</a>
 <span class="break"></span><dl class="dlParallel" id="section-9.2-2">
           <dt id="section-9.2-2.1">Agent identity (who is acting):</dt>
           <dd style="margin-left: 1.5em" id="section-9.2-2.2">
-            <p id="section-9.2-2.2.1">The logical agent and, where the instance profiles are deployed,
-the concrete instance (<a href="#components" class="auto internal xref">Section 9</a>). Owned by the deployment's
-agent IAM, a registry or directory outside this family, and
-consumed as the <code>client_id</code>, the instance assertion, and verified
-instance claims.<a href="#section-9.2-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-9.2-2.2.1">The logical agent and, where client instance identification is
+deployed, the concrete instance (<a href="#components" class="auto internal xref">Section 9</a>). Owned by the
+deployment's agent IAM, a registry or directory outside this family,
+and consumed as the <code>client_id</code>, the client-instance attestation, and
+validated Instance Context.<a href="#section-9.2-2.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-9.2-2.3">Agent Deployment (what is running):</dt>
@@ -2896,12 +2900,12 @@ decision may depend on agent state, Mission state, and credential
 validity, and each gates independently. A valid credential never
 overrides a revoked agent or a non-active Mission, and a live agent
 under an active Mission still fails on an expired credential.<a href="#section-9.2-6" class="pilcrow">¶</a></p>
-<p id="section-9.2-7">The assurance levels add binding strength in the same order a
-deployment adds it: authority is issued to an authenticated client;
-instance assertion pins the concrete instance; sender-constraint
-keys pin possession; attested runtimes pin the execution
-environment; and an Agent Deployment pin holds the behavioral
-version (<a href="#assurance-levels" class="auto internal xref">Section 13</a>).<a href="#section-9.2-7" class="pilcrow">¶</a></p>
+<p id="section-9.2-7">The assurance levels add binding strength in the same order a deployment
+adds it: authority is issued to an authenticated client; client-instance
+attestation pins the concrete instance; sender-constraint keys pin
+possession; attested runtimes pin the execution environment; and an
+Agent Deployment pin holds the behavioral version
+(<a href="#assurance-levels" class="auto internal xref">Section 13</a>).<a href="#section-9.2-7" class="pilcrow">¶</a></p>
 <p id="section-9.2-8">The division of labor with agent IAM is one sentence: agent identity
 preserves who is acting, and the Mission preserves why their
 authority exists. The registry and workload identity authenticate an
@@ -2921,28 +2925,28 @@ Mission pinned to an Agent Deployment class or version, executed
 concurrently by N attested instances of that Deployment, is
 multiplication, not delegation: no <code>act</code> hop, no Child Mission, no
 attenuation chain, because authority never moves between principals.
-This pin is a named architectural pattern, not a wire member the
-OAuth binding currently defines: that document reserves no Intent
-member for it and points forward to a dedicated Agent Deployment
-Binding profile that a deployment wanting this pin implements
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Late binding is
-attestation: an instance joins the work by
-authenticating as the pinned Deployment under the instance profiles
-(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-assertion" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-assertion</a>]</span>,
-<span>[<a href="#I-D.draft-mcguinness-oauth-ai-agent-instance" class="cite xref">I-D.draft-mcguinness-oauth-ai-agent-instance</a>]</span>), not by receiving
-a credential from a peer. The invariant is class-grain
-authorization, instance-grain attribution: the class, the Agent
-Deployment projected as <code>client_id</code>, is an authorization subject,
-never an attribution subject, and attribution stays per-instance
-through the instance substrate, which forbids a sender-constraint
-key shared across a client's instances. The OAuth binding's
-<code>derivation_limit</code> is not a fan-out or concurrency ceiling: it counts
-issuance events, not instances, and a single instance refreshing
-repeatedly consumes it exactly as one selector among N instances
-deriving once each would. What actually bounds a swarm's aggregate
-consumption is the metering profile's Mission-grain budget: consumption
-bounds attach to the Mission, not to any one instance, so a swarm of
-instances shares one budget (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-9.3-1" class="pilcrow">¶</a></p>
+This pin is a named architectural pattern, not a wire member the OAuth
+binding currently defines: that document reserves no Intent member for
+it and points forward to a dedicated Agent Deployment Binding profile
+that a deployment wanting this pin implements
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Late binding is attestation:
+an instance joins the work by authenticating as the pinned Deployment
+with its own Client Attestation
+(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>), not by receiving a
+credential from a peer. The invariant is class-grain authorization,
+instance-grain attribution: the class, the Agent Deployment projected as
+<code>client_id</code>, is an authorization subject, never an attribution subject,
+and attribution stays per-instance through the instance substrate, which
+attributes a presentation to an instance only under a sender-constraint
+key unique to it (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>,
+Section 7.3). The OAuth binding's <code>derivation_limit</code> is not a fan-out or
+concurrency ceiling: it counts issuance events, not instances, and a
+single instance refreshing repeatedly consumes it exactly as one
+selector among N instances deriving once each would. What actually
+bounds a swarm's aggregate consumption is the metering profile's
+Mission-grain budget: consumption bounds attach to the Mission, not to
+any one instance, so a swarm of instances shares one budget
+(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-9.3-1" class="pilcrow">¶</a></p>
 <p id="section-9.3-2">The decision ladder:<a href="#section-9.3-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-9.3-3.1">
@@ -4605,19 +4609,21 @@ or its authenticated request context binding the same
 tamper-resistant work-item identifier the harness recorded; no
 family carrier supplies that today, so a deployment claims the two
 properties separately and nothing more.<a href="#section-13.3-16" class="pilcrow">¶</a></p>
-<p id="section-13.3-17">The mechanism mapping is conservative: a propagated
-Mission-Reference is selection only; a mapping join is
-<code>credential-correlated</code>, with its equivalence-class ambiguity; a
-Mission Join Assertion is a stronger, token- and key-specific
-<code>credential-correlated</code>, still never issuance; a trusted harness
-supplies <code>work-item-bound</code> where its attacher requirements hold; a
-native or issuance-grant-derived token is
+<p id="section-13.3-17">The mechanism mapping is conservative: a propagated Mission-Reference is
+selection only; a mapping join is <code>credential-correlated</code>, with its
+equivalence-class ambiguity; a Mission Join Assertion is a stronger,
+token- and key-specific <code>credential-correlated</code>, still never issuance; a
+trusted harness supplies <code>work-item-bound</code> where its attacher
+requirements hold; a native or issuance-grant-derived token is
 <code>credential-mission-bound</code>, and <code>presenter-key-bound</code> where its
-confirmation binding is in force end to end; an authenticated
-client-instance assertion with a verified key binding is what makes
-a path <code>instance-bound</code>; a verified transaction token is the
-portable <code>action-bound</code> form, and an AuthZEN runtime permit is the
-channel-bound form under that binding's conditions.<a href="#section-13.3-17" class="pilcrow">¶</a></p>
+confirmation binding is in force end to end; Instance Context whose
+association with the presenter is established, over an instance-unique
+confirmation key and, for context preserved from an input token,
+authenticated provenance
+(<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>, Sections 7.3 and
+7.5), is what makes a path <code>instance-bound</code>; a verified transaction
+token is the portable <code>action-bound</code> form, and an AuthZEN runtime permit
+is the channel-bound form under that binding's conditions.<a href="#section-13.3-17" class="pilcrow">¶</a></p>
 <p id="section-13.3-18">The property names above are stable identifiers, and a claim is a
 per-path declaration, not prose: each claimed property or
 composition names the covered issuer, resource, and action-class
@@ -5807,13 +5813,13 @@ minimization and retention duties applying there.<a href="#section-19-3" class="
       <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for UMA 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-uma.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-uma.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-oauth-ai-agent-instance">[I-D.draft-mcguinness-oauth-ai-agent-instance]</dt>
+<dt id="I-D.draft-mcguinness-oauth-client-attesters">[I-D.draft-mcguinness-oauth-client-attesters]</dt>
       <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth 2.0 AI Agent Instance Profile"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-ai-agent-instance-00</span>, <time datetime="2026-07-04" class="refDate">4 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-ai-agent-instance-00">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-ai-agent-instance-00</a>&gt;</span>. </dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth 2.0 Client Attester Endorsement"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-client-attesters-00</span>, <time datetime="2026-09-28" class="refDate">28 September 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-attesters-00">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-attesters-00</a>&gt;</span>. </dd>
 <dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-oauth-client-instance-assertion">[I-D.draft-mcguinness-oauth-client-instance-assertion]</dt>
+<dt id="I-D.draft-mcguinness-oauth-client-instance-id">[I-D.draft-mcguinness-oauth-client-instance-id]</dt>
       <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth 2.0 Client Instance Assertion"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-client-instance-assertion-01</span>, <time datetime="2026-06-24" class="refDate">24 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-assertion-01">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-assertion-01</a>&gt;</span>. </dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Client Instance Identification for Attestation-Based Client Authentication"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-client-instance-id-00</span>, <time datetime="2026-09-28" class="refDate">28 September 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-00">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-00</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-id-continuation-assertion">[I-D.draft-mcguinness-oauth-id-continuation-assertion]</dt>
       <dd>
@@ -5934,15 +5940,26 @@ minimization and retention duties applying there.<a href="#section-19-3" class="
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Linked the OAuth binding's informative derivation-policy appendix
-from the authority derivation boundary (#309).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.1.1">Client-instance references follow their successors:
+draft-mcguinness-oauth-client-instance-assertion is replaced by
+{I-D.draft-mcguinness-oauth-client-instance-id} and
+<span>[<a href="#I-D.draft-mcguinness-oauth-client-attesters" class="cite xref">I-D.draft-mcguinness-oauth-client-attesters</a>]</span>, and the
+deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
+cited. Instance identity is
+a client-instance attestation and validated Instance Context,
+attribution needs an instance-unique key, and instance evidence
+identifies no actor. No requirement changed.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">Added the optional Control-Plane Consistency companion to the document
-map (#250).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.2.1">Linked the OAuth binding's informative derivation-policy appendix
+from the authority derivation boundary (#309).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">Controls taxonomy retirement (#636): the swarm-execution discussion
+          <p id="appendix-A-2.3.1">Added the optional Control-Plane Consistency companion to the document
+map (#250).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1">Controls taxonomy retirement (#636): the swarm-execution discussion
 no longer claims <code>derivation_limit</code> (renamed from <code>max_derivations</code>)
 is a fan-out or concurrency ceiling; it counts issuance events, not
 instances, and one instance refreshing repeatedly exhausts it exactly
@@ -5952,10 +5969,10 @@ the OAuth binding currently defines, pointing to a forward-referenced
 Agent Deployment Binding profile instead of the retired
 <code>controls.agent_deployment</code>. References to the OAuth binding's
 retired <code>controls</code> extension seam updated to the Mission Intent's
-own (open, named-member) extension seam.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+own (open, named-member) extension seam.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1">PR #717 review fix: precised the "Mission-bound" definition text
+        <li class="normal" id="appendix-A-2.5">
+          <p id="appendix-A-2.5.1">PR #717 review fix: precised the "Mission-bound" definition text
 (<a href="#token-classes" class="auto internal xref">Section 10.2</a> and <a href="#binding-properties" class="auto internal xref">Section 13.3</a>) so it no longer
 requires a Mission Substrate Statement of a binding that
 deliberately publishes none. A binding that claims substrate
@@ -5964,10 +5981,10 @@ Statement; the OAuth binding, which claims no substrate conformance
 and publishes no Statement, is instead assessed through its own
 informative Mapping Assessment and discharges the definition
 directly through its own Conformance gates. No normative content
-changed.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+changed.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.5">
-          <p id="appendix-A-2.5.1">Reworded the blanket "the bindings are peers of one another"
+        <li class="normal" id="appendix-A-2.6">
+          <p id="appendix-A-2.6.1">Reworded the blanket "the bindings are peers of one another"
 sentence in the Introduction to name two independent axes, deployment
 topology and data-model independence, and to classify the Mission
 Authority Server as a normative standalone-controller protocol
@@ -5981,10 +5998,10 @@ binding's Conformance gates): <a href="#binding-properties" class="auto internal
 a binding's Mission Substrate Statement is how it evidences the
 properties, and the OAuth binding's gates are its discharge of the
 definition (#663). No normative content, anchor, or table row
-changed.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+changed.<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.6">
-          <p id="appendix-A-2.6.1">Cross-referenced the three previously separate accounts of what
+        <li class="normal" id="appendix-A-2.7">
+          <p id="appendix-A-2.7.1">Cross-referenced the three previously separate accounts of what
 earns the "Mission-bound" term: <a href="#token-classes" class="auto internal xref">Section 10.2</a> now names the
 Mission Binding Properties vector's <code>credential-mission-bound</code>
 property (<a href="#binding-properties" class="auto internal xref">Section 13.3</a>) as the definition. Its six
@@ -5994,18 +6011,18 @@ no longer names a token-carried <code>authority_hash</code>, aligning with
 the ruled minimal-claim direction of #702, and condition 6
 (the auditable derivation link) names the OAuth binding's retained
 Mission Record explicitly rather than asserting an unspecified
-discharge (#663).<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
+discharge (#663).<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.7">
-          <p id="appendix-A-2.7.1">Non-goal reworded (#637): "a new authority format, or a new grant
+        <li class="normal" id="appendix-A-2.8">
+          <p id="appendix-A-2.8.1">Non-goal reworded (#637): "a new authority format, or a new grant
 protocol" narrowed to "a new grant protocol," naming the OAuth
 binding's Mission Resource Access Profile as the family's one
 cross-resource <code>authorization_details</code> type, since RFC 9396 leaves
 type semantics to the type and the family now defines one. Document
-Map gains the profile's row under "The substrate and the bindings."<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
+Map gains the profile's row under "The substrate and the bindings."<a href="#appendix-A-2.8.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.8">
-          <p id="appendix-A-2.8.1">Editorial density pass on this Informational document: the
+        <li class="normal" id="appendix-A-2.9">
+          <p id="appendix-A-2.9.1">Editorial density pass on this Informational document: the
 aggregate-ceiling and artifact-plane (non-transitive work-product)
 composition readings under <a href="#invariants" class="auto internal xref">Section 8</a> tightened to a summary
 sentence plus citation each, with their "not this summary, is the
@@ -6013,7 +6030,7 @@ normative text this passage tracks" deferral kept; several
 over-long paragraphs in <a href="#capability-envelope" class="auto internal xref">Section 4.1</a>, <a href="#validity-model" class="auto internal xref">Section 10.5</a>,
 <a href="#assurance-levels" class="auto internal xref">Section 13</a>, and <a href="#containment" class="auto internal xref">Section 15.1</a> split for one idea per
 paragraph and front-loaded openers. No normative content, anchor,
-or table row changed.<a href="#appendix-A-2.8.1" class="pilcrow">¶</a></p>
+or table row changed.<a href="#appendix-A-2.9.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
