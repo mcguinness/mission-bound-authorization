@@ -286,8 +286,10 @@ Table of Contents
        the derived Authority Set itself, not to the task description
        alone (Section 6).
 
-   3.  Task, authority, and approval are durably bound in the Mission
-       Record and its commitments (Section 7).
+   3.  The Mission Record durably associates the disclosed task, the
+       approved authority, and the approval basis; separate commitments
+       protect the recorded Intent and Authority Set (Section 7,
+       Section 8.1).
 
    4.  The OAuth grant lineage is bound to exactly one Mission, server-
        side (Section 6.3).

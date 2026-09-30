@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-09-30T20:25:49Z
-Source repository commit: b044be9709b497d97d068952a38803542b111d0d
+Generated: 2026-09-30T20:41:39Z
+Source repository commit: 000781fd2f7cbd390e248f0cc2183075cb54b11b
 Member count: 9
 
 Reading order:
@@ -6348,8 +6348,10 @@ Table of Contents
        the derived Authority Set itself, not to the task description
        alone (Section 6).
 
-   3.  Task, authority, and approval are durably bound in the Mission
-       Record and its commitments (Section 7).
+   3.  The Mission Record durably associates the disclosed task, the
+       approved authority, and the approval basis; separate commitments
+       protect the recorded Intent and Authority Set (Section 7,
+       Section 8.1).
 
    4.  The OAuth grant lineage is bound to exactly one Mission, server-
        side (Section 6.3).
