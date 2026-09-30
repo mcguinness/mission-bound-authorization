@@ -1498,6 +1498,9 @@ model and pipeline layers, and saying so is the point:
 
 \[\[ To be removed from the final specification ]]
 
+- The issuance-only residuals state issuance-time bounding and
+  per-request introspection rather than audit only.
+
 - Client-instance references follow their successors:
   draft-mcguinness-oauth-client-instance-assertion is replaced by
   {I-D.draft-mcguinness-oauth-client-instance-id} and
