@@ -336,11 +336,15 @@ approval. A Mission is created and used in a single chain:
    authority, and the AS commits the task as an **`intent_hash`** and
    the authority as an **`authority_hash`** and records a durable
    **Mission**.
-4. Every access token the agent obtains under the Mission carries the
+4. The AS binds the OAuth grant that the approval produces to that
+   Mission, server-side: every later derivation from that grant
+   lineage resolves to exactly this Mission, and the client never
+   selects or reassigns it ({{grant-binding}}).
+5. Every access token the agent obtains under the Mission carries the
    derived authorization details and a **`mission` claim** identifying
    the Mission (`id`, `issuer`) it was derived under. A Resource
    Server enforces statelessly from the token.
-5. Token issuance and refresh are **gated on Mission state**, so
+6. Token issuance and refresh are **gated on Mission state**, so
    revoking or expiring the Mission stops the agent from obtaining
    further authority.
 
