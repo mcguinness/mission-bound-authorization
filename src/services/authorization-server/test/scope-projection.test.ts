@@ -738,6 +738,59 @@ describe("ungrantable requested scope (@spec mission#scope-projection, mission#e
   });
 });
 
+describe("async-delegation idempotency covers the requested scope (@spec continuation#transport-async, mission#scope-projection)", () => {
+  const exchange = (base: string, acting: Keys, creationRequestId: string, scope: string) =>
+    token(
+      {
+        grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+        request_refresh_token: "true",
+        subject_token: base,
+        subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+        resource: PLAIN,
+        creation_request_id: creationRequestId,
+        scope,
+      },
+      acting,
+    );
+
+  it("the same creation_request_id with a different scope is a different request: refused invalid_request, with no second derivation", async () => {
+    const base = await issue([entry([READ, WRITE])]);
+    expect(base.status, JSON.stringify(base.body)).toBe(200);
+    const baseToken = base.body.access_token as string;
+    const missionId = (decodeJwt(baseToken).mission as { id: string }).id;
+    const acting = await newKeys();
+    const id = crypto.randomUUID();
+    const first = await exchange(baseToken, acting, id, "reports.read reports.write");
+    expect(first.status, JSON.stringify(first.body)).toBe(200);
+    const count = as.kernel.get(missionId)?.derivation_count;
+
+    const reused = await exchange(baseToken, acting, id, "reports.read");
+    expect(reused.status, JSON.stringify(reused.body)).toBe(400);
+    expect(reused.body.error).toBe("invalid_request");
+    expect(reused.body.error_description).toContain("different creation request");
+    expect(reused.body.access_token).toBeUndefined();
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(count);
+  });
+
+  it("the same creation_request_id with the same scope values in another order replays the stored response", async () => {
+    const base = await issue([entry([READ, WRITE])]);
+    expect(base.status, JSON.stringify(base.body)).toBe(200);
+    const baseToken = base.body.access_token as string;
+    const missionId = (decodeJwt(baseToken).mission as { id: string }).id;
+    const acting = await newKeys();
+    const id = crypto.randomUUID();
+    const first = await exchange(baseToken, acting, id, "reports.write reports.read");
+    expect(first.status, JSON.stringify(first.body)).toBe(200);
+    const count = as.kernel.get(missionId)?.derivation_count;
+
+    const retry = await exchange(baseToken, acting, id, "reports.read  reports.write");
+    expect(retry.status, JSON.stringify(retry.body)).toBe(200);
+    expect(retry.body.refresh_token).toBe(first.body.refresh_token);
+    expect(retry.body.access_token).toBe(first.body.access_token);
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(count);
+  });
+});
+
 describe("refresh preserved on a projection refusal (@spec mission#scope-projection)", () => {
   /** A rotating (async-delegation family) refresh token for a plain RS Mission over READ and WRITE. */
   async function family(): Promise<{ rt: string; acting: Keys }> {
