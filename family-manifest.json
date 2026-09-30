@@ -84,7 +84,7 @@
    "architecture_name": "High-assurance architecture"
   }
  },
- "count": 47,
+ "count": 48,
  "drafts": [
   {
    "file": "draft-mcguinness-mission-control-plane.md",
@@ -312,6 +312,7 @@
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-continuation",
     "draft-mcguinness-oauth-mission-cross-domain",
+    "draft-mcguinness-oauth-mission-derivation-limits",
     "draft-mcguinness-oauth-mission-discharge",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-issuance-grant",
@@ -513,6 +514,7 @@
     "draft-mcguinness-oauth-mission-attenuation",
     "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-consent-evidence",
+    "draft-mcguinness-oauth-mission-derivation-limits",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-issuance-grant",
     "draft-mcguinness-oauth-mission-progressive",
@@ -736,6 +738,7 @@
     "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-containment",
+    "draft-mcguinness-oauth-mission-derivation-limits",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-status"
    ],
@@ -759,6 +762,12 @@
      "when": "the Status profile is adopted",
      "requires": [
       "draft-mcguinness-oauth-mission-status"
+     ]
+    },
+    {
+     "when": "a derivation_limit is established for the Mission",
+     "requires": [
+      "draft-mcguinness-oauth-mission-derivation-limits"
      ]
     }
    ],
@@ -784,6 +793,7 @@
     "draft-mcguinness-oauth-mission-consent-evidence",
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-cross-domain",
+    "draft-mcguinness-oauth-mission-derivation-limits",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-progressive",
     "draft-mcguinness-oauth-mission-signals",
@@ -949,7 +959,8 @@
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-consent-evidence",
-    "draft-mcguinness-oauth-mission-containment"
+    "draft-mcguinness-oauth-mission-containment",
+    "draft-mcguinness-oauth-mission-derivation-limits"
    ]
   },
   {
@@ -1272,12 +1283,13 @@
     "draft-mcguinness-oauth-mission-consent-evidence",
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-cross-domain",
+    "draft-mcguinness-oauth-mission-derivation-limits",
+    "draft-mcguinness-oauth-mission-discharge",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-issuance-grant",
     "draft-mcguinness-oauth-mission-management",
     "draft-mcguinness-oauth-mission-progressive",
     "draft-mcguinness-oauth-mission-signals",
-    "draft-mcguinness-oauth-mission-discharge",
     "draft-mcguinness-oauth-mission-status",
     "draft-mcguinness-oauth-mission-transaction-authorization",
     "draft-mcguinness-oauth-mission-work-products"
@@ -1328,6 +1340,7 @@
     "draft-mcguinness-oauth-mission-approval-revision",
     "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-consent-evidence",
+    "draft-mcguinness-oauth-mission-derivation-limits",
     "draft-mcguinness-oauth-mission-progressive",
     "draft-mcguinness-oauth-mission-template"
    ]
@@ -1378,7 +1391,8 @@
    "pull_when": "Evaluating a UMA 2.0 deployment only.",
    "normative_references": [
     "draft-mcguinness-mission-substrate",
-    "draft-mcguinness-oauth-mission"
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-derivation-limits"
    ],
    "adoption_requires": [
     "draft-mcguinness-mission-substrate"
@@ -1404,10 +1418,19 @@
     "draft-mcguinness-oauth-mission-consent-evidence",
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-cross-domain",
+    "draft-mcguinness-oauth-mission-derivation-limits",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-progressive",
     "draft-mcguinness-oauth-mission-signals",
     "draft-mcguinness-oauth-mission-status"
+   ],
+   "requires_when": [
+    {
+     "when": "a derivation_limit is established for the Mission",
+     "requires": [
+      "draft-mcguinness-oauth-mission-derivation-limits"
+     ]
+    }
    ]
   },
   {
@@ -1529,6 +1552,7 @@
    "pull_when": "A sub-agent needs its own Mission outliving a call frame, with cascade termination.",
    "normative_references": [
     "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-derivation-limits",
     "draft-mcguinness-oauth-mission-discharge",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-status"
@@ -1549,6 +1573,12 @@
      "requires": [
       "draft-mcguinness-oauth-mission-discharge"
      ]
+    },
+    {
+     "when": "the carryover preserves an established derivation_limit",
+     "requires": [
+      "draft-mcguinness-oauth-mission-derivation-limits"
+     ]
     }
    ],
    "references": [
@@ -1561,6 +1591,7 @@
     "draft-mcguinness-oauth-mission-attenuation",
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-continuation",
+    "draft-mcguinness-oauth-mission-derivation-limits",
     "draft-mcguinness-oauth-mission-discharge",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-issuance-grant",
@@ -1708,6 +1739,7 @@
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-cross-domain",
+    "draft-mcguinness-oauth-mission-derivation-limits",
     "draft-mcguinness-oauth-mission-expansion"
    ]
   },
@@ -1741,6 +1773,7 @@
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-continuation",
     "draft-mcguinness-oauth-mission-cross-org-delegation",
+    "draft-mcguinness-oauth-mission-derivation-limits",
     "draft-mcguinness-oauth-mission-resource-access",
     "draft-mcguinness-oauth-mission-signals",
     "draft-mcguinness-oauth-mission-status"
@@ -1890,6 +1923,7 @@
    "normative_references": [
     "draft-mcguinness-mission-authority-server",
     "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-derivation-limits",
     "draft-mcguinness-oauth-mission-status"
    ],
    "adoption_requires": [
@@ -1902,6 +1936,12 @@
      "requires": [
       "draft-mcguinness-oauth-mission-status"
      ]
+    },
+    {
+     "when": "a derivation_limit is established for the Mission",
+     "requires": [
+      "draft-mcguinness-oauth-mission-derivation-limits"
+     ]
     }
    ],
    "references": [
@@ -1913,6 +1953,7 @@
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-cross-domain",
+    "draft-mcguinness-oauth-mission-derivation-limits",
     "draft-mcguinness-oauth-mission-status"
    ]
   },
@@ -2267,6 +2308,7 @@
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-continuation",
     "draft-mcguinness-oauth-mission-cross-domain",
+    "draft-mcguinness-oauth-mission-derivation-limits",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-management",
     "draft-mcguinness-oauth-mission-progressive",
@@ -2275,6 +2317,36 @@
     "draft-mcguinness-oauth-mission-status",
     "draft-mcguinness-oauth-mission-template",
     "draft-mcguinness-oauth-mission-work-products"
+   ]
+  },
+  {
+   "file": "draft-mcguinness-oauth-mission-derivation-limits.md",
+   "slug": "draft-mcguinness-oauth-mission-derivation-limits",
+   "title": "Mission Derivation Limits for OAuth 2.0",
+   "category": "std",
+   "role": "companion",
+   "spec_maturity": "experimental",
+   "maintenance": "active",
+   "group": "lifecycle",
+   "verbs": [
+    "govern"
+   ],
+   "summary": "Bounds how many derivations the issuer performs under a Mission: an optional requested ceiling, an AS-established effective limit, atomic counting across code exchange, refresh, and Token Exchange, refusal at the cap, and remaining-count disclosure through introspection.",
+   "pull_when": "A deployment wants a hard cap on the tokens an issuer mints under one Mission, independent of authority and lifetime.",
+   "normative_references": [
+    "draft-mcguinness-oauth-mission"
+   ],
+   "adoption_requires": [
+    "draft-mcguinness-oauth-mission"
+   ],
+   "requires_when": [],
+   "references": [
+    "draft-mcguinness-mission-metering",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-child-delegation",
+    "draft-mcguinness-oauth-mission-cross-domain",
+    "draft-mcguinness-oauth-mission-expansion",
+    "draft-mcguinness-oauth-mission-template"
    ]
   }
  ]

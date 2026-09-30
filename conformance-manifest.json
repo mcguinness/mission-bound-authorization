@@ -97,6 +97,10 @@
    "draft-mcguinness-oauth-mission-child-delegation.md": {
     "revision": "79344a58d878545e3daa6d5b880f6fe5dedb51b2",
     "content_sha256": "796e972f2ce34f0ecf41b4b16705cdea31d49154f4bd18c6c4de867abe6a1576"
+   },
+   "draft-mcguinness-oauth-mission-derivation-limits.md": {
+    "revision": "0000000000000000000000000000000000000000",
+    "content_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
    }
   }
  },
@@ -208,7 +212,8 @@
    "child-delegation.carryover",
    "core.instance-context",
    "runtime.instance-context",
-   "mas.instance-bound-join"
+   "mas.instance-bound-join",
+   "derivation-limits.limit"
   ]
  },
  "profiles": [
@@ -2853,19 +2858,17 @@
    ]
   },
   {
-   "id": "core.intent.max-derivations-floor",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "mission-intent",
+   "id": "derivation-limits.requested.max-derivations-floor",
+   "spec": "draft-mcguinness-oauth-mission-derivation-limits.md",
+   "anchor": "requested-limit",
    "text": "An AS MUST reject a value below 1 with `invalid_request`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "derivation-limits.limit"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "par",
    "assertion": "refusal",
    "observation": {
@@ -2884,19 +2887,17 @@
    ]
   },
   {
-   "id": "core.derivation-issuance-policy.effective-limit-is-clamped-minimum",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "derivation-issuance-policy",
+   "id": "derivation-limits.effective.effective-limit-is-clamped-minimum",
+   "spec": "draft-mcguinness-oauth-mission-derivation-limits.md",
+   "anchor": "effective-limit",
    "text": "the AS establishes it as the minimum of the deployment's own policy ceiling for this Mission and the requested `requested_derivation_limit`, where one was submitted",
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "derivation-limits.limit"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
@@ -3825,19 +3826,17 @@
    "notes": "#760 extended this row's citation instead of adding a semantic row: `authority_source` is named beside `approval_basis` in the introspection member list and its issuer-only sentence, the member-scoped disclosure sentence, the Mission Issuer conformance bullet, and the OAuth Token Introspection Response registration. The cited disclosure test asserts the disclosed shape exactly (`type` plus organizational `policy.id`/`policy.version`, no `digest`)."
   },
   {
-   "id": "core.lifecycle.derivation-cap-exhaustion",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "lifecycle",
+   "id": "derivation-limits.enforcement.derivation-cap-exhaustion",
+   "spec": "draft-mcguinness-oauth-mission-derivation-limits.md",
+   "anchor": "enforcement",
    "text": "the AS MUST refuse, with the `invalid_grant` error code, any derivation that would make the number of **derivations** under the Mission exceed it",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "derivation-limits.limit"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
@@ -3880,19 +3879,17 @@
    "notes": "The implementation calls applyExpiry() before every ordinary gate; expansion redemption commits its expiry-aware predecessor re-check, successor creation, idempotency completion, supersession CAS, and a durable finalization outbox job as ONE transaction, with emission suppressed in-tx and the drain idempotently replayable post-commit (a committed operation is recovered on re-poll, never access_denied; crash-window test in expansion-endpoint). The row stays todo until every state-dependent path is inventoried and boundary-tested, per review."
   },
   {
-   "id": "core.lifecycle.failed-derivations-not-counted",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "lifecycle",
+   "id": "derivation-limits.counting.failed-derivations-not-counted",
+   "spec": "draft-mcguinness-oauth-mission-derivation-limits.md",
+   "anchor": "counted-operations",
    "text": "A derivation that fails, including one refused for exceeding the bound, MUST NOT be counted",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "derivation-limits.limit"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "token-endpoint",
    "assertion": "no-side-effect",
    "observation": {
