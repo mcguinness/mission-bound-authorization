@@ -2332,7 +2332,7 @@
     "govern"
    ],
    "summary": "Bounds how many derivations the issuer performs under a Mission: an optional requested ceiling, an AS-established effective limit, atomic counting across code exchange, refresh, and Token Exchange, refusal at the cap, and remaining-count disclosure through introspection.",
-   "pull_when": "A deployment wants a hard cap on the tokens an issuer mints under one Mission, independent of authority and lifetime.",
+   "pull_when": "A deployment wants a hard cap on issuance operations under one Mission, independent of authority and lifetime.",
    "normative_references": [
     "draft-mcguinness-oauth-mission"
    ],
