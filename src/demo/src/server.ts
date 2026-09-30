@@ -203,7 +203,7 @@ async function main() {
       constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
     },
   ]);
-  const issued = await issueMissionToken(asUrl, stack.authServer.agentClientJwk, { missionIntent, authorizationDetails, scope: "payments" }, stack.authServer.approverServiceToken);
+  const issued = await issueMissionToken(asUrl, stack.authServer.agentClientJwk, { missionIntent, authorizationDetails }, stack.authServer.approverServiceToken);
   const rsProof = await dpopProofFor(issued.dpopKeys, CANONICAL_RESOURCE, "POST", issued.accessToken);
   // @spec authority-server#mission-join (#557 review point 5) — validateToken()
   // returns MissionBoundTokenFacts specifically (mission REQUIRED, never
@@ -597,7 +597,6 @@ async function main() {
     try {
       submitted = await submitMissionApproval(asUrl, agentClientJwk, {
         missionIntent,
-        scope: "payments",
         ...(authorizationDetails ? { authorizationDetails } : {}),
       });
     } catch (e) {
