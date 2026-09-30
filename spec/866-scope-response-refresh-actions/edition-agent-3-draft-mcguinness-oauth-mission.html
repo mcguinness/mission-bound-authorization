@@ -4736,7 +4736,9 @@ it (<a href="#grant-binding" class="auto internal xref">Section 6.2</a>).<a href
 <p id="section-9-9">For example, the agent narrows the canonical ERP Mission (the worked
 example of <a href="#mission-record" class="auto internal xref">Section 8</a>) to a read-only token, presenting the
 Mission's refresh token with the <span>[<a href="#RFC8707" class="cite xref">RFC8707</a>]</span> <code>resource</code> parameter and
-narrowing further with <code>scope</code>:<a href="#section-9-9" class="pilcrow">¶</a></p>
+narrowing further with <code>authorization_details</code> (<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> Section 6).
+The ERP consumes <code>authorization_details</code>, so a resource <code>scope</code> for it
+would be refused (<a href="#scope-projection" class="auto internal xref">Section 9.1</a>):<a href="#section-9-9" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-9-10">
 <pre>
 POST /token HTTP/1.1
@@ -4747,15 +4749,35 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 grant_type=refresh_token
 &amp;refresh_token=rt_4mN8qV2xP7sL1tY9zB3k
 &amp;resource=https%3A%2F%2Ferp.example.com
-&amp;scope=invoices.read
+&amp;authorization_details=%5B%7B%22type%22%3A%22mission_resource_acc...
 </pre><a href="#section-9-10" class="pilcrow">¶</a>
 </div>
-<p id="section-9-11">The issuance is a derivation, gated on the Mission being <code>active</code>
-(<a href="#lifecycle" class="auto internal xref">Section 10</a>). The response echoes the narrowed grant and the
+<p id="section-9-11">The <code>authorization_details</code> value, before form encoding, requests the
+Mission's read entry alone:<a href="#section-9-11" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-9-12">
+<pre>
+[
+  { "type": "mission_resource_access",
+    "resource": "https://erp.example.com",
+    "actions": ["invoices.read"],
+    "constraints": {
+      "resource_issued_after": "2026-07-01T00:00:00Z",
+      "resource_issued_before": "2026-09-30T23:59:59Z"
+    },
+    "delegation": {
+      "max_depth": 2,
+      "allowed_delegates": [{ "sub_profile": "ai_agent" }]
+    } }
+]
+</pre><a href="#section-9-12" class="pilcrow">¶</a>
+</div>
+<p id="section-9-13">The issuance is a derivation, gated on the Mission being <code>active</code>
+(<a href="#lifecycle" class="auto internal xref">Section 10</a>). The response carries no <code>scope</code> member because none
+was requested or granted. It echoes the narrowed grant and the
 <code>mission_id</code> reference (<a href="#grant-binding" class="auto internal xref">Section 6.2</a>); the emitted entry is a
 subset (<a href="#subset" class="auto internal xref">Section 5.1</a>) of the Mission's read entry, its <code>constraints</code>
-carried intact:<a href="#section-9-11" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-9-12">
+carried intact:<a href="#section-9-13" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-9-14">
 <pre>
 {
   "access_token": "eyJhbGciOiJFUzI1NiIsInR5cCI6ImF0K2p3dCJ9...",
@@ -4777,15 +4799,15 @@ carried intact:<a href="#section-9-11" class="pilcrow">¶</a></p>
       } }
   ]
 }
-</pre><a href="#section-9-12" class="pilcrow">¶</a>
+</pre><a href="#section-9-14" class="pilcrow">¶</a>
 </div>
-<p id="section-9-13">Mission-bound refresh tokens <span class="bcp14">MUST</span> be sender-constrained or use refresh
+<p id="section-9-15">Mission-bound refresh tokens <span class="bcp14">MUST</span> be sender-constrained or use refresh
 token rotation. This matters most for a public client, since
 Mission-state gating bounds a stolen refresh token's usefulness over
 time but not while the Mission is still <code>active</code>. This strengthens
 the refresh-token guidance of <span>[<a href="#RFC9700" class="cite xref">RFC9700</a>]</span> Section 2.2.2, whose <span class="bcp14">MUST</span>
-applies to public clients, to all Mission-bound refresh tokens.<a href="#section-9-13" class="pilcrow">¶</a></p>
-<p id="section-9-14">The authentication achieved for the approval event describes the
+applies to public clients, to all Mission-bound refresh tokens.<a href="#section-9-15" class="pilcrow">¶</a></p>
+<p id="section-9-16">The authentication achieved for the approval event describes the
 Approver at approval time, not the token's Subject or any later
 presentation of the token; it is approval-time provenance
 (<a href="#approval-authentication" class="auto internal xref">Section 6.1</a>), never carried on a derived token. A
@@ -4798,34 +4820,34 @@ token-authentication meaning, describing the token's own presentation
 or Subject, never repurposed to carry the Approver's approval-time
 context; a consumer <span class="bcp14">MUST NOT</span> infer approval provenance from their
 presence and <span class="bcp14">MUST NOT</span> treat their absence as an authentication
-downgrade.<a href="#section-9-14" class="pilcrow">¶</a></p>
-<p id="section-9-15"><code>authorization_details</code> is the authoritative expression of a
+downgrade.<a href="#section-9-16" class="pilcrow">¶</a></p>
+<p id="section-9-17"><code>authorization_details</code> is the authoritative expression of a
 Mission-bound token's authority. A token <span class="bcp14">MAY</span> also carry <code>scope</code>,
 subject to the Scope Projection rule of <a href="#scope-projection" class="auto internal xref">Section 9.1</a>. Because
 <code>scope</code> is a coarse string list, it cannot carry the per-entry
 <code>constraints</code>; where it is emitted at all, it is a compatibility
-projection, never the authoritative form of the Mission's authority.<a href="#section-9-15" class="pilcrow">¶</a></p>
-<p id="section-9-16">A credential the Mission Issuer derives <span class="bcp14">MUST</span> have an <code>exp</code> that does
+projection, never the authoritative form of the Mission's authority.<a href="#section-9-17" class="pilcrow">¶</a></p>
+<p id="section-9-18">A credential the Mission Issuer derives <span class="bcp14">MUST</span> have an <code>exp</code> that does
 not exceed the Mission's <code>expires_at</code>, so that no credential outlives
 the approved Mission (not merely that none is issued after expiry). How
 this bound extends transitively to tokens minted in another trust
 domain is specified by the companion
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>).<a href="#section-9-16" class="pilcrow">¶</a></p>
-<p id="section-9-17">Short-lived access tokens remain this profile's issuance-only
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>).<a href="#section-9-18" class="pilcrow">¶</a></p>
+<p id="section-9-19">Short-lived access tokens remain this profile's issuance-only
 recommendation: with no runtime layer, token lifetime is the
 revocation-latency bound at unmodified Resource Servers. Where a
 runtime layer covers the high-consequence classes with an active
 freshness source, the point-of-use decision is the revocation
 cutoff, and a deployment <span class="bcp14">MAY</span> size lifetimes by action class without
 losing the kill switch (<a href="#runtime-boundary" class="auto internal xref">Section 17.3.1</a>,
-<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-9-17" class="pilcrow">¶</a></p>
-<p id="section-9-18">Classes attach to
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-9-19" class="pilcrow">¶</a></p>
+<p id="section-9-20">Classes attach to
 entries while <code>exp</code> attaches to the token: an extended lifetime is
 appropriate only for a token whose carried entries are all on
 runtime-gated paths, since a single ungated entry stretches its own
 revocation latency to the extended lifetime. Narrowed,
 single-audience tokens (<a href="#subset" class="auto internal xref">Section 5.1</a>) are the mechanism that keeps
-gated and ungated authority from sharing one long-lived token.<a href="#section-9-18" class="pilcrow">¶</a></p>
+gated and ungated authority from sharing one long-lived token.<a href="#section-9-20" class="pilcrow">¶</a></p>
 <div id="scope-projection">
 <section id="section-9.1">
         <h3 id="name-scope-projection">
@@ -4890,17 +4912,21 @@ granted scope differs from the requested scope, and its grammar
 defines no empty scope, so an issuance cannot report an ungranted
 requested value by omission. The AS <span class="bcp14">MUST</span> refuse, with <code>invalid_scope</code>
 (<a href="#error-mapping" class="auto internal xref">Section 9.6</a>), a request that explicitly names a <code>scope</code> value
-the issuance cannot grant: a value the target's mapping names that no
-carried entry makes safe (step 3), or any <code>scope</code> value the AS
+the issuance cannot grant: a value the target's trusted mapping names
+but no carried entry makes safe (step 3), or any <code>scope</code> value the AS
 associates with a target that consumes <code>authorization_details</code> (step
-4). Where the AS emits a projected <code>scope</code>, a requested <code>scope</code>
+4). An unknown, ambiguous, or stale mapping is a step 5 failure and
+yields <code>invalid_target</code> even when the request also names a <code>scope</code>
+value; <code>invalid_scope</code> applies only under a mapping the AS trusts.
+Where the AS emits a projected <code>scope</code>, a requested <code>scope</code>
 narrows it to the requested values, and the token response reports
 the values granted (<span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> Section 5.1). Scope values with their
 own semantics, such as <code>openid</code> (<span>[<a href="#OpenID.Core" class="cite xref">OpenID.Core</a>]</span>), are unaffected and
 combine with <code>authorization_details</code> as <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> Section 3.1
-permits; a Mission-creating client that requests authority through
-<code>authorization_details</code> does not also request a resource <code>scope</code> for
-it.<a href="#section-9.1-5" class="pilcrow">¶</a></p>
+permits. A Mission-creating client does not request a resource <code>scope</code>
+for a target that consumes <code>authorization_details</code>; for a <code>scope</code>-only
+target, a requested <code>scope</code> selects among the values the projection
+can grant.<a href="#section-9.1-5" class="pilcrow">¶</a></p>
 <p id="section-9.1-6">A refusal caused solely by failure to establish a safe scope
 projection <span class="bcp14">MUST NOT</span> invalidate an otherwise-valid refresh token or its
 authorization grant. Independent expiration, revocation, and
@@ -5571,14 +5597,14 @@ applies this mapping and does not restate it.<a href="#section-9.6-1" class="pil
 </td>
             </tr>
             <tr>
-              <td class="text-left" rowspan="1" colspan="1">Authorization or token request: the target is <code>scope</code>-only and no safe projection exists for the applicable entries, or its scope-projection mapping is unknown, ambiguous, or stale (<a href="#scope-projection" class="auto internal xref">Section 9.1</a>); or, where the AS applies <a href="#rs-enforcement" class="auto internal xref">Section 9.3</a>'s delegated-token routing rule at issuance, the delegated token's target is not known to be Mission-aware</td>
+              <td class="text-left" rowspan="1" colspan="1">Authorization or token request: the target's scope-projection mapping is unknown, ambiguous, or stale, whether or not the request names a <code>scope</code> value, or the target is <code>scope</code>-only and no safe projection exists for the applicable entries when the request names no <code>scope</code> value (<a href="#scope-projection" class="auto internal xref">Section 9.1</a>); or, where the AS applies <a href="#rs-enforcement" class="auto internal xref">Section 9.3</a>'s delegated-token routing rule at issuance, the delegated token's target is not known to be Mission-aware</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>invalid_target</code> (<span>[<a href="#RFC8707" class="cite xref">RFC8707</a>]</span>)</td>
               <td class="text-left" rowspan="1" colspan="1">safe <code>error_description</code>
 </td>
             </tr>
             <tr>
-              <td class="text-left" rowspan="1" colspan="1">Authorization or token request: an explicitly requested <code>scope</code> value the issuance cannot grant (<a href="#scope-projection" class="auto internal xref">Section 9.1</a>)</td>
+              <td class="text-left" rowspan="1" colspan="1">Authorization or token request: an explicitly requested <code>scope</code> value the issuance cannot grant under a scope-projection mapping the AS trusts (<a href="#scope-projection" class="auto internal xref">Section 9.1</a>)</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>invalid_scope</code> (<span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>)</td>
               <td class="text-left" rowspan="1" colspan="1">safe <code>error_description</code>
@@ -9503,7 +9529,10 @@ requested <code>scope</code> value the issuance cannot grant is refused with
 <code>invalid_scope</code>, a requested <code>scope</code> narrows a projected one, and a
 refusal caused solely by a failed projection does not invalidate an
 otherwise-valid refresh token. A changed mapping is re-evaluated,
-not stale by itself.<a href="#appendix-E-3.1.1" class="pilcrow">¶</a></p>
+not stale by itself. A mapping failure yields <code>invalid_target</code> even
+when a <code>scope</code> value is requested; the no-resource-<code>scope</code> client
+guidance covers targets that consume <code>authorization_details</code>; and
+the refresh example narrows with <code>authorization_details</code>.<a href="#appendix-E-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-E-3.2">
           <p id="appendix-E-3.2.1">The Error and Challenge Mapping table maps a scope-projection
