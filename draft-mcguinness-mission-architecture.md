@@ -2178,8 +2178,8 @@ calling any other resource runs under a Child Mission
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). The OAuth
 binding's invariants carry the deployment: every derived token is a
 subset of the Authority Set, no audience receives a grant it would
-over-grant on, no credential outlives the Mission, and token lifetime
-does not exceed the tolerated staleness. Where the Authorization
+over-grant on, and no credential outlives the Mission; the deployment
+sizes token lifetime to its tolerated staleness. Where the Authorization
 Server offers introspection, a Resource Server that introspects per
 request stops honoring a token at its next request once the Mission
 leaves `active`, with no Mission-specific code
@@ -2187,10 +2187,10 @@ leaves `active`, with no Mission-specific code
 approved-record integrity and bounded revocation latency
 ({{assurance-claims-axis}}), and {{deployment-profile}} shows its
 Deployment Profile. The runtime layer
-({{I-D.draft-mcguinness-mission-runtime}}) joins for an action class
-that needs per-action evaluation or evidence, approval bound to a
-single action, or a bound the receiving Resource Server cannot
-enforce.
+({{I-D.draft-mcguinness-mission-runtime}}) joins for the
+high-consequence classes and for an action class that needs
+per-action evaluation or evidence, approval bound to a single action,
+or a bound the receiving Resource Server cannot enforce.
 
 One ramp cuts across the rows: the **short mission**. A Mission whose
 `expires_at` sits minutes out, run in records mode with
@@ -2658,7 +2658,7 @@ with the binding; the Mission Deployment Profile
 
 | Level | What a deployment can defensibly grant |
 | --- | --- |
-| Baseline Issuance | Consequential reads and writes whose bounds the receiving Resource Server enforces, attributable and killable at the issuance gate, outstanding tokens running to their own expiry or the next introspection |
+| Baseline Issuance | Consequential reads and writes outside the high-consequence classes whose bounds the receiving Resource Server enforces, attributable and killable at the issuance gate, outstanding tokens running to their own expiry or the next introspection |
 | Runtime-Enforced | Consequential actions that need a per-action decision: parameter-bound writes and bounds finer than the receiving Resource Server enforces; reversal and compensation stay the orchestration profile's, where adopted |
 | Governed Agent | Unattended operation and delegation, with Consent Evidence binding each approval event |
 | High-Assurance Agent | The high-consequence classes ({{I-D.draft-mcguinness-mission-runtime}}), under mediated custody and action-bound approval |
