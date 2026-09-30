@@ -4938,6 +4938,52 @@
    "notes": "Witnessed: initial issuance, refresh (projection repeated, subset and stale refusals), async-delegation Token Exchange and its family refresh, the cross-org Token Exchange, and the deferred and child jwt-bearer mints (their payments tokens carry no scope). The dispatch and expansion-successor mints run the same save-time projection but no test observes them."
   },
   {
+   "id": "core.scope-projection.ungrantable-requested-scope-refused",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "scope-projection",
+   "text": "The AS MUST refuse, with `invalid_scope` ({{error-mapping}}), a request that explicitly names a `scope` value the issuance cannot grant",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a request that explicitly names a scope value the issuance cannot grant (one the target's mapping names but no carried entry makes safe, or any scope value associated with a target that consumes authorization_details) is refused with invalid_scope rather than issued with an omitted or silently reduced scope"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "core.scope-projection.refresh-preserved-on-projection-refusal",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "scope-projection",
+   "text": "A refusal caused solely by failure to establish a safe scope projection MUST NOT invalidate an otherwise-valid refresh token or its authorization grant",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "after a refresh refused solely because no safe scope projection could be established, the same refresh token and its grant remain usable once the projection can be established; independent expiration, revocation, and replay-detection rules still apply"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
    "id": "core.introspection.composite-active",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "composite-active",
@@ -22025,6 +22071,29 @@
      "surface": "token-endpoint"
     }
    ]
+  },
+  {
+   "id": "resource-access.scope-projection.actions-subset",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "scope-projection",
+   "text": "Every action granted by the mapped `scope` value MUST be included in the applicable entry's `actions`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a mapped scope value is projected only when every action it grants is in the applicable entry's actions; a value granting a proper subset is projected, and one granting any additional action is not"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
   },
   {
    "id": "resource-access.transformation-capabilities.projection-undeclared-fallback",
