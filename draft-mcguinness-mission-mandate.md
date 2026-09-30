@@ -191,8 +191,6 @@ authorizes nothing either. It lets a verifier know what was approved;
 authority remains the substrate's job
 ({{cross-domain-verification}}).
 
-# Status: An Optional Extension {#optional-status}
-
 This document is optional. A deployment that never mints Mandates is
 fully conformant to the issuance profile and its companions and is
 unaffected by this document; the Mandate defines no authority surface
@@ -204,13 +202,6 @@ standards, and the issuance profile's committed record is its only
 Mission input. The artifact itself is not yet exercised in deployment,
 so an implementer validates the verification steps and failure
 taxonomy against real cross-domain use before relying on them.
-
-<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Role: companion. Spec maturity: experimental. Maintenance: active.
-Adopt when: An outside party must verify what was approved without a token-exchange hop.
-Requires: Mission Substrate Requirements.
-Also requires, conditionally: Mission-Bound Authorization for OAuth 2.0 (when the OAuth binding is the substrate).
-<!-- family-status: END -->
 
 # Conventions and Terminology {#conventions}
 

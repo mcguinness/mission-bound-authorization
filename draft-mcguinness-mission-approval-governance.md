@@ -139,7 +139,7 @@ Mission record's single accountable Approver is unchanged.
 
 --- middle
 
-# Introduction
+# Introduction {#introduction}
 
 An authority-bearing binding of the Mission model records one
 accountable Approver and defers multi-party approval and
@@ -165,8 +165,6 @@ evaluated or persisted MUST prevent activation. After commitment, the
 record is evidence: immutable, signed, and consumed by audit, never
 by enforcement.
 
-# Status: An Optional Extension {#optional-status}
-
 This document is optional. A deployment that records nothing beyond
 the Mission record's accountable `approver` is fully conformant to
 its Mission binding and unaffected by this document. Profiles MAY
@@ -179,13 +177,6 @@ approval, deferred approval
 ({{I-D.draft-mcguinness-oauth-mission-approval}}), and the standalone
 Mission Authority Server's native asynchronous approval alike, and
 depends on no deferral substrate.
-
-<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Role: companion. Spec maturity: experimental. Maintenance: active.
-Adopt when: Approval authority itself needs authenticated, policy-backed provenance.
-Requires: Mission Substrate Requirements.
-Also requires, conditionally: Mission Progressive Authorization for OAuth 2.0 (when the Approval Context Manifest is computed for a Mission whose record carries a Progressive ceiling).
-<!-- family-status: END -->
 
 # Conventions and Definitions {#conventions-and-definitions}
 
@@ -567,7 +558,7 @@ NOT be created and, by {{atomic-commitment}}, the Mission MUST NOT be
 created `active`.
 
 Approval Governance is an optional extension
-({{optional-status}}); the rules of this section are a conservative
+({{introduction}}); the rules of this section are a conservative
 default of that profile, not a family-wide guarantee, and a
 deployment that records no Approval Governance Record is unbounded
 by them. `kind: human` is not by itself an assurance property: the
@@ -732,7 +723,7 @@ semantics are defined by the Progressive profile
 reference of this document for that reason; this section imports its
 `ceiling_hash` definition without redefining it, and adopting this
 Approval Context Commitment profile does not by itself require
-adopting Progressive ({{optional-status}}).
+adopting Progressive ({{I-D.draft-mcguinness-oauth-mission-progressive}}).
 
 The manifest excludes the Mission Record's one mutable member,
 `state`, and every value that is not itself a member of the

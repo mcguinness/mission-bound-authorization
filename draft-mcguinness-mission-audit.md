@@ -252,19 +252,6 @@ no new evidence object. It is optional, and what it proves is bounded:
 transparency makes misbehavior detectable and attributable, it does not
 make a dishonest issuer honest ({{limits}}).
 
-# Conventions and Terminology {#conventions}
-
-{::boilerplate bcp14-tagged}
-
-Mission evidence:
-: Any evidence record the suite defines, including the approval event,
-  lifecycle transitions, consent evidence
-  ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), and runtime
-  decision and execution evidence
-  ({{I-D.draft-mcguinness-mission-runtime}}).
-
-# Status: An Optional Extension {#optional-status}
-
 This document is optional. A deployment that retains evidence without a
 Transparency Service is fully conformant to the issuance profile and its
 companions and is unaffected by this document. It places no new
@@ -285,12 +272,16 @@ them. The signed evidence the suite produces without a Transparency
 Service ({{I-D.draft-mcguinness-oauth-mission}}) does not depend on this
 profile.
 
-<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Role: companion. Spec maturity: experimental. Maintenance: active.
-Adopt when: A cross-domain party must verify evidence integrity without trusting issuer logs.
-Requires: Mission Substrate Requirements; Mission-Bound Authorization for OAuth 2.0.
-Also requires, conditionally: Mission Approval Governance (when approval governance records are audited); Mission Open-World Discovery (when discovery evidence is audited); Mission-Aware Agent Harnesses (when harness or egress evidence is audited); Mission Mandate (when the Mandate profile is deployed); Mission Runtime Evidence (when runtime decision or execution evidence is audited); Mission Child Delegation for OAuth 2.0 (when child delegation evidence is audited); Mission Consent Evidence for OAuth 2.0 (when consent evidence is audited); Mission Containment for OAuth 2.0 (when containment evidence is audited); Mission Lifecycle Signals for OAuth 2.0 (when lifecycle transitions arrive as Signals); Mission Work Products (when work-product bindings are audited).
-<!-- family-status: END -->
+# Conventions and Terminology {#conventions}
+
+{::boilerplate bcp14-tagged}
+
+Mission evidence:
+: Any evidence record the suite defines, including the approval event,
+  lifecycle transitions, consent evidence
+  ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), and runtime
+  decision and execution evidence
+  ({{I-D.draft-mcguinness-mission-runtime}}).
 
 # Relationship to the Issuance Profile {#issuance-relationship}
 

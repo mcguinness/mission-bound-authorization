@@ -359,3 +359,20 @@ attests the current bytes: `report.document_sha256` records them, and
 has those bytes, so the two fields still pair as that file defines them.
 The original audit stays recorded here: commit `7f5cbd57` and the (b)
 digest.
+
+## (f) Re-review, 2026-09-30
+
+The substrate's bytes changed again, to sha256
+`7195da680769b4404eaa88c65764198af32e016527dc2c1306e89e24611375cd`
+(commit `4fe0d0b0`, which retired every draft's Status section). The
+complete diff from the bytes (e) attests is the removal of the
+substrate's own block-only Status section: its heading, "Status: A
+Normative Contract for Bindings", and its generated block (role,
+maturity, maintenance, adoption trigger, requires), whose facts
+`DRAFTS.md`'s generated index still publishes. The section held no
+hand-written prose.
+
+No BCP 14 keyword line changed, so the clause-level inventory in (a) is
+unaffected and no fresh audit is warranted. `candidate-gate.json` now
+attests these bytes: `report.document_sha256` records them and
+`audited_by` names `4fe0d0b0`, where the substrate has them.

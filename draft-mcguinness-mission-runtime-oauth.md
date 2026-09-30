@@ -187,15 +187,6 @@ deployment on a different Mission substrate supplies its own
 credential profile and uses the runtime core unchanged
 ({{I-D.draft-mcguinness-mission-substrate}}).
 
-# Status: An Optional Profile {#doc-status}
-
-<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Role: companion. Spec maturity: experimental. Maintenance: active.
-Adopt when: The Mission-bound credential is an OAuth access token and the runtime core's abstract roles need their concrete OAuth realization.
-Requires: Mission-Bound Runtime Enforcement; Mission Substrate Requirements; Mission-Bound Authorization for OAuth 2.0.
-Also requires, conditionally: Mission Resource Access Profile for OAuth 2.0 (when the deployment maps a mission_resource_access authorization_details entry).
-<!-- family-status: END -->
-
 # Conventions and Terminology {#conventions-and-definitions}
 
 {::boilerplate bcp14-tagged}

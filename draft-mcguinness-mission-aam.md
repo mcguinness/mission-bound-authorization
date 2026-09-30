@@ -197,14 +197,6 @@ deployment planning against AAM's component list can name the
 Mission surface that realizes each entry and the documents whose
 conformance targets it is thereby claiming.
 
-# Status: An Experimental Sketch {#doc-status}
-
-<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Role: companion. Spec maturity: sketch. Maintenance: lab-best-effort.
-Adopt when: Adopting Cloudflare's AAM vocabulary and mapping it onto existing mechanisms.
-Requires: nothing beyond its listed references.
-<!-- family-status: END -->
-
 # Conventions and Terminology {#conventions-and-terminology}
 
 {::boilerplate bcp14-tagged}

@@ -140,14 +140,6 @@ the base protocol defines at `mission_endpoint`.  The approving PS
 remains the only server that can interpret the reference and change
 its state.
 
-# Status: An Optional Profile {#doc-status}
-
-<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Role: companion. Spec maturity: experimental. Maintenance: frozen-until-upstream-release.
-Adopt when: Alongside the AAuth binding: status, termination, delegation-tree queries.
-Requires: nothing beyond its listed references.
-<!-- family-status: END -->
-
 # Conventions and Terminology {#conventions}
 
 {::boilerplate bcp14-tagged}

@@ -193,8 +193,6 @@ can name a class of resources the agent will only meet during
 execution: the Approver consents once to the family, and every
 concrete binding stays inside it ({{in-ceiling-expansion}}).
 
-# Status: An Experimental Extension {#optional-status}
-
 This document is optional and experimental: adopt it for
 evaluation, not as a stable interface. It removes the per-expansion
 human from a consented envelope, which is the highest-consequence
@@ -209,13 +207,6 @@ expansion-capable Mission Issuer
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}). Nothing here places
 a new requirement back on the expansion profile or the issuance
 profile.
-
-<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Role: companion. Spec maturity: experimental. Maintenance: lab-best-effort.
-Adopt when: Authority cannot be enumerated up front; policy-bounded drawdown beats over-provisioning.
-Requires: Mission-Bound Authorization for OAuth 2.0; Mission Expansion for OAuth 2.0.
-Also requires, conditionally: Mission-Bound Runtime Enforcement (when drawdown maps to the runtime profile's action classes).
-<!-- family-status: END -->
 
 # Relationship to the Expansion Profile {#relationship}
 
