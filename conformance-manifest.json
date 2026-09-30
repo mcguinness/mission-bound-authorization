@@ -7,8 +7,8 @@
     "content_sha256": "ec57264fec92ea2dd3c42ba1067c70d72195f251bc5c416ccad856cb1beac3a1"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
-    "content_sha256": "94b7a047046cc1646aabb610f006439a99b60365eba1faa11346ecdf4ba0558e"
+    "revision": "40dcd8aafb590df09de07d6e29719d008df5b168",
+    "content_sha256": "0d1cc54f875b2a31774c5769ec8d016f8194a5232cda90ef12c1437331af174b"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
@@ -35,8 +35,8 @@
     "content_sha256": "9d6ada5d10abb2862280d8e923f5c1164f3c16c3102675ea402ef4839afb14c0"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
-    "content_sha256": "4c2e002dd73ce012d3d45de025c6510aaa3ae72ce3fe60dd5923cce1291ed71d"
+    "revision": "40dcd8aafb590df09de07d6e29719d008df5b168",
+    "content_sha256": "f058d49764fe9b89fed2082baafaf28199b85aa54980aa2c5777c911e1ec8b90"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
     "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
@@ -59,16 +59,16 @@
     "content_sha256": "2ecac7a1642121e76f782cb12941b64fc1ed0782ae6df8a6e82721d5bc280b1f"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "d48fc3aa3e44ae522cb2beb4fea99e725a2e520f",
-    "content_sha256": "83cdd40cd20af0801beed3482200cf4e8308f8fb40b7ced39e62f6cf3701972a"
+    "revision": "40dcd8aafb590df09de07d6e29719d008df5b168",
+    "content_sha256": "b80a7ad85093c5d2de748e8a9ea0fdceeca25bd54c45fa28ac6a76f30867be37"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7fc9ef45b5fb69f06bd3e90c1a93b6ac71808c10",
     "content_sha256": "f32cf81e773c9098464a50e451f559b3a5ad31485a315cc611df8e60fcafa2a7"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
-    "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
-    "content_sha256": "e059f4a32a9900c6eff397ce91f7d3d1ff30952fe46429004945955a4f1fdde4"
+    "revision": "40dcd8aafb590df09de07d6e29719d008df5b168",
+    "content_sha256": "605de481c1d8be28a9b44d7617822bfc1e7ea9eb1c57a0ae931752986d4ceeea"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
     "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
@@ -95,12 +95,12 @@
     "content_sha256": "9448fa23fdc05360cb9adef4a8d7f7334b55ac0ccf85cae18dcc0d8df807652f"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "79344a58d878545e3daa6d5b880f6fe5dedb51b2",
-    "content_sha256": "796e972f2ce34f0ecf41b4b16705cdea31d49154f4bd18c6c4de867abe6a1576"
+    "revision": "40dcd8aafb590df09de07d6e29719d008df5b168",
+    "content_sha256": "d1d8a48d031bcb628651e1127ece804c4086e2660dfb85e3d87b2e482212f129"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
-    "revision": "0000000000000000000000000000000000000000",
-    "content_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    "revision": "40dcd8aafb590df09de07d6e29719d008df5b168",
+    "content_sha256": "a2457ae90d691516191928c05e9670b7298b8fc45414c7181ba28590c72e1898"
    }
   }
  },
