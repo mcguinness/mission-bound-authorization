@@ -3140,9 +3140,10 @@ narrows it to the requested values, and the token response reports
 the values granted ({{RFC6749}} Section 5.1). Scope values with their
 own semantics, such as `openid` ({{OpenID.Core}}), are unaffected and
 combine with `authorization_details` as {{RFC9396}} Section 3.1
-permits; a Mission-creating client that requests authority through
-`authorization_details` does not also request a resource `scope` for
-it.
+permits. A Mission-creating client does not request a resource `scope`
+for a target that consumes `authorization_details`; for a `scope`-only
+target, a requested `scope` selects among the values the projection
+can grant.
 
 A refusal caused solely by failure to establish a safe scope
 projection MUST NOT invalidate an otherwise-valid refresh token or its
