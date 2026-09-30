@@ -4073,6 +4073,10 @@ This document's extension points are:
   example, a runtime decision reference, a delegation receipt, or an
   attestation reference), under the consumer rules of
   {{mission-claim}}.
+- **Mission Record members.** The Mission Record is open to
+  additional members set at creation, under short names a companion
+  profile coordinates with this document or under collision-resistant
+  names, as {{mission-record}} states.
 - **Lifecycle state.** The lifecycle state space ({{lifecycle}}) is
   open to additional states that companion profiles register in the
   Mission Lifecycle States registry ({{iana-lifecycle-states}}) for
