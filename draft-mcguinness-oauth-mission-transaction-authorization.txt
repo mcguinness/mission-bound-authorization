@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                          29 September 2026
-Expires: 2 April 2027
+Intended status: Experimental                          30 September 2026
+Expires: 3 April 2027
 
 
         Mission Transaction Authorization Profile for OAuth 2.0
@@ -53,7 +53,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 2 April 2027.
+   This Internet-Draft will expire on 3 April 2027.
 
 Copyright Notice
 
@@ -72,30 +72,29 @@ Copyright Notice
 Table of Contents
 
    1.  Introduction
-   2.  Status: An Optional Extension
-   3.  Conventions and Terminology
-   4.  Applicability
-   5.  Resource Challenge
-   6.  Challenge Redemption and Approval
-     6.1.  Subject Establishment
-       6.1.1.  Subject Namespaces
-     6.2.  Two-Phase Expiry
-   7.  Transaction Token
-   8.  Offline Verification and Execution
-   9.  Evidence and Audit
-   10. Failure Semantics
-   11. Security Considerations
-   12. Privacy Considerations
-   13. IANA Considerations
-     13.1.  Media Type Registration
-       13.1.1.  application/mission-txn-token+jwt
-   14. Mission Substrate
-   15. Carrier Binding Floor
-     15.1.  Transaction Invariants
-     15.2.  Carrier Requirements
-     15.3.  OAuth Discharge
-   16. Conformance
-   17. Document History
+   2.  Conventions and Terminology
+   3.  Applicability
+   4.  Resource Challenge
+   5.  Challenge Redemption and Approval
+     5.1.  Subject Establishment
+       5.1.1.  Subject Namespaces
+     5.2.  Two-Phase Expiry
+   6.  Transaction Token
+   7.  Offline Verification and Execution
+   8.  Evidence and Audit
+   9.  Failure Semantics
+   10. Security Considerations
+   11. Privacy Considerations
+   12. IANA Considerations
+     12.1.  Media Type Registration
+       12.1.1.  application/mission-txn-token+jwt
+   13. Mission Substrate
+   14. Carrier Binding Floor
+     14.1.  Transaction Invariants
+     14.2.  Carrier Requirements
+     14.3.  OAuth Discharge
+   15. Conformance
+   16. Document History
    Acknowledgments
    References
      Normative References
@@ -143,8 +142,6 @@ Table of Contents
    engagement with that protocol's own evolution proceeds through the
    family's coordination process, outside this document.
 
-2.  Status: An Optional Extension
-
    This document is optional.  A deployment that satisfies action-bound
    approval by another means, a synchronous local decision, a bespoke
    callback, or no cross-organizational case at all, is fully conformant
@@ -175,13 +172,7 @@ Table of Contents
    Experimental for that reason, tracking its substrate and crossing to
    the stable tier by reclassification when the substrate does.
 
-   Role: companion.  Spec maturity: experimental.  Maintenance: active-
-   experimental.  Adopt when: One action needs a fresh, portable, cross-
-   org authorization with no live callback.  Requires: Mission-Bound
-   Runtime Enforcement; Mission Substrate Requirements; Mission-Bound
-   Authorization for OAuth 2.0.
-
-3.  Conventions and Terminology
+2.  Conventions and Terminology
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
@@ -224,7 +215,7 @@ Table of Contents
       [I-D.draft-rosomakho-oauth-txn-challenge] in this profile: it
       normalizes the requested operation, computes its parameter_digest,
       and signs the transaction challenge with the Mission-profiled
-      claims of Section 5.
+      claims of Section 4.
 
    Presenting Client:  The client of
       [I-D.draft-rosomakho-oauth-txn-challenge] in this profile: it
@@ -234,14 +225,14 @@ Table of Contents
 
    Transaction challenge:  The transaction_challenge of
       [I-D.draft-rosomakho-oauth-txn-challenge], typed txn-authz-
-      challenge+jwt, profiled by Section 5 with the Mission-profiled
+      challenge+jwt, profiled by Section 4 with the Mission-profiled
       claims.
 
    Transaction token:  The sender-constrained, single-audience, single-
-      use JWT the TAS mints of Section 7, typed application/mission-txn-
+      use JWT the TAS mints of Section 6, typed application/mission-txn-
       token+jwt.
 
-4.  Applicability
+3.  Applicability
 
    This profile is invoked when any of these requires action-bound
    approval for a normalized operation:
@@ -268,7 +259,7 @@ Table of Contents
    NOT treat a step-up context alone as satisfying an action-bound
    approval requirement.  A durable role or relationship grant produced
    by a governance decision is also not an approval token: it becomes
-   current governance state, and the fresh decision of Section 6 re-
+   current governance state, and the fresh decision of Section 5 re-
    evaluates it like any other current policy input rather than
    consuming it as the approval itself.
 
@@ -277,10 +268,10 @@ Table of Contents
    preparation, commit, and compensation
    ([I-D.draft-mcguinness-mission-runtime]).
 
-5.  Resource Challenge
+4.  Resource Challenge
 
    After receiving an ordinary Mission-bound request for an action that
-   falls under Section 4, the Challenge-Issuing Resource normalizes the
+   falls under Section 3, the Challenge-Issuing Resource normalizes the
    operation under its Operation Profile and computes the runtime
    parameter_digest ([I-D.draft-mcguinness-mission-runtime]).  When no
    valid transaction token is presented, the resource signals and
@@ -315,7 +306,7 @@ Table of Contents
 
    parameter_digest:  REQUIRED.  Computed exactly as the runtime profile
       specifies ([I-D.draft-mcguinness-mission-runtime]): a canonical-
-      object digest of the imported species (Section 3); this document
+      object digest of the imported species (Section 2); this document
       defines no second canonicalization.
 
    cnf:  REQUIRED.  The presenter key [RFC7800] to which the resulting
@@ -336,7 +327,7 @@ Table of Contents
    recompute parameter_digest against it before relying on it.  This
    document defines no second, unspecified attribute channel.
 
-6.  Challenge Redemption and Approval
+5.  Challenge Redemption and Approval
 
    The Presenting Client submits the challenge to the
    transaction_authorization_endpoint exactly as
@@ -352,7 +343,7 @@ Table of Contents
 
    The request also carries proof of possession of the challenge's cnf
    key, using DPoP [RFC9449] or mTLS [RFC8705], the same mechanism
-   Section 7 binds the resulting token to.  A holder-mediated cross-
+   Section 6 binds the resulting token to.  A holder-mediated cross-
    organizational delegation Chain is not an acceptable subject_token
    for this version of the profile; presenting one at the transaction
    endpoint returns once this profile defines its own subject_token_type
@@ -370,7 +361,7 @@ Table of Contents
        token was issued for the challenged resource and is held by the
        party presenting the challenge, and validating any delegation
        context (act chain) the subject_token carries under the actor
-       rules in effect, since the token of Section 7 projects exactly
+       rules in effect, since the token of Section 6 projects exactly
        that verified context;
 
    2.  requiring exact equality between the challenge's mission and
@@ -416,17 +407,17 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-approval-governance]); this document
    neither restates nor requires it.
 
-6.1.  Subject Establishment
+5.1.  Subject Establishment
 
    The destination-local subject the flow binds, from the approval of
-   step 5 through the token of Section 7, is established at admission
+   step 5 through the token of Section 6, is established at admission
    and revalidated at completion:
 
    1.  verify subject_token and establish its issuer-qualified identity,
        the pair of its iss and its sub;
 
    2.  establish the destination-local subject from that identity under
-       the configured namespace policy of Section 6.1.1;
+       the configured namespace policy of Section 5.1.1;
 
    3.  where the Origin Principal profile applies
        ([I-D.draft-mcguinness-oauth-mission-cross-domain]), co-resolve
@@ -447,12 +438,12 @@ Table of Contents
 
    The two numbered sequences interleave in exactly one way:
    establishment steps 1 through 4 run at admission, inside the
-   subject_token validation of Section 6 step 1, and MUST complete
-   before Section 6 step 5 binds the approval to the pinned subject;
-   establishment steps 5 and 6 run at completion, before Section 6 step
+   subject_token validation of Section 5 step 1, and MUST complete
+   before Section 5 step 5 binds the approval to the pinned subject;
+   establishment steps 5 and 6 run at completion, before Section 5 step
    7's fresh decision.
 
-6.1.1.  Subject Namespaces
+5.1.1.  Subject Namespaces
 
    A TAS MAY restrict which subject_token issuers and subject namespaces
    it accepts.  Whether an accepted issuer shares this Authorization
@@ -465,7 +456,7 @@ Table of Contents
    namespace and use the mapped value.  A missing, ambiguous, stale, or
    disabled mapping MUST be refused rather than guessed.
 
-6.2.  Two-Phase Expiry
+5.2.  Two-Phase Expiry
 
    The challenge's exp bounds initial admission only: the Presenting
    Client MUST submit before it expires, and a late challenge is refused
@@ -476,11 +467,11 @@ Table of Contents
    [I-D.draft-mcguinness-mission-authzen]), carries its own deployment-
    declared lifetime: the upstream expires_in of
    [I-D.draft-rosomakho-oauth-txn-challenge] Section 5.2.  Steps 6 and 7
-   of Section 6 revalidate current Mission state, subject_token
+   of Section 5 revalidate current Mission state, subject_token
    validity, approval freshness, client and key binding, entitlement,
    and policy, fresh at the moment they run; the transaction token's exp
    is bounded by those inputs and the pending workflow's remaining
-   lifetime, never by the already-consumed challenge exp (Section 7).
+   lifetime, never by the already-consumed challenge exp (Section 6).
 
    Repeated initial submission of the same (challenge issuer, challenge
    jti, client, cnf) MUST return the existing pending workflow or fail
@@ -503,10 +494,10 @@ Table of Contents
    federation metadata, not through anything the request asserts about
    itself.
 
-7.  Transaction Token
+6.  Transaction Token
 
    On permit, the Transaction Authorization Server issues a JWT with
-   protected header typ mission-txn-token+jwt (Section 13).  Exact
+   protected header typ mission-txn-token+jwt (Section 12).  Exact
    validation of that protected typ value, together with mutually
    exclusive validation rules for the artifact profiles, implements the
    substitution defense of [RFC8725], Sections 3.11 and 3.12.  This is
@@ -525,8 +516,8 @@ Table of Contents
 
    sub:  REQUIRED.  The destination-local subject, derived from the
       verified issuer-qualified identity of the presented subject_token
-      under the establishment and revalidation rules of Section 6.1 and
-      the namespace contract of Section 6.1.1: the pinned subject those
+      under the establishment and revalidation rules of Section 5.1 and
+      the namespace contract of Section 5.1.1: the pinned subject those
       rules produced at admission and reconfirmed at completion, never a
       value derived a second way at minting time.  Where the Origin
       Principal profile applies
@@ -549,14 +540,14 @@ Table of Contents
       who acted, for audit and as policy input, and grants nothing by
       itself.  Actor proofs and receipts, where a deployment carries
       them, stay off this token; they ride subject_token or the
-      delegation context the TAS verified at redemption (Section 6),
+      delegation context the TAS verified at redemption (Section 5),
       never the transaction token itself.
 
    txn:  REQUIRED.  Copied unchanged from the verified challenge.
 
    authorization_details:  REQUIRED.  The exact permitted entry, never
       wider than the challenge, subject_token's Authority Set, or the
-      fresh decision of Section 6.
+      fresh decision of Section 5.
 
    parameter_digest:  REQUIRED.  Copied only after recomputation and
       verification against the challenge's value.
@@ -580,13 +571,13 @@ Table of Contents
 
    The token's exp MUST be no later than the earliest of: approval
    freshness or approved_until; subject_token's own validity; Mission
-   expiry; the pending workflow's remaining lifetime (Section 6.2); and
+   expiry; the pending workflow's remaining lifetime (Section 5.2); and
    deployment maximum.  It is never bounded by the already-consumed
    challenge exp.  A short token lifetime limits stale-policy and
    revocation exposure but does not replace the point-of-use state
-   checks Section 8 requires.
+   checks Section 7 requires.
 
-8.  Offline Verification and Execution
+7.  Offline Verification and Execution
 
    The Challenge-Issuing Resource verifies the transaction token
    locally, without calling the Transaction Authorization Server on the
@@ -673,7 +664,7 @@ Table of Contents
    again.  A genuinely new attempt requires a new challenge, a new
    workflow, a new token, and a new idempotency key.
 
-9.  Evidence and Audit
+8.  Evidence and Audit
 
    This document defines no evidence object of its own.  The approval
    service or TAS records Approval Governance and, where configured,
@@ -694,7 +685,7 @@ Table of Contents
    The Transaction Authorization Server MUST be able to show that its
    fresh decision relied on a valid approval.  A resource's own
    authorization decision rests on the trusted, typed transaction token
-   plus the current local checks of Section 8, never on parsing an
+   plus the current local checks of Section 7, never on parsing an
    arbitrary evidence blob presented at the request.
 
    This profile defines no Continuation Transport and no continuity
@@ -707,21 +698,21 @@ Table of Contents
    Profile's idempotency identity correlates the effect and is not
    carried by the token.
 
-10.  Failure Semantics
+9.  Failure Semantics
 
    The pending and polling states and errors of
    [I-D.draft-rosomakho-oauth-txn-challenge] Section 5.3
    (authorization_pending, slow_down, access_denied, expired_token)
    apply unchanged; this document defines no second error vocabulary for
    that surface.  Initial validation only admits a workflow: only the
-   fresh decision at Section 6 completion is final, and an admitted
+   fresh decision at Section 5 completion is final, and an admitted
    workflow MUST still refuse there when a fresh input no longer holds.
 
    No or expired action approval:  Deny.  The workflow MAY return or
       request another approval.
 
    Approval granted but current policy or entitlement denies:  Deny.
-      The approval is not a bypass of step 7 of Section 6.
+      The approval is not a bypass of step 7 of Section 5.
 
    Parameter, resource, Mission, principal, presenter, or audience
 
@@ -729,17 +720,17 @@ Table of Contents
 
    Superseded Operation Profile version:  A new admission under a
       superseded version is refused; a superseded version resolves only
-      for workflows admitted under it (Section 5).
+      for workflows admitted under it (Section 4).
 
    Effective Authority Set narrowed since admission:  Terminal refusal
-      at step 5 of Section 8; a containment or discharge narrowing is an
+      at step 5 of Section 7; a containment or discharge narrowing is an
       authority change, never lifecycle noise.
 
    Stale or unavailable required state:  Fail closed.  Retry only
       according to the declared state-recovery policy.
 
    Consumed token:  Return the prior idempotent result via the
-      relationship map of Section 8 when the Operation Profile allows
+      relationship map of Section 7 when the Operation Profile allows
       it; otherwise duplicate_suppressed
       ([I-D.draft-mcguinness-mission-runtime]).  Never execute again.
 
@@ -748,14 +739,14 @@ Table of Contents
    authorization_details semantics:  MUST be rejected outright, never
       parsed on a best-effort basis.
 
-11.  Security Considerations
+10.  Security Considerations
 
    The security considerations of the issuance profile
    [I-D.draft-mcguinness-oauth-mission] and the runtime profile
    [I-D.draft-mcguinness-mission-runtime] apply.
 
    Challenge and credential substitution:  A challenge is scoped to one
-      resource, one operation, and one presenter key.  Section 6's step
+      resource, one operation, and one presenter key.  Section 5's step
       1 (subject_token audience and cnf), step 2 (exact mission
       equality), and step 3 (authority subset) together close the case
       of a challenge issued for one resource being redeemed for
@@ -782,7 +773,7 @@ Table of Contents
       the TAS's signing key and decision logic from the agent's own
       execution environment, matching the runtime profile's mediated-
       custody posture, SHOULD bound the pending workflow's declared
-      lifetime (Section 6.2) to what genuine approval latency requires,
+      lifetime (Section 5.2) to what genuine approval latency requires,
       and SHOULD bound token lifetime tightly enough that a detected
       compromise's blast radius is the outstanding token population, not
       the Mission's full remaining lifetime.
@@ -793,18 +784,18 @@ Table of Contents
       [I-D.draft-mcguinness-mission-metering]; a deployment that
       degrades to a merely local cache during partition no longer has
       that property and MUST NOT claim it.  Every failure path of
-      Section 10 resolves to denial, refusal, or a fail-closed state,
+      Section 9 resolves to denial, refusal, or a fail-closed state,
       never silent pass-through; an implementation that treats an
       unrecognized typ, an unverifiable approval, or an unreachable
       consumption store as permission is nonconformant.
 
-12.  Privacy Considerations
+11.  Privacy Considerations
 
    Raw action parameters and approval detail stay off the transaction
    token by design: the token carries parameter_digest, not the
    parameters, and no approval object.  A Transaction Authorization
    Server that needs more than the digest to decide or render obtains
-   raw values through the reason_uri retrieval of Section 5, never by
+   raw values through the reason_uri retrieval of Section 4, never by
    widening the token.
 
    Digest-plus-attributes authorization lets a TAS decide without
@@ -814,7 +805,7 @@ Table of Contents
    subject_token discloses to the TAS that the Presenting Client holds
    Mission-bound authority at the challenged resource; the TAS already
    is a party the deployment trusts with the fresh decision, so this is
-   not a disclosure beyond what Section 6 already requires it to
+   not a disclosure beyond what Section 5 already requires it to
    evaluate.
 
    txn and the transaction token's jti are a correlation surface: any
@@ -822,11 +813,11 @@ Table of Contents
    resource transaction to one TAS decision.  This is the profile's
    intended accountability property, not an incidental leak, but a
    deployment SHOULD scope txn values to the minimum lifetime and
-   audience that Section 5 and Section 8 require.
+   audience that Section 4 and Section 7 require.
 
-13.  IANA Considerations
+12.  IANA Considerations
 
-13.1.  Media Type Registration
+12.1.  Media Type Registration
 
    IANA is requested to register one media type per [RFC6838].  Its JOSE
    protected typ is the registered media type with the application/
@@ -838,7 +829,7 @@ Table of Contents
    This document does not register a second challenge media type; the
    challenge keeps the upstream typ txn-authz-challenge+jwt unchanged.
 
-13.1.1.  application/mission-txn-token+jwt
+12.1.1.  application/mission-txn-token+jwt
 
    *  Type name: application
 
@@ -850,7 +841,7 @@ Table of Contents
 
    *  Encoding considerations: 8bit; JWS Compact Serialization [RFC7515]
 
-   *  Security considerations: see Section 11
+   *  Security considerations: see Section 10
 
    *  Interoperability considerations: see this document
 
@@ -891,7 +882,7 @@ Table of Contents
    single_use member anywhere, because single use is semantic to the
    type itself.
 
-14.  Mission Substrate
+13.  Mission Substrate
 
    This document is defined against the Mission model rather than
    against OAuth 2.0 mechanics: it is a substrate-neutral consumer, and
@@ -903,7 +894,7 @@ Table of Contents
    From the contextual-governance kernel it consumes the Mission
    identifier and issuer, the kernel's Mission Reference and Controller
    carried in the mission claim, and the active and non-active gate the
-   fresh decision of Section 6 observes.
+   fresh decision of Section 5 observes.
 
    Its declaration against the optional capabilities:
 
@@ -920,11 +911,11 @@ Table of Contents
    |Authority       |           |authorization_details entry is        |
    |                |           |evaluated against the verified        |
    |                |           |Authority Set under the subset rule   |
-   |                |           |(Section 6 step 3)                    |
+   |                |           |(Section 5 step 3)                    |
    +----------------+-----------+--------------------------------------+
    |State-Observable|required   |Offline verification observes current |
    |                |           |Mission state within its declared     |
-   |                |           |freshness bound (Section 8);          |
+   |                |           |freshness bound (Section 7);          |
    |                |           |establishing that state is the runtime|
    |                |           |and Status profiles' concern          |
    +----------------+-----------+--------------------------------------+
@@ -936,7 +927,7 @@ Table of Contents
    |Credential-Bound|required   |subject_token MUST already be sender- |
    |                |and        |constrained by cnf, and the minted    |
    |                |produced   |transaction token is itself a cnf-    |
-   |                |           |bound artifact (Section 7); this      |
+   |                |           |bound artifact (Section 6); this      |
    |                |           |profile both requires and produces the|
    |                |           |capability                            |
    +----------------+-----------+--------------------------------------+
@@ -946,7 +937,7 @@ Table of Contents
    |                |           |separate credential to the Mission    |
    |                |           |here                                  |
    +----------------+-----------+--------------------------------------+
-   |Independently   |produced   |Offline verification of Section 8     |
+   |Independently   |produced   |Offline verification of Section 7     |
    |Verifiable      |           |independently verifies the transaction|
    |                |           |permit, the transaction binding, the  |
    |                |           |carried authority, and the presenter  |
@@ -957,7 +948,7 @@ Table of Contents
    +----------------+-----------+--------------------------------------+
    |Portable        |not        |This document defines no evidence     |
    |Evidence        |consumed   |artifact of its own; the evidence     |
-   |                |           |plane of Section 9 carries the durable|
+   |                |           |plane of Section 8 carries the durable|
    |                |           |account                               |
    +----------------+-----------+--------------------------------------+
 
@@ -966,9 +957,9 @@ Table of Contents
    Beyond the kernel, this profile also consumes companion capabilities
    outside the substrate contract: the metering companion's Exact
    enforcement profile for atomic txn consumption and the Mission Status
-   surface for freshness-bounded state observation (both Section 8),
+   surface for freshness-bounded state observation (both Section 7),
    and, conditionally, the cross-domain Origin Principal profile for the
-   invariant origin principal (Section 5).  All three are consumed, none
+   invariant origin principal (Section 4).  All three are consumed, none
    produced.
 
    These consumed capabilities join conjunctively, at the runtime
@@ -980,22 +971,22 @@ Table of Contents
 
    The carrier-side dual of this declaration, what a protocol binding
    must provide for another substrate to host this profile's flow, is
-   Section 15.
+   Section 14.
 
-15.  Carrier Binding Floor
+14.  Carrier Binding Floor
 
    The wire mechanics of this document are one discharge of a carrier-
-   neutral flow: Section 14 declares what this profile consumes from the
+   neutral flow: Section 13 declares what this profile consumes from the
    Mission kernel, and this section declares what the flow itself
-   requires, in three layers.  Section 15.1 states the invariants that
-   make the flow safe on any substrate.  Section 15.2 states the slots a
-   protocol binding MUST provide to carry them.  Section 15.3 names this
+   requires, in three layers.  Section 14.1 states the invariants that
+   make the flow safe on any substrate.  Section 14.2 states the slots a
+   protocol binding MUST provide to carry them.  Section 14.3 names this
    document's own discharge of each slot.
 
    A binding that cannot provide a slot does not host this profile:
    absence is fail-closed, and there is no partial hosting.
 
-15.1.  Transaction Invariants
+14.1.  Transaction Invariants
 
    Four roles participate: the Challenging Resource, which owns the
    operation and its state; the Transaction Authority, which admits the
@@ -1043,14 +1034,14 @@ Table of Contents
        states are distinguishable, so a refused caller can re-plan
        without receiving a map of the environment.
 
-15.2.  Carrier Requirements
+14.2.  Carrier Requirements
 
    A protocol binding provides one slot for each requirement below.
    Each slot is named by function; the binding supplies the substrate-
    native carrier.
 
    Challenge carrier:  A resource-authenticated artifact for the
-      commitments of Section 15.1, whose signing keys a verifier
+      commitments of Section 14.1, whose signing keys a verifier
       resolves from the issuer's published metadata and nowhere else;
       one issuer's key never verifies another issuer's challenge.
 
@@ -1088,35 +1079,35 @@ Table of Contents
       workflow states onto the substrate's native vocabulary; the
       binding defines no second vocabulary.
 
-15.3.  OAuth Discharge
+14.3.  OAuth Discharge
 
        +===============+==========================================+
        | Requirement   | This document                            |
        +===============+==========================================+
-       | Challenge     | The signed challenge of Section 5, keys  |
+       | Challenge     | The signed challenge of Section 4, keys  |
        | carrier       | via txn_challenge_jwks_uri               |
        +---------------+------------------------------------------+
        | Operation     | The authorization_details entry type and |
-       | identity      | Operation Profile rules of Section 5     |
+       | identity      | Operation Profile rules of Section 4     |
        +---------------+------------------------------------------+
        | Parameter     | parameter_digest, carried and verified   |
-       | commitment    | per Section 5 and Section 8              |
+       | commitment    | per Section 4 and Section 7              |
        +---------------+------------------------------------------+
        | Workflow      | transaction_authorization_id and the     |
-       | handle        | admission rules of Section 6.2           |
+       | handle        | admission rules of Section 5.2           |
        +---------------+------------------------------------------+
-       | Result class  | mission-txn-token+jwt per Section 7      |
+       | Result class  | mission-txn-token+jwt per Section 6      |
        +---------------+------------------------------------------+
        | Possession    | cnf under DPoP or mutual TLS, including  |
-       |               | ath, per Section 6 and Section 8         |
+       |               | ath, per Section 5 and Section 7         |
        +---------------+------------------------------------------+
        | Current-state | Offline verification step 5 of           |
-       | source        | Section 8: the Mission Status surface,   |
+       | source        | Section 7: the Mission Status surface,   |
        |               | the Status List, or issuer introspection |
        |               | within declared freshness bounds         |
        +---------------+------------------------------------------+
        | Failure       | The upstream vocabulary applied          |
-       | vocabulary    | unchanged per Section 10                 |
+       | vocabulary    | unchanged per Section 9                  |
        +---------------+------------------------------------------+
 
            Table 2: OAuth discharge of the carrier requirements
@@ -1126,19 +1117,19 @@ Table of Contents
    native and missing status of each requirement against AAuth and R3
    ([I-D.draft-hardt-aauth-r3]); it does not claim the capability.
 
-16.  Conformance
+15.  Conformance
 
    A *Transaction Authorization Server*:
 
    *  authenticates the Presenting Client and validates the challenge as
       [I-D.draft-rosomakho-oauth-txn-challenge] requires, then completes
-      every added step of Section 6 in order and refuses on any failure;
+      every added step of Section 5 in order and refuses on any failure;
 
    *  MUST NOT let completion of the approval step alone trigger token
       issuance or bypass the fresh decision;
 
    *  mints the transaction token only with the claims and MUST NOT list
-      of Section 7; and
+      of Section 6; and
 
    *  publishes its signing keys and accepted challenge issuers as
       deployment and federation metadata, resolving each challenge
@@ -1149,9 +1140,9 @@ Table of Contents
 
    *  derives the Mission-profiled challenge claims from the request and
       the verified credential, never from a client-supplied value
-      (Section 5);
+      (Section 4);
 
-   *  verifies the transaction token locally under Section 8 without a
+   *  verifies the transaction token locally under Section 7 without a
       request-path call to the TAS; and
 
    *  consumes txn atomically and linearizably across every replica,
@@ -1187,7 +1178,7 @@ Table of Contents
    detail absent from the token; and evidence correlation from challenge
    and decision through exactly one execution or terminal refusal.
 
-17.  Document History
+16.  Document History
 
    [[ To be removed from the final specification ]]
 

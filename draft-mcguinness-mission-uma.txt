@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                          29 September 2026
-Expires: 2 April 2027
+Intended status: Experimental                          30 September 2026
+Expires: 3 April 2027
 
 
                 Mission-Bound Authorization for UMA 2.0
@@ -63,7 +63,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 2 April 2027.
+   This Internet-Draft will expire on 3 April 2027.
 
 Copyright Notice
 
@@ -84,36 +84,35 @@ Table of Contents
    1.  Introduction
      1.1.  Attempt-First Operation
      1.2.  Applicability
-   2.  Status: An Experimental Sketch
-   3.  Conventions and Terminology
-   4.  Mission Roles
-   5.  Mission Flow
-   6.  Mission Intent
-   7.  Mission Approval
-   8.  Mission Record
-   9.  Mission Lifecycle
-     9.1.  Issuance Gating
-     9.2.  Mission State Surfaces
-   10. Mission-Bound Credential
-     10.1.  The Mission Claim
-     10.2.  Authority Subset and Grain
-     10.3.  Drawdown and Upgrade
-     10.4.  Mission Continuity: the PCT
-     10.5.  Worked Example
-   11. Mission Substrate Statement
-   12. Limitations
-   13. Conformance
-   14. Security Considerations
-     14.1.  The Ticket as Deferral Handle
-     14.2.  Rendering the Proposal
-     14.3.  The PCT Is Not Authority
-     14.4.  Authorization Server Compromise
-     14.5.  Introspection as the State Channel
-   15. Privacy Considerations
-   16. IANA Considerations
-   17. References
-     17.1.  Normative References
-     17.2.  Informative References
+   2.  Conventions and Terminology
+   3.  Mission Roles
+   4.  Mission Flow
+   5.  Mission Intent
+   6.  Mission Approval
+   7.  Mission Record
+   8.  Mission Lifecycle
+     8.1.  Issuance Gating
+     8.2.  Mission State Surfaces
+   9.  Mission-Bound Credential
+     9.1.  The Mission Claim
+     9.2.  Authority Subset and Grain
+     9.3.  Drawdown and Upgrade
+     9.4.  Mission Continuity: the PCT
+     9.5.  Worked Example
+   10. Mission Substrate Statement
+   11. Limitations
+   12. Conformance
+   13. Security Considerations
+     13.1.  The Ticket as Deferral Handle
+     13.2.  Rendering the Proposal
+     13.3.  The PCT Is Not Authority
+     13.4.  Authorization Server Compromise
+     13.5.  Introspection as the State Channel
+   14. Privacy Considerations
+   15. IANA Considerations
+   16. References
+     16.1.  Normative References
+     16.2.  Informative References
    Acknowledgments
    Author's Address
 
@@ -171,7 +170,7 @@ Table of Contents
    is also the first binding authored against the Mission Substrate
    Requirements contract ([I-D.draft-mcguinness-mission-substrate])
    rather than one the contract was extracted from; its Mission
-   Substrate Statement (Section 11) is written to that document's
+   Substrate Statement (Section 10) is written to that document's
    conformance rules, and exercising the checklist on a substrate none
    of its source bindings resemble is part of this sketch's purpose.
 
@@ -186,7 +185,7 @@ Table of Contents
    inversion with one rule: the first ticket exchanged under a
    prospective Mission carries the whole task as a pushed Mission
    Intent, and the authorization server derives and obtains approval for
-   the full Authority Set, not the ticketed slice (Section 6).
+   the full Authority Set, not the ticketed slice (Section 5).
 
    Without that rule the Approver would meet the Mission one resource-
    server slice at a time, which is the consent-fatigue failure the
@@ -203,22 +202,16 @@ Table of Contents
    the accountable person is the resource owner.  Resource servers
    participate through plain UMA: registration, permission requests, and
    introspection are unchanged, and a resource server needs no Mission
-   awareness beyond what introspection already returns (Section 10).
+   awareness beyond what introspection already returns (Section 9).
    Both substrate documents are final Kantara Initiative
-   Recommendations; Section 12 discusses what that dependency choice
+   Recommendations; Section 11 discusses what that dependency choice
    trades.
 
    This document is an experimental sketch.  It fixes the binding's
    shape and its Mission Substrate Statement; worked test vectors and a
    per-endpoint error taxonomy are deferred to a later revision.
 
-2.  Status: An Experimental Sketch
-
-   Role: adapter-binding.  Spec maturity: sketch.  Maintenance: lab-
-   best-effort.  Adopt when: Evaluating a UMA 2.0 deployment only.
-   Requires: Mission Substrate Requirements.
-
-3.  Conventions and Terminology
+2.  Conventions and Terminology
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
@@ -249,13 +242,13 @@ Table of Contents
    Mission-Bound UMA Authorization Server:  A UMA 2.0 authorization
       server conforming to this profile: it implements the Mission
       Issuer role behind its token endpoint and owner surfaces
-      (Section 13).
+      (Section 12).
 
    Mission-Bound UMA Client:  A UMA client that proposes structured
       intent on its first ticket exchange under a prospective Mission
-      and respects the Mission lifecycle (Section 13).
+      and respects the Mission lifecycle (Section 12).
 
-4.  Mission Roles
+3.  Mission Roles
 
          +===============+======================================+
          | UMA role      | Mission model role                   |
@@ -290,7 +283,7 @@ Table of Contents
    profile's approval modes are native UMA modes: pre-registered owner
    policy at the authorization server is the authorized-policy approver
    deciding at machine speed, and request_submitted is the human
-   Approver deciding asynchronously (Section 7).
+   Approver deciding asynchronously (Section 6).
 
    UMA permits the requesting party and the resource owner to be the
    same natural person, and in the agent deployments this profile
@@ -298,7 +291,7 @@ Table of Contents
    person is both Subject and Approver, the OAuth binding's default
    geometry.  Nothing in this binding requires them to differ.
 
-5.  Mission Flow
+4.  Mission Flow
 
    This section is informative.  An agent holds the task "reconcile Q3
    invoices at the finance service and file the summary at the document
@@ -314,7 +307,7 @@ Table of Contents
    2.  The agent presents the ticket at the token endpoint under
        grant_type urn:ietf:params:oauth:grant-type:uma-ticket, pushing
        the Mission Intent for the whole task, both services, as a claim
-       token (Section 6).
+       token (Section 5).
 
    3.  The authorization server gathers the requesting party's identity
        claims through UMA's ordinary channels (a pushed identity claim
@@ -324,7 +317,7 @@ Table of Contents
    4.  The authorization server derives the full Authority Set from the
        Intent, renders it for consent on its owner surface, and returns
        request_submitted with a rotated ticket: the decision is deferred
-       to Alice (Section 7).
+       to Alice (Section 6).
 
    5.  Alice approves on the owner surface.  The Mission record is
        created active, the anchors are committed, and Consent Evidence
@@ -332,13 +325,13 @@ Table of Contents
 
    6.  The agent retries the ticket and receives an RPT carrying the
        finance permissions, the first drawdown of the approved ceiling,
-       plus a PCT (Section 10.4).
+       plus a PCT (Section 9.4).
 
    7.  Later the agent attempts the document service.  The new ticket
        goes to the token endpoint with the PCT and the existing RPT for
        upgrading; the authorization server resolves the Mission through
        the PCT, checks the requested permissions against the Authority
-       Set, and approves by policy without waking Alice (Section 10.3).
+       Set, and approves by policy without waking Alice (Section 9.3).
        The upgraded RPT carries both services' permissions.
 
    8.  Each resource server introspects the RPT per use.  Revoking the
@@ -346,7 +339,7 @@ Table of Contents
        introspection everywhere: one Mission, compiled once, projected
        per resource server, killed in one place.
 
-6.  Mission Intent
+5.  Mission Intent
 
    The Mission Intent reaches the authorization server through claims
    pushing: it rides the existing claim_token parameter of the token
@@ -393,13 +386,13 @@ Table of Contents
    same or other rounds of the need_info rotation loop; the
    authorization server MUST NOT take the Subject from the Mission
    Intent claim token, which is unauthenticated client input
-   (Section 7).
+   (Section 6).
 
    The proposal is the shaping profile's Mission Intent proposal, and a
    deployment that shapes free-text instructions into structured Intents
    composes here unchanged ([I-D.draft-mcguinness-mission-shaping]).
 
-7.  Mission Approval
+6.  Mission Approval
 
    UMA's authorization assessment is this binding's approval surface.
    Where the assessment concludes that a new Mission is proposed, it
@@ -422,9 +415,9 @@ Table of Contents
        other unauthenticated client input.
 
    3.  Derive the Authority Set from the Intent, and from the authority
-       proposal where one was pushed (Section 6), and render it for
+       proposal where one was pushed (Section 5), and render it for
        consent on the owner surface under the issuance profile's
-       rendering rules (Section 14.2).
+       rendering rules (Section 13.2).
 
    4.  Compute the integrity anchors with the authorization server's
        issuer identifier as the envelope iss.
@@ -439,7 +432,7 @@ Table of Contents
    request_submitted with a rotated permission ticket, and the resource
    owner decides on the owner surface asynchronously; the client retries
    under UMA's own discipline.  The rotating ticket is the deferral
-   handle (Section 14.1).  This is the surface the OAuth binding needs
+   handle (Section 13.1).  This is the surface the OAuth binding needs
    the Mission Deferred Approval companion for
    ([I-D.draft-mcguinness-oauth-mission-approval]); here it is the
    substrate's ratified machinery, and that companion does not apply.
@@ -471,7 +464,7 @@ Table of Contents
    surface is where the disclosure is rendered, and what was shown is
    what the evidence commits.
 
-8.  Mission Record
+7.  Mission Record
 
    UMA has no native artifact for what was approved; the Mission record
    supplies it.  A Mission-Bound UMA Authorization Server MUST create a
@@ -487,10 +480,10 @@ Table of Contents
    wire-native mission artifact to commit.  The record is held at the
    authorization server, mission_id and issuer name the Mission, and
    consumers meet the reference in the RPT's mission claim or the
-   introspection response (Section 10).  No substrate-native commitment
+   introspection response (Section 9).  No substrate-native commitment
    exists beside the anchors, and nothing substitutes for them.
 
-9.  Mission Lifecycle
+8.  Mission Lifecycle
 
    The Mission lifecycle is the issuance profile's state space, extended
    by the status profile where the deployment adopts it
@@ -522,8 +515,7 @@ Table of Contents
    The projection is fail-safe: every non-active state projects to a
    non-permitting native signal.  The family surfaces report the
    distinct state, and the introspection response's mission.state member
-   carries it verbatim (Section 10.1).  This binding adds to UMA's
-   model:
+   carries it verbatim (Section 9.1).  This binding adds to UMA's model:
 
    *  *Revocation.* The authorization server MUST provide an
       authenticated means for the Subject, the Approver, or an
@@ -547,7 +539,7 @@ Table of Contents
       returns request_submitted, so the client waits under UMA's own
       retry discipline rather than treating the Mission as dead.
 
-9.1.  Issuance Gating
+8.1.  Issuance Gating
 
    No RPT exists without the authorization server's token endpoint, so
    issuance gating is structural, as it is at the AAuth Person Server.
@@ -581,11 +573,11 @@ Table of Contents
    authority_contained in the mission_denial_reason member, the
    containment profile's registered denial carrier.
 
-9.2.  Mission State Surfaces
+8.2.  Mission State Surfaces
 
    Per-use introspection is this binding's native state source: a
    response for an RPT under a Mission carries the mission member with
-   its state (Section 10.1), so a resource server that introspects per
+   its state (Section 9.1), so a resource server that introspects per
    [UMA-FEDAUTHZ] learns of revocation at the next access.  Its
    staleness bound is the introspection caching the deployment permits,
    which the deployment MUST state; with caching disabled the bound is
@@ -600,7 +592,7 @@ Table of Contents
    or a scope removed from a surviving one, is authority the resource
    server cannot rely on, the same result as an RPT that never carried
    it. mission.state continues to report active: containment narrows
-   authority without changing Mission state, and per Section 9's active-
+   authority without changing Mission state, and per Section 8's active-
    Mission projection the response's top-level active member ([RFC7662])
    MUST remain true while the RPT is otherwise active, whether or not
    any permission survives intersection: an empty permissions array
@@ -633,11 +625,11 @@ Table of Contents
    semantics those profiles define; its existing jwks_uri is the
    published key material for its signed artifacts.
 
-10.  Mission-Bound Credential
+9.  Mission-Bound Credential
 
    The RPT is this binding's Mission-bound credential.
 
-10.1.  The Mission Claim
+9.1.  The Mission Claim
 
    An RPT issued under a Mission names it through the mission claim: the
    family members id and issuer, as the issuance profile's baseline
@@ -670,10 +662,10 @@ Table of Contents
    protection API channel at each use.  In both, the Mission reference
    arrives through token validation itself, so the runtime profile's
    binding establishment composes credential-carried with no join
-   (Section 11).  A consumer MUST NOT use any mission member to grant or
+   (Section 10).  A consumer MUST NOT use any mission member to grant or
    widen authority, per the issuance profile.
 
-10.2.  Authority Subset and Grain
+9.2.  Authority Subset and Grain
 
    The permissions an RPT carries MUST be a subset of the Mission's
    Authority Set under the issuance profile's subset rule, projected
@@ -681,7 +673,7 @@ Table of Contents
    scope a permission grants MUST correspond to authority the set grants
    at that resource, and no permission may convey authority, or
    relaxation of a constraint, that the set does not.  Where the
-   deployment adopts Mission Containment, Section 9.1 states the set an
+   deployment adopts Mission Containment, Section 8.1 states the set an
    RPT is gated against at issuance and upgrade
    ([I-D.draft-mcguinness-oauth-mission-containment]).
 
@@ -694,12 +686,12 @@ Table of Contents
    where the PDP evaluates each consequential action against the full
    Authority Set ([I-D.draft-mcguinness-mission-runtime],
    [I-D.draft-mcguinness-mission-authzen]); the substrate swap leaves
-   that layer untouched (Section 12).  An RPT MAY additionally carry
+   that layer untouched (Section 11).  An RPT MAY additionally carry
    Mission-derived authorization details entries per the issuance
    profile where the deployment's RPT format admits them, under the same
    subset rule.
 
-10.3.  Drawdown and Upgrade
+9.3.  Drawdown and Upgrade
 
    The approved Authority Set is a pre-consented ceiling, and each RPT
    issuance or upgrade is a drawdown within it: the model the
@@ -711,7 +703,7 @@ Table of Contents
    and where they are within it MAY approve by policy without waking the
    Approver: that adjudication is a drawdown, not a new approval, and
    the anchors do not change.  The upgraded RPT replaces the prior one
-   and stays bounded per Section 9.1.
+   and stays bounded per Section 8.1.
 
    A requested permission outside the Authority Set is an expansion, not
    a drawdown.  The authorization server MUST NOT widen by policy: it
@@ -721,7 +713,7 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-expansion]).  The wire needs
    nothing new: widening is another ticket the owner must decide.
 
-10.4.  Mission Continuity: the PCT
+9.4.  Mission Continuity: the PCT
 
    The persisted claims token is UMA's continuity artifact: it persists
    the requesting party's claims across authorization processes and
@@ -739,11 +731,11 @@ Table of Contents
    for Mission state, for the subset check, or for any approval; a PCT
    presented under a non-active Mission yields request_denied (or
    request_submitted under suspension), and a PCT never widens what
-   assessment would grant without it (Section 14.3).
+   assessment would grant without it (Section 13.3).
 
-10.5.  Worked Example
+9.5.  Worked Example
 
-   The introspection response for the upgraded RPT of Section 5, after
+   The introspection response for the upgraded RPT of Section 4, after
    the document-service drawdown:
 
    {
@@ -770,9 +762,9 @@ Table of Contents
    permissions are the scope-grain projection of the Mission's Authority
    Set entries at each resource server; the amount bound on
    adjustments.post does not appear, because UMA's grain cannot carry
-   it, and it binds at the runtime layer instead (Section 10.2).
+   it, and it binds at the runtime layer instead (Section 9.2).
 
-11.  Mission Substrate Statement
+10.  Mission Substrate Statement
 
    This section is this binding's Mission Substrate Statement
    ([I-D.draft-mcguinness-mission-substrate]).  It applies to this
@@ -784,20 +776,20 @@ Table of Contents
    1.  *Mission Reference*: the tuple (issuer, mission_id) names one
        record. issuer is the authorization server issuer from UMA
        discovery; mission_id follows the issuance profile's uniqueness,
-       retention, comparison, and non-reassignment rules (Section 8).
+       retention, comparison, and non-reassignment rules (Section 7).
 
    2.  *Controller*: the UMA authorization server controls approval,
        state, assessment, and RPT issuance.  Consumers establish it from
        the UMA discovery document and its configured trust relationship;
        jwks_uri publishes verification keys for signed artifacts
-       (Section 9.2).
+       (Section 8.2).
 
    3.  *Actor binding*: the UMA client is the Actor and its
        authenticated OAuth client identifier is recorded as client_id.
        The token endpoint establishes it from client authentication, not
        the pushed Intent.  Later RPT issuance and validation use UMA's
        ordinary client binding; the separately established requesting
-       party is the Mission Subject (Section 4, Section 7, Section 10).
+       party is the Mission Subject (Section 3, Section 6, Section 9).
 
    4.  *Approved Context*: the immutable Mission Intent, the recorded
        authority proposal where one was pushed, and the derived
@@ -805,31 +797,31 @@ Table of Contents
        The family intent_hash and authority_hash, plus proposal_hash
        where a proposal was pushed, commit them under the issuance
        profile's canonicalization; they are this binding's chosen
-       mechanism, not a substrate-kernel requirement (Section 8).
+       mechanism, not a substrate-kernel requirement (Section 7).
 
    5.  *Approval ceremony*: UMA authorization assessment performs the
        five approval steps in either the deferred owner-decision or pre-
        registered-policy mode and creates the record active atomically
-       with approval (Section 7).
+       with approval (Section 6).
 
    6.  *Governance gate*: only the issuance profile's active state is
        active.  Every other or unrecognized value fails closed at the
        token endpoint and introspection projection.  The Subject,
        Approver, and administrator have an authenticated revocation path
-       (Section 9, Section 9.1).
+       (Section 8, Section 8.1).
 
    7.  *Reliance bound*: RPT issuance and upgrade establish active at
        the token endpoint.  An opaque RPT is bounded by authenticated
        per-use introspection; a self-contained RPT without a state check
        remains usable only for its bounded lifetime after a transition
-       (Section 9.1, Section 10.1, Section 9.2).
+       (Section 8.1, Section 9.1, Section 8.2).
 
    8.  *Context propagation*: the protected mission claim in a self-
        contained RPT, or the authenticated introspection response for an
        opaque RPT, carries the Mission Reference and credential
        association.  The PCT carries continuity only and never
-       establishes Mission governance or authority (Section 10.1,
-       Section 10.4).
+       establishes Mission governance or authority (Section 9.1,
+       Section 9.4).
 
    9.  *Governance record*: the assessment log is the ordered governance
        record.  The authorization server MUST append approval, positive
@@ -855,8 +847,8 @@ Table of Contents
    |             |        |             |introspection   |state check  |
    |             |        |             |gates continued |remains      |
    |             |        |             |reliance        |usable only  |
-   |             |        |             |(Section 9.1,   |for its      |
-   |             |        |             |Section 9.2)    |bounded      |
+   |             |        |             |(Section 8.1,   |for its      |
+   |             |        |             |Section 8.2)    |bounded      |
    |             |        |             |                |lifetime     |
    +-------------+--------+-------------+----------------+-------------+
    |State-       |supplied|authenticated|Those surfaces, |A self-      |
@@ -868,7 +860,7 @@ Table of Contents
    |             |        |cache bound, |                |observation; |
    |             |        |or Mission   |                |token        |
    |             |        |Status active|                |lifetime     |
-   |             |        |(Section 9.2)|                |alone is not |
+   |             |        |(Section 8.2)|                |alone is not |
    |             |        |             |                |observation  |
    +-------------+--------+-------------+----------------+-------------+
    |Structured   |supplied|always       |The Authority   |UMA          |
@@ -879,7 +871,7 @@ Table of Contents
    |             |        |             |are its         |constraints  |
    |             |        |             |resource/scope  |             |
    |             |        |             |projection      |             |
-   |             |        |             |(Section 10.2)  |             |
+   |             |        |             |(Section 9.2)   |             |
    +-------------+--------+-------------+----------------+-------------+
    |Monotonic    |supplied|always       |The token       |Applies to   |
    |Derivation   |        |             |endpoint        |the declared |
@@ -890,15 +882,15 @@ Table of Contents
    |             |        |             |relation at RPT |values       |
    |             |        |             |issuance and    |             |
    |             |        |             |upgrade         |             |
-   |             |        |             |(Section 10.2,  |             |
-   |             |        |             |Section 10.3)   |             |
+   |             |        |             |(Section 9.2,   |             |
+   |             |        |             |Section 9.3)    |             |
    +-------------+--------+-------------+----------------+-------------+
    |Credential-  |supplied|a protected  |One RPT, Actor, |Introspection|
    |Bound        |        |RPT claim, or|and Mission     |carriage is  |
    |             |        |authenticated|Reference       |an online    |
    |             |        |introspection|associated at   |issuer       |
-   |             |        |(Section     |issuance; fact  |assertion,   |
-   |             |        |10.1)        |semantics:      |not offline  |
+   |             |        |(Section 9.1)|issuance; fact  |assertion,   |
+   |             |        |             |semantics:      |not offline  |
    |             |        |             |issuance under  |proof        |
    |             |        |             |the Mission     |             |
    +-------------+--------+-------------+----------------+-------------+
@@ -924,9 +916,9 @@ Table of Contents
    |             |        |or signed    |under the       |any          |
    |             |        |Mission      |Mission,        |particular   |
    |             |        |Status       |offline; a      |RPT's        |
-   |             |        |(Section     |signed Mission  |issuance;    |
-   |             |        |10.1,        |Status response |opaque RPT   |
-   |             |        |Section 9.2) |proves record   |introspection|
+   |             |        |(Section 9.1,|signed Mission  |issuance;    |
+   |             |        |Section 8.2) |Status response |opaque RPT   |
+   |             |        |             |proves record   |introspection|
    |             |        |             |and state       |is online    |
    |             |        |             |properties as   |             |
    |             |        |             |of its          |             |
@@ -973,8 +965,8 @@ Table of Contents
       carriage surface: the Mission reference arrives through token
       validation (JWT claims, or the issuer's introspection response
       that validates the opaque RPT), so binding establishment is
-      credential-carried in both (Section 10.1).  The constraint grain
-      UMA cannot carry is exactly what they enforce (Section 10.2).
+      credential-carried in both (Section 9.1).  The constraint grain
+      UMA cannot carry is exactly what they enforce (Section 9.2).
 
    *  Shaping, consent evidence, status and signals, the Mandate, and
       audit transparency ([I-D.draft-mcguinness-mission-audit]) compose
@@ -999,33 +991,33 @@ Table of Contents
       ([I-D.draft-mcguinness-oauth-mission-cross-domain]).  FedAuthz's
       federation does mean one Mission natively governs many resource
       servers within the authorization server's own trust domain, the
-      multi-resource-server case the flow shows (Section 5).
+      multi-resource-server case the flow shows (Section 4).
 
    *  Mission Containment composes at the token endpoint: RPT issuance
       and upgrade gate on the Effective Authority Set, and per-use
       introspection applies the same filtering to an RPT issued or
       upgraded before a contain transition
-      ([I-D.draft-mcguinness-oauth-mission-containment], Section 9.1,
-      Section 10.2).
+      ([I-D.draft-mcguinness-oauth-mission-containment], Section 8.1,
+      Section 9.2).
 
    *  The family's Mission Assurance Levels layer on top unchanged
       ([I-D.draft-mcguinness-mission-architecture]); a deployment states
       its level, binding, state sources, and staleness bounds in its
       Mission Deployment Profile.
 
-12.  Limitations
+11.  Limitations
 
    *Authority grain.* UMA's unit of authority is the permission, a
    resource and its scopes.  The Authority Set's parameter-bound actions
    and consumption bounds cannot ride it, so the RPT is always a coarse
    projection, and the runtime layer carries the constraint enforcement
-   this family treats as load-bearing (Section 10.2).  The substrate
-   swap replaces approval and issuance plumbing; it does not move the
-   action chokepoint.
+   this family treats as load-bearing (Section 9.2).  The substrate swap
+   replaces approval and issuance plumbing; it does not move the action
+   chokepoint.
 
    *Attempt-triggered approval.* The approval moment is the first ticket
    exchange, not a moment the client chooses before acting.  The whole-
-   task Intent rule (Section 6) preserves compile-once, but the Approver
+   task Intent rule (Section 5) preserves compile-once, but the Approver
    decides when the agent first collides with a protected resource.  A
    deployment that wants approval before the run starts fronts the flow
    with a deliberate first attempt, or uses an intent-first binding.
@@ -1040,7 +1032,7 @@ Table of Contents
    reason to adopt one for the Mission's sake, since the OAuth binding
    exists.
 
-13.  Conformance
+12.  Conformance
 
    An implementation conforms in one of two roles.  Resource servers
    participate through unmodified [UMA-FEDAUTHZ] and have no role to
@@ -1049,20 +1041,20 @@ Table of Contents
    A *Mission-Bound UMA Authorization Server*:
 
    *  accepts the Mission Intent claim token format and bounds it as
-      untrusted input (Section 6);
+      untrusted input (Section 5);
 
    *  executes the approval event on its assessment surface in both
       native decision modes, creating the record active atomically with
-      the decision and computing the anchors (Section 7, Section 8);
+      the decision and computing the anchors (Section 6, Section 7);
 
-   *  operates the lifecycle of Section 9: authenticated revocation by
+   *  operates the lifecycle of Section 8: authenticated revocation by
       mission_id, expiry, completion, fail-safe projection onto token-
       endpoint outcomes, and the only-active gate atomic with every
-      issuance and upgrade (Section 9.1);
+      issuance and upgrade (Section 8.1);
 
    *  issues RPTs as Mission-bound credentials on a declared carriage
       surface, applies the subset rule at every issuance and upgrade,
-      and routes out-of-set requests to the Approver (Section 10);
+      and routes out-of-set requests to the Approver (Section 9);
 
    *  where it adopts Mission Containment, intersects the entire
       resulting RPT, including permissions carried forward from before a
@@ -1073,19 +1065,19 @@ Table of Contents
       scope on any permission, the OAuth error member carrying
       request_denied accompanied by authority_contained in the
       mission_denial_reason member
-      ([I-D.draft-mcguinness-oauth-mission-containment], Section 9.1);
+      ([I-D.draft-mcguinness-oauth-mission-containment], Section 8.1);
 
    *  applies the same scope-grain filtering to per-use introspection of
       an RPT issued or upgraded before a contain transition, and reports
       the introspection response's top-level active member true while
       the RPT is otherwise active regardless of whether any permission
-      survives (Section 9.2);
+      survives (Section 8.2);
 
    *  associates PCTs with Missions as continuity, never authority
-      (Section 10.4);
+      (Section 9.4);
 
    *  serves Mission state with a declared staleness bound per
-      Section 9.2, and retains the record and assessment log for the
+      Section 8.2, and retains the record and assessment log for the
       audit horizon; and
 
    *  publishes its Mission surfaces in its UMA discovery document.
@@ -1094,7 +1086,7 @@ Table of Contents
 
    *  pushes a whole-task Mission Intent on the first ticket exchange
       under a prospective Mission, and treats every proposal as a
-      proposal, never as authority (Section 6);
+      proposal, never as authority (Section 5);
 
    *  follows UMA's retry discipline under request_submitted and
       need_info, and stops on request_denied;
@@ -1105,9 +1097,9 @@ Table of Contents
    *  proposes completion when the task is done, where the deployment
       serves the completion operation.
 
-14.  Security Considerations
+13.  Security Considerations
 
-14.1.  The Ticket as Deferral Handle
+13.1.  The Ticket as Deferral Handle
 
    Between request_submitted and the owner's decision, the rotating
    permission ticket is the only artifact binding the client to the
@@ -1120,7 +1112,7 @@ Table of Contents
    long-lived ticket would let a stale or hijacked exchange complete
    against a decision the owner made about a different pending state.
 
-14.2.  Rendering the Proposal
+13.2.  Rendering the Proposal
 
    The Mission Intent, its goal text, and every justification are
    attacker-influenceable input rendered on the owner surface.  The
@@ -1130,7 +1122,7 @@ Table of Contents
    distinct from client-supplied narrative, so crafted text cannot pass
    as derived authority.
 
-14.3.  The PCT Is Not Authority
+13.3.  The PCT Is Not Authority
 
    The PCT is a bearer continuity artifact held by the client.  Its
    theft replays claims continuity, not authority: assessment still
@@ -1138,10 +1130,10 @@ Table of Contents
    authorization server MUST keep it that way; an optimization that lets
    a PCT skip state evaluation or the subset check converts a continuity
    token into a credential and breaks the family's continuity discipline
-   (Section 10.4).  UMA's own PCT rules on client binding and rotation
+   (Section 9.4).  UMA's own PCT rules on client binding and rotation
    apply.
 
-14.4.  Authorization Server Compromise
+13.4.  Authorization Server Compromise
 
    A compromised authorization server is a compromised Mission Issuer:
    forged approvals, arbitrary RPTs, false state
@@ -1151,7 +1143,7 @@ Table of Contents
    binding applies in full.  Consent evidence and audit transparency
    make forgery detectable after the fact; they do not prevent it.
 
-14.5.  Introspection as the State Channel
+13.5.  Introspection as the State Channel
 
    Where opaque RPTs make introspection the Mission and state channel,
    the channel's authentication (the PAT) and its caching policy carry
@@ -1160,9 +1152,9 @@ Table of Contents
    bound turns fail-closed rules fail-open in effect; a deployment MUST
    size PAT protection and cache bounds to what its Mission Deployment
    Profile claims.  Self-contained RPTs move the same weight onto token
-   lifetime (Section 9.2).
+   lifetime (Section 8.2).
 
-15.  Privacy Considerations
+14.  Privacy Considerations
 
    *The task concentrates at the authorization server.* The whole-task
    Intent rule sends the full task description to the authorization
@@ -1181,24 +1173,24 @@ Table of Contents
 
    *The PCT is a correlation handle.* UMA already names the PCT a
    correlation surface across authorization processes; associating it
-   with a mission_id (Section 10.4) adds Mission correlation at the
+   with a mission_id (Section 9.4) adds Mission correlation at the
    authorization server only, and nothing new crosses to resource
    servers. mission_id itself correlates the Mission's activity across
    resource servers through introspection responses, the issuance
    profile's deliberate stable-anchor property; that profile's guidance
    applies.
 
-16.  IANA Considerations
+15.  IANA Considerations
 
    This document has no IANA actions.  The mission introspection
    response member and the mission JWT claim are registered by the
    issuance profile; UMA claim_token_format identifiers are URIs with no
-   registry, and the identifier of Section 6 is under this document's
+   registry, and the identifier of Section 5 is under this document's
    control.
 
-17.  References
+16.  References
 
-17.1.  Normative References
+16.1.  Normative References
 
    [I-D.draft-mcguinness-mission-substrate]
               McGuinness, K., "Mission Substrate Requirements", 2026,
@@ -1241,7 +1233,7 @@ Table of Contents
               <https://docs.kantarainitiative.org/uma/wg/rec-oauth-uma-
               grant-2.0.html>.
 
-17.2.  Informative References
+16.2.  Informative References
 
    [I-D.draft-mcguinness-mission-aauth]
               McGuinness, K., "Mission Context Binding for AAuth", 2026,

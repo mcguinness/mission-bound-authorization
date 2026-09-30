@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                          29 September 2026
-Expires: 2 April 2027
+Intended status: Experimental                          30 September 2026
+Expires: 3 April 2027
 
 
                       Mission Consumption Metering
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 2 April 2027.
+   This Internet-Draft will expire on 3 April 2027.
 
 Copyright Notice
 
@@ -75,8 +75,7 @@ Copyright Notice
 Table of Contents
 
    1.  Introduction
-   2.  Status: An Experimental Extension
-     2.1.  Promotion Criteria
+   2.  Promotion Criteria
    3.  Relationship to the Issuance and Runtime Profiles
    4.  Conventions and Terminology
    5.  Mission Substrate
@@ -126,8 +125,6 @@ Table of Contents
    *  the AuthZEN wire binding ([I-D.draft-mcguinness-mission-authzen])
       for settlement and duration-lease renewal.
 
-2.  Status: An Experimental Extension
-
    This document is optional and experimental: adopt it for evaluation,
    not as a stable interface.  Metering cumulative bounds exactly under
    distributed decision points is a distributed-counting problem, and
@@ -145,7 +142,7 @@ Table of Contents
    this safe to omit: a bound is rendered to an Approver only where it
    is actually metered.
 
-2.1.  Promotion Criteria
+2.  Promotion Criteria
 
    This section is informative.  Promotion moves this accounting model
    from optional evaluation toward the architectural baseline for any
@@ -315,16 +312,6 @@ Table of Contents
    one independently implemented counterpart component; they demand
    exercised machinery and stable surfaces, not adoption counts.
 
-   Role: companion.  Spec maturity: experimental.  Maintenance: lab-
-   floor-referenced.  Adopt when: A Mission needs cumulative caps
-   (budget, calls, duration, egress), not just scope.  Requires:
-   Mission-Bound Runtime Enforcement; Mission Runtime Evidence; Mission
-   Substrate Requirements; Mission-Bound Authorization for OAuth 2.0.
-   Also requires, conditionally: Mission-Bound Runtime Enforcement:
-   AuthZEN Profile (when the AuthZEN binding is the runtime wire);
-   Mission Consent Evidence for OAuth 2.0 (when Consent Evidence is
-   recorded).
-
 3.  Relationship to the Issuance and Runtime Profiles
 
    This document depends normatively on the issuance profile and the
@@ -484,7 +471,7 @@ Table of Contents
 
    exclusive:  OPTIONAL and EXPERIMENTAL (unlike the four bounds above,
       this member is not yet promotion-ready: a 2026-08 assessment
-      against Section 2.1 found every applicable gate NOT MET, issue
+      against Section 2 found every applicable gate NOT MET, issue
       #117).  An array of exclusivity groups, each an array of two or
       more selectors.  A selector is an object with resource (REQUIRED,
       a string) and actions (OPTIONAL, an array of strings); it matches
@@ -734,7 +721,7 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-child-delegation]); absent a
    deployed lineage-keyed counter, no per-Mission counter, however many
    Missions in a lineage carry one, adds up to an aggregate bound on the
-   lineage.  This document is experimental (Section 2), so a deployment
+   lineage.  This document is experimental (Section 1), so a deployment
    running only the stable issuance and runtime profiles has no lineage-
    wide aggregate bound in force at all.  A deployment MUST NOT render,
    in an Enforcement Scope Statement or at any consent surface, a
@@ -1145,10 +1132,10 @@ Table of Contents
    "Mission Intent Members" registry: max_budget, max_calls,
    max_duration, and max_egress_volume as stable, and exclusive as
    experimental (not promoted; a 2026-08 assessment against this
-   document's own promotion criteria, Section 2.1, found every
-   applicable gate unmet).  Each is a named top-level Mission Intent
-   member this profile defines, produces, and enforces in full under the
-   issuance profile's Mission-Intent extension seam
+   document's own promotion criteria, Section 2, found every applicable
+   gate unmet).  Each is a named top-level Mission Intent member this
+   profile defines, produces, and enforces in full under the issuance
+   profile's Mission-Intent extension seam
    ([I-D.draft-mcguinness-oauth-mission]); the registration records
    ownership only. context.prior_evaluation_id is AuthZEN extension data
    carried per the AuthZEN profile's conventions
@@ -1247,13 +1234,13 @@ Appendix A.  Document History
       the issuance profile retires the controls bucket entirely
       ([I-D.draft-mcguinness-oauth-mission]); this is a wire-shape
       change to that surface, so the wire-surface-stability window
-      (Section 2.1) restarts at this revision.  The earlier plan to
-      adopt exclusive into the issuance profile's core controls
-      vocabulary is retired along with that vocabulary; exclusive stays
-      an ordinary member of this document.  A 2026-08 promotion
-      assessment of exclusive against Section 2.1 found every applicable
-      gate NOT MET (issue #117): it remains EXPERIMENTAL and unpromoted,
-      now explicitly marked as such at its own definition (Section 6).
+      (Section 2) restarts at this revision.  The earlier plan to adopt
+      exclusive into the issuance profile's core controls vocabulary is
+      retired along with that vocabulary; exclusive stays an ordinary
+      member of this document.  A 2026-08 promotion assessment of
+      exclusive against Section 2 found every applicable gate NOT MET
+      (issue #117): it remains EXPERIMENTAL and unpromoted, now
+      explicitly marked as such at its own definition (Section 6).
       max_derivations renamed to derivation_limit in cross-references to
       the issuance profile.
 

@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       29 September 2026
-Expires: 2 April 2027
+Intended status: Standards Track                       30 September 2026
+Expires: 3 April 2027
 
 
           Mission Completion and Entry Discharge for OAuth 2.0
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 2 April 2027.
+   This Internet-Draft will expire on 3 April 2027.
 
 Copyright Notice
 
@@ -75,32 +75,31 @@ Copyright Notice
 Table of Contents
 
    1.  Introduction
-   2.  Status: An Optional Profile
-   3.  Conventions and Terminology
-   4.  Entry Discharge Operation
-     4.1.  Discharge Authority
-     4.2.  Discharge Anti-Oracle
-     4.3.  Idempotency: nonce and event_id
-     4.4.  Discharge Result
-   5.  Mission Completion and Entry Discharge
-     5.1.  Relationship to the Issuance Profile
-     5.2.  Entry Completion Conditions
-     5.3.  Discharge and Issuance Gating
-       5.3.1.  Determining Discharge
-       5.3.2.  Discharge Visibility
-     5.4.  Subset Rule
-     5.5.  Forward Compatibility
-     5.6.  Derivation Guidance
-     5.7.  Relationship to Runtime Enforcement
-     5.8.  Worked Example
-     5.9.  Completion Conformance
-   6.  Security Considerations
-     6.1.  Entry Discharge
-   7.  Privacy Considerations
-     7.1.  Completion Condition Disclosure
-   8.  IANA Considerations
-     8.1.  Common Constraints Registry: terminal_when
-   9.  Conformance
+   2.  Conventions and Terminology
+   3.  Entry Discharge Operation
+     3.1.  Discharge Authority
+     3.2.  Discharge Anti-Oracle
+     3.3.  Idempotency: nonce and event_id
+     3.4.  Discharge Result
+   4.  Mission Completion and Entry Discharge
+     4.1.  Relationship to the Issuance Profile
+     4.2.  Entry Completion Conditions
+     4.3.  Discharge and Issuance Gating
+       4.3.1.  Determining Discharge
+       4.3.2.  Discharge Visibility
+     4.4.  Subset Rule
+     4.5.  Forward Compatibility
+     4.6.  Derivation Guidance
+     4.7.  Relationship to Runtime Enforcement
+     4.8.  Worked Example
+     4.9.  Completion Conformance
+   5.  Security Considerations
+     5.1.  Entry Discharge
+   6.  Privacy Considerations
+     6.1.  Completion Condition Disclosure
+   7.  IANA Considerations
+     7.1.  Common Constraints Registry: terminal_when
+   8.  Conformance
    Acknowledgments
    References
      Normative References
@@ -124,16 +123,16 @@ Table of Contents
    terminal_when, an OPTIONAL Common Constraint
    ([I-D.draft-mcguinness-oauth-mission-resource-access]) on a
    mission_resource_access entry that carries one or more completion
-   conditions, and it registers discharge (Section 4) as an extension
+   conditions, and it registers discharge (Section 3) as an extension
    operation value on the Status profile's Mission Lifecycle endpoint,
    authenticated and authorized independently of that endpoint's other
    operations, that commits a condition's firing.  When a condition is
    met, the entry is *discharged*: the Authorization Server no longer
-   derives a token carrying that entry (Section 5.3), exactly as it
-   refuses derivation for a non-active Mission.  Section 5 states the
+   derives a token carrying that entry (Section 4.3), exactly as it
+   refuses derivation for a non-active Mission.  Section 4 states the
    properties this mechanism requires and the threat analysis, including
    why a prompt-injected agent cannot use discharge to escalate, is
-   given in Section 6.1.
+   given in Section 5.1.
 
    This document is optional and depends normatively on the issuance
    profile, its Mission Resource Access Profile, and the Status profile;
@@ -145,16 +144,7 @@ Table of Contents
    exercised than baseline issuance and runtime enforcement, and is not
    required by any Mission Assurance Level; its details may change.
 
-2.  Status: An Optional Profile
-
-   Role: companion.  Spec maturity: experimental.  Maintenance: active.
-   Adopt when: One Authority Set entry's task finishes before the rest
-   of the Mission, and its authority should retire itself rather than
-   wait for a Mission-level revoke, expiry, or complete.  Requires:
-   Mission-Bound Authorization for OAuth 2.0; Mission Resource Access
-   Profile for OAuth 2.0; Mission Status and Lifecycle for OAuth 2.0.
-
-3.  Conventions and Terminology
+2.  Conventions and Terminology
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
@@ -176,11 +166,11 @@ Table of Contents
    All JSON shown in this document is non-normative and illustrative;
    the member definitions in the surrounding text are authoritative.
 
-4.  Entry Discharge Operation
+3.  Entry Discharge Operation
 
    discharge commits that a terminal_when completion condition
-   (Section 5.2) has fired, discharging the named Mission-record entry
-   (Section 5.3).  It is registered as an extension operation value on
+   (Section 4.2) has fired, discharging the named Mission-record entry
+   (Section 4.3).  It is registered as an extension operation value on
    the Status profile's Mission Lifecycle endpoint
    ([I-D.draft-mcguinness-oauth-mission-status]).  Beyond mission_id and
    nonce, it requires:
@@ -193,18 +183,18 @@ Table of Contents
 
    condition_digest:  REQUIRED.  A string.  The digest identifying the
       single terminal_when condition that fired, defined beside that
-      member (Section 5.2).
+      member (Section 4.2).
 
    event_type:  REQUIRED.  A string.  Echoed from the fired condition
       and cross-checked against the condition condition_digest names: a
       mismatch joins the not_found collapse, since distinguishing it
       would reveal information about a condition selected by digest
-      (Section 4.2). event_type is never a selector by itself.
+      (Section 3.2). event_type is never a selector by itself.
 
    event_id:  REQUIRED.  A string, 1*128( ALPHA / DIGIT / "-" / "_" /
       ":" / "." ) [RFC5234].  The identifier of the asserted external
       occurrence, used for evidence correlation and for the event-level
-      deduplication of Section 4.3.  It is distinct from nonce, the HTTP
+      deduplication of Section 3.3.  It is distinct from nonce, the HTTP
       retry key of the Status profile's Idempotency and Conflicts rule
       ([I-D.draft-mcguinness-oauth-mission-status], Section "Idempotency
       and Conflicts").
@@ -234,18 +224,18 @@ Table of Contents
    Semantics:
 
    *  *Entry-level OR latch.* The entry's terminal_when discharges on
-      any condition being met (Section 5.2); the request names the
+      any condition being met (Section 4.2); the request names the
       condition that fired.  The committed state is one monotonic latch
       on the entry, or on its selector equivalence class, one state-
       version increment, one audit record, and one notification.  A
       later delivery presenting any valid condition against an already-
       discharged entry, a sibling condition, or the same condition under
       a different event_id, is acknowledged already_discharged
-      (Section 4.4) and MUST NOT discharge the entry again or increment
+      (Section 3.4) and MUST NOT discharge the entry again or increment
       the version again; an exact event replay (the same tuple and the
       same fingerprint) is handled first by the dedup rule of
-      Section 4.3.  The latch MUST NOT revert, and issuance gating for a
-      discharged entry is unchanged (Section 5.3).
+      Section 3.3.  The latch MUST NOT revert, and issuance gating for a
+      discharged entry is unchanged (Section 4.3).
 
    *  *Duplicate entries.* One entry_digest discharges every recorded
       entry resolving to that digest as a single equivalence-class
@@ -257,18 +247,18 @@ Table of Contents
       suspended: a suspended Mission still narrows monotonically.  A
       delivery reaching the endpoint after completed, revoked, expired,
       or another terminal state returns an authenticated terminal_noop
-      acknowledgement (Section 4.4) and MUST NOT create a transition or
+      acknowledgement (Section 3.4) and MUST NOT create a transition or
       a version increment. discharge never changes Mission-level state;
       a deployment that also tracks all-entry completion invokes the
       Status profile's complete operation separately
       ([I-D.draft-mcguinness-oauth-mission-status]).  The AS reaches
       this determination only after the selector and authorization
-      validation of Section 4.2, so a terminal Mission is never a
+      validation of Section 3.2, so a terminal Mission is never a
       shortcut past those checks.
 
    *  *No expected_version.* A stale-version refusal would delay a
       safety-reducing operation; the digest selectors above and the
-      idempotency rules of Section 4.3 are the guards instead.
+      idempotency rules of Section 3.3 are the guards instead.
 
    *  *Atomicity.* The entry latch (or its equivalence-class latch), the
       version increment, the audit and result record, and the durable
@@ -286,7 +276,7 @@ Table of Contents
       authority in the gap between the parent's commit and the child's
       materialized view.
 
-4.1.  Discharge Authority
+3.1.  Discharge Authority
 
    Authorization for discharge requires a distinct mission_discharge
    scope or an equivalent deployment-defined grant.  Possession of the
@@ -309,7 +299,7 @@ Table of Contents
 
    A terminal_when condition MAY carry discharge_policy (OPTIONAL): a
    stable, opaque selector naming the AS-side authority mapping for that
-   condition (Section 8.1).  The AS MUST resolve and validate the
+   condition (Section 7.1).  The AS MUST resolve and validate the
    selector whenever a condition first enters an immutable Mission-
    record entry: at Mission creation, and at every later point where a
    derived entry can carry a new condition (child creation, expansion,
@@ -321,12 +311,12 @@ Table of Contents
    A requesting client MUST NOT select an arbitrary otherwise-valid
    policy merely because adding a condition is narrowing: an unchecked
    choice of mapping for a newly added condition could still force the
-   premature discharge that Section 6.1 warns against, a denial-of-
+   premature discharge that Section 5.1 warns against, a denial-of-
    service on the task and an early retirement of its own guardrail.
    The member is never a raw principal or workload structure, and the
    requesting client cannot select an unapproved fallback.
 
-4.2.  Discharge Anti-Oracle
+3.2.  Discharge Anti-Oracle
 
    An unknown mission_id, an unknown entry_digest, an unknown
    condition_digest, an entry with no terminal_when, an event_type that
@@ -341,14 +331,14 @@ Table of Contents
    condition_digest all resolve, the entry carries terminal_when, and
    event_type matches the named condition), then condition membership
    (the named condition belongs to the named entry), then target
-   authorization (the discharge authority mapping of Section 4.1),
-   before returning any terminal_noop acknowledgement (Section 4.4).
+   authorization (the discharge authority mapping of Section 3.1),
+   before returning any terminal_noop acknowledgement (Section 3.4).
    This order keeps a terminal Mission from acting as a selector-
    existence oracle: every case the collapse above refuses is checked
    before a terminal Mission is ever distinguished from one whose
    selectors do not resolve.
 
-4.3.  Idempotency: nonce and event_id
+3.3.  Idempotency: nonce and event_id
 
    discharge keeps two identities apart. nonce stays the HTTP operation
    retry key under the Status profile's Idempotency and Conflicts rule
@@ -409,7 +399,7 @@ Table of Contents
    against the latch and yields already_discharged with no version
    increment, which is safe because the latch is monotonic.
 
-4.4.  Discharge Result
+3.4.  Discharge Result
 
    On success, discharge returns the Status profile's existing signed
    Mission Status Response envelope
@@ -424,13 +414,13 @@ Table of Contents
       under a different event_id, presented against an already-latched
       entry), or terminal_noop (the Mission was already in a terminal
       state).  An exact event replay is handled first by the dedup rule
-      (Section 4.3), never reaching this determination as a fresh
+      (Section 3.3), never reaching this determination as a fresh
       already_discharged.
 
    prior_version, current_version:  the Mission's state version
       immediately before and after the commit this result reports.  For
       a request that itself commits, that commit is this request's own.
-      For the new-nonce fresh-envelope case of Section 4.3, which
+      For the new-nonce fresh-envelope case of Section 3.3, which
       commits nothing, these are the versions the original commit
       produced, unchanged.  They are equal for already_discharged and
       terminal_noop.
@@ -438,7 +428,7 @@ Table of Contents
    With the echoed nonce, this is the durable acknowledgement an at-
    least-once sender stops retrying against.
 
-5.  Mission Completion and Entry Discharge
+4.  Mission Completion and Entry Discharge
 
    This section is OPTIONAL.  A deployment that ends an entry's
    authority only by Mission revocation or expiry is fully conformant to
@@ -467,7 +457,7 @@ Table of Contents
    mission_resource_access entry that carries one or more completion
    conditions.  When a condition is met, the entry is *discharged*: the
    Authorization Server no longer derives a token carrying that entry
-   (Section 5.3), exactly as it refuses derivation for a non-active
+   (Section 4.3), exactly as it refuses derivation for a non-active
    Mission.
 
    Three properties make this safe inside the Mission model and this
@@ -486,13 +476,13 @@ Table of Contents
 
    The threat analysis of these properties, including why a prompt-
    injected agent cannot use discharge to escalate and the forced-
-   premature-discharge residual, is given in Section 6.1.
+   premature-discharge residual, is given in Section 5.1.
 
-   Discharge gates at the entry, not the Mission (Section 5.3).  It
+   Discharge gates at the entry, not the Mission (Section 4.3).  It
    strengthens the kill switch: a task that finishes stops issuing its
    own authority without waiting for a clock or a revoke.
 
-5.1.  Relationship to the Issuance Profile
+4.1.  Relationship to the Issuance Profile
 
    The completion capability depends normatively on the issuance profile
    and on its Mission Resource Access Profile
@@ -509,22 +499,22 @@ Table of Contents
 
    It extends the Mission Resource Access Profile in one narrow,
    additive way: it registers terminal_when, an OPTIONAL Common
-   Constraint on a mission_resource_access entry (Section 5.2), whose
+   Constraint on a mission_resource_access entry (Section 4.2), whose
    subset rule that profile's existing subset comparison applies
-   (Section 5.4).  It changes no Mission lifecycle state and no meaning
+   (Section 4.4).  It changes no Mission lifecycle state and no meaning
    of any existing member.
 
-5.2.  Entry Completion Conditions
+4.2.  Entry Completion Conditions
 
    This section defines terminal_when, a Common Constraint
    ([I-D.draft-mcguinness-oauth-mission-resource-access]) carried in the
    constraints object of a mission_resource_access entry.  It is a
    specification-defined Common Constraint under the Mission Resource
-   Access Profile's naming convention (Section 8).
+   Access Profile's naming convention (Section 7).
 
    terminal_when:  OPTIONAL.  An array of one or more completion
       conditions.  When any condition is met, the entry is discharged
-      (Section 5.3).  Each condition is an object with these members:
+      (Section 4.3).  Each condition is an object with these members:
 
       event_type:  REQUIRED.  A string identifying the completion event.
          Its semantics are deployment- or registry-defined and opaque to
@@ -534,7 +524,7 @@ Table of Contents
       discharge_policy:  OPTIONAL.  A string, 1*64( ALPHA / DIGIT / "-"
          / "_" / ":" / "." ) [RFC5234], opaque.  A stable selector
          naming the AS-side discharge-authority mapping for this
-         condition (Section 4.1).
+         condition (Section 3.1).
 
    The terminal_when array is part of the entry's constraints and so of
    the Authority Set: it is committed by authority_hash and reproducible
@@ -543,17 +533,17 @@ Table of Contents
    under the issuance profile's canonicalization; an AS refuses a value
    carrying two identical conditions, and an intersection of two arrays
    deduplicates by that identity and sorts by the lexicographic order of
-   the canonical bytes (Section 8.1), so the intersected entry is one
+   the canonical bytes (Section 7.1), so the intersected entry is one
    reproducible array.  Whether a condition has fired is evaluated
    state, not part of authority_hash; folding fired status into the
    anchor would make the committed authority time-varying.
 
    condition_digest, used to select a condition on the discharge
-   operation (Section 4), is a canonical-object digest
+   operation (Section 3), is a canonical-object digest
    ([I-D.draft-mcguinness-oauth-mission]) over the exact canonical bytes
    of the single condition object, in the issuance profile's encoded
    form: the same canonical form the registration's no-duplicate rule
-   above already fixes as condition identity (Section 8.1).
+   above already fixes as condition identity (Section 7.1).
 
    terminal_when is the enforceable counterpart of the inert
    success_criteria ([I-D.draft-mcguinness-oauth-mission]), which
@@ -562,7 +552,7 @@ Table of Contents
    consumption bound, which meters volume; a terminal_when condition is
    a single external event.
 
-5.3.  Discharge and Issuance Gating
+4.3.  Discharge and Issuance Gating
 
    When a condition in an entry's terminal_when has been met, the entry
    is discharged.  The Authorization Server MUST NOT derive a token
@@ -591,12 +581,12 @@ Table of Contents
    entry remains valid until it expires, as with revocation
    ([I-D.draft-mcguinness-oauth-mission]).  A deployment that needs
    prompt cutoff relies on short token lifetimes or on the runtime layer
-   denying a discharged entry at the point of use (Section 5.7).
+   denying a discharged entry at the point of use (Section 4.7).
 
-5.3.1.  Determining Discharge
+4.3.1.  Determining Discharge
 
    A discharge is committed one of two ways: through the discharge
-   operation (Section 4), or by deployment-internal adjudication the
+   operation (Section 3), or by deployment-internal adjudication the
    issuer trusts, recorded under the same audited basis as any other
    lifecycle commit.  This document defines no interoperable event-
    source polling profile of its own: the discharge operation is the
@@ -609,7 +599,7 @@ Table of Contents
    Once committed, a discharge is recorded as Authorization-Server-side
    state and MUST NOT revert: a later delivery presenting any valid
    condition against an already-discharged entry is acknowledged
-   already_discharged (Section 4.4) and does not restore the entry's
+   already_discharged (Section 3.4) and does not restore the entry's
    authority.
 
    A committed discharge is a committed metadata-only change for the
@@ -625,9 +615,9 @@ Table of Contents
 
    Before the AS receives and commits a discharge, it continues issuing
    against the entry.  The posture this implies is stated plainly in
-   Section 6.1.
+   Section 5.1.
 
-5.3.2.  Discharge Visibility
+4.3.2.  Discharge Visibility
 
    A discharged entry is no longer derivable, so the surfaces that
    report a Mission's authority MUST reflect that.  Where the Status
@@ -646,7 +636,7 @@ Table of Contents
    active-to-active event carrying it signals that the Mission's
    effective authority narrowed even though state did not change.
 
-5.4.  Subset Rule
+4.4.  Subset Rule
 
    Because terminal_when is a Common Constraint, the issuance profile's
    subset comparison ([I-D.draft-mcguinness-oauth-mission]) applies its
@@ -669,7 +659,7 @@ Table of Contents
    whether the change discharges earlier or later from opaque event_type
    values.
 
-5.5.  Forward Compatibility
+4.5.  Forward Compatibility
 
    Because terminal_when is a constraints member, a consumer that does
    not recognize it fails closed by the issuance profile's Resource
@@ -687,7 +677,7 @@ Table of Contents
    closed rule binds a consumer that encounters the constraint without
    implementing it.
 
-5.6.  Derivation Guidance
+4.6.  Derivation Guidance
 
    This guidance is non-normative.  When the Authorization Server
    derives an entry from the Mission Intent, a reviewable rule governs
@@ -708,7 +698,7 @@ Table of Contents
    500 USD" is a max_amount constraint, while "until the Q3 close is
    finalized" is a completion condition.
 
-5.7.  Relationship to Runtime Enforcement
+4.7.  Relationship to Runtime Enforcement
 
    Discharge is an issuance-gating signal and is fully meaningful at the
    issuance profile alone.  It is also a natural input to the runtime
@@ -718,9 +708,9 @@ Table of Contents
    discharge and token expiry the same way it denies a revoked Mission.
    A Policy Enforcement Point learns that an entry is discharged from
    the Status profile's Mission Status operation or the token
-   introspection projection (Section 5.3.2), the same way it learns a
+   introspection projection (Section 4.3.2), the same way it learns a
    Mission is revoked.  A runtime Policy Enforcement Point that does not
-   recognize terminal_when fails closed for the entry per Section 5.5.
+   recognize terminal_when fails closed for the entry per Section 4.5.
 
    For that point-of-use denial this document defines the denial-reason
    identifier authority_discharged, a family-coordinated name under the
@@ -734,7 +724,7 @@ Table of Contents
    approved).  A consumer treats an unrecognized value as a deny under
    the binding's own rule; no other semantics attach.
 
-5.8.  Worked Example
+4.8.  Worked Example
 
    A Mission for alice reconciles Q3 payables.  Its Authority Set has
    two entries: a read over the ledger, and a write to post journal
@@ -757,7 +747,7 @@ Table of Contents
 
    discharge_policy names the AS-side authority mapping approved for
    this condition: the close-management system's workload identity, not
-   alice's agent, may assert accounting-period-closed (Section 4.1).
+   alice's agent, may assert accounting-period-closed (Section 3.1).
    The agent cannot drive its own discharge: it holds no
    mission_discharge authorization for that event_type.
 
@@ -769,7 +759,7 @@ Table of Contents
    event_id for its own occurrence record.  The Authorization Server
    authenticates the caller against the resolved discharge_policy
    mapping, commits the latch, and returns a signed discharge_result of
-   outcome discharged (Section 4.4).
+   outcome discharged (Section 3.4).
 
    From then on the Authorization Server refuses to derive the write
    entry: a refresh returns a token carrying only the read entry.  The
@@ -778,45 +768,45 @@ Table of Contents
    entries.  No revoke and no clock was needed; the write authority
    retired itself when the task it was granted for completed.
 
-5.9.  Completion Conformance
+4.9.  Completion Conformance
 
    An Authorization Server claiming the completion capability MUST:
 
    *  treat an entry whose terminal_when has been discharged as
-      discharged and refuse to derive it (Section 5.3);
+      discharged and refuse to derive it (Section 4.3);
 
    *  commit a discharge only through the discharge operation, meeting
       its authority, anti-oracle, idempotency, and atomicity
-      requirements (Section 4), or through an equivalently audited
-      deployment-internal adjudication (Section 5.3.1);
+      requirements (Section 3), or through an equivalently audited
+      deployment-internal adjudication (Section 4.3.1);
 
    *  record a committed discharge as latched state that MUST NOT revert
-      (Section 5.3.1);
+      (Section 4.3.1);
 
    *  carry every parent completion condition into a derived entry when
-      narrowing, permitting only added conditions (Section 5.4);
+      narrowing, permitting only added conditions (Section 4.4);
 
    *  where it offers the Status profile's Mission Status operation or
       the token introspection projection, omit a discharged entry from
-      the authorization_details it returns (Section 5.3.2); and
+      the authorization_details it returns (Section 4.3.2); and
 
    *  keep the terminal_when condition array committed by authority_hash
-      and keep fired status out of it (Section 5.2).
+      and keep fired status out of it (Section 4.2).
 
    A consumer claiming the completion capability MUST fail closed for an
    entry carrying a terminal_when constraint it does not understand
-   (Section 5.5).
+   (Section 4.5).
 
-6.  Security Considerations
+5.  Security Considerations
 
    The security considerations of the issuance profile
    [I-D.draft-mcguinness-oauth-mission] and the Status profile
    [I-D.draft-mcguinness-oauth-mission-status] apply in full.  This
    section covers threats specific to this document's capability.
 
-6.1.  Entry Discharge
+5.1.  Entry Discharge
 
-   The completion capability (Section 5) adds the following:
+   The completion capability (Section 4) adds the following:
 
    *  Monotonic by construction.  Discharge only removes an entry's
       authority, so it is not a path to escalation; a compromised or
@@ -825,12 +815,12 @@ Table of Contents
       not an escalation, but a forced premature discharge is a denial-
       of-service on the task (authority the task still needs is
       withdrawn) and, where discharge is relied on as a guardrail,
-      retires that guardrail early.  Discharge authority (Section 4.1)
+      retires that guardrail early.  Discharge authority (Section 3.1)
       bounds who can force it.
 
    *  Fail closed on unknown constraint.  A consumer that does not
       understand the terminal_when constraint MUST refuse the entry
-      (Section 5.5); ignoring the constraint would let a discharged
+      (Section 4.5); ignoring the constraint would let a discharged
       entry continue to be narrowed, projected, or enforced, defeating
       discharge.
 
@@ -839,7 +829,7 @@ Table of Contents
       continues issuing against the entry: a lost or suppressed
       notification is a temporary widening relative to the real-world
       event, bounded by authenticated at-least-once delivery with
-      retries to an idempotent acknowledgement (Section 4.4), monitoring
+      retries to an idempotent acknowledgement (Section 3.4), monitoring
       and reconciliation, and the Mission's and its tokens' own
       lifetimes.  This is not a fail-closed property: a deployment
       requiring cannot-determine-means-no-issuance runs a synchronous
@@ -850,22 +840,22 @@ Table of Contents
       honors the issued token until expiry.  Prompt cutoff on a
       discharged entry requires the Status profile's Mission Status
       operation or introspection projection, or runtime enforcement
-      ([I-D.draft-mcguinness-oauth-mission-status], Section 5.7); an
+      ([I-D.draft-mcguinness-oauth-mission-status], Section 4.7); an
       entry constraint the enforcing party does not understand still
-      fails closed (Section 5.5).
+      fails closed (Section 4.5).
 
    *  Already-issued tokens.  The window between discharge and the
       expiry of a token already issued is the same residual revocation
-      carries, bounded the same way (Section 5.3, Section 5.7).
+      carries, bounded the same way (Section 4.3, Section 4.7).
 
-7.  Privacy Considerations
+6.  Privacy Considerations
 
    The privacy considerations of the issuance profile
    [I-D.draft-mcguinness-oauth-mission] and the Status profile
    [I-D.draft-mcguinness-oauth-mission-status] apply in full.  This
    section covers privacy specific to this document's capability.
 
-7.1.  Completion Condition Disclosure
+6.1.  Completion Condition Disclosure
 
    A terminal_when condition can reveal task structure: event_type may
    name a business event, a case, or a record whose mere existence is
@@ -877,21 +867,21 @@ Table of Contents
    defined and MAY correlate with a class of sensitive events; a
    deployment SHOULD weigh that when publishing its meaning.  The
    event_id, evidence_ref, evidence_digest, and observed_at a discharge
-   request carries (Section 4) do not ride the token; they land only in
+   request carries (Section 3) do not ride the token; they land only in
    issuer audit records, which deployments MUST treat as Mission
    information-disclosure surfaces per the Status profile's audit-
    logging rule ([I-D.draft-mcguinness-oauth-mission-status],
    Section "Status Audit Logging").
 
-8.  IANA Considerations
+7.  IANA Considerations
 
    This document requests IANA actions for a registration in the Mission
    Resource Access Profile's Mission Common Constraints registry.  It
    establishes no registry of its own.
 
-8.1.  Common Constraints Registry: terminal_when
+7.1.  Common Constraints Registry: terminal_when
 
-   The completion capability (Section 5) registers one Common Constraint
+   The completion capability (Section 4) registers one Common Constraint
    in the Mission Resource Access Profile's Mission Common Constraints
    registry ([I-D.draft-mcguinness-oauth-mission-resource-access]),
    under that registry's Specification Required policy.  This document
@@ -902,7 +892,7 @@ Table of Contents
    *  Value Space: a JSON array of one or more completion-condition
       objects, each with a REQUIRED event_type (string) and an OPTIONAL
       discharge_policy (string, an opaque selector); no two conditions
-      in one array share a canonical form (Section 5.2).  This Value
+      in one array share a canonical form (Section 4.2).  This Value
       Space is a breaking change, while this experimental draft's
       registration is still open, to the one a prior revision
       registered: event_source and max_staleness are removed and
@@ -912,7 +902,7 @@ Table of Contents
       value when the candidate's condition array contains every
       condition of the reference, compared structurally after the
       issuance profile's canonicalization; the candidate MAY add further
-      conditions (Section 5.4).
+      conditions (Section 4.4).
 
    *  Intersection Rule: the union of the two condition arrays, where
       condition identity is byte equality of each condition object's
@@ -924,7 +914,7 @@ Table of Contents
 
    *  Change Controller: IETF
 
-   *  Reference: this document, Section 5.2
+   *  Reference: this document, Section 4.2
 
    terminal_when is a constraints member of the mission_resource_access
    authorization details type defined by the Mission Resource Access
@@ -933,10 +923,10 @@ Table of Contents
    this document, as purpose is, so this document establishes no
    registry of event types.
 
-9.  Conformance
+8.  Conformance
 
    An implementation claiming this document's capability MUST meet the
-   requirements of Section 5.9.  An implementation that does not claim
+   requirements of Section 4.9.  An implementation that does not claim
    it is unaffected and remains conformant to the issuance profile, its
    Mission Resource Access Profile, and the Status profile.
 

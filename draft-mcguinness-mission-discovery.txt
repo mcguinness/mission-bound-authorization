@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                          29 September 2026
-Expires: 2 April 2027
+Intended status: Experimental                          30 September 2026
+Expires: 3 April 2027
 
 
                       Mission Open-World Discovery
@@ -59,7 +59,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 2 April 2027.
+   This Internet-Draft will expire on 3 April 2027.
 
 Copyright Notice
 
@@ -78,26 +78,25 @@ Copyright Notice
 Table of Contents
 
    1.  Introduction
-   2.  Status: An Experimental Extension
-   3.  Conventions and Terminology
-   4.  Mission Substrate
-   5.  The Encounter
-   6.  Resource Identity
-   7.  Discovery Adjudication
-     7.1.  Re-Encounter and Drift
-   8.  The Lying Resource
-   9.  Injection-Driven Discovery
-   10. Discovery Evidence
-     10.1.  Canonical Bytes
-   11. Conformance
-   12. Security Considerations
-   13. Privacy Considerations
-   14. IANA Considerations
-     14.1.  Media Type Registration
-       14.1.1.  Discovery Evidence Media Type
-   15. References
-     15.1.  Normative References
-     15.2.  Informative References
+   2.  Conventions and Terminology
+   3.  Mission Substrate
+   4.  The Encounter
+   5.  Resource Identity
+   6.  Discovery Adjudication
+     6.1.  Re-Encounter and Drift
+   7.  The Lying Resource
+   8.  Injection-Driven Discovery
+   9.  Discovery Evidence
+     9.1.  Canonical Bytes
+   10. Conformance
+   11. Security Considerations
+   12. Privacy Considerations
+   13. IANA Considerations
+     13.1.  Media Type Registration
+       13.1.1.  Discovery Evidence Media Type
+   14. References
+     14.1.  Normative References
+     14.2.  Informative References
    Appendix A.  Document History
    Acknowledgments
    Author's Address
@@ -130,8 +129,6 @@ Table of Contents
    policy: self-declarations never classify consequences, and tainted
    sessions never bind a newly discovered resource by policy alone.
 
-2.  Status: An Experimental Extension
-
    This document is Experimental.  It extends stable interfaces only
    through their declared seams: the progressive profile's drawdown
    path, the runtime profile's decision context, the AAuth binding's
@@ -142,16 +139,7 @@ Table of Contents
    resource outside every envelope is a fresh human-approved expansion
    ([I-D.draft-mcguinness-oauth-mission-expansion]).
 
-   Role: companion.  Spec maturity: experimental.  Maintenance: lab-
-   best-effort.  Adopt when: An open-world agent meets resources its
-   approval never named.  Requires: Mission-Bound Runtime Enforcement;
-   Mission Substrate Requirements.  Also requires, conditionally:
-   Mission-Aware Agent Harnesses (when the harness supplies taint
-   state); Mission-Bound Authorization for OAuth 2.0 and Mission
-   Progressive Authorization for OAuth 2.0 (when ceiling adjudication is
-   the deployed mode).
-
-3.  Conventions and Terminology
+2.  Conventions and Terminology
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
@@ -217,10 +205,10 @@ Table of Contents
       concrete authority for the encountered resource, within a
       consented ceiling entry, bound to the Mission.
 
-4.  Mission Substrate
+3.  Mission Substrate
 
    This profile is defined against the Mission model rather than OAuth
-   mechanics.  Both adjudication modes (Section 7) consume the Mission
+   mechanics.  Both adjudication modes (Section 6) consume the Mission
    record's committed members and the only-active rule.
 
    Ceiling adjudication additionally consumes:
@@ -242,12 +230,12 @@ Table of Contents
    binding hosts it at the Person Server's decision gate
    ([I-D.draft-mcguinness-mission-aauth]).
 
-5.  The Encounter
+4.  The Encounter
 
    An encounter is classified before it is adjudicated:
 
    *  *A resource*: an API origin or service the agent must call.  It is
-      adjudicated under this profile (Section 7).
+      adjudicated under this profile (Section 6).
 
    *  *A capability catalog or tool*: a tool server or catalog whose
       capabilities the agent would invoke.  Its admission is adjudicated
@@ -262,7 +250,7 @@ Table of Contents
       it; cross-domain projection exists for domains with established
       trust ([I-D.draft-mcguinness-oauth-mission-cross-domain]), and
       everything else is a fresh approval.  The encounter is still
-      evidenced (Section 10): routed or refused, a foreign-domain
+      evidenced (Section 9): routed or refused, a foreign-domain
       encounter leaves the same record.
 
    How the agent met the resource is not this document's subject.
@@ -283,7 +271,7 @@ Table of Contents
    member of an encounter request derives, widens, or gates authority by
    itself, per the OAuth binding's inert-input rule.
 
-6.  Resource Identity
+5.  Resource Identity
 
    No binding occurs against an unpinned resource.  The Mission Issuer
    MUST establish the identity of the encountered resource itself, from
@@ -299,7 +287,7 @@ Table of Contents
    *  a declaration digest.
 
    An Encountered Resource object that rides the agent's request is a
-   hint the issuer verifies, never the pinned identity (Section 7).
+   hint the issuer verifies, never the pinned identity (Section 6).
    Before adjudication, the identity MUST be established and recorded:
 
    1.  *Origin.* The resource's origin, TLS-authenticated by the Mission
@@ -324,9 +312,9 @@ Table of Contents
    3.  *Self-declaration.* Where the resource publishes a self-
        declaration, the Mission Issuer computes its content-addressed
        digest at encounter from the bytes it retrieved and carries that
-       digest through adjudication and evidence (Section 8).
+       digest through adjudication and evidence (Section 7).
 
-   The two floors of this document (Section 8, Section 9) are only as
+   The two floors of this document (Section 7, Section 8) are only as
    strong as these issuer-verified inputs.  An origin, digest, issuer,
    or taint state taken from the agent would let a prompt-injected agent
    fabricate identity or clear taint, so each MUST be established
@@ -344,7 +332,7 @@ Table of Contents
    object*, on the wire and in evidence.  When it rides the agent's
    request it is an unverified hint; the values recorded in evidence and
    used for adjudication are the Mission Issuer's own verified values
-   (Section 6), never the agent's:
+   (Section 5), never the agent's:
 
    origin:  REQUIRED.  A string containing a URI.  The TLS-authenticated
       origin of the encountered resource.
@@ -362,14 +350,14 @@ Table of Contents
    r3_s256 ([I-D.draft-hardt-aauth-r3],
    [I-D.draft-mcguinness-mission-aauth]).
 
-7.  Discovery Adjudication
+6.  Discovery Adjudication
 
    An adjudication takes, at minimum:
 
    *  the Mission reference;
 
    *  the Encountered Resource object as the Mission Issuer verified it
-      (Section 6);
+      (Section 5);
 
    *  the self-declaration digest where one exists;
 
@@ -386,14 +374,14 @@ Table of Contents
    the agent does not mediate (a harness attestation,
    [I-D.draft-mcguinness-mission-harness]), never from the encounter
    request.  The adjudicator MUST treat a missing, stale, or
-   unverifiable taint state as tainted: the floor of Section 9 keys on
+   unverifiable taint state as tainted: the floor of Section 8 keys on
    the harness's report, and an absent report is not an untainted one.
    An operation the deployment's classification cannot assign an action
    class MUST NOT bind by policy: with no class the floors cannot be
    applied, so the encounter routes to a human or is refused.
 
    Adjudication runs in one of two modes, fixed by what the binding
-   supplies (Section 4). *Ceiling adjudication* decides against a
+   supplies (Section 3). *Ceiling adjudication* decides against a
    structured, pre-consented ceiling under the subset rule. *Contextual
    adjudication* is the Controller's own judgment that the encounter
    falls within the approved mission context, informed by the governance
@@ -423,8 +411,8 @@ Table of Contents
 
       *  it falls outside every ceiling entry;
 
-      *  a floor of this document requires a human (Section 8,
-         Section 9); or
+      *  a floor of this document requires a human (Section 7,
+         Section 8); or
 
       *  identity could not be fully pinned.
 
@@ -444,7 +432,7 @@ Table of Contents
       *  the session's taint status.
 
       The resulting approval or expansion evidence carries the
-      encounter_id (Section 10), so the encounter and its human
+      encounter_id (Section 9), so the encounter and its human
       resolution correlate.
 
    *Refuse.*  The encounter violates a hard rule (unpinnable identity
@@ -459,7 +447,7 @@ Table of Contents
 
    On the OAuth binding's drawdown path, the encounter rides the
    expansion request as two additional parameters, encountered_resource
-   (the Encountered Resource object of Section 6) and
+   (the Encountered Resource object of Section 5) and
    resource_declaration_digest; the progressive profile's rate bound,
    prohibited-class mapping, and audit linkage apply to encounter-
    triggered drawdowns unchanged.  A deployment MUST additionally bound
@@ -467,9 +455,9 @@ Table of Contents
    outcomes.  It MUST publish the concrete bound in the Mission
    Deployment Profile.  Routed and refused encounters consume
    adjudicator and Approver attention, and are the probing surface of
-   Section 12.
+   Section 11.
 
-7.1.  Re-Encounter and Drift
+6.1.  Re-Encounter and Drift
 
    A binding persists as the authority it created.  An encounter whose
    Encountered Resource object matches an existing entry, its origin
@@ -486,7 +474,7 @@ Table of Contents
    capabilities at the PDP
    ([I-D.draft-mcguinness-mission-capability-binding]).
 
-   The taint floor (Section 9) is applied only at binding.  A binding
+   The taint floor (Section 8) is applied only at binding.  A binding
    created while the session was untainted remains usable after the
    session becomes tainted: the floor gates new egress-capable bindings,
    not the use of authority already bound.  A web-reading agent is
@@ -495,7 +483,7 @@ Table of Contents
    is left to the harness profile
    ([I-D.draft-mcguinness-mission-harness]).
 
-8.  The Lying Resource
+7.  The Lying Resource
 
    A self-declaration is self-asserted: a malicious resource declares
    itself read-only, reversible, and inconsequential, and authors
@@ -521,7 +509,7 @@ Table of Contents
       is attributable: what the resource claimed at binding is
       reproducible against what it later did.
 
-9.  Injection-Driven Discovery
+8.  Injection-Driven Discovery
 
    The sharpest open-world attack needs no authority excess: injected
    content steers the agent to encounter the attacker's resource and
@@ -570,7 +558,7 @@ Table of Contents
    rule above, no encounter binds by policy and every binding routes to
    a human.
 
-10.  Discovery Evidence
+9.  Discovery Evidence
 
    Every adjudication, in all three outcomes, produces a Discovery
    Evidence object:
@@ -583,14 +571,14 @@ Table of Contents
 
    outcome:  REQUIRED.  A string: bound, routed_to_approval, or refused.
 
-   resource:  REQUIRED.  The Encountered Resource object of Section 6.
+   resource:  REQUIRED.  The Encountered Resource object of Section 5.
 
    resource_declaration_digest:  CONDITIONAL.  REQUIRED when a self-
       declaration existed at encounter: its content-addressed digest.
 
    sought_classes:  REQUIRED.  An array of strings: the action classes
       of the authority sought, under the deployment's classification
-      (Section 8).
+      (Section 7).
 
    ceiling_entry_digest:  CONDITIONAL.  REQUIRED on bound under ceiling
       adjudication: the integrity-anchor encoded digest of the ceiling
@@ -605,12 +593,12 @@ Table of Contents
 
    adjudicated_at:  REQUIRED.  An RFC 3339 [RFC3339] date-time.
 
-   The Discovery Adjudicator, always the Mission Issuer (Section 3), is
+   The Discovery Adjudicator, always the Mission Issuer (Section 2), is
    the authoritative producer of Discovery Evidence and signs the object
    under the suite's evidence conventions: a JWS whose protected header
    carries alg, a kid resolvable in the Mission Issuer's published key
    material, and a typ of mission-discovery-evidence+json, naming the
-   application/mission-discovery-evidence+json media type (Section 10.1)
+   application/mission-discovery-evidence+json media type (Section 9.1)
    with the application/ prefix omitted, as JWS typ values do [RFC7515].
    The signature is what identifies the adjudicator, so the object
    carries no member for it.  The payload's canonical bytes are its JCS
@@ -654,52 +642,52 @@ Table of Contents
    document defines the outcome and the evidence it produces, not the
    policy that consumes them into a containment trigger.
 
-10.1.  Canonical Bytes
+9.1.  Canonical Bytes
 
    A Discovery Evidence object's canonical bytes are its JCS [RFC8785]
    canonicalization, and its type identifier is application/mission-
-   discovery-evidence+json, registered by this document (Section 14).
+   discovery-evidence+json, registered by this document (Section 13).
 
-11.  Conformance
+10.  Conformance
 
    A deployment claiming this profile MUST:
 
    *  adjudicate every encounter of the classes it enables through
-      Section 7, default-closed, establishing resource identity itself
-      and independently of the agent, with the pinning of Section 6;
+      Section 6, default-closed, establishing resource identity itself
+      and independently of the agent, with the pinning of Section 5;
 
    *  obtain the session taint state through a channel the agent does
       not mediate, and treat an untrustworthy taint state as tainted
-      (Section 7);
+      (Section 6);
 
    *  route to a human or refuse any encounter it cannot pin, cannot
       classify, or cannot obtain a trustworthy taint state for
-      (Section 6, Section 7);
+      (Section 5, Section 6);
 
    *  enforce both floors: no consequence classification from self-
-      declarations, with the high-consequence human floor (Section 8);
+      declarations, with the high-consequence human floor (Section 7);
       and no policy binding of egress-capable authority in tainted
-      sessions (Section 9);
+      sessions (Section 8);
 
    *  bound the rate of encounter adjudications per Mission across all
       outcomes and publish the concrete bound in the Mission Deployment
-      Profile (Section 7);
+      Profile (Section 6);
 
    *  produce and sign Discovery Evidence for every adjudication,
-      foreign-domain encounters included (Section 10); and
+      foreign-domain encounters included (Section 9); and
 
    *  state in its Enforcement Scope Statement which encounter classes
       it adjudicates, the ceiling families consented for them, and the
       floors as published limits.
 
-12.  Security Considerations
+11.  Security Considerations
 
-   *The lying resource* is Section 8's subject; its residual is honest:
+   *The lying resource* is Section 7's subject; its residual is honest:
    a resource whose operations are correctly classified low-consequence
    can still misdescribe its meaning to an Approver, and the declaration
    digest makes that attributable, not impossible.
 
-   *Injection-driven discovery* is Section 9's subject; its residual is
+   *Injection-driven discovery* is Section 8's subject; its residual is
    an untainted session binding within an over-broad consented family.
    The mitigation is at consent time: ceiling families SHOULD be as
    narrow as the task allows, and the progressive profile's rate bound
@@ -713,7 +701,7 @@ Table of Contents
    session-level taint can still satisfy this profile, but more
    encounters route to a human or are refused.  A missing, stale, or
    unverifiable report is treated as tainted under the rule above
-   (Section 7); it is not an untainted report.  This profile does not
+   (Section 6); it is not an untainted report.  This profile does not
    strengthen the harness's separate SHOULD-level post-binding egress
    response.  The degradation is therefore explicit: less precise taint
    information reduces policy binding, while weaker harness egress
@@ -728,7 +716,7 @@ Table of Contents
    *Probing.* The outcome trichotomy itself leaks coarse ceiling shape
    to whoever controls what the agent meets: bind, route, and refuse
    partition the world.  Refusals are uniform (refused carries no
-   ceiling detail), the adjudication rate bound of Section 7 prices the
+   ceiling detail), the adjudication rate bound of Section 6 prices the
    probe, a deployment MAY collapse refused into routed_to_approval so a
    probe sees a single non-bind outcome while a human sees the pattern,
    and the anti-oracle discipline of the family's status surfaces
@@ -740,7 +728,7 @@ Table of Contents
    bindings, never existing authority.  Fail-closed here costs
    opportunity, not work in flight.
 
-13.  Privacy Considerations
+12.  Privacy Considerations
 
    Encounters reveal where an agent goes: the adjudicator learns every
    resource an agent met, including refused ones, and the transparency
@@ -754,13 +742,13 @@ Table of Contents
    declaration may itself contain third-party information; the digest
    commitment keeps that content out of the log.
 
-14.  IANA Considerations
+13.  IANA Considerations
 
    This document registers one media type per [RFC6838].
 
-14.1.  Media Type Registration
+13.1.  Media Type Registration
 
-14.1.1.  Discovery Evidence Media Type
+13.1.1.  Discovery Evidence Media Type
 
    *  Type name: application
 
@@ -772,7 +760,7 @@ Table of Contents
 
    *  Encoding considerations: binary; JSON encoded in UTF-8
 
-   *  Security considerations: see Section 12
+   *  Security considerations: see Section 11
 
    *  Interoperability considerations: see this document
 
@@ -805,9 +793,9 @@ Table of Contents
 
    *  Change controller: IETF
 
-15.  References
+14.  References
 
-15.1.  Normative References
+14.1.  Normative References
 
    [I-D.draft-mcguinness-mission-harness]
               McGuinness, K., "Mission-Aware Agent Harnesses", 2026,
@@ -867,7 +855,7 @@ Table of Contents
               DOI 10.17487/RFC9728, April 2025,
               <https://www.rfc-editor.org/rfc/rfc9728>.
 
-15.2.  Informative References
+14.2.  Informative References
 
    [I-D.draft-hardt-aauth-r3]
               Hardt, D., "AAuth Rich Resource Requests (R3)", 2026,

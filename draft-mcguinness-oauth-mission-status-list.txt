@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       29 September 2026
-Expires: 2 April 2027
+Intended status: Standards Track                       30 September 2026
+Expires: 3 April 2027
 
 
                    Mission Status List for OAuth 2.0
@@ -52,7 +52,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 2 April 2027.
+   This Internet-Draft will expire on 3 April 2027.
 
 Copyright Notice
 
@@ -71,13 +71,12 @@ Copyright Notice
 Table of Contents
 
    1.  Introduction
-   2.  Status: An Optional Profile
-   3.  Conventions and Terminology
-   4.  Mission Status List
-   5.  Security Considerations
-   6.  Privacy Considerations
-   7.  IANA Considerations
-   8.  Conformance
+   2.  Conventions and Terminology
+   3.  Mission Status List
+   4.  Security Considerations
+   5.  Privacy Considerations
+   6.  IANA Considerations
+   7.  Conformance
    Acknowledgments
    References
      Normative References
@@ -109,15 +108,7 @@ Table of Contents
    Mission Status Response are defined in
    [I-D.draft-mcguinness-oauth-mission-status].
 
-2.  Status: An Optional Profile
-
-   Role: companion.  Spec maturity: experimental.  Maintenance: active.
-   Adopt when: A consumer relies on many Missions concurrently and per-
-   Mission status reads do not scale.  Requires: Mission-Bound
-   Authorization for OAuth 2.0; Mission Status and Lifecycle for OAuth
-   2.0.
-
-3.  Conventions and Terminology
+2.  Conventions and Terminology
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
@@ -134,7 +125,7 @@ Table of Contents
    All JSON shown in this document is non-normative and illustrative;
    the member definitions in the surrounding text are authoritative.
 
-4.  Mission Status List
+3.  Mission Status List
 
    This section is OPTIONAL.
 
@@ -189,27 +180,27 @@ Table of Contents
       Property") while the fetch itself, covering every index at once,
       reveals no per-Mission interest.
 
-5.  Security Considerations
+4.  Security Considerations
 
    The security considerations of the issuance profile
    [I-D.draft-mcguinness-oauth-mission] and the Status profile
    [I-D.draft-mcguinness-oauth-mission-status] apply in full.  This
    document introduces no attack surface beyond the Mapping and
-   Freshness rules of Section 4, which are normative above: a consumer
+   Freshness rules of Section 3, which are normative above: a consumer
    that fails safe on a non-VALID bit and never relies past the Status
    List Token's own exp inherits the Status profile's revocation-
    propagation guarantees for the fleet-scale path.
 
-6.  Privacy Considerations
+5.  Privacy Considerations
 
    The privacy considerations of the issuance profile
    [I-D.draft-mcguinness-oauth-mission] and the Status profile
    [I-D.draft-mcguinness-oauth-mission-status] apply in full.  The
    Status List's own privacy rule, that index assignment MUST NOT be
    derivable from or correlatable with the Mission Identifier, is given
-   in Section 4.
+   in Section 3.
 
-7.  IANA Considerations
+6.  IANA Considerations
 
    This document requests no IANA actions.  It defines no new OAuth
    Authorization Server metadata member, media type, or registry: the
@@ -217,11 +208,11 @@ Table of Contents
    Mission Status Response and introspection extension point
    ([I-D.draft-mcguinness-oauth-mission-status]).
 
-8.  Conformance
+7.  Conformance
 
    An implementation claiming this capability MUST publish a Mission
    Status List meeting the Reference, Mapping, Freshness, and Privacy
-   rules of Section 4.  An implementation that does not claim it is
+   rules of Section 3.  An implementation that does not claim it is
    unaffected and remains conformant to the Status profile.
 
 Acknowledgments

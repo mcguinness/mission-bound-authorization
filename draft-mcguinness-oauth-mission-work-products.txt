@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                          29 September 2026
-Expires: 2 April 2027
+Intended status: Experimental                          30 September 2026
+Expires: 3 April 2027
 
 
                          Mission Work Products
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 2 April 2027.
+   This Internet-Draft will expire on 3 April 2027.
 
 Copyright Notice
 
@@ -76,26 +76,25 @@ Copyright Notice
 Table of Contents
 
    1.  Introduction
-   2.  Status: An Experimental Extension
-   3.  Relationship to Other Profiles
-   4.  Conventions and Terminology
-   5.  The Work Product Invariant
-   6.  Work Product Provenance
-   7.  Non-Transitive Mission-to-Mission Handoff
-     7.1.  Contrast with Cross-Domain Projection
-   8.  Relationship to the Execution-Time Evidence Continuity
-   9.  Work Product Binding
-     9.1.  Conceptual Model
-     9.2.  The Binding Object
-     9.3.  Verification
-     9.4.  Guardrails
-     9.5.  Out of Scope
-   10. Conformance
-   11. Security Considerations
-   12. Privacy Considerations
-   13. IANA Considerations
-     13.1.  Media Type Registration
-       13.1.1.  application/mission-work-product-binding+jwt
+   2.  Relationship to Other Profiles
+   3.  Conventions and Terminology
+   4.  The Work Product Invariant
+   5.  Work Product Provenance
+   6.  Non-Transitive Mission-to-Mission Handoff
+     6.1.  Contrast with Cross-Domain Projection
+   7.  Relationship to the Execution-Time Evidence Continuity
+   8.  Work Product Binding
+     8.1.  Conceptual Model
+     8.2.  The Binding Object
+     8.3.  Verification
+     8.4.  Guardrails
+     8.5.  Out of Scope
+   9.  Conformance
+   10. Security Considerations
+   11. Privacy Considerations
+   12. IANA Considerations
+     12.1.  Media Type Registration
+       12.1.1.  application/mission-work-product-binding+jwt
    Acknowledgments
    References
      Normative References
@@ -126,13 +125,11 @@ Table of Contents
 
    Its place in the family is the artifact-scoped companion to the
    execution-time-evidence continuity of Mission Continuation
-   (Section 8).  It defines no new token type, grant type, or endpoint.
-   It defines one invariant (Section 5), a provenance object that
-   attributes an artifact (Section 6), and the rule that makes the
+   (Section 7).  It defines no new token type, grant type, or endpoint.
+   It defines one invariant (Section 4), a provenance object that
+   attributes an artifact (Section 5), and the rule that makes the
    invariant hold when an artifact crosses between independent Missions
-   (Section 7).
-
-2.  Status: An Experimental Extension
+   (Section 6).
 
    This document is optional and experimental: adopt it for evaluation,
    not as a stable interface.  No Standards-Track document depends on
@@ -146,19 +143,14 @@ Table of Contents
    handoff rule are companion mechanisms that a deployment adopts where
    its agents share durable work products.
 
-   Role: companion.  Spec maturity: experimental.  Maintenance: lab-
-   best-effort.  Adopt when: Artifacts cross into another Mission and
-   must carry provenance, never authority.  Requires: Mission-Bound
-   Authorization for OAuth 2.0.
-
-3.  Relationship to Other Profiles
+2.  Relationship to Other Profiles
 
    This document depends normatively on the issuance profile
    [I-D.draft-mcguinness-oauth-mission] and is not implementable alone.
    It uses Mission, Authority Set, approval event, active, derivation,
    and the subset rule as the issuance profile defines them.
 
-   The invariant of Section 5 is not a new axiom.  It is the artifact-
+   The invariant of Section 4 is not a new axiom.  It is the artifact-
    plane reading of a claim the issuance profile already makes on the
    credential plane: authority exists only by derivation for a Mission,
    so no possessed thing, credential or artifact, substitutes for the
@@ -174,7 +166,7 @@ Table of Contents
    bounded by the parent under the subset rule, never authority read off
    the artifact.  Cross-domain projection
    ([I-D.draft-mcguinness-oauth-mission-cross-domain]) is contrasted in
-   Section 7: it preserves the same Mission across a trust boundary,
+   Section 6: it preserves the same Mission across a trust boundary,
    where this document governs handoffs between independent Missions.
    The architecture ([I-D.draft-mcguinness-mission-architecture])
    promotes the quarantine pattern to a normative cross-Mission handoff
@@ -182,7 +174,7 @@ Table of Contents
    The security model ([I-D.draft-mcguinness-mission-security-model])
    catalogs the threat this rule addresses.
 
-4.  Conventions and Terminology
+3.  Conventions and Terminology
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
@@ -205,14 +197,14 @@ Table of Contents
    Receiving Mission:  A Mission whose agent reads a work product that a
       different Mission produced.
 
-   Work Product Provenance:  The object of Section 6 that attributes a
+   Work Product Provenance:  The object of Section 5 that attributes a
       work product to its Producing Mission.  It is an attribution
       claim, never an authority claim.
 
-5.  The Work Product Invariant
+4.  The Work Product Invariant
 
    This document states one invariant, in normative language so
-   conformance to it is testable (Section 10):
+   conformance to it is testable (Section 9):
 
    *  No authority is acquired by information propagation alone.
 
@@ -224,13 +216,13 @@ Table of Contents
       it.  A component on that path MUST NOT construe the crossing of
       information as also conferring authority.
 
-   The invariant extends the credential-plane claims of Section 3 to the
+   The invariant extends the credential-plane claims of Section 2 to the
    artifact plane; it does not contradict or replace them.  The
-   provenance object of Section 6 makes an artifact's origin legible,
-   and the handoff rule of Section 7 keeps that origin from becoming a
+   provenance object of Section 5 makes an artifact's origin legible,
+   and the handoff rule of Section 6 keeps that origin from becoming a
    grant.
 
-6.  Work Product Provenance
+5.  Work Product Provenance
 
    A work product MAY carry a Work Product Provenance object attributing
    it to the approved work under which it came into existence.  The
@@ -291,10 +283,10 @@ Table of Contents
    evidence structure; this document defines only the members above and
    requires no new media type.
 
-7.  Non-Transitive Mission-to-Mission Handoff
+6.  Non-Transitive Mission-to-Mission Handoff
 
    Attributing a work product does not authorize a reader to act on it.
-   The rule that keeps the invariant of Section 5 holding when a work
+   The rule that keeps the invariant of Section 4 holding when a work
    product crosses from its Producing Mission into an independent
    Receiving Mission is:
 
@@ -321,7 +313,7 @@ Table of Contents
    its own approval derived, and reading a work product neither widens
    that set nor substitutes for its live gate.
 
-7.1.  Contrast with Cross-Domain Projection
+6.1.  Contrast with Cross-Domain Projection
 
    Cross-domain projection preserves the same Mission across a trust
    boundary: the projected credential carries a subset of one Mission's
@@ -332,7 +324,7 @@ Table of Contents
    its own Authority Set rather than continuing the producer's.  A work
    product is not a projection: it moves information, not the Mission.
 
-8.  Relationship to the Execution-Time Evidence Continuity
+7.  Relationship to the Execution-Time Evidence Continuity
 
    Mission Continuation keeps three continuities apart: identity
    continuity, authorization continuity, and execution-time evidence
@@ -348,26 +340,26 @@ Table of Contents
    took it; provenance ties an artifact back to the Mission that
    produced it.  Neither answers what a reader of the artifact may do;
    that remains the Receiving Mission's Authority Set to decide
-   (Section 7).
+   (Section 6).
 
-9.  Work Product Binding
+8.  Work Product Binding
 
    A work product MAY additionally carry a Work Product Binding: a
    signed object that proves a Work Product Provenance object
-   (Section 6) describes one specific artifact and was attached by a
+   (Section 5) describes one specific artifact and was attached by a
    trusted mediator, without making that provenance object authority-
    bearing.  The binding is a distinct object beside the provenance
    object.  It adds no member to the provenance object and does not
-   modify it: that object still carries only the five members Section 6
+   modify it: that object still carries only the five members Section 5
    defines.  The binding names the provenance object and the artifact by
    digest, so binding one to the other changes neither.
 
    The binding is OPTIONAL.  Its absence means only that attribution
    integrity is unproven for an artifact; absence is never a signal that
    authority is present, nor that it is denied.  What a reader may do
-   remains the Receiving Mission's Authority Set to decide (Section 7).
+   remains the Receiving Mission's Authority Set to decide (Section 6).
 
-9.1.  Conceptual Model
+8.1.  Conceptual Model
 
    The binding profiles the subject, digest, and predicate model of
    software supply-chain attestation, in-toto [IN-TOTO] and SLSA [SLSA],
@@ -380,23 +372,23 @@ Table of Contents
    records, rather than a supply-chain attestation format.  A future
    translation shim that emits a byte-compatible in-toto or SLSA
    attestation for supply-chain tooling is possible but out of scope
-   here (Section 9.5).
+   here (Section 8.5).
 
-9.2.  The Binding Object
+8.2.  The Binding Object
 
    A Work Product Binding is a JWT [RFC7519] in JWS Compact
    Serialization [RFC7515], signed by the trusted mediator that attached
    the provenance object, an Agent Deployment's execution environment
-   (harness) or the Mission Issuer (issuer; Section 6), with that
+   (harness) or the Mission Issuer (issuer; Section 5), with that
    mediator's own signing key.  The producing agent MUST NOT sign it: a
    binding an agent signs over its own work is the same self-authored,
-   authority-bearing forgery the custody boundary of Section 6 prevents.
+   authority-bearing forgery the custody boundary of Section 5 prevents.
 
    The protected header carries:
 
    typ:  REQUIRED. mission-work-product-binding+jwt.  Per [RFC7515]
       Section 4.1.9 the value omits the application/ prefix of the media
-      type registered in Section 13.  The distinct typ domain-separates
+      type registered in Section 12.  The distinct typ domain-separates
       the binding so a binding digest can never be read as an authority
       artifact: exact validation of the typ, with mutually exclusive
       validation rules for the artifact profiles, implements the
@@ -424,7 +416,7 @@ Table of Contents
 
    mediator:  REQUIRED.  The trusted mediator that attached the
       provenance object and signed this binding, as the id and role of
-      the attacher of Section 6, role being harness (the Agent
+      the attacher of Section 5, role being harness (the Agent
       Deployment's execution environment) or issuer (the Mission
       Issuer). mediator.id MUST differ from the provenance object's
       producer; a binding whose mediator names the producing agent is
@@ -453,7 +445,7 @@ Table of Contents
         "value": <the five-member provenance object>
       }
 
-      where value is the provenance object of Section 6 unchanged;
+      where value is the provenance object of Section 5 unchanged;
       canonicalize the envelope with JCS [RFC8785]; compute SHA-256
       [RFC6234] over the canonical bytes; and encode as sha-256:
       followed by the unpadded base64url of the digest. mission-work-
@@ -467,7 +459,7 @@ Table of Contents
    The binding MAY carry other standard JWT [RFC7519] claims, such as
    iat; they do not affect either digest.
 
-9.3.  Verification
+8.3.  Verification
 
    A receiver that holds the artifact, the five-member provenance
    object, and the binding verifies in this order:
@@ -496,7 +488,7 @@ Table of Contents
 
    6.  A binding that verifies proves attribution integrity only.  The
        Receiving Mission MUST STILL re-evaluate any proposed action
-       under its own Authority Set (Section 7) before acting.  A
+       under its own Authority Set (Section 6) before acting.  A
        verified binding is a precondition to trusting the attribution,
        never an input to a permit decision.
 
@@ -510,32 +502,32 @@ Table of Contents
    canonical bytes are the JWS Compact Serialization as issued, the
    payload-preimage-content-type is application/mission-work-product-
    binding+jwt, and the authoritative producer is the signing mediator,
-   its key resolved as in Section 9.2.  The protected typ names the same
+   its key resolved as in Section 8.2.  The protected typ names the same
    media type, prefix omitted ([RFC7515]).
 
-9.4.  Guardrails
+8.4.  Guardrails
 
    *  The binding proves attribution integrity, never authority.  A
       content digest narrows what a provenance object can be re-attached
       to; it does not widen what a reader may do.  The invariant of
-      Section 5, that information may propagate and authority may not,
+      Section 4, that information may propagate and authority may not,
       is unchanged: a verified binding is still gated by the Receiving
-      Mission's Authority Set (Section 7) and is never a permit input.
+      Mission's Authority Set (Section 6) and is never a permit input.
 
-   *  The typ domain separation of Section 9.2 keeps a binding digest
+   *  The typ domain separation of Section 8.2 keeps a binding digest
       from ever being mistaken for an authority artifact.
 
-   *  The residual and out-of-scope items of Section 11 are unchanged.
+   *  The residual and out-of-scope items of Section 10 are unchanged.
       A binding fixes one artifact to one provenance object; it does not
       bound the emergent-authority-through-coordination aggregate, and
       it neither quarantines a work product nor blocks its consumers.
 
-9.5.  Out of Scope
+8.5.  Out of Scope
 
    This document binds one artifact to one sealed provenance object and
    stops there.  The following are deliberately deferred:
 
-   *  A verifiable lineage chain, making parent_artifact (Section 6) a
+   *  A verifiable lineage chain, making parent_artifact (Section 5) a
       digest so a provenance chain is itself tamper-evident, is a
       further change to the sealed object and is left to a later pass.
 
@@ -544,10 +536,10 @@ Table of Contents
       interoperability work; this document defines only the family's JWS
       binding.
 
-10.  Conformance
+9.  Conformance
 
-   This section maps the invariant of Section 5 and the handoff rule of
-   Section 7 to per-role requirements, so a deployment claiming this
+   This section maps the invariant of Section 4 and the handoff rule of
+   Section 6 to per-role requirements, so a deployment claiming this
    document is testable against them.
 
    A mediator that attaches Work Product Provenance (an Agent
@@ -556,37 +548,37 @@ Table of Contents
    *  populate mission_id, deployment_id, and producer from its own
       record of the Mission and Agent Deployment executing when the
       artifact was produced, never from an unauthenticated assertion by
-      the producing agent (Section 6);
+      the producing agent (Section 5);
 
    *  carry no member beyond the five this document defines, and no
       authority, constraint, classification, or permission in any of
-      them (Section 6); and
+      them (Section 5); and
 
    *  disclose an attached object under the same access rules as the
-      deployment's other Mission evidence (Section 6).
+      deployment's other Mission evidence (Section 5).
 
    A producing agent MUST NOT self-author or self-assert its own Work
-   Product Provenance (Section 6).
+   Product Provenance (Section 5).
 
    A Receiving Mission (its agent, harness, or PDP) MUST:
 
    *  re-evaluate any proposed action against its own Authority Set
       before acting on a work product or the provenance attributed to
       it, regardless of the Producing Mission's approval or lifecycle
-      state (Section 7); and
+      state (Section 6); and
 
    *  treat a Work Product Provenance object, or its absence, as
       attribution only, and MUST NOT treat either as authority for an
-      action (Section 5, Section 7).
+      action (Section 4, Section 6).
 
    Any party needing authority over a work product's subject matter MUST
    obtain it through the authority plane, a Child Mission request or
    another authorized Mission transition, and MUST NOT derive it from a
-   work product or its provenance (Section 7).
+   work product or its provenance (Section 6).
 
-11.  Security Considerations
+10.  Security Considerations
 
-   The invariant of Section 5 is the security property this document
+   The invariant of Section 4 is the security property this document
    provides: authority never rides a work product.  The provenance
    object carries no authority by construction, and the handoff rule
    denies any transfer of the Producing Mission's authority through
@@ -598,9 +590,9 @@ Table of Contents
    The trusted mediator that attaches Work Product Provenance is itself
    a residual this document does not close.  A Work Product Binding's
    signature proves that the signing mediator's key bound the artifact
-   and provenance bytes together (Section 9.3); it does not prove that
+   and provenance bytes together (Section 8.3); it does not prove that
    the claimed production happened.  A compromised harness-role mediator
-   (Section 9.2) can attach and sign a Work Product Provenance object
+   (Section 8.2) can attach and sign a Work Product Provenance object
    attributing a fabricated or malicious artifact to a legitimate active
    Mission, and the binding verifies exactly as a faithful one would.
 
@@ -611,7 +603,7 @@ Table of Contents
    evidence can reveal a contradiction, or a missing event the rule
    expects, against the binding's claimed mission_id and created_at.
    This is not a general guarantee: Work Product Binding registration is
-   optional (Section 9.3), runtime evidence registration is not
+   optional (Section 8.3), runtime evidence registration is not
    universal, and a work product's creation need not correspond one-to-
    one to a consequential action with evidence of its own.  Without an
    independent witness to production, a compromised mediator can produce
@@ -620,9 +612,9 @@ Table of Contents
    Transparency registration makes a false claim permanent and
    attributable once made; it does not make the claim detectable, and it
    does not make a dishonest mediator honest.  Routing the mediator role
-   through the Mission Issuer (Section 9.2) helps only where the issuer
+   through the Mission Issuer (Section 8.2) helps only where the issuer
    independently observed the production it signs for, a condition an
-   issuer typically lacks for harness-executed work (Section 6).  The
+   issuer typically lacks for harness-executed work (Section 5).  The
    harness profile's own compromise analysis states the same split
    between prevention and after-the-fact detectability for a compromised
    execution environment ([I-D.draft-mcguinness-mission-harness]).
@@ -657,7 +649,7 @@ Table of Contents
    classification and lineage inputs to aggregate bounds; it does not
    standardize those mechanisms or quarantine with consumer blocking.
 
-12.  Privacy Considerations
+11.  Privacy Considerations
 
    Work Product Provenance attributes an artifact to a Mission and to a
    producing principal, so it can reveal the existence of a Mission and
@@ -669,13 +661,13 @@ Table of Contents
    classification that could widen what a reader learns.  This document
    adds no anonymous surface.
 
-13.  IANA Considerations
+12.  IANA Considerations
 
-13.1.  Media Type Registration
+12.1.  Media Type Registration
 
    IANA is requested to register one media type per [RFC6838].
 
-13.1.1.  application/mission-work-product-binding+jwt
+12.1.1.  application/mission-work-product-binding+jwt
 
    *  Type name: application
 
@@ -687,7 +679,7 @@ Table of Contents
 
    *  Encoding considerations: binary; JWS Compact Serialization
 
-   *  Security considerations: see Section 11 and Section 9.4
+   *  Security considerations: see Section 10 and Section 8.4
 
    *  Interoperability considerations: see this document
 
@@ -721,12 +713,12 @@ Table of Contents
    *  Change controller: IETF
 
    The committed-object typ value mission-work-product-provenance used
-   to compute provenance_digest (Section 9.2) is not registered: the
+   to compute provenance_digest (Section 8.2) is not registered: the
    issuance profile specification defines no registry of such values and
    relies on the collision-resistant-name rule
    ([I-D.draft-mcguinness-oauth-mission]).  This document adds the
    informative in-toto [IN-TOTO] and SLSA [SLSA] references as the
-   conceptual model for Section 9.
+   conceptual model for Section 8.
 
 Acknowledgments
 
@@ -854,7 +846,7 @@ Informative References
 Appendix A.  Artifact-Lineage Label Persistence
 
    This appendix is informative.  Lineage here is the artifact
-   provenance chain of Section 6, including the derivation recorded by
+   provenance chain of Section 5, including the derivation recorded by
    parent_artifact, not the Mission lineage of child delegation.
 
    A deployment can persist classification labels on artifacts in a
@@ -902,7 +894,7 @@ Appendix A.  Artifact-Lineage Label Persistence
 
    Label-write custody belongs to the trusted mediator that attaches
    Work Product Provenance, the execution environment or Mission Issuer
-   described in Section 6.  A producing agent can write an artifact but
+   described in Section 5.  A producing agent can write an artifact but
    cannot write or clear its catalog label.  Any governed clear is a
    separate trusted operation, not a consequence of copying or resetting
    a session.  A catalog answer reaches the consumer through the trusted
@@ -957,14 +949,14 @@ Appendix A.  Artifact-Lineage Label Persistence
 
    The pattern does not supply authority or complete information-flow
    control.  Every proposed action is still evaluated under the
-   Receiving Mission (Section 7).  Propagation is only as complete as
+   Receiving Mission (Section 6).  Propagation is only as complete as
    the recorded flow: compute that reads, transforms, and emits without
    recording the derivation leaves no computable join, so its output
    takes the unknown default.  That arbitrary-compute boundary is
    bounded, not closed.  The pattern provides no stronger guarantee than
    its trusted label writer; without isolation, compromise of the agent
    can also compromise the writer.  Nor does it quarantine artifacts or
-   block their consumers, which remains deferred in Section 9.4.
+   block their consumers, which remains deferred in Section 8.4.
 
 Appendix B.  Document History
 

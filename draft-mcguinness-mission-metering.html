@@ -1064,7 +1064,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 2 April 2027</td>
+<td class="center">Expires 3 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1077,12 +1077,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-metering-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-09-29" class="published">29 September 2026</time>
+<time datetime="2026-09-30" class="published">30 September 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Experimental</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-02">2 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-03">3 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1141,7 +1141,7 @@ refuse rather than silently ignore it.<a href="#section-abstract-1" class="pilcr
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 2 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 3 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1174,15 +1174,10 @@ refuse rather than silently ignore it.<a href="#section-abstract-1" class="pilcr
             <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
-            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-status-an-experimental-exte" class="internal xref">Status: An Experimental Extension</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.1">
-                <p id="section-toc.1-1.2.2.1.1" class="keepWithNext"><a href="#section-2.1" class="auto internal xref">2.1</a>.  <a href="#name-promotion-criteria" class="internal xref">Promotion Criteria</a></p>
-</li>
-            </ul>
+            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-promotion-criteria" class="internal xref">Promotion Criteria</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
-            <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-relationship-to-the-issuanc" class="internal xref">Relationship to the Issuance and Runtime Profiles</a></p>
+            <p id="section-toc.1-1.3.1" class="keepWithNext"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-relationship-to-the-issuanc" class="internal xref">Relationship to the Issuance and Runtime Profiles</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
             <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-conventions-and-terminology" class="internal xref">Conventions and Terminology</a></p>
@@ -1302,33 +1297,28 @@ distributed-consistency concerns of its own.<a href="#section-1-1" class="pilcro
 duration-lease renewal.<a href="#section-1-3.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-</section>
-</div>
-<div id="optional-status">
-<section id="section-2">
-      <h2 id="name-status-an-experimental-exte">
-<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-status-an-experimental-exte" class="section-name selfRef">Status: An Experimental Extension</a>
-      </h2>
-<p id="section-2-1">This document is optional and experimental: adopt it for
+<p id="section-1-4">This document is optional and experimental: adopt it for
 evaluation, not as a stable interface. Metering cumulative bounds
 exactly under distributed decision points is a distributed-counting
 problem, and the reserve, commit, lease, and settlement machinery here
-is expected to evolve with implementation experience.<a href="#section-2-1" class="pilcrow">¶</a></p>
-<p id="section-2-2">A deployment that does not implement this document carries no
+is expected to evolve with implementation experience.<a href="#section-1-4" class="pilcrow">¶</a></p>
+<p id="section-1-5">A deployment that does not implement this document carries no
 consumption bounds on its Missions and is fully conformant to the
 issuance and runtime profiles. The issuance profile's
 <code>derivation_limit</code> is not a consumption bound: it is enforced by the
 issuing Authorization Server at each derivation and needs none of this
-document (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-2-2" class="pilcrow">¶</a></p>
-<p id="section-2-3">The consent-integrity rule of <a href="#consent" class="auto internal xref">Section 6.1</a> is the boundary that makes
+document (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-1-5" class="pilcrow">¶</a></p>
+<p id="section-1-6">The consent-integrity rule of <a href="#consent" class="auto internal xref">Section 6.1</a> is the boundary that makes
 this safe to omit: a bound is rendered to an Approver only where it is
-actually metered.<a href="#section-2-3" class="pilcrow">¶</a></p>
+actually metered.<a href="#section-1-6" class="pilcrow">¶</a></p>
+</section>
+</div>
 <div id="promotion-criteria">
-<section id="section-2.1">
-        <h3 id="name-promotion-criteria">
-<a href="#section-2.1" class="section-number selfRef">2.1. </a><a href="#name-promotion-criteria" class="section-name selfRef">Promotion Criteria</a>
-        </h3>
-<p id="section-2.1-1">This section is informative. Promotion moves this accounting model
+<section id="section-2">
+      <h2 id="name-promotion-criteria">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-promotion-criteria" class="section-name selfRef">Promotion Criteria</a>
+      </h2>
+<p id="section-2-1">This section is informative. Promotion moves this accounting model
 from optional evaluation toward the architectural baseline for any
 Mission carrying a consumption bound, so the bar is exercised
 machinery, not elapsed time. Meeting these criteria supplies
@@ -1341,70 +1331,70 @@ maturity label is distinct from an IETF stream decision and follows
 one rather than substituting for one. Implementation listings and
 test reports belong in an Implementation Status section per
 <span>[<a href="#RFC7942" class="cite xref">RFC7942</a>]</span>, removed before RFC publication; this section states the
-durable criteria.<a href="#section-2.1-1" class="pilcrow">¶</a></p>
-<p id="section-2.1-2">Promotion is gated per feature by the applicable rows:<a href="#section-2.1-2" class="pilcrow">¶</a></p>
+durable criteria.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<p id="section-2-2">Promotion is gated per feature by the applicable rows:<a href="#section-2-2" class="pilcrow">¶</a></p>
 <span id="name-promotion-gates"></span><table class="center" id="table-1">
-          <caption>
+        <caption>
 <a href="#table-1" class="selfRef">Table 1</a>:
 <a href="#name-promotion-gates" class="selfRef">Promotion gates</a>
-          </caption>
+        </caption>
 <thead>
-            <tr>
-              <th class="text-left" rowspan="1" colspan="1">Gate</th>
-              <th class="text-left" rowspan="1" colspan="1">Applies to</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td class="text-left" rowspan="1" colspan="1">Retry, atomicity, settlement, and crash recovery</td>
-              <td class="text-left" rowspan="1" colspan="1">Every consumption bound</td>
-            </tr>
-            <tr>
-              <td class="text-left" rowspan="1" colspan="1">Exact or qualified topology behavior</td>
-              <td class="text-left" rowspan="1" colspan="1">Every claimed topology profile</td>
-            </tr>
-            <tr>
-              <td class="text-left" rowspan="1" colspan="1">Currency and debit/refund behavior</td>
-              <td class="text-left" rowspan="1" colspan="1">
-                <code>max_budget</code>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Gate</th>
+            <th class="text-left" rowspan="1" colspan="1">Applies to</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Retry, atomicity, settlement, and crash recovery</td>
+            <td class="text-left" rowspan="1" colspan="1">Every consumption bound</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Exact or qualified topology behavior</td>
+            <td class="text-left" rowspan="1" colspan="1">Every claimed topology profile</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Currency and debit/refund behavior</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>max_budget</code>
 </td>
-            </tr>
-            <tr>
-              <td class="text-left" rowspan="1" colspan="1">Call classification and counting point</td>
-              <td class="text-left" rowspan="1" colspan="1">
-                <code>max_calls</code>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Call classification and counting point</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>max_calls</code>
 </td>
-            </tr>
-            <tr>
-              <td class="text-left" rowspan="1" colspan="1">Measurement, renewal, skew, and stop behavior</td>
-              <td class="text-left" rowspan="1" colspan="1">
-                <code>max_duration</code>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Measurement, renewal, skew, and stop behavior</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>max_duration</code>
 </td>
-            </tr>
-            <tr>
-              <td class="text-left" rowspan="1" colspan="1">Payload dereference and message accounting</td>
-              <td class="text-left" rowspan="1" colspan="1">
-                <code>max_egress_volume</code>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Payload dereference and message accounting</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>max_egress_volume</code>
 </td>
-            </tr>
-            <tr>
-              <td class="text-left" rowspan="1" colspan="1">Cross-Mission counter consistency</td>
-              <td class="text-left" rowspan="1" colspan="1">Aggregate bounds</td>
-            </tr>
-            <tr>
-              <td class="text-left" rowspan="1" colspan="1">Atomic latch and release</td>
-              <td class="text-left" rowspan="1" colspan="1">
-                <code>exclusive</code>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Cross-Mission counter consistency</td>
+            <td class="text-left" rowspan="1" colspan="1">Aggregate bounds</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Atomic latch and release</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>exclusive</code>
 </td>
-            </tr>
-            <tr>
-              <td class="text-left" rowspan="1" colspan="1">Independent interoperation</td>
-              <td class="text-left" rowspan="1" colspan="1">Each promoted wire profile</td>
-            </tr>
-          </tbody>
-        </table>
-<p id="section-2.1-4">Each gate passes on named evidence:<a href="#section-2.1-4" class="pilcrow">¶</a></p>
-<p id="section-2.1-5"><strong>Retry, atomicity, settlement, and crash recovery.</strong> For each
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">Independent interoperation</td>
+            <td class="text-left" rowspan="1" colspan="1">Each promoted wire profile</td>
+          </tr>
+        </tbody>
+      </table>
+<p id="section-2-4">Each gate passes on named evidence:<a href="#section-2-4" class="pilcrow">¶</a></p>
+<p id="section-2-5"><strong>Retry, atomicity, settlement, and crash recovery.</strong> For each
 promoted bound class, a reproducible test suite with no skipped
 cases demonstrates exactly-once accounting under <a href="#retry" class="auto internal xref">Section 7.2</a> and
 <a href="#settlement-exchange" class="auto internal xref">Section 11.1</a>: a retry under the same idempotency key or
@@ -1414,8 +1404,8 @@ closed; a crash between reserve and commit resumes to a consistent
 balance; and every evidence state of <a href="#settlement-states" class="auto internal xref">Section 11.1.2</a> is
 exercised. This is the decrement-side counterpart of the
 exactly-once reservation machinery the family's Mission-creating
-surfaces carry for creation.<a href="#section-2.1-5" class="pilcrow">¶</a></p>
-<p id="section-2.1-6"><strong>Exact or qualified topology behavior.</strong> Each claimed enforcement
+surfaces carry for creation.<a href="#section-2-5" class="pilcrow">¶</a></p>
+<p id="section-2-6"><strong>Exact or qualified topology behavior.</strong> Each claimed enforcement
 profile of <a href="#topology" class="auto internal xref">Section 7.1</a> is demonstrated against its own guarantee:
 the Exact profile never over-consumes under concurrent
 near-exhaustion attempts; the Bounded-consistency profile stays
@@ -1427,30 +1417,30 @@ promotion as a baseline hard cap; Bounded-consistency evidence
 qualifies only the qualified form, the cap together with its
 published bound, rendered per <a href="#consent" class="auto internal xref">Section 6.1</a>. Artifacts: the
 Enforcement Scope Statement naming the profile per counter, and the
-reconciliation record.<a href="#section-2.1-6" class="pilcrow">¶</a></p>
-<p id="section-2.1-7"><strong>Currency and debit/refund behavior</strong> (<code>max_budget</code>). Exact decimal
+reconciliation record.<a href="#section-2-6" class="pilcrow">¶</a></p>
+<p id="section-2-7"><strong>Currency and debit/refund behavior</strong> (<code>max_budget</code>). Exact decimal
 arithmetic with no floating-point accumulation; refusal on a
 currency the counter does not carry, or the deployment's documented
 conversion rule; debit, refund, and release paths returning exact
-amounts.<a href="#section-2.1-7" class="pilcrow">¶</a></p>
-<p id="section-2.1-8"><strong>Call classification and counting point</strong> (<code>max_calls</code>). The
+amounts.<a href="#section-2-7" class="pilcrow">¶</a></p>
+<p id="section-2-8"><strong>Call classification and counting point</strong> (<code>max_calls</code>). The
 <code>call_class</code> mapping of <a href="#bounds" class="auto internal xref">Section 6</a> exercised across implementations,
 the same consequential action counted against the same class, and
 the counting point proven: the count consumed at decision, the
-disposition confirmed at settlement (<a href="#settlement-contract" class="auto internal xref">Section 11.1.1</a>).<a href="#section-2.1-8" class="pilcrow">¶</a></p>
-<p id="section-2.1-9"><strong>Measurement, renewal, skew, and stop behavior</strong> (<code>max_duration</code>).
+disposition confirmed at settlement (<a href="#settlement-contract" class="auto internal xref">Section 11.1.1</a>).<a href="#section-2-8" class="pilcrow">¶</a></p>
+<p id="section-2-9"><strong>Measurement, renewal, skew, and stop behavior</strong> (<code>max_duration</code>).
 The duration rules of <a href="#metering" class="auto internal xref">Section 7</a> exercised: bounded reservation or
 lease for an unknown duration, renewal through
 <code>context.prior_evaluation_id</code> ahead of expiry by the skew margin,
 stop-or-new-permit before exhaustion, the in-flight handling of an
 action that cannot be safely stopped, and <code>measured_duration</code> commit
-with release of the unused reservation.<a href="#section-2.1-9" class="pilcrow">¶</a></p>
-<p id="section-2.1-10"><strong>Payload dereference and message accounting</strong>
+with release of the unused reservation.<a href="#section-2-9" class="pilcrow">¶</a></p>
+<p id="section-2-10"><strong>Payload dereference and message accounting</strong>
 (<code>max_egress_volume</code>). The Operation Profile measurement exercised
 for both <code>bytes</code> and <code>messages</code>, including a reference-typed
 parameter measured by its dereferenced payload or its action class
-excluded from a claimed <code>bytes</code> bound (<a href="#metering" class="auto internal xref">Section 7</a>).<a href="#section-2.1-10" class="pilcrow">¶</a></p>
-<p id="section-2.1-11"><strong>Cross-Mission counter consistency</strong> (aggregate bounds,
+excluded from a claimed <code>bytes</code> bound (<a href="#metering" class="auto internal xref">Section 7</a>).<a href="#section-2-10" class="pilcrow">¶</a></p>
+<p id="section-2-11"><strong>Cross-Mission counter consistency</strong> (aggregate bounds,
 <a href="#aggregate-bounds" class="auto internal xref">Section 9</a>). A lineage-keyed budget identifier and its
 authoritative shared counter metering a root Mission and its Child
 Missions in the counter's own consistency domain: a lineage-wide
@@ -1461,8 +1451,8 @@ aggregate bound the deployed counter does not back. Artifacts: the
 refusal's Decision Evidence carrying a <code>metering</code> entry
 (<a href="#metering-evidence" class="auto internal xref">Section 10</a>) whose <code>requested</code>, <code>remaining</code>,
 <code>counter_scope</code>, and <code>counter_id</code> prove the accounting invariant
-rather than only the asserted refusal.<a href="#section-2.1-11" class="pilcrow">¶</a></p>
-<p id="section-2.1-12"><strong>Atomic latch and release</strong> (<code>exclusive</code>). Concurrent consequential
+rather than only the asserted refusal.<a href="#section-2-11" class="pilcrow">¶</a></p>
+<p id="section-2-12"><strong>Atomic latch and release</strong> (<code>exclusive</code>). Concurrent consequential
 actions matching different selectors of one group latch exactly one
 selector, atomically with the permit; the affirmative-non-execution
 release restores the group; refusals carry <code>exclusivity_latched</code> in
@@ -1480,23 +1470,23 @@ assessment against this and the independent-interoperation gate below
 found every applicable row NOT MET (issue #117): no reference
 implementation of the latch domain, the settlement-intake path, or an
 independently interoperating counterpart exists, so <code>exclusive</code> stays
-EXPERIMENTAL and unpromoted.<a href="#section-2.1-12" class="pilcrow">¶</a></p>
-<p id="section-2.1-13"><strong>Independent interoperation.</strong> Two distinct results, both required
+EXPERIMENTAL and unpromoted.<a href="#section-2-12" class="pilcrow">¶</a></p>
+<p id="section-2-13"><strong>Independent interoperation.</strong> Two distinct results, both required
 for each promoted wire profile, aligning with the implementation and
-interoperation reporting convention of <span>[<a href="#RFC7942" class="cite xref">RFC7942</a>]</span>:<a href="#section-2.1-13" class="pilcrow">¶</a></p>
+interoperation reporting convention of <span>[<a href="#RFC7942" class="cite xref">RFC7942</a>]</span>:<a href="#section-2-13" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-2.1-14.1">
-            <p id="section-2.1-14.1.1">Operational experience: at least one deployment not operated by
-the implementer.<a href="#section-2.1-14.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-2-14.1">
+          <p id="section-2-14.1.1">Operational experience: at least one deployment not operated by
+the implementer.<a href="#section-2-14.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-2.1-14.2">
-            <p id="section-2.1-14.2.1">Interoperability: an independently implemented PEP and PDP
+        <li class="normal" id="section-2-14.2">
+          <p id="section-2-14.2.1">Interoperability: an independently implemented PEP and PDP
 exchange the profiled messages, including duplicate delivery and
 failure cases, under the settlement submission contract
-(<a href="#settlement-contract" class="auto internal xref">Section 11.1.1</a>).<a href="#section-2.1-14.2.1" class="pilcrow">¶</a></p>
+(<a href="#settlement-contract" class="auto internal xref">Section 11.1.1</a>).<a href="#section-2-14.2.1" class="pilcrow">¶</a></p>
 </li>
-        </ul>
-<p id="section-2.1-15">Across every gate, promotion additionally requires the promoted wire
+      </ul>
+<p id="section-2-15">Across every gate, promotion additionally requires the promoted wire
 surface unchanged in name, shape, and semantics across two
 consecutive published revisions of this document while the evidence
 accumulated: the Mission Intent members of <a href="#bounds" class="auto internal xref">Section 6</a>, <code>quota_exceeded</code>,
@@ -1508,23 +1498,17 @@ every member of <a href="#bounds" class="auto internal xref">Section 6</a> from 
 Mission Intent member: that is a wire-shape change to this exact
 surface, so the two-consecutive-revisions window restarts at this
 revision (zero of two), regardless of how long the pre-relocation
-shape had otherwise held.<a href="#section-2.1-15" class="pilcrow">¶</a></p>
-<p id="section-2.1-16">Selective promotion means the applicable rows: promoting a
+shape had otherwise held.<a href="#section-2-15" class="pilcrow">¶</a></p>
+<p id="section-2-16">Selective promotion means the applicable rows: promoting a
 per-Mission bound class does not require the aggregate or
 <code>exclusive</code> gates, and promoting the <code>exclusive</code> control does not
 require the bound-class gates; every promotion includes the rows
 that apply to each consumption bound it covers, its claimed topology
-profiles, and its wire profile.<a href="#section-2.1-16" class="pilcrow">¶</a></p>
-<p id="section-2.1-17">The criteria are sized to be satisfiable by a reference
+profiles, and its wire profile.<a href="#section-2-16" class="pilcrow">¶</a></p>
+<p id="section-2-17">The criteria are sized to be satisfiable by a reference
 implementation, one deployment not operated by its implementer, and
 one independently implemented counterpart component; they demand
-exercised machinery and stable surfaces, not adoption counts.<a href="#section-2.1-17" class="pilcrow">¶</a></p>
-<p id="section-2.1-18">Role: companion. Spec maturity: experimental. Maintenance: lab-floor-referenced.
-Adopt when: A Mission needs cumulative caps (budget, calls, duration, egress), not just scope.
-Requires: Mission-Bound Runtime Enforcement; Mission Runtime Evidence; Mission Substrate Requirements; Mission-Bound Authorization for OAuth 2.0.
-Also requires, conditionally: Mission-Bound Runtime Enforcement: AuthZEN Profile (when the AuthZEN binding is the runtime wire); Mission Consent Evidence for OAuth 2.0 (when Consent Evidence is recorded).<a href="#section-2.1-18" class="pilcrow">¶</a></p>
-</section>
-</div>
+exercised machinery and stable surfaces, not adoption counts.<a href="#section-2-17" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="relationship">
@@ -1737,7 +1721,7 @@ does not detect it.<a href="#section-6-2.8.1" class="pilcrow">¶</a></p>
         <dd style="margin-left: 1.5em" id="section-6-2.10">
           <p id="section-6-2.10.1"><span class="bcp14">OPTIONAL</span> and EXPERIMENTAL (unlike the four bounds above, this
 member is not yet promotion-ready: a 2026-08 assessment against
-<a href="#promotion-criteria" class="auto internal xref">Section 2.1</a> found every applicable gate NOT MET, issue
+<a href="#promotion-criteria" class="auto internal xref">Section 2</a> found every applicable gate NOT MET, issue
 #117). An array of exclusivity groups, each an array of two or
 more selectors. A selector is an object with <code>resource</code> (<span class="bcp14">REQUIRED</span>,
 a string) and <code>actions</code> (<span class="bcp14">OPTIONAL</span>, an array of strings); it matches
@@ -2046,7 +2030,7 @@ bounds nothing beyond that Child Mission itself
 deployed lineage-keyed counter, no per-Mission counter, however many
 Missions in a lineage carry one, adds up to an aggregate bound on the
 lineage.
-This document is experimental (<a href="#optional-status" class="auto internal xref">Section 2</a>), so a deployment
+This document is experimental (<a href="#introduction" class="auto internal xref">Section 1</a>), so a deployment
 running only the stable issuance and runtime profiles has no
 lineage-wide aggregate bound in force at all. A deployment <span class="bcp14">MUST NOT</span>
 render, in an Enforcement Scope Statement or at any consent surface,
@@ -2578,7 +2562,7 @@ the humans adjudicating it.<a href="#section-14-2" class="pilcrow">¶</a></p>
 "Mission Intent Members" registry: <code>max_budget</code>, <code>max_calls</code>,
 <code>max_duration</code>, and <code>max_egress_volume</code> as <code>stable</code>, and <code>exclusive</code>
 as <code>experimental</code> (not promoted; a 2026-08 assessment against this
-document's own promotion criteria, <a href="#promotion-criteria" class="auto internal xref">Section 2.1</a>, found every
+document's own promotion criteria, <a href="#promotion-criteria" class="auto internal xref">Section 2</a>, found every
 applicable gate unmet). Each is a named top-level Mission Intent
 member this profile defines, produces, and enforces in full under the
 issuance profile's Mission-Intent extension seam
@@ -2688,11 +2672,11 @@ this registry.<a href="#section-15-1" class="pilcrow">¶</a></p>
 the issuance profile retires the <code>controls</code> bucket entirely
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); this is a wire-shape
 change to that surface, so the wire-surface-stability window
-(<a href="#promotion-criteria" class="auto internal xref">Section 2.1</a>) restarts at this revision. The earlier plan
+(<a href="#promotion-criteria" class="auto internal xref">Section 2</a>) restarts at this revision. The earlier plan
 to adopt <code>exclusive</code> into the issuance profile's core <code>controls</code>
 vocabulary is retired along with that vocabulary; <code>exclusive</code> stays
 an ordinary member of this document. A 2026-08 promotion assessment
-of <code>exclusive</code> against <a href="#promotion-criteria" class="auto internal xref">Section 2.1</a> found every applicable
+of <code>exclusive</code> against <a href="#promotion-criteria" class="auto internal xref">Section 2</a> found every applicable
 gate NOT MET (issue #117): it remains EXPERIMENTAL and unpromoted,
 now explicitly marked as such at its own definition (<a href="#bounds" class="auto internal xref">Section 6</a>).
 <code>max_derivations</code> renamed to <code>derivation_limit</code> in cross-references

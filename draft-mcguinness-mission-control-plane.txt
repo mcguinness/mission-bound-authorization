@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       29 September 2026
-Expires: 2 April 2027
+Intended status: Standards Track                       30 September 2026
+Expires: 3 April 2027
 
 
                    Mission Control-Plane Consistency
@@ -48,7 +48,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 2 April 2027.
+   This Internet-Draft will expire on 3 April 2027.
 
 Copyright Notice
 
@@ -67,27 +67,26 @@ Copyright Notice
 Table of Contents
 
    1.  Introduction
-   2.  Status: An Optional Profile
-   3.  Conventions
-   4.  Shared Consistency and Availability Rule
-   5.  Issuer Consistency Invariants
-     5.1.  1.  Serialization domains
-     5.2.  2.  Fresh observations, not fresh signatures
-     5.3.  3.  One state-observation model
-     5.4.  4.  Rollback resistance
-     5.5.  5.  Terminal-state tombstones
-     5.6.  6.  Authoritative mutation under partition
-     5.7.  7.  Emergency narrowing
-     5.8.  8.  Positive emergency authority is separate
-     5.9.  9.  Isolation at mutable seams
-     5.10. 10.  Repairable fan-out
-   6.  Deployment Declaration
-   7.  Fault Conformance Cases
-   8.  Conformance
-   9.  Security Considerations
-   10. Privacy Considerations
-   11. IANA Considerations
-   12. Normative References
+   2.  Conventions
+   3.  Shared Consistency and Availability Rule
+   4.  Issuer Consistency Invariants
+     4.1.  1.  Serialization domains
+     4.2.  2.  Fresh observations, not fresh signatures
+     4.3.  3.  One state-observation model
+     4.4.  4.  Rollback resistance
+     4.5.  5.  Terminal-state tombstones
+     4.6.  6.  Authoritative mutation under partition
+     4.7.  7.  Emergency narrowing
+     4.8.  8.  Positive emergency authority is separate
+     4.9.  9.  Isolation at mutable seams
+     4.10. 10.  Repairable fan-out
+   5.  Deployment Declaration
+   6.  Fault Conformance Cases
+   7.  Conformance
+   8.  Security Considerations
+   9.  Privacy Considerations
+   10. IANA Considerations
+   11. Normative References
    Appendix A.  Document History
    Acknowledgments
    Author's Address
@@ -110,20 +109,11 @@ Table of Contents
    Runtime owns point-of-use bounded reliance
    ([I-D.draft-mcguinness-mission-runtime]).
 
-2.  Status: An Optional Profile
-
-   Role: companion.  Spec maturity: experimental.  Maintenance: lab-
-   best-effort.  Adopt when: A deployment claims testable control-plane
-   consistency across replication, partition, and recovery.  Requires:
-   Mission-Bound Runtime Enforcement; Mission-Bound Authorization for
-   OAuth 2.0; Mission Lifecycle Signals for OAuth 2.0; Mission Status
-   and Lifecycle for OAuth 2.0.
-
    This document has no implemented conformance coverage.  Its fault
    cases and requirement rows are unimplemented, and its maintenance
    class reflects that absence of implementation evidence.
 
-3.  Conventions
+2.  Conventions
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
@@ -138,7 +128,7 @@ Table of Contents
    identifiers inhabit different identifier spaces and are not compared
    for raw equality.
 
-4.  Shared Consistency and Availability Rule
+3.  Shared Consistency and Availability Rule
 
    A deployment may trade availability inside a declared freshness
    window, but it cannot manufacture freshness, lose a serialized
@@ -148,13 +138,13 @@ Table of Contents
    Recovery objectives guide selecting bounds within the security
    ceiling, never extending them during an incident.
 
-5.  Issuer Consistency Invariants
+4.  Issuer Consistency Invariants
 
    The following requirements apply when the deployment claims this
    profile, in addition to the unconditional requirements of each
    adopted binding.  Each subsection identifies its enforcing subject.
 
-5.1.  1.  Serialization domains
+4.1.  1.  Serialization domains
 
    The Mission Issuer MUST provide one serialization order per Mission
    and per multi-object invariant.
@@ -168,7 +158,7 @@ Table of Contents
    atomic-issuance obligations and adds explicit durable fan-out
    coupling.
 
-5.2.  2.  Fresh observations, not fresh signatures
+4.2.  2.  Fresh observations, not fresh signatures
 
    A signer of a state observation MUST NOT manufacture freshness by
    assigning a new iat or fresh_until to an older observation without
@@ -185,7 +175,7 @@ Table of Contents
    validity proves producer and integrity, not recency.  The Status
    freshness ceiling is unchanged.
 
-5.3.  3.  One state-observation model
+4.3.  3.  One state-observation model
 
    A binding claiming this profile MUST map its state observations onto
    the existing Status, introspection, Mission Status List, or Signals
@@ -199,7 +189,7 @@ Table of Contents
    Conflicting observations are reconciled under the version and
    freshness rules, never by selecting the more permissive surface.
 
-5.4.  4.  Rollback resistance
+4.4.  4.  Rollback resistance
 
    After restore or failover, the Mission Issuer MUST NOT issue a lower
    state version for an existing Mission, and MUST refuse state-
@@ -213,7 +203,7 @@ Table of Contents
    names are not ordered by severity.  Issuer durability is required
    even when a consumer has never seen the pre-restore version.
 
-5.5.  5.  Terminal-state tombstones
+4.5.  5.  Terminal-state tombstones
 
    The Mission Issuer MUST retain terminal-state tombstones for the
    maximum applicable credential/artifact lifetime, state-staleness plus
@@ -227,7 +217,7 @@ Table of Contents
    composes retention horizons; it does not weaken the binding's
    existing identifier-nonreuse requirement.
 
-5.6.  6.  Authoritative mutation under partition
+4.6.  6.  Authoritative mutation under partition
 
    The Mission Issuer MUST perform issuance, refresh, expansion, child
    creation, and lifecycle mutation against authoritative current state
@@ -241,7 +231,7 @@ Table of Contents
    observations only within its separate Runtime bounds; that does not
    authorize a stale control-plane write.
 
-5.7.  7.  Emergency narrowing
+4.7.  7.  Emergency narrowing
 
    An issuer or deny cache MUST NOT use emergency deny information to
    create authority or extend the freshness of an active observation.
@@ -254,7 +244,7 @@ Table of Contents
    additional denial; ordinary positive checks still apply.  A terminal
    tombstone MUST NOT expire into active behavior.
 
-5.8.  8.  Positive emergency authority is separate
+4.8.  8.  Positive emergency authority is separate
 
    A deployment MUST NOT represent positive emergency permission as a
    Mission permit, active Mission state, or Authority Set authorization,
@@ -264,10 +254,10 @@ Table of Contents
    The ordinary Mission path still fails closed.  Operator-facing
    emergency-mode activation and truthful evidence belong to the
    operational profile; narrowing emergency control is described in
-   Section 5.7.  No emergency flag turns a failed Mission check into a
+   Section 4.7.  No emergency flag turns a failed Mission check into a
    successful one.
 
-5.9.  9.  Isolation at mutable seams
+4.9.  9.  Isolation at mutable seams
 
    Issuers and retaining consumers MUST isolate mutable Mission state by
    the canonical (issuer, mission_id) tuple, or a tenant-qualified
@@ -281,7 +271,7 @@ Table of Contents
    its tenant separation and resource isolation so one tenant cannot
    silently consume another's state-propagation guarantee.
 
-5.10.  10.  Repairable fan-out
+4.10.  10.  Repairable fan-out
 
    The Mission Issuer MUST atomically retain durable publication or
    repair work with each committed transition and publish only after
@@ -298,7 +288,7 @@ Table of Contents
    not promise global delivery order or require a particular worker/
    claiming topology.
 
-6.  Deployment Declaration
+5.  Deployment Declaration
 
    A claiming deployment MUST document its serialization domains,
    authoritative observation mechanism, replication and recovery model,
@@ -312,64 +302,64 @@ Table of Contents
    A residual risk is a disclosed limitation, not an exemption from a
    requirement the deployment claims.
 
-7.  Fault Conformance Cases
+6.  Fault Conformance Cases
 
     +=======================+=============================+===========+
     | Fault or race         | Required outcome            | Invariant |
     +=======================+=============================+===========+
     | Two writers race a    | One serialized result; no   | Section   |
-    | transition or counter | double budget spend         | 5.1       |
+    | transition or counter | double budget spend         | 4.1       |
     +-----------------------+-----------------------------+-----------+
     | Child creation races  | Child record and counter    | Section   |
-    | the fan-out cap       | commit together             | 5.1       |
+    | the fan-out cap       | commit together             | 4.1       |
     +-----------------------+-----------------------------+-----------+
     | Expansion fails       | Neither half survives alone | Section   |
-    | between predecessor   |                             | 5.1       |
+    | between predecessor   |                             | 4.1       |
     | and successor writes  |                             |           |
     +-----------------------+-----------------------------+-----------+
     | Crash after state     | Durable repair publishes    | Section   |
-    | commit, before        | without losing the          | 5.10      |
+    | commit, before        | without losing the          | 4.10      |
     | publication           | transition                  |           |
     +-----------------------+-----------------------------+-----------+
     | Lagging node signs a  | Refusal unless an           | Section   |
-    | newly fresh active    | authoritative observation   | 5.2       |
+    | newly fresh active    | authoritative observation   | 4.2       |
     | value                 | establishes that value      |           |
     +-----------------------+-----------------------------+-----------+
     | Restore exposes a     | Issuer refuses until        | Section   |
-    | lower version         | reconciled; retaining       | 5.4       |
+    | lower version         | reconciled; retaining       | 4.4       |
     |                       | consumer rejects rollback   |           |
     +-----------------------+-----------------------------+-----------+
     | Legitimate higher-    | State is not rejected       | Section   |
-    | version resume        | merely because active seems | 5.4       |
+    | version resume        | merely because active seems | 4.4       |
     |                       | less severe                 |           |
     +-----------------------+-----------------------------+-----------+
     | Partition outlasts    | No new control-plane        | Section   |
-    | the existing          | mutation; stale reliance    | 5.6       |
+    | the existing          | mutation; stale reliance    | 4.6       |
     | freshness horizon     | stops                       |           |
     +-----------------------+-----------------------------+-----------+
     | Terminal record is    | Identifier does not regain  | Section   |
-    | absent after backup   | active authority            | 5.5       |
+    | absent after backup   | active authority            | 4.5       |
     | restore               |                             |           |
     +-----------------------+-----------------------------+-----------+
     | Same Mission ID under | No shared high-water mark,  | Section   |
-    | two issuers           | budget, or idempotency      | 5.9       |
+    | two issuers           | budget, or idempotency      | 4.9       |
     |                       | result                      |           |
     +-----------------------+-----------------------------+-----------+
     | Key rotation during   | A new signing key does not  | Section   |
-    | replication lag       | create freshness            | 5.2       |
+    | replication lag       | create freshness            | 4.2       |
     +-----------------------+-----------------------------+-----------+
     | Duplicate or out-of-  | Idempotent handling, gap    | Section   |
-    | order transition      | detection, authoritative    | 5.10      |
+    | order transition      | detection, authoritative    | 4.10      |
     | events                | resynchronization           |           |
     +-----------------------+-----------------------------+-----------+
     | Positive emergency    | Truthfully separate         | Section   |
-    | permission            | authority; affected actions | 5.8       |
+    | permission            | authority; affected actions | 4.8       |
     |                       | excluded from the claim     |           |
     +-----------------------+-----------------------------+-----------+
 
                                   Table 1
 
-8.  Conformance
+7.  Conformance
 
    A deployment claiming Mission Control-Plane Consistency MUST satisfy
    every applicable requirement for the issuer, binding, and consumer
@@ -378,7 +368,7 @@ Table of Contents
    evidence of compliance.  Existing binding-level conformance remains
    independent of this optional claim.
 
-9.  Security Considerations
+8.  Security Considerations
 
    A valid signature can authenticate a stale or rolled-back assertion.
    Consumer high-water marks complement, but do not replace, issuer
@@ -393,7 +383,7 @@ Table of Contents
    isolation and bounded propagation capacity; correct cache keys alone
    do not establish tenant availability.
 
-10.  Privacy Considerations
+9.  Privacy Considerations
 
    Durable tombstones, idempotency records, and qualified Mission
    identifiers can correlate activity.  Retain the minimum facts needed
@@ -401,11 +391,11 @@ Table of Contents
    putting human identity or action content into replication and queue
    keys.
 
-11.  IANA Considerations
+10.  IANA Considerations
 
    This document requests no IANA actions.
 
-12.  Normative References
+11.  Normative References
 
    [I-D.draft-mcguinness-mission-runtime]
               McGuinness, K., "Mission-Bound Runtime Enforcement", 2026,

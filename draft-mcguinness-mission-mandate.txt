@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       29 September 2026
-Expires: 2 April 2027
+Intended status: Standards Track                       30 September 2026
+Expires: 3 April 2027
 
 
                             Mission Mandate
@@ -54,7 +54,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 2 April 2027.
+   This Internet-Draft will expire on 3 April 2027.
 
 Copyright Notice
 
@@ -73,40 +73,39 @@ Copyright Notice
 Table of Contents
 
    1.  Introduction
-   2.  Status: An Optional Extension
-   3.  Conventions and Terminology
-   4.  Mission Substrate
-   5.  Mission Mandate
-     5.1.  JOSE Header
-     5.2.  Mandate Claims
-     5.3.  State at Issuance
-     5.4.  Minting
-     5.5.  Example
-   6.  Selective Disclosure
-   7.  Mandate Verification
-     7.1.  Failure Taxonomy
-     7.2.  Transparency-Hardened Verification
-   8.  Mandate Use
-     8.1.  Cross-Domain Verification
-     8.2.  Vertical Derivation
-     8.3.  Mission Evidence
-   9.  Non-Goals and Deferred Work
-   10. Conformance
-   11. Security Considerations
-     11.1.  Mandate-as-Credential Misuse
-     11.2.  Stale-State Reliance
-     11.3.  Issuer Key Compromise
-     11.4.  Confusion with the Cross-Domain Grant
-   12. Privacy Considerations
-     12.1.  Task-Data Propagation
-     12.2.  Subject Disclosure
-   13. IANA Considerations
-     13.1.  Media Type Registration
-       13.1.1.  application/mission-mandate+jwt
-       13.1.2.  application/mission-mandate+sd-jwt
-   14. References
-     14.1.  Normative References
-     14.2.  Informative References
+   2.  Conventions and Terminology
+   3.  Mission Substrate
+   4.  Mission Mandate
+     4.1.  JOSE Header
+     4.2.  Mandate Claims
+     4.3.  State at Issuance
+     4.4.  Minting
+     4.5.  Example
+   5.  Selective Disclosure
+   6.  Mandate Verification
+     6.1.  Failure Taxonomy
+     6.2.  Transparency-Hardened Verification
+   7.  Mandate Use
+     7.1.  Cross-Domain Verification
+     7.2.  Vertical Derivation
+     7.3.  Mission Evidence
+   8.  Non-Goals and Deferred Work
+   9.  Conformance
+   10. Security Considerations
+     10.1.  Mandate-as-Credential Misuse
+     10.2.  Stale-State Reliance
+     10.3.  Issuer Key Compromise
+     10.4.  Confusion with the Cross-Domain Grant
+   11. Privacy Considerations
+     11.1.  Task-Data Propagation
+     11.2.  Subject Disclosure
+   12. IANA Considerations
+     12.1.  Media Type Registration
+       12.1.1.  application/mission-mandate+jwt
+       12.1.2.  application/mission-mandate+sd-jwt
+   13. References
+     13.1.  Normative References
+     13.2.  Informative References
    Acknowledgments
    Author's Address
 
@@ -133,7 +132,7 @@ Table of Contents
    and no callback for the facts themselves.  Only currency is external:
    a Mandate proves what was committed as of its iat, and a verifier
    that relies on the Mission being active checks current state
-   separately (Section 5.3).
+   separately (Section 4.3).
 
    The family distinguishes three artifacts:
 
@@ -151,9 +150,7 @@ Table of Contents
    Mission to the Grant").  A Mandate extends that rule from the
    identifier to the full committed record: presenting a Mandate
    authorizes nothing either.  It lets a verifier know what was
-   approved; authority remains the substrate's job (Section 8.1).
-
-2.  Status: An Optional Extension
+   approved; authority remains the substrate's job (Section 7.1).
 
    This document is optional.  A deployment that never mints Mandates is
    fully conformant to the issuance profile and its companions and is
@@ -168,13 +165,7 @@ Table of Contents
    failure taxonomy against real cross-domain use before relying on
    them.
 
-   Role: companion.  Spec maturity: experimental.  Maintenance: active.
-   Adopt when: An outside party must verify what was approved without a
-   token-exchange hop.  Requires: Mission Substrate Requirements.  Also
-   requires, conditionally: Mission-Bound Authorization for OAuth 2.0
-   (when the OAuth binding is the substrate).
-
-3.  Conventions and Terminology
+2.  Conventions and Terminology
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
@@ -200,14 +191,14 @@ Table of Contents
 
    Mission Mandate (Mandate):  A signed, portable statement of a
       Mission's committed facts, minted by the Mission Issuer
-      (Section 5).
+      (Section 4).
 
    Mandate Issuer, Mandate Verifier:  The conformance roles of
-      Section 10: the Mission Issuer acting as the minter of Mandates
+      Section 9: the Mission Issuer acting as the minter of Mandates
       (always the Mission issuer), and a party that validates a Mandate
-      (Section 7) and relies on it as evidence.
+      (Section 6) and relies on it as evidence.
 
-4.  Mission Substrate
+3.  Mission Substrate
 
    This profile is defined against the Mission model rather than against
    OAuth 2.0 mechanics.  It consumes these substrate primitives:
@@ -257,47 +248,47 @@ Table of Contents
    +=============+===========+================================================+
    |Structured   |not        |authority_set and authority_hash are committed  |
    |Authority    |consumed   |facts a verifier recomputes for correlation     |
-   |             |           |(Section 7 step 6); a consumer MUST NOT derive  |
-   |             |           |authority from any claim member (Section 5.2)   |
+   |             |           |(Section 6 step 6); a consumer MUST NOT derive  |
+   |             |           |authority from any claim member (Section 4.2)   |
    +-------------+-----------+------------------------------------------------+
    |Lifecycle-   |not        |A Mandate authorizes no action and gates no     |
    |Gated        |consumed   |decision; reliance on a currently active Mission|
-   |Authorization|           |is the freshness check of Section 5.3, not a    |
+   |Authorization|           |is the freshness check of Section 4.3, not a    |
    |             |           |gate this document performs                     |
    +-------------+-----------+------------------------------------------------+
    |State-       |required   |Consumed whenever reliance requires a currently |
-   |Observable   |when       |active Mission (Section 7 step 7);              |
+   |Observable   |when       |active Mission (Section 6 step 7);              |
    |             |reliance   |state_at_issuance never substitutes, and the    |
-   |             |requires a |stale class of Section 7.1 applies until current|
+   |             |requires a |stale class of Section 6.1 applies until current|
    |             |currently  |state is obtained                               |
    |             |active     |                                                |
    |             |Mission    |                                                |
    +-------------+-----------+------------------------------------------------+
    |Monotonic    |not        |A Mandate narrows nothing; a rail's vertical    |
-   |Derivation   |consumed   |derivation (Section 8.2) is that rail's own     |
+   |Derivation   |consumed   |derivation (Section 7.2) is that rail's own     |
    |             |           |governance, never a narrowing this document     |
    |             |           |performs                                        |
    +-------------+-----------+------------------------------------------------+
    |Credential-  |not        |A Mandate binds no holder and is freely copyable|
-   |Bound        |consumed   |(Section 9); a deriving rail MUST independently |
+   |Bound        |consumed   |(Section 8); a deriving rail MUST independently |
    |             |           |authenticate the presenter through its own      |
-   |             |           |channel (Section 8.2)                           |
+   |             |           |channel (Section 7.2)                           |
    +-------------+-----------+------------------------------------------------+
    |Authorized   |not        |Presenter correlation is the deriving rail's own|
    |Context      |consumed   |independent authentication, never a joining     |
    |Correlation  |           |association this document establishes           |
-   |             |           |(Section 8.2)                                   |
+   |             |           |(Section 7.2)                                   |
    +-------------+-----------+------------------------------------------------+
    |Independently|not        |The Mandate is itself the verification artifact:|
-   |Verifiable   |consumed   |Section 7 defines its canonical input, kid key  |
-   |             |           |discovery (Section 4), algorithm agility, and   |
-   |             |           |validity interval (mandate_exp, Section 5.2);   |
+   |Verifiable   |consumed   |Section 6 defines its canonical input, kid key  |
+   |             |           |discovery (Section 3), algorithm agility, and   |
+   |             |           |validity interval (mandate_exp, Section 4.2);   |
    |             |           |the standalone and UMA bindings already supply  |
    |             |           |this capability through their own mechanisms,   |
    |             |           |independent of the Mandate                      |
    +-------------+-----------+------------------------------------------------+
    |Portable     |not        |The Mandate is registrable Mission evidence     |
-   |Evidence     |consumed   |(Section 8.3) that a binding's Mission Substrate|
+   |Evidence     |consumed   |(Section 7.3) that a binding's Mission Substrate|
    |             |           |Statement can name as its supply mechanism; the |
    |             |           |OAuth binding's own Mapping Assessment, the     |
    |             |           |standalone binding's Statement, and the UMA     |
@@ -310,20 +301,20 @@ Table of Contents
 
                   Table 1: Mandate capability consumption
 
-5.  Mission Mandate
+4.  Mission Mandate
 
    A Mission Mandate is a JWT [RFC7519] signed as a JWS [RFC7515] by the
    Mission Issuer, stating the committed facts of exactly one Mission as
    of the Mandate's iat.  The JWS Compact Serialization is the Mandate's
    wire and evidence form.
 
-5.1.  JOSE Header
+4.1.  JOSE Header
 
    The protected header MUST carry:
 
    typ:  REQUIRED. mission-mandate+jwt.  Per [RFC7515] Section 4.1.9 the
       value omits the application/ prefix of the media type registered
-      in Section 13.  Exact validation of the protected typ value,
+      in Section 12.  Exact validation of the protected typ value,
       together with mutually exclusive validation rules for the artifact
       profiles, implements the substitution defense of [RFC8725],
       Sections 3.11 and 3.12.
@@ -331,9 +322,9 @@ Table of Contents
    alg:  REQUIRED.  An asymmetric JWS algorithm. none MUST NOT be used.
 
    kid:  REQUIRED.  A key identifier that resolves in the Mission
-      Issuer's published key material (Section 4).
+      Issuer's published key material (Section 3).
 
-5.2.  Mandate Claims
+4.2.  Mandate Claims
 
    iss:  REQUIRED.  A string.  The Mission issuer.
 
@@ -376,7 +367,7 @@ Table of Contents
       policy_version.
 
    state_at_issuance:  REQUIRED.  A string.  The Mission's lifecycle
-      state at iat (Section 5.3).
+      state at iat (Section 4.3).
 
    created_at:  OPTIONAL.  An RFC 3339 [RFC3339] date-time: the time the
       Mission was approved, mirroring the Mission record's creation
@@ -397,14 +388,14 @@ Table of Contents
       authenticated artifact that discloses the same commitment for the
       same Mission, without either artifact re-deriving the other's
       fields.  It carries no authority and is never an enforcement input
-      (Section 7).
+      (Section 6).
 
    authority_set:  OPTIONAL.  An array.  The full consented Authority
       Set, exactly as recorded on the Mission record, preserving array
       order (the order is part of the canonical form under the issuance
       profile's canonicalization rules).  When present, a verifier that
       relies on its contents recomputes authority_hash over it
-      (Section 7).
+      (Section 6).
 
    mandate_exp:  OPTIONAL.  A NumericDate.  An expiry of the Mandate
       artifact itself, distinct from the Mission's expires_at: after it,
@@ -421,7 +412,7 @@ Table of Contents
       Mandate was minted for.  It is attribution, not audience: it binds
       nothing.  A verifier MUST NOT treat it as access control or reject
       a Mandate over its value.  Its use is that a Mandate found where
-      it should not be names its leak path (Section 12).
+      it should not be names its leak path (Section 11).
 
    The claim set is open in the manner of the mission claim: a companion
    profile of the issuance profile MAY add members with coordinated
@@ -434,9 +425,9 @@ Table of Contents
    [RFC3339] strings for record-level facts (mission.expires_at and
    created_at), which mirror the Mission record verbatim.  A verifier
    parses each in the form its claim defines and applies clock-skew
-   leeway to time comparisons (Section 7).
+   leeway to time comparisons (Section 6).
 
-5.3.  State at Issuance
+4.3.  State at Issuance
 
    state_at_issuance records history, not currency.  A Mandate proves
    the Mission's committed facts as of iat; it MUST NOT be treated as
@@ -465,13 +456,13 @@ Table of Contents
    propagation bound, the freshness bound SHOULD be no looser
    ([I-D.draft-mcguinness-oauth-mission-status]).  An issuer that mints
    for cross-domain reliance provisions the recipient's standing to one
-   of these surfaces at minting (Section 5.4).  A recipient without such
+   of these surfaces at minting (Section 4.4).  A recipient without such
    standing cannot perform the check and MUST treat reliance that
-   requires an active Mission as stale (Section 7.1).  Reliance that
+   requires an active Mission as stale (Section 6.1).  Reliance that
    needs no active Mission, such as auditing a completed one, needs no
    check.
 
-5.4.  Minting
+4.4.  Minting
 
    The Mission Issuer MAY mint a Mandate at any time within the
    Mission's audit horizon, including after the Mission reaches a
@@ -493,7 +484,7 @@ Table of Contents
 
    An issuer SHOULD mint narrowly for the recipient's need, in
    particular omitting authority_set when the recipient does not
-   recompute the anchor (Section 12).  An issuer SHOULD record
+   recompute the anchor (Section 11).  An issuer SHOULD record
    minted_for.
 
    Each minting is a Mandate evidence event.  The issuer MUST record,
@@ -512,7 +503,7 @@ Table of Contents
    a repudiating one (the Join Assertion's minting evidence is the same
    pattern, [I-D.draft-mcguinness-mission-authority-server]).
 
-   The mandatory freshness check (Section 5.3) is reachable only if the
+   The mandatory freshness check (Section 4.3) is reachable only if the
    recipient has standing to a state surface.  An issuer that mints a
    Mandate whose recipient's reliance requires an active Mission MUST
    provision that standing together with the Mandate, by one of:
@@ -537,9 +528,9 @@ Table of Contents
    key rule ([I-D.draft-mcguinness-oauth-mission]), with the Mandate's
    evidence lifetime as the retention bound.  Revocation for a key known
    or suspected compromised is distinct from routine retirement and is
-   treated in Section 11.
+   treated in Section 10.
 
-5.5.  Example
+4.5.  Example
 
    A decoded Mandate for the issuance profile's worked-example Mission.
    The signature value is illustrative; all other segments are computed
@@ -664,9 +655,9 @@ Table of Contents
    over the signing input; the signature value depends on the issuer's
    key and is not reproduced here.
 
-6.  Selective Disclosure
+5.  Selective Disclosure
 
-   This section is OPTIONAL.  The plain JWS form of Section 5 is the
+   This section is OPTIONAL.  The plain JWS form of Section 4 is the
    mandatory-to-implement baseline.  An issuer MAY additionally mint a
    Mandate as an SD-JWT [RFC9901], so a holder passing the Mandate
    onward discloses to a given verifier only what it needs; this
@@ -675,7 +666,7 @@ Table of Contents
 
    The disclosable elements are exactly: the authority_set entries, each
    an array-element disclosure per [RFC9901], and any free-text Intent-
-   derived extension member added under Section 5.2.  All other claims,
+   derived extension member added under Section 4.2.  All other claims,
    in particular iss, mission, subject, and state_at_issuance, MUST
    remain plaintext, so every presentation still identifies the Mission,
    its issuer, its Subject, and its state as of minting.
@@ -696,20 +687,20 @@ Table of Contents
       set is complete and the anchor is verified;
 
    *  it does not match and undisclosed array-element digests remain:
-      the presentation is partial (Section 7.1), not invalid.  The
+      the presentation is partial (Section 6.1), not invalid.  The
       verifier MUST NOT recompute the anchor as if the set were
       complete.  It MUST NOT treat the mismatch as tampering;
 
    *  it does not match and no undisclosed array-element digest remains:
-      the set is invalid (Section 7.1), an anchor mismatch over a full
+      the set is invalid (Section 6.1), an anchor mismatch over a full
       array.
 
    The SD-JWT form carries the protected header typ mission-mandate+sd-
    jwt and the SD-JWT serialization of [RFC9901], with no Key Binding
-   JWT (Section 9).  This document registers a media type for both the
-   plain JWS form and the SD-JWT form (Section 13).
+   JWT (Section 8).  This document registers a media type for both the
+   plain JWS form and the SD-JWT form (Section 12).
 
-7.  Mandate Verification
+6.  Mandate Verification
 
    A Mandate Verifier MUST perform these steps before relying on a
    Mandate:
@@ -718,27 +709,27 @@ Table of Contents
        (or mission-mandate+sd-jwt for the SD-JWT form, then applying
        [RFC9901] processing).  Reject any other value.
 
-   2.  *Structure.* Confirm every REQUIRED claim of Section 5.2 is
+   2.  *Structure.* Confirm every REQUIRED claim of Section 4.2 is
        present and well-formed.
 
    3.  *Signature.* Resolve the REQUIRED kid in the Mission Issuer's
-       published key material (Section 4) and verify the JWS signature.
+       published key material (Section 3) and verify the JWS signature.
        Confirm mission.issuer equals iss.  Where the issuer has
-       published the kid as revoked for compromise (Section 5.4), apply
+       published the kid as revoked for compromise (Section 4.4), apply
        this precedence:
 
        *  Where the key carries a compromise time and the Mandate's iat
           is at or after it, reject the Mandate: it asserts post-
-          compromise creation, the invalid class of Section 7.1.
+          compromise creation, the invalid class of Section 6.1.
 
        *  Otherwise, where a Receipt the verifier trusts under the audit
-          transparency profile (Section 8.3) anchors the Mandate's
+          transparency profile (Section 7.3) anchors the Mandate's
           registration before the compromise time, verification
           continues: the Receipt establishes pre-compromise existence,
           and the signature authenticates the content as of that time.
 
        *  Otherwise, including where the issuer published no compromise
-          time, the Mandate is unverifiable (Section 7.1), never
+          time, the Mandate is unverifiable (Section 6.1), never
           invalid.
 
        The self-asserted iat never establishes the pre-compromise bound;
@@ -753,7 +744,7 @@ Table of Contents
        from an untrusted issuer proves nothing.
 
    5.  *Evidence lifetime.* Reject reliance on a Mandate whose
-       mandate_exp has passed (the expired class of Section 7.1),
+       mandate_exp has passed (the expired class of Section 6.1),
        allowing a small clock-skew leeway, set by verifier policy,
        before treating it as passed.
 
@@ -764,20 +755,20 @@ Table of Contents
        mission.issuer).  A verifier that does not so rely MAY recompute.
        On mismatch over a full array the verifier MUST reject the
        Mandate (invalid).  For an SD-JWT presentation the verifier
-       applies the three-way rule of Section 6 instead: a match is
+       applies the three-way rule of Section 5 instead: a match is
        complete, a mismatch with undisclosed array-element digests is
        partial, and a mismatch with none is invalid.  It MAY likewise
        verify intent_hash against a Mission Intent it holds.
 
    7.  *Freshness.* When reliance requires an active Mission, obtain
-       current state within the freshness bound of Section 5.3.
+       current state within the freshness bound of Section 4.3.
        state_at_issuance never substitutes.
 
    8.  *Hash agility.* Reject any integrity anchor whose algorithm
        prefix the verifier does not recognize, and never treat an
        unrecognized prefix as sha-256, per the issuance profile.
 
-   Where approval_context_commitment (Section 5.2) is present, a
+   Where approval_context_commitment (Section 4.2) is present, a
    verifier that holds the Mission's immutable creation facts MAY
    recompute it and MUST reject the Mandate on a mismatch, the recompute
    rule the Approval Context Commitment profile fixes
@@ -791,15 +782,15 @@ Table of Contents
    never a verification failure.
 
    Where the deployment runs the audit transparency profile, a verifier
-   MAY additionally confirm an audit-registration Receipt (Section 8.3)
+   MAY additionally confirm an audit-registration Receipt (Section 7.3)
    before high-consequence reliance, and under a key revoked for
    compromise the Receipt is the only path on which verification
-   continues (step 3).  Transparency-hardened verification (Section 7.2)
+   continues (step 3).  Transparency-hardened verification (Section 6.2)
    makes both sides mandatory; the issuer-key-compromise consideration
    states what the hardening bounds and what its absence leaves open
-   (Section 11).
+   (Section 10).
 
-7.1.  Failure Taxonomy
+6.1.  Failure Taxonomy
 
    Verification failures fall into four classes, and a partial
    disclosure into a fifth; a verifier MUST distinguish them:
@@ -815,7 +806,7 @@ Table of Contents
    Partial:  The artifact verifies, but an SD-JWT presentation discloses
       only some authority_set entries: authority_hash recomputation does
       not match and undisclosed array-element digests remain
-      (Section 6).  This is not the invalid class; the Mandate is
+      (Section 5).  This is not the invalid class; the Mandate is
       authentic and every plaintext claim is relied on normally.  A
       verifier that needs the full Authority Set:
 
@@ -835,14 +826,14 @@ Table of Contents
 
       *  the signing key is issuer-flagged as compromised and no trusted
          Receipt anchors the Mandate before the published compromise
-         time, or no compromise time is published at all (Section 11).
+         time, or no compromise time is published at all (Section 10).
 
       This is not evidence of tampering, mirroring the audit profile's
       classification ([I-D.draft-mcguinness-mission-audit]).  The
       verifier MUST NOT treat the Mandate as verified.  It MUST NOT
       treat the failure as proof the artifact is false.  Within a
       Mandate's evidence lifetime a conforming issuer keeps its
-      verification key resolvable (Section 5.4), so a kid that no longer
+      verification key resolvable (Section 4.4), so a kid that no longer
       resolves inside that bound is itself worth recording, though still
       not proof of forgery.
 
@@ -857,7 +848,7 @@ Table of Contents
       MUST NOT be relied on as evidence, though expiry is not evidence
       against the facts it states.
 
-7.2.  Transparency-Hardened Verification
+6.2.  Transparency-Hardened Verification
 
    Baseline verification is steps 1 through 8: a Mandate's validity
    never depends on transparency infrastructure.  A deployment that
@@ -865,7 +856,7 @@ Table of Contents
    *transparency-hardened Mandate verification*. Under it:
 
    *  the Mandate Issuer MUST register every Mandate it mints as Mission
-      evidence at minting (Section 8.3), so a missing Receipt is itself
+      evidence at minting (Section 7.3), so a missing Receipt is itself
       a signal rather than an unknown; and
 
    *  a Mandate Verifier MUST confirm a Receipt it trusts before high-
@@ -874,28 +865,28 @@ Table of Contents
 
    The mode is a deployment property, not an artifact property: a
    Mandate carries no marker for it, and a verifier learns which mode
-   governs from deployment configuration (Section 10).
+   governs from deployment configuration (Section 9).
 
-8.  Mandate Use
+7.  Mandate Use
 
-8.1.  Cross-Domain Verification
+7.1.  Cross-Domain Verification
 
    Mission Cross-Domain Projection for OAuth 2.0
    [I-D.draft-mcguinness-oauth-mission-cross-domain] projects authority:
    the cross-domain grant carries the mission claim and the audience-
    scoped Authority Set entries to one Resource AS, which mints local
    tokens from it.  That projection remains the only path to local
-   tokens; a Mandate replaces nothing in it (Section 9, and the grant
-   contrast in Section 11).
+   tokens; a Mandate replaces nothing in it (Section 8, and the grant
+   contrast in Section 10).
 
    What a Mandate adds is knowledge.  A verifier that needed to know
    what a Mission approved previously had only the token-exchange
    projection, available only in the grant flow and only audience-
-   scoped.  With a Mandate plus a current-state check (Section 5.3), any
+   scoped.  With a Mandate plus a current-state check (Section 4.3), any
    authorized recipient verifies the committed facts without standing in
    the token path at all.
 
-8.2.  Vertical Derivation
+7.2.  Vertical Derivation
 
    The derivation use case in this subsection is informative; the
    presenter-authentication rule it states is normative.  An external
@@ -911,7 +902,7 @@ Table of Contents
    Mandate contributes committed facts and audit continuity, never
    authority.
 
-   A Mandate binds no holder and is freely copyable (Section 9), so
+   A Mandate binds no holder and is freely copyable (Section 8), so
    possession of one is not evidence that the presenter is the Mission's
    Subject or client.  A rail MUST NOT derive authority on possession of
    a Mandate alone.  Before minting its vertical artifact, the rail MUST
@@ -922,13 +913,13 @@ Table of Contents
    That authentication is necessary, never sufficient: minting is the
    rail's own authorization decision under its own governance, and
    neither the Mandate nor its presentation substitutes for it.  Until a
-   holder-bound Mandate is defined (Section 9), that independent
+   holder-bound Mandate is defined (Section 8), that independent
    authentication is the only binding between the artifact and its
    presenter, and deriving authority without it repeats the mandate-as-
-   credential misuse (Section 11).
+   credential misuse (Section 10).
 
    A rail deriving a durable artifact from a Mandate SHOULD record the
-   time of its current-state check (Section 5.3) in its own artifact.
+   time of its current-state check (Section 4.3) in its own artifact.
    It SHOULD consume Mission Status
    ([I-D.draft-mcguinness-oauth-mission-status]) or Lifecycle Signals
    ([I-D.draft-mcguinness-oauth-mission-signals]) for the Mission's
@@ -941,7 +932,7 @@ Table of Contents
    shows what external artifacts it spawned, as it shows what children
    it delegated.
 
-8.3.  Mission Evidence
+7.3.  Mission Evidence
 
    A Mandate is registrable Mission evidence.  For deployments running
    the audit transparency profile
@@ -960,21 +951,21 @@ Table of Contents
 
    *  *payload-preimage-content-type*: application/mission-mandate+jwt
       for the plain form, application/mission-mandate+sd-jwt for the SD-
-      JWT form (Section 13).
+      JWT form (Section 12).
 
    *  *Authoritative producer*: the Mission issuer; the registering iss
       MUST equal it, which holds by construction since a Mandate's iss
-      is mission.issuer (Section 10).
+      is mission.issuer (Section 9).
 
    Registration happens once, at minting, independent of any
-   presentation.  It is an optional hardening: verification (Section 7)
+   presentation.  It is an optional hardening: verification (Section 6)
    does not require it.  It gives a Mandate an independent existence
-   proof, which bounds a later issuer key compromise (Section 11);
-   transparency-hardened verification makes it mandatory (Section 7.2).
+   proof, which bounds a later issuer key compromise (Section 10);
+   transparency-hardened verification makes it mandatory (Section 6.2).
 
-9.  Non-Goals and Deferred Work
+8.  Non-Goals and Deferred Work
 
-   *  Not a credential (Section 11).  A Mandate is never authority-
+   *  Not a credential (Section 10).  A Mandate is never authority-
       bearing; anything authority-bearing belongs to the substrate's
       issuance surfaces.
 
@@ -989,19 +980,19 @@ Table of Contents
       named future work.
 
    *  No revocation of the Mandate artifact.  State currency is the
-      status surface's job (Section 5.3); mandate_exp bounds the
+      status surface's job (Section 4.3); mandate_exp bounds the
       artifact's evidence lifetime, and no revocation list is defined.
 
    *  No multi-Mission bundling.  A Mandate states exactly one Mission.
 
-10.  Conformance
+9.  Conformance
 
    A *Mandate Issuer* MUST:
 
    *  be the Mission issuer and set iss to it;
 
    *  mint only over an existing Mission record, populating every claim
-      from its committed members (Section 5.4);
+      from its committed members (Section 4.4);
 
    *  set state_at_issuance to the Mission's lifecycle state at iat;
 
@@ -1009,30 +1000,30 @@ Table of Contents
       exactly as recorded, in recorded order;
 
    *  sign with a key resolvable by kid in its published key material,
-      with the protected typ of Section 5.1;
+      with the protected typ of Section 4.1;
 
    *  keep the verification key for every minted Mandate resolvable for
-      that Mandate's evidence lifetime (Section 5.4);
+      that Mandate's evidence lifetime (Section 4.4);
 
    *  publish a compromised signing key as revoked, distinct from
-      routine retirement (Section 5.4);
+      routine retirement (Section 4.4);
 
    *  provision a recipient's standing to a state surface when its
-      reliance requires an active Mission (Section 5.4); and
+      reliance requires an active Mission (Section 4.4); and
 
    *  issue jti values it never reuses.
 
    A Mandate Issuer running the audit transparency profile SHOULD
    register a Mandate as Mission evidence when it feeds high-consequence
-   decisions (Section 8.3).  Under transparency-hardened verification
-   (Section 7.2), registration is not selective: the issuer MUST
+   decisions (Section 7.3).  Under transparency-hardened verification
+   (Section 6.2), registration is not selective: the issuer MUST
    register every Mandate at minting.
 
    A *Mandate Verifier* MUST:
 
-   *  perform the steps of Section 7 before reliance;
+   *  perform the steps of Section 6 before reliance;
 
-   *  classify failures per Section 7.1 and treat only the invalid class
+   *  classify failures per Section 6.1 and treat only the invalid class
       as evidence against the artifact;
 
    *  obtain current state within its freshness bound whenever reliance
@@ -1040,12 +1031,12 @@ Table of Contents
 
    *  never grant access, mint credentials, or widen authority solely by
       virtue of presentation of a Mandate; a derived artifact rests on
-      the relying party's own authorization decision (Section 8.2,
-      Section 11).
+      the relying party's own authorization decision (Section 7.2,
+      Section 10).
 
-11.  Security Considerations
+10.  Security Considerations
 
-11.1.  Mandate-as-Credential Misuse
+10.1.  Mandate-as-Credential Misuse
 
    The central risk is the mandate-as-credential anti-pattern: granting
    access because a presenter holds a well-signed Mandate.  A Mandate
@@ -1058,7 +1049,7 @@ Table of Contents
    flows only through the substrate's issuance surfaces
    ([I-D.draft-mcguinness-oauth-mission]) or, for a derived vertical
    artifact, through the rail's own authorization decision
-   (Section 8.2); the presentation itself never suffices.
+   (Section 7.2); the presentation itself never suffices.
 
    This is a deliberate departure from prior art that binds authority to
    a signed artifact's presentation: zcap-ld capabilities, W3C
@@ -1069,30 +1060,30 @@ Table of Contents
    facts, never as a right exercised on presentation, so verifying one
    answers what was approved and never what the holder may do.
 
-11.2.  Stale-State Reliance
+10.2.  Stale-State Reliance
 
    A verified Mandate over a revoked Mission is still a verified
    Mandate: treating state_at_issuance as current state extends reliance
    past revocation with no artifact-level signal.  The freshness rule of
-   Section 5.3 is the control; the stale class of Section 7.1 makes the
+   Section 4.3 is the control; the stale class of Section 6.1 makes the
    omission a named failure rather than a silent acceptance.
 
-11.3.  Issuer Key Compromise
+10.3.  Issuer Key Compromise
 
    A party holding the Mission Issuer's signing key can mint a self-
    consistent Mandate: not only over Missions that never existed, but
    over a real, active Mission, with facts drawn from the record and
    state_at_issuance set to active, so it passes every artifact-level
-   step of Section 7.  Rotation does not bound the exposure: within each
+   step of Section 6.  Rotation does not bound the exposure: within each
    Mandate's evidence lifetime the verification key stays resolvable
-   (Section 5.4), so a forged Mandate with a backdated iat verifies
+   (Section 4.4), so a forged Mandate with a backdated iat verifies
    exactly as a genuine one does, and an issuer cannot recover by simply
    dropping the key from the published set without also breaking the
    genuine Mandates that key signed.
 
    The residual is explicit: a signature-only Mandate cannot prove it
    existed before an issuer-key compromise.  Audit registration
-   (Section 8.3), where the deployment runs the transparency profile, is
+   (Section 7.3), where the deployment runs the transparency profile, is
    the bound.  A deployment whose Mandates feed high-consequence
    decisions SHOULD register them: a genuine Mandate has an independent,
    timestamped existence proof, and a forged one either goes
@@ -1101,11 +1092,11 @@ Table of Contents
    An issuer that learns a signing key was compromised SHOULD record and
    publish the compromise time.  A verifier then treats an unregistered
    Mandate under that kid whose iat cannot be anchored before that time
-   as unverifiable (Section 7.1), never as verified evidence; a Mandate
+   as unverifiable (Section 6.1), never as verified evidence; a Mandate
    whose Receipt anchors it before that time continues through step 3's
-   precedence (Section 7).
+   precedence (Section 6).
 
-11.4.  Confusion with the Cross-Domain Grant
+10.4.  Confusion with the Cross-Domain Grant
 
    Both artifacts are issuer-signed JWTs carrying Mission facts.  The
    cross-domain grant
@@ -1114,11 +1105,11 @@ Table of Contents
    these.  The distinct protected typ is the mechanical separator: a
    token endpoint MUST NOT accept a mission-mandate+jwt as any grant or
    assertion, and a Mandate Verifier rejects a grant presented as a
-   Mandate at step 1 of Section 7.
+   Mandate at step 1 of Section 6.
 
-12.  Privacy Considerations
+11.  Privacy Considerations
 
-12.1.  Task-Data Propagation
+11.1.  Task-Data Propagation
 
    A Mandate carries what the Mission record committed: principals, task
    anchors, expiry, and optionally the full Authority Set with its
@@ -1131,7 +1122,7 @@ Table of Contents
    *  omit authority_set unless the recipient needs anchor
       recomputation;
 
-   *  prefer the selective-disclosure form (Section 6) where a holder
+   *  prefer the selective-disclosure form (Section 5) where a holder
       re-presents the Mandate onward; and
 
    *  avoid Intent-derived free-text extension members by default.
@@ -1150,21 +1141,21 @@ Table of Contents
    shared anchor; a deployment SHOULD weigh it before minting Mandates
    for recipients that do not need durable correlation.
 
-12.2.  Subject Disclosure
+11.2.  Subject Disclosure
 
-   Selective disclosure never hides subject (Section 6): every
+   Selective disclosure never hides subject (Section 5): every
    presentation identifies the Mission's Subject.  Deployments SHOULD
    use opaque or pairwise Subject identifiers where the identity
    provider supports them.  They SHOULD weigh Subject disclosure per
    recipient as this section weighs authority_set.
 
-13.  IANA Considerations
+12.  IANA Considerations
 
-13.1.  Media Type Registration
+12.1.  Media Type Registration
 
    IANA is requested to register two media types per [RFC6838].
 
-13.1.1.  application/mission-mandate+jwt
+12.1.1.  application/mission-mandate+jwt
 
    *  Type name: application
 
@@ -1176,7 +1167,7 @@ Table of Contents
 
    *  Encoding considerations: binary; JWS Compact Serialization
 
-   *  Security considerations: see Section 11
+   *  Security considerations: see Section 10
 
    *  Interoperability considerations: see this document
 
@@ -1209,7 +1200,7 @@ Table of Contents
 
    *  Change controller: IETF
 
-13.1.2.  application/mission-mandate+sd-jwt
+12.1.2.  application/mission-mandate+sd-jwt
 
    *  Type name: application
 
@@ -1221,7 +1212,7 @@ Table of Contents
 
    *  Encoding considerations: binary; SD-JWT serialization [RFC9901]
 
-   *  Security considerations: see Section 11
+   *  Security considerations: see Section 10
 
    *  Interoperability considerations: see this document
 
@@ -1254,9 +1245,9 @@ Table of Contents
 
    *  Change controller: IETF
 
-14.  References
+13.  References
 
-14.1.  Normative References
+13.1.  Normative References
 
    [I-D.draft-mcguinness-mission-substrate]
               McGuinness, K., "Mission Substrate Requirements", 2026,
@@ -1299,7 +1290,7 @@ Table of Contents
               DOI 10.17487/RFC9901, November 2025,
               <https://www.rfc-editor.org/rfc/rfc9901>.
 
-14.2.  Informative References
+13.2.  Informative References
 
    [I-D.draft-mcguinness-mission-aauth]
               McGuinness, K., "Mission Context Binding for AAuth", 2026,

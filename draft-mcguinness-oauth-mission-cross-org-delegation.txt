@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                          29 September 2026
-Expires: 2 April 2027
+Intended status: Experimental                          30 September 2026
+Expires: 3 April 2027
 
 
          Mission Cross-Organizational Delegation for OAuth 2.0
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 2 April 2027.
+   This Internet-Draft will expire on 3 April 2027.
 
 Copyright Notice
 
@@ -75,31 +75,30 @@ Copyright Notice
 Table of Contents
 
    1.  Introduction
-   2.  Status: An Experimental Extension
-   3.  Conventions and Terminology
-   4.  The Delegation Chain
-     4.1.  The Chain Presentation
-     4.2.  Hop Members
-     4.3.  Actor Identity
-     4.4.  Actor-Binding Credentials
-   5.  Root Issuance
-   6.  Per-Hop Derivation
-   7.  Trust Model
-   8.  Destination Verification
-   9.  Local Projection
-     9.1.  The Projection Exchange
-   10. Provenance for AS-Mediated Consumption
-   11. Capability and Discovery
-   12. Conformance
-   13. End-to-End Example (Non-Normative)
-   14. Security Considerations
-   15. Privacy Considerations
-   16. IANA Considerations
-     16.1.  OAuth URI Registration
-     16.2.  Media Type Registration
-   17. References
-     17.1.  Normative References
-     17.2.  Informative References
+   2.  Conventions and Terminology
+   3.  The Delegation Chain
+     3.1.  The Chain Presentation
+     3.2.  Hop Members
+     3.3.  Actor Identity
+     3.4.  Actor-Binding Credentials
+   4.  Root Issuance
+   5.  Per-Hop Derivation
+   6.  Trust Model
+   7.  Destination Verification
+   8.  Local Projection
+     8.1.  The Projection Exchange
+   9.  Provenance for AS-Mediated Consumption
+   10. Capability and Discovery
+   11. Conformance
+   12. End-to-End Example (Non-Normative)
+   13. Security Considerations
+   14. Privacy Considerations
+   15. IANA Considerations
+     15.1.  OAuth URI Registration
+     15.2.  Media Type Registration
+   16. References
+     16.1.  Normative References
+     16.2.  Informative References
    Acknowledgments
    Author's Address
 
@@ -128,8 +127,6 @@ Table of Contents
    boundaries require, and defines how a destination consumes the
    verified chain.
 
-2.  Status: An Experimental Extension
-
    This profile is experimental, and it profiles an experimental
    substrate: it inherits the maturity of Mission Offline Attenuation
    and the attenuating-agent-token substrate that document profiles
@@ -146,16 +143,7 @@ Table of Contents
    basis is an Expansion successor or another fresh approval
    ([I-D.draft-mcguinness-oauth-mission-expansion]).
 
-   Role: companion.  Spec maturity: experimental.  Maintenance: active-
-   experimental.  Adopt when: An attenuation chain crosses
-   organizational trust domains.  Requires: Mission Substrate
-   Requirements; Mission-Bound Authorization for OAuth 2.0; Mission
-   Offline Attenuation for OAuth 2.0; Mission Cross-Domain Projection
-   for OAuth 2.0; Mission Status and Lifecycle for OAuth 2.0.  Also
-   requires, conditionally: Mission Runtime Evidence (when a local token
-   is minted from a verified Chain).
-
-3.  Conventions and Terminology
+2.  Conventions and Terminology
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
@@ -180,7 +168,7 @@ Table of Contents
       its Resource Authorization Server minted after verifying a Chain,
       and does not claim to have independently verified the Chain.
 
-4.  The Delegation Chain
+3.  The Delegation Chain
 
    A Chain's signed hops carry the semantics; no addition to
    mission_intent and no new PAR parameter collection is introduced.
@@ -189,7 +177,7 @@ Table of Contents
    narrowed entry was a member of that set.  The signed root and the
    verified per-hop subset relations provide that proof.
 
-4.1.  The Chain Presentation
+3.1.  The Chain Presentation
 
    A Chain travels as one closed JSON envelope, the *Chain
    Presentation*:
@@ -199,7 +187,7 @@ Table of Contents
       hop token.
 
    actor_credentials:  OPTIONAL.  An array of objects aligning actor-
-      binding credentials to named hops (Section 4.4), each with hop
+      binding credentials to named hops (Section 3.4), each with hop
       (REQUIRED, the 0-based index into chain), type (REQUIRED, a
       registered actor-credential type identifier), and credential
       (REQUIRED, the credential in the serialization its type defines).
@@ -208,13 +196,13 @@ Table of Contents
    unknown top-level member MUST be refused.  On the OAuth wire the
    Presentation is the UTF-8 JSON serialization, base64url-encoded
    without padding, carried as the subject_token of the projection
-   exchange (Section 9.1) with subject_token_type
+   exchange (Section 8.1) with subject_token_type
    urn:ietf:params:oauth:token-type:mission-delegation-chain; for
    retention and evidence its media type is application/mission-
-   delegation-chain+json (Section 16).  Direct presentation of a Chain
+   delegation-chain+json (Section 15).  Direct presentation of a Chain
    to a Resource Server is not defined in this version: a chain-
    verifying Resource Server obtains the Presentation through a
-   deployment-defined channel and applies Section 8 unchanged.
+   deployment-defined channel and applies Section 7 unchanged.
 
    A verifier MUST declare maximum hop count, maximum Presentation size,
    and a verification-cost ceiling, and MUST refuse a Presentation
@@ -226,7 +214,7 @@ Table of Contents
    exactly as presented, an ordered JSON array of compact-JWS strings.
    It commits to the complete ordered chain and to nothing else.
 
-4.2.  Hop Members
+3.2.  Hop Members
 
    Each hop carries the substrate's members and this profile's:
 
@@ -250,7 +238,7 @@ Table of Contents
       ([I-D.draft-mcguinness-oauth-actor-profile]) naming this hop's
       actor only, with BOTH act.iss and act.sub REQUIRED when present
       (sub_profile as profiled). act is present exactly when the hop is
-      NAMED (Section 4.3); a key-only hop omits act entirely.  The root
+      NAMED (Section 3.3); a key-only hop omits act entirely.  The root
       MUST carry act; and
 
    *  the mission claim, value-invariant across every hop: id and issuer
@@ -265,7 +253,7 @@ Table of Contents
 
    A hop never carries a nested actor history: the complete actor
    history is the validated root-to-leaf Chain itself, reconstructed at
-   verification (Section 8), and a consumer MUST reject a Chain
+   verification (Section 7), and a consumer MUST reject a Chain
    presenting conflicting or duplicated actor representations.  A
    materialized nested act projection ([RFC8693]) is constructed from
    the validated Chain at a consuming boundary, a PDP, an introspection
@@ -273,7 +261,7 @@ Table of Contents
    on the artifacts ([I-D.draft-mcguinness-oauth-mission-attenuation],
    Section "Actor Attribution on the Chain").
 
-4.3.  Actor Identity
+3.3.  Actor Identity
 
    Each surface has one attestation authority.  The root's act is
    asserted by the Mission Issuer and bound to the root presenter key by
@@ -290,7 +278,7 @@ Table of Contents
    delegated to the child key; it does not authenticate the identity
    values the parent asserts.  A hop carrying act MUST have exactly one
    aligned entry in the Presentation's actor_credentials, and its
-   credential MUST validate under Section 4.4; a Chain naming an actor
+   credential MUST validate under Section 3.4; a Chain naming an actor
    on a hop with a missing, misaligned, or invalid credential MUST be
    refused.  A hop without act is key-only: its holder is identified by
    key possession alone, it satisfies no eligibility matcher (the
@@ -304,7 +292,7 @@ Table of Contents
    Mission delegation, so an organizational boundary neither starts a
    new root nor resets depth.
 
-4.4.  Actor-Binding Credentials
+3.4.  Actor-Binding Credentials
 
    An actor-binding credential binds an issuer-qualified actor identity
    to a hop key; it conveys no authority.  For each actor_credentials
@@ -316,7 +304,7 @@ Table of Contents
 
    2.  the credential's issuer is an accepted actor-identity attestation
        source for the named trust domain under the trust model
-       (Section 7);
+       (Section 6);
 
    3.  the credential is valid: its signature, audience, lifetime, and
        status checks pass as its type defines;
@@ -326,7 +314,7 @@ Table of Contents
    5.  the credential's bound key equals the hop's cnf.jwk, compared by
        JWK thumbprint.
 
-5.  Root Issuance
+4.  Root Issuance
 
    The originating Mission Issuer MAY issue a cross-organizational
    attenuation root only when all of the following hold:
@@ -357,7 +345,7 @@ Table of Contents
        to cross the named trust boundary; and
 
    8.  the root carries the issuer-asserted act naming the approved
-       agent under the resolution procedure of Section 4.3, the root
+       agent under the resolution procedure of Section 3.3, the root
        presenter's public key as cnf.jwk, and the mission claim
        including subject.
 
@@ -366,7 +354,7 @@ Table of Contents
    be omitted.  It MUST NOT cross under a promise that the destination
    will interpret prose or issuer-local policy.
 
-6.  Per-Hop Derivation
+5.  Per-Hop Derivation
 
    A holder creates a child exactly as Mission Offline Attenuation
    specifies, with these profile rules:
@@ -397,7 +385,7 @@ Table of Contents
    The recipient proves possession of the leaf key at redemption or
    direct resource access.
 
-7.  Trust Model
+6.  Trust Model
 
    "No interaction-specific bilateral agreement" does not mean "trust
    any issuer."  A conforming deployment MUST hold a federation or
@@ -410,7 +398,7 @@ Table of Contents
 
    *  actor-identity attestation sources: the anchors that bind an
       issuer-qualified (act.iss, act.sub) to a workload key
-      (Section 4.3);
+      (Section 3.3);
 
    *  resource identifiers to the Resource AS or RS authorized to
       consume them;
@@ -430,7 +418,7 @@ Table of Contents
    "no callback to the origin on the request path"; it does not claim
    instantaneous revocation.
 
-8.  Destination Verification
+7.  Destination Verification
 
    A Resource AS or chain-verifying Resource Server MUST perform the
    following, in order:
@@ -458,7 +446,7 @@ Table of Contents
         its presence beyond the mapped entry refuses the Chain;
 
    6.   classify each hop as named (act present with its aligned
-        credential validated per Section 4.4) or key-only (act absent),
+        credential validated per Section 3.4) or key-only (act absent),
         refusing a named hop whose credential is missing, misaligned, or
         invalid, and failing closed where policy requires a named actor
         and the hop is key-only;
@@ -472,7 +460,7 @@ Table of Contents
    9.   establish that the Mission is active from a locally available
         state source within the deployment's declared freshness bound
         ([I-D.draft-mcguinness-oauth-mission-status]; Bounded Reliance,
-        Section 7); and
+        Section 6); and
 
    10.  authorize dual-axis under the Origin Principal profile
         ([I-D.draft-mcguinness-oauth-mission-cross-domain]): the
@@ -485,7 +473,7 @@ Table of Contents
    attenuate; the destination's own decisions under local policy are
    decide_anew.
 
-9.  Local Projection
+8.  Local Projection
 
    When a Resource AS mints a conventional local token from a verified
    Chain, it MUST:
@@ -511,7 +499,7 @@ Table of Contents
    attenuation Chain, never from a locally projected token that has lost
    the parent proof.
 
-9.1.  The Projection Exchange
+8.1.  The Projection Exchange
 
    A Resource AS accepting Chains offers the exchange on its token
    endpoint as an [RFC8693] token exchange:
@@ -519,7 +507,7 @@ Table of Contents
    *  grant_type: urn:ietf:params:oauth:grant-type:token-exchange;
 
    *  subject_token: the base64url-encoded Chain Presentation
-      (Section 4.1);
+      (Section 3.1);
 
    *  subject_token_type: urn:ietf:params:oauth:token-type:mission-
       delegation-chain;
@@ -537,12 +525,12 @@ Table of Contents
 
    A Presentation that is malformed, carries an unknown top-level
    member, or exceeds a declared bound refuses with invalid_request; a
-   Chain failing any step of Section 8 refuses with invalid_grant,
+   Chain failing any step of Section 7 refuses with invalid_grant,
    disclosing no partial verification detail; a requested audience
    outside the leaf's aud refuses with invalid_target.  On success the
    Resource AS mints the audience-local token per the rules above.
 
-10.  Provenance for AS-Mediated Consumption
+9.  Provenance for AS-Mediated Consumption
 
    An AS-mediated consumer needing provenance of the upstream hops uses
    one of:
@@ -551,7 +539,7 @@ Table of Contents
 
    *  the destination AS's introspection or evidence resolution over its
       recorded derivation evidence (the chain digest, reconstructed
-      actor lineage, and principal_mapping of Section 9).
+      actor lineage, and principal_mapping of Section 8).
 
    Issuer-signed hop receipts belong to the issuer-mediated lane: a
    destination AS MUST NOT manufacture receipts for holder-created hops.
@@ -560,26 +548,26 @@ Table of Contents
    to a companion until a consumer demonstrates that these two modes are
    insufficient.
 
-11.  Capability and Discovery
+10.  Capability and Discovery
 
    This profile defines no runtime discovery.  The attenuation
    substrate's issuer discovery advertises root issuance only; it does
    not advertise Chain acceptance, projection support, or consumption
    class.  A deployment declares the cross_org_delegation capability,
-   its consumption class (Section 12), and its accepted trust domains
+   its consumption class (Section 11), and its accepted trust domains
    explicitly in its deployment profile and federation agreements, and
    consumes the capability under the family's declared-consumption rule.
 
-12.  Conformance
+11.  Conformance
 
    A deployment claims one or both consumption classes:
 
    *  *Chain-verifying*: the relying party receives and verifies the
-      complete Chain per Section 8.
+      complete Chain per Section 7.
 
    *  *AS-mediated*: an RS trusts its Resource AS's locally issued token
       and does not claim independent verification of the Chain;
-      provenance uses Section 10.
+      provenance uses Section 9.
 
    Positive and negative vectors cover, at minimum: a valid three-domain
    A to B to C chain; action, resource, amount, audience, or expiry
@@ -604,7 +592,7 @@ Table of Contents
    valid delegated authority denied by local entitlement or local
    policy.
 
-13.  End-to-End Example (Non-Normative)
+12.  End-to-End Example (Non-Normative)
 
    Organization 1's Mission Issuer resolves approved client agent-a to
    the canonical actor {"iss": "https://id.org1.example", "sub": "wl-
@@ -635,7 +623,7 @@ Table of Contents
    &audience=https://api.org3.example
 
    with DPoP proving possession of C's key, the leaf cnf.jwk.  The
-   Resource AS runs Section 8: trust resolution; root validation
+   Resource AS runs Section 7: trust resolution; root validation
    including the issuer-asserted act and mission.subject; both par_hash
    links and child signatures under the carried public keys; invariants,
    depth, audience, expiry, and the mapped-capability subset at each
@@ -651,11 +639,11 @@ Table of Contents
    reconstructed lineage A to B to C, the policy version, and the
    principal_mapping object.
 
-14.  Security Considerations
+13.  Security Considerations
 
    The attenuation profile's security considerations apply in full.  Its
    kill-switch conditions apply as that document specifies them; this
-   document's own mandatory state check is step 9 of Section 8, whose
+   document's own mandatory state check is step 9 of Section 7, whose
    state source ([I-D.draft-mcguinness-oauth-mission-status]) is a
    normative dependency.  Every JWT this profile handles follows the JWT
    best current practices ([RFC8725]): explicit typing, algorithm allow-
@@ -671,7 +659,7 @@ Table of Contents
       this revision.
 
    *  *Holder-asserted identity.* Without the binding rule of
-      Section 4.3, a holder could name any actor and have policy trust
+      Section 3.3, a holder could name any actor and have policy trust
       it.  The rule makes unverified names inert; the failure mode is
       attribution loss, never authority gain.
 
@@ -687,9 +675,9 @@ Table of Contents
 
    *  *State staleness.* Cached state substitutes bounded staleness for
       a synchronous origin dependency; the bound is declared and
-      exceeded state fails closed (Section 7).
+      exceeded state fails closed (Section 6).
 
-   This profile's minimum required check is step 9 of Section 8:
+   This profile's minimum required check is step 9 of Section 7:
    establish that the Mission is active from a locally available state
    source within the declared freshness bound.  It answers a different
    exposure than Mission Cross-Domain Projection for OAuth 2.0's lease
@@ -704,7 +692,7 @@ Table of Contents
    redeemed there requires; an ordinary local access token minted on
    either path does not carry its provenance in its type.
 
-15.  Privacy Considerations
+14.  Privacy Considerations
 
    The Chain discloses issuer-qualified actor identifiers and the origin
    principal along its path.  Actor identifiers are correlation handles:
@@ -716,19 +704,19 @@ Table of Contents
    audience-narrowed by construction; a hop's aud never widens, so
    disclosure is bounded by the root's audience set.
 
-16.  IANA Considerations
+15.  IANA Considerations
 
-16.1.  OAuth URI Registration
+15.1.  OAuth URI Registration
 
    This document registers urn:ietf:params:oauth:token-type:mission-
    delegation-chain in the "OAuth URI" registry: the token type of the
-   Chain Presentation (Section 4.1).  Change controller: IESG;
+   Chain Presentation (Section 3.1).  Change controller: IESG;
    Specification document: this document.
 
-16.2.  Media Type Registration
+15.2.  Media Type Registration
 
    This document registers application/mission-delegation-chain+json in
-   the "Media Types" registry, per Section 4.1: Type name: application;
+   the "Media Types" registry, per Section 3.1: Type name: application;
    Subtype name: mission-delegation-chain+json; Required parameters: N/
    A; Optional parameters: N/A; Encoding considerations: binary (UTF-8
    JSON); Security considerations: see this document; Interoperability
@@ -737,9 +725,9 @@ Table of Contents
    Servers, Resource Servers, and audit systems; Change controller:
    IESG.
 
-17.  References
+16.  References
 
-17.1.  Normative References
+16.1.  Normative References
 
    [I-D.draft-mcguinness-mission-runtime-evidence]
               McGuinness, K., "Mission Runtime Evidence", 2026,
@@ -819,7 +807,7 @@ Table of Contents
               DOI 10.17487/RFC9396, May 2023,
               <https://www.rfc-editor.org/rfc/rfc9396>.
 
-17.2.  Informative References
+16.2.  Informative References
 
    [I-D.draft-mcguinness-mission-audit]
               McGuinness, K., "Mission Audit", 2026,

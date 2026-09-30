@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       29 September 2026
-Expires: 2 April 2027
+Intended status: Standards Track                       30 September 2026
+Expires: 3 April 2027
 
 
           Mission-Bound Runtime Enforcement: OAuth 2.0 Profile
@@ -49,7 +49,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 2 April 2027.
+   This Internet-Draft will expire on 3 April 2027.
 
 Copyright Notice
 
@@ -68,23 +68,22 @@ Copyright Notice
 Table of Contents
 
    1.  Introduction
-   2.  Status: An Optional Profile
-   3.  Conventions and Terminology
-   4.  Establishing Validated Credential Context
-   5.  Runtime Input Mapping
-     5.1.  Required Instance Attribution
-   6.  Authority and State Sources
-     6.1.  Credential Authority and Current Effective Authority
-     6.2.  Mission State Sources
-   7.  Resource-Owner Class Floors
-   8.  Conformance
-   9.  Security Considerations
-   10. Privacy Considerations
-   11. IANA Considerations
-     11.1.  OAuth Protected Resource Metadata Registration
-   12. References
-     12.1.  Normative References
-     12.2.  Informative References
+   2.  Conventions and Terminology
+   3.  Establishing Validated Credential Context
+   4.  Runtime Input Mapping
+     4.1.  Required Instance Attribution
+   5.  Authority and State Sources
+     5.1.  Credential Authority and Current Effective Authority
+     5.2.  Mission State Sources
+   6.  Resource-Owner Class Floors
+   7.  Conformance
+   8.  Security Considerations
+   9.  Privacy Considerations
+   10. IANA Considerations
+     10.1.  OAuth Protected Resource Metadata Registration
+   11. References
+     11.1.  Normative References
+     11.2.  Informative References
    Acknowledgments
    Author's Address
 
@@ -135,7 +134,7 @@ Table of Contents
                                   Table 1
 
    This document defines the processing rules that mapping needs and one
-   protected resource metadata member (Section 7).  It cites the runtime
+   protected resource metadata member (Section 6).  It cites the runtime
    core's invariants, failure modes, and evidence requirements and the
    issuance profile's token validation rather than restating them.
 
@@ -147,18 +146,7 @@ Table of Contents
    credential profile and uses the runtime core unchanged
    ([I-D.draft-mcguinness-mission-substrate]).
 
-2.  Status: An Optional Profile
-
-   Role: companion.  Spec maturity: experimental.  Maintenance: active.
-   Adopt when: The Mission-bound credential is an OAuth access token and
-   the runtime core's abstract roles need their concrete OAuth
-   realization.  Requires: Mission-Bound Runtime Enforcement; Mission
-   Substrate Requirements; Mission-Bound Authorization for OAuth 2.0.
-   Also requires, conditionally: Mission Resource Access Profile for
-   OAuth 2.0 (when the deployment maps a mission_resource_access
-   authorization_details entry).
-
-3.  Conventions and Terminology
+2.  Conventions and Terminology
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
@@ -177,7 +165,7 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-runtime]).
 
    Validated credential context:  The values a PEP has established for a
-      presented access token under Section 4: the claims of a validated
+      presented access token under Section 3: the claims of a validated
       JWT access token, or the members of the introspection response for
       a presented opaque token.
 
@@ -185,7 +173,7 @@ Table of Contents
       carries: for a Mission-bound token, the authorization_details in
       the validated credential context; for an ordinary token joined to
       a Mission under an externally established reference, the authority
-      it carries as issued (Section 6.1).
+      it carries as issued (Section 5.1).
 
    Current effective authority:  The Mission's approved Authority Set
       narrowed by whatever narrowing mechanism the deployment runs, as
@@ -193,7 +181,7 @@ Table of Contents
       profile's Status companion names it the Effective Authority Set
       ([I-D.draft-mcguinness-oauth-mission-status]).
 
-4.  Establishing Validated Credential Context
+3.  Establishing Validated Credential Context
 
    The runtime decision is downstream of ordinary access token
    validation.  Before using a token's Mission, authority, subject,
@@ -218,7 +206,7 @@ Table of Contents
       Consumption").
 
    Each value the runtime decision uses is read from the resulting
-   validated credential context (Section 5).
+   validated credential context (Section 4).
 
    Under the issuance profile alone, introspection freshness is per use:
    each response is an observation for one decision, not a cacheable
@@ -260,13 +248,13 @@ Table of Contents
    Section "Protected Resource Metadata"), whatever reference the
    deployment could establish externally.
 
-5.  Runtime Input Mapping
+4.  Runtime Input Mapping
 
    The runtime core states its decision inputs, permit binding, and
    required evidence fields as abstract roles
    ([I-D.draft-mcguinness-mission-runtime]).  This section is their
    complete, normative realization on this profile.  Each value is read
-   from the validated credential context (Section 4): a JWT claim, or
+   from the validated credential context (Section 3): a JWT claim, or
    the introspection response member of the same name.
 
    +=======================+==================================================+
@@ -275,7 +263,7 @@ Table of Contents
    +=======================+==================================================+
    |Established Mission    |The mission claim's id and issuer                 |
    |reference              |[I-D.draft-mcguinness-oauth-mission], or an       |
-   |                       |externally established reference (Section 4)      |
+   |                       |externally established reference (Section 3)      |
    +-----------------------+--------------------------------------------------+
    |Authenticated subject  |sub                                               |
    +-----------------------+--------------------------------------------------+
@@ -300,7 +288,7 @@ Table of Contents
    |                       |provenance for context preserved from an input    |
    |                       |token                                             |
    +-----------------------+--------------------------------------------------+
-   |Sender-constraint      |cnf, verified during validation (Section 4)       |
+   |Sender-constraint      |cnf, verified during validation (Section 3)       |
    |confirmation           |                                                  |
    +-----------------------+--------------------------------------------------+
    |Credential audience or |The protected resource the PEP guards; validation |
@@ -309,10 +297,10 @@ Table of Contents
    |Authority entry        |The applicable entry of the credential authority  |
    |                       |for a Mission-bound token; under a join, the      |
    |                       |applicable entry of the Mission's authority       |
-   |                       |(Section 6.1)                                     |
+   |                       |(Section 5.1)                                     |
    +-----------------------+--------------------------------------------------+
    |Current effective      |The approved Authority Set as narrowed, from a    |
-   |authority              |source that reports the narrowing (Section 6.1)   |
+   |authority              |source that reports the narrowing (Section 5.1)   |
    +-----------------------+--------------------------------------------------+
    |Credential issuer      |iss                                               |
    +-----------------------+--------------------------------------------------+
@@ -346,7 +334,7 @@ Table of Contents
       resource, the target of the action.
 
    *  The credential authority and the current effective authority.  The
-      action falls within both (Section 6.1).
+      action falls within both (Section 5.1).
 
    *  Credential expiry and Mission expiry.  The PDP MUST refuse if the
       decision context indicates the token is expired (exp).  Where the
@@ -388,7 +376,7 @@ Table of Contents
    and the decision-API profile in use, for example
    [I-D.draft-mcguinness-mission-authzen].
 
-5.1.  Required Instance Attribution
+4.1.  Required Instance Attribution
 
    The instance specification defines how to validate context and
    associate it with a presenter; this binding selects that association
@@ -413,13 +401,13 @@ Table of Contents
    on the path's policy, not a requirement that every Mission deployment
    use instance attribution.
 
-6.  Authority and State Sources
+5.  Authority and State Sources
 
    The runtime decision needs two kinds of input that OAuth supplies
    separately: the authority an action is checked against, and
    observations of Mission state.
 
-6.1.  Credential Authority and Current Effective Authority
+5.1.  Credential Authority and Current Effective Authority
 
    The runtime core requires that the action fall within both the
    credential authority and the current effective authority, that the
@@ -432,7 +420,7 @@ Table of Contents
       authorization_details of the validated JWT or, for an opaque
       token, of its introspection response; for an ordinary token joined
       to a Mission under an externally established reference
-      (Section 4), the authority that token carries as issued,
+      (Section 3), the authority that token carries as issued,
       established and enforced as the join profile defines (the Mission
       Authority Server enforces it at the Resource Server or gateway,
       [I-D.draft-mcguinness-mission-authority-server]); and
@@ -442,7 +430,7 @@ Table of Contents
       Mission-bound token with no narrowing mechanism running, the
       approved set already bounds the credential authority, so this
       bound needs no lookup.  Otherwise it is established from a source
-      that reports it (Section 6.2), and under a join the join profile
+      that reports it (Section 5.2), and under a join the join profile
       draws it from the Mission.
 
    A token narrowed below its Mission's approved Authority Set is
@@ -462,7 +450,7 @@ Table of Contents
    semantics, the runtime core's fail-closed rule governing what it does
    not understand or cannot enforce.
 
-6.2.  Mission State Sources
+5.2.  Mission State Sources
 
    The runtime core defines an abstract freshness dial running from
    credential-lifetime expiry to a queried or event-driven active
@@ -579,7 +567,7 @@ Table of Contents
    [I-D.draft-mcguinness-oauth-mission-status-list]), or Mission
    Lifecycle Signals.
 
-7.  Resource-Owner Class Floors
+6.  Resource-Owner Class Floors
 
    A resource owner can carry its classification minimums to any PDP
    through its protected resource metadata [RFC9728], the OAuth
@@ -615,29 +603,29 @@ Table of Contents
      }
    }
 
-8.  Conformance
+7.  Conformance
 
    A deployment conforms to this profile where, for its declared
    enforcement scope, it:
 
    1.  establishes the validated credential context before any
-       credential-derived value becomes a decision input (Section 4);
+       credential-derived value becomes a decision input (Section 3);
 
-   2.  realizes each runtime-core role as Section 5 maps it;
+   2.  realizes each runtime-core role as Section 4 maps it;
 
    3.  evaluates each action against both the credential authority and
-       the current effective authority (Section 6.1);
+       the current effective authority (Section 5.1);
 
    4.  establishes the Mission reference from the credential, or
        verifies an externally established one where no resource
-       requirement for Mission-bound tokens applies (Section 4);
+       requirement for Mission-bound tokens applies (Section 3);
 
-   5.  observes Mission state through sources from Section 6.2 that
+   5.  observes Mission state through sources from Section 5.2 that
        satisfy the runtime core's freshness requirements it adopts for
        each action class; and
 
    6.  honors any classification floor it holds from protected resource
-       metadata (Section 7).
+       metadata (Section 6).
 
    It also conforms to the runtime core
    ([I-D.draft-mcguinness-mission-runtime]) and the issuance profile
@@ -647,7 +635,7 @@ Table of Contents
    a true statement of the deployment's Enforcement Scope Statement,
    rather than a second scope to declare separately.
 
-9.  Security Considerations
+8.  Security Considerations
 
    The runtime core's Security Considerations
    ([I-D.draft-mcguinness-mission-runtime]) apply in full, including the
@@ -662,18 +650,18 @@ Table of Contents
    Evaluating an action against the approved Authority Set in place of
    the credential authority would let a narrowed token act with its
    Mission's broader authority, undoing the narrowing the issuance
-   profile applied; Section 6.1 requires both bounds for that reason.
+   profile applied; Section 5.1 requires both bounds for that reason.
 
-10.  Privacy Considerations
+9.  Privacy Considerations
 
    This document defines no evidence content of its own; the runtime
    core's privacy guidance governs the claims this profile maps into
    decision inputs and evidence records
    ([I-D.draft-mcguinness-mission-runtime]).
 
-11.  IANA Considerations
+10.  IANA Considerations
 
-11.1.  OAuth Protected Resource Metadata Registration
+10.1.  OAuth Protected Resource Metadata Registration
 
    This document registers the following in the "OAuth Protected
    Resource Metadata" registry ([RFC9728]):
@@ -685,14 +673,14 @@ Table of Contents
 
    *  Change Controller: IETF
 
-   *  Reference: this document, Section 7
+   *  Reference: this document, Section 6
 
    The Mission-bound token claims this document maps are registered by
    [I-D.draft-mcguinness-oauth-mission].
 
-12.  References
+11.  References
 
-12.1.  Normative References
+11.1.  Normative References
 
    [I-D.draft-mcguinness-mission-runtime]
               McGuinness, K., "Mission-Bound Runtime Enforcement", 2026,
@@ -775,7 +763,7 @@ Table of Contents
               DOI 10.17487/RFC9728, April 2025,
               <https://www.rfc-editor.org/rfc/rfc9728>.
 
-12.2.  Informative References
+11.2.  Informative References
 
    [I-D.draft-mcguinness-mission-authority-server]
               McGuinness, K., "Mission Authority Server", 2026,

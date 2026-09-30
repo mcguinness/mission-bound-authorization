@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                          29 September 2026
-Expires: 2 April 2027
+Intended status: Experimental                          30 September 2026
+Expires: 3 April 2027
 
 
             Mission Progressive Authorization for OAuth 2.0
@@ -60,7 +60,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 2 April 2027.
+   This Internet-Draft will expire on 3 April 2027.
 
 Copyright Notice
 
@@ -79,23 +79,22 @@ Copyright Notice
 Table of Contents
 
    1.  Introduction
-   2.  Status: An Experimental Extension
-   3.  Relationship to the Expansion Profile
-   4.  Conventions and Terminology
-   5.  Progressive Authorization
-     5.1.  In-ceiling expansion
-     5.2.  What it bounds, and what it does not
-     5.3.  The Ceiling Review
-     5.4.  Realizing an approved access request
-   6.  The out_of_ceiling Denial Reason
-   7.  Audit Linkage
-   8.  Conformance
-   9.  Security Considerations
-   10. Privacy Considerations
-   11. IANA Considerations
-   12. References
-     12.1.  Normative References
-     12.2.  Informative References
+   2.  Relationship to the Expansion Profile
+   3.  Conventions and Terminology
+   4.  Progressive Authorization
+     4.1.  In-ceiling expansion
+     4.2.  What it bounds, and what it does not
+     4.3.  The Ceiling Review
+     4.4.  Realizing an approved access request
+   5.  The out_of_ceiling Denial Reason
+   6.  Audit Linkage
+   7.  Conformance
+   8.  Security Considerations
+   9.  Privacy Considerations
+   10. IANA Considerations
+   11. References
+     11.1.  Normative References
+     11.2.  Informative References
    Appendix A.  Document History
    Acknowledgments
    Author's Address
@@ -127,9 +126,7 @@ Table of Contents
    Mission yields stays narrow.  The envelope can name a class of
    resources the agent will only meet during execution: the Approver
    consents once to the family, and every concrete binding stays inside
-   it (Section 5.1).
-
-2.  Status: An Experimental Extension
+   it (Section 4.1).
 
    This document is optional and experimental: adopt it for evaluation,
    not as a stable interface.  It removes the per-expansion human from a
@@ -146,14 +143,7 @@ Table of Contents
    places a new requirement back on the expansion profile or the
    issuance profile.
 
-   Role: companion.  Spec maturity: experimental.  Maintenance: lab-
-   best-effort.  Adopt when: Authority cannot be enumerated up front;
-   policy-bounded drawdown beats over-provisioning.  Requires: Mission-
-   Bound Authorization for OAuth 2.0; Mission Expansion for OAuth 2.0.
-   Also requires, conditionally: Mission-Bound Runtime Enforcement (when
-   drawdown maps to the runtime profile's action classes).
-
-3.  Relationship to the Expansion Profile
+2.  Relationship to the Expansion Profile
 
    This document depends normatively on the expansion profile
    [I-D.draft-mcguinness-oauth-mission-expansion] and on the issuance
@@ -165,7 +155,7 @@ Table of Contents
    Predecessor Mission, Successor Mission, and Expansion request as the
    expansion profile defines them.
 
-4.  Conventions and Terminology
+3.  Conventions and Terminology
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
@@ -175,7 +165,7 @@ Table of Contents
 
    Authority ceiling:  The pre-consented maximum authority any expansion
       of a Mission may reach without a further human approval
-      (Section 5).  This bound is distinct from the template profile's
+      (Section 4).  This bound is distinct from the template profile's
       Template Ceiling on Missions dispatched from a template and from
       the shaping companion's caller-supplied shaping ceiling on a
       proposal ([I-D.draft-mcguinness-oauth-mission-template],
@@ -183,7 +173,7 @@ Table of Contents
 
    Drawdown policy:  The policy under which the Mission Issuer may
       adjudicate an in-ceiling expansion by policy rather than by a
-      fresh human approval (Section 5).
+      fresh human approval (Section 4).
 
    Mission Deployment Profile:  The deployment-level manifest the
       architecture defines
@@ -191,7 +181,7 @@ Table of Contents
       mappings, and cadence this document requires a deployment to
       publish are published there.
 
-5.  Progressive Authorization
+4.  Progressive Authorization
 
    At the initial approval event ([I-D.draft-mcguinness-oauth-mission]),
    the Approver MAY additionally consent to:
@@ -202,7 +192,7 @@ Table of Contents
       ([I-D.draft-mcguinness-oauth-mission]), that is the pre-consented
       maximum any expansion of this Mission may reach without a further
       human approval and that every in-ceiling successor MUST be within
-      (Section 5.1); and
+      (Section 4.1); and
 
    *  a *drawdown policy*, recorded as a drawdown_policy member on the
       Mission: a string or URI identifying the policy under which the
@@ -253,7 +243,7 @@ Table of Contents
    authorization: every expansion of it is an ordinary, freshly approved
    expansion ([I-D.draft-mcguinness-oauth-mission-expansion]).
 
-5.1.  In-ceiling expansion
+4.1.  In-ceiling expansion
 
    An *in-ceiling expansion* is an expansion, adjudicated per the
    expansion profile ([I-D.draft-mcguinness-oauth-mission-expansion]),
@@ -361,7 +351,7 @@ Table of Contents
    drawdown policy; policy adjudication only draws within that pre-given
    consent and can never exceed the ceiling.
 
-   The Mission Issuer MUST refuse, with out_of_ceiling (Section 6), a
+   The Mission Issuer MUST refuse, with out_of_ceiling (Section 5), a
    requested authority that is not within the consented
    authority_ceiling.  Exceeding the ceiling requires a fresh human
    approval that raises it, which is an ordinary expansion.
@@ -395,7 +385,7 @@ Table of Contents
 
    *  MUST record each policy-adjudicated expansion as an approval event
       whose approver context is the drawdown policy that authorized it
-      (Section 7).
+      (Section 6).
 
    Some authority classes always require a fresh human approval even
    within the ceiling.  To make that testable, a deployment MUST publish
@@ -430,7 +420,7 @@ Table of Contents
    to a fresh human approval.  Completion-discharged authority therefore
    cannot be resurrected by policy.
 
-5.2.  What it bounds, and what it does not
+4.2.  What it bounds, and what it does not
 
    The ceiling is broad by construction, since it must cover the open-
    ended task.  What stays narrow is the active authority any single
@@ -439,8 +429,8 @@ Table of Contents
    and revocable.  A compromised agent cannot instantly wield the
    ceiling; it can exercise only the current active authority and
    request in-ceiling drawdown, which is policy-gated, bounded per
-   drawdown and rate-limited per chain (Section 5.1), recorded for audit
-   (Section 7), and enforced per action by the runtime layer
+   drawdown and rate-limited per chain (Section 4.1), recorded for audit
+   (Section 6), and enforced per action by the runtime layer
    ([I-D.draft-mcguinness-mission-runtime]).
 
    Progressive authorization bounds, and does not eliminate, standing-
@@ -450,21 +440,21 @@ Table of Contents
    The drawdown policy is enforced by the Mission Issuer and is part of
    its trusted governance: a misconfigured policy can over-grant within
    the ceiling, so it is reviewed and versioned like other approval
-   policy, a requirement Section 9 states.
+   policy, a requirement Section 8 states.
 
-5.3.  The Ceiling Review
+4.3.  The Ceiling Review
 
    A pre-consented ceiling is standing consent, and standing consent
    decays: a chain renewed forever on policy alone is a standing grant
    with a calendar.  This profile therefore bounds the chain in time,
-   not only per drawdown and per unit rate (Section 5.1).
+   not only per drawdown and per unit rate (Section 4.1).
 
    A deployment MUST publish a *ceiling review cadence* in its Mission
    Deployment Profile.  The Mission Issuer MUST NOT policy-adjudicate an
    in-ceiling drawdown for a chain whose most recent human approval of
    the ceiling is older than that cadence: the request falls back to a
    fresh human approval, exactly as a request the drawdown policy does
-   not authorize does (Section 5.1).
+   not authorize does (Section 4.1).
 
    The cadence is a recency ceiling on the ceiling_drawdown approval
    basis's approved_at, the kind of declared maximum standing-consent
@@ -472,14 +462,14 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission]); this profile makes publishing
    one mandatory rather than optional.  It is recorded and reproducible,
    not anchored: like the drawdown policy body it bounds, it is not
-   folded into ceiling_hash (Section 5), so a change to the published
+   folded into ceiling_hash (Section 4), so a change to the published
    cadence is issuer-record trust, not detectable from the Mission's own
    anchors.  To stay reproducible in audit without a new schema member,
    the cadence is part of the drawdown policy's own versioned content: a
    deployment's drawdown policy document MUST state the cadence
    effective under a given version, identified by the policy_id and
    policy_version the ceiling_drawdown activation already carries
-   (Section 5), per the issuance profile's own rule that a mutable,
+   (Section 4), per the issuance profile's own rule that a mutable,
    unversioned value MUST NOT serve this role.  An auditor recovers the
    cadence that governed a given drawdown by resolving the retained
    drawdown policy document at the policy_version that drawdown's
@@ -506,10 +496,10 @@ Table of Contents
    Where consent evidence is claimed, that disclosure is committed like
    any other ([I-D.draft-mcguinness-oauth-mission-consent-evidence]), so
    the record shows the reviewer saw the cycle they renewed.  The review
-   is where decay is caught; Section 9 names the tells a reviewer checks
+   is where decay is caught; Section 8 names the tells a reviewer checks
    the records for.
 
-5.4.  Realizing an approved access request
+4.4.  Realizing an approved access request
 
    Progressive authorization grows authority that a deployment
    anticipated well enough to express as a ceiling.  The runtime
@@ -524,7 +514,7 @@ Table of Contents
 
    *  a request whose authority is within the Mission's consented
       ceiling is realized as a policy-adjudicated in-ceiling expansion
-      (Section 5.1); and
+      (Section 4.1); and
 
    *  a request whose authority exceeds the ceiling is realized only on
       the fresh human approval the request carries, as an ordinary
@@ -539,7 +529,7 @@ Table of Contents
    not realized as an expansion grants only the single runtime permit
    and no durable Mission authority.
 
-6.  The out_of_ceiling Denial Reason
+5.  The out_of_ceiling Denial Reason
 
    This document extends the expansion profile's closed set of expansion
    denial reasons ([I-D.draft-mcguinness-oauth-mission-expansion]) by
@@ -548,7 +538,7 @@ Table of Contents
    reasons are:
 
    out_of_ceiling:  The requested authority is not a subset of the
-      Mission's consented authority ceiling (Section 5), so it cannot be
+      Mission's consented authority ceiling (Section 4), so it cannot be
       granted by policy drawdown; raising the ceiling requires a fresh
       human approval.
 
@@ -556,7 +546,7 @@ Table of Contents
    out_of_ceiling as it treats any unrecognized reason code: the
    expansion stays denied.
 
-7.  Audit Linkage
+6.  Audit Linkage
 
    Each policy-adjudicated in-ceiling expansion is an approval event and
    MUST be recorded as one: the approver context is the drawdown policy
@@ -566,14 +556,14 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-expansion]).
 
    The record MUST carry the chain's cumulative drawdown count, so the
-   rate bound of Section 5.1 is auditable from the records alone.  A
+   rate bound of Section 4.1 is auditable from the records alone.  A
    deployment MUST retain the consented authority_ceiling,
    drawdown_policy, and ceiling_hash with every Mission record in the
    chain for the audit horizon, so an auditor can verify every drawdown
    was within the consented envelope and, by resolving the retained
    drawdown policy document at the policy_version each drawdown's
    ceiling_drawdown approval basis already records, against the cadence
-   that applied when it was adjudicated (Section 5.3).
+   that applied when it was adjudicated (Section 4.3).
 
    Where a drawdown is triggered by the agent encountering a resource
    not named at approval, and the resource self-declares its operations
@@ -589,7 +579,7 @@ Table of Contents
    defines the encounter adjudication contract, the identity pinning,
    and the floors this drawdown path carries.
 
-8.  Conformance
+7.  Conformance
 
    A Mission Issuer that claims *Expansion with Progressive
    Authorization* is a conforming expansion-capable Mission Issuer
@@ -597,41 +587,41 @@ Table of Contents
 
    *  for a Mission whose Approver consented to a ceiling, record the
       consented authority_ceiling and drawdown_policy on the Mission and
-      commit them with ceiling_hash (Section 5);
+      commit them with ceiling_hash (Section 4);
 
    *  evaluate a requested successor Authority Set as in-ceiling by the
       subset rule, and refuse an out-of-ceiling request with
-      out_of_ceiling (Section 5.1, Section 6);
+      out_of_ceiling (Section 4.1, Section 5);
 
    *  bound each policy-adjudicated drawdown incrementally, so a single
       drawdown never activates the entire remaining ceiling, and publish
       the concrete per-drawdown bound in the Mission Deployment Profile
-      (Section 5.1);
+      (Section 4.1);
 
    *  enforce the prohibited-class rule, requiring a fresh human
       approval for a drawdown that grants irreversible, external-
       commitment, or privileged-administration authority, that satisfies
       the external-communication predicate, or that grants cross-domain
       authority, and publish the action-class mapping in the Mission
-      Deployment Profile (Section 5.1);
+      Deployment Profile (Section 4.1);
 
    *  require a fresh human approval for an in-ceiling drawdown while
-      the predecessor has non-terminal Child Missions (Section 5.1);
+      the predecessor has non-terminal Child Missions (Section 4.1);
 
    *  rate-bound policy-adjudicated drawdowns per expansion chain, keyed
       by the chain's root Mission and counted across predecessor links,
       publish the concrete rate bound in the Mission Deployment Profile,
       and record each as an approval event carrying the chain's
-      cumulative drawdown count (Section 5.1, Section 7); and
+      cumulative drawdown count (Section 4.1, Section 6); and
 
    *  bound each chain by the published ceiling review cadence, refusing
       policy adjudication past it, and rendering the chain's record
       since the prior review in the review approval's disclosure
-      (Section 5.3); state the cadence effective under each drawdown
+      (Section 4.3); state the cadence effective under each drawdown
       policy version in that policy's own versioned content
-      (Section 5.3).
+      (Section 4.3).
 
-9.  Security Considerations
+8.  Security Considerations
 
    The expansion profile's security considerations apply in full.  This
    document adds the drawdown surface:
@@ -640,23 +630,23 @@ Table of Contents
       compromised agent can request in-ceiling drawdown unattended; the
       mitigations are the rate bound, the prohibited-class rule, the
       fall-back to human approval for unauthorized drawdowns
-      (Section 5.1), and per-action runtime enforcement
+      (Section 4.1), and per-action runtime enforcement
       ([I-D.draft-mcguinness-mission-runtime]).
 
    *  The drawdown policy is authority-bearing governance.  A
       misconfigured policy over-grants within the ceiling; it MUST be
       reviewed and versioned like approval policy, and its identity and
-      version are part of the recorded approver context (Section 7).
+      version are part of the recorded approver context (Section 6).
 
    *  The ceiling is a consent artifact.  It MUST be rendered to the
       Approver at the initial approval with the fact that in-ceiling
-      expansion is policy-adjudicated (Section 5); a ceiling the
+      expansion is policy-adjudicated (Section 4); a ceiling the
       Approver did not knowingly consent to is standing authority
       obtained by omission.
 
    *  Consent decays even when nothing is misconfigured: the drawdown
       and rate bounds cap rate, not duration, and the ceiling review
-      (Section 5.3) is the temporal bound.  The tells of decay are
+      (Section 4.3) is the temporal bound.  The tells of decay are
       checkable from the chain's own records: reviews that never narrow
       the ceiling, ceilings that only grow, guard exceptions trending
       toward zero because the policy was quietly widened, and discharge
@@ -664,7 +654,7 @@ Table of Contents
       to complete.  A review that cannot cite the evidence of the cycle
       it renews has not reviewed it.
 
-10.  Privacy Considerations
+9.  Privacy Considerations
 
    The ceiling discloses, at initial approval time, the full envelope a
    task may grow into, which can reveal more about the anticipated task
@@ -673,20 +663,20 @@ Table of Contents
    chain; access to the ceiling and drawdown records SHOULD be scoped to
    parties with a governance need.
 
-11.  IANA Considerations
+10.  IANA Considerations
 
    This document requests one registration in the expansion profile's
    Mission Denial Reasons registry
    ([I-D.draft-mcguinness-oauth-mission-expansion]): out_of_ceiling,
-   with the semantics of Section 6 and Reference this document.  Beyond
+   with the semantics of Section 5 and Reference this document.  Beyond
    that, authority_ceiling and drawdown_policy are Mission record
    members defined by this profile, and the mission-authority-ceiling
    anchor typ follows the issuance profile's collision-resistant typ
    convention, none of which require registration.
 
-12.  References
+11.  References
 
-12.1.  Normative References
+11.1.  Normative References
 
    [I-D.draft-mcguinness-mission-runtime]
               McGuinness, K., "Mission-Bound Runtime Enforcement", 2026,
@@ -712,7 +702,7 @@ Table of Contents
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
 
-12.2.  Informative References
+11.2.  Informative References
 
    [I-D.draft-mcguinness-mission-aauth]
               McGuinness, K., "Mission Context Binding for AAuth", 2026,
@@ -781,17 +771,17 @@ Appendix A.  Document History
 
    *  Editorial: disambiguated authority_ceiling from the template
       profile's Template Ceiling and the shaping companion's shaping
-      ceiling at its first definition (Section 4), no normative change.
+      ceiling at its first definition (Section 3), no normative change.
 
    *  Mirrored the OAuth binding's Mission Template uncommitted-policy-
       body pattern onto drawdown_policy: a SHOULD to additionally commit
       the policy body under an integrity anchor or disclose it under
-      Consent Evidence (Section 5).  Reframed the ceiling review cadence
+      Consent Evidence (Section 4).  Reframed the ceiling review cadence
       as a recency ceiling on the ceiling_drawdown approval basis's
       approved_at, reproducible from the drawdown policy's own versioned
       content identified by the existing policy_id/policy_version rather
       than a new commitment or a new, separately versioned member
-      (Section 5.3, Section 7).
+      (Section 4.3, Section 6).
 
 Acknowledgments
 

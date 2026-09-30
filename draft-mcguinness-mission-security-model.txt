@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                         29 September 2026
-Expires: 2 April 2027
+Intended status: Informational                         30 September 2026
+Expires: 3 April 2027
 
 
                          Mission Security Model
@@ -63,7 +63,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 2 April 2027.
+   This Internet-Draft will expire on 3 April 2027.
 
 Copyright Notice
 
@@ -82,25 +82,24 @@ Copyright Notice
 Table of Contents
 
    1.  Introduction
-   2.  Status: An Informational Model
-   3.  Conventions and Terminology
-   4.  Mission Substrate
-   5.  The Untrusted Agent
-   6.  The Enforcement Perimeter
-   7.  The Trusted Base
-   8.  Cross-Cutting Assumptions
-     8.1.  Failure Taxonomy Crosswalk (Informative)
-   9.  What the Model Does and Does Not Guarantee
-   10. Adversary Model and Coverage
-   11. Revocation-to-Action Latency
-   12. Documenting the Trusted Base
-   13. Retention and the Audit Horizon
-   14. Security Considerations
-   15. Privacy Considerations
-   16. IANA Considerations
-   17. References
-     17.1.  Normative References
-     17.2.  Informative References
+   2.  Conventions and Terminology
+   3.  Mission Substrate
+   4.  The Untrusted Agent
+   5.  The Enforcement Perimeter
+   6.  The Trusted Base
+   7.  Cross-Cutting Assumptions
+     7.1.  Failure Taxonomy Crosswalk (Informative)
+   8.  What the Model Does and Does Not Guarantee
+   9.  Adversary Model and Coverage
+   10. Revocation-to-Action Latency
+   11. Documenting the Trusted Base
+   12. Retention and the Audit Horizon
+   13. Security Considerations
+   14. Privacy Considerations
+   15. IANA Considerations
+   16. References
+     16.1.  Normative References
+     16.2.  Informative References
    Appendix A.  OWASP Agentic Threat Coverage
    Appendix B.  Document History
    Acknowledgments
@@ -122,7 +121,7 @@ Table of Contents
    degrade or void the guarantees the suite otherwise provides.
    Everything on the other side of that line, the agent that executes
    the task and the shaper that authors its proposal, is untrusted
-   (Section 5).
+   (Section 4).
 
    Each profile documents the security considerations local to its own
    mechanism.  What no single profile provides, and what a reviewer or a
@@ -135,8 +134,6 @@ Table of Contents
    a model that aids review and deployment; the normative requirements
    live in the profiles it references.
 
-2.  Status: An Informational Model
-
    This document is Informational.  It does not place normative
    requirements on implementations; the enforcement obligations are
    defined by the selected binding and its companions (for the OAuth
@@ -145,11 +142,7 @@ Table of Contents
    model places on a deployment that claims the suite, realized by the
    referenced profile, not a new conformance requirement of its own.
 
-   Role: guide.  Spec maturity: not applicable.  Maintenance: active.
-   Adopt when: Reviewing or auditing: the one consolidated trust and
-   blast-radius view.  Requires: nothing beyond its listed references.
-
-3.  Conventions and Terminology
+2.  Conventions and Terminology
 
    This document uses Mission, Mission Issuer (the Authorization Server
    in the OAuth binding; the Mission Authority Server in the standalone
@@ -166,7 +159,7 @@ Table of Contents
    Assurance Levels as defined in
    [I-D.draft-mcguinness-mission-architecture].
 
-4.  Mission Substrate
+3.  Mission Substrate
 
    This model describes the components and trust relationships of the
    Mission model, not of OAuth 2.0 mechanics.  Its analysis rests on the
@@ -199,7 +192,7 @@ Table of Contents
    the capabilities it consumes; each profile's own consumption
    declaration is authoritative.
 
-5.  The Untrusted Agent
+4.  The Untrusted Agent
 
    The agent is not in the trusted base.  The model assumes the agent
    can be prompt-injected, can be compromised, and can attempt any
@@ -224,7 +217,7 @@ Table of Contents
    The agent and harness boundary assumes an isolation boundary between
    them: process, host, or service separation within a single operator.
    Without that separation, agent compromise and harness compromise are
-   one event, and the harness-compromise degradation (Section 7) applies
+   one event, and the harness-compromise degradation (Section 6) applies
    to a compromised agent.  A deployment claiming the runtime profile's
    agent-compromise-resistant enforcement therefore isolates the
    mediating PEP and its key custody from agent-facing components; the
@@ -242,7 +235,7 @@ Table of Contents
    cannot approve one, and what it proposed is what the derivation
    bounds and the Approver reads.
 
-6.  The Enforcement Perimeter
+5.  The Enforcement Perimeter
 
    The deployment's observable perimeter has three rings:
 
@@ -286,7 +279,7 @@ Table of Contents
    enforcement scope ([I-D.draft-mcguinness-mission-runtime]); declaring
    an unmediated entry is disclosure, never an enforcement claim.
 
-7.  The Trusted Base
+6.  The Trusted Base
 
    The following components are trusted to varying degrees.  For each:
    what it must achieve, what it assumes of the others, and how its
@@ -298,7 +291,7 @@ Table of Contents
       integrity anchors, and gates issuance on Mission state.  It must
       derive faithfully and gate correctly; it assumes the Approver is
       authenticated and the agent is untrusted.  Its compromise voids
-      the model (Section 12 names the key-custody statement a deployment
+      the model (Section 11 names the key-custody statement a deployment
       publishes for this assumption): a compromised issuer can mint
       arbitrary authority, including a forged Mandate over a real
       Mission that a verifier cannot reject on artifact-level checks
@@ -480,9 +473,9 @@ Table of Contents
    attribution (which instance executed) without forging Mission
    authority (what was approved).  A deployment that relies on instance-
    grade joins or instance-attributed evidence extends its documented
-   trust statement (Section 12) to that attester.
+   trust statement (Section 11) to that attester.
 
-8.  Cross-Cutting Assumptions
+7.  Cross-Cutting Assumptions
 
    Four assumptions hold across the whole model:
 
@@ -493,7 +486,7 @@ Table of Contents
       proof-of-possession mechanism is sound and keys are protected by
       their holder.  Where a deployment issues bearer tokens instead, an
       exfiltrated token is usable until it expires, and the stolen-token
-      residual (Section 10) applies in full.
+      residual (Section 9) applies in full.
 
    *  *Fail-closed on authority, fail-safe on inert evidence.* Wherever
       a trusted component cannot establish an authority-relevant fact it
@@ -509,7 +502,7 @@ Table of Contents
       refusal ([I-D.draft-mcguinness-mission-audit]); tampered inert
       evidence is an integrity failure, handled by the profile that
       defines the artifact.  Each profile names its failure classes in
-      its own terms; Section 8.1 maps those terms onto this axis.
+      its own terms; Section 7.1 maps those terms onto this axis.
 
    *  *Role-scoped trust anchors.* A party trusted in one role (Mission
       issuer, evidence producer for one evidence type, SET transmitter,
@@ -531,7 +524,7 @@ Table of Contents
       reads and consents to, and is inert once the Mission is approved
       ([I-D.draft-mcguinness-oauth-mission]).
 
-8.1.  Failure Taxonomy Crosswalk (Informative)
+7.1.  Failure Taxonomy Crosswalk (Informative)
 
    This section is informative.  Four profiles name verification and
    failure classes in their own terms: the Mandate's Failure Taxonomy
@@ -674,14 +667,14 @@ Table of Contents
    verification failure
    ([I-D.draft-mcguinness-oauth-mission-transaction-authorization]).
 
-9.  What the Model Does and Does Not Guarantee
+8.  What the Model Does and Does Not Guarantee
 
    Given an intact trusted base, the model's guarantees are these.  Each
    is named, names the Mission Assurance Level
    ([I-D.draft-mcguinness-mission-architecture]) at which it is earned,
    and names the components that must be intact for it to hold;
-   Section 7 is the failure analysis of those dependencies, and
-   Section 12 is where a deployment states which of them it claims.
+   Section 6 is the failure analysis of those dependencies, and
+   Section 11 is where a deployment states which of them it claims.
 
    Bounded authority (Baseline Issuance):  A compromised or injected
       agent cannot exceed the approved Authority Set and cannot move
@@ -700,7 +693,7 @@ Table of Contents
    Kill switch (Baseline Issuance for issuance; Runtime-Enforced for
    action):  Revoking or expiring a Mission stops further issuance at
       once and stops governed action within a window this model states
-      precisely (Section 11).  Rests on the Mission Issuer, the Mission
+      precisely (Section 10).  Rests on the Mission Issuer, the Mission
       state source, and, for action, the PEP and PDP.
 
    Per-action enforcement (Runtime-Enforced):  Every consequential
@@ -787,12 +780,12 @@ Table of Contents
 
    It does not make a compromised trusted component safe.  The
    compromise of each component degrades a specific guarantee, as listed
-   in Section 7.  It does not verify the agent's reasoning or the
+   in Section 6.  It does not verify the agent's reasoning or the
    truthfulness of its outputs; semantic and intent verification are a
    non-goal of the suite ([I-D.draft-mcguinness-oauth-mission]).  And it
    inherits the threat models of the substrates the companions profile
    (Token Exchange, Attenuating Agent Tokens, SCITT, Deferred Token
-   Response), which those substrates own.  Section 10 gives the per-
+   Response), which those substrates own.  Section 9 gives the per-
    adversary-move detail: what addresses each move, and the residual it
    leaves.
 
@@ -807,24 +800,24 @@ Table of Contents
    exceeds its source (the subset rule), so broad "acting as" standing
    cannot be laundered out of a narrow approval.
 
-10.  Adversary Model and Coverage
+9.  Adversary Model and Coverage
 
-   The trusted base (Section 7) is the component view; this is the
+   The trusted base (Section 6) is the component view; this is the
    adversary view.  The adversary is assumed to control the agent and
    the task proposal it submits (including a shaper's output,
-   Section 5), to reach the content and inputs the agent processes (so
+   Section 4), to reach the content and inputs the agent processes (so
    it can attempt prompt injection), and to capture tokens in transit.
    The adversary is assumed not to break the cryptographic primitives,
    not to forge an authenticated component's signing key, and not to
    compromise a trusted-base component; those last two are the residuals
-   of Section 7, and the table's final row only restates that exclusion.
+   of Section 6, and the table's final row only restates that exclusion.
 
    The following maps each adversary move to the mechanism that
    addresses it and to what is explicitly not stopped.  The residual is
    the honest part: it is what a deploying party still owns.
 
    Compromised or injected agent acts beyond its task:  Addressed by
-      authority committed at the approval event (Section 5) (issuance);
+      authority committed at the approval event (Section 4) (issuance);
       per-action PDP check (runtime).  Residual: misuse within the
       approved scope; low-consequence authority the agent legitimately
       holds.
@@ -932,7 +925,7 @@ Table of Contents
       client's instances, the instance-profile rule mediated custody
       composes with ([I-D.draft-mcguinness-mission-runtime]).  Residual:
       instance-grain attribution, and the narrowest kill, exist only
-      where the instance substrate is deployed (Section 7); without it
+      where the instance substrate is deployed (Section 6); without it
       attribution collapses to the shared client_id, and containment
       falls back to the Deployment and Mission kills.
 
@@ -1036,21 +1029,21 @@ Table of Contents
 
    A trusted-base component is compromised:  Addressed by not addressed;
       evidence detects it after the fact.  Residual: not prevented;
-      degrades the specific guarantee per Section 7.
+      degrades the specific guarantee per Section 6.
 
    Arbitrary code runs inside the agent's boundary:  Addressed by the
       mediated boundary an effect crosses (an interpreter, a spawned
       process, or a generated script), parameter-bound permits, mediated
       credential custody, and the harness's isolation and channel
       enumeration.  Residual: unrecorded computation and channels
-      outside that perimeter (Section 6); sandboxing owns execution.
+      outside that perimeter (Section 5); sandboxing owns execution.
 
    Eleven residuals are worth stating on their own, because they are the
    limits most likely to matter and most often overstated away
    elsewhere:
 
    *  *Unrecorded compute.* Effects and data flow outside a mediated or
-      reconstructible path remain unrecorded (Section 6).
+      reconstructible path remain unrecorded (Section 5).
       Reconstruction supplies provenance, not containment or
       retrospective authorization.
 
@@ -1128,7 +1121,7 @@ Table of Contents
 
    *  *Single-service equivocation.* Transparency's non-equivocation
       guarantee is per-service, stated in full at the Transparency
-      Service trusted-base entry (Section 7;
+      Service trusted-base entry (Section 6;
       [I-D.draft-mcguinness-mission-audit]).
 
    *  *Offline breadth.* Offline attenuation
@@ -1142,7 +1135,7 @@ Table of Contents
       is availability against observation, and a deployment that chooses
       offline minting accepts the unobserved breadth.
 
-   *  *Self-graded enforcement.* The strongest claims of Section 9 rest
+   *  *Self-graded enforcement.* The strongest claims of Section 8 rest
       on a self-declared execution-environment scope statement
       ([I-D.draft-mcguinness-mission-runtime],
       [I-D.draft-mcguinness-mission-harness]): the wire carries no
@@ -1157,7 +1150,7 @@ Table of Contents
       wire.
 
    *  *Availability.* The model fails closed everywhere a trusted
-      component cannot establish the fact it needs (Section 8), which
+      component cannot establish the fact it needs (Section 7), which
       trades availability for safety.  An attacker who degrades a state
       source, an event stream, or a PDP does not gain unauthorized
       action, but converts the attack into work stoppage and, for in-
@@ -1168,7 +1161,7 @@ Table of Contents
       dependency-conditional outage and ride-through semantics
       ([I-D.draft-mcguinness-mission-runtime]).
 
-11.  Revocation-to-Action Latency
+10.  Revocation-to-Action Latency
 
    The kill switch is not instantaneous.  Between the moment a Mission
    is revoked and the last possible consequential action under it there
@@ -1264,7 +1257,7 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-harness]); without it, a resumed job
    acts on the authority its cached credential still carries.
 
-12.  Documenting the Trusted Base
+11.  Documenting the Trusted Base
 
    A deployment cannot be evaluated against this model without knowing
    which components it actually trusts.  The runtime profile already
@@ -1273,13 +1266,13 @@ Table of Contents
    execution paths it mediates ([I-D.draft-mcguinness-mission-runtime]).
    This model recommends that a deployment claiming the Mission suite
    extend that documentation to its full trusted base: which of the
-   components in Section 7 it relies on, which it does not deploy, and,
+   components in Section 6 it relies on, which it does not deploy, and,
    for each consequential action class, which components must be intact
    for the class's guarantee to hold.  The statement covers key custody:
    for each key class the deployment operates (issuer signing, evidence
    signing, agent sender-constraint, mediating-PEP custody, attenuation
    roots), where the key is held, at what custody grade, and the
-   compromise-recovery procedure (Section 7).  This documentation is
+   compromise-recovery procedure (Section 6).  This documentation is
    what lets a relying party or auditor reason about the deployment's
    actual security posture rather than the model's idealized one.
 
@@ -1287,12 +1280,12 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-architecture]) is the artifact this
    statement belongs in: one publishable manifest that composes the per-
    layer scope statements and states its residual risks alongside its
-   claims.  The named guarantees of Section 9 are the vocabulary for the
-   claims, and the residuals of Section 10 are the vocabulary for
+   claims.  The named guarantees of Section 8 are the vocabulary for the
+   claims, and the residuals of Section 9 are the vocabulary for
    residual_risks: a deployment names which residuals it accepts, which
    it mitigates, and how.
 
-13.  Retention and the Audit Horizon
+12.  Retention and the Audit Horizon
 
    The guarantees this model states at audit time depend on artifacts
    that several profiles retain independently: Consent Evidence
@@ -1313,7 +1306,7 @@ Table of Contents
    that rests on it to still hold; an artifact dropped before the
    horizon forfeits the guarantee that depended on it.
 
-14.  Security Considerations
+13.  Security Considerations
 
    This document is itself a security-considerations document.  It
    defines no mechanism and adds no attack surface.  Its content is the
@@ -1323,7 +1316,7 @@ Table of Contents
    Where this document and a profile appear to differ, the profile
    governs.
 
-15.  Privacy Considerations
+14.  Privacy Considerations
 
    The trusted components see Mission data: the Authorization Server and
    PDP see the Authority Set, the consent rendering layer and Approver
@@ -1344,20 +1337,20 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-management]).  Each profile's
    Privacy Considerations govern the data its own component handles.
 
-16.  IANA Considerations
+15.  IANA Considerations
 
    This document makes no IANA request.
 
-17.  References
+16.  References
 
-17.1.  Normative References
+16.1.  Normative References
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission.html>.
 
-17.2.  Informative References
+16.2.  Informative References
 
    [I-D.draft-mcguinness-mission-aauth]
               McGuinness, K., "Mission Context Binding for AAuth", 2026,
@@ -1578,15 +1571,14 @@ Appendix A.  OWASP Agentic Threat Coverage
       claimed, and a named complement owns it.
 
    The pattern behind the verdicts follows the model's one commitment
-   (Section 5): authority is committed at the approval event, and every
+   (Section 4): authority is committed at the approval event, and every
    consequential action is checked against it fresh.  Threats that
    attack authority are contained.  Threats that attack the model, its
    memory, or its inputs are bounded, because a fully fooled agent still
    cannot out-argue a parameter check.  Threats that attack other layers
-   are delegated by name.  The adversary model (Section 10) owns
-   coverage and residuals; this appendix maps its rows onto OWASP
-   vocabulary, and where the two could be read to differ, the adversary
-   model governs.
+   are delegated by name.  The adversary model (Section 9) owns coverage
+   and residuals; this appendix maps its rows onto OWASP vocabulary, and
+   where the two could be read to differ, the adversary model governs.
 
    +==============+========================================================+==========+
    |Threat        |The model's answer                                      |Verdict   |
@@ -1645,7 +1637,7 @@ Appendix A.  OWASP Agentic Threat Coverage
    |the Loop      |([I-D.draft-mcguinness-oauth-mission-approval])         |          |
    +--------------+--------------------------------------------------------+----------+
    |T11 Unexpected|Sandboxing owns execution; the model gates effects      |Bounded   |
-   |RCE and Code  |crossing its declared perimeter (Section 6), where      |          |
+   |RCE and Code  |crossing its declared perimeter (Section 5), where      |          |
    |Attacks       |consequential effects need permits and capabilities are |          |
    |              |bound to source digests with drift failing closed       |          |
    +--------------+--------------------------------------------------------+----------+
@@ -1688,7 +1680,7 @@ Appendix A.  OWASP Agentic Threat Coverage
     | LLM01 Prompt   | The injected instruction cannot   | Bounded   |
     | Injection      | widen committed authority, and    |           |
     |                | external egress needs a fresh     |           |
-    |                | parameter-bound permit; Section 5 |           |
+    |                | parameter-bound permit; Section 4 |           |
     |                | carries the taint posture         |           |
     +----------------+-----------------------------------+-----------+
     | LLM02          | Exposure discipline bounds what   | Bounded   |
@@ -1759,7 +1751,7 @@ Appendix B.  Document History
       through semantics (#310).
 
    *  Failure taxonomy crosswalk (#671): an informative subsection added
-      to Section 8, mapping the Mandate, Audit, Consent Evidence, and
+      to Section 7, mapping the Mandate, Audit, Consent Evidence, and
       Transaction Authorization failure classes onto the fail-closed/
       fail-safe axis, and stating that the axis depends on how the
       artifact is used rather than on the class label alone.  Every
@@ -1773,15 +1765,15 @@ Appendix B.  Document History
       change.
 
    *  Editorial density pass on this Informational document: the
-      Transparency Service entry of Section 7 kept as the one full
+      Transparency Service entry of Section 6 kept as the one full
       statement of the single-service-equivocation point, with the Ten
       Residuals restatement compressed to a pointer at it; the
       Documenting section's echo of the Authorization Server entry's
       "strongest trust assumption" phrasing dropped in favor of its
-      existing Section 7 cross-reference, and that entry given an
+      existing Section 6 cross-reference, and that entry given an
       explicit citation to the Mission Mandate document it shares the
       issuer-key-compromise concern with.  Several over-long paragraphs
-      in Section 9 split for one idea per paragraph.  No normative
+      in Section 8 split for one idea per paragraph.  No normative
       content, anchor, or adversary-model row, mitigation, or residual
       changed.
 

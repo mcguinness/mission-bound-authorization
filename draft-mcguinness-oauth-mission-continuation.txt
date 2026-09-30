@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                          29 September 2026
-Expires: 2 April 2027
+Intended status: Experimental                          30 September 2026
+Expires: 3 April 2027
 
 
     Mission Continuation: Authorization Continuity for Mission-Bound
@@ -40,7 +40,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 2 April 2027.
+   This Internet-Draft will expire on 3 April 2027.
 
 Copyright Notice
 
@@ -59,23 +59,22 @@ Copyright Notice
 Table of Contents
 
    1.  Introduction
-   2.  Status: An Experimental Extension
-   3.  Conventions and Terminology
-   4.  The Three Continuities
-   5.  Authorization Continuity and the Mission
-   6.  The Grants-Nothing Invariant
-   7.  Continuation Transports
-     7.1.  Identity Continuation Transport
-     7.2.  Async Delegation Transport
-     7.3.  Cross-Domain Projection Transport
-   8.  Execution-Time Evidence
-   9.  Substrate Dispositions
-   10. Security Considerations
-   11. Privacy Considerations
-   12. IANA Considerations
-   13. References
-     13.1.  Normative References
-     13.2.  Informative References
+   2.  Conventions and Terminology
+   3.  The Three Continuities
+   4.  Authorization Continuity and the Mission
+   5.  The Grants-Nothing Invariant
+   6.  Continuation Transports
+     6.1.  Identity Continuation Transport
+     6.2.  Async Delegation Transport
+     6.3.  Cross-Domain Projection Transport
+   7.  Execution-Time Evidence
+   8.  Substrate Dispositions
+   9.  Security Considerations
+   10. Privacy Considerations
+   11. IANA Considerations
+   12. References
+     12.1.  Normative References
+     12.2.  Informative References
    Author's Address
 
 1.  Introduction
@@ -114,8 +113,6 @@ Table of Contents
    authorization.  Its place in the family is the Continue verb of the
    architecture ([I-D.draft-mcguinness-mission-architecture]).
 
-2.  Status: An Experimental Extension
-
    This document is optional and experimental: adopt it for evaluation,
    not as a stable interface.  It is a layered binding between the
    issuance profile and an identity-continuity transport, not a change
@@ -130,18 +127,11 @@ Table of Contents
    A Mission Issuer claims conformance to this document only when it
    continues a Mission across an Identity Continuation, async
    delegation, or cross-domain projection hop under the requirements of
-   Section 5; otherwise it remains a plain issuance-profile Mission
+   Section 4; otherwise it remains a plain issuance-profile Mission
    Issuer.  Nothing here places a new requirement back on the issuance
    profile.
 
-   Role: companion.  Spec maturity: experimental.  Maintenance: lab-
-   best-effort.  Adopt when: Authorized work continues across hops or
-   time without re-presented credentials.  Requires: Mission-Bound
-   Authorization for OAuth 2.0.  Also requires, conditionally: Mission
-   Expansion for OAuth 2.0 (when the async-delegation transport creates
-   refresh families).
-
-3.  Conventions and Terminology
+2.  Conventions and Terminology
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
@@ -161,22 +151,22 @@ Table of Contents
    Continuation Transport:  An identity-continuity mechanism that
       carries an acting identity onward and, under this profile, a
       reference to the Mission whose authorization is continued.  This
-      document profiles three (see Section 7).
+      document profiles three (see Section 6).
 
    Accepted Hop:  A point at which a Mission's authorization has been
       established and from which a continuation may proceed.
 
    Continuation Handle:  An opaque reference that names an accepted hop.
-      A continuation handle is not a credential (see Section 6).
+      A continuation handle is not a credential (see Section 5).
 
    Rooting Anchor:  The record binding a continuation to exactly one
       Mission.  A rooting anchor is grant-anchored (durable) or session-
-      anchored (see Section 5).
+      anchored (see Section 4).
 
    Continued Grant:  A credential a transport issues for a Mission's
       work as the result of a continuation.
 
-4.  The Three Continuities
+3.  The Three Continuities
 
    This profile keeps the three continuities of Section 1 apart and
    assigns each an owner.
@@ -184,19 +174,19 @@ Table of Contents
    Identity continuity is owned by a Continuation Transport, never by
    this profile.  This profile is transport-agnostic and states the
    requirements a transport MUST meet to carry a Mission continuation
-   (Section 7).
+   (Section 6).
 
-   Authorization continuity is owned by the Mission (Section 5).
+   Authorization continuity is owned by the Mission (Section 4).
 
    Execution-time evidence is owned by the runtime and recorded against
-   the Mission (Section 8).
+   the Mission (Section 7).
 
    The separation exists to prevent one failure: a transport that embeds
    authorization detail being treated as self-authorizing, so that
    possession of a continued credential substitutes for the Mission's
-   live state.  The invariant of Section 6 forbids exactly this.
+   live state.  The invariant of Section 5 forbids exactly this.
 
-5.  Authorization Continuity and the Mission
+4.  Authorization Continuity and the Mission
 
    A continuation continues a Mission.  The Mission is the durable root;
    the transport is the carrier.  The following requirements bind every
@@ -240,7 +230,7 @@ Table of Contents
    separate continuity ceiling.  A continuation that issues a distinct
    new grant (for example, an Identity Continuation hop that mints a new
    audience-scoped credential) counts as one derivation; the successive
-   refreshes of a single async delegation family (Section 7.2) are one
+   refreshes of a single async delegation family (Section 6.2) are one
    delegation and do not each count again.
 
    This counts derivations within one Mission; it does not bound how
@@ -250,7 +240,7 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-child-delegation],
    Section "Derivation Budget Is Not Inherited").
 
-6.  The Grants-Nothing Invariant
+5.  The Grants-Nothing Invariant
 
    The whole profile rests on one invariant:
 
@@ -262,7 +252,7 @@ Table of Contents
    any other transport artifact MUST NOT be treated as evidence that the
    work is still authorized.  Authorization is established only by
    deriving a subset of the Mission's Authority Set under a live state
-   check (Section 5) at each issuance.  A relying party MUST NOT make an
+   check (Section 4) at each issuance.  A relying party MUST NOT make an
    authorization decision from the mere existence or contents of a
    continuation artifact.
 
@@ -274,7 +264,7 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-uma]).  This profile generalizes the
    same rule to the OAuth transports.
 
-7.  Continuation Transports
+6.  Continuation Transports
 
    A Continuation Transport carries an acting identity onward and a
    reference to the Mission being continued.  Every transport, whatever
@@ -288,17 +278,17 @@ Table of Contents
       continued credential to a confirmed key held by that identity; and
 
    *  convey no authorization the Mission did not derive under
-      Section 5.
+      Section 4.
 
    This profile defines both cross-workload continuation (a different
    workload continues the Mission at the next hop) and over-time
    continuation (the same workload continues after its credential is
    gone).  Neither is a universal mandatory-to-implement capability: a
-   binding realizes the transports its substrate supports (Section 9).
+   binding realizes the transports its substrate supports (Section 8).
    The three transports below partition the space this profile
    addresses.
 
-7.1.  Identity Continuation Transport
+6.1.  Identity Continuation Transport
 
    The Identity Continuation Assertion
    ([I-D.draft-mcguinness-oauth-id-continuation-assertion]) is the
@@ -310,12 +300,12 @@ Table of Contents
    identity_continuation_handle MUST resolve to a Mission rooting
    anchor; the issued ID-JAG's authorization detail MUST be a subset of
    that Mission's Authority Set, state-gated, and lifetime-clamped per
-   Section 5; and the ID-JAG MUST be bound ([RFC9449]) to the acting
+   Section 4; and the ID-JAG MUST be bound ([RFC9449]) to the acting
    identity's key.  The assertion carries no subject, so continuation
    preserves the Mission's subject rather than projecting it; the actor
    is rebound per hop.
 
-7.2.  Async Delegation Transport
+6.2.  Async Delegation Transport
 
    Async delegation ([I-D.draft-zhu-oauth-async-delegation]) is the
    intra-domain, disconnected, over-time transport, for background jobs,
@@ -332,7 +322,7 @@ Table of Contents
    This is the "scheduled continuation roots in durable authorization"
    case: the Mission is that durable authorization.  Successive
    refreshes within one family are one delegation and are not counted
-   again against derivation_limit (Section 5).
+   again against derivation_limit (Section 4).
 
    Establishing the family is a delegation-family-creating exchange, and
    a client that loses the response retries with a fresh, valid proof;
@@ -387,7 +377,7 @@ Table of Contents
    ([RFC9700]); recovery MUST NOT mint an independent sibling refresh
    token into it.
 
-7.3.  Cross-Domain Projection Transport
+6.3.  Cross-Domain Projection Transport
 
    Cross-domain projection
    ([I-D.draft-mcguinness-oauth-mission-cross-domain]) is the cross-
@@ -401,7 +391,7 @@ Table of Contents
    the partner's state view.  Projection stays single-hop regardless of
    intra-domain continuation on either side of the boundary.
 
-8.  Execution-Time Evidence
+7.  Execution-Time Evidence
 
    Each action taken under a continued credential is a decision point
    that produces execution evidence and a Mission Receipt
@@ -418,11 +408,11 @@ Table of Contents
    reviewer can reconstruct which continuation, of possibly many under
    one Mission, produced a given effect.
 
-9.  Substrate Dispositions
+8.  Substrate Dispositions
 
    This is an OAuth-wire profile, not a substrate requirement.  The
    Mission substrate restates no definition, and the continuity
-   requirements of Section 5 are applications of existing substrate
+   requirements of Section 4 are applications of existing substrate
    requirements (the Mission identifier, active-gated issuance, the
    subset rule, revocation, and the anchors) rather than new
    obligations.  A binding therefore realizes continuation through its
@@ -452,10 +442,10 @@ Table of Contents
    invariant, with every requesting-party token re-passing fresh
    assessment.
 
-10.  Security Considerations
+9.  Security Considerations
 
    Handle theft yields no authority.  Because a continuation handle
-   grants nothing (Section 6), an attacker who steals one cannot obtain
+   grants nothing (Section 5), an attacker who steals one cannot obtain
    a continued grant without also satisfying the transport's identity
    re-establishment and key confirmation and passing the Mission's live
    state gate.  This is the property that makes conveying a handle
@@ -465,7 +455,7 @@ Table of Contents
    Revocation latency for a continuation is bounded by the shorter of
    the continued credential's remaining lifetime and the transport's re-
    issuance interval, and never exceeds the Mission's expiry
-   (Section 5).  Terminating a Mission stops future continuation
+   (Section 4).  Terminating a Mission stops future continuation
    immediately but does not shorten a credential already issued;
    deployments requiring tighter bounds choose shorter transport
    lifetimes.
@@ -474,12 +464,12 @@ Table of Contents
    Identity Continuation Assertion is single-use by jti, and an async
    delegation family rotates on each refresh with reuse detection over
    the family.  A continuation MUST NOT widen authority; the subset
-   check of Section 5 is enforced at every issuance, so a compromised
+   check of Section 4 is enforced at every issuance, so a compromised
    transport cannot escalate beyond the Mission's Authority Set.
    Continued grants are audience-confined by their transport, limiting a
    confused-deputy hop to the audiences the Mission already reaches.
 
-11.  Privacy Considerations
+10.  Privacy Considerations
 
    Continuation preserves the Mission's subject rather than minting a
    new one, and the transports resolve audience-local subjects where
@@ -489,7 +479,7 @@ Table of Contents
    carry no authorization detail, so their exposure discloses neither
    the subject nor the granted authority.
 
-12.  IANA Considerations
+11.  IANA Considerations
 
    This document has no IANA actions.  The token types, grant types, and
    metadata parameters used by the transports are registered by their
@@ -499,9 +489,9 @@ Table of Contents
    [I-D.draft-mcguinness-oauth-mission-cross-domain]); this profile
    constrains their use and introduces none of its own.
 
-13.  References
+12.  References
 
-13.1.  Normative References
+12.1.  Normative References
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
@@ -536,7 +526,7 @@ Table of Contents
               Possession (DPoP)", RFC 9449, DOI 10.17487/RFC9449,
               September 2023, <https://www.rfc-editor.org/rfc/rfc9449>.
 
-13.2.  Informative References
+12.2.  Informative References
 
    [I-D.draft-mcguinness-mission-aauth]
               McGuinness, K., "Mission Context Binding for AAuth", 2026,

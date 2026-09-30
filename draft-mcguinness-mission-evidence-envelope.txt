@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                          29 September 2026
-Expires: 2 April 2027
+Intended status: Experimental                          30 September 2026
+Expires: 3 April 2027
 
 
                        Mission Evidence Envelope
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 2 April 2027.
+   This Internet-Draft will expire on 3 April 2027.
 
 Copyright Notice
 
@@ -76,39 +76,38 @@ Copyright Notice
 Table of Contents
 
    1.  Introduction
-   2.  Status: An Optional, Experimental Mechanism
-   3.  Conventions and Terminology
-   4.  Mission Substrate
-   5.  Mission Evidence Envelope
-     5.1.  Envelope Members
-     5.2.  Payload Type Registry
-     5.3.  Domain Separation
-     5.4.  Producer Authorization
-     5.5.  Integrity
-     5.6.  Retention
-     5.7.  Specialized Containers
-     5.8.  Migration Plan (Non-Normative)
-   6.  Intent Admission Evidence
-     6.1.  The Intent Admission Assertion
-     6.2.  Verification Procedure
-     6.3.  Recorded Facts
-     6.4.  The Intent Admission Payload Type
-     6.5.  Worked Example
-   7.  Conformance
-   8.  Security Considerations
+   2.  Conventions and Terminology
+   3.  Mission Substrate
+   4.  Mission Evidence Envelope
+     4.1.  Envelope Members
+     4.2.  Payload Type Registry
+     4.3.  Domain Separation
+     4.4.  Producer Authorization
+     4.5.  Integrity
+     4.6.  Retention
+     4.7.  Specialized Containers
+     4.8.  Migration Plan (Non-Normative)
+   5.  Intent Admission Evidence
+     5.1.  The Intent Admission Assertion
+     5.2.  Verification Procedure
+     5.3.  Recorded Facts
+     5.4.  The Intent Admission Payload Type
+     5.5.  Worked Example
+   6.  Conformance
+   7.  Security Considerations
+     7.1.  Envelope and Registry
+     7.2.  Intent Admission
+   8.  Privacy Considerations
      8.1.  Envelope and Registry
      8.2.  Intent Admission
-   9.  Privacy Considerations
-     9.1.  Envelope and Registry
-     9.2.  Intent Admission
-   10. IANA Considerations
-     10.1.  Media Type Registry
-       10.1.1.  Mission Evidence Envelope Media Type
-       10.1.2.  Secured Mission Evidence Envelope Media Type
-     10.2.  Mission Evidence Payload Type Registry
-   11. References
-     11.1.  Normative References
-     11.2.  Informative References
+   9.  IANA Considerations
+     9.1.  Media Type Registry
+       9.1.1.  Mission Evidence Envelope Media Type
+       9.1.2.  Secured Mission Evidence Envelope Media Type
+     9.2.  Mission Evidence Payload Type Registry
+   10. References
+     10.1.  Normative References
+     10.2.  Informative References
    Appendix A.  Document History
    Acknowledgments
    Author's Address
@@ -137,18 +136,18 @@ Table of Contents
    pilot consumer, not with a retroactive claim on the family's existing
    records.  It defines:
 
-   *  the *Mission Evidence Envelope* (Section 5): the generic wrapper
+   *  the *Mission Evidence Envelope* (Section 4): the generic wrapper
       (type, id, mission, emitter, occurred_at, sequence, related,
       payload, and an integrity envelope);
 
-   *  the *Mission Evidence Payload Type Registry* (Section 5.2):
+   *  the *Mission Evidence Payload Type Registry* (Section 4.2):
       registration rules requiring a closed payload schema, a
       verification procedure that establishes producer authorization and
-      not merely signature validity (Section 5.4), and a named producer,
+      not merely signature validity (Section 4.4), and a named producer,
       so a shared envelope and a shared media type never relocate domain
       separation into a payload member; and
 
-   *  *Intent Admission Evidence* (Section 6): the registry's first
+   *  *Intent Admission Evidence* (Section 5): the registry's first
       registered payload type and the first consumer of the OAuth
       binding's Intent Submission Evidence dispatch, which shipped with
       an empty type registry that refuses every presented entry until a
@@ -162,19 +161,11 @@ Table of Contents
    fixes them.  Whether a given kind migrates onto this envelope in the
    future is a decision for that kind's own specification, made on its
    own merits and its own breaking-change and deprecation terms; this
-   document states only a non-normative migration plan (Section 5.8) and
+   document states only a non-normative migration plan (Section 4.8) and
    does not require, schedule, or presume any particular migration.  A
    reader should not infer, from this document's existence, that an
    existing evidence kind's current media type is deprecated: it is not,
    unless and until that kind's own specification says so.
-
-2.  Status: An Optional, Experimental Mechanism
-
-   Role: companion.  Spec maturity: sketch.  Maintenance: lab-best-
-   effort.  Adopt when: A new evidence kind is being designed and a
-   deployment wants to avoid minting another bespoke media type, or
-   Intent Admission Evidence's inbound assertion and emitted attestation
-   are needed.  Requires: nothing beyond its listed references.
 
    This document is Experimental.  It has no known implementation, no
    migrated evidence kind, and no adopter commitment on record.  A
@@ -186,7 +177,7 @@ Table of Contents
    this document's normative content depends on records those documents
    define.
 
-3.  Conventions and Terminology
+2.  Conventions and Terminology
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
@@ -194,18 +185,18 @@ Table of Contents
    BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
    capitals, as shown here.
 
-   *Envelope instance*: a JSON object conforming to Section 5.1,
+   *Envelope instance*: a JSON object conforming to Section 4.1,
    identified by its type member.
 
    *Payload type*: a registration in the Mission Evidence Payload Type
-   Registry (Section 5.2) fixing one type value's closed payload schema,
+   Registry (Section 4.2) fixing one type value's closed payload schema,
    verification procedure, and producer.
 
    *Producer*: the component authorized, under a payload type's
    verification procedure, to emit an envelope instance of that type for
    a named Mission.
 
-4.  Mission Substrate
+3.  Mission Substrate
 
    This document is defined against the Mission model rather than
    against OAuth 2.0 mechanics: it is a substrate-neutral consumer, and
@@ -219,7 +210,7 @@ Table of Contents
    envelope instance's mission object.  Its instances are not the
    kernel's ordered governance record; they are a separate, joinable
    evidence stream, retained no shorter than the Mission's audit horizon
-   (Section 5.6).
+   (Section 4.6).
 
    Its declaration against the optional capabilities:
 
@@ -243,7 +234,7 @@ Table of Contents
    |Credential-  |not        |The Mission enters an instance only as  |
    |Bound        |consumed   |the mission reference object; this      |
    |             |           |document verifies no credential binding |
-   |             |           |beyond Section 5.4                      |
+   |             |           |beyond Section 4.4                      |
    +-------------+-----------+----------------------------------------+
    |Authorized   |not        |No instance correlates against an       |
    |Context      |consumed   |authorized context beyond the Mission   |
@@ -253,7 +244,7 @@ Table of Contents
    |Verifiable   |consumed   |form: a verifier holding the producing  |
    |             |           |authority's published keys and the      |
    |             |           |producer-authorization rule of          |
-   |             |           |Section 5.4 verifies an instance        |
+   |             |           |Section 4.4 verifies an instance        |
    |             |           |independently of the emitting           |
    |             |           |deployment; this document defines no    |
    |             |           |transparency-service registration itself|
@@ -268,17 +259,17 @@ Table of Contents
 
         Table 1: Mission Evidence Envelope capability consumption
 
-5.  Mission Evidence Envelope
+4.  Mission Evidence Envelope
 
    A Mission Evidence Envelope instance is a JSON object with the
-   members below.  A registered payload type (Section 5.2) fixes the
+   members below.  A registered payload type (Section 4.2) fixes the
    content of payload alone; every other member is fixed by this
    document and is identical across every payload type.
 
-5.1.  Envelope Members
+4.1.  Envelope Members
 
    type:  REQUIRED.  A string.  The registered payload type
-      (Section 5.2): the schema payload is closed to, and the
+      (Section 4.2): the schema payload is closed to, and the
       verification procedure a consumer applies to the whole instance.
 
    id:  REQUIRED.  A string.  A unique identifier for this envelope
@@ -292,11 +283,11 @@ Table of Contents
       identifying the emitting component) and role (REQUIRED, a string).
       This document defines one role, issuer: the Mission issuer
       identified by mission.issuer, or a component the issuer
-      specifically registers to emit on its behalf (Section 5.4).  A
+      specifically registers to emit on its behalf (Section 4.4).  A
       payload type registration MAY require additional roles,
       coordinated the same way a type value is (collision-resistant,
       registered alongside the type). emitter alone is a claim, not a
-      proof of authorization; Section 5.4 fixes what a verifier
+      proof of authorization; Section 4.4 fixes what a verifier
       additionally checks.
 
    occurred_at:  REQUIRED.  An RFC 3339 [RFC3339] timestamp of the event
@@ -316,11 +307,11 @@ Table of Contents
       require specific relation values; this document requires none.
 
    payload:  REQUIRED.  An object.  Content fixed exclusively by the
-      registered type's closed schema (Section 5.2).  This document
+      registered type's closed schema (Section 4.2).  This document
       defines no members of its own on payload.
 
    evidence_envelope:  REQUIRED.  An object, the integrity protection
-      (Section 5.5), carrying format (string, required) and value
+      (Section 4.5), carrying format (string, required) and value
       (string, required).
 
    A Mission Evidence Envelope instance is closed to uncoordinated
@@ -328,13 +319,13 @@ Table of Contents
    of this document's schema, and a registered payload type extends the
    object only through payload.
 
-5.2.  Payload Type Registry
+4.2.  Payload Type Registry
 
    type selects a registration, and a registration fixes exactly four
    things: the closed schema payload carries; the verification procedure
    a consumer applies to the whole instance, which MUST establish
-   producer authorization under Section 5.4 and not only that the
-   envelope integrity check of Section 5.5 passes; the producer or
+   producer authorization under Section 4.4 and not only that the
+   envelope integrity check of Section 4.5 passes; the producer or
    producer class, and the emitter.role values, authorized to emit it;
    and its registered type string.
 
@@ -351,10 +342,10 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission]); a stable reference defining
    the closed payload schema; a stable reference defining the
    verification procedure, including the producer-authorization check
-   Section 5.4 requires; and the producer or producer class, and
+   Section 4.4 requires; and the producer or producer class, and
    permitted emitter.role values, authoritative for instances of that
    type.  The registration mechanics and Designated Expert criteria are
-   in Section 10.
+   in Section 9.
 
    *Registration is not frozen for its full lifetime.* A registered
    type's change controller MAY publish a compatible update to its
@@ -373,28 +364,28 @@ Table of Contents
    counts as a new registration) rather than treating every change as
    equivalent to inventing a new artifact.  This document seeds the
    registry with one payload type, mission-intent-admission
-   (Section 6.4).
+   (Section 5.4).
 
-5.3.  Domain Separation
+4.3.  Domain Separation
 
    Sharing one envelope shape and one media type across every registered
    payload type does not relocate domain separation into a payload
    member the way a single flat typ value list would.  Four things hold
    it in place instead.  First, type is itself inside the bytes the
-   evidence_envelope signs (Section 5.5): a party that relabels type
+   evidence_envelope signs (Section 4.5): a party that relabels type
    without the signer's key breaks the signature, so type is tamper-
    evident, not an unauthenticated routing hint read before
    verification.  Second, a verifier applies a payload's schema and
    verification procedure only after resolving type to exactly one
-   registration (Section 5.2); there is no shared, generic parse of
+   registration (Section 4.2); there is no shared, generic parse of
    payload a verifier could apply across types.  Third, a schema or
    procedure change that would accept or require different conforming
    bytes is a new type, never a silent reinterpretation of an existing
    one, while a compatible clarification or hardening stays reviewable
-   against its change history (Section 5.2).  Fourth, a valid signature
+   against its change history (Section 4.2).  Fourth, a valid signature
    and a schema-conformant payload are necessary but not sufficient: a
    verifier additionally checks that the signing emitter is authorized
-   to speak for the named Mission and type (Section 5.4), so domain
+   to speak for the named Mission and type (Section 4.4), so domain
    separation is never reduced to "the bytes parse and the signature
    verifies."
 
@@ -410,9 +401,9 @@ Table of Contents
    [I-D.draft-mcguinness-oauth-mission-consent-evidence]); this document
    neither re-registers them nor requires that they migrate.
 
-5.4.  Producer Authorization
+4.4.  Producer Authorization
 
-   The generic envelope integrity check (Section 5.5) proves that the
+   The generic envelope integrity check (Section 4.5) proves that the
    exact bytes of an instance, evidence_envelope excluded, are signed by
    whatever key the JWS kid resolves to.  It does not by itself prove
    that the resolved key's owner is entitled to speak for the named
@@ -443,7 +434,7 @@ Table of Contents
    naming a Mission or producer role it is not authorized for is not
    verified evidence.
 
-5.5.  Integrity
+4.5.  Integrity
 
    Every committed or signed JSON value in this document satisfies the
    canonicalization, I-JSON conformance, and algorithm-agility rules of
@@ -473,21 +464,20 @@ Table of Contents
    4.  Verify the JWS signature and protected header against the
        candidate emitter's published or registered signing key.
 
-   5.  Apply Section 5.4: reject unless the signing key, emitter,
+   5.  Apply Section 4.4: reject unless the signing key, emitter,
        mission.issuer, and type are mutually authorized under the
        recognized type's registration.
 
    The JWS protected header MUST carry kid (a key identifier resolvable
-   under Section 5.4), alg (ES256 [RFC7518] mandatory to implement; an
+   under Section 4.4), alg (ES256 [RFC7518] mandatory to implement; an
    implementation MAY offer other JOSE algorithms but MUST implement
    ES256, and MUST reject none and any protected header whose alg does
    not match the algorithm family of the resolved key), typ
    (application/mission-evidence+jws, the one value for every payload
-   type this envelope secures, Section 10), and cty (application/
-   mission-evidence+json, the one media type every instance of this
-   envelope carries regardless of type, Section 10).  A verifier MUST
-   reject a JWS whose protected typ or cty does not match these exact
-   values.
+   type this envelope secures, Section 9), and cty (application/mission-
+   evidence+json, the one media type every instance of this envelope
+   carries regardless of type, Section 9).  A verifier MUST reject a JWS
+   whose protected typ or cty does not match these exact values.
 
    Where the selected signing key is identified as compromised by the
    deployment-defined key-status mechanism, a verifier MUST require an
@@ -496,7 +486,7 @@ Table of Contents
    before the compromise boundary, before continuing verification; the
    instance's own asserted timestamps never satisfy this.
 
-5.6.  Retention
+4.6.  Retention
 
    A Mission Evidence Envelope instance MUST be retained for at least
    the deployment's audit retention window, no shorter than the
@@ -513,7 +503,7 @@ Table of Contents
    different acknowledgment semantics, or a specific durable store where
    its own governance requirements differ from this default.
 
-5.7.  Specialized Containers
+4.7.  Specialized Containers
 
    Not every committed artifact belongs inside this envelope's generic
    payload wrapping.  An SD-JWT Mandate
@@ -530,7 +520,7 @@ Table of Contents
    record.  Both stay in their own compact, natively typed wire forms,
    outside this registry.
 
-5.8.  Migration Plan (Non-Normative)
+4.8.  Migration Plan (Non-Normative)
 
    This document requires no existing evidence kind to migrate, and
    claims no timeline for one doing so.  This section is a non-normative
@@ -569,27 +559,27 @@ Table of Contents
    own scope; it is flagged here as a candidate follow-on for the
    affected kind's own editors to schedule.
 
-6.  Intent Admission Evidence
+5.  Intent Admission Evidence
 
    Intent Admission Evidence spans two planes, and the terms below keep
    them distinct because the AS's own evidence hook does
    ([I-D.draft-mcguinness-oauth-mission]).  Inbound, a client presents
    an *Intent Admission Assertion* as an Intent Submission Evidence
-   entry (Section 6.1): this is the first type this document series
+   entry (Section 5.1): this is the first type this document series
    registers under the Mission Intent Submission envelope's evidence
    dispatch, which shipped with an empty type registry and refuses every
    presented entry until a profile registers one.  Emitted, the AS
    records its own admission attestation as a *Mission Intent Admission*
-   payload type of the Mission Evidence Envelope (Section 6.4): the
-   first payload type this document's registry seeds (Section 5.2).  The
+   payload type of the Mission Evidence Envelope (Section 5.4): the
+   first payload type this document's registry seeds (Section 4.2).  The
    inbound assertion is client-presented policy input; the emitted
    record is the issuer's own signed attestation, not independent proof
-   of the inbound assertion (Section 6.4).  Neither is authority:
+   of the inbound assertion (Section 5.4).  Neither is authority:
    verified evidence remains authenticated input to AS policy, never a
    copied entry in the Authority Set and never the Mission approval
    event ([I-D.draft-mcguinness-oauth-mission]).
 
-6.1.  The Intent Admission Assertion
+5.1.  The Intent Admission Assertion
 
    The evidence entry's type is mission-intent-admission-assertion.  The
    entry is closed to exactly two members:
@@ -660,9 +650,9 @@ Table of Contents
       defines; a verifier MUST treat any other value as not verified.
       status reflects the admission issuer's state at the instant it
       signed the assertion; it is not re-checked afterward
-      (Section 8.2).
+      (Section 7.2).
 
-6.2.  Verification Procedure
+5.2.  Verification Procedure
 
    Beyond the Mission Intent Submission envelope's own dispatch rules
    ([I-D.draft-mcguinness-oauth-mission]), the AS verifies an entry of
@@ -734,7 +724,7 @@ Table of Contents
    regardless of whether it shares a creation fingerprint with an
    unrelated prior request.
 
-6.3.  Recorded Facts
+5.3.  Recorded Facts
 
    On success, the verified output facts this type designates for
    recording as a submission_evidence element
@@ -749,7 +739,7 @@ Table of Contents
    admission_basis:  REQUIRED.  The assertion's admission_basis.
 
    status:  REQUIRED.  The assertion's status, as observed at admission;
-      see Section 8.2 for what this does and does not prove afterward.
+      see Section 7.2 for what this does and does not prove afterward.
 
    These facts are exactly the normalized form a submission_evidence
    element's facts member carries for this type
@@ -763,12 +753,12 @@ Table of Contents
    document takes no position on whether or how such a root is
    constructed.
 
-6.4.  The Intent Admission Payload Type
+5.4.  The Intent Admission Payload Type
 
    mission-intent-admission is a Mission Evidence Envelope payload type
-   (Section 5.2).
+   (Section 4.2).
 
-   *Producer authorization* (Section 5.4), instantiated for this type:
+   *Producer authorization* (Section 4.4), instantiated for this type:
 
    *  emitter.role MUST be issuer; no other role is permitted for this
       type.
@@ -786,7 +776,7 @@ Table of Contents
       named issuer for this purpose.  A valid, resolvable key belonging
       to a different issuer, presented over an instance naming this
       Mission, MUST be rejected under this rule even though the envelope
-      integrity check of Section 5.5 would otherwise pass.
+      integrity check of Section 4.5 would otherwise pass.
 
    An AS SHOULD emit one instance at Mission creation when the approved
    submission carried Intent Admission Evidence, giving that admission
@@ -807,9 +797,9 @@ Table of Contents
       Mission exists to reference, so no refusal outcome is
       representable by it.  A companion needing richer admission-outcome
       semantics registers a new payload type rather than extending this
-      one's closed schema (Section 5.2).
+      one's closed schema (Section 4.2).
 
-   Beyond Section 5.5 and the producer authorization above, a verifier
+   Beyond Section 4.5 and the producer authorization above, a verifier
    holding the referenced Mission Record MUST confirm
    payload.intent_hash and payload.submission_evidence are byte-for-byte
    equal, member for member, to the Mission Record's own intent_hash and
@@ -821,19 +811,19 @@ Table of Contents
    intent under this exact recorded evidence; it has not independently
    verified the admission issuer's original Intent Admission Assertion,
    because the payload carries only submission_evidence's digest and
-   extracted facts (Section 6.3), never the assertion bytes themselves,
+   extracted facts (Section 5.3), never the assertion bytes themselves,
    and the cross-check above compares two representations that are both
    under the Mission issuer's own control.  A party requiring
    independent proof of what the admission issuer signed must obtain the
    retained assertion artifact, or a resolvable reference to it plus its
-   digest, and verify it directly under Section 6.2; this document does
+   digest, and verify it directly under Section 5.2; this document does
    not require a Mission issuer to retain or disclose that artifact, and
    states no disclosure or access rule for one that is retained
    voluntarily.  A deployment that intends independent verifiability
    should retain the assertion (or a digest-referenced pointer to it)
    and define its own disclosure policy.
 
-6.5.  Worked Example
+5.5.  Worked Example
 
    An Intent Submission Evidence entry presenting an Intent Admission
    Assertion:
@@ -887,9 +877,9 @@ Table of Contents
    *Cross-issuer signature.* A component holding a valid, resolvable
    signing key for https://as-b.example signs an otherwise well-formed
    mission-intent-admission instance whose mission.issuer is https://as-
-   a.example.  The envelope integrity check (Section 5.5) passes: the
+   a.example.  The envelope integrity check (Section 4.5) passes: the
    signature is valid and the bytes match.  Producer authorization
-   (Section 6.4) fails: the key is not one https://as-a.example
+   (Section 5.4) fails: the key is not one https://as-a.example
    publishes, so the instance is rejected.
 
    *Concurrent replay.* Two submissions presenting assertions with the
@@ -905,7 +895,7 @@ Table of Contents
    verification is even meaningful for this purpose: the protected typ
    does not equal mission-intent-admission-assertion+jws.
 
-7.  Conformance
+6.  Conformance
 
    This document defines conformance for three roles: a PRODUCER that
    emits Mission Evidence Envelope instances; a VERIFIER that reads and
@@ -914,50 +904,50 @@ Table of Contents
 
    A PRODUCER conforming to this document MUST:
 
-   *  emit only instances whose type is registered (Section 5.2);
+   *  emit only instances whose type is registered (Section 4.2);
 
-   *  sign every instance under Section 5.5, with a kid resolvable under
-      Section 5.4 for the named mission.issuer, emitter.role, and type;
+   *  sign every instance under Section 4.5, with a kid resolvable under
+      Section 4.4 for the named mission.issuer, emitter.role, and type;
       and
 
    *  retain, or successfully deliver to a designated collector, every
-      instance it emits, per Section 5.6.
+      instance it emits, per Section 4.6.
 
    A VERIFIER conforming to this document MUST:
 
    *  reject an instance whose type it does not recognize, applying no
-      default or guessed schema (Section 5.2);
+      default or guessed schema (Section 4.2);
 
-   *  perform the five-step procedure of Section 5.5, including the
+   *  perform the five-step procedure of Section 4.5, including the
       producer authorization check of step 5, and treat a failure at any
       step as not-verified; and
 
-   *  apply the compromise-boundary rule of Section 5.5 where the
+   *  apply the compromise-boundary rule of Section 4.5 where the
       resolved signing key is identified as compromised.
 
    An AS supporting Intent Admission Evidence MUST:
 
-   *  perform the ten-step procedure of Section 6.2 for every mission-
+   *  perform the ten-step procedure of Section 5.2 for every mission-
       intent-admission-assertion entry presented, including the atomic
       jti reserve/commit/release discipline of step 7 and step 10;
 
-   *  record the verified facts exactly as Section 6.3 fixes; and
+   *  record the verified facts exactly as Section 5.3 fixes; and
 
    *  where it emits a mission-intent-admission instance, satisfy the
       producer-authorization instantiation and the byte-equality cross-
-      check of Section 6.4.
+      check of Section 5.4.
 
-8.  Security Considerations
+7.  Security Considerations
 
-8.1.  Envelope and Registry
+7.1.  Envelope and Registry
 
    A shared media type and a shared JWS typ across every registered
    payload type do not, by themselves, prevent a well-signed instance
    from naming a Mission or role its signer has no relationship to; that
-   is exactly the gap Section 5.4 closes, and a payload type
+   is exactly the gap Section 4.4 closes, and a payload type
    registration that omits an executable producer-authorization check is
-   non-conforming under Section 5.2, not merely incomplete.  A
-   Designated Expert reviewing a new registration (Section 10) MUST
+   non-conforming under Section 4.2, not merely incomplete.  A
+   Designated Expert reviewing a new registration (Section 9) MUST
    confirm the verification-procedure reference actually specifies this
    check; a registration whose "verification procedure" is only the
    generic five-step integrity algorithm, with no type-specific
@@ -969,13 +959,13 @@ Table of Contents
    that key defeats producer authorization the same way it would defeat
    any other signature-based control; this document adds no independent
    defense against a compromised issuer key beyond the general
-   compromise-boundary rule of Section 5.5.
+   compromise-boundary rule of Section 4.5.
 
-8.2.  Intent Admission
+7.2.  Intent Admission
 
    *Key-use separation.* Requiring a key scoped specifically to Intent
    Admission Assertion signing, and a distinct protected typ
-   (Section 6.1), defends against a cross-protocol substitution: without
+   (Section 5.1), defends against a cross-protocol substitution: without
    both, a JWS validly issued for an unrelated purpose under the same
    multipurpose key could otherwise be misinterpreted as an Intent
    Admission Assertion, since generic JWS validation alone does not
@@ -984,7 +974,7 @@ Table of Contents
    *Atomic replay control.* Checking whether a jti has been consumed and
    then separately recording it as consumed is a check-then-act race:
    two concurrent submissions can both observe the identifier as unused
-   before either records it.  The atomic reserve of Section 6.2 step 7
+   before either records it.  The atomic reserve of Section 5.2 step 7
    closes this by making the reservation itself the race's single
    winner-take-all point, rather than treating "check" and "consume" as
    two independent operations a concurrent request can interleave
@@ -1003,26 +993,26 @@ Table of Contents
    check is not a gap this document's conformance requirements cover.
 
    *The emitted record is not independent proof of the inbound
-   assertion.* See Section 6.4: a verifier that trusts only the Mission
+   assertion.* See Section 5.4: a verifier that trusts only the Mission
    issuer's own attestation, without separately verifying the original
    Intent Admission Assertion or a retained reference to it, has not
    independently corroborated what the admission issuer signed.
 
-9.  Privacy Considerations
+8.  Privacy Considerations
 
-9.1.  Envelope and Registry
+8.1.  Envelope and Registry
 
    A Mission Evidence Envelope instance's emitter, mission, and payload
    members may carry identifiers correlatable across a Mission's
    evidence stream; a registered payload type states its own
    minimization guidance where its payload carries personal data.  This
-   document states none for the generic envelope beyond what Section 6.3
+   document states none for the generic envelope beyond what Section 5.3
    states for Intent Admission Evidence.
 
-9.2.  Intent Admission
+8.2.  Intent Admission
 
    The Intent Admission Assertion's originator, and the facts recorded
-   under Section 6.3, identify a natural person;
+   under Section 5.3, identify a natural person;
    admission_basis.reference further identifies an external ticketing or
    consent record.  A deployment retaining mission-intent-admission
    payload instances SHOULD apply access control and retention
@@ -1030,17 +1020,17 @@ Table of Contents
    admission_basis.reference to disclose more of the upstream record
    than the admission issuer's own disclosure policy permits.
 
-10.  IANA Considerations
+9.  IANA Considerations
 
    This document requests the following IANA actions.
 
-10.1.  Media Type Registry
+9.1.  Media Type Registry
 
    This document registers two media types per [RFC6838]: the Mission
    Evidence Envelope's JSON representation and its JWS-secured
    representation, shared by every registered payload type.
 
-10.1.1.  Mission Evidence Envelope Media Type
+9.1.1.  Mission Evidence Envelope Media Type
 
    *  Type name: application
 
@@ -1052,14 +1042,14 @@ Table of Contents
 
    *  Encoding considerations: binary; JSON encoded in UTF-8
 
-   *  Security considerations: see Section 8
+   *  Security considerations: see Section 7
 
-   *  Interoperability considerations: see this document (Section 5)
+   *  Interoperability considerations: see this document (Section 4)
 
    *  Published specification: this document
 
    *  Applications that use this media type: any registered Mission
-      Evidence Envelope payload type (Section 5.2)
+      Evidence Envelope payload type (Section 4.2)
 
    *  Fragment identifier considerations: same as for application/json
 
@@ -1085,7 +1075,7 @@ Table of Contents
 
    *  Change controller: IETF
 
-10.1.2.  Secured Mission Evidence Envelope Media Type
+9.1.2.  Secured Mission Evidence Envelope Media Type
 
    *  Type name: application
 
@@ -1098,16 +1088,16 @@ Table of Contents
    *  Encoding considerations: binary; a JWS Compact Serialization:
       base64url-encoded values separated by period characters.  The
       secured payload's own media type is always application/mission-
-      evidence+json, carried in the JWS protected cty (Section 5.5).
+      evidence+json, carried in the JWS protected cty (Section 4.5).
 
-   *  Security considerations: see Section 8
+   *  Security considerations: see Section 7
 
-   *  Interoperability considerations: see this document (Section 5.5)
+   *  Interoperability considerations: see this document (Section 4.5)
 
    *  Published specification: this document
 
    *  Applications that use this media type: any registered Mission
-      Evidence Envelope payload type (Section 5.2)
+      Evidence Envelope payload type (Section 4.2)
 
    *  Fragment identifier considerations: N/A
 
@@ -1133,19 +1123,19 @@ Table of Contents
 
    *  Change controller: IETF
 
-10.2.  Mission Evidence Payload Type Registry
+9.2.  Mission Evidence Payload Type Registry
 
    IANA is requested to create the "Mission Evidence Payload Types"
    registry.  The registration policy is Specification Required
    [RFC8126].  A Designated Expert reviews a submission for the
-   discipline Section 5.2 and Section 5.4 require: a Type value that is
+   discipline Section 4.2 and Section 4.4 require: a Type value that is
    a collision-resistant name, not already registered; a stable Payload
    Schema Reference fixing a closed schema for payload; a stable
    Verification Procedure Reference fixing, beyond the shared envelope
-   integrity procedure (Section 5.5), every check a consumer applies to
+   integrity procedure (Section 4.5), every check a consumer applies to
    that payload, including an executable producer-authorization binding
    of emitter, signing key, and permitted emitter.role values to the
-   named mission.issuer and type (Section 5.4); and a Producer naming
+   named mission.issuer and type (Section 4.4); and a Producer naming
    the principal or principal class, and permitted emitter.role values,
    authoritative for instances of the type.
 
@@ -1153,7 +1143,7 @@ Table of Contents
    procedure reference does not fully specify payload verification and
    producer authorization, or whose Type would require reinterpreting an
    already-registered type's schema or semantics rather than adding a
-   new one (Section 5.3).  A Designated Expert MAY approve a same-Type
+   new one (Section 4.3).  A Designated Expert MAY approve a same-Type
    update to an existing registration's schema or verification-procedure
    reference where the change controller demonstrates it is compatible
    (accepts no bytes an existing conforming instance would not already
@@ -1188,8 +1178,8 @@ Table of Contents
    +=========+=========+============+=============+==========+=========+
    |mission- |this     |this        |Mission      |IETF      |this     |
    |intent-  |document,|document,   |issuer       |          |document,|
-   |admission|Section  |Section 6.4 |(emitter.role|          |Section 6|
-   |         |6.4      |            |issuer)      |          |         |
+   |admission|Section  |Section 5.4 |(emitter.role|          |Section 5|
+   |         |5.4      |            |issuer)      |          |         |
    +---------+---------+------------+-------------+----------+---------+
 
                                   Table 2
@@ -1200,9 +1190,9 @@ Table of Contents
    publication dependency under this registry's policy until it is
    published.
 
-11.  References
+10.  References
 
-11.1.  Normative References
+10.1.  Normative References
 
    [I-D.draft-mcguinness-mission-substrate]
               McGuinness, K., "Mission Substrate Requirements", 2026,
@@ -1273,7 +1263,7 @@ Table of Contents
               DOI 10.17487/RFC8785, June 2020,
               <https://www.rfc-editor.org/rfc/rfc8785>.
 
-11.2.  Informative References
+10.2.  Informative References
 
    [I-D.draft-mcguinness-mission-audit]
               McGuinness, K., "Mission Audit Transparency", 2026,
