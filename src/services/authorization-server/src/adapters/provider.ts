@@ -771,9 +771,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
    * inherits as `scope`, split into OIDC values (their own semantics,
    * unaffected by the projection) and resource values (projected). A request
    * `scope` naming resource values is explicit; a code carries the resource
-   * values its authorization request named (explicit); a refresh with none
-   * inherits the refresh token's granted scope (RFC 6749 Section 6, not
-   * explicit). Only the code and refresh grants issue OIDC artifacts.
+   * values its authorization request named (explicit). A refresh inherits the
+   * refresh token's granted scope (RFC 6749 Section 6, not explicit) only when
+   * it omits `scope`; a refresh naming only OIDC values explicitly asks for no
+   * resource value. Only the code and refresh grants issue OIDC artifacts.
    */
   function missionScopeRequest(ctx: unknown): {
     requested?: RequestedScope;
@@ -794,7 +795,9 @@ export function buildProvider(opts: AdapterOptions): Provider {
     const explicit = splitScope(params.scope);
     let requested: RequestedScope | undefined;
     let oidcValues = explicit.oidc;
-    if (explicit.resource.length) {
+    if (grantType === "refresh_token" && typeof params.scope === "string") {
+      requested = { values: explicit.resource, explicit: true };
+    } else if (explicit.resource.length) {
       requested = { values: explicit.resource, explicit: true };
     } else if (grantType === "authorization_code") {
       const code = splitScope(entities.AuthorizationCode?.scope);
@@ -803,7 +806,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
     } else if (grantType === "refresh_token") {
       const rt = splitScope(entities.RefreshToken?.scope);
       requested = { values: rt.resource, explicit: false };
-      if (typeof params.scope !== "string") oidcValues = rt.oidc;
+      oidcValues = rt.oidc;
     }
     const held = new Set((entities.Grant?.getOIDCScope() ?? "").split(" ").filter(Boolean));
     return {

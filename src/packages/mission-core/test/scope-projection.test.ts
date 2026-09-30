@@ -329,6 +329,16 @@ describe("projectScope (@spec mission#scope-projection)", () => {
     ).toEqual({ outcome: "omit" });
   });
 
+  it("an explicit request naming no resource value refuses invalid_scope at a scope-only audience and omits at an authorization_details one", () => {
+    const none = { values: [], explicit: true };
+    expect(
+      projectScope({ mapping, audiences: [RS], entries: [entry(["read"])], requested: none }),
+    ).toMatchObject({ outcome: "refuse", error: "invalid_scope" });
+    expect(
+      projectScope({ mapping, audiences: [OTHER], entries: [entry(["read"])], requested: none }),
+    ).toEqual({ outcome: "omit" });
+  });
+
   it("an unknown mapping refuses invalid_target even when the request names a scope value", () => {
     expect(
       projectScope({

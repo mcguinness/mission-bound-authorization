@@ -357,7 +357,8 @@ export interface RequestedScope {
    * `true` when the request itself names the values (an authorization or
    * token request's `scope`, or an authorization code carrying what its
    * authorization request named): an ungrantable value refuses
-   * `invalid_scope`. `false` when the values are inherited (a refresh with
+   * `invalid_scope`, and so does an explicit request naming no resource value
+   * at a `scope`-only target (a refresh whose `scope` is OIDC-only). `false` when the values are inherited (a refresh with
    * no `scope`, which RFC 6749 Section 6 treats as the originally granted
    * scope): the issuance narrows to what is still safe.
    */
@@ -476,6 +477,16 @@ export function projectScope(input: ScopeProjectionInput): ScopeProjectionOutcom
     const unsafe = requested.find((v) => !safeSet.has(v));
     if (unsafe !== undefined) {
       return ungrantable(unsafe, "no applicable entry makes it a safe projection");
+    }
+    // An explicit request naming no resource value (a refresh asking for
+    // only OIDC values) leaves a `scope`-only target nothing to grant: a
+    // token with no `scope` there is not a usable credential.
+    if (requested.length === 0) {
+      return {
+        outcome: "refuse",
+        error: "invalid_scope",
+        reason: "the requested scope names no value this scope-only target can grant",
+      };
     }
   }
   const values = [...safeSet].filter((v) => !requested || requested.includes(v)).sort();

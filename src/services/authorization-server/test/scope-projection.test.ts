@@ -969,6 +969,34 @@ describe("refresh preserved on a projection refusal (@spec mission#scope-project
     expect(still.body.scope).toBe("reports.read");
   });
 
+  it("a refresh naming only OIDC values explicitly asks for no resource value: refused invalid_scope at a scope-only target without consuming the token, which then inherits its full granted scope", async () => {
+    const first = await issue([entry([READ, WRITE])], "openid");
+    expect(first.status, JSON.stringify(first.body)).toBe(200);
+    expect(first.body.scope).toBe("openid reports.read reports.write");
+    const rt = first.body.refresh_token as string;
+    const oidcOnly = await refresh(rt, first.keys, "openid");
+    expect(oidcOnly.status, JSON.stringify(oidcOnly.body)).toBe(400);
+    expect(oidcOnly.body.error).toBe("invalid_scope");
+    const inherited = await refresh(rt, first.keys);
+    expect(inherited.status, JSON.stringify(inherited.body)).toBe(200);
+    expect(inherited.body.scope).toBe("openid reports.read reports.write");
+  });
+
+  it("a refresh naming only OIDC values at an authorization_details target is granted exactly them, with no scope on the token", async () => {
+    const keys = await newKeys();
+    const code = await approve(
+      [{ type: "mission_resource_access", resource: PAYMENTS, actions: ["payments:invoice.read"], constraints: { vendors: ["acme"] } }],
+      PAYMENTS,
+      "openid",
+    );
+    const first = await redeem(code, keys, PAYMENTS);
+    expect(first.status, JSON.stringify(first.body)).toBe(200);
+    const res = await refresh(first.body.refresh_token as string, keys, "openid");
+    expect(res.status, JSON.stringify(res.body)).toBe(200);
+    expect(res.body.scope).toBe("openid");
+    expect(decodeJwt(res.body.access_token as string).scope).toBeUndefined();
+  });
+
   it("an unauthenticated or wrong-client refresh of a projection-failing token gets the ordinary client error, never a projection error", async () => {
     const { rt, acting } = await family();
     await withPlain(dropped, async () => {
