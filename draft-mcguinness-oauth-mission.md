@@ -2745,8 +2745,9 @@ To emit `scope` for an entry, the AS:
 
 Unknown `scope` semantics, unknown Resource Server enforcement
 behavior, or an ambiguous or stale mapping all fail closed under step
-5. This rule applies to every issuance path that can emit `scope` on
-a Mission-bound token: initial issuance, refresh, Token Exchange, and
+5 ({{error-mapping}}). This rule applies to every issuance path that
+can emit `scope` on a Mission-bound token: initial issuance, refresh,
+Token Exchange, and
 any other derived-token path.
 
 This is the type-agnostic form of the rule; a type's own
@@ -3068,6 +3069,7 @@ elsewhere in this document that names one of these codes
 | PAR or authorization: malformed or unsupported actual RAR object (an entry of a submitted `authorization_details` proposal) | `invalid_authorization_details` ({{Section 5 of RFC9396}}) | RAR-defined detail |
 | Request from a client registered as Mission-governed: `authorization_details` without `mission_intent` ({{authority-proposal}}) | `invalid_request` ({{Section 4.1.2.1 of RFC6749}}, {{Section 5.2 of RFC6749}}) | safe `error_description` |
 | Authorization or token request: invalid, unknown, or malformed actual RFC 8707 `resource` parameter, or a token-endpoint `resource` outside the Mission's Authority Set | `invalid_target` ({{Section 2 of RFC8707}}) | safe `error_description` |
+| Authorization or token request: the target is `scope`-only and no safe projection exists for the applicable entries, or its scope-projection mapping is unknown, ambiguous, or stale ({{scope-projection}}); or, where the AS applies {{rs-enforcement}}'s delegated-token routing rule at issuance, the delegated token's target is not known to be Mission-aware | `invalid_target` ({{Section 2 of RFC8707}}) | safe `error_description` |
 | Authorization request: `scope` includes `openid` and the Approver is not the Subject ({{approval-authentication}}) | `invalid_scope` ({{Section 4.1.2.1 of RFC6749}}) | safe `error_description` |
 | Authorization decision: the Approver declines, approval authentication fails the floor or a requested `acr_values`/`max_age`, or a well-formed request (including configured-mapping mode) is refused by AS policy | `access_denied` ({{Section 4.1.2.1 of RFC6749}}) | none unless a defined extension applies |
 | Token endpoint: the Mission is revoked, expired, superseded, or its `derivation_limit` is exhausted | `invalid_grant` ({{Section 5.2 of RFC6749}}) | `mission_error` ({{iana}}) |
@@ -5853,6 +5855,10 @@ Local Approved-Set Verification:
   The metering members left this document's registry seed, since the
   metering profile registers them. Anchors are unchanged, and no
   conformance capability changed.
+
+- The Error and Challenge Mapping table maps a scope-projection
+  refusal, and an issuance-time refusal under the delegated-token
+  routing rule, to `invalid_target`.
 
 - Stated in the Introduction and {{runtime-boundary}} that a
   deployment can run this profile alone, with Resource Servers that

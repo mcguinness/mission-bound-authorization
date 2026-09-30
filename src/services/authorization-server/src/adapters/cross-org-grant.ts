@@ -276,7 +276,7 @@ export async function handleCrossOrgChainExchange(
   // access token directly, outside oidc-provider's save(), so it calls the
   // same projection itself: omit `scope` for an `authorization_details`
   // target, emit only proven-safe values for a `scope`-only one, refuse
-  // otherwise (`invalid_target`, the core's error-mapping gap).
+  // otherwise (`invalid_target`, @spec mission#error-mapping).
   // @spec mission#rs-enforcement — this token always carries a (restarted)
   // `act`: it is a delegated Mission-bound token, minted only for an
   // audience the mapping classifies Mission-aware.
