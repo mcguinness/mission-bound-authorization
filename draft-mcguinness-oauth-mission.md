@@ -380,8 +380,10 @@ requirements that realize them:
 2. The authority is explicitly approved: the Approver consents to the
    derived Authority Set itself, not to the task description alone
    ({{approval-event}}).
-3. Task, authority, and approval are durably bound in the Mission
-   Record and its commitments ({{mission-record}}).
+3. The Mission Record durably associates the disclosed task, the
+   approved authority, and the approval basis; separate commitments
+   protect the recorded Intent and Authority Set ({{mission-record}},
+   {{integrity-anchors}}).
 4. The OAuth grant lineage is bound to exactly one Mission,
    server-side ({{grant-binding}}).
 5. Every derived authority is no broader than the approved Authority
