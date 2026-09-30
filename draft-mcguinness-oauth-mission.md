@@ -1836,8 +1836,8 @@ document defines:
 `issuer`:
 : REQUIRED. A string. The issuer URL of the Mission Issuer that
   approved the Mission. Equals the `iss` of tokens that AS derives;
-  for cross-domain tokens it remains the originating AS even though
-  the issuing `iss` differs
+  for cross-domain tokens it remains the issuer AS that approved the
+  Mission even though the issuing `iss` differs
   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
 
 `state`:
@@ -4652,11 +4652,6 @@ Extensions Error" registry {{RFC6749}}:
 - Change Controller: IETF
 - Specification Document(s): this document,
   {{intent-submission-evidence}}
-
-The error is returned where the containing exchange returns its
-errors: on a PAR submission, in the PAR error response; on a
-token-endpoint carriage defined by a companion profile, in the token
-error response.
 
 A code distinct from `invalid_request` lets a client tell a malformed
 submission from missing or untrusted evidence, and remedy each
