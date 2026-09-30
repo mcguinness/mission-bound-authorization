@@ -4313,8 +4313,8 @@
   {
    "id": "core.approval-authentication.no-token-claim-carriage",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "approval-authentication",
-   "text": "this document defines no Mission Record member for them, and they MUST NOT\nbe carried on, or inferred from, a derived access token",
+   "anchor": "mission-bound-tokens",
+   "text": "An AS MUST NOT use the authentication of an Approver who is not the token's Subject as authentication information about that Subject",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -4326,7 +4326,7 @@
    "surface": "approval-ceremony",
    "assertion": "ignore",
    "observation": {
-    "normative": "the Approver's achieved acr/amr/auth_time is approval-time provenance, not a Mission Intent or Mission Record member, and MUST NOT be carried on or inferred from a derived access token; this is the RFC 9068-claim-repurposing pattern core prohibits"
+    "normative": "an Approver's achieved acr/amr/auth_time is approval-time provenance; when the Approver is not the token's Subject, a derived access token never carries it as authentication information about the Subject (claims that are present follow RFC 9068 Section 2.2.1 and describe the Subject)"
    },
    "level": "endpoint",
    "coverage": "tested",
