@@ -3575,6 +3575,13 @@ This document makes no IANA request.
 
 \[\[ To be removed from the final specification ]]
 
+- The issuance-only deployment is named under Entry Ramps by Estate
+  with its invariants, introspection cutoff, claims, and runtime
+  triggers; the adoption-ladder table grants Baseline Issuance the
+  reads and writes whose bounds the receiving Resource Server
+  enforces; and the Deployment Profile gains an issuance-only example
+  shape.
+
 - Client-instance references follow their successors:
   draft-mcguinness-oauth-client-instance-assertion is replaced by
   {I-D.draft-mcguinness-oauth-client-instance-id} and
