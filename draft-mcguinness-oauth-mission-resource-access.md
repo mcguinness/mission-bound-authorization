@@ -962,6 +962,10 @@ registry.
 
 -00
 
+- Scope Projection's action condition permits a mapped `scope` value
+  to grant a proper subset of the entry's `actions`, matching the
+  core's subset condition; any additional action still fails.
+
 - Controls taxonomy retirement (#636): the AS-side no-registered-
   narrowing failure-closed cross-reference updated from an
   unrecognized `resources` value to an unrecognized `target_resources`
