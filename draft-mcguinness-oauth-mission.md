@@ -674,12 +674,12 @@ The times below are on the same day in UTC.
    ({{approval-event}}, {{grant-binding}}).
 3. **Issue.** Still at 12:00, the client redeems the code. The AS
    resolves and checks the Mission and returns a sender-constrained
-   ERP token that
-   expires at 12:05, with the read authority and a `mission` reference.
-   The response also supplies the granted authority and, in this
-   example, the Mission identifier and effective expiry. The access
-   token's five-minute lifetime is distinct from the Mission's
-   one-hour lifetime ({{mission-bound-tokens}}).
+   ERP token that expires at 12:05, with the read authority and a
+   `mission` reference. The response also carries the granted
+   authority, `mission_id`, and `mission_expires_at`
+   ({{grant-binding}}). The access token's five-minute lifetime is
+   distinct from the Mission's one-hour lifetime
+   ({{mission-bound-tokens}}).
 4. **Use.** The ERP validates the token and proof of possession and
    permits the authorized read. The token grants no write authority.
    No Mission-state lookup or complete-set retrieval is part of this
