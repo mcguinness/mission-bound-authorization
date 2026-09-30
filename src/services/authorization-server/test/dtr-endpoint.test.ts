@@ -276,7 +276,9 @@ describe("AS deferred grant on /token (AROP Deferred Token Response, DTR -00, D4
     };
     expect(okRes.status, JSON.stringify(okBody)).toBe(200);
     expect(okBody.token_type).toBe("DPoP");
-    expect(okBody.scope).toBe("payments");
+    // @spec mission#scope-projection step 4 — the payments audience consumes
+    // authorization_details, so the Mission-bound token carries no `scope`.
+    expect(okBody.scope).toBeUndefined();
     expect(okBody.access_token).toBeTruthy();
     expect(okRes.headers.get("cache-control")).toContain("no-store");
     // TTL clamped below the default RS TTL (300) by approved_until.

@@ -562,6 +562,8 @@ describe("active composite + projection matrix (@spec mission#composite-active)"
     expect(res.status).toBe(200);
     expect(res.body.active).toBe(true);
     // The COMPLETE disclosed top-level key set (no privacy oracle beyond it).
+    // No `scope`: the payments audience consumes authorization_details, so
+    // the token carries none (@spec mission#scope-projection step 4).
     expect(Object.keys(res.body).sort()).toEqual([
       "active",
       "aud",
@@ -573,7 +575,6 @@ describe("active composite + projection matrix (@spec mission#composite-active)"
       "iss",
       "jti",
       "mission",
-      "scope",
       "sub",
       "token_type",
     ]);

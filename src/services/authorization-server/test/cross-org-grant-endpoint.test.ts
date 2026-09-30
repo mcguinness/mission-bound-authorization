@@ -36,6 +36,7 @@ import {
   type FederationConfig,
 } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { SCOPE_PROJECTION } from "@mission/demo-data";
 
 const PORT = 14503;
 const ISSUER = `http://localhost:${PORT}`;
@@ -64,6 +65,17 @@ let evidence: CrossOrgDerivationRecord[];
 const FULL_CEILING: AuthorityEntry[] = [
   { type: "mission_resource_access", resource: RESOURCE, actions: [READ, SCHEDULE], constraints: { max_amount: { amount: "500.00", currency: "USD" } } },
 ];
+/**
+ * @spec mission#scope-projection — this destination classifies its local
+ * resource as an `authorization_details` consumer (so the exchange mints no
+ * `scope`); the scope-projection describe below swaps the entry.
+ */
+const SCOPE_MAPPING = {
+  audiences: {
+    ...SCOPE_PROJECTION.audiences,
+    [RESOURCE]: { version: "xorg-1", mode: "authorization_details" },
+  } as Record<string, unknown>,
+};
 const READ_ONLY_CEILING: AuthorityEntry[] = [
   { type: "mission_resource_access", resource: RESOURCE, actions: [READ], constraints: { max_amount: { amount: "500.00", currency: "USD" } } },
 ];
@@ -230,7 +242,11 @@ beforeAll(async () => {
     entitlementStalenessBoundSeconds: 86_400,
   };
 
-  as = await buildAuthorizationServer({ issuer: ISSUER, crossOrg: crossOrgOptions });
+  as = await buildAuthorizationServer({
+    issuer: ISSUER,
+    crossOrg: crossOrgOptions,
+    scopeProjection: SCOPE_MAPPING as never,
+  });
   asServer = as.provider.listen(PORT);
   clientKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
   remoteJwks = createRemoteJWKSet(new URL(`${ISSUER}/jwks`));
@@ -380,6 +396,57 @@ describe("the minted token and derivation evidence (@spec cross-org-delegation#p
     expect(new Date(record.principal_mapping.observed_at).getTime()).not.toBeNaN();
     expect(new Date(record.principal_mapping.valid_until).getTime()).toBeGreaterThan(
       new Date(record.principal_mapping.observed_at).getTime(),
+    );
+  });
+});
+
+describe("scope projection on the cross-org exchange (@spec mission#scope-projection)", () => {
+  const withAudience = async (entry: unknown, run: () => Promise<void>) => {
+    const saved = SCOPE_MAPPING.audiences[RESOURCE];
+    if (entry === undefined) delete SCOPE_MAPPING.audiences[RESOURCE];
+    else SCOPE_MAPPING.audiences[RESOURCE] = entry;
+    try {
+      await run();
+    } finally {
+      SCOPE_MAPPING.audiences[RESOURCE] = saved;
+    }
+  };
+
+  it("refuses invalid_target when the mapping does not know the requested audience", async () => {
+    await withAudience(undefined, async () => {
+      const { chain, leafKeys } = await buildChain();
+      const res = await exchange({ subjectToken: present(chain), leafKeys });
+      const body = (await res.json()) as { error?: string; error_description?: string };
+      expect(res.status).toBe(400);
+      expect(body.error).toBe("invalid_target");
+      expect(body.error_description).toMatch(/no scope-projection mapping/);
+    });
+  });
+
+  it("emits only a proven-safe scope for a scope-only audience whose mandatory control covers the entry's max_amount", async () => {
+    const rights = { type: "mission_resource_access", resource: RESOURCE, match: "exact" };
+    await withAudience(
+      {
+        version: "xorg-2",
+        mode: "scope_only",
+        scopes: {
+          "invoices.read": {
+            rights: { ...rights, actions: [READ] },
+            mandatory_controls: { max_amount: { amount: "500.00", currency: "USD" } },
+          },
+          // Aggregates an action the entry does not carry: never emitted.
+          "invoices.admin": { rights: { ...rights, actions: [READ, "payments:invoice.delete"] }, mandatory_controls: {} },
+        },
+      },
+      async () => {
+        const { chain, leafKeys } = await buildChain();
+        const res = await exchange({ subjectToken: present(chain), leafKeys });
+        const body = (await res.json()) as { access_token: string; scope?: string };
+        expect(res.status, JSON.stringify(body)).toBe(200);
+        expect(body.scope).toBe("invoices.read");
+        const { payload } = await jwtVerify(body.access_token, remoteJwks, { issuer: ISSUER, audience: RESOURCE });
+        expect(payload.scope).toBe("invoices.read");
+      },
     );
   });
 });
