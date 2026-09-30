@@ -374,6 +374,58 @@ consequence of what its agents do; the Mission Assurance Levels of
 {{I-D.draft-mcguinness-mission-architecture}} name the composed
 levels informatively.
 
+## Implementation Map (Informative) {#implementation-map}
+
+This map is a reading aid, not an additional conformance profile.
+{{conformance}} remains the complete statement of roles and optional
+capabilities. The starting path is one client, one Authorization
+Server, direct approval, and a single resource audience. It needs no
+runtime profile, delegated token, cross-domain projection, or local
+approved-set verification.
+
+| Implementer | Responsibility on the starting path | Defining sections |
+| --- | --- | --- |
+| Mission Client | Submit an Intent through PAR, optionally propose authority, complete the authorization-code flow, and read the granted authority and Mission references from the response | {{submission-via-par}}, {{authority-proposal}}, {{grant-binding}}, {{mission-bound-tokens}} |
+| Mission Issuer (AS) | Validate the submission, derive bounded authority, obtain approval, commit the Mission, and gate every issuance and refresh on its state and limits | {{submission-processing}}, {{authorization-derivation}}, {{approval-event}}, {{mission-record}}, {{issuance-gating}} |
+| Mission-aware Resource Server | Validate the credential and its sender constraint, enforce the carried authority, and apply any configured Mission requirement | {{rs-enforcement}}, {{introspected-consumption}} |
+{: title="Who implements the issuance path"}
+
+A Resource Server need not become Mission-aware for this starting
+path. A scope-only resource is eligible only when the AS establishes
+that its scope projection and the resource's independent controls
+cannot over-grant ({{scope-projection}}); an unenforceable bound is
+not made safe by recording it in a Mission. Delegated tokens have a
+separate Mission-awareness requirement ({{rs-enforcement}}).
+
+Three kinds of requirement appear in the sections that follow:
+
+- **Core duties:** request validation, bounded derivation, approval
+  and commitments, grant binding, token enforcement, and lifecycle
+  gating apply to the relevant conforming role.
+- **Conditional core duties:** a submitted authority proposal is
+  validated and committed when present; presented or required
+  submission evidence is checked under {{intent-submission-evidence}};
+  an established derivation limit is enforced; opaque tokens require
+  introspection. A condition being absent does not waive its rule
+  when that condition later holds.
+- **Optional capabilities:** Delegation ({{delegation}}),
+  Introspection as a state overlay for JWTs ({{introspection}}),
+  Cross-Domain projection, and Local Approved-Set Verification
+  ({{local-approved-set-verification}}) are adopted explicitly under
+  {{conformance}}. Ordinary JWT consumption does not require
+  retrieving the Mission Record or recomputing the complete approved
+  Authority Set.
+
+For a first reading, follow {{protocol-flow}}, then submission,
+authority derivation, approval, the record and its commitments,
+lifecycle gating, and token issuance and consumption. The worked
+starting path in {{first-mission}} includes revocation; the full
+message example is in {{e2e-example}}. Read each optional capability
+when its adoption condition applies. Design comparisons and the
+boundaries with companion profiles are collected in {{design-context}};
+the security and privacy considerations apply to the paths a
+deployment implements.
+
 ## Applicability {#applicability}
 
 This profile targets OAuth deployments where authority serves a
@@ -596,6 +648,54 @@ moves the Mission to `revoked` or `expired`, after which the AS refuses further
 issuance and refresh; a deployment MAY additionally compose RFC 7009
 {{RFC7009}} refresh-token revocation ({{revocation}}). The end-to-end
 example ({{e2e-example}}) walks this flow with concrete messages.
+
+### One Mission from Approval to Revocation (Informative) {#first-mission}
+
+Consider a registered client reading invoices from one ERP resource
+for Alice. Alice is both the Subject and the Approver; the authority
+source is user-delegated. The AS and ERP support the
+`mission_resource_access` type defined by
+{{I-D.draft-mcguinness-oauth-mission-resource-access}}. This example
+uses a direct approval, a JWT access token, no delegated token, and
+no submission evidence; the AS's admission policy requires none.
+The times below are on the same day in UTC.
+
+1. **Submit.** The client pushes a Mission Intent naming
+   `https://erp.example.com` and requesting expiry at 13:00. Alongside
+   it, the client proposes an `authorization_details` entry of type
+   `mission_resource_access` for that resource and the action
+   `invoices.read`. It follows the PAR `request_uri` into the
+   authorization interaction ({{submission-via-par}}).
+2. **Approve and commit.** At 12:00 the AS authenticates Alice,
+   verifies the authority source and proposed read authority, and
+   renders that authority and the effective 13:00 expiry for her
+   approval. On approval it atomically creates the active Mission,
+   records its commitments, and binds the authorization code to it
+   ({{approval-event}}, {{grant-binding}}).
+3. **Issue.** Still at 12:00, the client redeems the code. The AS
+   resolves and checks the Mission and returns a sender-constrained
+   ERP token that
+   expires at 12:05, with the read authority and a `mission` reference.
+   The response also supplies the granted authority and, in this
+   example, the Mission identifier and effective expiry. The access
+   token's five-minute lifetime is distinct from the Mission's
+   one-hour lifetime ({{mission-bound-tokens}}).
+4. **Use.** The ERP validates the token and proof of possession and
+   permits the authorized read. The token grants no write authority.
+   No Mission-state lookup or complete-set retrieval is part of this
+   example's resource request ({{rs-enforcement}}).
+5. **Stop further issuance.** At 12:02 an authorized revocation makes
+   the Mission non-active. A subsequent refresh, if the AS issued a
+   refresh token, is refused with `invalid_grant`
+   ({{issuance-gating}}). The already-issued access token can still
+   be honored on this stateless path until 12:05; revocation does not
+   undo a completed read ({{revocation}}).
+
+An ERP that instead introspects on every request stops honoring the
+token on its next request after revocation, through the composite
+`active` result ({{composite-active}}). That state check does not
+require adopting the separate per-action runtime profile
+({{runtime-boundary}}).
 
 ## Authority Sources {#authority-sources}
 
@@ -6460,6 +6560,14 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Reordered the reading path around submission, approval, the record
+  and commitments, lifecycle gating, and token issuance and consumption.
+  Added an informative implementation map and a single-audience
+  approval-to-revocation walkthrough; separated resource-server
+  enforcement from optional approved-set verification and collected
+  design context outside the Introduction. Existing requirements and
+  anchors are preserved; no conformance capability changes.
 
 - Stated in the Introduction and {{runtime-boundary}} that a
   deployment can run this profile alone, with Resource Servers that
