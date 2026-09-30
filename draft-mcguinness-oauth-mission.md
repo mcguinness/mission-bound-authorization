@@ -439,10 +439,10 @@ unchanged. The boundary is that lifetime equality, not the absence
 of a human: a workload's durable multi-step task is in scope as a
 service-owned Mission ({{authority-sources}}).
 
-A Mission SHOULD be scoped to a concrete task, not to an agent's whole
-lifetime. A deployment SHOULD prefer narrow, per-task Missions, each
-separately approved and revocable, over a single broad standing Mission
-that accumulates authority across unrelated tasks. The durable object is
+A Mission is intended to cover one concrete task, not an agent's whole
+lifetime: narrow, per-task Missions, each separately approved and
+revocable, are preferred over a single broad standing Mission that
+accumulates authority across unrelated tasks. The durable object is
 the approved task: keeping it task-scoped is what makes its authority
 and audit meaningful and bounds the blast radius on compromise to one
 task. An agent pursuing many tasks holds many Missions, not one broad
@@ -537,8 +537,7 @@ Mission:
 Mission Grant Binding (Grant Binding):
 : The AS-controlled, functional mapping from one persistent,
   redeemable grant lineage to exactly one Mission ({{grant-binding}}).
-  A Mission MAY have zero or more grant bindings; a grant binding
-  never resolves to more than one Mission. Distinct from a Derived
+  Distinct from a Derived
   token's own `mission` claim, which every issued credential carries
   without itself creating a grant binding.
 
@@ -576,10 +575,10 @@ This document maps principals onto native OAuth constructs:
   The Approver is the accountable consent principal whose approval
   created the Mission, always equal to
   `approval_basis.consent_principal`; under a standing-consent basis
-  a policy adjudicates the activation, a mechanism the basis's
-  OPTIONAL discriminated `adjudication` MAY make explicit
-  ({{mission-record}}), while the Approver remains the human whose
-  consent roots it ({{authority-sources}}, {{multi-party-approval}}).
+  a policy adjudicates the activation, which the basis's
+  `adjudication` member can make explicit ({{mission-record}}), while
+  the Approver remains the human whose consent roots it
+  ({{authority-sources}}, {{multi-party-approval}}).
 
 On a derived token the `sub` claim is the AS-local `sub` the AS
 maps the Subject to under the injective mapping of
@@ -616,9 +615,9 @@ compared to each other under this rule.
 
 Dynamic delegation (the actors an agent delegates to during
 execution) is carried on derived tokens via the `act` chain
-({{delegation}}), not on the immutable Mission record. Richer subject
-identifier formats (for example, the formats of {{RFC9493}}) MAY be
-layered in future versions and are not required here.
+({{delegation}}), not on the immutable Mission record. This document
+uses only (`iss`, `sub`) pairs; the subject identifier formats of
+{{RFC9493}} are not used.
 
 ## Protocol Flow {#protocol-flow}
 
@@ -641,11 +640,12 @@ layered in future versions and are not required here.
 
 The flow then leaves the AS: (4) the agent calls the Resource Server
 with the token; the RS enforces the `authorization_details`
-statelessly and MAY check the `mission` claim, with no callback to the
-AS required. (5) A management revoke, or `expires_at` passing,
-moves the Mission to `revoked` or `expired`, after which the AS refuses further
-issuance and refresh; a deployment MAY additionally compose RFC 7009
-{{RFC7009}} refresh-token revocation ({{revocation}}). The end-to-end
+statelessly and can check the `mission` claim ({{rs-enforcement}}),
+with no callback to the AS required. (5) A management revoke, or
+`expires_at` passing, moves the Mission to `revoked` or `expired`,
+after which the AS refuses further issuance and refresh; a deployment
+can also treat {{RFC7009}} revocation of the refresh token as
+revoking the Mission ({{revocation}}). The end-to-end
 example ({{e2e-example}}) walks this flow with concrete messages.
 
 ### One Mission from Approval to Revocation (Informative) {#first-mission}
@@ -766,9 +766,9 @@ narrowed `scope`. It has the following members:
 : OPTIONAL. A string. A BCP 47 language tag {{RFC5646}} declaring
   the language of the Intent's human-readable members (`goal`,
   `task_bounds`, `success_criteria`). It is disclosure metadata for
-  rendering, committed by `intent_hash` like every Intent member;
-  it carries no machine semantics and MUST NOT be used to derive,
-  widen, or gate authority. At submission acceptance, the AS MUST
+  rendering, committed by `intent_hash` like every Intent member, and
+  carries no machine semantics ({{authorization-derivation}}). At
+  submission acceptance, the AS MUST
   refuse a `goal_lang` that is not a well-formed language tag with
   `invalid_request` ({{i18n}}).
 
@@ -788,51 +788,43 @@ narrowed `scope`. It has the following members:
 : OPTIONAL. An array of strings. Human-readable bounds on
   the task (for example, "read only invoices from 2026"). They are
   disclosure and audit context, rendered to the Approver beside the
-  derived Authority Set ({{approval-event}}); the AS MUST NOT parse
-  them for machine semantics, and a machine-enforceable bound enters
-  as structure instead ({{authorization-derivation}}).
+  derived Authority Set ({{approval-event}}), and carry no machine
+  semantics ({{authorization-derivation}}); a machine-enforceable
+  bound enters as structure instead.
 
 `success_criteria`:
 : OPTIONAL. An array of strings. Human-readable
   observable outcomes that indicate the task is complete. These are
   disclosure and audit material only: they are rendered to the
-  Approver and committed by `intent_hash` ({{integrity-anchors}}),
-  but carry no machine semantics and MUST NOT be used to derive,
-  widen, or gate authority.
+  Approver and committed by `intent_hash` ({{integrity-anchors}}) and
+  carry no machine semantics ({{authorization-derivation}}).
 
 `purpose`:
 : OPTIONAL. A string. A URI identifying the purpose of the
   task, recorded for disclosure and audit. Its semantics are
   deployment- or registry-defined and opaque to this document. It is
-  a structured, opaque lookup key permitted only for
-  configured-mapping-mode selection: the configured mapping MAY key on it
+  an opaque lookup key: a configured mapping can key on it
   ({{authorization-derivation}}), and the derived set stays bounded
-  by the Intent and by policy like any derivation. It MUST NOT
-  otherwise be used to derive, widen, or gate authority, and once
-  the Mission is approved it is inert. A deployment MAY consult it
-  for out-of-band policy or logging that does not affect the
-  authority derived here.
+  by the Intent and by policy like any derivation. Other than as that
+  lookup key, `purpose` MUST NOT affect the derived Authority Set or
+  any issuance decision; once the Mission is approved it is inert.
 
 `expires_at`:
-: REQUIRED. A string. An RFC 3339 {{RFC3339}}
-  date-time: the client's requested not-after ceiling for the
-  Mission's lifetime. The submitted Intent is recorded verbatim; the
-  lifetime actually granted is the Mission Record's effective
-  `expires_at`, which MUST NOT be later than this value
-  ({{mission-record}}). An AS or Mission-creating profile MAY grant a
-  shorter lifetime under applicable policy or an already-approved
-  bound; a longer one requires a new submitted value through a
-  creation or fresh-approval path that authorizes it. At submission
-  acceptance, the AS MUST refuse a malformed or already-past value
-  with `invalid_request` (the member rides `mission_intent`, and the
-  request may carry no `authorization_details` for an
-  `invalid_authorization_details` refusal to describe); acceptance
-  does not freeze time, and Mission creation re-checks the effective
-  expiry atomically at the commit ({{approval-event}}). Submission
-  acceptance governs a new operation; a request that resolves to an
-  already-committed operation is recovery and returns the stored
-  outcome under the applicable idempotency rules even when the
-  requested ceiling has since passed ({{grant-binding}}).
+: REQUIRED. A string. An RFC 3339 {{RFC3339}} date-time: the
+  client's requested not-after ceiling for the Mission's lifetime.
+  The submitted Intent is recorded verbatim. The lifetime actually
+  granted is the Mission Record's effective `expires_at`, which the
+  AS establishes at Mission creation and which is no later than this
+  value ({{approval-event}}, {{mission-record}}).
+
+  At submission acceptance, the AS MUST refuse a malformed or
+  already-past value with `invalid_request`. Acceptance does not
+  freeze time: Mission creation re-checks the effective expiry
+  atomically at the commit ({{approval-event}}). A request that
+  resolves to an already-committed operation is recovery, not a new
+  submission, and returns the stored outcome under the applicable
+  idempotency rules even when the ceiling has since passed
+  ({{grant-binding}}).
 
 `requested_derivation_limit`:
 : OPTIONAL. A positive integer (1 or greater). A client-requested
@@ -883,9 +875,9 @@ carries it, where a client requests one, on the standard `acr_values`
 and `max_age` authorization-request parameters
 ({{approval-authentication}}). It is not a Mission Intent member.
 
-The Mission Intent's top level is closed to the members above; a
-companion profile MAY add further top-level members, under
-{{extensibility}}.
+The Mission Intent's top level is closed to the members above and to
+those a companion profile the AS implements defines
+({{extensibility}}, {{submission-via-par}}).
 
 Example Mission Intent:
 
@@ -922,10 +914,8 @@ body, like other OAuth parameters) with exactly these members:
 
 `evidence`:
 : OPTIONAL. A non-empty array of Intent Submission Evidence entries
-  ({{intent-submission-evidence}}). When present it MUST be
-  non-empty: omission already expresses absence, and the AS refuses
-  an empty array with `invalid_request`, preserving one closed
-  canonical syntax for "no evidence".
+  ({{intent-submission-evidence}}); the AS refuses an empty array
+  with `invalid_request`.
 
 The Submission envelope separates the semantic task from material
 presented about it: `intent_hash` commits exactly the `intent`
@@ -942,54 +932,32 @@ definitions, MUST refuse the request with `invalid_request`.
 
 Submission is governed by the following rules:
 
-- **Closed top levels.** The Submission envelope is closed: the AS
-  MUST reject with `invalid_request` an envelope containing a
-  top-level member other than `intent` and `evidence`. A bare
-  Mission Intent submitted as the parameter value fails this rule,
-  since its `goal` and sibling members are unknown envelope members.
-  The Mission Intent's own top level is likewise closed: the AS MUST
-  reject with `invalid_request` an `intent` containing a top-level
-  member neither this document nor a companion profile the AS
-  implements defines ({{extensibility}}); presented evidence belongs
-  under the envelope's `evidence` member, so deployment- or
-  companion-defined semantics are always explicit and cannot
-  masquerade as core Intent semantics. Both top levels are closed
-  because their members feed approval rendering, the `intent_hash`
-  commitment, and evidence dispatch, and the closure also keeps
-  issuer-output members, such as a client-planted `authority_hash`,
-  out of the Intent.
-- **Derivation failure is distinct from syntax, and its error code
-  follows which object failed** ({{error-mapping}} states this
-  mapping normatively). For an Intent that is well-formed
-  but yields no valid Authority Set, the failing object determines
-  the code. Where the client submitted an authority proposal
-  ({{authority-proposal}}) and an entry of it is unsupported or
-  policy-barred, the AS SHOULD refuse with `invalid_authorization_details`
-  ({{RFC9396}}), since an actual `authorization_details` object is
-  what failed. In configured-mapping mode, where no proposal was
-  submitted and the Mission Intent alone yields no valid Authority
-  Set (no configured mapping matches, or policy bars the mapped
-  authority), the AS refuses with `access_denied`
-  ({{authorization-derivation}}): no `authorization_details` object
-  exists for `invalid_authorization_details` to describe. Either way
-  a client can tell a syntax error, refused at parse, from a
-  derivation failure, refused after validation.
-- **One carriage, through PAR.** The Intent is accepted as the
-  form-encoded `mission_intent` parameter of the PAR request body, or
-  as a `mission_intent` claim inside a signed Request Object
-  ({{RFC9101}}) that is itself pushed through PAR. The AS MUST reject
-  with `invalid_request` a `mission_intent` presented on a
-  front-channel authorization request that does not use a PAR-issued
-  `request_uri`: `mission_intent` MUST NOT appear as a plaintext
-  front-channel authorization-request parameter, whether or not a
-  Request Object is also present. When the pushed request carries a
-  Request Object (a `request` parameter value), that object is
-  authoritative: a `mission_intent` submitted outside the Request
-  Object in the same push MUST be rejected with `invalid_request`,
-  the {{RFC9101}} duplication rule applied to this parameter. A
-  single point of precedence keeps the member set the AS validates
-  and bounds in one place; PAR keeps the integrity-sensitive Intent
-  off the untrusted front channel.
+- **Closed top levels.** The AS MUST reject a submission with the
+  `invalid_request` error code if the Submission envelope contains a
+  top-level member other than `intent` and `evidence`, or if the
+  `intent` contains a top-level member that neither this document
+  nor a companion profile the AS implements defines
+  ({{extensibility}}). A bare Mission Intent submitted as the
+  parameter value fails this rule, since its `goal` and sibling
+  members are unknown envelope members.
+- **One carriage, through PAR.** The AS accepts the Intent in one of
+  two forms:
+
+  1. the form-encoded `mission_intent` parameter of the PAR request
+     body; or
+  2. a `mission_intent` claim inside a signed Request Object
+     ({{RFC9101}}) that is itself pushed through PAR.
+
+  The AS MUST reject with `invalid_request` a `mission_intent`
+  presented on a front-channel authorization request that does not
+  use a PAR-issued `request_uri`. A client MUST NOT send
+  `mission_intent` as a plaintext front-channel authorization-request
+  parameter, whether or not a Request Object is also present. When
+  the pushed request carries a Request Object (a `request` parameter
+  value), that object is authoritative: a `mission_intent` submitted
+  outside the Request Object in the same push MUST be rejected with
+  `invalid_request`, strengthening {{Section 6.3 of RFC9101}}, under
+  which the AS would only ignore such a value.
 - **Bounded size.** The AS MUST bound the Submission envelope's
   total size, the Intent's total size and the lengths of its arrays,
   and the count and per-entry sizes of `evidence` entries, refusing
@@ -999,25 +967,23 @@ Submission is governed by the following rules:
   verification-cost bound of {{intent-submission-evidence}}
   accompanies these.
 - **Concrete authority is proposed via `authorization_details`.**
-  A client proposing concrete authority submits the standard
-  {{RFC9396}} `authorization_details` request parameter alongside
-  `mission_intent` in the same push, as a proposal subject to
-  derivation ({{authority-proposal}}); `mission_intent` itself
-  carries no authority members. A client MAY submit `scope` and
-  `resource` ({{RFC8707}}) values. The AS treats them as a requested
-  subset and MUST NOT grant authority beyond what the Mission Intent
-  yields.
+  A client proposes concrete authority on the standard
+  `authorization_details` parameter in the same push
+  ({{authority-proposal}}). A client can also push `scope` and
+  `resource` ({{RFC8707}}) values; the AS treats them as a requested
+  subset of the authority the Mission Intent yields
+  ({{authorization-derivation}}).
 - **Pushed parameters are authoritative.** On the front-channel
   request that redeems the `request_uri`, the AS MUST ignore any
   `mission_intent`, `authorization_details`, `scope`, or `resource`
-  presented, and MUST NOT let such a value widen the authority
-  derived from the pushed parameters.
+  presented.
 - **A proposal, never authority.** A Mission Intent, and any
   authority proposal submitted alongside it ({{authority-proposal}}),
   is untrusted client input; trust enters only when the AS validates
-  it and the Approver consents to the rendered result. The AS MUST
-  treat the submission as a proposal and MUST derive and bound
-  authority by policy regardless of what the client submitted. How a
+  it and the Approver consents to the rendered result. The AS treats
+  the submission as a proposal and derives and bounds authority by
+  its own policy, whatever the client submitted
+  ({{authorization-derivation}}). How a
   client produces the Intent (for example, a "Mission Shaper"
   deriving it from a natural-language instruction) is out of scope
   for this document.
@@ -1053,31 +1019,24 @@ among them) is refused as an unknown top-level member under the
 closed-top-level rule of {{submission-via-par}}.
 
 The submitted `authorization_details` is a proposal, never
-authority, under the submission trust rule of
-{{submission-via-par}}: the AS derives and bounds the Authority Set
-by policy regardless of what was submitted
-({{authorization-derivation}}) and MUST NOT grant authority beyond
-what the Mission Intent yields.
+authority ({{submission-via-par}}); the AS derives and bounds the
+Authority Set from it ({{authorization-derivation}}).
 
-Each submitted entry MUST be of a supported type ({{other-types}},
-{{discovery}}) and MUST validate against that type's documented
-definition; where a machine-readable JSON Schema for the type is
-advertised ({{discovery}}) or established out of band, the entry
-MUST also validate against that schema.
-This is the {{RFC9396}} Section 5 validation of the standard
-parameter: the AS MUST refuse a request carrying an entry of an
-unsupported type, or an entry that fails its type's documented
-definition or applicable schema, with
-`invalid_authorization_details`; a validation failure is never
-repaired by omitting the entry.
+The AS validates each submitted entry per {{Section 5 of RFC9396}}:
+it refuses an entry of a type it does not support ({{other-types}},
+{{discovery}}), or one that fails its type's documented definition,
+with the `invalid_authorization_details` error code, and never
+repairs a failure by omitting the entry. Where a machine-readable
+JSON Schema for the type is advertised ({{discovery}}) or
+established out of band, the entry MUST also validate against that
+schema, and the AS MUST refuse an entry that fails it with the
+`invalid_authorization_details` error code.
 
-Policy narrowing is distinct.
-During derivation the AS MAY narrow or omit a syntactically valid
-entry that policy cannot accept ({{authorization-derivation}}); it
-MUST NOT keep such an entry silently, and the granted
-`authorization_details` echo ({{mission-bound-tokens}}) MUST
-reflect every narrowing and omission, so no entry is ever
-represented as granted when it was not.
+Policy narrowing is distinct. During derivation the AS MAY narrow or
+omit a syntactically valid entry that policy cannot accept
+({{authorization-derivation}}). The granted `authorization_details`
+in the token response reflects every narrowing and omission
+({{mission-bound-tokens}}).
 
 When a proposal is present, the AS MUST derive each Authority Set
 entry as a subset ({{subset}}) of some proposed entry of the *same
@@ -1105,10 +1064,17 @@ was granted (`authority_hash`), so a narrowed grant can be audited
 against the proposal that sought it.
 
 Submitting `authorization_details` without `mission_intent` is an
-ordinary {{RFC9396}} request that this document does not govern;
-the client-side and AS-side duties that keep a governed task from
-downgrading across that line are stated in {{discovery}} and
-{{downgrade-by-omission}}.
+ordinary {{RFC9396}} request that this document does not govern.
+Two AS-side rules keep a governed task from being downgraded to such
+a request; {{downgrade-by-omission}} states the client-side rule and
+the threat. Where a deployment designates a
+resource Mission-governed, its AS MUST NOT issue a token for that
+resource outside a Mission, except under documented policy
+exceptions. If a client registered as Mission-governed sends an
+`authorization_details` request that carries no `mission_intent`,
+the AS MUST reject the request with the `invalid_request` error
+code, so the client cannot omit the Intent to obtain ungoverned
+tokens.
 
 Example authority proposal, submitted alongside the example Intent
 of {{mission-intent}}. Derivation narrows `invoices.*` to
@@ -1177,36 +1143,29 @@ Processing is governed by the following rules:
   `invalid_request`. The AS MUST refuse an entry whose `type` it
   does not support, and an entry that fails its type's validation or
   verification, with `invalid_mission_intent_evidence` ({{iana}}).
-  Evidence presented for admission MUST NOT be silently ignored,
-  dropped, or demoted to advisory input: a submission is accepted
-  only when every presented entry verified.
-- **Policy input, never authority.** A verified entry MUST NOT be
-  interpreted as authority, copied into the Authority Set, or
-  treated as the Mission approval event. Verified evidence MAY serve
-  as authenticated input to the AS's admission and derivation
-  policy; the AS remains responsible for deriving and bounding the
-  Authority Set ({{authorization-derivation}}), and the approval
-  event ({{approval-event}}) remains the sole activation of
-  authority. Verification authenticates the artifact issuer's
-  claims; AS policy decides whether those claims are acceptable for
-  this request.
+  A submission is accepted only when every presented entry verifies.
+- **Policy input, never authority.** A verified entry is policy
+  input, never authority: it is not copied into the Authority Set and
+  does not stand in for the approval event ({{approval-event}}), the
+  sole activation of authority. Verified evidence can serve as
+  authenticated input to admission and derivation policy; AS policy
+  decides whether the verified claims are acceptable for this
+  request.
 - **Required evidence is resolved before derivation.** Rejecting
   presented evidence does not defend against evidence a client
   omits. The AS determines the evidence types its applicable
   profile, client, resource, or admission policy requires before
   derivation. When a required type is absent from the submission,
-  the AS MUST refuse with `invalid_mission_intent_evidence`, and
-  successful processing of a submission without evidence MUST NOT be
-  interpreted as satisfying an evidence requirement. This is the
-  submission-plane form of the downgrade-by-omission duty
-  ({{downgrade-by-omission}}).
+  the AS MUST refuse with `invalid_mission_intent_evidence`. This is
+  the submission-plane form of the downgrade rules of
+  {{authority-proposal}}.
 - **Evidence binds one exact Intent.** Evidence bound to an
-  `intent_hash` applies only to that exact semantic Intent. Any
-  shaping or approval revision that changes `intent_hash` MUST
-  obtain new evidence, unless the evidence type's specification
-  explicitly authorizes defined transformations and defines how
-  their lineage is verified. Evidence for the predecessor Intent
-  MUST NOT be treated as evidence for the revised Intent.
+  `intent_hash` applies only to that exact semantic Intent. When a
+  shaping or approval revision changes `intent_hash`, the AS MUST NOT
+  treat evidence bound to the predecessor Intent as evidence for the
+  revised Intent, unless the evidence type's specification
+  explicitly authorizes that transformation and defines how its
+  lineage is verified.
 - **The exchange establishes the presenter; the evidence must
   agree.** The AS establishes the presenter through the containing
   exchange: client authentication and, where present, proof of
@@ -1221,6 +1180,11 @@ Processing is governed by the following rules:
   verifications it performs), refusing a submission that exceeds the
   bound with `invalid_request`, so presented evidence cannot exhaust
   the AS any more than an oversized Intent can.
+
+The AS returns the `invalid_mission_intent_evidence` error code where
+the containing exchange returns its errors: in the PAR error response
+for a PAR submission, and in the token error response for a
+token-endpoint carriage that a companion profile defines.
 
 On a surface that carries a Mission-creation idempotency fingerprint
 (the expansion and child-creation token exchanges,
@@ -1264,11 +1228,10 @@ The AS processes a submission in this order:
    `submission_evidence` ({{mission-record}}).
 
 The material verified provenance of step 7 is part of the approval
-surface, not an annotation beside it: where a deployment commits the
-rendered approval surface, the commitment MUST cover the normalized
-provenance facts, at least as a digest of their canonical
-`submission_evidence` representation ({{mission-record}}), so the
-committed rendering proves which provenance supported the decision.
+surface. Where a deployment commits the rendered approval surface,
+that commitment MUST cover the normalized provenance facts, at least
+as a digest of their canonical `submission_evidence` representation
+({{mission-record}}).
 The consent-evidence companion binds this with a
 `submission_provenance_hash` inside its committed disclosure
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
@@ -1288,83 +1251,74 @@ type ({{other-types}}). Derivation is
 mechanical. It happens once, at the approval event, over the
 derivation policy then in force, in one of two modes:
 
-- **Narrowing mode** (RECOMMENDED): the client submitted an
-  authority proposal ({{authority-proposal}}), and the Authority Set
-  is the proposal narrowed to policy. Each derived entry MUST be a
-  subset ({{subset}}) of some proposed entry of the same type
-  ({{authority-proposal}}). An entry of an unadvertised type, or one
-  that fails its schema, was refused at validation and never reaches
-  derivation ({{authority-proposal}}); a valid proposed entry that
-  policy cannot accept is narrowed or omitted, and the granted echo
-  reflects it ({{authority-proposal}}).
-- **Configured-mapping mode**: no authority proposal was submitted, and
-  a deployment-configured mapping, keyed on the Intent's `purpose` or
-  `target_resources`, yields the candidate entries, which are then
-  narrowed to policy. The mapping is a lookup, never synthesis;
-  because no `authorization_details` object was submitted, the AS
-  refuses an Intent that matches no configured mapping, or whose
-  mapped candidates policy narrows to nothing, with `access_denied`
-  ({{error-mapping}}), and SHOULD make a no-match refusal
-  distinguishable from a policy-narrowing refusal in
-  `error_description`. A deployment publishes its mapping space as
-  deployment
-  documentation; eligibility MAY be scoped per Subject and client,
+- **Narrowing mode** (preferred where the client can author
+  `authorization_details`): the client submitted an authority
+  proposal ({{authority-proposal}}), and the Authority Set is the
+  proposal narrowed to policy. Each derived entry is a same-type
+  subset of a proposed entry ({{authority-proposal}}).
+- **Configured-mapping mode**: no authority proposal was submitted,
+  and a deployment-configured mapping, keyed on the Intent's
+  `purpose` or `target_resources`, yields the candidate entries,
+  which are then narrowed to policy.
+
+  The mapping is a lookup, never synthesis; because no
+  `authorization_details` object was submitted, the AS refuses an
+  Intent that matches no configured mapping, or whose mapped
+  candidates policy narrows to nothing, with `access_denied`
+  ({{error-mapping}}); its `error_description` can say whether no
+  mapping matched or policy narrowed the candidates to nothing.
+
+  A deployment publishes its mapping space as deployment
+  documentation. Eligibility can be scoped per Subject and client,
   and a mapping keyed on Subject attributes resolves at the approval
   event, where the Subject is established ({{approval-event}}), so a
   refusal at PAR time is best-effort over what is checkable without
-  the Subject.
-
-  Configured-mapping mode is the low-integration on-ramp: the client
-  submits a Mission Intent and no `authorization_details` proposal
-  at all, so an estate adopts Mission governance without teaching
-  clients RAR authoring, and the client-side cost is the Intent
-  envelope alone. Every Mission this mode yields still takes its own
-  fresh approval; standing consent to a pre-approved ceiling with
-  machine-speed dispatch is the separate, experimental Mission
+  the Subject. Either mode is conforming. Every Mission this mode
+  yields takes its own fresh approval; standing consent to a
+  pre-approved ceiling is the separate, experimental Mission
   Template profile ({{I-D.draft-mcguinness-oauth-mission-template}}),
   not this mode.
 
 In both modes the AS MUST bound every derived entry by the Mission
-Intent: each derived entry that carries a `resource` member MUST
-have it among the Intent's `target_resources` values. In both modes
-the AS MUST also record the policy version in force as the Mission's
-`policy_version`: an opaque audit correlator naming the policy a
-derivation ran under, not a value whose policy travels. Deriving
-authority generatively, with model assistance over the structured
-inputs above, is not one of this
-profile's modes: a deployment MAY implement it as a local-policy
-extension, it is the least portable option, and the Intent bounds,
-the prose boundary below, and the recording rule above all apply to
-it unchanged.
+Intent: each derived entry that carries a `resource` member has it
+among the Intent's `target_resources` values.
 
-A `target_resources` entry the deployment does not recognize either
-causes refusal under the derivation-failure rule above
-({{submission-via-par}}) or is omitted from the Authority Set, by
-deployment policy. When an
-omission or a narrowing leaves the Authority Set short of what was
-proposed ({{authority-proposal}}), derivation is partial. The granted
-`authorization_details` echo ({{mission-bound-tokens}}) MUST reflect
-every omission and narrowing and remains the authoritative statement
-of what was granted; a client learns of any shortfall by comparing
-the echo against its proposal, which `proposal_hash` commits as
-submitted ({{integrity-anchors}}). No omitted or narrowed entry is
-ever represented as granted.
+The Mission records the policy version in force as `policy_version`
+({{mission-record}}), an opaque audit correlator; the policy itself
+is not conveyed.
+
+Generative derivation, with model assistance over the structured
+inputs above, is not one of this document's modes; a deployment that
+uses it as a local-policy extension stays bound by the Intent
+bounds, the prose boundary below, and the recording rule above.
+
+A `target_resources` entry the deployment does not recognize is, by
+deployment policy, either omitted from the Authority Set or refused
+with the error code {{error-mapping}} assigns. When an omission or a
+narrowing leaves the Authority Set short of what was proposed
+({{authority-proposal}}), derivation is partial. The granted
+`authorization_details` in the token response
+({{mission-bound-tokens}}) is the authoritative statement of what was
+granted; a client compares it against its proposal, which
+`proposal_hash` commits as submitted ({{integrity-anchors}}).
 
 The derived Authority Set, not the Mission Intent, is the authority the
 Approver consents to: the AS renders the Authority Set for approval and
 commits it as `authority_hash` ({{approval-event}}). The Intent's
 members describe and bound the task but grant no authority by
 themselves ({{mission-intent}}): its structured members constrain
-what the AS MAY derive mechanically, its prose members bound through
+what the AS can derive mechanically, its prose members bound through
 disclosure (the Approver refuses authority the words do not
 support), and none widens.
 
 The `goal`, `task_bounds`, and `success_criteria` members are
-human-readable disclosure and audit context. The AS MUST NOT parse
-them for machine semantics or vary the derived Authority Set on an
-interpretation of their prose; translating a user's words into
-structure is the shaper's job, before admission and outside the
-trust boundary ({{I-D.draft-mcguinness-mission-shaping}}).
+human-readable disclosure and audit context. The AS MUST derive the
+same Authority Set, under the same policy, for two submissions that
+differ only in `goal`, `goal_lang`, `task_bounds`, or
+`success_criteria`, and MUST NOT gate issuance on those members;
+translating a user's words into structure is the shaper's job,
+before admission and outside the trust boundary
+({{I-D.draft-mcguinness-mission-shaping}}).
 
 A
 client-proposed constraint on an individual Authority Set entry
@@ -1384,49 +1338,35 @@ beside the derived Authority Set ({{approval-event}}): the human
 check that the structure matches the words, never a machine
 enforcement mechanism.
 
-Derivation is governed by local policy and is not a portable algorithm:
-different Authorization Servers MAY derive different Authority Sets from
-the same Mission Intent, exactly as different deployments grant
-different authority for the same {{RFC9396}} request or the same scope.
-That locality is intended, not a gap. A Mission Intent has no portable
-semantics: interoperability begins at the committed result, the derived
-Authority Set's structure and vocabulary, as each supported type
-defines it ({{authorization-derivation}}, {{other-types}}), and its
-integrity anchors ({{integrity-anchors}}), which a consumer in any
-domain interprets, enforces, and audits identically.
-
-A consumer enforces
-the derived Authority Set, never the Intent, and audit establishes what
-was derived, against `intent_hash` and `policy_version`, never whether
-the derivation was the right reading of the task. A deployment whose
-partners reason about its derivations SHOULD publish a derivation
-policy identifier and test fixtures pinning Intent-to-Authority-Set
-outcomes; the policy itself does not travel.
+Derivation is governed by local policy and is not a portable
+algorithm: different Authorization Servers can derive different
+Authority Sets from the same Mission Intent, as they can grant
+different authority for the same {{RFC9396}} request or the same
+scope. Interoperability begins at the derived Authority Set, whose
+structure and vocabulary each supported type defines
+({{other-types}}), and at its integrity anchors
+({{integrity-anchors}}). A consumer enforces the derived Authority
+Set, never the Intent, and audit establishes what was derived,
+against `intent_hash` and `policy_version`, never whether the
+derivation was the right reading of the task. A deployment whose
+partners reason about its derivations can publish a derivation
+policy identifier and test fixtures that pin Intent-to-Authority-Set
+outcomes; the policy itself is not conveyed.
 
 For an open-ended task whose concrete objects cannot be enumerated at
 approval (for example, "reconcile this customer's ledger," where the
-individual invoices are not yet known), the AS SHOULD bound the derived
-authority primarily by `constraints` that hold as invariants over those
-objects (the owning customer, the tenant, an amount ceiling, read-only
-except named write actions, a validity window) rather than by an
-exhaustive `resource` enumeration. The runtime layer
+individual invoices are not yet known), bounding the derived
+authority by `constraints` that hold as invariants over those
+objects (the owning customer, the tenant, an amount ceiling,
+read-only except named write actions, a validity window) is
+preferable to an exhaustive `resource` enumeration. The runtime layer
 ({{runtime-boundary}}) checks each concrete object against the
-constraint at the point of use. Constraint-bounding lets a Mission cover
-an open-ended task with tight authority even though the specific objects
-are unknown at approval, and avoids the over-broad enumeration a
-deployment would otherwise need in order to anticipate them.
+constraint at the point of use.
 
-`mission_resource_access` is an {{RFC9396}} `authorization_details`
-type: a cross-resource authorization language matching a resource
-exactly or by prefix, an action namespace with wildcard families,
-generic per-entry constraints (including the Common Constraints,
-{{other-types}}), and a delegation policy, together with the subset
-and intersection algebra that compares two entries. It is defined,
-in full, by the Mission Resource Access Profile
-({{I-D.draft-mcguinness-oauth-mission-resource-access}}), a
-companion of this document; the Authority Set MAY carry
-`mission_resource_access` entries, or entries of any other
-AS-supported type, on the same type-agnostic terms ({{other-types}}).
+`mission_resource_access` is defined by the Mission Resource Access
+Profile ({{I-D.draft-mcguinness-oauth-mission-resource-access}}); the
+Authority Set carries it on the same type-agnostic terms as any
+supported type ({{other-types}}).
 
 Example Authority Set (the read entry is delegable to depth 2 and
 bounded to a Q3 issuance window by the `resource_issued_after` and
@@ -1467,13 +1407,12 @@ supported type defines its own relation (for `mission_resource_access`,
 refuse to derive an entry that is not a subset, under its type's
 relation, of some Mission Authority Set entry.
 
-Authority under a Mission MUST NOT widen after the approval event: a
-request that exceeds the Authority Set on any dimension (a new
-resource, action, actor, delegation path, longer duration, or
-constraint relaxation) is refused under this rule, and broader
+The AS MUST refuse a request that would widen authority under a
+Mission after the approval event on any dimension (a new resource,
+action, actor, delegation path, longer duration, or constraint
+relaxation); broader
 authority requires a fresh approval event, either a new Mission or a
-successor per the companion
-{{I-D.draft-mcguinness-oauth-mission-expansion}}.
+successor ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 
 The comparison is representational, not semantic. A candidate that
 compares as no broader can still permit effects the parent's purpose
@@ -1500,12 +1439,12 @@ type-agnostic toward every supported type:
 - narrowing and delegation use the subset semantics the type defines
   ({{subset}}, {{delegation-constraints}}). A type whose subset and
   delegation semantics the AS does not understand MUST NOT be
-  delegated, audience-projected to a Resource AS, or narrowed: the AS
-  cannot prove a transformed copy is still a subset of what was
-  approved. Such an entry MAY be issued only to its original approved
-  audience, carried exactly as approved, and MUST NOT appear in a
-  delegated token or in a cross-domain grant
-  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}});
+  delegated, audience-projected to a Resource AS
+  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), or narrowed,
+  since the AS cannot prove that a transformed copy is still a subset
+  of what was approved. The AS MUST NOT issue such an entry to any
+  audience other than its original approved audience, or in any form
+  other than exactly as approved;
 - evaluating the entry against a concrete request is the runtime
   layer's responsibility ({{runtime-boundary}}), not the AS's.
 
@@ -1520,36 +1459,39 @@ Intent like any other, but treats the carried policy largely opaquely;
 the Resource Server or Policy Decision Point (PDP) evaluates it at
 request time.
 
-Stated as a limit: the subset rule is fully defined only for a type
-whose specification defines it. Authority expressed in a type with no
-defined subset relation is carried as approved: never narrowed,
-delegated, or projected. That boundary is declared per type, not
-discovered at a refused derivation. For every supported type, the AS
-MUST declare three independent capabilities: whether it understands
-the type's subset relation (narrowing), whether it understands
-the type's delegation semantics (delegation), and whether it
-establishes a safe scope projection for the type ({{scope-projection}})
-(projection); understanding one establishes none of the others.
-A type undeclared on a capability is thereby carried-as-approved on
-it: non-delegable if delegation is undeclared, non-projectable to
-`scope` if projection is undeclared. The AS satisfies this MUST
-through, in order of preference: a `mission_transformation_capabilities`
-member in the type's entry in the `authorization_details_types_metadata_endpoint`
-response, where the AS advertises that endpoint ({{discovery}}); an
-equivalently-shaped member of its supported-type documentation; or,
-where neither carrier is implemented, deployment documentation naming
-the type as supported ({{discovery}}) alone. Deployment documentation
-is always a sufficient carrier; a machine-readable carrier is
-additive, not a replacement for it. The narrowing guarantee is
-therefore strongest for a type whose specification defines a subset
-relation, such as `mission_resource_access`, and weakens as
-expressiveness moves into opaque policy-language entries.
+The subset rule is fully defined only for a type whose specification
+defines it. For every supported type, the AS declares three
+independent transformation capabilities; understanding one
+establishes none of the others:
 
-A `mission_transformation_capabilities` value is a JSON object with
+- **narrowing:** the AS understands the type's subset relation;
+- **delegation:** the AS understands the type's delegation
+  semantics; and
+- **projection:** the AS establishes a safe scope projection for the
+  type ({{scope-projection}}).
+
+The AS MUST NOT narrow, delegate, or project to `scope` an entry of
+a type for which it has not declared the corresponding capability;
+on an undeclared capability the entry is carried as approved.
+
+The AS declares the capabilities through these carriers, in order of
+preference:
+
+1. a `mission_transformation_capabilities` member in the type's
+   entry in the `authorization_details_types_metadata_endpoint`
+   response, where the AS advertises that endpoint ({{discovery}});
+2. an equivalently shaped member of its supported-type
+   documentation; or
+3. deployment documentation naming the type as supported
+   ({{discovery}}).
+
+Deployment documentation is always a sufficient carrier; a
+machine-readable carrier is additive. A
+`mission_transformation_capabilities` value is a JSON object with
 three OPTIONAL boolean members, `narrowing`, `delegation`, and
-`projection`; an absent member declares that capability undeclared by
-this carrier, falling through to the next carrier in the preference
-order above.
+`projection`; an absent member leaves that capability undeclared by
+this carrier, falling through to the next carrier in the order
+above.
 
 Example (non-normative): an Authority Set with a Cedar policy entry
 for a finance audience that consumes Cedar, alongside a
@@ -1577,8 +1519,8 @@ the Mission. The Cedar entry is evaluated by the finance audience's
 PDP; the `mission_resource_access` entry is enforced as in
 {{mission-bound-tokens}}. Because the Cedar profile defines no subset
 or delegation rule over policy sets, the AS carries the Cedar entry as
-approved rather than narrowing it, and it MUST NOT appear in a
-delegated token or cross-domain grant. Delegation controls on other
+approved, so it does not appear in a delegated token or cross-domain
+grant. Delegation controls on other
 entries, such as the `mission_resource_access` entry, apply to those
 entries only.
 
