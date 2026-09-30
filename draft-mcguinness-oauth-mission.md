@@ -680,8 +680,9 @@ The times below are on the same day in UTC.
    ({{grant-binding}}). The access token's five-minute lifetime is
    distinct from the Mission's one-hour lifetime
    ({{mission-bound-tokens}}).
-4. **Use.** The ERP validates the token and proof of possession and
-   permits the authorized read. The token grants no write authority.
+4. **Use.** The ERP, a Mission-aware Resource Server, validates the
+   token and proof of possession and permits the authorized read. The
+   token grants no write authority.
    No Mission-state lookup or complete-set retrieval is part of this
    example's resource request ({{rs-enforcement}}).
 5. **Stop further issuance.** At 12:02 an authorized revocation makes
