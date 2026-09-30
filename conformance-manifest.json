@@ -59,12 +59,12 @@
     "content_sha256": "2ecac7a1642121e76f782cb12941b64fc1ed0782ae6df8a6e82721d5bc280b1f"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "943e78342671ae42a611e2a33a9bfbb579770a73",
-    "content_sha256": "2af71a790adcf81b8a9150525180af4328f84b6a5102aadbd6339dca818b1fda"
+    "revision": "6f3b9ad9642cf61cf94d5f612d07fc57ec453d30",
+    "content_sha256": "b6877fa2bef49532e64230a5dd774643b2a4d700ec117140b16fc476387d1bfb"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
-    "content_sha256": "3a3d8f5dc8fbe8314d1d8cebd9742b5817b88ba645798c753f4dc82c26df9b1e"
+    "revision": "7fc9ef45b5fb69f06bd3e90c1a93b6ac71808c10",
+    "content_sha256": "f32cf81e773c9098464a50e451f559b3a5ad31485a315cc611df8e60fcafa2a7"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
     "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
@@ -4936,6 +4936,52 @@
     }
    ],
    "notes": "Witnessed: initial issuance, refresh (projection repeated, subset and stale refusals), async-delegation Token Exchange and its family refresh, the cross-org Token Exchange, and the deferred and child jwt-bearer mints (their payments tokens carry no scope). The dispatch and expansion-successor mints run the same save-time projection but no test observes them."
+  },
+  {
+   "id": "core.scope-projection.ungrantable-requested-scope-refused",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "scope-projection",
+   "text": "The AS MUST refuse, with `invalid_scope` ({{error-mapping}}), a request that explicitly names a `scope` value the issuance cannot grant",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a request that explicitly names a scope value the issuance cannot grant (one the target's mapping names but no carried entry makes safe, or any scope value associated with a target that consumes authorization_details) is refused with invalid_scope rather than issued with an omitted or silently reduced scope"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "core.scope-projection.refresh-preserved-on-projection-refusal",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "scope-projection",
+   "text": "A refusal caused solely by failure to establish a safe scope projection MUST NOT invalidate an otherwise-valid refresh token or its authorization grant",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "after a refresh refused solely because no safe scope projection could be established, the same refresh token and its grant remain usable once the projection can be established; independent expiration, revocation, and replay-detection rules still apply"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
   },
   {
    "id": "core.introspection.composite-active",
@@ -22025,6 +22071,29 @@
      "surface": "token-endpoint"
     }
    ]
+  },
+  {
+   "id": "resource-access.scope-projection.actions-subset",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "scope-projection",
+   "text": "Every action granted by the mapped `scope` value MUST be included in the applicable entry's `actions`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a mapped scope value is projected only when every action it grants is in the applicable entry's actions; a value granting a proper subset is projected, and one granting any additional action is not"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
   },
   {
    "id": "resource-access.transformation-capabilities.projection-undeclared-fallback",

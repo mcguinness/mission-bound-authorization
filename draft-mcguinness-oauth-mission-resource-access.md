@@ -604,12 +604,14 @@ is safe only when all of the following hold:
    value the target's own interpretation extends to a broader
    ancestor resource is not a safe projection of a narrower `prefix`
    entry.
-2. **The actions match without aggregation.** The mapping's `scope`
-   value stands for exactly the entry's `actions`, action for action.
-   A `scope` value that stands for an action family, an aggregate of
-   unrelated actions, or the union of more than one entry's actions
-   fails this condition, because the target grants every action the
-   union names, not only the entry's.
+2. **The actions match without aggregation.** Every action granted by
+   the mapped `scope` value MUST be included in the applicable entry's
+   `actions`; the value MAY grant a proper subset of them. A `scope`
+   value that grants any additional action, including through an
+   implied action family, an aggregate of unrelated actions, or the
+   union of more than one entry's actions, fails this condition,
+   because the target grants every action the union names, not only
+   the entry's.
 3. **Every carried `constraints` key is independently enforced.** For
    every key in the entry's `constraints`, the mapping states that
    the target enforces that key, under a comparison at least as tight
@@ -959,6 +961,11 @@ registry.
 \[\[ To be removed from the final specification ]]
 
 -00
+
+- Scope Projection's action condition permits a mapped `scope` value
+  to grant a proper subset of the entry's `actions`, matching the
+  issuance profile's subset condition; any additional action still
+  fails.
 
 - Controls taxonomy retirement (#636): the AS-side no-registered-
   narrowing failure-closed cross-reference updated from an
