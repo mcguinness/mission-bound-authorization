@@ -5073,6 +5073,18 @@
      "name": "scope projection on derived tokens (@spec mission#scope-projection) > refresh re-projects against the current mapping: a version bump alone still projects, a mapping that no longer proves the value refuses invalid_target, and an audience removed from the mapping fails closed",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "refresh preserved on a projection refusal (@spec mission#scope-projection) > a refresh omitting scope whose inherited grant the current mapping no longer grants, leaving no scope value to report, is refused invalid_scope before rotation; the restored mapping lets the same token succeed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "refresh preserved on a projection refusal (@spec mission#scope-projection) > a refresh naming only OIDC values explicitly asks for no resource value: refused invalid_scope at a scope-only target without consuming the token, which then inherits its full granted scope",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
    "notes": "The projection is decided in oidc-provider's rotateRefreshToken hook, after client authentication and the refresh token's own client, expiry, sender-constraint and reuse checks, and before consumption or rotation. Witnessed on a rotating (async-delegation family) refresh token: refused invalid_target and invalid_scope while the mapping cannot prove the value, then the same token succeeds once after the mapping is repaired, and its reuse is replay-detected (grant revoked). Rotation is not disabled and no consumed token is restored."
