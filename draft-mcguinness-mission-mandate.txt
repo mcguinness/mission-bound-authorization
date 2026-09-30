@@ -157,13 +157,11 @@ Table of Contents
    unaffected by this document; the Mandate defines no authority surface
    and places no requirement on deployments that do not claim it.
 
-   The Mandate is among the newest artifacts in the family.  Its
-   normative dependencies are ratified: JWS, JWT, and SD-JWT are
-   published standards, and the issuance profile's committed record is
-   its only Mission input.  The artifact itself is not yet exercised in
-   deployment, so an implementer validates the verification steps and
-   failure taxonomy against real cross-domain use before relying on
-   them.
+   The Mandate's normative dependencies are ratified: JWS, JWT, and SD-
+   JWT are published standards, and the issuance profile's committed
+   record is its only Mission input.  An implementer validates the
+   verification steps and failure taxonomy against real cross-domain use
+   before relying on them.
 
 2.  Conventions and Terminology
 

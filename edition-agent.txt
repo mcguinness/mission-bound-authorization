@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-09-30T00:33:23Z
-Source repository commit: 5ba831fdcd7689b36f61651b316c3364d1fbb9a9
+Generated: 2026-09-30T00:42:12Z
+Source repository commit: 545324606941e40c9ead036591215d7c24beba5c
 Member count: 9
 
 Reading order:
@@ -222,13 +222,11 @@ Table of Contents
    reference, lifecycle gating where the PS is on path, and governance
    history (Section 3).
 
-   It defines no protocol, no object, and no requirement.  It is a map,
-   not the territory: every mechanism named points at the profile that
-   normatively defines it, and where this document and a profile appear
-   to differ, the profile governs.
-
-   This document is Informational.  It establishes no conformance class
-   and defines no new mechanism, claim, or wire format.
+   This document is Informational.  It defines no protocol, object,
+   requirement, or conformance class, and no new mechanism, claim, or
+   wire format.  It is a map, not the territory: every mechanism named
+   points at the profile that normatively defines it, and where this
+   document and a profile appear to differ, the profile governs.
 
    Its boundary with the Mission Security Model
    ([I-D.draft-mcguinness-mission-security-model]) is deliberate: this
