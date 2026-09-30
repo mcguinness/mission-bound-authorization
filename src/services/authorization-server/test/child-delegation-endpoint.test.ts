@@ -679,7 +679,9 @@ describe("PR4b: child redeems the child-bound grant AS ITSELF at /token (@spec #
     };
     expect(res.status, JSON.stringify(body)).toBe(200);
     expect(body.token_type).toBe("DPoP");
-    expect(body.scope).toBe("payments");
+    // @spec mission#scope-projection step 4 — the payments audience consumes
+    // authorization_details, so the Mission-bound token carries no `scope`.
+    expect(body.scope).toBeUndefined();
     expect(res.headers.get("cache-control")).toContain("no-store");
 
     // The token is a real, resource-bound JWT (verifies on the AS jwks_uri).

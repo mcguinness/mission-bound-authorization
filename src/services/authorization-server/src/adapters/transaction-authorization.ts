@@ -29,7 +29,11 @@ import {
 } from "jose";
 import { randomBytes } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { isSubsetSetIgnoringCapabilitySources } from "@mission/core";
+import {
+  delegatedRoutingRefusal,
+  isSubsetSetIgnoringCapabilitySources,
+  type ScopeProjectionMapping,
+} from "@mission/core";
 import { GateError, type MissionKernel } from "../kernel/kernel.js";
 import {
   ChallengeError,
@@ -256,6 +260,12 @@ export interface TxnAuthorizationDeps {
   subjectTokenLive: (jti: string) => Promise<boolean>;
   now: () => Date;
   txn?: TxnAuthorizationOptions;
+  /**
+   * @spec mission#rs-enforcement — the AS's audience classification. A
+   * transaction token that will carry `act` is issued only for a
+   * Challenge-Issuing Resource classified `mission_aware`.
+   */
+  scopeProjection?: ScopeProjectionMapping;
 }
 
 const DEFAULT_POLL_INTERVAL_S = 5;
@@ -547,6 +557,18 @@ async function admit(
     return;
   }
   const requiresApproval = entryRequiresApproval || policy?.requires_approval === true;
+
+  // @spec mission#rs-enforcement — upstream actor context makes `act`
+  // REQUIRED on the issued token, so it is a delegated Mission-bound token:
+  // refused here, before the workflow is admitted or an approval opened,
+  // unless the Challenge-Issuing Resource is classified Mission-aware.
+  if (subject.act !== undefined || challenge.act !== undefined) {
+    const refusal = delegatedRoutingRefusal(deps.scopeProjection, [challenge.iss]);
+    if (refusal) {
+      fail(ctx, 400, "invalid_target", refusal);
+      return;
+    }
+  }
 
   const nowS = Math.floor(deps.now().getTime() / 1000);
 

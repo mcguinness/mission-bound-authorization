@@ -36,8 +36,10 @@ import {
   DEMO_AGENT_PROPOSAL,
   DERIVATION_POLICY,
   GOVERNED_POLICIES,
+  loadScopeProjection,
   MAS_JOIN,
   RAS_LOCAL_POLICY,
+  SCOPE_PROJECTION,
   TOPOLOGY,
 } from "@mission/demo-data";
 import { evaluate, relationForAction, stalenessBound, type Fga, type MissionView } from "@mission/pdp";
@@ -460,5 +462,55 @@ describe("authority-source config loader (@spec mission#authority-sources)", () 
     await expect(import("@mission/demo-data")).rejects.toThrow(
       /activators must be a string array/,
     );
+  });
+});
+
+describe("config/scope-projection.json loader (@spec mission#scope-projection)", () => {
+  const shipped = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "../../../config/scope-projection.json"),
+    "utf8",
+  );
+
+  it("classifies every shipped resource audience: the MCP resources consume authorization_details, the plain RS is scope_only", () => {
+    const { payments, saas, hrFiles, plainRs } = TOPOLOGY.resources;
+    expect(SCOPE_PROJECTION.audiences[CANONICAL_RESOURCE]?.mode).toBe("authorization_details");
+    expect(CANONICAL_RESOURCE).toBe(process.env.MCP_PAYMENTS_RESOURCE ?? payments);
+    expect(SCOPE_PROJECTION.audiences[saas]?.mode).toBe("authorization_details");
+    expect(SCOPE_PROJECTION.audiences[hrFiles]?.mode).toBe("authorization_details");
+    expect(SCOPE_PROJECTION.audiences[plainRs]?.mode).toBe("scope_only");
+    expect(loadScopeProjection(shipped)).toEqual(SCOPE_PROJECTION);
+  });
+
+  it("classifies each shipped audience mission_aware from what its Resource Server processes (@spec mission#rs-enforcement)", () => {
+    const { saas, hrFiles, plainRs } = TOPOLOGY.resources;
+    // mcp-payments reads the act chain (per-instance revocation, context actor) and the mission claim.
+    expect(SCOPE_PROJECTION.audiences[CANONICAL_RESOURCE]?.mission_aware).toBe(true);
+    // mcp-saas requires the mission claim but never reads act; hrFiles has no Resource Server here;
+    // the plain RS reads neither.
+    expect(SCOPE_PROJECTION.audiences[saas]?.mission_aware).toBe(false);
+    expect(SCOPE_PROJECTION.audiences[hrFiles]?.mission_aware).toBe(false);
+    expect(SCOPE_PROJECTION.audiences[plainRs]?.mission_aware).toBe(false);
+  });
+
+  it("refuses an audience whose mission_aware is missing or not a boolean (@spec mission#rs-enforcement)", () => {
+    const missing = shipped.replace('"mission_aware": false,\n      "mode": "scope_only",', '"mode": "scope_only",');
+    expect(missing).not.toBe(shipped);
+    expect(() => loadScopeProjection(missing)).toThrow(/mission_aware must be a boolean/);
+    for (const value of ['"true"', "1", "null"]) {
+      const wrong = shipped.replace('"mission_aware": true,', `"mission_aware": ${value},`);
+      expect(wrong).not.toBe(shipped);
+      expect(() => loadScopeProjection(wrong)).toThrow(/mission_aware must be a boolean/);
+    }
+  });
+
+  it("refuses an ambiguous mapping (a duplicated member name) and an unknown member at load", () => {
+    const duplicated = shipped.replace(
+      '"version": "2026-09-29.2",',
+      '"version": "2026-09-29.2", "version": "2026-09-30.1",',
+    );
+    expect(duplicated).not.toBe(shipped);
+    expect(() => loadScopeProjection(duplicated)).toThrow(/ambiguous mapping: duplicate JSON member name/);
+    const unknown = shipped.replace('"mode": "scope_only",', '"mode": "scope_only", "fallback": "omit",');
+    expect(() => loadScopeProjection(unknown)).toThrow(/fallback is not a known member/);
   });
 });

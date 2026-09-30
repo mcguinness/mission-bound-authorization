@@ -14,9 +14,14 @@ import {
   type ActionPhase,
   type AuthorityEntry,
   computeAnchor,
+  DuplicateMemberError,
   GOVERNED_POLICY_TYP,
   isActionPhase,
   isAuthorityEntry,
+  parseScopeProjectionMapping,
+  parseStrictJson,
+  type ScopeProjectionMapping,
+  ScopeProjectionMappingError,
 } from "@mission/core";
 import { exportJWK, generateKeyPair } from "jose";
 
@@ -196,7 +201,7 @@ export interface TxnChallengeTopology {
 
 /** The full deployment topology (issuers, ports, ttls, keys, resources). */
 export interface Topology {
-  resources: { payments: string; saas: string; hrFiles: string };
+  resources: { payments: string; saas: string; hrFiles: string; plainRs: string };
   txnChallenge: { payments: TxnChallengeTopology };
   issuers: { as: string; ras: string; transparency: string; pdp: string };
   endpoints: { arsIntake: string };
@@ -276,6 +281,7 @@ function loadTopology(): Topology {
       payments: reqString(file, resources, "payments", "resources"),
       saas: reqString(file, resources, "saas", "resources"),
       hrFiles: reqString(file, resources, "hrFiles", "resources"),
+      plainRs: reqString(file, resources, "plainRs", "resources"),
     },
     txnChallenge: {
       payments: reqTxnChallenge(file, txnChallenge, "payments", "txnChallenge"),
@@ -1620,6 +1626,60 @@ function loadIntrospectionPrincipals(): IntrospectionPrincipal[] {
 
 /** The validated introspection principals (@see loadIntrospectionPrincipals). */
 export const INTROSPECTION_PRINCIPALS: IntrospectionPrincipal[] = loadIntrospectionPrincipals();
+
+/**
+ * @spec mission#scope-projection — load + validate config/scope-projection.json,
+ * the authenticated out-of-band scope-projection mapping (step 2): per
+ * audience, a `version` and the target's enforcement `mode`, and for a
+ * `scope_only` target the rights and independently enforced controls each
+ * `scope` value stands for. Parsed STRICTLY: a duplicated member name is an
+ * ambiguous mapping and refuses at load, as does any unknown member. The
+ * payments audience (and any rights naming it) resolves to the possibly
+ * env-overridden CANONICAL_RESOURCE, like the ceiling and catalog.
+ */
+export function loadScopeProjection(
+  text: string = readText("scope-projection.json"),
+): ScopeProjectionMapping {
+  const file = "scope-projection.json";
+  let raw: unknown;
+  try {
+    raw = parseStrictJson(text);
+  } catch (e) {
+    if (e instanceof DuplicateMemberError)
+      throw new ConfigError(file, `ambiguous mapping: ${e.message}`);
+    throw new ConfigError(file, `invalid JSON: ${(e as Error).message}`);
+  }
+  let mapping: ScopeProjectionMapping;
+  try {
+    mapping = parseScopeProjectionMapping(raw);
+  } catch (e) {
+    if (e instanceof ScopeProjectionMappingError) throw new ConfigError(file, e.message);
+    throw e;
+  }
+  const remap = (uri: string) => (uri === DEFAULT_PAYMENTS_RESOURCE ? CANONICAL_RESOURCE : uri);
+  const audiences: ScopeProjectionMapping["audiences"] = {};
+  for (const [aud, m] of Object.entries(mapping.audiences)) {
+    const key = remap(aud);
+    if (audiences[key])
+      throw new ConfigError(file, `ambiguous mapping: two entries for audience ${key}`);
+    audiences[key] =
+      m.mode === "scope_only"
+        ? {
+            ...m,
+            scopes: Object.fromEntries(
+              Object.entries(m.scopes).map(([name, v]) => [
+                name,
+                { ...v, rights: { ...v.rights, resource: remap(v.rights.resource) } },
+              ]),
+            ),
+          }
+        : m;
+  }
+  return { audiences };
+}
+
+/** The validated shipped scope-projection mapping (@see loadScopeProjection). */
+export const SCOPE_PROJECTION: ScopeProjectionMapping = loadScopeProjection();
 
 /** Build a confidential client (private_key_jwt) from a seed: fresh key per boot (D25). */
 async function buildSeededClient(client: ClientSeed): Promise<SeededClient> {

@@ -14,9 +14,11 @@ import {
   seedGovernedClient,
   seedTrustedSources,
   type SeededTrustedSource,
+  SCOPE_PROJECTION,
   TOPOLOGY,
   USERS,
 } from "@mission/demo-data";
+import type { ScopeProjectionMapping } from "@mission/core";
 import { exportJWK, generateKeyPair, importJWK, type CryptoKey, type JWK } from "jose";
 import type Provider from "oidc-provider";
 import type { ApprovalSessionStore } from "./adapters/approval-resolution.js";
@@ -704,6 +706,13 @@ export async function buildAuthorizationServer(opts: {
   dischargeAuthority?: DischargeAuthorityPolicy;
   /** @spec discharge#discharge-idempotency — event-dedup retention override (seconds). */
   dischargeEventRetentionSeconds?: number;
+  /**
+   * @spec mission#scope-projection — override the scope-projection mapping.
+   * Defaults to the config-shipped {@link SCOPE_PROJECTION}. Read at every
+   * Mission-bound issuance, so a test that replaces an audience's entry (or
+   * bumps its `version`) observes the next issuance under the new mapping.
+   */
+  scopeProjection?: ScopeProjectionMapping;
 }): Promise<BuiltAs> {
   // Per-purpose keys on one jwks_uri (@spec mission#as-metadata; matrix D39):
   // as-token signs tokens, as-status signs Status responses, as-txn signs
@@ -1043,6 +1052,8 @@ export async function buildAuthorizationServer(opts: {
     ...(opts.stateRecoveryRetryAfter !== undefined
       ? { stateRecoveryRetryAfter: opts.stateRecoveryRetryAfter }
       : {}),
+    // @spec mission#scope-projection — the trusted out-of-band mapping.
+    scopeProjection: opts.scopeProjection ?? SCOPE_PROJECTION,
   });
   // @spec async-delegation — publish the provider to the terminal subscriber now
   // that construction is complete (no lifecycle commit could have fired earlier).

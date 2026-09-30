@@ -43,6 +43,11 @@
       "constraints": {
         "vendors": ["acme"]
       }
+    },
+    {
+      "type": "mission_resource_access",
+      "resource": "http://localhost:4410/api",
+      "actions": ["reports:report.read", "reports:report.write"]
     }
   ],
   "write_actions": [
