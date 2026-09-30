@@ -2751,17 +2751,12 @@ not bound a stolen refresh token while the Mission is `active`.
 The authentication achieved for the approval event describes the
 Approver at approval time, not the token's Subject or any later
 presentation of the token; it is approval-time provenance
-({{approval-authentication}}), never carried on a derived token. A
-derived token's authority comes from the Mission, not from a fresh
-authentication, so this document requires no `acr` or `auth_time`
-claim on it, and an AS MUST NOT include either on a derived access
-token to convey approval-event context. Where an AS includes `acr` or
-`auth_time` per {{RFC9068}}, each keeps that claim's standard
-token-authentication meaning, describing the token's own presentation
-or Subject, never repurposed to carry the Approver's approval-time
-context; a consumer MUST NOT infer approval provenance from their
-presence and MUST NOT treat their absence as an authentication
-downgrade.
+({{approval-authentication}}), not token content. A derived token's
+authority comes from the Mission, not from a fresh authentication.
+An AS MUST NOT include `acr`, `amr`, or `auth_time` on a derived
+access token, strengthening {{Section 2.2.1 of RFC9068}}, under which
+those claims would describe the approval-time authentication. Their
+absence is not an authentication downgrade.
 
 `authorization_details` is the authoritative expression of a
 Mission-bound token's authority; a `scope` claim
