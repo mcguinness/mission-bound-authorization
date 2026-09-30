@@ -3113,8 +3113,9 @@ To emit `scope` for an entry, the AS:
 
 Unknown `scope` semantics, unknown Resource Server enforcement
 behavior, or an ambiguous or stale mapping all fail closed under step
-5. This rule applies to every issuance path that can emit `scope` on
-a Mission-bound token: initial issuance, refresh, Token Exchange, and
+5 ({{error-mapping}}). This rule applies to every issuance path that
+can emit `scope` on a Mission-bound token: initial issuance, refresh,
+Token Exchange, and
 any other derived-token path.
 
 This is the type-agnostic form of the rule; a type's own
@@ -3649,6 +3650,7 @@ applies this mapping and does not restate it.
 | PAR: malformed Mission envelope or Intent (schema, unknown member, invalid value) | `invalid_request` | safe `error_description` |
 | PAR or authorization: malformed or unsupported actual RAR object (an entry of a submitted `authorization_details` proposal) | `invalid_authorization_details` ({{RFC9396}}) | RAR-defined detail |
 | Authorization or token request: invalid, unknown, or malformed actual RFC 8707 `resource` parameter | `invalid_target` ({{RFC8707}}) | safe `error_description` |
+| Authorization or token request: the target is `scope`-only and no safe projection exists for the applicable entries, or its scope-projection mapping is unknown, ambiguous, or stale ({{scope-projection}}); or, where the AS applies {{rs-enforcement}}'s delegated-token routing rule at issuance, the delegated token's target is not known to be Mission-aware | `invalid_target` ({{RFC8707}}) | safe `error_description` |
 | Authorization decision: the Approver declines, approval authentication fails the floor or a requested `acr_values`/`max_age`, or a well-formed request (including configured-mapping mode) is refused by AS policy | `access_denied` ({{RFC6749}}) | none unless a defined extension applies |
 | Token endpoint: the Mission is revoked, expired, superseded, or its `derivation_limit` is exhausted | `invalid_grant` | `mission_error` ({{iana}}) |
 | Token endpoint: the requested RAR subset exceeds the Mission's granted authority | `invalid_authorization_details` ({{RFC9396}}) | safe detail |
