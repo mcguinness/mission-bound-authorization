@@ -717,10 +717,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
       pinnedVersion: (a) => pins?.get(a),
     });
     if (outcome.outcome === "refuse") {
-      // @spec mission#scope-projection — step 5 refusal. The core's
-      // error-mapping table names no code for this refusal (a spec gap);
-      // `invalid_target` (RFC 8707) is the closest registered meaning: the
-      // requested target cannot be issued to.
+      // @spec mission#scope-projection — step 5 refusal, mapped to
+      // `invalid_target` (RFC 8707) by the core's error-mapping table
+      // (@spec mission#error-mapping): the requested target cannot be
+      // issued to.
       throw new errors.InvalidTarget(outcome.reason);
     }
     if (token.grantId) {
