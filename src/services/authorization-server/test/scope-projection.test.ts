@@ -634,6 +634,16 @@ describe("requested scope and the token response (@spec mission#scope-projection
     const res = await redeem(r.code as string, await newKeys());
     expect(res.status, JSON.stringify(res.body)).toBe(200);
     expect(res.body.scope).toBe("reports.read reports.write");
+
+    // The payments ceiling derives entries carrying constraints and delegation policy.
+    const p = await authorize(undefined, { resource: PAYMENTS });
+    expect(p.par.status, JSON.stringify(p.par.body)).toBe(201);
+    expect(p.code, JSON.stringify(p)).toBeTruthy();
+    const paid = await redeem(p.code as string, await newKeys(), PAYMENTS);
+    expect(paid.status, JSON.stringify(paid.body)).toBe(200);
+    expect(paid.body.scope).toBeUndefined();
+    const carried = decodeJwt(paid.body.access_token as string).authorization_details as AuthorityEntry[];
+    expect(carried.some((e) => e.delegation !== undefined)).toBe(true);
   });
 });
 
