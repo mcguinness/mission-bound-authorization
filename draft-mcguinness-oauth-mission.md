@@ -364,7 +364,7 @@ issuance and use. The second layer, a separately specified runtime
 layer ({{runtime-boundary}}), adds a per-action check for the action
 classes whose consequence needs one.
 
-## Implementation Map (Informative) {#implementation-map}
+## Implementation Map {#implementation-map}
 
 {{conformance}} is the complete statement of roles and optional
 capabilities. The starting path is one client, one Authorization
@@ -606,7 +606,7 @@ can also treat {{RFC7009}} revocation of the refresh token as
 revoking the Mission ({{revocation}}). The end-to-end example
 ({{e2e-example}}) walks this flow with concrete messages.
 
-### One Mission from Approval to Revocation (Informative) {#first-mission}
+### One Mission from Approval to Revocation {#first-mission}
 
 Consider a registered client reading invoices from one ERP resource
 for Alice. Alice is both the Subject and the Approver; the authority
@@ -883,7 +883,7 @@ deployment-defined type:
 }
 ~~~
 
-## The Authority Proposal {#authority-proposal}
+## Authority Proposal {#authority-proposal}
 
 A client MAY propose concrete authority for the task by submitting
 the standard {{RFC9396}} `authorization_details` request parameter,
@@ -3316,10 +3316,11 @@ the Mission is revoked ({{composite-active}}):
 }
 ~~~
 
-# Delegation Within a Mission (Optional) {#delegation}
+# Delegation Within a Mission {#delegation}
 
-An agent may delegate execution to downstream actors (a sub-agent,
-service, or tool that is itself an OAuth client) within a Mission.
+Delegation is an optional capability ({{conformance}}). An agent may
+delegate execution to downstream actors (a sub-agent, service, or tool
+that is itself an OAuth client) within a Mission.
 Delegation is represented with the OAuth Actor Profile
 {{I-D.draft-mcguinness-oauth-actor-profile}}, which profiles the
 `act` (actor) claim of {{Section 4.1 of RFC8693}}.
@@ -3575,9 +3576,9 @@ a further hop can be evaluated: a depth-3 delegate, or a
 non-`ai_agent` one, would narrow it out too. The `mission` claim is
 unchanged.
 
-# Local Approved-Set Verification (Optional) {#local-approved-set-verification}
+# Local Approved-Set Verification {#local-approved-set-verification}
 
-This optional profile lets a verifying party check a token's carried
+This optional capability lets a verifying party check a token's carried
 authority against the Mission's complete approved Authority Set,
 rather than relying on the token signature and the AS's subset
 assertion alone ({{rs-enforcement}}). A deployment adopts it when a
@@ -4805,7 +4806,7 @@ member's registration in its own IANA considerations.
 
 --- back
 
-# End-to-End Example (Non-Normative) {#e2e-example}
+# End-to-End Example {#e2e-example}
 
 This appendix walks one Mission from an agent through Mission
 creation, token issuance, and Resource Server enforcement in a single
@@ -5032,7 +5033,7 @@ Mission to a partner ERP in another trust domain.
 This appendix explains the design choices behind the Mission and
 records what this document leaves to other work.
 
-## Why a New Object {#why-a-new-object}
+## Relationship to Existing OAuth Objects {#why-a-new-object}
 
 OAuth already has objects near this need, but none is the approved
 task:
@@ -5253,7 +5254,7 @@ The following are out of scope for this document:
   authority works against the identifier and is therefore future work
   ({{mission-identifier-correlation}}).
 
-## Adopted Model: client_id Names the Requesting Client {#client-id-rebinding}
+## The `client_id` Claim in Delegated Tokens {#client-id-rebinding}
 
 This profile keeps `client_id`'s registered meaning, stated
 normatively in {{mission-bound-tokens}} and enforced in
@@ -5275,7 +5276,7 @@ chain a consumer needs to process, a Mission-unaware Resource Server
 cannot opt into that processing, and routing a delegated token to one
 is therefore forbidden.
 
-## A Typed Selective-Inclusion Proof: a Future Composition Point {#lasv-proof-future}
+## Selective-Inclusion Proofs {#lasv-proof-future}
 
 Rather than retrieving the complete set, a future profile could
 define a proof type under which the verifying party holds, per
@@ -5328,7 +5329,7 @@ Direct approval is the degenerate case where one human fills every
 role. Where a profile or deployment does not populate `adjudication`
 ({{mission-record}}), the table shows the value it would carry.
 
-# Derivation Policy (Non-Normative) {#derivation-policy}
+# Derivation Policy {#derivation-policy}
 
 This appendix is illustrative and adds no requirements. It
 describes an authoring artifact for the contract in
