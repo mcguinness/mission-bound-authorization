@@ -95,8 +95,8 @@
     "content_sha256": "5325dbd72605a44fb32ab86575cfccc07b78398d60aabaf6c87ff41a96d4dc25"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "55a8b1cb0610980b8c299b9e0c69b5304d4cc689",
-    "content_sha256": "8ffadfddb65950212f91d93524532dac0aba4734de34fb60842337826d5505fe"
+    "revision": "3c5f0bf7e879ee24cbbba010a56fc52770136c10",
+    "content_sha256": "6f9c2ec3c0dade005a714ab16160d47b6ec4d4c1ffeb511c4588c20af16db445"
    }
   }
  },
