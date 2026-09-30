@@ -5115,7 +5115,7 @@ values are illustrative and are not computed from the displayed JSON.
 This walkthrough is the baseline issuance path: stateless enforcement
 bounded only by token lifetime. No stage calls back to the AS for
 Mission state; each party enforces from the credential it holds.
-Stage 3 notes where the OPTIONAL runtime layer adds a point-of-use
+Stage 3 notes where the optional runtime layer adds a point-of-use
 check.
 
 Scenario: agent `s6BhdRkqt3`, acting for `alice`
@@ -5707,16 +5707,10 @@ Mission Substrate Statement and makes no substrate-conformance claim,
 and it takes no requirement from the substrate. Its reference to the
 substrate is informative, and the substrate's own reference back to
 this document is informative in turn, so neither document takes a
-normative dependency on the other. This appendix applies to the
-substrate edition published from the same repository revision as
-this document (the two editions revise and publish in lockstep, so
-the assessed revision is exact; for a copy obtained independently of
-the repository, the family's conformance manifest publishes the
-assessed substrate's content digest in its `source.specs` entry,
-identifying the exact assessed bytes), in this document's base
-single-domain mode with the OPTIONAL capabilities as the activation
-conditions below state, and to the kernel and capability vocabulary
-of the substrate document as of that revision. The digest marker
+normative dependency on the other. The assessment applies to the
+substrate revision published with this document, in this document's
+base single-domain mode, with the optional capabilities active as the
+conditions below state. The digest marker
 above keeps this description synchronized with the substrate's own
 text; a mismatch prompts review, not a normative failure.
 
@@ -5742,9 +5736,9 @@ For the kernel:
    immutable members; commitments are the typed integrity anchors
    (`intent_hash`, `proposal_hash`, `authority_hash`); a material
    change obtains a new approval through an expansion successor.
-5. The approval ceremony is this document's approval event:
-   authenticated Approver, the distinct-approver rule for
-   write-bearing Missions, rendering of the derived Authority Set and
+5. The approval ceremony is this document's approval event
+   ({{approval-event}}): authenticated Approver, established Subject
+   and authority source, rendering of the derived Authority Set and
    the effective expiry, and atomic record commit, with deferred,
    interactive, and dispatch realizations.
 6. The active predicate is stored `state` equal to `active` with
@@ -5757,8 +5751,7 @@ For the kernel:
 7. The reliance bound is the record's effective `expires_at` (never
    later than the requested ceiling), which caps every derived
    credential's `exp`; the maximum residual after a Mission becomes
-   non-active is the outstanding credential lifetime, bounded by the
-   deployment's declared access-token TTL.
+   non-active is the outstanding credential lifetime ({{revocation}}).
 8. The propagation and join surfaces are: the `mission` claim
    (artifact issuance under the Mission, authority derivation, and
    lifecycle-gated issuance); the `mission_id` and
@@ -5781,7 +5774,7 @@ The capability table:
 | Structured Authority | supplied | always | `authorization_details` of AS-supported types ({{other-types}}), each type's own specification defining semantics (for `mission_resource_access`, the Mission Resource Access Profile's Common Constraints, {{I-D.draft-mcguinness-oauth-mission-resource-access}}) | Semantics exist per supported type, not universally |
 | Monotonic Derivation | supplied | always | The subset rule over covered types at every derivation, delegation, and attenuation point | Covered transitions are `attenuate`; a cross-vocabulary transition is `decide_anew`, never silent attenuation |
 | Credential-Bound | supplied | always | The `mission` claim on issued tokens | Fact semantics: issuance under the Mission, authority derivation, lifecycle-gated issuance; state-as-of only via the State-Observable surfaces |
-| Authorized Context Correlation | supplied | the Delegation role active ({{delegation}}) | The Token Exchange join at delegated issuance: the AS, as joining authority, joins the Mission and Subject carried by the Mission-bound `subject_token` with the delegate identity independently established by the `actor_token` or the delegate's own client authentication, binding both to the newly issued credential | The base grant binding at issuance co-establishes its facts and is not a join; cross-authority joins are the Mission Authority Server's machinery, not this binding's |
+| Authorized Context Correlation | supplied | the Delegation capability active ({{delegation}}) | The Token Exchange join at delegated issuance: the AS, as joining authority, joins the Mission and Subject carried by the Mission-bound `subject_token` with the delegate identity independently established by the `actor_token` or the delegate's own client authentication, binding both to the newly issued credential | The base grant binding at issuance co-establishes its facts and is not a join; cross-authority joins are the Mission Authority Server's machinery, not this binding's |
 | Independently Verifiable | supplied | Mandate, signed Status, or audit companion active | Anchor recomputation and signed artifacts per those profiles | Signature verification never establishes current state |
 | Portable Evidence | supplied | Evidence, Mandate, or audit companion active | Per those profiles | The governance record is otherwise issuer-local |
 {: title="OAuth Mission binding capability table"}
@@ -5789,22 +5782,22 @@ The capability table:
 Temporal elements: every issued credential's `exp` is capped by the
 record's effective `expires_at`; state observations carry their
 surface's declared freshness; the residual after non-active is the
-outstanding credential lifetime under the deployment's declared TTL.
+outstanding credential lifetime.
 Failure behavior: an unknown lifecycle state is non-active; an
 unresolvable reference, a failed anchor verification, and an unknown
 `authorization_details` type fail closed; where a row's activation
-condition does not hold, the property is not supplied and a consumer
-MUST NOT rely on it.
+condition does not hold, the property is not supplied, and a consumer
+cannot rely on it.
 
-This document's three OPTIONAL implementation roles, which its
-Conformance section names OPTIONAL capabilities ({{conformance}}),
-are surfaces an implementation may or may not offer, each independent
-of the others. The capability table above states scoped guarantee
+This document's four optional capabilities ({{conformance}}) are
+surfaces an implementation may or may not offer, each independent of
+the others. The capability table above states scoped guarantee
 claims: properties this document supplies and the conditions under
 which each is supplied. The two vocabularies answer different
 questions and are not equivalent; the entries below relate them
-without collapsing one into the other. Declaring an OPTIONAL role
-never creates a claim beyond the eight already stated above.
+without collapsing one into the other. Declaring an optional
+capability never creates a claim beyond the eight already stated
+above.
 
 Introspection:
 : Exercises State-Observable. One of State-Observable's three named
@@ -5828,9 +5821,9 @@ Delegation:
   binding, not a second binding of its own ({{grant-binding}}). Four
   of the five claims are supplied always, and Delegation exercises
   them rather than creating them; Authorized Context Correlation is
-  the exception, activated by this role, whose Token Exchange join
-  is its supplier. The `act` chain itself supplies none of them: it
-  is attribution, never authority.
+  the exception, activated by this capability, whose Token Exchange
+  join is its supplier. The `act` chain itself supplies none of them:
+  it is attribution, never authority.
 
 Cross-Domain:
 : Exercises Lifecycle-Gated Authorization, Structured Authority,
@@ -5842,6 +5835,15 @@ Cross-Domain:
   provide. It does not become Portable Evidence by crossing a
   domain: that claim activates only when an Evidence, Mandate, or
   audit companion is active, and Cross-Domain is not among them.
+
+Local Approved-Set Verification:
+: Exercises Structured Authority and Monotonic Derivation. A
+  verifying Resource Server or policy decision point recomputes
+  `authority_hash` over the complete approved Authority Set and
+  checks the carried authority as a subset of that set
+  ({{local-approved-set-verification}}), instead of relying on the
+  AS's subset assertion alone. Both claims are supplied always; this
+  capability adds an independent check of them and creates no claim.
 
 # Document History {#document-history}
 
