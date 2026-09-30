@@ -83,10 +83,6 @@ owns its delivery protocol ({{I-D.draft-mcguinness-oauth-mission-signals}}), and
 Runtime owns point-of-use bounded reliance
 ({{I-D.draft-mcguinness-mission-runtime}}).
 
-This document has no implemented conformance coverage. Its fault cases
-and requirement rows are unimplemented, and its maintenance class reflects
-that absence of implementation evidence.
-
 # Conventions {#conventions}
 
 {::boilerplate bcp14-tagged}

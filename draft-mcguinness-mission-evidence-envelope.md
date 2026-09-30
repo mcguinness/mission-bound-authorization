@@ -164,9 +164,7 @@ existence, that an existing evidence kind's current media type is
 deprecated: it is not, unless and until that kind's own specification
 says so.
 
-This document is Experimental. It has no known implementation, no
-migrated evidence kind, and no adopter commitment on record. A
-deployment MAY implement the envelope and the Intent Admission payload
+This document is Experimental. A deployment MAY implement the envelope and the Intent Admission payload
 type independently of every other family document; adopting it
 creates no dependency on Mission-Bound Runtime Enforcement, its
 AuthZEN binding, or their evidence companion
