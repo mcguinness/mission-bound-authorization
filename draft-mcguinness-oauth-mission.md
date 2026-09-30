@@ -406,8 +406,7 @@ Three kinds of requirement appear in the sections that follow:
   validated and committed when present; presented or required
   submission evidence is checked under {{intent-submission-evidence}};
   an established derivation limit is enforced; opaque tokens require
-  introspection. A condition being absent does not waive its rule
-  when that condition later holds.
+  introspection. Each applies whenever its condition holds.
 - **Optional capabilities:** Delegation ({{delegation}}),
   Introspection as a state overlay for JWTs ({{introspection}}),
   Cross-Domain projection, and Local Approved-Set Verification
