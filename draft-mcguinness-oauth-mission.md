@@ -749,9 +749,9 @@ narrowed `scope`. It has the following members:
   ceiling on the number of derivations the issuer AS performs under
   the Mission. An AS MUST reject a value below 1 with
   `invalid_request`. This member is a request only: the
-  AS-established effective ceiling, its omission semantics, its
-  rendering, and its enforcement are defined once, in
-  {{derivation-issuance-policy}}.
+  AS-established effective ceiling, its omission semantics, and its
+  rendering are defined in {{derivation-issuance-policy}}, and its
+  enforcement in {{issuance-gating}}.
 
 The Approver's authentication strength for the approval event is
 requested with the standard `acr_values` and `max_age`
@@ -1137,7 +1137,7 @@ bounds, the prose boundary below, and the recording rule above.
 
 A `target_resources` entry the deployment does not recognize is, by
 deployment policy, either omitted from the Authority Set or refused
-with the error code {{error-mapping}} assigns. When an omission or a
+with `access_denied` ({{error-mapping}}). When an omission or a
 narrowing leaves the Authority Set short of what was proposed
 ({{authority-proposal}}), derivation is partial. The granted
 `authorization_details` in the token response
@@ -2445,7 +2445,8 @@ Wherever a Mission state is reported, including the Mission record
 and the introspection `mission` member, a consumer MUST treat only
 the exact value `active` as permitting derivation or continued
 reliance, and MUST treat every other value, including one it does
-not recognize, as non-active and non-deriving.
+not recognize, as non-active and non-deriving (the
+forward-compatibility rule).
 
 For every state-dependent decision this document defines, the AS MUST
 treat a Mission as `active` only when its stored state is `active`
@@ -4494,8 +4495,8 @@ the shape of the task and its business bounds (for example, an amount
 ceiling) to every holder and every audience of a derived token.
 Single-audience tokens, one per Resource Server, are the minimization
 measure: they carry only the
-entries the consuming Resource Server needs, and this document
-recommends them ({{mission-bound-tokens}}).
+entries the consuming Resource Server needs, as
+{{Section 2.3 of RFC9700}} recommends ({{mission-bound-tokens}}).
 
 ## Intent Retention and Anchor Disclosure {#intent-retention-and-anchor-disclosure}
 
@@ -5453,7 +5454,7 @@ type's relation.
 ## Fixtures and Authoring Discipline
 
 Versioned Intent and proposal fixtures with expected Authority Sets
-make the publication recommendation in {{authorization-derivation}}
+make the optional publication in {{authorization-derivation}}
 concrete. Reviewing their diffs on every policy change exposes
 altered grants before approval. Fixtures cover empty intersections,
 unknown constraints, incomparable values, and attempts to introduce
