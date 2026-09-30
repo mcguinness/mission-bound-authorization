@@ -6524,7 +6524,10 @@ Cross-Domain:
   `invalid_scope`, a requested `scope` narrows a projected one, and a
   refusal caused solely by a failed projection does not invalidate an
   otherwise-valid refresh token. A changed mapping is re-evaluated,
-  not stale by itself.
+  not stale by itself. A mapping failure yields `invalid_target` even
+  when a `scope` value is requested; the no-resource-`scope` client
+  guidance covers targets that consume `authorization_details`; and
+  the refresh example narrows with `authorization_details`.
 
 - The Error and Challenge Mapping table maps a scope-projection
   refusal, and an issuance-time refusal under the delegated-token
