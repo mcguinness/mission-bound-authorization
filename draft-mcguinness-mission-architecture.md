@@ -2174,7 +2174,8 @@ The last row is a deployment in its own right, the **issuance-only
 deployment**: the Authorization Server and the Mission-creating client
 change, and Resource Servers need not be Mission-aware. A delegated
 token reaches only a Mission-aware Resource Server, so a delegate
-calling any other resource runs under a Child Mission
+calling any other resource runs under a Child Mission where child
+creation is authorized
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). The OAuth
 binding's invariants carry the deployment: every derived token is a
 subset of the Authority Set, no audience receives a grant it would
