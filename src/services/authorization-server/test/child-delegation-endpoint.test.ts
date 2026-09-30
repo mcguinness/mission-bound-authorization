@@ -198,7 +198,6 @@ async function issueParentMission(): Promise<{ missionId: string; refreshToken: 
       client_id: "ap-agent",
       response_type: "code",
       redirect_uri: REDIRECT_URI,
-      scope: "payments",
       resource: RESOURCE,
       code_challenge: challenge,
       code_challenge_method: "S256",
