@@ -2636,8 +2636,8 @@ with the binding; the Mission Deployment Profile
 
 | Level | What a deployment can defensibly grant |
 | --- | --- |
-| Baseline Issuance | Consequential reads that are attributable and killable at the issuance gate, outstanding tokens running to their own expiry: the governed pilot |
-| Runtime-Enforced | Consequential writes inside approved bounds; reversal and compensation stay the orchestration profile's, where adopted |
+| Baseline Issuance | Consequential reads and writes whose bounds the receiving Resource Server enforces, attributable and killable at the issuance gate, outstanding tokens running to their own expiry or the next introspection |
+| Runtime-Enforced | Consequential actions that need a per-action decision: parameter-bound writes and bounds finer than the receiving Resource Server enforces; reversal and compensation stay the orchestration profile's, where adopted |
 | Governed Agent | Unattended operation and delegation, with Consent Evidence binding each approval event |
 | High-Assurance Agent | The high-consequence classes ({{I-D.draft-mcguinness-mission-runtime}}), under mediated custody and action-bound approval |
 
