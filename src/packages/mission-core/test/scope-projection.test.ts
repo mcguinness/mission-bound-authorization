@@ -7,6 +7,7 @@
  */
 import { describe, expect, it } from "vitest";
 import {
+  delegatedRoutingRefusal,
   parseScopeProjectionMapping,
   projectScope,
   type ScopeProjectionMapping,
@@ -38,17 +39,22 @@ describe("scope-projection mapping validation", () => {
     audiences: {
       [RS]: {
         version: "1",
+        mission_aware: false,
         mode: "scope_only",
         scopes: { "r.read": { rights: value(["read"]).rights, mandatory_controls: {} } },
       },
-      [OTHER]: { version: "1", mode: "authorization_details" },
+      [OTHER]: { version: "1", mission_aware: true, mode: "authorization_details" },
     },
   };
 
   it("accepts a versioned per-audience mapping in both modes", () => {
     const m = parseScopeProjectionMapping(valid);
     expect(m.audiences[RS]?.mode).toBe("scope_only");
-    expect(m.audiences[OTHER]).toEqual({ version: "1", mode: "authorization_details" });
+    expect(m.audiences[OTHER]).toEqual({
+      version: "1",
+      mission_aware: true,
+      mode: "authorization_details",
+    });
   });
 
   it("rejects unknown members at every level, a missing version, an unknown mode, and a control it has no comparison for", () => {
@@ -66,6 +72,15 @@ describe("scope-projection mapping validation", () => {
     expect(bad(["extra"], 1)).toThrow(ScopeProjectionMappingError);
     expect(bad(["audiences", OTHER, "scopes"], {})).toThrow(/scopes is not a known member/);
     expect(bad(["audiences", RS, "version"], undefined)).toThrow(/version/);
+    expect(bad(["audiences", RS, "mission_aware"], undefined)).toThrow(
+      /mission_aware must be a boolean/,
+    );
+    expect(bad(["audiences", OTHER, "mission_aware"], "true")).toThrow(
+      /mission_aware must be a boolean/,
+    );
+    expect(bad(["audiences", OTHER, "mission_aware"], 1)).toThrow(
+      /mission_aware must be a boolean/,
+    );
     expect(bad(["audiences", RS, "mode"], "hybrid")).toThrow(/mode/);
     expect(bad([...read, "rights", "match"], "glob")).toThrow(/match/);
     expect(bad([...read, "rights", "extra"], true)).toThrow(/not a known member/);
@@ -192,6 +207,7 @@ describe("projectScope (@spec mission#scope-projection)", () => {
     audiences: {
       [RS]: {
         version: "v1",
+        mission_aware: false,
         mode: "scope_only",
         scopes: {
           "r.read": value(["read"]),
@@ -199,7 +215,7 @@ describe("projectScope (@spec mission#scope-projection)", () => {
           "r.rw": value(["read", "write"]),
         },
       },
-      [OTHER]: { version: "v1", mode: "authorization_details" },
+      [OTHER]: { version: "v1", mission_aware: true, mode: "authorization_details" },
     },
   };
 
@@ -260,6 +276,7 @@ describe("projectScope (@spec mission#scope-projection)", () => {
         ...mapping.audiences,
         [RS2]: {
           version: "v7",
+          mission_aware: false,
           mode: "scope_only",
           scopes: { "r.read": value(["read"]), "r.write": value(["write"], { resource: RS2 }) },
         },
@@ -290,5 +307,48 @@ describe("projectScope (@spec mission#scope-projection)", () => {
         pinnedVersion: (a) => (a === RS2 ? "v6" : undefined),
       }),
     ).toMatchObject({ outcome: "refuse", reason: expect.stringMatching(/stale/) });
+  });
+});
+
+describe("delegated routing (@spec mission#rs-enforcement)", () => {
+  const AWARE = "https://aware.example/api";
+  const mapping: ScopeProjectionMapping = {
+    audiences: {
+      [RS]: {
+        version: "v1",
+        mission_aware: false,
+        mode: "scope_only",
+        scopes: { "r.read": value(["read"]) },
+      },
+      [AWARE]: { version: "v1", mission_aware: true, mode: "authorization_details" },
+    },
+  };
+
+  it("a delegated token reaches only audiences classified mission_aware; an undelegated one keeps its projection", () => {
+    expect(delegatedRoutingRefusal(mapping, [AWARE])).toBeUndefined();
+    expect(delegatedRoutingRefusal(mapping, [RS])).toMatch(
+      /routed only to a Mission-aware Resource Server/,
+    );
+    expect(delegatedRoutingRefusal(mapping, [AWARE, RS])).toMatch(
+      /audience https:\/\/rs\.example\/api/,
+    );
+    expect(delegatedRoutingRefusal(mapping, ["https://unknown.example"])).toMatch(
+      /no scope-projection mapping/,
+    );
+    expect(delegatedRoutingRefusal(undefined, [AWARE])).toMatch(/no scope-projection mapping/);
+    expect(delegatedRoutingRefusal(mapping, [])).toMatch(/no audience/);
+
+    const entries = [entry(["read"])];
+    expect(projectScope({ mapping, audiences: [RS], entries, delegated: true })).toMatchObject({
+      outcome: "refuse",
+      reason: expect.stringMatching(/Mission-aware/),
+    });
+    expect(projectScope({ mapping, audiences: [RS], entries })).toMatchObject({
+      outcome: "emit",
+      scope: "r.read",
+    });
+    expect(projectScope({ mapping, audiences: [AWARE], entries, delegated: true })).toMatchObject({
+      outcome: "omit",
+    });
   });
 });

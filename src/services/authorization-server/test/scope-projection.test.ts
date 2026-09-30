@@ -276,6 +276,7 @@ describe("scope projection at the token endpoint (@spec mission#scope-projection
     await withPlain(
       {
         version: SHIPPED_PLAIN?.version,
+        mission_aware: false,
         mode: "scope_only",
         scopes: { "reports.read": { rights: rights([READ]), mandatory_controls: { vendors: ["acme"] } } },
       },
@@ -302,6 +303,7 @@ describe("scope projection at the token endpoint (@spec mission#scope-projection
     await withPlain(
       {
         version: "union-1",
+        mission_aware: false,
         mode: "scope_only",
         scopes: { "reports.rw": { rights: rights([READ, WRITE]), mandatory_controls: {} } },
       },
@@ -318,6 +320,7 @@ describe("scope projection at the token endpoint (@spec mission#scope-projection
     await withPlain(
       {
         version: "aggregate-1",
+        mission_aware: false,
         mode: "scope_only",
         scopes: { "reports.all": { rights: rights([READ, WRITE]), mandatory_controls: {} } },
       },
@@ -334,6 +337,7 @@ describe("scope projection at the token endpoint (@spec mission#scope-projection
     await withPlain(
       {
         version: "prefix-1",
+        mission_aware: false,
         mode: "scope_only",
         scopes: { "reports.read": { rights: rights([READ], "prefix"), mandatory_controls: {} } },
       },
@@ -387,6 +391,7 @@ describe("scope projection on derived tokens (@spec mission#scope-projection)", 
     await withPlain(
       {
         version: SHIPPED_PLAIN?.version,
+        mission_aware: false,
         mode: "scope_only",
         scopes: { "reports.admin": { rights: rights([READ, WRITE, "reports:report.delete"]), mandatory_controls: {} } },
       },
@@ -447,6 +452,70 @@ describe("scope projection on derived tokens (@spec mission#scope-projection)", 
     expect(refused.body.error).toBe("invalid_target");
     expect(refused.body.error_description).toMatch(/no safe scope projection/);
     expect(as.kernel.get(missionId)?.derivation_count).toBe(count);
+  });
+});
+
+describe("delegated routing to a Mission-unaware Resource Server (@spec mission#rs-enforcement)", () => {
+  /** An async-delegation Token Exchange from `base`, optionally presenting an actor_token. */
+  const delegate = (base: string, resource: string, acting: Keys, actorToken?: string) =>
+    token(
+      {
+        grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+        request_refresh_token: "true",
+        subject_token: base,
+        subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+        resource,
+        creation_request_id: crypto.randomUUID(),
+        ...(actorToken
+          ? { actor_token: actorToken, actor_token_type: "urn:ietf:params:oauth:token-type:jwt" }
+          : {}),
+      },
+      acting,
+    );
+  const actorAssertion = (acting: Keys) =>
+    new SignJWT({ cnf: { jkt: "delegate" } })
+      .setProtectedHeader({ alg: "ES256", typ: "JWT" })
+      .setIssuer("https://delegates.example")
+      .setSubject("subagent-invoice-extractor")
+      .setIssuedAt()
+      .setExpirationTime("2m")
+      .sign(acting.privateKey);
+
+  it("refuses invalid_target, spending no derivation, a Token Exchange presenting an actor to the plain RS, while the same exchange with no actor succeeds with the projected scope", async () => {
+    const base = await issue([entry([READ])]);
+    expect(base.status, JSON.stringify(base.body)).toBe(200);
+    const baseToken = base.body.access_token as string;
+    const missionId = (decodeJwt(baseToken).mission as { id: string }).id;
+    const count = as.kernel.get(missionId)?.derivation_count;
+    const acting = await newKeys();
+
+    const refused = await delegate(baseToken, PLAIN, acting, await actorAssertion(acting));
+    expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+    expect(refused.body.error).toBe("invalid_target");
+    expect(refused.body.error_description).toMatch(/routed only to a Mission-aware Resource Server/);
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(count);
+
+    const self = await delegate(baseToken, PLAIN, acting);
+    expect(self.status, JSON.stringify(self.body)).toBe(200);
+    expect(self.body.scope).toBe("reports.read");
+    const claims = decodeJwt(self.body.access_token as string);
+    expect(claims.scope).toBe("reports.read");
+    expect(claims.act).toBeUndefined();
+    expect((await callRs(RS_PORT, "GET", self.body.access_token as string, acting)).status).toBe(200);
+  });
+
+  it("allows the Token Exchange presenting an actor to a Mission-aware audience", async () => {
+    const keys = await newKeys();
+    const code = await approve(
+      [{ type: "mission_resource_access", resource: PAYMENTS, actions: ["payments:invoice.read"], constraints: { vendors: ["acme"] } }],
+      PAYMENTS,
+    );
+    const base = await redeem(code, keys, PAYMENTS);
+    expect(base.status, JSON.stringify(base.body)).toBe(200);
+    const acting = await newKeys();
+    const res = await delegate(base.body.access_token as string, PAYMENTS, acting, await actorAssertion(acting));
+    expect(res.status, JSON.stringify(res.body)).toBe(200);
+    expect(res.body.scope).toBeUndefined();
   });
 });
 
