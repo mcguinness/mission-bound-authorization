@@ -5107,30 +5107,29 @@ member's registration in its own IANA considerations.
 
 This appendix walks one Mission from an agent through Mission
 creation, token issuance, and Resource Server enforcement in a single
-trust domain. It is illustrative and adds no normative requirements.
-The OAuth pieces use the rules in this document; the identity setup is
-by reference to {{I-D.draft-ietf-wimse-aims}}. Identifiers and hash
-values are illustrative and are not computed from the displayed JSON.
+trust domain. It is illustrative and adds no requirements. The OAuth
+steps follow this document; the identity setup follows
+{{I-D.draft-ietf-wimse-aims}}. Identifiers and hash values are
+illustrative and are not computed from the displayed JSON.
 
-This walkthrough is the baseline issuance path: stateless enforcement
+The walkthrough is the baseline issuance path: stateless enforcement
 bounded only by token lifetime. No stage calls back to the AS for
-Mission state; each party enforces from the credential it holds.
-Stage 3 notes where the optional runtime layer adds a point-of-use
-check.
+Mission state. Stage 3 notes where the optional runtime layer adds a
+point-of-use check.
 
 Scenario: agent `s6BhdRkqt3`, acting for `alice`
 (`user_3p2q8mN1a0kV7tR`), reconciles Q3 invoices in the home ERP
 under Mission `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-`.
 
 ## Stage 0: Agent Identity (by Reference) {#stage-0-agent-identity-by-reference}
-The agent is an OAuth client with a workload identity (for example,
-a workload identity established using WIMSE or SPIFFE,
-{{I-D.draft-ietf-wimse-arch}},
-{{I-D.draft-ietf-oauth-spiffe-client-auth}}), and `alice` has delegated to it through an
-ordinary authorization-code flow, per
-{{I-D.draft-ietf-wimse-aims}}: `client_id` is the agent and the
-token `sub` is `alice`. This document adds the Mission layer on top of
-that identity; Stage 0 is otherwise unchanged from that specification.
+The agent is an OAuth client with a workload identity, for example
+one established using WIMSE {{I-D.draft-ietf-wimse-arch}} or SPIFFE
+{{I-D.draft-ietf-oauth-spiffe-client-auth}}. `alice` has delegated to
+it through an ordinary authorization code flow, per
+{{I-D.draft-ietf-wimse-aims}}: `client_id` is the agent, and the
+token `sub` is `alice`. This document adds the Mission layer on top
+of that identity; Stage 0 is otherwise unchanged from that
+specification.
 
 ## Stage 1: Mission Creation {#stage-1-mission-creation}
 The agent submits this Submission envelope through PAR
@@ -5224,8 +5223,8 @@ AS resolves the Mission from the grant ({{grant-binding}}), gates on
 it being `active` ({{lifecycle}}), and issues a Mission-bound access
 token for the ERP. The token response carries the granted
 `authorization_details` echo ({{mission-bound-tokens}}) and the
-Mission references beside the token, response members rather than
-JWT claims ({{grant-binding}}):
+`mission_id` and `mission_expires_at` response parameters
+({{grant-binding}}):
 
 ~~~ json
 {
@@ -5256,7 +5255,7 @@ JWT claims ({{grant-binding}}):
 }
 ~~~
 
-The decoded token:
+The following is the decoded access token payload:
 
 ~~~ json
 {
@@ -5294,12 +5293,12 @@ The decoded token:
 }
 ~~~
 
-Everything enforcement needs is in the token: the audience, the
-sender-constraint (`cnf`), the authority with its constraints, and the
-`mission` claim identifying the Mission it was derived under. The
-token is short-lived (300 s) and its `exp` is far below
-`expires_at`; revoking the Mission stops further derivation, and
-this token dies at its own expiry ({{revocation}}).
+The token carries everything enforcement needs: the audience, the
+sender constraint (`cnf`), the authority with its constraints, and
+the `mission` claim naming the Mission it was derived under. Its
+300-second lifetime ends well before the Mission's `expires_at`.
+Revoking the Mission stops further derivation; this token remains
+valid until its own `exp` ({{revocation}}).
 
 ## Stage 3: The Resource Server Enforces {#stage-3-the-resource-server-enforces}
 The agent calls the ERP Resource Server (`erp.example.com`) with that
@@ -5310,22 +5309,21 @@ permitting `invoices.read` within the Q3 issuance window and
 ({{rs-enforcement}}). It treats the `mission` claim as audit and
 correlation context and makes no call to the AS.
 
-This is stateless enforcement from the token alone.
-`journal-entries.write` is a consequential write, so where the
-deployment runs the runtime profile
-({{I-D.draft-mcguinness-mission-runtime}}) it also obtains a
-point-of-use PDP permit against current Mission state before
-executing. The baseline bounds the write only by token lifetime and
-the carried constraints.
+This is stateless enforcement from the token alone: the baseline
+bounds the consequential `journal-entries.write` only by token
+lifetime and the carried constraints. Where the deployment runs the
+runtime profile ({{I-D.draft-mcguinness-mission-runtime}}), the
+Resource Server also obtains a point-of-use permit from a policy
+decision point, against current Mission state, before executing the
+write.
 
-The cross-domain continuation of this same Mission, projected to a
-partner ERP in another trust domain and enforced there, is walked
-through in the companion's end-to-end example
-({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
+The end-to-end example of the Mission Cross-Domain Projection profile
+({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) continues this
+Mission to a partner ERP in another trust domain.
 
 # Derivation Policy (Non-Normative) {#derivation-policy}
 
-This appendix is illustrative and adds no normative requirements. It
+This appendix is illustrative and adds no requirements. It
 describes an authoring artifact for the contract in
 {{authorization-derivation}}, not a standardized policy language or an
 alternative subset relation.
@@ -5333,13 +5331,14 @@ alternative subset relation.
 ## The Policy as an Artifact
 
 A deployment retains a versioned derivation policy with its ceiling,
-configured mappings, and issuance limits. Its inputs include a validated
-Mission Intent, the client's authority proposal in narrowing mode (or
-configured candidates when there is no proposal), the applicable authority
-source ceiling, and the capability catalog's per-action properties. The
-output is the Authority Set committed by `authority_hash`; `policy_version`
-identifies the policy used. The policy does not travel. Its identifier and
-published Intent-to-Authority-Set fixtures let a partner review outcomes.
+configured mappings, and issuance limits. Its inputs include a
+validated Mission Intent, the client's authority proposal in
+narrowing mode (or configured candidates when there is no proposal),
+the applicable authority source ceiling, and the capability catalog's
+per-action properties. The output is the Authority Set committed by
+`authority_hash`; `policy_version` identifies the policy used. The
+policy is not transmitted; its identifier and published
+Intent-to-Authority-Set fixtures let a partner review outcomes.
 
 Reproducing a derivation requires the same inputs and the retained
 policy and catalog versions, not just the identifier of a mutable
@@ -5349,12 +5348,12 @@ or a proposal, and does not make the approval-time narrowing decision.
 ## Properties a Derivation Policy Holds
 
 The five properties below restate, for a policy author, what
-{{authorization-derivation}} and the rules it cites already require of
-a derivation. They add no requirement of their own.
+{{authorization-derivation}} and the rules it cites require of a
+derivation.
 
 - **Deterministic.** The same Intent, proposal, ceiling, and catalog
-  derive the same Authority Set, which is what makes `policy_version`
-  an audit correlator at all ({{authorization-derivation}}).
+  derive the same Authority Set, so `policy_version` can serve as an
+  audit correlator ({{authorization-derivation}}).
 - **Narrowing only.** Every derived entry is a subset of some proposed
   entry of the same type, under that type's own relation
   ({{authority-proposal}}, {{subset}}); in configured-mapping mode the
@@ -5364,34 +5363,30 @@ a derivation. They add no requirement of their own.
   incomparable, the posture is conservative refusal ({{subset}}). For
   `mission_resource_access`, two amount caps naming different
   currencies have no intersection, with no implicit conversion and no
-  "ceiling wins" exception; the Common Constraints and their
-  intersection rules are defined by
-  {{I-D.draft-mcguinness-oauth-mission-resource-access}}.
-- **Refusal over silent drop.** A policy demonstrates narrowing only
-  for a constraint its engine compares. An entry of an unsupported
-  type, or one that fails its schema, is refused, and a validation
-  failure is never repaired by omitting the entry
-  ({{authority-proposal}}). An entry carrying a constraint the engine
-  cannot compare is refused rather than derived with that constraint
-  dropped ({{subset}}, {{error-mapping}}): a narrowing intent that
-  vanishes silently is a widening. An entry the engine compares and
-  policy cannot accept is the distinct case, narrowed or omitted with
-  the granted echo reflecting it ({{authority-proposal}}). A
-  deployment-defined constraint carries the same obligation as a
-  registered one, its own implemented comparison, and a name absent
-  from the common registry does not relieve it.
-- **Issuer-established members are not client-supplied.**
-  `policy_version` ({{authorization-derivation}}), `authority_source`
-  and `approval_basis` ({{authority-sources}}, {{mission-record}}), and
-  the effective `derivation_limit` ({{derivation-issuance-policy}}) are
-  established by the issuer at the approval event, and no proposal
-  member sets them. A client's `requested_derivation_limit` is an input
-  the issuer clamps, never an independently established ceiling
+  "ceiling wins" exception;
+  {{I-D.draft-mcguinness-oauth-mission-resource-access}} defines the
+  Common Constraints and their intersection rules.
+- **Refusal over silent drop.** An entry of an unsupported type, an
+  entry that fails its schema, and an entry carrying a constraint the
+  engine cannot compare, whether registered or deployment-defined,
+  are refused ({{authority-proposal}}, {{subset}}, {{error-mapping}}).
+  Derivation does not repair them by omitting the entry or dropping
+  the constraint: a dropped constraint widens the grant. An entry the
+  engine compares but policy cannot accept is the distinct case: it
+  is narrowed or omitted, and the granted echo reflects that
+  ({{authority-proposal}}).
+- **Issuer-established members are not client-supplied.** The issuer
+  establishes `policy_version` ({{authorization-derivation}}),
+  `authority_source` and `approval_basis` ({{authority-sources}},
+  {{mission-record}}), and the effective `derivation_limit`
+  ({{derivation-issuance-policy}}) at the approval event; no proposal
+  member sets them. A client's `requested_derivation_limit` is an
+  input the issuer clamps, not an independently established ceiling
   ({{derivation-issuance-policy}}).
 - **No member the ceiling never granted.** A grant-shaped member absent
   from the ceiling, such as a per-entry `delegation` policy, stays
-  absent from the derived entry, so a proposal introduces no capability
-  the policy never conferred. A restriction nested inside an
+  absent from the derived entry, so a proposal cannot introduce a
+  capability the policy did not confer. A restriction nested inside an
   already-granted delegation, such as `allowed_delegates`, narrows in
   the ordinary direction.
 
@@ -5414,7 +5409,8 @@ those actions:
 ]
 ~~~
 
-The validated proposal also separates the read from the amount-bound write:
+The validated proposal also separates the read from the amount-bound
+write:
 
 ~~~ json
 [
@@ -5429,44 +5425,40 @@ The validated proposal also separates the read from the amount-bound write:
 ]
 ~~~
 
-The resulting Authority Set contains the proposed `invoices.read` entry
-unchanged, and the proposed `journal-entries.write` entry with `max_amount`
-narrowed to `500.00 USD`. The ceiling's unrequested `journal-entries.read`
-does not appear. Each proposal intersects the same-resource ceiling
-fragments; disjoint action intersections contribute no authority.
+The resulting Authority Set contains the proposed `invoices.read`
+entry unchanged, and the proposed `journal-entries.write` entry with
+`max_amount` narrowed to `500.00 USD`. The ceiling's unrequested
+`journal-entries.read` does not appear. Each proposed entry
+intersects the same-resource ceiling entries; an empty action
+intersection contributes no authority.
 
-Attaching the amount cap to a single mixed read and write proposal is
-not a shortcut to that result: the read supplies no amount for the cap
-to compare against. A deployment applying one entry-admission rule at
-intake refuses that modeling error, rather than leaving derivation to
-drop the cap from a read fragment. A write proposal naming a different
-currency likewise cannot produce the USD intersection shown. And a
-proposal carrying a Common Constraint this deployment does not compare
-is refused with `invalid_authorization_details` ({{error-mapping}}),
-not derived with the constraint dropped. These are negative fixtures
-alongside the positive result, not special cases that relax the type's
-relation.
+Attaching the amount cap to a single mixed read and write proposal
+does not reach that result: the read supplies no amount for the cap
+to compare against, so the deployment refuses the proposal at intake
+rather than letting derivation drop the cap from the read fragment.
+A write proposal naming a different currency likewise cannot produce
+the USD intersection shown. A proposal carrying a Common Constraint
+this deployment does not compare is refused with the
+`invalid_authorization_details` error code ({{error-mapping}}), not
+derived with the constraint dropped. These are negative fixtures
+alongside the positive result, not special cases that relax the
+type's relation.
 
 ## Fixtures and Authoring Discipline
 
-Versioned Intent/proposal fixtures with expected Authority Sets make the
-existing publication recommendation in {{authorization-derivation}}
-concrete. Reviewing their diffs with every policy change exposes altered
-grants before approval. Include empty intersections, unknown constraints,
-incomparable values, and attempts to introduce delegation, as well as
-normal template and narrowing outcomes. Check subset against both proposal
-and ceiling, not only against the issuer's ceiling.
+Versioned Intent and proposal fixtures with expected Authority Sets
+make the publication recommendation in {{authorization-derivation}}
+concrete. Reviewing their diffs on every policy change exposes
+altered grants before approval. Fixtures cover empty intersections,
+unknown constraints, incomparable values, and attempts to introduce
+delegation, as well as normal template and narrowing outcomes, and
+check each subset against both the proposal and the ceiling.
 
-An additional tripwire runs the configuration actually shipped through
-intake, derivation and a real decision path. A successful configuration
-load alone does not prove that it can authorize its intended workload.
-Using the same entry-admission rule at configuration load and client intake
-helps prevent those two surfaces from disagreeing. A reference
-implementation's split action ceiling and shipped-configuration tests
-realize this discipline. This appendix states the contract and
-certifies no implementation's handling of a constraint it does not
-compare or of mismatched currencies; a deployment establishes that with
-its own fixtures.
+A further check runs the shipped configuration through intake,
+derivation, and a real decision path, since a configuration that
+loads does not thereby authorize its intended workload. Applying the
+same entry checks at configuration load and at client intake keeps
+those two surfaces from disagreeing.
 
 ## Ownership and Operational Signals
 
@@ -5476,26 +5468,24 @@ its own fixtures.
 | Capability catalog and action properties | Resource owner or service team | Supported operations and the facts their constraints can evaluate |
 | Templates and configured mappings | Template author within issuer policy | Candidate authority for supported Intent shapes |
 
-Templates amortize repeated authoring across Missions; they do not bypass
-the ceilings. Unmapped-resource rate, template-hit rate and rule-exception
-rate help an operator see where its policy authoring surface remains
-incomplete. None of these metrics certifies that a policy captured a human's
-intended meaning; the derivation boundary remains the one stated in
-{{authorization-derivation}}.
+Templates amortize authoring across Missions and do not bypass the
+ceilings. The unmapped-resource rate, template-hit rate, and
+rule-exception rate show an operator where its policy authoring
+remains incomplete.
 
 # Integrity Anchor Test Vectors {#test-vectors}
 
 These non-normative vectors let an implementation verify its anchor
-computation ({{integrity-anchors}}, {{canonicalization}}) byte for byte.
-All use the issuer `https://as.example.com`. Each canonical-bytes block
-is the exact JCS {{RFC8785}} output: a single line, UTF-8, with no
-whitespace outside string values.
-It is shown here wrapped only for layout; remove the layout line breaks,
-adding no characters, to recover the canonical form. Note that JCS sorts
-object member names (so `iss` precedes `typ` precedes `value`, within
-an entry `actions` precedes `constraints` precedes `resource` precedes
-`type`, and within `max_amount` `amount` precedes `currency`) and
-preserves array order.
+computation ({{integrity-anchors}}, {{canonicalization}}) byte for
+byte. All use the issuer `https://as.example.com`. Each
+canonical-bytes block is the exact JCS {{RFC8785}} output: a single
+line of UTF-8 with no whitespace outside string values. It is wrapped
+here for layout only; removing the line breaks, and adding no
+characters, recovers the canonical form. JCS sorts object member
+names (so `iss` precedes `typ` precedes `value`; within an entry,
+`actions` precedes `constraints` precedes `resource` precedes `type`;
+and within `max_amount`, `amount` precedes `currency`) and preserves
+array order.
 
 `intent_hash`, over this Mission Intent as the envelope `value` with
 `typ` `mission-intent`:
@@ -5552,7 +5542,7 @@ ource_access"}]}
 authority_hash = sha-256:vUCCfjGulit9u0qJ0Z6pQSNerZtXMqRlfJNCr4PzLro
 ~~~
 
-The third pair exercises an additional flat Intent member beyond
+The next two vectors exercise an additional flat Intent member beyond
 `target_resources`, and an Authority Set entry whose
 `delegation.allowed_delegates` is an array of matcher objects, where
 JCS sorts each object's members but preserves the array's order (the
@@ -5615,7 +5605,7 @@ ess"}]}
 authority_hash = sha-256:notrA9wZaP3I5Gx8UzN0mfzUjHYPeX4Ri_B3ilh7BbA
 ~~~
 
-The last vector exercises the third anchor. `proposal_hash`, over
+The next vector exercises the third anchor: `proposal_hash`, over
 this submitted `authorization_details` proposal as the envelope
 `value` with `typ` `mission-proposed-authority`
 ({{authority-proposal}}):
@@ -5649,9 +5639,9 @@ resource_access"}]}
 proposal_hash = sha-256:udzftXYQy0pvYNxz4KgtmyL_EV8ry4DhIbBFfwILEBA
 ~~~
 
-The entry commitment ({{integrity-anchors}}) is computed over one
-immutable Mission-record Authority Set entry, never an issued or
-narrowed token projection. Over this entry:
+The last vector is the entry commitment ({{integrity-anchors}}),
+computed over one immutable Mission-record Authority Set entry, not
+an issued or narrowed token projection. Over this entry:
 
 ~~~ json
 {
@@ -5694,25 +5684,22 @@ resolve before interoperating.
 
 <!-- assessed-substrate-digest: 7195da680769b440 -->
 
-This appendix is informative. It is this document's own Mapping
-Assessment of itself against the Mission Substrate contract's kernel
-and capabilities ({{I-D.draft-mcguinness-mission-substrate}}, Section
-"Mission Substrate Statement"), describing in the Statement's form
-how the surfaces this document already defines normatively realize
-that vocabulary. An assessment cannot be normative content in its own
-right while depending, even to be read, on a contract it cites only
-informatively: this document's own Conformance gates ({{conformance}})
-remain its sole normative requirements, this document publishes no
-Mission Substrate Statement and makes no substrate-conformance claim,
-and it takes no requirement from the substrate. Its reference to the
-substrate is informative, and the substrate's own reference back to
-this document is informative in turn, so neither document takes a
-normative dependency on the other. The assessment applies to the
-substrate revision published with this document, in this document's
-base single-domain mode, with the optional capabilities active as the
-conditions below state. The digest marker
-above keeps this description synchronized with the substrate's own
-text; a mismatch prompts review, not a normative failure.
+This appendix is informative. It is this document's Mapping
+Assessment of itself against the kernel and capabilities of the
+Mission Substrate contract (the "Mission Substrate Statement" section
+of {{I-D.draft-mcguinness-mission-substrate}}). It describes, in the
+Statement's form, how the surfaces this document defines realize
+that vocabulary.
+
+The assessment adds no requirement: {{conformance}} alone defines
+conformance to this document. This document publishes no Mission
+Substrate Statement, makes no substrate-conformance claim, and takes
+no requirement from the substrate; each document references the
+other informatively.
+
+The assessment applies to the substrate revision published with this
+document, in this document's base single-domain mode, with the
+optional capabilities active as the conditions below state.
 
 For the kernel:
 
@@ -5726,10 +5713,10 @@ For the kernel:
    trust (AS metadata and published keys).
 3. The Actor handle is the authenticated OAuth client at approval; the
    external Subject is fixed by this document's injective mapping;
-   delegates ride the `act` chain; child and successor lineage is
-   recorded through the parent and predecessor members; actor-type
-   classification uses `sub_profile` and client-instance attestations
-   where deployed.
+   delegates are carried in the `act` chain; child and successor
+   lineage is recorded through the parent and predecessor members;
+   actor-type classification uses `sub_profile` and client-instance
+   attestations where deployed.
 4. The Approved Context is the Mission Intent recorded verbatim, the
    recorded authority proposal where one was submitted, and the
    derived Authority Set; the immutable boundary is the record's
@@ -5793,11 +5780,9 @@ This document's four optional capabilities ({{conformance}}) are
 surfaces an implementation may or may not offer, each independent of
 the others. The capability table above states scoped guarantee
 claims: properties this document supplies and the conditions under
-which each is supplied. The two vocabularies answer different
-questions and are not equivalent; the entries below relate them
-without collapsing one into the other. Declaring an optional
-capability never creates a claim beyond the eight already stated
-above.
+which each is supplied. The entries below relate each optional
+capability to those claims. Declaring an optional capability never
+creates a claim beyond the eight already stated above.
 
 Introspection:
 : Exercises State-Observable. One of State-Observable's three named
@@ -5807,23 +5792,14 @@ Introspection:
 Delegation:
 : Exercises Lifecycle-Gated Authorization, Structured Authority,
   Monotonic Derivation, Credential-Bound, and Authorized Context
-  Correlation. This document's delegation subset-checks
-  `authorization_details`, carries the `mission` claim unchanged,
-  sender-constrains the delegated credential to the delegate's own
-  key, and refuses issuance unless the Mission is active. The Token
-  Exchange that issues the delegated credential associates, at
-  issuance, the Mission and Subject carried by the Mission-bound
-  `subject_token` with the delegate identity established by the
-  `actor_token` or the delegate's own client authentication, binding
-  all three to the newly issued credential without itself
-  establishing a new grant binding: an access-token-only delegated
-  exchange is a derived token under the `subject_token`'s existing
-  binding, not a second binding of its own ({{grant-binding}}). Four
-  of the five claims are supplied always, and Delegation exercises
-  them rather than creating them; Authorized Context Correlation is
-  the exception, activated by this capability, whose Token Exchange
-  join is its supplier. The `act` chain itself supplies none of them:
-  it is attribution, never authority.
+  Correlation ({{delegation}}). The first four are supplied always,
+  and Delegation exercises them rather than creating them. Authorized
+  Context Correlation is activated by this capability; its supplier
+  is the Token Exchange join, which binds the Mission and Subject of
+  the `subject_token` and the delegate's identity to the delegated
+  credential without creating a new grant binding
+  ({{grant-binding}}). The `act` chain itself supplies none of these
+  claims: it is attribution, never authority.
 
 Cross-Domain:
 : Exercises Lifecycle-Gated Authorization, Structured Authority,
