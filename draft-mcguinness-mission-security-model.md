@@ -995,12 +995,14 @@ Parameters change between decision and use (TOCTOU):
 
 Active Mission used as ambient standing authority:
 : Addressed by per-action runtime enforcement, state re-check,
-  fail-closed on stale state. Residual: an issuance-only deployment gets
-  audit, not action-time defense.
+  fail-closed on stale state. Residual: an issuance-only deployment
+  bounds each token to the Authority Set at issuance but runs no
+  per-action check.
 
 Revoked or expired Mission still acts (kill switch):
 : Addressed by issuance gating; runtime state re-check within the
-  staleness bound; short token lifetimes. Residual: a window up to the
+  staleness bound; per-request introspection; short token lifetimes.
+  Residual: a window up to the
   staleness bound or token TTL; a spoofed state source (a trusted
   component).
 
