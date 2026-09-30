@@ -1122,9 +1122,9 @@ derivation policy then in force, in one of two modes:
   Template profile ({{I-D.draft-mcguinness-oauth-mission-template}}),
   not this mode.
 
-In both modes the AS MUST bound every derived entry by the Mission
-Intent: each derived entry that carries a `resource` member has it
-among the Intent's `target_resources` values.
+In both modes the AS bounds every derived entry by the Mission
+Intent: each derived entry that carries a `resource` member MUST
+have it among the Intent's `target_resources` values.
 
 The Mission records the policy version in force as `policy_version`
 ({{mission-record}}), an opaque audit correlator; the policy itself
