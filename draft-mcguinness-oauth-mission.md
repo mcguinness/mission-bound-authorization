@@ -3113,7 +3113,11 @@ To emit `scope` for an entry, the AS:
 
 Unknown `scope` semantics, unknown Resource Server enforcement
 behavior, or an ambiguous or stale mapping all fail closed under step
-5 ({{error-mapping}}). This rule applies to every issuance path that
+5 ({{error-mapping}}). A changed mapping is not by itself stale: the AS
+evaluates each issuance, refresh included, against the target's
+current trusted mapping, and a mapping is stale only when the AS
+cannot establish that it is the current trusted mapping for that
+target. This rule applies to every issuance path that
 can emit `scope` on a Mission-bound token: initial issuance, refresh,
 Token Exchange, and
 any other derived-token path.
