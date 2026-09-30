@@ -6461,6 +6461,10 @@ Cross-Domain:
 
 -01
 
+- The Error and Challenge Mapping table maps a scope-projection
+  refusal, and an issuance-time refusal under the delegated-token
+  routing rule, to `invalid_target`.
+
 - Stated in the Introduction and {{runtime-boundary}} that a
   deployment can run this profile alone, with Resource Servers that
   need not be Mission-aware outside delegation, named introspection as
