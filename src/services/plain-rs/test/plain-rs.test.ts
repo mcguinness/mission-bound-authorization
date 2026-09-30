@@ -1,13 +1,15 @@
 /**
  * RFC 9068 / RFC 9449 / RFC 6750 behavior of the plain Resource Server, driven
  * by a local signing key (no Authorization Server): scope-only authorization,
- * the `insufficient_scope` challenge, DPoP binding, and introspection mode.
+ * the `insufficient_scope` challenge, DPoP binding, introspection mode and its
+ * failure contract, and the access token's time boundaries under an injected
+ * clock.
  */
 import { createHash } from "node:crypto";
 import { createServer, type Server } from "node:http";
 import { calculateJwkThumbprint, exportJWK, generateKeyPair, type JWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { startPlainResourceServer } from "../src/index.js";
+import { type PlainRsHandler, type PlainRsOptions, plainResourceServer, startPlainResourceServer } from "../src/index.js";
 
 const PORT = 14711;
 const INTROSPECT_PORT = 14712;
@@ -191,5 +193,227 @@ describe("plain-rs introspection mode", () => {
     expect(res.status).toBe(401);
     expect(((await res.json()) as { error: string }).error).toBe("invalid_token");
     active = true;
+  });
+});
+
+/** Serve a handler on `port`, returning the server and the handler (for `performed`). */
+async function serve(port: number, opts: PlainRsOptions): Promise<{ server: Server; handler: PlainRsHandler }> {
+  const handler = plainResourceServer(opts);
+  const server = createServer((req, res) => {
+    void handler(req, res);
+  });
+  await new Promise<void>((r) => server.listen(port, () => r()));
+  return { server, handler };
+}
+
+/** A Bearer access token (no `cnf`) carrying `reports.write`, times relative to `t`. */
+async function bearer(t: number, claims: Record<string, unknown> = {}): Promise<string> {
+  return accessToken({ cnf: undefined, scope: "reports.read reports.write", iat: t - 10, exp: t + 300, ...claims });
+}
+
+/** POST /api/reports with a Bearer token (no DPoP proof). */
+function postBearer(base: string, token: string) {
+  return fetch(`${base}/api/reports`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify({ title: "q4" }),
+  });
+}
+
+describe("plain-rs introspection failure contract (#873)", () => {
+  const STUB_PORT = 14713;
+  const RS_PORT = 14714;
+  const DEAD_RS_PORT = 14715;
+  const DEAD_PORT = 14716;
+  const TIMEOUT_MS = 150;
+  const base = `http://localhost:${RS_PORT}`;
+  /** What the stub answers: a status, a raw body, and an optional delay. */
+  let reply: { status: number; body: string; delayMs?: number } = { status: 200, body: '{"active":true}' };
+  let calls = 0;
+  let stub: Server;
+  let rsServer: Server;
+  let handler: PlainRsHandler;
+  let dead: { server: Server; handler: PlainRsHandler };
+  const settings = (endpoint: string) => ({
+    endpoint,
+    clientId: "rs-1",
+    clientSecret: "s3cret",
+    timeoutMs: TIMEOUT_MS,
+  });
+
+  beforeAll(async () => {
+    stub = createServer((_req, res) => {
+      calls += 1;
+      const { status, body, delayMs } = reply;
+      const answer = () => {
+        res.writeHead(status, { "content-type": "application/json" });
+        res.end(body);
+      };
+      if (delayMs) setTimeout(answer, delayMs).unref();
+      else answer();
+    });
+    await new Promise<void>((r) => stub.listen(STUB_PORT, () => r()));
+    ({ server: rsServer, handler } = await serve(RS_PORT, {
+      issuer: ISSUER,
+      audience: AUDIENCE,
+      jwks,
+      baseUrl: base,
+      introspection: settings(`http://localhost:${STUB_PORT}/introspect`),
+    }));
+    dead = await serve(DEAD_RS_PORT, {
+      issuer: ISSUER,
+      audience: AUDIENCE,
+      jwks,
+      baseUrl: `http://localhost:${DEAD_RS_PORT}`,
+      introspection: settings(`http://localhost:${DEAD_PORT}/introspect`),
+    });
+  });
+
+  afterAll(() => {
+    stub?.closeAllConnections?.();
+    stub?.close();
+    rsServer?.close();
+    dead?.server.close();
+  });
+
+  /** POST under the stub's `r` reply; asserts the status/error and that no operation ran. */
+  async function refusedWith(r: typeof reply, status: number, error: string) {
+    reply = r;
+    const before = handler.performed;
+    const res = await postBearer(base, await bearer(Math.floor(Date.now() / 1000)));
+    expect(res.status).toBe(status);
+    expect(((await res.json()) as { error: string }).error).toBe(error);
+    expect(handler.performed).toBe(before);
+  }
+
+  it("a 500 from the introspection endpoint refuses 503 temporarily_unavailable before the operation", async () => {
+    await refusedWith({ status: 500, body: '{"active":true}' }, 503, "temporarily_unavailable");
+  });
+
+  it("an unreachable introspection endpoint (connection refused) refuses 503 temporarily_unavailable before the operation", async () => {
+    const before = dead.handler.performed;
+    const res = await postBearer(`http://localhost:${DEAD_RS_PORT}`, await bearer(Math.floor(Date.now() / 1000)));
+    expect(res.status).toBe(503);
+    expect(((await res.json()) as { error: string }).error).toBe("temporarily_unavailable");
+    expect(dead.handler.performed).toBe(before);
+  });
+
+  it("a body that is not JSON refuses 503 temporarily_unavailable before the operation", async () => {
+    await refusedWith({ status: 200, body: "{active: true" }, 503, "temporarily_unavailable");
+  });
+
+  it("a JSON null body refuses 503 temporarily_unavailable, never 500", async () => {
+    await refusedWith({ status: 200, body: "null" }, 503, "temporarily_unavailable");
+  });
+
+  it("a JSON array, number or string body refuses 503 temporarily_unavailable", async () => {
+    for (const body of ['[{"active":true}]', "1", '"active"']) {
+      await refusedWith({ status: 200, body }, 503, "temporarily_unavailable");
+    }
+  });
+
+  it("an object with no active member refuses 401 invalid_token before the operation", async () => {
+    await refusedWith({ status: 200, body: "{}" }, 401, "invalid_token");
+  });
+
+  it('an object whose active is the string "true" refuses 401 invalid_token before the operation', async () => {
+    await refusedWith({ status: 200, body: '{"active":"true"}' }, 401, "invalid_token");
+  });
+
+  it("a response slower than the introspection timeout refuses 503 temporarily_unavailable within about the timeout", async () => {
+    const started = Date.now();
+    await refusedWith({ status: 200, body: '{"active":true}', delayMs: 3000 }, 503, "temporarily_unavailable");
+    const elapsed = Date.now() - started;
+    expect(elapsed).toBeGreaterThanOrEqual(TIMEOUT_MS - 20);
+    expect(elapsed).toBeLessThan(1500);
+  });
+
+  it("active true admits the operation", async () => {
+    reply = { status: 200, body: '{"active":true}' };
+    const before = handler.performed;
+    const res = await postBearer(base, await bearer(Math.floor(Date.now() / 1000)));
+    expect(res.status).toBe(201);
+    expect(handler.performed).toBe(before + 1);
+  });
+
+  it("introspects every request: two requests make two calls, and a positive first result does not admit the second once the endpoint says active false", async () => {
+    const token = await bearer(Math.floor(Date.now() / 1000));
+    reply = { status: 200, body: '{"active":true}' };
+    const startCalls = calls;
+    const before = handler.performed;
+    expect((await postBearer(base, token)).status).toBe(201);
+    reply = { status: 200, body: '{"active":false}' };
+    const second = await postBearer(base, token);
+    expect(second.status).toBe(401);
+    expect(calls - startCalls).toBe(2);
+    expect(handler.performed).toBe(before + 1);
+  });
+});
+
+describe("plain-rs access-token time boundaries (injected clock)", () => {
+  // An injected clock an hour ahead of the system clock, so a boundary the
+  // server decides on its own clock differs from one decided on the system's.
+  const T = Math.floor(Date.now() / 1000) + 3600;
+  const opts = (port: number, extra: Partial<PlainRsOptions> = {}): PlainRsOptions => ({
+    issuer: ISSUER,
+    audience: AUDIENCE,
+    jwks,
+    baseUrl: `http://localhost:${port}`,
+    now: () => T,
+    ...extra,
+  });
+  let strict: { server: Server; handler: PlainRsHandler };
+  let tolerant: { server: Server; handler: PlainRsHandler };
+  beforeAll(async () => {
+    strict = await serve(14717, opts(14717));
+    tolerant = await serve(14718, opts(14718, { clockToleranceSeconds: 5 }));
+  });
+  afterAll(() => {
+    strict?.server.close();
+    tolerant?.server.close();
+  });
+
+  it("with clock tolerance 0, a token whose exp is 1 s before now is refused and one whose exp is 1 s after now is accepted", async () => {
+    const before = strict.handler.performed;
+    const late = await postBearer("http://localhost:14717", await bearer(T, { exp: T - 1 }));
+    expect(late.status).toBe(401);
+    expect(((await late.json()) as { error: string }).error).toBe("invalid_token");
+    expect(strict.handler.performed).toBe(before);
+    expect((await postBearer("http://localhost:14717", await bearer(T, { exp: T + 1 }))).status).toBe(201);
+  });
+
+  it("with clock tolerance 5 s, a token 3 s past exp is accepted and one 6 s past exp is refused", async () => {
+    expect((await postBearer("http://localhost:14718", await bearer(T, { exp: T - 3 }))).status).toBe(201);
+    const before = tolerant.handler.performed;
+    const late = await postBearer("http://localhost:14718", await bearer(T, { exp: T - 6 }));
+    expect(late.status).toBe(401);
+    expect(tolerant.handler.performed).toBe(before);
+  });
+
+  it("a DPoP proof whose iat is exactly 60 s either side of now is accepted, and 61 s is refused", async () => {
+    const url = "http://localhost:14717/api/reports";
+    const at = (iat: number, token: string) =>
+      new SignJWT({ htm: "POST", htu: url, ath: createHash("sha256").update(token).digest("base64url") })
+        .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: dpopJwk })
+        .setIssuedAt(iat)
+        .setJti(crypto.randomUUID())
+        .sign(dpopKeys.privateKey);
+    const send = async (iat: number) => {
+      const token = await accessToken({ scope: "reports.write", iat: T - 10, exp: T + 300 });
+      return fetch(url, {
+        method: "POST",
+        headers: { authorization: `DPoP ${token}`, dpop: await at(iat, token), "content-type": "application/json" },
+        body: "{}",
+      });
+    };
+    expect((await send(T - 60)).status).toBe(201);
+    expect((await send(T + 60)).status).toBe(201);
+    const before = strict.handler.performed;
+    for (const iat of [T - 61, T + 61]) {
+      const res = await send(iat);
+      expect(res.status).toBe(401);
+      expect(((await res.json()) as { error: string }).error).toBe("invalid_dpop_proof");
+    }
+    expect(strict.handler.performed).toBe(before);
   });
 });
