@@ -142,8 +142,11 @@ export {
 export {
   type AudienceScopeMapping,
   delegatedRoutingRefusal,
+  earlyScopeRefusal,
+  OIDC_SCOPE_VALUES,
   parseScopeProjectionMapping,
   projectScope,
+  type RequestedScope,
   SCOPE_CONTROL_KEYS,
   SCOPE_PROJECTION_MODES,
   SCOPE_RESOURCE_MATCHES,
@@ -157,6 +160,7 @@ export {
   type ScopeValueMapping,
   type ScopeValueRights,
   scopeValueSafeForEntry,
+  splitScope,
 } from "./scope-projection.js";
 export { DuplicateMemberError, parseStrictJson } from "./strict-json.js";
 export {

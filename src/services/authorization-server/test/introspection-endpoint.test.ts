@@ -118,7 +118,6 @@ async function runFlow(input: {
       client_id: "ap-agent",
       response_type: "code",
       redirect_uri: REDIRECT_URI,
-      scope: "payments",
       resource: input.resource,
       code_challenge: await pkceChallenge(),
       code_challenge_method: "S256",

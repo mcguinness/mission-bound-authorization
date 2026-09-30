@@ -29,10 +29,49 @@ import {
 import Provider, { errors, type Configuration, type KoaContextWithOIDC, type ResourceServer } from "oidc-provider";
 import {
   delegatedRoutingRefusal,
+  earlyScopeRefusal,
   projectScope,
+  type RequestedScope,
   type ScopeProjectionMapping,
   type ScopeProjectionOutcome,
+  splitScope,
+  withoutCapabilitySources,
 } from "@mission/core";
+
+/**
+ * @spec mission#authority-proposal, mission#scope-projection — the reserved
+ * stored-interaction key marking an `authorization_details` value the AS
+ * wrote itself (the Intent-only completion workaround in `decide`). It is not
+ * an oidc-provider parameter, so a client can never send it: the provider's
+ * parameter allow-list drops it from every PAR and authorization request.
+ */
+export const DERIVED_AUTHORIZATION_DETAILS_MARKER = "__mission_derived_authorization_details";
+
+/**
+ * @spec mission#authority-proposal — the client's authority proposal as the
+ * stored interaction carries it: the `authorization_details` string the
+ * client pushed, or undefined when it pushed none. A value the AS injected
+ * for oidc-provider's completion check is never a proposal.
+ */
+export function clientProposalParam(params: Record<string, unknown>): string | undefined {
+  if (params[DERIVED_AUTHORIZATION_DETAILS_MARKER] === true) return undefined;
+  return typeof params.authorization_details === "string" ? params.authorization_details : undefined;
+}
+
+/**
+ * @spec mission#error-mapping — a scope-projection refusal as the OAuth error
+ * the core's error-mapping table names for it: `invalid_scope` for an
+ * explicitly requested value the issuance cannot grant, `invalid_target` for
+ * an unknown mapping, the delegated-routing rule, or no safe projection.
+ */
+export function scopeProjectionError(outcome: Extract<ScopeProjectionOutcome, { outcome: "refuse" }>) {
+  return outcome.error === "invalid_scope"
+    ? // No `scope` member on the error body (@types require one; the runtime does not).
+      new (errors.InvalidScope as unknown as new (description: string) => errors.OIDCProviderError)(
+        outcome.reason,
+      )
+    : new errors.InvalidTarget(outcome.reason);
+}
 
 // @types/oidc-provider (9.5) predates InvalidAuthorizationDetails, present at
 // runtime in 9.10 (spec traceability: SPEC_VERSIONS O-2 note). Typed alias
@@ -671,77 +710,217 @@ export function buildProvider(opts: AdapterOptions): Provider {
     }
   };
 
-  // @spec mission#scope-projection — the per-grant mapping-version pins. The
-  // version-mismatch rule: the first Mission-bound issuance under a grant for
-  // an audience records the mapping version it projected under; every later
-  // issuance under that grant for that audience (refresh, deferred, child or
-  // dispatch mints reusing the Mission's grant) refuses as STALE when the
-  // current version differs. A new grant (a Token Exchange family, a child
-  // grant) pins afresh. Held in memory beside the grants themselves, which
-  // this deployment keeps in oidc-provider's in-memory adapter: a pin never
-  // outlives the grant it guards.
-  const scopeProjectionPins = new Map<string, Map<string, string>>();
   // The tokens whose `scope` the projection decided, so the JWT customizer
   // below applies exactly that decision (and refuses any Mission-bound token
-  // that did not pass through it).
+  // that did not pass through it), with the `scope` value the token response
+  // reports for each (OIDC values granted plus the projected ones).
   const projectedTokens = new WeakSet<object>();
+  const responseScopes = new WeakMap<object, string | undefined>();
 
   /**
    * @spec mission#scope-projection — THE shared projection for every
    * Mission-bound access token oidc-provider mints (authorization code,
    * refresh, Token Exchange families, deferred, child jwt-bearer, dispatch,
    * expansion). Runs from extraTokenClaims BEFORE the state and derivation
-   * gates, so a refusal consumes no derivation. Resolves the token's
-   * audience (step 1) and the mapping (step 2), applies the subset condition
-   * (step 3) over the token's own carried `authorization_details`, omits
-   * `scope` for an `authorization_details` target (step 4) and refuses a
-   * `scope`-only target with no safe value, an unknown audience, or a stale
-   * mapping with `invalid_target` (step 5), per audience (step 6). The
-   * decided value replaces whatever oidc-provider computed on `token.scope`,
-   * so the token response's `scope` member (rendered from it after save)
-   * and the JWT claim (the customizer) agree.
+   * gates, so a refusal consumes no derivation, and is evaluated against the
+   * mapping current at this issuance (no version pin: a changed mapping is
+   * not by itself stale). Resolves the token's audience (step 1) and the
+   * mapping (step 2), applies the subset condition (step 3) over the token's
+   * own carried `authorization_details`, omits `scope` for an
+   * `authorization_details` target (step 4), narrows to the requested
+   * values, and refuses per the core's error mapping: `invalid_target` for
+   * an unknown mapping or no safe projection, `invalid_scope` for an
+   * explicitly requested value the issuance cannot grant. The decided value
+   * replaces whatever oidc-provider computed on `token.scope`, so the JWT
+   * claim (the customizer) carries it, and the token response reports the
+   * granted values (the response middleware below).
    */
-  function projectMissionBoundScope(token: {
-    grantId?: string;
-    rar?: unknown;
-    scope?: string | undefined;
-    resourceServer?: { audience?: unknown };
-  }): void {
+  function projectMissionBoundScope(
+    ctx: unknown,
+    token: {
+      rar?: unknown;
+      scope?: string | undefined;
+      resourceServer?: { audience?: unknown };
+    },
+  ): void {
     const aud = token.resourceServer?.audience;
     const audiences = typeof aud === "string" ? [aud] : Array.isArray(aud) ? (aud as string[]) : [];
-    const pins = token.grantId ? scopeProjectionPins.get(token.grantId) : undefined;
-    const outcome: ScopeProjectionOutcome = projectScope({
+    const { emitted, granted } = decideMissionScope(
+      ctx,
+      audiences,
+      Array.isArray(token.rar) ? token.rar : [],
+    );
+    token.scope = emitted.length ? emitted.join(" ") : undefined;
+    projectedTokens.add(token);
+    responseScopes.set(token, granted.length ? granted.join(" ") : undefined);
+  }
+
+  /**
+   * @spec mission#scope-projection — the scope decision itself, shared by the
+   * save-time projection and the refresh pre-check so the two cannot differ:
+   * the projected resource values (`emitted`) and everything granted
+   * (`granted`: the OIDC values plus `emitted`), or a thrown refusal. A
+   * refresh omitting `scope` inherits the refresh token's granted scope; when
+   * the current mapping no longer grants some of it (a changed mode, or a
+   * value no longer safe), the narrowed grant is issued only while it still
+   * holds a scope value the response can report, and refused `invalid_scope`
+   * when it would hold none (RFC 6749 Section 3.3: a changed grant is
+   * reported, and there is no empty scope).
+   */
+  function decideMissionScope(
+    ctx: unknown,
+    audiences: readonly string[],
+    entries: readonly unknown[],
+  ): { emitted: string[]; granted: string[] } {
+    const request = missionScopeRequest(ctx);
+    if (!request.oidcGrantable && request.oidc.length) {
+      throw new errors.InvalidScope(
+        `requested scope value ${request.oidc[0]} cannot be granted on this grant`,
+        request.oidc[0] as string,
+      );
+    }
+    const outcome = projectScope({
       mapping: opts.scopeProjection,
       audiences,
-      entries: Array.isArray(token.rar) ? token.rar : [],
-      pinnedVersion: (a) => pins?.get(a),
+      entries,
+      ...(request.requested ? { requested: request.requested } : {}),
     });
-    if (outcome.outcome === "refuse") {
-      // @spec mission#scope-projection — step 5 refusal, mapped to
-      // `invalid_target` (RFC 8707) by the core's error-mapping table
-      // (@spec mission#error-mapping): the requested target cannot be
-      // issued to.
-      throw new errors.InvalidTarget(outcome.reason);
+    if (outcome.outcome === "refuse") throw scopeProjectionError(outcome);
+    const emitted = outcome.outcome === "emit" ? outcome.values : [];
+    const granted = [...request.oidcGranted, ...emitted];
+    if (request.inherited.length && !granted.length) {
+      throw scopeProjectionError({
+        outcome: "refuse",
+        error: "invalid_scope",
+        reason: `the inherited scope ${request.inherited.join(" ")} can no longer be granted`,
+      });
     }
-    if (token.grantId) {
-      const held = pins ?? new Map<string, string>();
-      for (const [a, v] of Object.entries(outcome.versions)) if (!held.has(a)) held.set(a, v);
-      scopeProjectionPins.set(token.grantId, held);
+    return { emitted, granted };
+  }
+
+  /**
+   * @spec mission#scope-projection — what the current request names or
+   * inherits as `scope`, split into OIDC values (their own semantics,
+   * unaffected by the projection) and resource values (projected). A request
+   * `scope` naming resource values is explicit; a code carries the resource
+   * values its authorization request named (explicit). A refresh inherits the
+   * refresh token's granted scope (RFC 6749 Section 6, not explicit) only when
+   * it omits `scope`; a refresh naming only OIDC values explicitly asks for no
+   * resource value. Only the code and refresh grants issue OIDC artifacts.
+   */
+  function missionScopeRequest(ctx: unknown): {
+    requested?: RequestedScope;
+    oidc: string[];
+    oidcGranted: string[];
+    oidcGrantable: boolean;
+    /** The granted scope a refresh omitting `scope` inherits (empty otherwise). */
+    inherited: string[];
+  } {
+    const oidc = (ctx as { oidc?: { params?: Record<string, unknown>; entities?: Record<string, unknown> } })
+      .oidc;
+    const params = oidc?.params ?? {};
+    const entities = (oidc?.entities ?? {}) as {
+      AuthorizationCode?: { scope?: string };
+      RefreshToken?: { scope?: string };
+      Grant?: { getOIDCScope(): string };
+    };
+    const grantType = params.grant_type;
+    const oidcGrantable = grantType === "authorization_code" || grantType === "refresh_token";
+    const explicit = splitScope(params.scope);
+    let requested: RequestedScope | undefined;
+    let oidcValues = explicit.oidc;
+    let inherited: string[] = [];
+    if (grantType === "refresh_token" && typeof params.scope === "string") {
+      requested = { values: explicit.resource, explicit: true };
+    } else if (explicit.resource.length) {
+      requested = { values: explicit.resource, explicit: true };
+    } else if (grantType === "authorization_code") {
+      const code = splitScope(entities.AuthorizationCode?.scope);
+      if (code.resource.length) requested = { values: code.resource, explicit: true };
+      if (typeof params.scope !== "string") oidcValues = code.oidc;
+    } else if (grantType === "refresh_token") {
+      const rt = splitScope(entities.RefreshToken?.scope);
+      requested = { values: rt.resource, explicit: false };
+      oidcValues = rt.oidc;
+      inherited = [...rt.oidc, ...rt.resource];
     }
-    token.scope = outcome.outcome === "emit" ? outcome.scope : undefined;
-    projectedTokens.add(token);
+    const held = new Set((entities.Grant?.getOIDCScope() ?? "").split(" ").filter(Boolean));
+    return {
+      ...(requested ? { requested } : {}),
+      oidc: explicit.oidc,
+      oidcGranted: oidcGrantable ? oidcValues.filter((v) => held.has(v)) : [],
+      oidcGrantable,
+      inherited,
+    };
+  }
+
+  /**
+   * @spec mission#scope-projection, mission#refresh-preservation — the
+   * refresh pre-check. oidc-provider's refresh_token grant calls
+   * `rotateRefreshToken` after client authentication, the refresh token's
+   * own client, expiry, sender-constraint and reuse checks, and the grant
+   * lookup, and BEFORE it consumes or rotates the token
+   * (lib/actions/grants/refresh_token.js 9.10.0 L60-133 then L137). The
+   * projection is decided here with the same inputs the access token's save
+   * will use, so a refusal caused solely by the projection leaves the
+   * refresh token and its grant valid. A failure to resolve the refreshed
+   * authority itself is left to the ordinary path.
+   */
+  function preCheckRefreshProjection(ctx: unknown): void {
+    const c = ctx as {
+      oidc: {
+        params: Record<string, unknown>;
+        entities: { RefreshToken?: { grantId?: string; resource?: unknown }; Grant?: { jti?: string; rar?: unknown } };
+      };
+    };
+    const rt = c.oidc.entities.RefreshToken;
+    const grant = c.oidc.entities.Grant;
+    if (!rt?.grantId || !grant) return;
+    const bound =
+      kernel.findByGrant(rt.grantId) !== undefined ||
+      opts.familyStore?.resolve(rt.grantId) !== undefined ||
+      kernel.missionBoundGrants.resolve(rt.grantId) !== undefined;
+    if (!bound) return; // an ordinary OAuth grant: no projection applies
+    let rar: unknown;
+    try {
+      rar = rarThroughEffectiveSet(grant);
+    } catch {
+      return;
+    }
+    const resource =
+      typeof c.oidc.params.resource === "string" ? c.oidc.params.resource : rt.resource;
+    if (typeof resource !== "string") return;
+    decideMissionScope(ctx, [resource], Array.isArray(rar) ? rar : []);
   }
 
   const configuration: Configuration = {
     clients: opts.clients as never,
     jwks: opts.jwks as never,
-    scopes: ["openid", "profile", "email", "payments"],
+    // @spec mission#scope-projection — the OIDC vocabulary only (the prior
+    // list less the synthetic "payments"): a resource `scope` value is the
+    // scope projection's, never a provider scope.
+    scopes: ["openid", "profile", "email"],
     // OIDC claims by scope, sourced from the identity store; put them in the
     // id_token itself (not only at userinfo) so the token carries the subject's
     // identity for the demo. `sub` is always present.
     claims: { profile: ["name", "preferred_username"], email: ["email"] },
     conformIdTokenClaims: false,
-    issueRefreshToken: async (_ctx, client) => client.grantTypeAllowed("refresh_token"),
+    issueRefreshToken: async (ctx, client, source) => {
+      if (!client.grantTypeAllowed("refresh_token")) return false;
+      // @spec mission#scope-projection — the refresh token records the scope
+      // actually granted (the code's OIDC values plus the projected ones), so
+      // a later refresh naming a subset is checked against it, and one
+      // naming nothing inherits it (RFC 6749 Section 6).
+      const at = (ctx.oidc.entities as { AccessToken?: object }).AccessToken;
+      const s = source as { scope?: string | undefined };
+      if (at && projectedTokens.has(at)) {
+        const projected = splitScope((at as { scope?: string }).scope).resource;
+        const kept = splitScope(s.scope).oidc;
+        const recorded = [...kept, ...projected];
+        s.scope = recorded.length ? recorded.join(" ") : undefined;
+      }
+      return true;
+    },
     pkce: { required: () => true },
     interactions: { url: (_ctx, interaction) => `/interaction/${interaction.uid}` },
     // @spec mission#downgrade-by-omission — the per-client Mission-governance
@@ -836,8 +1015,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
       resourceIndicators: {
         enabled: true,
         defaultResource: () => opts.issuer,
+        // @types/oidc-provider 9.5 types `scope` as required; the 9.10 runtime
+        // treats an absent one as an empty vocabulary.
         getResourceServerInfo: (_ctx, resourceIndicator) =>
-          resourceServerInfoFor(resourceIndicator, opts.accessTokenTTL ?? 300),
+          resourceServerInfoFor(resourceIndicator, opts.accessTokenTTL ?? 300) as unknown as ResourceServer,
         useGrantedResource: () => true,
       },
     },
@@ -870,6 +1051,22 @@ export function buildProvider(opts: AdapterOptions): Provider {
           if (typeof proposalRaw === "string") {
             kernel.validateProposal(proposalRaw, intent.target_resources);
           }
+          // @spec mission#scope-projection, mission#error-mapping — the early
+          // requested-scope check (same error class as the issuance): under a
+          // trusted mapping, a resource value for an `authorization_details`
+          // target, or one a `scope`-only target's mapping does not name, can
+          // never be granted. Values that depend on the derived authority are
+          // checked at the decision; an unknown mapping at the token endpoint.
+          const requested = splitScope(params.scope).resource;
+          const resourceParam = params.resource;
+          const audiences =
+            typeof resourceParam === "string"
+              ? [resourceParam]
+              : Array.isArray(resourceParam)
+                ? (resourceParam as string[])
+                : [];
+          const early = earlyScopeRefusal(opts.scopeProjection, audiences, requested);
+          if (early) throw new errors.InvalidScope(early, requested.join(" "));
           // @spec mission#intent-submission-evidence — STAGE-2 verification at
           // submission time (required types resolved BEFORE derivation; the
           // presenter is the PAR-authenticated client, no cnf at this carrier).
@@ -930,7 +1127,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
         const fam = opts.familyStore?.resolve(grantId);
         const famRecord = fam ? kernel.get(fam.missionId) : missionForBoundGrant(grantId);
         if (!famRecord) return {};
-        projectMissionBoundScope(token as Parameters<typeof projectMissionBoundScope>[0]);
+        projectMissionBoundScope(_ctx, token as Parameters<typeof projectMissionBoundScope>[1]);
         try {
           // gateActive, never gateDerivation: the SINGLE count of a family (or
           // of the Mission's original issuance) was spent once at issuance
@@ -959,7 +1156,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
           throw e;
         }
       }
-      projectMissionBoundScope(token as Parameters<typeof projectMissionBoundScope>[0]);
+      projectMissionBoundScope(_ctx, token as Parameters<typeof projectMissionBoundScope>[1]);
       try {
         // @spec control-plane#serialization — THE UNCOUPLED COUNTER. This hook
         // is synchronous and runs inside oidc-provider's own token `save()`,
@@ -1021,6 +1218,8 @@ export function buildProvider(opts: AdapterOptions): Provider {
       // refresh token" the profile forbids. Resolving here makes the 503 land
       // at L135 instead, leaving the client's refresh token usable for a retry.
       probeAuthoritySource(rt?.grantId);
+      // @spec mission#scope-projection — refusal before consumption.
+      preCheckRefreshProjection(ctx);
       if (rt?.grantId && opts.familyStore?.resolve(rt.grantId)) return true;
       // Default: lib/helpers/defaults.js rotateRefreshToken (oidc-provider 9.10.0,
       // L528-546) — cap rotation at 1 year, rotate non-sender-constrained public
@@ -1140,7 +1339,8 @@ export function buildProvider(opts: AdapterOptions): Provider {
     provider.registerGrantType(
       DEFERRED_GRANT_TYPE,
       (ctx) => handleDeferredGrant(opts, deferrals, provider, ctx),
-      new Set(["deferral_code", "deferred_authorization"]),
+      // `scope` (@spec mission#scope-projection) is read on the redeeming request.
+      new Set(["deferral_code", "deferred_authorization", "scope"]),
     );
   }
 
@@ -1154,7 +1354,8 @@ export function buildProvider(opts: AdapterOptions): Provider {
   provider.registerGrantType(
     CHILD_JWT_BEARER_GRANT_TYPE,
     (ctx) => handleChildJwtBearerGrant(opts, provider, ctx),
-    new Set(["assertion"]),
+    // `scope` (@spec mission#scope-projection) narrows the projected scope.
+    new Set(["assertion", "scope"]),
   );
 
   // @spec child-delegation#child-creation — Child Mission CREATION is now an RFC
@@ -1176,7 +1377,8 @@ export function buildProvider(opts: AdapterOptions): Provider {
     // (@spec mission#authority-proposal), the same standard carriage as PAR
     // and the child/expansion exchanges; it MUST be declared here or
     // stripGrantIrrelevantParams removes it.
-    new Set(["template_id", "mission_intent", "dispatch_event_id", "authorization_details"]),
+    // `scope` (@spec mission#scope-projection) narrows the projected scope.
+    new Set(["template_id", "mission_intent", "dispatch_event_id", "authorization_details", "scope"]),
   );
 
   // @spec id-continuation-assertion — the RFC 8693 token-exchange grant: an ICA
@@ -1224,6 +1426,9 @@ export function buildProvider(opts: AdapterOptions): Provider {
       // retrieval mode of the child-creation completion surface (no new
       // endpoint and no new metadata member).
       "carryover_replacement",
+      // @spec mission#scope-projection — declared so an exchange's requested
+      // `scope` is honored or refused, never stripped unseen.
+      "scope",
     ]),
   );
 
@@ -1240,6 +1445,22 @@ export function buildProvider(opts: AdapterOptions): Provider {
     if (body?.error === "temporarily_unavailable" && !ctx.response.get("Retry-After")) {
       ctx.set("Retry-After", String(opts.stateRecoveryRetryAfter ?? 5));
     }
+  });
+
+  // @spec mission#scope-projection — the token response reports the scope
+  // actually granted (RFC 6749 Section 5.1): the OIDC values granted plus the
+  // projected ones, and no member when nothing was granted. Applied to every
+  // Mission-bound issuance oidc-provider or a custom grant rendered, keyed on
+  // the minted AccessToken the projection decided.
+  provider.use(async (ctx, next) => {
+    await next();
+    if (ctx.oidc?.route !== "token" || ctx.status !== 200) return;
+    const body = ctx.body as Record<string, unknown> | undefined;
+    const at = (ctx.oidc.entities as { AccessToken?: object } | undefined)?.AccessToken;
+    if (!body || typeof body.access_token !== "string" || !at || !responseScopes.has(at)) return;
+    const granted = responseScopes.get(at);
+    if (granted) body.scope = granted;
+    else delete body.scope;
   });
 
   // @spec mission#grant-binding — `mission_expires_at` (and `mission_id`) on the
@@ -1307,16 +1528,13 @@ export const SCOPE_DECIDED_AT_SAVE = "";
  * resourceIndicators config and the custom-grant mints so all project an
  * identical, resource-bound (not opaque) token.
  *
- * `scope` here is oidc-provider's resource-server scope vocabulary (what it
- * filters a requested or refreshed scope against). It is never the emitted
- * value of a Mission-bound token: every Mission-bound mint replaces it with
- * the scope-projection decision (@spec mission#scope-projection,
- * projectMissionBoundScope in buildProvider), which omits it for an
- * `authorization_details` target.
+ * It declares no resource-server `scope` vocabulary: authority is the
+ * token's `authorization_details`, and a Mission-bound token's `scope` is the
+ * scope-projection decision alone (@spec mission#scope-projection,
+ * projectMissionBoundScope in buildProvider).
  */
 export function resourceServerInfoFor(resource: string, accessTokenTTL: number) {
   return {
-    scope: "payments",
     audience: resource,
     accessTokenFormat: "jwt" as const,
     accessTokenTTL,
@@ -1384,6 +1602,12 @@ async function handleDeferredGrant(
   // --- Initiation: the client submits the mission subset it wants deferred. ---
   const raw = params.deferred_authorization;
   if (typeof raw === "string" && raw) {
+    // @spec mission#scope-projection — no token is issued here, so a
+    // requested `scope` is refused rather than dropped: it belongs on the
+    // redeeming request, whose issuance it narrows.
+    if (params.scope !== undefined) {
+      throw new errors.InvalidRequest("scope is accepted on the deferral_code redemption that issues the token");
+    }
     let intent: { mission_id?: unknown; requested?: unknown };
     try {
       intent = JSON.parse(raw) as { mission_id?: unknown; requested?: unknown };
@@ -1637,8 +1861,6 @@ async function handleChildJwtBearerGrant(
     grantId = record.grant_id;
   } else {
     const grant = new provider.Grant({ accountId: record.subject.sub, clientId: record.client_id });
-    grant.addOIDCScope("payments");
-    grant.addResourceScope(resource, "payments");
     for (const entry of effective) {
       (grant as unknown as { addRar: (d: unknown) => void }).addRar(entry);
     }
@@ -1837,9 +2059,10 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // authorization_details parameter; the rendering distinguishes the
       // submitted proposal (untrusted) from the derived Authority Set (what
       // approval grants).
+      const proposalRaw = clientProposalParam(params);
       const proposal =
-        typeof params.authorization_details === "string"
-          ? kernel.validateProposal(params.authorization_details, intent.target_resources)
+        proposalRaw !== undefined
+          ? kernel.validateProposal(proposalRaw, intent.target_resources)
           : undefined;
       // @spec mission#error-mapping — a well-formed Intent this AS's policy
       // (or the client's own proposal) derives no Authority Set from is a
@@ -3160,8 +3383,6 @@ async function handleMissionDispatchGrant(
     grantId = record.grant_id;
   } else {
     const grant = new provider.Grant({ accountId: record.subject.sub, clientId: client.clientId });
-    grant.addOIDCScope("payments");
-    grant.addResourceScope(resource, "payments");
     for (const entry of effective) {
       (grant as unknown as { addRar: (d: unknown) => void }).addRar(entry);
     }
@@ -3295,9 +3516,10 @@ async function decide(
   // exactly this context, so a change to any of task, proposal, or derived set
   // between rendering and decision is a NEW interaction context and recomputes
   // every anchor.
+  const proposalRaw = clientProposalParam(params);
   const proposedAuthority =
-    typeof params.authorization_details === "string"
-      ? opts.kernel.validateProposal(params.authorization_details, intent.target_resources)
+    proposalRaw !== undefined
+      ? opts.kernel.validateProposal(proposalRaw, intent.target_resources)
       : undefined;
   const approver = principal.sub;
   const subject = typeof params.login_hint === "string" ? params.login_hint : approver;
@@ -3375,6 +3597,31 @@ async function decide(
     return;
   }
 
+  // @spec mission#scope-projection, mission#error-mapping — the requested
+  // `scope` check at the authorization decision, before any Mission exists:
+  // under a trusted mapping, a requested resource value the derived authority
+  // cannot make a safe projection of refuses `invalid_scope` through the
+  // pending authorization request. An unknown mapping or a target with no
+  // safe projection is left to the token endpoint, which refuses it
+  // `invalid_target` (the mapping error takes precedence).
+  const requestedScope = splitScope(params.scope);
+  const audience = typeof params.resource === "string" ? params.resource : authority[0]?.resource;
+  if (requestedScope.resource.length && audience) {
+    const outcome = projectScope({
+      mapping: opts.scopeProjection,
+      audiences: [audience],
+      entries: authority,
+      requested: { values: requestedScope.resource, explicit: true },
+    });
+    if (outcome.outcome === "refuse" && outcome.error === "invalid_scope") {
+      await provider.interactionFinished(ctx.req, ctx.res, {
+        error: "invalid_scope",
+        error_description: outcome.reason,
+      });
+      return;
+    }
+  }
+
   // @spec mission#approval-event (step 3), mission#error-mapping — the five
   // authority-source gates run inside `approve()`, before any anchor is
   // computed and before the record is created. Every refusal is an
@@ -3412,18 +3659,43 @@ async function decide(
   }
 
   const grant = new provider.Grant({ accountId: subject, clientId: String(params.client_id) });
-  // Grant exactly the requested scopes (openid enables an id_token when asked).
-  grant.addOIDCScope(typeof params.scope === "string" ? params.scope : "payments");
+  // @spec mission#scope-projection — the grant holds exactly what the
+  // request named: its OIDC values (openid enables an id_token), and any
+  // resource values the check above let through, so the authorization code
+  // carries them to the token request. Authority itself is the grant's rar;
+  // no resource scope stands in for it.
+  if (requestedScope.oidc.length) grant.addOIDCScope(requestedScope.oidc.join(" "));
+  if (requestedScope.resource.length && audience) {
+    grant.addResourceScope(audience, requestedScope.resource.join(" "));
+  }
   // Containment: the grant's rar copies the EFFECTIVE set. A freshly approved
   // Mission has no containment, so this is the approved set as-is (fast path).
   const effective = opts.kernel.effectiveAuthoritySet(record);
-  const resource = effective[0]?.resource ?? opts.issuer;
-  grant.addResourceScope(resource, "payments");
   for (const entry of effective) {
     (grant as unknown as { addRar: (d: unknown) => void }).addRar(entry);
   }
   const grantId = await grant.save();
   opts.kernel.bindGrant(record.id, grantId);
+
+  // @spec mission#scope-projection — an Intent-only request (configured
+  // mapping: no `authorization_details`, and no resource `scope` either,
+  // since a Mission client does not request one for this authority) must
+  // still complete. oidc-provider's authorization endpoint finishes a
+  // request only when a scope was granted or `authorization_details` was
+  // requested (lib/actions/authorization/interactions.js 9.10.0 L63-72), so
+  // the pending request records the issuer-derived authority as its
+  // `authorization_details`: the authority this request obtains is carried
+  // through RAR, never through a synthetic scope. The grant's rar, not this
+  // parameter, is what every token carries.
+  // The value is marked (DERIVED_AUTHORIZATION_DETAILS_MARKER) so every
+  // reader of the stored parameters as a client proposal (the approval render
+  // and a repeated decision on this interaction) treats it as absent, and the
+  // anchors never commit a proposal the client did not send.
+  if (typeof params.authorization_details !== "string" || params[DERIVED_AUTHORIZATION_DETAILS_MARKER] === true) {
+    params.authorization_details = JSON.stringify(withoutCapabilitySources(effective));
+    params[DERIVED_AUTHORIZATION_DETAILS_MARKER] = true;
+    await details.save(Math.max(1, (details.exp ?? 0) - Math.floor(Date.now() / 1000)));
+  }
 
   await provider.interactionFinished(ctx.req, ctx.res, {
     login: { accountId: subject },

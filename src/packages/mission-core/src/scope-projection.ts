@@ -21,6 +21,28 @@
 import type { AuthorityEntry } from "./authority-entry.js";
 import { compareAmounts, isValidAmount } from "./decimal-amount.js";
 
+/**
+ * @spec mission#scope-projection — the `scope` values with their own (OIDC)
+ * semantics. They are unaffected by the projection and combine with
+ * `authorization_details`; every other `scope` value is a resource value the
+ * projection governs.
+ */
+export const OIDC_SCOPE_VALUES: ReadonlySet<string> = new Set([
+  "openid",
+  "offline_access",
+  "profile",
+  "email",
+]);
+
+/** Split a `scope` string into its OIDC values and its resource values. */
+export function splitScope(value: unknown): { oidc: string[]; resource: string[] } {
+  const values = typeof value === "string" ? [...new Set(value.split(" ").filter(Boolean))] : [];
+  return {
+    oidc: values.filter((v) => OIDC_SCOPE_VALUES.has(v)),
+    resource: values.filter((v) => !OIDC_SCOPE_VALUES.has(v)),
+  };
+}
+
 /** How the target's enforcement path consumes a Mission-bound token. */
 export const SCOPE_PROJECTION_MODES = ["authorization_details", "scope_only"] as const;
 export type ScopeProjectionMode = (typeof SCOPE_PROJECTION_MODES)[number];
@@ -314,27 +336,51 @@ export function scopeValueSafeForEntry(value: ScopeValueMapping, entry: unknown)
 
 export type ScopeProjectionOutcome =
   /** Step 4: every audience consumes `authorization_details`; emit no `scope`. */
-  | { outcome: "omit"; versions: Record<string, string> }
+  | { outcome: "omit" }
   /** Steps 1-3: `scope` is exactly these values, each proven safe at every audience. */
-  | { outcome: "emit"; scope: string; values: string[]; versions: Record<string, string> }
-  /** Step 5: issuance is refused. */
-  | { outcome: "refuse"; reason: string };
+  | { outcome: "emit"; scope: string; values: string[] }
+  /**
+   * Refused. `invalid_target`: no trusted mapping for an audience, the
+   * delegated-routing rule, a mixed-mode token, or no safe projection with no
+   * `scope` requested. `invalid_scope`: under a trusted mapping, an explicitly
+   * requested value the issuance cannot grant (@spec mission#error-mapping).
+   */
+  | { outcome: "refuse"; error: "invalid_target" | "invalid_scope"; reason: string };
+
+/**
+ * The resource `scope` values a request names, with OIDC and other
+ * self-describing values already removed by the caller.
+ */
+export interface RequestedScope {
+  values: readonly string[];
+  /**
+   * `true` when the request itself names the values (an authorization or
+   * token request's `scope`, or an authorization code carrying what its
+   * authorization request named): an ungrantable value refuses
+   * `invalid_scope`, and so does an explicit request naming no resource value
+   * at a `scope`-only target (a refresh whose `scope` is OIDC-only). `false` when the values are inherited (a refresh with
+   * no `scope`, which RFC 6749 Section 6 treats as the originally granted
+   * scope): the issuance narrows to what is still safe, and refuses
+   * `invalid_scope` when none of it is.
+   */
+  explicit: boolean;
+}
 
 export interface ScopeProjectionInput {
-  /** The trusted mapping; absent means no audience is known. */
+  /** The trusted mapping, read at this issuance; absent means no audience is known. */
   mapping: ScopeProjectionMapping | undefined;
   /** The token's audience or audiences (step 1). */
   audiences: readonly string[];
   /** The token's carried `authorization_details`. */
   entries: readonly unknown[];
   /**
-   * The mapping version recorded for this audience when the grant was first
-   * issued under, if any. A different current version is a stale mapping.
+   * The requested resource `scope` values, if the request names or inherits
+   * any. Absent: every safe value is emitted.
    */
-  pinnedVersion?: (audience: string) => string | undefined;
+  requested?: RequestedScope;
   /**
-   * The token is delegated: it carries an `act` chain (or answers an RFC 8693
-   * delegation request). Then every audience must be Mission-aware.
+   * The token is delegated: it carries an `act` chain. Then every audience
+   * must be Mission-aware.
    */
   delegated?: boolean;
 }
@@ -365,39 +411,57 @@ export function delegatedRoutingRefusal(
 
 /**
  * @spec mission#scope-projection — the issuance algorithm, per audience
- * (step 6): a delegated token first passes the routing rule
- * ({@link delegatedRoutingRefusal}); then resolve the audience's mapping
- * (unknown fails closed), refuse a
- * mapping whose version differs from the one pinned for the grant (stale),
- * then either omit `scope` (the target consumes `authorization_details`) or
- * emit only values a single carried entry covers. One `scope` claim reaches
- * every audience, so a value is emitted only when it is safe at every
- * audience, a token spanning both modes is refused, and a `scope`-only
- * audience left with no safe value is refused.
+ * (step 6), evaluated at every issuance against the mapping current at that
+ * issuance (a changed mapping is not by itself stale). Precedence: a missing
+ * mapping for any audience and the delegated-routing rule
+ * ({@link delegatedRoutingRefusal}) refuse `invalid_target` before any
+ * requested value is judged; then, under a trusted mapping, an explicitly
+ * requested value the issuance cannot grant refuses `invalid_scope` (any
+ * resource value for an `authorization_details` audience, or a value no
+ * carried entry makes safe). An `authorization_details` audience omits
+ * `scope`; a `scope`-only audience emits the safe values, narrowed to the
+ * requested ones. One `scope` claim reaches every audience, so a value is
+ * emitted only when it is safe at every audience and a token spanning both
+ * modes is refused (an implementation restriction, not a protocol rule).
  */
 export function projectScope(input: ScopeProjectionInput): ScopeProjectionOutcome {
+  const target = (reason: string): ScopeProjectionOutcome => ({
+    outcome: "refuse",
+    error: "invalid_target",
+    reason,
+  });
+  const ungrantable = (value: string, why: string): ScopeProjectionOutcome => ({
+    outcome: "refuse",
+    error: "invalid_scope",
+    reason: `requested scope value ${value} cannot be granted: ${why}`,
+  });
   const audiences = [...new Set(input.audiences)];
-  if (audiences.length === 0) return { outcome: "refuse", reason: "the token names no audience" };
-  if (input.delegated) {
-    const reason = delegatedRoutingRefusal(input.mapping, audiences);
-    if (reason) return { outcome: "refuse", reason };
-  }
-  const versions: Record<string, string> = {};
-  const modes = new Set<ScopeProjectionMode>();
-  let safe: Set<string> | undefined;
+  if (audiences.length === 0) return target("the token names no audience");
+  const mappings: AudienceScopeMapping[] = [];
   for (const aud of audiences) {
     const m = input.mapping?.audiences[aud];
-    if (!m) return { outcome: "refuse", reason: `no scope-projection mapping for audience ${aud}` };
-    const pinned = input.pinnedVersion?.(aud);
-    if (pinned !== undefined && pinned !== m.version) {
-      return {
-        outcome: "refuse",
-        reason: `scope-projection mapping for audience ${aud} is stale (version ${m.version}, grant issued under ${pinned})`,
-      };
-    }
-    versions[aud] = m.version;
+    if (!m) return target(`no scope-projection mapping for audience ${aud}`);
+    mappings.push(m);
+  }
+  if (input.delegated) {
+    const reason = delegatedRoutingRefusal(input.mapping, audiences);
+    if (reason) return target(reason);
+  }
+  const requested = input.requested ? [...new Set(input.requested.values)] : undefined;
+  const explicit = input.requested?.explicit === true;
+  const modes = new Set<ScopeProjectionMode>();
+  let safe: Set<string> | undefined;
+  for (const [i, m] of mappings.entries()) {
     modes.add(m.mode);
-    if (m.mode !== "scope_only") continue;
+    if (m.mode !== "scope_only") {
+      if (explicit && requested?.length) {
+        return ungrantable(
+          requested[0] as string,
+          `audience ${audiences[i]} consumes authorization_details`,
+        );
+      }
+      continue;
+    }
     const here = new Set(
       Object.entries(m.scopes)
         .filter(([, value]) => input.entries.some((entry) => scopeValueSafeForEntry(value, entry)))
@@ -405,19 +469,72 @@ export function projectScope(input: ScopeProjectionInput): ScopeProjectionOutcom
     );
     safe = safe ? new Set([...safe].filter((s) => here.has(s))) : here;
   }
-  if (!modes.has("scope_only")) return { outcome: "omit", versions };
+  if (!modes.has("scope_only")) return { outcome: "omit" };
   if (modes.size > 1) {
-    return {
-      outcome: "refuse",
-      reason: "a scope claim cannot be omitted for one audience and emitted for another",
-    };
+    return target("a scope claim cannot be omitted for one audience and emitted for another");
   }
-  const values = [...(safe ?? [])].sort();
+  const safeSet = safe ?? new Set<string>();
+  if (explicit && requested) {
+    const unsafe = requested.find((v) => !safeSet.has(v));
+    if (unsafe !== undefined) {
+      return ungrantable(unsafe, "no applicable entry makes it a safe projection");
+    }
+    // An explicit request naming no resource value (a refresh asking for
+    // only OIDC values) leaves a `scope`-only target nothing to grant: a
+    // token with no `scope` there is not a usable credential.
+    if (requested.length === 0) {
+      return {
+        outcome: "refuse",
+        error: "invalid_scope",
+        reason: "the requested scope names no value this scope-only target can grant",
+      };
+    }
+  }
+  if (safeSet.size === 0) {
+    return target("no safe scope projection exists for the applicable entries");
+  }
+  const values = [...safeSet].filter((v) => !requested || requested.includes(v)).sort();
   if (values.length === 0) {
-    return {
-      outcome: "refuse",
-      reason: "no safe scope projection exists for the applicable entries",
-    };
+    // Inherited values (a refresh omitting `scope`) none of which is still
+    // safe: the narrowed grant would carry no scope value, which the
+    // response cannot report (RFC 6749 Section 3.3 has no empty scope).
+    if (requested?.length) {
+      return {
+        outcome: "refuse",
+        error: "invalid_scope",
+        reason: `the inherited scope ${requested.join(" ")} can no longer be granted`,
+      };
+    }
+    return target("no safe scope projection exists for the applicable entries");
   }
-  return { outcome: "emit", scope: values.join(" "), values, versions };
+  return { outcome: "emit", scope: values.join(" "), values };
+}
+
+/**
+ * @spec mission#scope-projection, mission#error-mapping — the part of the
+ * requested-scope check an authorization request can run before any
+ * Authority Set exists (at PAR): under a trusted mapping, a resource value
+ * for an `authorization_details` audience, or a value a `scope`-only
+ * audience's mapping does not name, can never be granted. Returns the
+ * refusal reason, or undefined. An audience without a mapping is left to
+ * the issuance, which refuses it `invalid_target` first.
+ */
+export function earlyScopeRefusal(
+  mapping: ScopeProjectionMapping | undefined,
+  audiences: readonly string[],
+  requested: readonly string[],
+): string | undefined {
+  if (!requested.length) return undefined;
+  for (const aud of audiences) {
+    const m = mapping?.audiences[aud];
+    if (!m) continue;
+    if (m.mode !== "scope_only") {
+      return `requested scope value ${requested[0]} cannot be granted: audience ${aud} consumes authorization_details`;
+    }
+    const unknown = requested.find((v) => !Object.hasOwn(m.scopes, v));
+    if (unknown !== undefined) {
+      return `requested scope value ${unknown} cannot be granted: the mapping for audience ${aud} does not name it`;
+    }
+  }
+  return undefined;
 }

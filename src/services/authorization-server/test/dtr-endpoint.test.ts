@@ -129,7 +129,6 @@ async function issueBaseMissionToken(): Promise<{ token: string; missionId: stri
       client_id: "ap-agent",
       response_type: "code",
       redirect_uri: REDIRECT_URI,
-      scope: "payments",
       resource: RESOURCE,
       code_challenge: challenge,
       code_challenge_method: "S256",
@@ -349,5 +348,30 @@ describe("AS deferred grant on /token (AROP Deferred Token Response, DTR -00, D4
     // The authoritative gate runs once (extraTokenClaims at mint); redeem() no
     // longer gates. Before O-36 this delta was 2.
     expect(count() - before).toBe(1);
+  });
+});
+
+describe("requested scope on the deferred grant (@spec mission#scope-projection)", () => {
+  it("refuses a scope on the deferral initiation with invalid_request, and a resource scope for the authorization_details target on the redemption with invalid_scope", async () => {
+    const requested = subset(["payments:invoice.read"]);
+    const early = await tokenRequest({
+      grant_type: DEFERRED_GRANT_TYPE,
+      deferred_authorization: JSON.stringify({ mission_id: missionId, requested }),
+      scope: "payments",
+    });
+    const earlyBody = (await early.json()) as { error?: string; error_description?: string };
+    expect(early.status).toBe(400);
+    expect(earlyBody.error).toBe("invalid_request");
+    expect(earlyBody.error_description).toMatch(/deferral_code redemption/);
+
+    const initBody = (await (await initiate(requested)).json()) as { deferral_code?: string };
+    const code = initBody.deferral_code as string;
+    as.deferrals.approve(code, new Date(Date.now() + 120_000).toISOString());
+    const res = await tokenRequest({ grant_type: DEFERRED_GRANT_TYPE, deferral_code: code, scope: "payments" });
+    const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_scope");
+    expect(body.error_description).toMatch(/consumes authorization_details/);
+    expect(body.access_token).toBeUndefined();
   });
 });

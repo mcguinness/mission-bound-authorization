@@ -42,13 +42,14 @@ import {
   projectThroughEffective,
   SourceUnavailableError,
 } from "../kernel/derive.js";
-import { isSubsetSetIgnoringCapabilitySources, projectScope } from "@mission/core";
+import { isSubsetSetIgnoringCapabilitySources, projectScope, splitScope } from "@mission/core";
 import { UniqueViolationError } from "@mission/store";
 import {
   type CreationOperation,
   type CreationReservation,
   creationFingerprint,
   isValidCreationRequestId,
+  normalizedScope,
 } from "../kernel/creation-idempotency.js";
 import { DEFERRAL_EXPIRES_IN, DEFERRAL_INTERVAL, ExpansionDeferralError } from "../kernel/deferred.js";
 import { CarryoverRetrievalError } from "../kernel/carryover.js";
@@ -195,6 +196,12 @@ export async function handleTokenExchangeGrant(
     return;
   }
 
+  // @spec mission#scope-projection — this exchange issues an identity
+  // grant, not a Mission-bound access token: a requested `scope` cannot be
+  // granted, so it is refused rather than dropped.
+  if (params.scope !== undefined) {
+    throw new errors.InvalidScope("scope is not supported on this exchange", String(params.scope));
+  }
   // Step 1: RFC 8693 param shape.
   if (params.requested_token_type !== ID_JAG_TOKEN_TYPE) {
     throw new errors.InvalidRequest("requested_token_type MUST be the id-jag token type");
@@ -489,6 +496,14 @@ export async function handleAsyncDelegationExchange(
   if (!familyStore || !resourceToAs) {
     throw new errors.InvalidRequest("async-delegation transport is not configured");
   }
+  // @spec continuation#transport-async, mission#rs-enforcement — this
+  // transport continues the base token's own client and cannot represent a
+  // delegate: an `actor_token` is refused, for every target, before any side
+  // effect, rather than silently dropped.
+  if (params.actor_token !== undefined) {
+    txError(ctx, 400, "invalid_request", "actor_token is not supported on this exchange");
+    return;
+  }
 
   // Step 1: the authenticated acting client (client auth ran before this handler) +
   // the DPoP-derived presenter jkt (reuse the ICA handler's DPoP block). The new
@@ -543,6 +558,13 @@ export async function handleAsyncDelegationExchange(
   const missionId = missionRef?.id;
   if (typeof missionId !== "string") {
     txError(ctx, 400, "invalid_grant", "subject_token is missing the mission claim");
+    return;
+  }
+  // @spec continuation#transport-async, mission#rs-enforcement — a
+  // subject_token already carrying `act` holds actor context this transport
+  // cannot carry forward: refused, never stripped.
+  if (baseClaims.act !== undefined) {
+    txError(ctx, 400, "invalid_request", "subject_token actor context (act) is not supported on this exchange");
     return;
   }
   // @spec async-delegation: the delegation handle (the base access token) is
@@ -605,6 +627,7 @@ export async function handleAsyncDelegationExchange(
     ...(requestedSubset ? { proposal: requestedSubset } : {}),
     resource: target,
     request_refresh_token: true,
+    scope: normalizedScope(params.scope),
   });
   const idem = opts.creationIdempotency;
   if (!idem) {
@@ -672,19 +695,23 @@ export async function handleAsyncDelegationExchange(
   // reservation, the family grant and the single derivation count, keeps the
   // refusal free of side effects. save() decides with the same function over
   // the same inputs for a fresh family grant, so the two cannot disagree.
-  // @spec mission#rs-enforcement — an exchange presenting an `actor_token`
-  // is an RFC 8693 delegation request: its token is a delegated
-  // Mission-bound token, routed only to a Mission-aware audience. This
-  // transport does not render the actor as `act`, so the refusal is keyed on
-  // the request, and it lands here, before any side effect.
+  // The family token carries no `act` (an actor_token was refused above), so
+  // the delegated-routing rule does not apply; its requested `scope` does.
+  const requestedScope = splitScope(params.scope);
+  if (requestedScope.oidc.length) {
+    txError(ctx, 400, "invalid_scope", `requested scope value ${requestedScope.oidc[0]} cannot be granted on this grant`);
+    return;
+  }
   const projection = projectScope({
     mapping: opts.scopeProjection,
     audiences: [target],
     entries: confinedSubset,
-    delegated: params.actor_token !== undefined,
+    ...(requestedScope.resource.length
+      ? { requested: { values: requestedScope.resource, explicit: true } }
+      : {}),
   });
   if (projection.outcome === "refuse") {
-    txError(ctx, 400, "invalid_target", projection.reason);
+    txError(ctx, 400, projection.error, projection.reason);
     return;
   }
 
@@ -715,8 +742,8 @@ export async function handleAsyncDelegationExchange(
   }
 
   // Step 5 (FAMILY-CREATED): create the per-delegation Grant (its rar IS the
-  // confined subset — structural confinement; addResourceScope(target) is
-  // REQUIRED or the refreshed access token's scope filters empty), record the
+  // confined subset — structural confinement; it holds no resource scope:
+  // every family token's `scope` is the scope projection's), record the
   // family so extraTokenClaims/rotate/ttl recognise it, then record the family
   // identity on the reservation ATOMICALLY with the single gateDerivation (one
   // kernel-db transaction). Every later hop (initial mint + refreshes +
@@ -728,8 +755,6 @@ export async function handleAsyncDelegationExchange(
   // the family-created transition back together, invalidates the provisional
   // family, and records a failed tombstone (the refusal replays).
   const grant = new provider.Grant({ accountId: record.subject.sub, clientId: client.clientId });
-  grant.addOIDCScope("payments");
-  grant.addResourceScope(target, "payments");
   for (const entry of confinedSubset) {
     (grant as unknown as { addRar: (d: unknown) => void }).addRar(entry);
   }
@@ -839,10 +864,10 @@ async function deliverAsyncDelegationFamily(
     client,
     grantId: d.grantId,
     gty: TOKEN_EXCHANGE_GRANT_TYPE,
-    // oidc-provider grant plumbing (the vocabulary a refresh filters its
-    // scope through, matching addResourceScope above); never emitted: each
-    // refreshed access token's `scope` is the scope-projection decision.
-    scope: "payments",
+    // @spec mission#scope-projection — the family records the scope the
+    // initial access token was granted, so a refresh naming a subset is
+    // checked against it and one naming nothing inherits it.
+    ...((at as { scope?: string }).scope ? { scope: (at as { scope?: string }).scope } : {}),
     rar: d.refreshRar,
     resource: d.target,
   });
@@ -1244,8 +1269,6 @@ async function mintMissionAccessToken(
     grantId = mission.grant_id;
   } else {
     const grant = new provider.Grant({ accountId: mission.subject.sub, clientId: mission.client_id });
-    grant.addOIDCScope("payments");
-    grant.addResourceScope(resource, "payments");
     for (const entry of effective) (grant as unknown as { addRar: (d: unknown) => void }).addRar(entry);
     grantId = await grant.save();
     opts.kernel.bindGrant(mission.id, grantId);
@@ -1457,6 +1480,12 @@ export async function handleChildCreationExchange(
   ctx: KoaContextWithOIDC,
 ): Promise<void> {
   const params = ctx.oidc.params as Record<string, unknown>;
+  // @spec mission#scope-projection — child creation issues the child's
+  // authorization grant, not an access token: a requested `scope` belongs on
+  // the child's own jwt-bearer redemption, so it is refused here.
+  if (params.scope !== undefined) {
+    throw new errors.InvalidScope("scope is not supported on this exchange", String(params.scope));
+  }
   // @spec child-delegation#carryover-commit — the carryover result retrieval
   // mode: a `carryover_replacement`, no `subject_token`. It creates nothing.
   const carryoverReplacement = params.carryover_replacement;
@@ -1801,6 +1830,12 @@ export async function handleExpansionExchange(
   if (typeof deferralCode === "string" && deferralCode) {
     await pollDeferredExpansion(opts, provider, ctx, deferralCode);
     return;
+  }
+  // @spec mission#scope-projection — the successor's token is issued on the
+  // deferral_code poll, which is where a requested `scope` narrows it; on the
+  // initiation it is refused rather than dropped.
+  if (params.scope !== undefined) {
+    throw new errors.InvalidRequest("scope is accepted on the deferral_code poll that issues the token");
   }
 
   // Steps 1-3: possession — the predecessor is selected by subject_token.

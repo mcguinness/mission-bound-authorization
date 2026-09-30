@@ -14,6 +14,7 @@ import {
   type LocalMappingPolicy,
   narrowToEntitledAuthority,
   narrowToCeiling,
+  OIDC_SCOPE_VALUES,
   parseChainPresentation,
   projectScope,
   resolveLocalPrincipal,
@@ -276,18 +277,27 @@ export async function handleCrossOrgChainExchange(
   // access token directly, outside oidc-provider's save(), so it calls the
   // same projection itself: omit `scope` for an `authorization_details`
   // target, emit only proven-safe values for a `scope`-only one, refuse
-  // otherwise (`invalid_target`, @spec mission#error-mapping).
+  // otherwise (`invalid_target`, or `invalid_scope` for an explicitly
+  // requested value it cannot grant, @spec mission#error-mapping).
   // @spec mission#rs-enforcement — this token always carries a (restarted)
   // `act`: it is a delegated Mission-bound token, minted only for an
   // audience the mapping classifies Mission-aware.
+  const requested =
+    typeof params.scope === "string" ? [...new Set(params.scope.split(" ").filter(Boolean))] : [];
+  const oidcValue = requested.find((v) => OIDC_SCOPE_VALUES.has(v));
+  if (oidcValue !== undefined) {
+    fail(ctx, "invalid_scope", `requested scope value ${oidcValue} cannot be granted on this grant`);
+    return;
+  }
   const projection = projectScope({
     mapping: opts.scopeProjection,
     audiences: [requestedAud],
     entries: outputAuthority,
     delegated: true,
+    ...(requested.length ? { requested: { values: requested, explicit: true } } : {}),
   });
   if (projection.outcome === "refuse") {
-    fail(ctx, "invalid_target", projection.reason);
+    fail(ctx, projection.error, projection.reason);
     return;
   }
   const projectedScope = projection.outcome === "emit" ? projection.scope : undefined;

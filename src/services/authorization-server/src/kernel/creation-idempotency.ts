@@ -152,6 +152,10 @@ export interface MissionCreationFingerprintInput {
  *    confined subset, when present.
  *  - `resource`: the target the family is audienced to.
  *  - `request_refresh_token`: the parameter selecting this exchange.
+ *  - `scope` (@spec mission#scope-projection): the requested `scope`,
+ *    normalized as its value set, sorted and space-separated, empty when
+ *    absent. It changes the outcome (projection, narrowing, `invalid_scope`),
+ *    so a retry naming a different set is a different request.
  */
 export interface AsyncDelegationFingerprintInput {
   op: "async-delegation";
@@ -162,6 +166,13 @@ export interface AsyncDelegationFingerprintInput {
   proposal?: AuthorityEntry[];
   resource: string;
   request_refresh_token: true;
+  scope: string;
+}
+
+/** A `scope` parameter as its normalized value set: deduplicated, sorted, space-separated. */
+export function normalizedScope(value: unknown): string {
+  if (typeof value !== "string") return "";
+  return [...new Set(value.split(" ").filter(Boolean))].sort().join(" ");
 }
 
 export type CreationFingerprintInput =
@@ -179,6 +190,7 @@ export function creationFingerprint(input: CreationFingerprintInput): string {
       ...(input.proposal ? { proposal: input.proposal } : {}),
       resource: input.resource,
       request_refresh_token: true,
+      scope: input.scope,
     };
     return computeAnchor(MISSION_CREATION_FINGERPRINT_TYP, input.iss, value as unknown as JsonValue);
   }

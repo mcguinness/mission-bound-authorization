@@ -19,7 +19,7 @@ let agentCredential: IssuedMission;
 const defaults: IssueOpts = {
   missionIntent: JSON.stringify({ intent: { goal: "Read approved invoices", target_resources: [CANONICAL_RESOURCE], expires_at: "2027-01-01T00:00:00Z" } }),
   authorizationDetails: JSON.stringify([{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] }]),
-  scope: "payments openid",
+  scope: "openid",
 };
 beforeAll(async () => {
   const now = Math.floor(Date.now() / 1000);

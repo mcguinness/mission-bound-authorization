@@ -408,7 +408,6 @@ async function pushPar(issuer: string, key: CryptoKey, params: Record<string, st
       client_id: "ap-agent",
       response_type: "code",
       redirect_uri: REDIRECT_URI,
-      scope: "payments",
       resource: RESOURCE,
       code_challenge: await pkceChallenge(),
       code_challenge_method: "S256",

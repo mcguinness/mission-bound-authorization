@@ -65,7 +65,7 @@ async function main(): Promise<void> {
   const authorizationDetails = JSON.stringify(DEMO_AGENT_PROPOSAL);
   // Trusted CLI bootstrap, before creating the agent. Only issued credentials
   // and mediated dependencies are handed to runAgentLoop below.
-  const issued = await issueMissionToken(as.asUrl, as.agentClientJwk, { missionIntent, authorizationDetails, scope: "payments" }, as.approverServiceToken);
+  const issued = await issueMissionToken(as.asUrl, as.agentClientJwk, { missionIntent, authorizationDetails }, as.approverServiceToken);
   const missionClaim = decodeClaims(issued.accessToken).mission as { id: string; authority_hash: string };
   const missionId = missionClaim.id;
 

@@ -269,7 +269,6 @@ async function pushPar(
       client_id: clientId,
       response_type: "code",
       redirect_uri: REDIRECT_URI,
-      scope: "payments",
       resource: RESOURCE,
       code_challenge: await pkceChallenge(),
       code_challenge_method: "S256",
@@ -648,7 +647,7 @@ describe("Approver Authentication Strength (@spec mission#approval-authenticatio
       // ADOPTED profile of it here is Approver-scoped, not Subject/ID-Token
       // scoped, but the underlying library ties the parameter's acceptance
       // to that scope regardless of which principal it describes.
-      scope: "payments openid",
+      scope: "openid",
       ...(args.parExtra ?? {}),
     });
     expect(par.status).toBe(201);

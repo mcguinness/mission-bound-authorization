@@ -44,7 +44,6 @@ describe("authorization endpoint: mission_intent requires a PAR-issued request_u
       client_id: "ap-agent",
       response_type: "code",
       redirect_uri: REDIRECT_URI,
-      scope: "payments",
       mission_intent: missionIntent,
     })}`;
     const res = await fetch(authUrl, { redirect: "manual" });

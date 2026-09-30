@@ -39,8 +39,13 @@ export interface IssueOpts {
    * derivation (task + policy alone).
    */
   authorizationDetails?: string;
-  /** Requested scope (e.g. "openid payments" to also receive an id_token). */
-  scope: string;
+  /**
+   * @spec mission#scope-projection — requested `scope`, OPTIONAL: authority
+   * comes through `authorization_details`, so a Mission client names only
+   * OIDC values (e.g. "openid" to also receive an id_token) or, for a
+   * `scope`-only target, the projected values it wants.
+   */
+  scope?: string;
 }
 
 /** The raw request params + responses at each leg, for the exhibit to print. */
@@ -129,7 +134,7 @@ export async function submitMissionApproval(
     client_id: "ap-agent",
     response_type: "code",
     redirect_uri: REDIRECT_URI,
-    scope: opts.scope,
+    ...(opts.scope ? { scope: opts.scope } : {}),
     resource: CANONICAL_RESOURCE,
     code_challenge: challenge,
     code_challenge_method: "S256",
