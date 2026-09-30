@@ -307,7 +307,10 @@ builds on the OAuth binding and implements its runtime, lifecycle,
 delegation, and
 transaction surfaces tracked row-by-row in
 [`src/SPEC_VERSIONS.md`](src/SPEC_VERSIONS.md);
-[`src/DEMO.md`](src/DEMO.md) runs the flow end to end.
+[`src/DEMO.md`](src/DEMO.md) runs the flow end to end, and
+[`src/docs/issuance-only-deployment.md`](src/docs/issuance-only-deployment.md)
+describes the proposed issuance-only reference deployment: a Mission-aware
+AS and Resource Servers that need not be Mission-aware.
 [`conformance-manifest.json`](conformance-manifest.json) maps each
 inventoried requirement in its audited specification set to tested,
 partial, or todo coverage.
