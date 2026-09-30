@@ -946,9 +946,9 @@ tokens.
 
 The following is an example of an authority proposal submitted
 alongside the example Intent of {{mission-intent}}. Derivation
-narrows `invoices.*` to `invoices.read` bounded to a Q3 issuance
-window, halves the proposed ceiling under the Intent's task bounds,
-and carries the proposed `delegation` policy through unchanged (the
+narrows `invoices.*` to `invoices.read`, keeps the proposed Q3
+issuance window and write ceiling, which the Intent's task bounds
+support, and carries the proposed `delegation` policy through unchanged (the
 example Authority Set of {{authorization-derivation}}):
 
 ~~~ json
@@ -2730,7 +2730,7 @@ To emit `scope` for an entry, the AS:
 1. determines the target Resource Server or audience for the token;
 2. resolves a trusted, versioned scope-projection mapping for that
    target, established through the target's protected resource
-   metadata ({{protected-resource-metadata}}) or authenticated
+   metadata ({{RFC9728}}) or authenticated
    out-of-band configuration;
 3. establishes, under the subset condition above, that the complete
    effective authorization the projected `scope` grants at that
@@ -3066,7 +3066,7 @@ elsewhere in this document that names one of these codes
 
 | Surface / failing input | Base OAuth error | Optional detail |
 |---|---|---|
-| PAR: malformed Mission envelope or Intent (schema, unknown member, invalid value) | `invalid_request` ({{Section 5.2 of RFC6749}}) | safe `error_description` |
+| PAR: malformed Submission envelope or Intent (schema, unknown member, invalid value) | `invalid_request` ({{Section 5.2 of RFC6749}}) | safe `error_description` |
 | PAR, or a companion's token-endpoint submission: a presented evidence entry of an unsupported type, or failing its type's validation or verification, or a required evidence type absent | `invalid_mission_intent_evidence` ({{intent-submission-evidence}}) | safe `error_description` |
 | PAR or authorization: malformed or unsupported actual RAR object (an entry of a submitted `authorization_details` proposal) | `invalid_authorization_details` ({{Section 5 of RFC9396}}) | RAR-defined detail |
 | Request from a client registered as Mission-governed: `authorization_details` without `mission_intent` ({{authority-proposal}}) | `invalid_request` ({{Section 4.1.2.1 of RFC6749}}, {{Section 5.2 of RFC6749}}) | safe `error_description` |
@@ -4128,8 +4128,9 @@ resources the approved task needs, and per-task Missions
 
 Against the untrusted-content leg, it contributes one thing:
 `success_criteria` is inert, granting, widening, and gating no
-authority, and `goal` and `purpose` shape authority only through the
-pre-approval derivation whose result the Approver reads and consents to
+authority, `purpose` shapes authority only as a lookup key of the
+pre-approval derivation whose result the Approver reads and consents to,
+and `goal` bounds it only through that disclosure
 ({{mission-intent}}, {{authorization-derivation}}). Authority is fixed
 at the approval event, so injected text cannot expand an approved
 Mission.
@@ -4315,7 +4316,7 @@ stolen from an audience then fails presentation at the token endpoint.
 
 ### client_id Conformance and the Approved-Agent Residual {#client-id-misattribution}
 
-Because this profile keeps `client_id`'s ordinary {{RFC9068}} meaning
+Because this document keeps `client_id`'s ordinary {{RFC9068}} meaning
 ({{client-id-rebinding}}), a generic {{RFC9068}} Resource Server, or a
 logging, SIEM, or audit pipeline, that keys attribution on `client_id`
 attributes a Mission-derived token, delegated or not, to the correct
