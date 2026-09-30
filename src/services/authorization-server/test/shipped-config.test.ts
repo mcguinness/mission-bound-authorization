@@ -36,8 +36,10 @@ import {
   DEMO_AGENT_PROPOSAL,
   DERIVATION_POLICY,
   GOVERNED_POLICIES,
+  loadScopeProjection,
   MAS_JOIN,
   RAS_LOCAL_POLICY,
+  SCOPE_PROJECTION,
   TOPOLOGY,
 } from "@mission/demo-data";
 import { evaluate, relationForAction, stalenessBound, type Fga, type MissionView } from "@mission/pdp";
@@ -460,5 +462,33 @@ describe("authority-source config loader (@spec mission#authority-sources)", () 
     await expect(import("@mission/demo-data")).rejects.toThrow(
       /activators must be a string array/,
     );
+  });
+});
+
+describe("config/scope-projection.json loader (@spec mission#scope-projection)", () => {
+  const shipped = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "../../../config/scope-projection.json"),
+    "utf8",
+  );
+
+  it("classifies every shipped resource audience: the MCP resources consume authorization_details, the plain RS is scope_only", () => {
+    const { payments, saas, hrFiles, plainRs } = TOPOLOGY.resources;
+    expect(SCOPE_PROJECTION.audiences[CANONICAL_RESOURCE]?.mode).toBe("authorization_details");
+    expect(CANONICAL_RESOURCE).toBe(process.env.MCP_PAYMENTS_RESOURCE ?? payments);
+    expect(SCOPE_PROJECTION.audiences[saas]?.mode).toBe("authorization_details");
+    expect(SCOPE_PROJECTION.audiences[hrFiles]?.mode).toBe("authorization_details");
+    expect(SCOPE_PROJECTION.audiences[plainRs]?.mode).toBe("scope_only");
+    expect(loadScopeProjection(shipped)).toEqual(SCOPE_PROJECTION);
+  });
+
+  it("refuses an ambiguous mapping (a duplicated member name) and an unknown member at load", () => {
+    const duplicated = shipped.replace(
+      '"version": "2026-09-29.1",',
+      '"version": "2026-09-29.1", "version": "2026-09-30.1",',
+    );
+    expect(duplicated).not.toBe(shipped);
+    expect(() => loadScopeProjection(duplicated)).toThrow(/ambiguous mapping: duplicate JSON member name/);
+    const unknown = shipped.replace('"mode": "scope_only",', '"mode": "scope_only", "fallback": "omit",');
+    expect(() => loadScopeProjection(unknown)).toThrow(/fallback is not a known member/);
   });
 });
