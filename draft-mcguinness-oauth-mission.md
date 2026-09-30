@@ -1571,8 +1571,9 @@ parameters describe the requested authentication of the
 principal ({{approval-event}}, step 2). Requesting them implies
 nothing about the authentication claims of an issued token: this
 document does not adopt the token-claim carriage of {{RFC9470}} for
-them (see below), and {{rs-enforcement}} uses the {{RFC9470}}
-exchange unchanged for the token's own Subject.
+them (see below), and {{rs-enforcement}} keeps the {{RFC9470}}
+challenge for the token's own Subject, although a derived access
+token carries no `acr`, `amr`, or `auth_time` ({{mission-bound-tokens}}).
 
 The Approver's authentication satisfies `acr_values` when it matches
 any one listed value under the deployment's own policy mapping (this
