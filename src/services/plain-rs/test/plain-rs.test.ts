@@ -417,3 +417,21 @@ describe("plain-rs access-token time boundaries (injected clock)", () => {
     expect(strict.handler.performed).toBe(before);
   });
 });
+
+describe("plain-rs configuration validation", () => {
+  it("refuses at construction a clock tolerance that is not a finite non-negative number, and an introspection timeout that is not a positive integer", () => {
+    const base = { issuer: ISSUER, audience: AUDIENCE, jwks };
+    for (const clockToleranceSeconds of [Number.NaN, -1, Number.POSITIVE_INFINITY]) {
+      expect(() => plainResourceServer({ ...base, clockToleranceSeconds })).toThrow(/clockToleranceSeconds/);
+    }
+    for (const timeoutMs of [Number.NaN, 0, -5, 1.5]) {
+      expect(() =>
+        plainResourceServer({
+          ...base,
+          introspection: { endpoint: "http://localhost:1/introspect", clientId: "c", clientSecret: "s", timeoutMs },
+        }),
+      ).toThrow(/timeoutMs/);
+    }
+    expect(() => plainResourceServer({ ...base, clockToleranceSeconds: 0 })).not.toThrow();
+  });
+});

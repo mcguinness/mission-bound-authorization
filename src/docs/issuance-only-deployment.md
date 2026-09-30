@@ -177,7 +177,10 @@ target that processes the `act` chain and the `mission` claim.
   0, `PLAIN_RS_CLOCK_TOLERANCE_SECONDS` in the launcher). It is passed to jose
   with the injectable `now()` clock. A token is refused once
   `exp <= now - tolerance`, so an issued token stays usable until its `exp`
-  plus the declared tolerance. `plain-rs` accepts DPoP proofs whose `iat` is
+  plus the declared tolerance. A tolerance that is not a finite number >= 0, or
+  a timeout that is not a positive integer, stops `plain-rs` at construction
+  (`plain-rs configuration validation > refuses at construction a clock tolerance that is not a finite non-negative number, and an introspection timeout that is not a positive integer`).
+  `plain-rs` accepts DPoP proofs whose `iat` is
   within ±60 seconds of now, inclusive (`dpopWindowSeconds`). With the shipped
   values, the JWT-only configuration states a 300-second maximum access-token
   lifetime and a 0-second accepted skew. One synchronized clock is assumed

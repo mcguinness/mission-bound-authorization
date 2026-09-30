@@ -124,6 +124,16 @@ export function plainResourceServer(opts: PlainRsOptions): PlainRsHandler {
   const baseUrl = (opts.baseUrl ?? new URL(opts.audience).origin).replace(/\/$/, "");
   const windowS = opts.dpopWindowSeconds ?? 60;
   const toleranceS = opts.clockToleranceSeconds ?? 0;
+  // Refused at startup: a NaN or negative tolerance would make jose's `exp`
+  // comparison never fail (fail open), and a bad timeout would refuse every
+  // call without saying why.
+  if (!Number.isFinite(toleranceS) || toleranceS < 0) {
+    throw new Error("plain-rs: clockToleranceSeconds must be a finite number >= 0");
+  }
+  const timeoutMs = opts.introspection?.timeoutMs ?? DEFAULT_INTROSPECTION_TIMEOUT_MS;
+  if (!Number.isInteger(timeoutMs) || timeoutMs <= 0) {
+    throw new Error("plain-rs: introspection.timeoutMs must be a positive integer");
+  }
   const now = opts.now ?? (() => Math.floor(Date.now() / 1000));
   let performed = 0;
   /** RFC 9449 Section 11.1: proof `jti` values seen inside the window. */
@@ -224,7 +234,7 @@ export function plainResourceServer(opts: PlainRsOptions): PlainRsHandler {
           authorization: `Basic ${Buffer.from(`${enc(settings.clientId)}:${enc(settings.clientSecret)}`).toString("base64")}`,
         },
         body: new URLSearchParams({ token, token_type_hint: "access_token" }).toString(),
-        signal: AbortSignal.timeout(settings.timeoutMs ?? DEFAULT_INTROSPECTION_TIMEOUT_MS),
+        signal: AbortSignal.timeout(timeoutMs),
       });
       if (res.status !== 200) throw new Error(String(res.status));
       body = JSON.parse(await res.text()) as unknown;
