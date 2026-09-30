@@ -3,8 +3,8 @@
  "source": {
   "specs": {
    "draft-mcguinness-mission-control-plane.md": {
-    "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
-    "content_sha256": "2754495db7fcfc3eff487a8e3528d6e0be82f0cd0080ac959642755609877712"
+    "revision": "909a3ee7371452ad969554d57c4ae9941a4caf36",
+    "content_sha256": "ec57264fec92ea2dd3c42ba1067c70d72195f251bc5c416ccad856cb1beac3a1"
    },
    "draft-mcguinness-mission-authority-server.md": {
     "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
@@ -79,8 +79,8 @@
     "content_sha256": "bc498b14258afa19a5f311310f5710722b5ae67c778d9ddbd299123d054246ad"
    },
    "draft-mcguinness-mission-evidence-envelope.md": {
-    "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
-    "content_sha256": "cb3d0e10c384c3cb9ccaae7d4d7e9071ad2039a6ef39ba45cf0e24ef89e09a03"
+    "revision": "a71f191137f80cc0c6d25806ea95a3eb0bfcc2c2",
+    "content_sha256": "7f9c97f65341853cecf4e6ed6a484f063e6f6824b2cebec3604b2f06d0a5f5d9"
    },
    "draft-mcguinness-mission-approval-governance.md": {
     "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
@@ -4598,8 +4598,39 @@
     "normative": "the AS refuses issuance to a scope-only target when no safe scope projection exists for the applicable authorization_details entries, per the issuance algorithm, rather than issuing a token whose scope would over-grant"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "scope projection at the token endpoint (@spec mission#scope-projection) > refuses invalid_target when an entry constraint is not independently enforced by the target, and projects once the mapping declares a control at least as tight",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "scope projection at the token endpoint (@spec mission#scope-projection) > refuses a scope only the union of two entries covers",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "scope projection at the token endpoint (@spec mission#scope-projection) > refuses a scope that aggregates an action the entry does not carry",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "scope projection at the token endpoint (@spec mission#scope-projection) > refuses a prefix scope for an exact entry",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "scope projection at the token endpoint (@spec mission#scope-projection) > refuses invalid_target for an audience the mapping does not know",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ]
   },
   {
    "id": "core.scope-projection.semantic-subset-condition",
@@ -4621,8 +4652,34 @@
     "normative": "the effective rights the target's enforcement path grants from a projected scope, together with every independently mandatory control on that path, must be a subset of the applicable authorization_details rights."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "scope projection at the token endpoint (@spec mission#scope-projection) > a safe projection carries exactly the projected scope, and the plain RS allows the in-scope operation and refuses the other with 403 insufficient_scope",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "scope projection at the token endpoint (@spec mission#scope-projection) > refuses invalid_target when an entry constraint is not independently enforced by the target, and projects once the mapping declares a control at least as tight",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "scope projection on the cross-org exchange (@spec mission#scope-projection) > emits only a proven-safe scope for a scope-only audience whose mandatory control covers the entry's max_amount",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "mission_resource_access scope-projection conditions (@spec resource-access#scope-projection) > constraints: every carried key needs an independently enforced control at least as tight",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "The mandatory-control clause is observed at the token endpoint: an entry constraint the target does not independently enforce refuses, and the same entry projects once the mapping declares a control at least as tight (vendors here, max_amount on the cross-org exchange). The subset is proven against the trusted mapping's declared rights and controls; this implementation does not probe the target's enforcement path."
   },
   {
    "id": "core.scope-projection.action-aggregation-fails",
@@ -4644,8 +4701,21 @@
     "normative": "a scope that aggregates a broader action than a constraints-free entry grants fails the projection condition."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "scope projection at the token endpoint (@spec mission#scope-projection) > refuses a scope that aggregates an action the entry does not carry",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "mission_resource_access scope-projection conditions (@spec resource-access#scope-projection) > action aggregation: a value granting an action the entry does not carry is not safe",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ]
   },
   {
    "id": "core.scope-projection.resource-path-aggregation-fails",
@@ -4667,8 +4737,22 @@
     "normative": "a scope covering more resource instances or paths than the entry fails the projection condition."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "scope projection at the token endpoint (@spec mission#scope-projection) > refuses a prefix scope for an exact entry",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "mission_resource_access scope-projection conditions (@spec resource-access#scope-projection) > resource match: a prefix value is never safe for an exact entry, nor a broader ancestor for a narrower prefix entry",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "The endpoint case is a prefix scope over an exact entry; the narrower-prefix-entry case is unit-level, since this deployment's derivation never produces a prefix entry."
   },
   {
    "id": "core.scope-projection.union-widening-fails",
@@ -4690,8 +4774,21 @@
     "normative": "a scope value formed as the union of more than one entry's rights fails the projection condition when the union is broader than any single entry."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "scope projection at the token endpoint (@spec mission#scope-projection) > refuses a scope only the union of two entries covers",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "projectScope (@spec mission#scope-projection) > union widening: a value only two entries together cover is not emitted",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ]
   },
   {
    "id": "core.scope-projection.per-audience-proof",
@@ -4713,8 +4810,16 @@
     "normative": "for a multi-audience token, the AS proves the projection condition independently for every audience."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "projectScope (@spec mission#scope-projection) > per audience: a value is emitted only when safe at every audience, and mixed modes refuse",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Unit-level only: projectScope proves each audience independently (a value is emitted only when safe at every audience, a stale pin on one audience refuses, mixed modes refuse). No issuance path here mints a multi-audience access token (oidc-provider binds one resource server per token), so no endpoint test observes the clause."
   },
   {
    "id": "core.scope-projection.unknown-stale-mapping-fail-closed",
@@ -4736,8 +4841,40 @@
     "normative": "unknown scope semantics, unknown Resource Server behavior, or an ambiguous or stale scope-projection mapping all cause issuance to fail closed."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "scope projection at the token endpoint (@spec mission#scope-projection) > refuses invalid_target for an audience the mapping does not know",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "scope projection on derived tokens (@spec mission#scope-projection) > refresh re-projects the same scope, and refuses invalid_target when the mapping no longer proves it or its version changed since the grant was issued",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "scope projection on the cross-org exchange (@spec mission#scope-projection) > refuses invalid_target when the mapping does not know the requested audience",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "projectScope (@spec mission#scope-projection) > refuses an unknown audience, a stale version, no audience, and a scope-only target with no safe value",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/shipped-config.test.ts",
+     "name": "config/scope-projection.json loader (@spec mission#scope-projection) > refuses an ambiguous mapping (a duplicated member name) and an unknown member at load",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Unknown audience (hence unknown Resource Server behavior and scope semantics) and a stale mapping version refuse invalid_target at the token endpoint; an ambiguous mapping (duplicated member) or an unknown member refuses at load, so it never reaches issuance."
   },
   {
    "id": "core.scope-projection.derived-token-issuance-paths",
@@ -4759,8 +4896,46 @@
     "normative": "the scope-projection rule applies to every issuance path that can emit scope on a Mission-bound token, not only initial issuance."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "scope projection on derived tokens (@spec mission#scope-projection) > refresh re-projects the same scope, and refuses invalid_target when the mapping no longer proves it or its version changed since the grant was issued",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "scope projection on derived tokens (@spec mission#scope-projection) > Token Exchange projects the family token's scope from its confined subset, keeps it on the family refresh, and refuses an unenforced constraint before creating a family",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "scope projection on the cross-org exchange (@spec mission#scope-projection) > refuses invalid_target when the mapping does not know the requested audience",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "scope projection on the cross-org exchange (@spec mission#scope-projection) > emits only a proven-safe scope for a scope-only audience whose mandatory control covers the entry's max_amount",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dtr-endpoint.test.ts",
+     "name": "AS deferred grant on /token (AROP Deferred Token Response, DTR -00, D42) > initiates, pends, slow_downs, then on approval issues a REAL resource-bound mission token (single-use)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "PR4b: child redeems the child-bound grant AS ITSELF at /token (@spec #child-client-identity) > happy path: child redeems its assertion -> 200 DPoP-bound child token carrying the child mission",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Witnessed: initial issuance, refresh (projection repeated, subset and stale refusals), async-delegation Token Exchange and its family refresh, the cross-org Token Exchange, and the deferred and child jwt-bearer mints (their payments tokens carry no scope). The dispatch and expansion-successor mints run the same save-time projection but no test observes them."
   },
   {
    "id": "core.introspection.composite-active",
@@ -21750,8 +21925,22 @@
     "normative": "a scope value the target's own interpretation extends to a broader ancestor resource is not a safe projection of a narrower prefix entry."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "mission_resource_access scope-projection conditions (@spec resource-access#scope-projection) > resource match: a prefix value is never safe for an exact entry, nor a broader ancestor for a narrower prefix entry",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "scope projection at the token endpoint (@spec mission#scope-projection) > refuses a prefix scope for an exact entry",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "The narrower-prefix-entry clause is unit-level only: this deployment's derivation never produces a resource_match prefix entry. The endpoint test covers the exact-entry half (a prefix scope is not a safe projection of an exact entry)."
   },
   {
    "id": "resource-access.scope-projection.actions-no-aggregation",
@@ -21773,8 +21962,27 @@
     "normative": "a scope value standing for an action family, aggregate, or union of more than one entry's actions fails the projection condition."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "scope projection at the token endpoint (@spec mission#scope-projection) > refuses a scope that aggregates an action the entry does not carry",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "scope projection at the token endpoint (@spec mission#scope-projection) > refuses a scope only the union of two entries covers",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "mission_resource_access scope-projection conditions (@spec resource-access#scope-projection) > action aggregation: a value granting an action the entry does not carry is not safe",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ]
   },
   {
    "id": "resource-access.scope-projection.constraints-independently-enforced",
@@ -21796,8 +22004,27 @@
     "normative": "every constraints key on an entry must be independently and identically enforced by the target at least as tightly as the entry's value for the projection to be safe."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "scope projection at the token endpoint (@spec mission#scope-projection) > refuses invalid_target when an entry constraint is not independently enforced by the target, and projects once the mapping declares a control at least as tight",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "scope projection on the cross-org exchange (@spec mission#scope-projection) > emits only a proven-safe scope for a scope-only audience whose mandatory control covers the entry's max_amount",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "mission_resource_access scope-projection conditions (@spec resource-access#scope-projection) > constraints: every carried key needs an independently enforced control at least as tight",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ]
   },
   {
    "id": "resource-access.transformation-capabilities.projection-undeclared-fallback",

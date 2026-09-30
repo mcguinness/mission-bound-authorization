@@ -10,7 +10,7 @@ import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fix
 
 import { type Server } from "node:http";
 import { AccessRequestService, txnTaskId } from "@mission/access-request";
-import { CANONICAL_RESOURCE } from "@mission/demo-data";
+import { CANONICAL_RESOURCE, SCOPE_PROJECTION } from "@mission/demo-data";
 import {
   calculateJwkThumbprint,
   createRemoteJWKSet,
@@ -2294,6 +2294,81 @@ describe("transaction token identity projection (@spec txn-authorization#transac
     expect(withoutActor.act).toBeUndefined();
     expect(withoutActor.sub).toBe("alice");
     expect(withoutActor.client_id).toBe("ap-agent");
+  });
+});
+
+describe("delegated routing of transaction tokens (@spec mission#rs-enforcement)", () => {
+  it("refuses invalid_target, opening no approval, an act-bearing transaction token for a Challenge-Issuing Resource not classified Mission-aware, and admits it once the resource is", async () => {
+    const txnKeys = await generateKeyPair("ES256", { extractable: true });
+    const rsPub = { ...(await exportJWK(rsTxnKeys.publicKey)), kid: "rs-txn", alg: "ES256" } as JWK;
+    const asJwks = (await (await fetch(`${ISSUER}/jwks`)).json()) as { keys: JWK[] };
+    const classify = (missionAware: boolean) => ({
+      audiences: {
+        ...SCOPE_PROJECTION.audiences,
+        [RESOURCE]: { version: "txn-1", mission_aware: missionAware, mode: "authorization_details" as const },
+      },
+    });
+    const depsFor = (missionAware: boolean) => ({
+      issuer: ISSUER,
+      kernel: as.kernel,
+      clients: [{ client_id: "ap-agent", jwks: { keys: [agentClientPublicJwk] } }],
+      publicJwks: asJwks,
+      dpopProofReplay: newDpopProofReplay(),
+      subjectTokenLive: async () => true,
+      now: () => new Date(),
+      scopeProjection: classify(missionAware),
+      txn: {
+        challengeIssuers: new Map([
+          [RESOURCE, { jwks: createLocalJWKSet({ keys: [rsPub] }), algs: ["ES256"] }],
+        ]) as ChallengeIssuers,
+        ars,
+        operationProfiles: new OperationProfileRegistry().register(RESOURCE, missionResourceAccessProfile()),
+        tokenKey: txnKeys.privateKey,
+        tokenKid: "routing-txn",
+        workflowLifetimeSeconds: WORKFLOW_LIFETIME_S,
+        maxTokenLifetimeSeconds: MAX_TOKEN_LIFETIME_S,
+        freshDecision: async () => ({ decision: "permit" as const }),
+      },
+    });
+    const mission = await freshMission();
+    const challengeFor = (txn: string, act?: unknown) =>
+      signChallenge(
+        {
+          txn,
+          authorization_details: remittanceEntry(mission.missionId),
+          iss: RESOURCE,
+          aud: ISSUER,
+          reason: "action_approval_required",
+          parameter_digest: `sha-256:${txn}`,
+          mission: mission.mission,
+          ...(act !== undefined ? { act } : {}),
+        },
+        rsTxnKeys.privateKey,
+        "rs-txn",
+      );
+    const submitVia = async (missionAware: boolean, challenge: string) =>
+      callTransactionEndpoint(depsFor(missionAware), newTxnWorkflows(), {
+        transaction_challenge: challenge,
+        subject_token: mission.token,
+        subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
+      });
+    const act = { sub: "subagent-invoice-extractor", iss: ISSUER };
+
+    const refused = await submitVia(false, await challengeFor("txn_routing_unaware", act));
+    expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+    expect((refused.body as { error: string }).error).toBe("invalid_target");
+    expect((refused.body as { error_description: string }).error_description).toMatch(
+      /routed only to a Mission-aware Resource Server/,
+    );
+    expect(ars.getTask(taskFor("txn_routing_unaware"))).toBeUndefined();
+
+    // No actor context upstream: no `act`, so the classification does not apply.
+    const plain = await submitVia(false, await challengeFor("txn_routing_plain"));
+    expect(plain.status, JSON.stringify(plain.body)).toBe(200);
+
+    const aware = await submitVia(true, await challengeFor("txn_routing_aware", act));
+    expect(aware.status, JSON.stringify(aware.body)).toBe(200);
+    expect(ars.getTask(taskFor("txn_routing_aware"))).toBeDefined();
   });
 });
 

@@ -27,6 +27,12 @@ import {
   type JWK,
 } from "jose";
 import Provider, { errors, type Configuration, type KoaContextWithOIDC, type ResourceServer } from "oidc-provider";
+import {
+  delegatedRoutingRefusal,
+  projectScope,
+  type ScopeProjectionMapping,
+  type ScopeProjectionOutcome,
+} from "@mission/core";
 
 // @types/oidc-provider (9.5) predates InvalidAuthorizationDetails, present at
 // runtime in 9.10 (spec traceability: SPEC_VERSIONS O-2 note). Typed alias
@@ -465,6 +471,14 @@ export interface AdapterOptions {
    * declared state-recovery policy. Defaults to 5.
    */
   stateRecoveryRetryAfter?: number;
+  /**
+   * @spec mission#scope-projection — the trusted, versioned scope-projection
+   * mapping (step 2: authenticated out-of-band configuration). Read at every
+   * Mission-bound issuance, never snapshotted, so a replaced mapping is seen
+   * by the next issuance. Absent: no audience is known, so every
+   * Mission-bound access token is refused (fail closed).
+   */
+  scopeProjection?: ScopeProjectionMapping;
 }
 
 /**
@@ -656,6 +670,67 @@ export function buildProvider(opts: AdapterOptions): Provider {
       throw e;
     }
   };
+
+  // @spec mission#scope-projection — the per-grant mapping-version pins. The
+  // version-mismatch rule: the first Mission-bound issuance under a grant for
+  // an audience records the mapping version it projected under; every later
+  // issuance under that grant for that audience (refresh, deferred, child or
+  // dispatch mints reusing the Mission's grant) refuses as STALE when the
+  // current version differs. A new grant (a Token Exchange family, a child
+  // grant) pins afresh. Held in memory beside the grants themselves, which
+  // this deployment keeps in oidc-provider's in-memory adapter: a pin never
+  // outlives the grant it guards.
+  const scopeProjectionPins = new Map<string, Map<string, string>>();
+  // The tokens whose `scope` the projection decided, so the JWT customizer
+  // below applies exactly that decision (and refuses any Mission-bound token
+  // that did not pass through it).
+  const projectedTokens = new WeakSet<object>();
+
+  /**
+   * @spec mission#scope-projection — THE shared projection for every
+   * Mission-bound access token oidc-provider mints (authorization code,
+   * refresh, Token Exchange families, deferred, child jwt-bearer, dispatch,
+   * expansion). Runs from extraTokenClaims BEFORE the state and derivation
+   * gates, so a refusal consumes no derivation. Resolves the token's
+   * audience (step 1) and the mapping (step 2), applies the subset condition
+   * (step 3) over the token's own carried `authorization_details`, omits
+   * `scope` for an `authorization_details` target (step 4) and refuses a
+   * `scope`-only target with no safe value, an unknown audience, or a stale
+   * mapping with `invalid_target` (step 5), per audience (step 6). The
+   * decided value replaces whatever oidc-provider computed on `token.scope`,
+   * so the token response's `scope` member (rendered from it after save)
+   * and the JWT claim (the customizer) agree.
+   */
+  function projectMissionBoundScope(token: {
+    grantId?: string;
+    rar?: unknown;
+    scope?: string | undefined;
+    resourceServer?: { audience?: unknown };
+  }): void {
+    const aud = token.resourceServer?.audience;
+    const audiences = typeof aud === "string" ? [aud] : Array.isArray(aud) ? (aud as string[]) : [];
+    const pins = token.grantId ? scopeProjectionPins.get(token.grantId) : undefined;
+    const outcome: ScopeProjectionOutcome = projectScope({
+      mapping: opts.scopeProjection,
+      audiences,
+      entries: Array.isArray(token.rar) ? token.rar : [],
+      pinnedVersion: (a) => pins?.get(a),
+    });
+    if (outcome.outcome === "refuse") {
+      // @spec mission#scope-projection — step 5 refusal. The core's
+      // error-mapping table names no code for this refusal (a spec gap);
+      // `invalid_target` (RFC 8707) is the closest registered meaning: the
+      // requested target cannot be issued to.
+      throw new errors.InvalidTarget(outcome.reason);
+    }
+    if (token.grantId) {
+      const held = pins ?? new Map<string, string>();
+      for (const [a, v] of Object.entries(outcome.versions)) if (!held.has(a)) held.set(a, v);
+      scopeProjectionPins.set(token.grantId, held);
+    }
+    token.scope = outcome.outcome === "emit" ? outcome.scope : undefined;
+    projectedTokens.add(token);
+  }
 
   const configuration: Configuration = {
     clients: opts.clients as never,
@@ -855,6 +930,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
         const fam = opts.familyStore?.resolve(grantId);
         const famRecord = fam ? kernel.get(fam.missionId) : missionForBoundGrant(grantId);
         if (!famRecord) return {};
+        projectMissionBoundScope(token as Parameters<typeof projectMissionBoundScope>[0]);
         try {
           // gateActive, never gateDerivation: the SINGLE count of a family (or
           // of the Mission's original issuance) was spent once at issuance
@@ -883,6 +959,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
           throw e;
         }
       }
+      projectMissionBoundScope(token as Parameters<typeof projectMissionBoundScope>[0]);
       try {
         // @spec control-plane#serialization — THE UNCOUPLED COUNTER. This hook
         // is synchronous and runs inside oidc-provider's own token `save()`,
@@ -954,6 +1031,36 @@ export function buildProvider(opts: AdapterOptions): Provider {
       if (client?.clientAuthMethod === "none" && !rt.isSenderConstrained()) return true;
       return rt.ttlPercentagePassed() >= 70;
     },
+    // @spec mission#scope-projection — the JWT access-token claim follows the
+    // projection's decision, never the `scope` oidc-provider computed from the
+    // grant and the resource-server vocabulary. oidc-provider assembles the
+    // payload (the `mission` claim included) before this hook and signs after
+    // it. A Mission-bound token the projection did not decide is refused:
+    // every Mission-bound mint passes through extraTokenClaims, so this is
+    // the fail-closed backstop, not a path.
+    formats: {
+      customizers: {
+        jwt: async (_ctx: unknown, token: unknown, jwt: { payload: Record<string, unknown> }) => {
+          if (jwt.payload.mission === undefined) return;
+          const t = token as { scope?: string };
+          if (!projectedTokens.has(t)) {
+            throw new errors.InvalidTarget("Mission-bound token without a scope projection");
+          }
+          if (t.scope) jwt.payload.scope = t.scope;
+          else delete jwt.payload.scope;
+          // @spec mission#rs-enforcement — the delegated-routing backstop. No
+          // oidc-provider mint here carries `act` today (extraTokenClaims adds
+          // only `mission`); should one ever, it reaches only audiences the
+          // mapping classifies Mission-aware.
+          if (jwt.payload.act !== undefined) {
+            const aud = jwt.payload.aud;
+            const audiences = typeof aud === "string" ? [aud] : Array.isArray(aud) ? (aud as string[]) : [];
+            const refusal = delegatedRoutingRefusal(opts.scopeProjection, audiences);
+            if (refusal) throw new errors.InvalidTarget(refusal);
+          }
+        },
+      },
+    } as never,
     ttl: {
       // @spec async-delegation — absolute-lifetime clamp. A per-delegation family
       // refresh token never outlives its Mission: its lifetime is bounded by the
@@ -1188,10 +1295,24 @@ export function buildProvider(opts: AdapterOptions): Provider {
 }
 
 /**
- * The resource-server info the AS attaches to every mission-bound JWT access
- * token: audience = the resource, JWT format, `payments` scope, TTL. Shared by
- * the resourceIndicators config and the deferred-grant mint so both project an
+ * @spec mission#scope-projection — what a custom-grant mint passes for
+ * oidc-provider's typed `scope` member. Never emitted: save() replaces it with
+ * the scope-projection decision (projectMissionBoundScope in buildProvider).
+ */
+export const SCOPE_DECIDED_AT_SAVE = "";
+
+/**
+ * The resource-server info the AS attaches to every resource-bound JWT access
+ * token: audience = the resource, JWT format, TTL. Shared by the
+ * resourceIndicators config and the custom-grant mints so all project an
  * identical, resource-bound (not opaque) token.
+ *
+ * `scope` here is oidc-provider's resource-server scope vocabulary (what it
+ * filters a requested or refreshed scope against). It is never the emitted
+ * value of a Mission-bound token: every Mission-bound mint replaces it with
+ * the scope-projection decision (@spec mission#scope-projection,
+ * projectMissionBoundScope in buildProvider), which omits it for an
+ * `authorization_details` target.
  */
 export function resourceServerInfoFor(resource: string, accessTokenTTL: number) {
   return {
@@ -1367,7 +1488,7 @@ async function mintDeferredToken(
     grantId: record.grant_id,
     gty: DEFERRED_GRANT_TYPE,
     rar: deferred.authorization_details,
-    scope: "payments",
+    scope: SCOPE_DECIDED_AT_SAVE,
   });
   at.resourceServer = newResourceServer(provider, resource, info);
   at.jkt = jkt; // sender-constrain to the DPoP key (tokenType -> DPoP)
@@ -1379,7 +1500,8 @@ async function mintDeferredToken(
     access_token: jwt,
     token_type: "DPoP",
     expires_in: at.expiration,
-    scope: "payments",
+    // @spec mission#scope-projection — the projected value save() decided.
+    ...(at.scope ? { scope: at.scope } : {}),
     authorization_details: deferred.authorization_details,
   };
   ctx.set("cache-control", "no-store");
@@ -1540,7 +1662,7 @@ async function handleChildJwtBearerGrant(
     grantId,
     gty: CHILD_JWT_BEARER_GRANT_TYPE,
     rar: effective,
-    scope: "payments",
+    scope: SCOPE_DECIDED_AT_SAVE,
   });
   at.resourceServer = newResourceServer(provider, resource, info);
   at.jkt = jkt; // sender-constrain to the child DPoP key (tokenType -> DPoP)
@@ -1553,7 +1675,8 @@ async function handleChildJwtBearerGrant(
     access_token: jwt,
     token_type: "DPoP",
     expires_in: at.expiration,
-    scope: "payments",
+    // @spec mission#scope-projection — the projected value save() decided.
+    ...(at.scope ? { scope: at.scope } : {}),
     authorization_details: effective,
   };
   ctx.set("cache-control", "no-store");
@@ -2623,6 +2746,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           },
           now: () => new Date(),
           ...(opts.txnAuthorization ? { txn: opts.txnAuthorization } : {}),
+          ...(opts.scopeProjection ? { scopeProjection: opts.scopeProjection } : {}),
         },
         ctx,
         txnWorkflows,
@@ -3061,7 +3185,7 @@ async function handleMissionDispatchGrant(
     grantId,
     gty: MISSION_DISPATCH_GRANT_TYPE,
     rar: effective,
-    scope: "payments",
+    scope: SCOPE_DECIDED_AT_SAVE,
   });
   at.resourceServer = newResourceServer(provider, resource, info);
   at.jkt = jkt; // sender-constrain to the dispatcher's DPoP key (tokenType -> DPoP)
@@ -3073,6 +3197,8 @@ async function handleMissionDispatchGrant(
     access_token: jwt,
     token_type: "DPoP",
     expires_in: at.expiration,
+    // @spec mission#scope-projection — the projected value save() decided.
+    ...(at.scope ? { scope: at.scope } : {}),
     mission_id: record.id,
     // @spec mission#grant-binding — the dispatched instance's COMMITTED
     // effective expiry, verbatim from the record, never recomputed here.

@@ -139,6 +139,25 @@ export {
   type PrincipalMappingObservation,
   type PrincipalMappingResolver,
 } from "./origin-principal.js";
+export {
+  type AudienceScopeMapping,
+  delegatedRoutingRefusal,
+  parseScopeProjectionMapping,
+  projectScope,
+  SCOPE_CONTROL_KEYS,
+  SCOPE_PROJECTION_MODES,
+  SCOPE_RESOURCE_MATCHES,
+  type ScopeMandatoryControls,
+  type ScopeProjectionInput,
+  type ScopeProjectionMapping,
+  ScopeProjectionMappingError,
+  type ScopeProjectionMode,
+  type ScopeProjectionOutcome,
+  type ScopeResourceMatch,
+  type ScopeValueMapping,
+  type ScopeValueRights,
+  scopeValueSafeForEntry,
+} from "./scope-projection.js";
 export { DuplicateMemberError, parseStrictJson } from "./strict-json.js";
 export {
   ACCEPT_TXN_CHALLENGE_HEADER,

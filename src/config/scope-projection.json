@@ -1,0 +1,44 @@
+{
+  "audiences": {
+    "http://localhost:4403/mcp": {
+      "version": "2026-09-29.2",
+      "mission_aware": true,
+      "mode": "authorization_details"
+    },
+    "http://localhost:4406/mcp": {
+      "version": "2026-09-29.2",
+      "mission_aware": false,
+      "mode": "authorization_details"
+    },
+    "http://localhost:4499/mcp": {
+      "version": "2026-09-29.2",
+      "mission_aware": false,
+      "mode": "authorization_details"
+    },
+    "http://localhost:4410/api": {
+      "version": "2026-09-29.2",
+      "mission_aware": false,
+      "mode": "scope_only",
+      "scopes": {
+        "reports.read": {
+          "rights": {
+            "type": "mission_resource_access",
+            "resource": "http://localhost:4410/api",
+            "match": "exact",
+            "actions": ["reports:report.read"]
+          },
+          "mandatory_controls": {}
+        },
+        "reports.write": {
+          "rights": {
+            "type": "mission_resource_access",
+            "resource": "http://localhost:4410/api",
+            "match": "exact",
+            "actions": ["reports:report.write"]
+          },
+          "mandatory_controls": {}
+        }
+      }
+    }
+  }
+}

@@ -18,6 +18,7 @@
     { "path": "services/agent" },
     { "path": "evals" },
     { "path": "demo" },
-    { "path": "services/ras" }
+    { "path": "services/ras" },
+    { "path": "services/plain-rs" }
   ]
 }

@@ -36,6 +36,7 @@ import {
   type FederationConfig,
 } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { SCOPE_PROJECTION } from "@mission/demo-data";
 
 const PORT = 14503;
 const ISSUER = `http://localhost:${PORT}`;
@@ -64,6 +65,18 @@ let evidence: CrossOrgDerivationRecord[];
 const FULL_CEILING: AuthorityEntry[] = [
   { type: "mission_resource_access", resource: RESOURCE, actions: [READ, SCHEDULE], constraints: { max_amount: { amount: "500.00", currency: "USD" } } },
 ];
+/**
+ * @spec mission#scope-projection — this destination classifies its local
+ * resource as an `authorization_details` consumer (so the exchange mints no
+ * `scope`); the scope-projection describe below swaps the entry.
+ */
+const SCOPE_MAPPING = {
+  audiences: {
+    ...SCOPE_PROJECTION.audiences,
+    // Mission-aware: this destination processes the act chain the exchange mints.
+    [RESOURCE]: { version: "xorg-1", mission_aware: true, mode: "authorization_details" },
+  } as Record<string, unknown>,
+};
 const READ_ONLY_CEILING: AuthorityEntry[] = [
   { type: "mission_resource_access", resource: RESOURCE, actions: [READ], constraints: { max_amount: { amount: "500.00", currency: "USD" } } },
 ];
@@ -230,7 +243,11 @@ beforeAll(async () => {
     entitlementStalenessBoundSeconds: 86_400,
   };
 
-  as = await buildAuthorizationServer({ issuer: ISSUER, crossOrg: crossOrgOptions });
+  as = await buildAuthorizationServer({
+    issuer: ISSUER,
+    crossOrg: crossOrgOptions,
+    scopeProjection: SCOPE_MAPPING as never,
+  });
   asServer = as.provider.listen(PORT);
   clientKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
   remoteJwks = createRemoteJWKSet(new URL(`${ISSUER}/jwks`));
@@ -381,6 +398,116 @@ describe("the minted token and derivation evidence (@spec cross-org-delegation#p
     expect(new Date(record.principal_mapping.valid_until).getTime()).toBeGreaterThan(
       new Date(record.principal_mapping.observed_at).getTime(),
     );
+  });
+});
+
+describe("scope projection on the cross-org exchange (@spec mission#scope-projection)", () => {
+  const withAudience = async (entry: unknown, run: () => Promise<void>) => {
+    const saved = SCOPE_MAPPING.audiences[RESOURCE];
+    if (entry === undefined) delete SCOPE_MAPPING.audiences[RESOURCE];
+    else SCOPE_MAPPING.audiences[RESOURCE] = entry;
+    try {
+      await run();
+    } finally {
+      SCOPE_MAPPING.audiences[RESOURCE] = saved;
+    }
+  };
+
+  it("refuses invalid_target when the mapping does not know the requested audience", async () => {
+    await withAudience(undefined, async () => {
+      const { chain, leafKeys } = await buildChain();
+      const res = await exchange({ subjectToken: present(chain), leafKeys });
+      const body = (await res.json()) as { error?: string; error_description?: string };
+      expect(res.status).toBe(400);
+      expect(body.error).toBe("invalid_target");
+      expect(body.error_description).toMatch(/no scope-projection mapping/);
+    });
+  });
+
+  const scopeOnly = (missionAware: boolean) => {
+    const rights = { type: "mission_resource_access", resource: RESOURCE, match: "exact" };
+    return {
+      version: "xorg-2",
+      mission_aware: missionAware,
+      mode: "scope_only",
+      scopes: {
+        "invoices.read": {
+          rights: { ...rights, actions: [READ] },
+          mandatory_controls: { max_amount: { amount: "500.00", currency: "USD" } },
+        },
+        // Aggregates an action the entry does not carry: never emitted.
+        "invoices.admin": { rights: { ...rights, actions: [READ, "payments:invoice.delete"] }, mandatory_controls: {} },
+      },
+    };
+  };
+
+  it("emits only a proven-safe scope for a scope-only audience whose mandatory control covers the entry's max_amount", async () => {
+    await withAudience(scopeOnly(true), async () => {
+      const { chain, leafKeys } = await buildChain();
+      const res = await exchange({ subjectToken: present(chain), leafKeys });
+      const body = (await res.json()) as { access_token: string; scope?: string };
+      expect(res.status, JSON.stringify(body)).toBe(200);
+      expect(body.scope).toBe("invoices.read");
+      const { payload } = await jwtVerify(body.access_token, remoteJwks, { issuer: ISSUER, audience: RESOURCE });
+      expect(payload.scope).toBe("invoices.read");
+      expect(payload.act).toBeDefined();
+    });
+  });
+});
+
+describe("delegated routing on the cross-org exchange (@spec mission#rs-enforcement)", () => {
+  const withAudience = async (entry: unknown, run: () => Promise<void>) => {
+    const saved = SCOPE_MAPPING.audiences[RESOURCE];
+    SCOPE_MAPPING.audiences[RESOURCE] = entry;
+    try {
+      await run();
+    } finally {
+      SCOPE_MAPPING.audiences[RESOURCE] = saved;
+    }
+  };
+
+  it("refuses invalid_target, recording no derivation evidence, when the act-bearing token's audience is not classified Mission-aware, even with a safe scope projection", async () => {
+    const rights = { type: "mission_resource_access", resource: RESOURCE, match: "exact" };
+    for (const entry of [
+      {
+        version: "xorg-3",
+        mission_aware: false,
+        mode: "scope_only",
+        scopes: {
+          "invoices.read": {
+            rights: { ...rights, actions: [READ] },
+            mandatory_controls: { max_amount: { amount: "500.00", currency: "USD" } },
+          },
+        },
+      },
+      { version: "xorg-3", mission_aware: false, mode: "authorization_details" },
+    ]) {
+      await withAudience(entry, async () => {
+        const before = evidence.length;
+        const { chain, leafKeys } = await buildChain();
+        const res = await exchange({ subjectToken: present(chain), leafKeys });
+        const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };
+        expect(res.status, JSON.stringify(body)).toBe(400);
+        expect(body.error).toBe("invalid_target");
+        expect(body.error_description).toMatch(/routed only to a Mission-aware Resource Server/);
+        expect(body.access_token).toBeUndefined();
+        expect(evidence.length).toBe(before);
+      });
+    }
+  });
+
+  it("mints the act-bearing token for an audience classified Mission-aware", async () => {
+    await withAudience({ version: "xorg-3", mission_aware: true, mode: "authorization_details" }, async () => {
+      const before = evidence.length;
+      const { chain, leafKeys } = await buildChain();
+      const res = await exchange({ subjectToken: present(chain), leafKeys });
+      const body = (await res.json()) as { access_token: string; scope?: string };
+      expect(res.status, JSON.stringify(body)).toBe(200);
+      expect(body.scope).toBeUndefined();
+      const { payload } = await jwtVerify(body.access_token, remoteJwks, { issuer: ISSUER, audience: RESOURCE });
+      expect(payload.act).toEqual({ iss: ISSUER, sub: "ap-agent" });
+      expect(evidence.length).toBe(before + 1);
+    });
   });
 });
 

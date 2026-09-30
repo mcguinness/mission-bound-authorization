@@ -15,7 +15,9 @@ import {
   narrowToEntitledAuthority,
   narrowToCeiling,
   parseChainPresentation,
+  projectScope,
   resolveLocalPrincipal,
+  type ScopeProjectionMapping,
 } from "@mission/core";
 import type { AuthorityEntry } from "../kernel/types.js";
 import {
@@ -104,6 +106,8 @@ interface HandlerOpts {
   tokenKid: string;
   proofJtiFresh: (jti: unknown) => boolean;
   now: () => Date;
+  /** @spec mission#scope-projection — the AS's mapping; absent, every audience is unknown. */
+  scopeProjection?: ScopeProjectionMapping;
 }
 
 function fail(ctx: KoaContextWithOIDC, code: string, description: string): void {
@@ -268,6 +272,25 @@ export async function handleCrossOrgChainExchange(
     fail(ctx, "invalid_grant", "chain verification failed");
     return;
   }
+  // @spec mission#scope-projection — this exchange signs its Mission-bound
+  // access token directly, outside oidc-provider's save(), so it calls the
+  // same projection itself: omit `scope` for an `authorization_details`
+  // target, emit only proven-safe values for a `scope`-only one, refuse
+  // otherwise (`invalid_target`, the core's error-mapping gap).
+  // @spec mission#rs-enforcement — this token always carries a (restarted)
+  // `act`: it is a delegated Mission-bound token, minted only for an
+  // audience the mapping classifies Mission-aware.
+  const projection = projectScope({
+    mapping: opts.scopeProjection,
+    audiences: [requestedAud],
+    entries: outputAuthority,
+    delegated: true,
+  });
+  if (projection.outcome === "refuse") {
+    fail(ctx, "invalid_target", projection.reason);
+    return;
+  }
+  const projectedScope = projection.outcome === "emit" ? projection.scope : undefined;
 
   const clientId = ctx.oidc.client?.clientId ?? "";
   const leafExp = Number(verified.leaf.payload.exp);
@@ -306,6 +329,7 @@ export async function handleCrossOrgChainExchange(
       subject: { iss: verified.subject.iss, sub: verified.subject.sub },
     },
     authorization_details: outputAuthority,
+    ...(projectedScope ? { scope: projectedScope } : {}),
   })
     .setProtectedHeader({ alg: "RS256", kid: opts.tokenKid, typ: "at+jwt" })
     .setIssuer(opts.issuer)
@@ -344,6 +368,7 @@ export async function handleCrossOrgChainExchange(
     issued_token_type: "urn:ietf:params:oauth:token-type:access_token",
     token_type: "DPoP",
     expires_in: exp - nowS,
+    ...(projectedScope ? { scope: projectedScope } : {}),
     authorization_details: outputAuthority,
   };
   ctx.set("cache-control", "no-store");
