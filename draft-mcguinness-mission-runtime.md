@@ -3093,7 +3093,8 @@ Three properties govern how this profile scales.
 
 **Token lifetime trades against the enforcement layer.** The
 issuance profile recommends short-lived tokens because, in an
-issuance-only deployment, token expiry is the revocation cutoff.
+issuance-only deployment, token expiry is the revocation cutoff
+wherever a Resource Server does not introspect.
 Where this profile's enforcement covers the high-consequence classes
 with an active-freshness state source, the PDP is the cutoff for the
 actions that matter, and a deployment MAY extend token lifetimes for
