@@ -3200,10 +3200,10 @@ distinguish a dead Mission from a bad token. A Mission transition
 does not by itself revoke the token as an individual credential;
 introspection reports the composite authorization as inactive.
 
-Reporting `mission.state` for an inactive token deviates from the
-SHOULD NOT of Sections 2.2 and 4 of {{RFC7662}} against including
-additional information about an inactive token. The caller
-authorization and minimization rules
+Reporting the `mission` member, `mission.state` included, for an
+inactive token deviates from the SHOULD NOT of Sections 2.2 and 4 of
+{{RFC7662}} against including additional information about an
+inactive token. The caller authorization and minimization rules
 ({{caller-authorization-and-minimization}}) govern that deviation.
 
 ## Only the Issuer Reports Mission State {#only-issuer-reports-state}
