@@ -1,19 +1,23 @@
 {
   "audiences": {
     "http://localhost:4403/mcp": {
-      "version": "2026-09-29.1",
+      "version": "2026-09-29.2",
+      "mission_aware": true,
       "mode": "authorization_details"
     },
     "http://localhost:4406/mcp": {
-      "version": "2026-09-29.1",
+      "version": "2026-09-29.2",
+      "mission_aware": false,
       "mode": "authorization_details"
     },
     "http://localhost:4499/mcp": {
-      "version": "2026-09-29.1",
+      "version": "2026-09-29.2",
+      "mission_aware": false,
       "mode": "authorization_details"
     },
     "http://localhost:4410/api": {
-      "version": "2026-09-29.1",
+      "version": "2026-09-29.2",
+      "mission_aware": false,
       "mode": "scope_only",
       "scopes": {
         "reports.read": {

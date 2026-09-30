@@ -27,7 +27,12 @@ import {
   type JWK,
 } from "jose";
 import Provider, { errors, type Configuration, type KoaContextWithOIDC, type ResourceServer } from "oidc-provider";
-import { projectScope, type ScopeProjectionMapping, type ScopeProjectionOutcome } from "@mission/core";
+import {
+  delegatedRoutingRefusal,
+  projectScope,
+  type ScopeProjectionMapping,
+  type ScopeProjectionOutcome,
+} from "@mission/core";
 
 // @types/oidc-provider (9.5) predates InvalidAuthorizationDetails, present at
 // runtime in 9.10 (spec traceability: SPEC_VERSIONS O-2 note). Typed alias
@@ -1043,6 +1048,16 @@ export function buildProvider(opts: AdapterOptions): Provider {
           }
           if (t.scope) jwt.payload.scope = t.scope;
           else delete jwt.payload.scope;
+          // @spec mission#rs-enforcement — the delegated-routing backstop. No
+          // oidc-provider mint here carries `act` today (extraTokenClaims adds
+          // only `mission`); should one ever, it reaches only audiences the
+          // mapping classifies Mission-aware.
+          if (jwt.payload.act !== undefined) {
+            const aud = jwt.payload.aud;
+            const audiences = typeof aud === "string" ? [aud] : Array.isArray(aud) ? (aud as string[]) : [];
+            const refusal = delegatedRoutingRefusal(opts.scopeProjection, audiences);
+            if (refusal) throw new errors.InvalidTarget(refusal);
+          }
         },
       },
     } as never,
@@ -2731,6 +2746,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           },
           now: () => new Date(),
           ...(opts.txnAuthorization ? { txn: opts.txnAuthorization } : {}),
+          ...(opts.scopeProjection ? { scopeProjection: opts.scopeProjection } : {}),
         },
         ctx,
         txnWorkflows,

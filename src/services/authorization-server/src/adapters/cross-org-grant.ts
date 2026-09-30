@@ -277,10 +277,14 @@ export async function handleCrossOrgChainExchange(
   // same projection itself: omit `scope` for an `authorization_details`
   // target, emit only proven-safe values for a `scope`-only one, refuse
   // otherwise (`invalid_target`, the core's error-mapping gap).
+  // @spec mission#rs-enforcement — this token always carries a (restarted)
+  // `act`: it is a delegated Mission-bound token, minted only for an
+  // audience the mapping classifies Mission-aware.
   const projection = projectScope({
     mapping: opts.scopeProjection,
     audiences: [requestedAud],
     entries: outputAuthority,
+    delegated: true,
   });
   if (projection.outcome === "refuse") {
     fail(ctx, "invalid_target", projection.reason);

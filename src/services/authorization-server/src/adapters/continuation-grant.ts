@@ -672,10 +672,16 @@ export async function handleAsyncDelegationExchange(
   // reservation, the family grant and the single derivation count, keeps the
   // refusal free of side effects. save() decides with the same function over
   // the same inputs for a fresh family grant, so the two cannot disagree.
+  // @spec mission#rs-enforcement — an exchange presenting an `actor_token`
+  // is an RFC 8693 delegation request: its token is a delegated
+  // Mission-bound token, routed only to a Mission-aware audience. This
+  // transport does not render the actor as `act`, so the refusal is keyed on
+  // the request, and it lands here, before any side effect.
   const projection = projectScope({
     mapping: opts.scopeProjection,
     audiences: [target],
     entries: confinedSubset,
+    delegated: params.actor_token !== undefined,
   });
   if (projection.outcome === "refuse") {
     txError(ctx, 400, "invalid_target", projection.reason);

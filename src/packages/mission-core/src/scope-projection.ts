@@ -56,9 +56,20 @@ export interface ScopeValueMapping {
   mandatory_controls: ScopeMandatoryControls;
 }
 
+/**
+ * `mission_aware` is the trusted classification the routing rule reads
+ * (@spec mission#rs-enforcement): `true` only for a target that processes
+ * the `act` chain and the `mission` claim; a delegated Mission-bound token is
+ * never issued to any other.
+ */
 export type AudienceScopeMapping =
-  | { version: string; mode: "authorization_details" }
-  | { version: string; mode: "scope_only"; scopes: Record<string, ScopeValueMapping> };
+  | { version: string; mission_aware: boolean; mode: "authorization_details" }
+  | {
+      version: string;
+      mission_aware: boolean;
+      mode: "scope_only";
+      scopes: Record<string, ScopeValueMapping>;
+    };
 
 export interface ScopeProjectionMapping {
   audiences: Record<string, AudienceScopeMapping>;
@@ -168,10 +179,14 @@ function parseScopeValue(v: unknown, path: string): ScopeValueMapping {
 function parseAudience(v: unknown, path: string): AudienceScopeMapping {
   const o = obj(v, path);
   const version = nonEmptyString(o.version, `${path}.version`);
+  if (typeof o.mission_aware !== "boolean") {
+    throw new ScopeProjectionMappingError(`${path}.mission_aware`, "must be a boolean");
+  }
+  const missionAware = o.mission_aware;
   const mode = o.mode;
   if (mode === "authorization_details") {
-    onlyMembers(o, ["version", "mode"], path);
-    return { version, mode };
+    onlyMembers(o, ["version", "mission_aware", "mode"], path);
+    return { version, mission_aware: missionAware, mode };
   }
   if (mode !== "scope_only") {
     throw new ScopeProjectionMappingError(
@@ -179,7 +194,7 @@ function parseAudience(v: unknown, path: string): AudienceScopeMapping {
       `must be one of ${SCOPE_PROJECTION_MODES.join(", ")}`,
     );
   }
-  onlyMembers(o, ["version", "mode", "scopes"], path);
+  onlyMembers(o, ["version", "mission_aware", "mode", "scopes"], path);
   const scopes = obj(o.scopes, `${path}.scopes`);
   const names = Object.keys(scopes);
   if (names.length === 0)
@@ -194,7 +209,7 @@ function parseAudience(v: unknown, path: string): AudienceScopeMapping {
     }
     out[name] = parseScopeValue(scopes[name], `${path}.scopes.${name}`);
   }
-  return { version, mode, scopes: out };
+  return { version, mission_aware: missionAware, mode, scopes: out };
 }
 
 /**
@@ -317,11 +332,42 @@ export interface ScopeProjectionInput {
    * issued under, if any. A different current version is a stale mapping.
    */
   pinnedVersion?: (audience: string) => string | undefined;
+  /**
+   * The token is delegated: it carries an `act` chain (or answers an RFC 8693
+   * delegation request). Then every audience must be Mission-aware.
+   */
+  delegated?: boolean;
+}
+
+/**
+ * @spec mission#rs-enforcement — the delegated-routing rule: a delegated
+ * Mission-bound token (one carrying an `act` chain) is routed only to a
+ * Resource Server the deployment knows to be Mission-aware, never to one
+ * that authorizes or logs the caller on `client_id` without processing the
+ * `act` chain. Returns the refusal reason, or undefined when every audience
+ * is classified `mission_aware: true`. An audience the mapping does not name
+ * is not known to be Mission-aware, so it fails closed.
+ */
+export function delegatedRoutingRefusal(
+  mapping: ScopeProjectionMapping | undefined,
+  audiences: readonly string[],
+): string | undefined {
+  if (audiences.length === 0) return "the token names no audience";
+  for (const aud of audiences) {
+    const m = mapping?.audiences[aud];
+    if (!m) return `no scope-projection mapping for audience ${aud}`;
+    if (m.mission_aware !== true) {
+      return `a delegated Mission-bound token is routed only to a Mission-aware Resource Server; audience ${aud} is not classified mission_aware`;
+    }
+  }
+  return undefined;
 }
 
 /**
  * @spec mission#scope-projection — the issuance algorithm, per audience
- * (step 6): resolve the audience's mapping (unknown fails closed), refuse a
+ * (step 6): a delegated token first passes the routing rule
+ * ({@link delegatedRoutingRefusal}); then resolve the audience's mapping
+ * (unknown fails closed), refuse a
  * mapping whose version differs from the one pinned for the grant (stale),
  * then either omit `scope` (the target consumes `authorization_details`) or
  * emit only values a single carried entry covers. One `scope` claim reaches
@@ -332,6 +378,10 @@ export interface ScopeProjectionInput {
 export function projectScope(input: ScopeProjectionInput): ScopeProjectionOutcome {
   const audiences = [...new Set(input.audiences)];
   if (audiences.length === 0) return { outcome: "refuse", reason: "the token names no audience" };
+  if (input.delegated) {
+    const reason = delegatedRoutingRefusal(input.mapping, audiences);
+    if (reason) return { outcome: "refuse", reason };
+  }
   const versions: Record<string, string> = {};
   const modes = new Set<ScopeProjectionMode>();
   let safe: Set<string> | undefined;

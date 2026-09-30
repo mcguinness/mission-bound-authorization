@@ -141,6 +141,7 @@ export {
 } from "./origin-principal.js";
 export {
   type AudienceScopeMapping,
+  delegatedRoutingRefusal,
   parseScopeProjectionMapping,
   projectScope,
   SCOPE_CONTROL_KEYS,
