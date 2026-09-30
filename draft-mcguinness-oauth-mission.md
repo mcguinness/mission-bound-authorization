@@ -421,12 +421,11 @@ separate Mission-awareness requirement ({{rs-enforcement}}).
 Some duties apply only when their condition holds: a submitted
 authority proposal, presented or required submission evidence
 ({{intent-submission-evidence}}), or opaque tokens (which require
-introspection). The optional
-capabilities (Delegation, Introspection as a state overlay for JWTs,
-Cross-Domain projection, and Local Approved-Set Verification) are
-adopted explicitly under {{conformance}}. Ordinary JWT consumption
-does not require retrieving the Mission Record or recomputing the
-complete approved Authority Set.
+introspection). The optional capabilities (Delegation, Introspection
+as a state overlay for JWTs, Cross-Domain projection, and Local
+Approved-Set Verification) are adopted explicitly under
+{{conformance}}. Ordinary JWT consumption does not require retrieving
+the Mission Record or recomputing the complete approved Authority Set.
 
 ## Applicability {#applicability}
 
@@ -1462,9 +1461,10 @@ At the approval event the AS MUST, in order:
    value is bounded as `expires_at` requires ({{mission-record}}) and
    is rechecked at the creation commit (step 7).
 5. Render for consent the derived Authority Set in human-meaningful
-   terms, with the `goal`, `task_bounds`, the effective `expires_at`
-   (and, when it differs, the requested `intent.expires_at`, so the
-   Approver sees the narrowing), as context:
+   terms, with the `goal`, `task_bounds`, and the effective
+   `expires_at` (and, when it differs, the requested
+   `intent.expires_at`, so the Approver sees the narrowing) as
+   context:
    - The consent object is the **derived Authority Set**, what the
      agent may do, not the `goal` or Mission Intent: derivation is
      local policy, and nothing commits that the derived authority
@@ -2503,9 +2503,9 @@ refusal under this section the AS SHOULD include, alongside `error`,
 the `mission_error` token-error-response member ({{iana}}) with one
 of the values `mission_revoked`, `mission_expired`, or
 `mission_superseded` (where a companion defines supersession). The
-member is diagnostic only: it grants
-nothing, an unrecognized value is ignored, and it is returned only to
-the authenticated client presenting the Mission's grant.
+member is diagnostic only: it grants nothing, an unrecognized value is
+ignored, and it is returned only to the authenticated client
+presenting the Mission's grant.
 
 Derived tokens SHOULD be short-lived so that a transition to
 `revoked` or `expired` takes effect promptly without per-request
@@ -3202,12 +3202,12 @@ These rules apply equally to the `mission` member of an
 Disclosure is member-scoped as well as caller-scoped.
 `proposal_hash`, `authority_hash`, `approval_basis`, and
 `authority_source` serve audit and correlation consumers, not
-Resource Server enforcement, and the AS MUST disclose each only to a caller the deployment has
-granted that member's disclosure privilege. By default, an
-audience-authorized Resource Server receives the audience-filtered
-enforcement projection above, without them. A `mission` member that a
-companion profile defines for disclosure here follows the same
-member-scoped rule and is not an enforcement input.
+Resource Server enforcement, and the AS MUST disclose each only to a
+caller the deployment has granted that member's disclosure privilege.
+By default, an audience-authorized Resource Server receives the
+audience-filtered enforcement projection above, without them. A
+`mission` member that a companion profile defines for disclosure here
+follows the same member-scoped rule and is not an enforcement input.
 
 ## Composite Active State {#composite-active}
 
@@ -3238,10 +3238,10 @@ inactive token. The caller authorization and minimization rules
 
 An AS MUST NOT include `mission.state`, `proposal_hash`,
 `authority_hash`, `approval_basis`, or `authority_source` in an
-introspection response unless it holds the
-Mission, that is, unless it is the Mission `issuer`. Introspection at
-a non-issuer Resource AS, which returns only the claim-shape members,
-is specified by the cross-domain companion
+introspection response unless it holds the Mission, that is, unless
+it is the Mission `issuer`. Introspection at a non-issuer Resource
+AS, which returns only the claim-shape members, is specified by the
+cross-domain companion
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
 
 ## Introspected Token Consumption {#introspected-consumption}
