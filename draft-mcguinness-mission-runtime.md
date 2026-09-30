@@ -282,11 +282,11 @@ authority freely, so a Mission that is never consulted at the point
 of use functions as ambient authority for every consequential action
 inside its envelope.
 
-This document is the runtime layer that closes that gap: the
-enforcement half of the model, and the profile that makes a
-Mission-bound credential more than governance metadata. Its substance is
-one contract, stated once here and elaborated by the rest of the
-document.
+This document is the runtime layer that closes that gap for the
+action classes it covers: the enforcement half of the model, a
+per-action decision composed over the bounds the issuance profile
+already enforces at issuance. Its substance is one contract, stated
+once here and elaborated by the rest of the document.
 
 ## Invariants, Not a Wire Protocol {#not-a-wire-protocol}
 
