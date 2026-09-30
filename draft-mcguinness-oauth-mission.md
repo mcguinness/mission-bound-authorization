@@ -371,6 +371,24 @@ classes whose consequence needs one.
 
 ## Implementation Map {#implementation-map}
 
+The core establishes six properties; {{conformance}} states the
+requirements that realize them:
+
+1. The task is disclosed: the approval rendering shows the Intent's
+   task, and the AS commits the Intent as `intent_hash`
+   ({{approval-event}}, {{integrity-anchors}}).
+2. The authority is explicitly approved: the Approver consents to the
+   derived Authority Set itself, not to the task description alone
+   ({{approval-event}}).
+3. Task, authority, and approval are durably bound in the Mission
+   Record and its commitments ({{mission-record}}).
+4. The OAuth grant lineage is bound to exactly one Mission,
+   server-side ({{grant-binding}}).
+5. Every derived authority is no broader than the approved Authority
+   Set ({{subset}}).
+6. A Mission that is not `active` yields no further derivation
+   ({{issuance-gating}}).
+
 {{conformance}} is the complete statement of roles and optional
 capabilities. The starting path is one client, one Authorization
 Server, direct approval, and a single resource audience. It needs no
@@ -5911,6 +5929,11 @@ Local Approved-Set Verification:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Stated the six properties the core establishes in the
+  Implementation Map, added the grant-lineage binding to the
+  Introduction's chain, and defined a Mission as the binding of a
+  disclosed task to an explicitly approved Authority Set.
 
 - Reordered the reading path around submission, approval, the record
   and commitments, lifecycle gating, and token issuance and consumption.
