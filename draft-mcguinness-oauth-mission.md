@@ -5835,9 +5835,24 @@ Local Approved-Set Verification:
   and commitments, lifecycle gating, and token issuance and consumption.
   Added an informative implementation map and a single-audience
   approval-to-revocation walkthrough; separated resource-server
-  enforcement from optional approved-set verification and collected
-  design context outside the Introduction. Existing requirements and
-  anchors are preserved; no conformance capability changes.
+  enforcement from optional approved-set verification and moved
+  design context to an appendix.
+
+- Reviewed the document against OAuth RFC conventions. Each rule now
+  has one home; restatements of RFC 6749, 7662, 8693, 9068, 9396, and
+  9700 became pointers; deployment, audit, and implementation duties
+  became guidance; and long requirements became numbered lists.
+  Conditional members use the "required when; absent otherwise" form,
+  and the issuance-side downgrade rules moved from Security
+  Considerations to {{authority-proposal}}. The error-mapping table
+  gained rows for `invalid_mission_intent_evidence`, `invalid_scope`,
+  the governed-client `invalid_request`, the missing-claim
+  `invalid_token`, and the delegation refusals. Derived access tokens
+  carry no `acr`, `amr`, or `auth_time`, strengthening RFC 9068, and
+  per-use introspection freshness is stated as strengthening RFC 7662.
+  The metering members left this document's registry seed, since the
+  metering profile registers them. Anchors are unchanged, and no
+  conformance capability changed.
 
 - Stated in the Introduction and {{runtime-boundary}} that a
   deployment can run this profile alone, with Resource Servers that
