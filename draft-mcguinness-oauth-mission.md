@@ -320,9 +320,10 @@ the user approved. A token issued for a task remains usable after
 the user's approval lapses or is withdrawn, because nothing ties the
 token's validity to that approval.
 
-This document defines a **Mission**: a structured, explicitly
-approved, integrity-bound OAuth authorization artifact. A Mission is
-created and used in a single chain:
+This document defines a **Mission**: a durable authorization object
+that binds a disclosed task to an explicitly approved Authority Set
+and governs the lifecycle of the authority derived from that
+approval. A Mission is created and used in a single chain:
 
 1. The client submits a structured **Mission Intent** describing the
    task (goal, target resources, task bounds) instead of requesting
@@ -335,11 +336,15 @@ created and used in a single chain:
    authority, and the AS commits the task as an **`intent_hash`** and
    the authority as an **`authority_hash`** and records a durable
    **Mission**.
-4. Every access token the agent obtains under the Mission carries the
+4. The AS binds the OAuth grant that the approval produces to that
+   Mission, server-side: every later derivation from that grant
+   lineage resolves to exactly this Mission, and the client never
+   selects or reassigns it ({{grant-binding}}).
+5. Every access token the agent obtains under the Mission carries the
    derived authorization details and a **`mission` claim** identifying
    the Mission (`id`, `issuer`) it was derived under. A Resource
    Server enforces statelessly from the token.
-5. Token issuance and refresh are **gated on Mission state**, so
+6. Token issuance and refresh are **gated on Mission state**, so
    revoking or expiring the Mission stops the agent from obtaining
    further authority.
 
@@ -365,6 +370,26 @@ layer ({{runtime-boundary}}), adds a per-action check for the action
 classes whose consequence needs one.
 
 ## Implementation Map {#implementation-map}
+
+The core establishes six properties; {{conformance}} states the
+requirements that realize them:
+
+1. The task is disclosed: the approval rendering shows the Intent's
+   task, and the AS commits the Intent as `intent_hash`
+   ({{approval-event}}, {{integrity-anchors}}).
+2. The authority is explicitly approved: the Approver consents to the
+   derived Authority Set itself, not to the task description alone
+   ({{approval-event}}).
+3. The Mission Record durably associates the disclosed task, the
+   approved authority, and the approval basis; separate commitments
+   protect the recorded Intent and Authority Set ({{mission-record}},
+   {{integrity-anchors}}).
+4. The OAuth grant lineage is bound to exactly one Mission,
+   server-side ({{grant-binding}}).
+5. Every derived authority is no broader than the approved Authority
+   Set ({{subset}}).
+6. A Mission that is not `active` yields no further derivation
+   ({{issuance-gating}}).
 
 {{conformance}} is the complete statement of roles and optional
 capabilities. The starting path is one client, one Authorization
@@ -491,10 +516,15 @@ Authority Set:
   ({{authorization-derivation}}).
 
 Mission:
-: The durable, immutable record created at the approval event
-  ({{mission-record}}), identified by a Mission Identifier
-  ({{mission-id}}) and, globally, by the pair (`issuer`, `id`). A
-  Mission is independent of any OAuth grant ({{grant-binding}}).
+: The durable authorization object that binds a disclosed task (its
+  Mission Intent) to an explicitly approved Authority Set and governs
+  the lifecycle of the authority derived from that approval. It is the
+  immutable record created at the approval event ({{mission-record}}),
+  identified by a Mission Identifier ({{mission-id}}) and, globally, by
+  the pair (`issuer`, `id`). A Mission is independent of any OAuth
+  grant ({{grant-binding}}). "The approved task" is shorthand for this
+  binding: the Approver approves the Authority Set, and the task is
+  disclosed and committed beside it.
 
 Mission Grant Binding (Grant Binding):
 : The AS-controlled, functional mapping from one persistent,
@@ -5901,6 +5931,11 @@ Local Approved-Set Verification:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Stated the six properties the core establishes in the
+  Implementation Map, added the grant-lineage binding to the
+  Introduction's chain, and defined a Mission as the binding of a
+  disclosed task to an explicitly approved Authority Set.
 
 - Reordered the reading path around submission, approval, the record
   and commitments, lifecycle gating, and token issuance and consumption.
