@@ -388,6 +388,22 @@ Where a deployment runs child delegation, that profile states what an
 approval interface discloses beside it
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
 
+# Conformance {#conformance}
+
+An AS conforming to this document MUST implement:
+
+- the requested limit, the effective limit, and the record member
+  ({{derivation-limit}});
+- derivation counting ({{counting}});
+- enforcement at issuance ({{enforcement}});
+- approval rendering ({{approval-rendering}}); and
+- where it supports token introspection for Mission-bound tokens, the
+  rules for `derivations_remaining` ({{introspection}}).
+
+A Resource Server does not need to understand this document to enforce
+Mission-bound tokens; `derivations_remaining` is not an enforcement
+input ({{introspection}}).
+
 # Security Considerations {#security-considerations}
 
 The security considerations of {{I-D.draft-mcguinness-oauth-mission}}
@@ -471,6 +487,13 @@ Intent Members" registry established by
   ({{requested-limit}}).
 - Change Controller: IETF
 - Reference: this document, {{requested-limit}}
+
+This document's promotion criteria for the member, which a Designated
+Expert confirms before a `stable` registration
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Intent
+Members Registry"), are met: this document completely defines the
+member's request semantics, the effective limit, counting, and
+enforcement ({{derivation-limit}}, {{counting}}, {{enforcement}}).
 
 `derivation_limit` is a Mission Record member and
 `derivations_remaining` a member of the introspection `mission`

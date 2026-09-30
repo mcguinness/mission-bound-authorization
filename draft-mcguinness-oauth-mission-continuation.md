@@ -68,6 +68,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-derivation-limits:
+    title: "Mission Derivation Limits for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-derivation-limits.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-aauth:
     title: "Mission Context Binding for AAuth"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html
@@ -277,7 +285,8 @@ Termination:
   issuance, not on tokens already in flight.
 
 Continuation is bounded in time by the Mission's expiry; that expiry is
-the continuity ceiling. The Mission's `derivation_limit`, where established,
+the continuity ceiling. The Mission's `derivation_limit`
+({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}), where established,
 remains a bound on distinct derivations and is not a separate continuity
 ceiling. A continuation that issues a distinct new grant (for example, an
 Identity Continuation hop that mints a new audience-scoped credential)

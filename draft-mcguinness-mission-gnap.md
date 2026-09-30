@@ -62,6 +62,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-derivation-limits:
+    title: "Mission Derivation Limits for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-derivation-limits.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-substrate:
     title: "Mission Substrate Requirements"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
@@ -785,8 +793,8 @@ an operation that issues none counts zero.
 Where the Mission's effective
 `derivation_limit` is
 established, the authorization server MUST refuse the derivation that
-would exceed it, per the issuance profile's count-and-gate rule
-({{I-D.draft-mcguinness-oauth-mission}}). An
+would exceed it, per the derivation limits profile's count-and-gate
+rule ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}). An
 access token issued under a Mission MUST NOT expire later than the
 Mission's `expires_at`, so no credential outlives the Mission.
 

@@ -190,6 +190,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-derivation-limits:
+    title: "Mission Derivation Limits for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-derivation-limits.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-audit:
     title: "Mission Audit Transparency"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html
@@ -541,7 +549,8 @@ carrying a proposal records `proposed_authority` and `proposal_hash`
 as the issuance profile's Mission record defines them.
 
 A MAS has no derivation event: no token is issued under the Mission,
-so a requested `requested_derivation_limit` binds nothing here (a MAS
+so a requested `requested_derivation_limit`
+({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}) binds nothing here (a MAS
 implementing the issuance-grant companion has one, each grant
 minted, and applies that profile's counting rule,
 {{I-D.draft-mcguinness-oauth-mission-issuance-grant}}). A MAS SHOULD refuse

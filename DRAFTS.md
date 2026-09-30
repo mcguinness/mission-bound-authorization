@@ -423,6 +423,19 @@ history disclosed to the Approver.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-containment.html)
 
+#### Mission Derivation Limits for OAuth 2.0
+
+Bounds the number of derivations the Mission Issuer performs under one
+Mission. A client can request a ceiling with the
+`requested_derivation_limit` Intent member; the authorization server
+establishes the effective `derivation_limit` as the minimum of that
+request and its own policy, renders it at approval, refuses any
+derivation that would exceed it, and can report `derivations_remaining`
+through token introspection. The limit bounds issuance, not the
+authority a token carries or how it is used.
+
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-derivation-limits.html)
+
 ### Runtime enforcement
 
 #### Mission-Bound Runtime Enforcement
