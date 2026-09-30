@@ -6493,6 +6493,13 @@ Cross-Domain:
 
 -01
 
+- Scope Projection keeps OAuth response semantics: an explicitly
+  requested `scope` value the issuance cannot grant is refused with
+  `invalid_scope`, a requested `scope` narrows a projected one, and a
+  refusal caused solely by a failed projection does not invalidate an
+  otherwise-valid refresh token. A changed mapping is re-evaluated,
+  not stale by itself.
+
 - The Error and Challenge Mapping table maps a scope-projection
   refusal, and an issuance-time refusal under the delegated-token
   routing rule, to `invalid_target`.
