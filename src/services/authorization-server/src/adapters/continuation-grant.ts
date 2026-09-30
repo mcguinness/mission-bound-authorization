@@ -42,7 +42,7 @@ import {
   projectThroughEffective,
   SourceUnavailableError,
 } from "../kernel/derive.js";
-import { isSubsetSetIgnoringCapabilitySources } from "@mission/core";
+import { isSubsetSetIgnoringCapabilitySources, projectScope } from "@mission/core";
 import { UniqueViolationError } from "@mission/store";
 import {
   type CreationOperation,
@@ -62,6 +62,7 @@ import {
   intentErrorToOidc,
   InvalidAuthorizationDetails,
   newResourceServer,
+  SCOPE_DECIDED_AT_SAVE,
   requiredEvidenceTypesFor,
   resourceServerInfoFor,
 } from "./provider.js";
@@ -179,6 +180,7 @@ export async function handleTokenExchangeGrant(
         tokenKid: opts.childGrantKid as string,
         proofJtiFresh: (jti) => freshProofJti(opts, jti),
         now: () => opts.kernel.nowDate(),
+        ...(opts.scopeProjection ? { scopeProjection: opts.scopeProjection } : {}),
       },
       ctx,
     );
@@ -665,6 +667,20 @@ export async function handleAsyncDelegationExchange(
     txError(ctx, 400, "invalid_authorization_details", "confined authorization_details must be non-empty");
     return;
   }
+  // @spec mission#scope-projection — the family's access tokens are projected
+  // at save() like every Mission-bound mint; refusing HERE, before the
+  // reservation, the family grant and the single derivation count, keeps the
+  // refusal free of side effects. save() decides with the same function over
+  // the same inputs for a fresh family grant, so the two cannot disagree.
+  const projection = projectScope({
+    mapping: opts.scopeProjection,
+    audiences: [target],
+    entries: confinedSubset,
+  });
+  if (projection.outcome === "refuse") {
+    txError(ctx, 400, "invalid_target", projection.reason);
+    return;
+  }
 
   // Step 4 (RESERVED): acquire the durable (client, creation_request_id)
   // reservation BEFORE any side effect. The datastore uniqueness constraint is
@@ -757,6 +773,8 @@ interface AsyncDelegationResponseBody {
   token_type: string;
   expires_in: number;
   refresh_token: string;
+  /** @spec mission#scope-projection — present only when the projection emitted one. */
+  scope?: string;
   authorization_details: AuthorityEntry[];
 }
 
@@ -801,7 +819,7 @@ async function deliverAsyncDelegationFamily(
     grantId: d.grantId,
     gty: TOKEN_EXCHANGE_GRANT_TYPE,
     rar: d.tokenRar,
-    scope: "payments",
+    scope: SCOPE_DECIDED_AT_SAVE,
   });
   at.resourceServer = newResourceServer(provider, d.target, info);
   at.jkt = d.jkt; // sender-constrain to the confirmed key (tokenType -> DPoP)
@@ -815,6 +833,9 @@ async function deliverAsyncDelegationFamily(
     client,
     grantId: d.grantId,
     gty: TOKEN_EXCHANGE_GRANT_TYPE,
+    // oidc-provider grant plumbing (the vocabulary a refresh filters its
+    // scope through, matching addResourceScope above); never emitted: each
+    // refreshed access token's `scope` is the scope-projection decision.
     scope: "payments",
     rar: d.refreshRar,
     resource: d.target,
@@ -828,6 +849,8 @@ async function deliverAsyncDelegationFamily(
     token_type: "DPoP",
     expires_in: (at as unknown as { expiration: number }).expiration,
     refresh_token: refreshTokenValue,
+    // @spec mission#scope-projection — the projected value save() decided.
+    ...((at as { scope?: string }).scope ? { scope: (at as { scope?: string }).scope as string } : {}),
     authorization_details: d.tokenRar,
   };
   opts.creationIdempotency?.completeDelivered(client.clientId, d.creationRequestId, d.mission.id, {
@@ -1229,7 +1252,7 @@ async function mintMissionAccessToken(
     grantId,
     gty: TOKEN_EXCHANGE_GRANT_TYPE,
     rar: tokenRar,
-    scope: "payments",
+    scope: SCOPE_DECIDED_AT_SAVE,
   });
   at.resourceServer = newResourceServer(provider, resource, info);
   at.jkt = jkt; // sender-constrain to the possession key (tokenType -> DPoP)
@@ -1240,7 +1263,8 @@ async function mintMissionAccessToken(
     access_token: jwt,
     token_type: "DPoP",
     expires_in: (at as unknown as { expiration: number }).expiration,
-    scope: "payments",
+    // @spec mission#scope-projection — the projected value save() decided.
+    ...((at as { scope?: string }).scope ? { scope: (at as { scope?: string }).scope } : {}),
     // @spec mission#grant-binding, expansion#successor-expiry — expansion
     // COMPLETES a Mission creation, so the completing body carries the
     // successor's identifier and its committed effective expiry, verbatim from
@@ -2191,7 +2215,11 @@ async function recoverExpansion(
       access_token: stored.access_token,
       token_type: "DPoP",
       expires_in: stored.exp - nowS,
-      scope: "payments",
+      // @spec mission#scope-projection — a replay returns the stored token's
+      // own projected `scope` (the claim save() wrote), never a fixed value.
+      ...(typeof decodeJwt(stored.access_token).scope === "string"
+        ? { scope: decodeJwt(stored.access_token).scope as string }
+        : {}),
       // @spec mission#grant-binding — a creation replay returns the COMMITTED
       // effective value unchanged: read back off the successor record, never
       // recomputed for this response.
