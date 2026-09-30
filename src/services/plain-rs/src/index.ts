@@ -68,6 +68,8 @@ export interface PlainRsOptions {
 }
 
 const DEFAULT_ALGS = ["RS256", "PS256", "ES256", "ES384", "EdDSA"];
+/** RFC 7638 SHA-256 thumbprint, base64url without padding: 32 octets, 43 characters. */
+const JWK_THUMBPRINT = /^[A-Za-z0-9_-]{43}$/;
 
 class Refusal extends Error {
   constructor(
@@ -119,6 +121,27 @@ export function plainResourceServer(opts: PlainRsOptions) {
     } catch {
       throw new Refusal(401, "invalid_token", "the access token is not valid for this resource", scheme);
     }
+  }
+
+  /**
+   * RFC 7800 Section 3.1: a `cnf` claim names how the presenter proves
+   * possession, and a Resource Server that cannot perform that proof cannot
+   * accept the token. Absent: a bearer token. Present: the only method this
+   * server verifies is RFC 9449 `jkt`, a base64url SHA-256 JWK thumbprint,
+   * alone in the object. Any other shape (a certificate thumbprint, which
+   * RFC 8705 Section 3 requires matching against the presented certificate,
+   * another or an additional member, a malformed value) is refused, never
+   * accepted as bearer.
+   */
+  function confirmationKey(payload: JWTPayload, scheme: "Bearer" | "DPoP"): string | undefined {
+    const cnf = payload.cnf;
+    if (cnf === undefined) return undefined;
+    const members = cnf !== null && typeof cnf === "object" && !Array.isArray(cnf) ? Object.keys(cnf) : [];
+    const jkt = members.length === 1 && members[0] === "jkt" ? (cnf as { jkt?: unknown }).jkt : undefined;
+    if (typeof jkt !== "string" || !JWK_THUMBPRINT.test(jkt)) {
+      throw new Refusal(401, "invalid_token", "unsupported or malformed confirmation method", scheme);
+    }
+    return jkt;
   }
 
   /** RFC 9449 Section 4.3 proof checks, bound to the token's `cnf.jkt`. */
@@ -186,8 +209,8 @@ export function plainResourceServer(opts: PlainRsOptions) {
     const scheme = (m[1] as string).toLowerCase() === "dpop" ? "DPoP" : "Bearer";
     const token = m[2] as string;
     const payload = await validateAccessToken(token, scheme);
-    const jkt = (payload.cnf as { jkt?: unknown } | undefined)?.jkt;
-    if (typeof jkt === "string") {
+    const jkt = confirmationKey(payload, scheme);
+    if (jkt !== undefined) {
       // RFC 9449 Section 7.1: a sender-constrained token is presented under DPoP only.
       if (scheme !== "DPoP") {
         throw new Refusal(401, "invalid_token", "a DPoP-bound token requires the DPoP scheme", "DPoP");
