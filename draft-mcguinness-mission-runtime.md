@@ -3710,6 +3710,11 @@ worked example shows the concrete record
 
 \[\[ To be removed from the final specification ]]
 
+- The Introduction states this profile as the per-action decision for
+  the action classes it covers, composed over the issuance profile's
+  bounds, and Deployment Considerations names introspection as a
+  cutoff on the issuance-only path.
+
 - Client-instance references follow their successors:
   draft-mcguinness-oauth-client-instance-assertion is replaced by
   {I-D.draft-mcguinness-oauth-client-instance-id}, and the
