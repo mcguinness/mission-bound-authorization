@@ -49,6 +49,7 @@ import {
   type CreationReservation,
   creationFingerprint,
   isValidCreationRequestId,
+  normalizedScope,
 } from "../kernel/creation-idempotency.js";
 import { DEFERRAL_EXPIRES_IN, DEFERRAL_INTERVAL, ExpansionDeferralError } from "../kernel/deferred.js";
 import { CarryoverRetrievalError } from "../kernel/carryover.js";
@@ -626,6 +627,7 @@ export async function handleAsyncDelegationExchange(
     ...(requestedSubset ? { proposal: requestedSubset } : {}),
     resource: target,
     request_refresh_token: true,
+    scope: normalizedScope(params.scope),
   });
   const idem = opts.creationIdempotency;
   if (!idem) {
