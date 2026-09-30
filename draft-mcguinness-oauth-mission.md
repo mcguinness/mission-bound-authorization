@@ -2378,7 +2378,7 @@ Every committed JSON value and its envelope are I-JSON {{RFC7493}}
 data, as {{Section 3.1 of RFC8785}} requires. Strengthening
 {{Section 3.1 of RFC8785}}, which adapts input to I-JSON, the party
 computing or verifying a commitment MUST reject non-conformant input
-before canonicalization rather than adapt it. Externally received
+before canonicalization rather than adapt it: externally received
 JSON destined for commitment is parsed by a duplicate-detecting
 parser, and an object carrying duplicate member names is rejected at
 parse time, before the parsed data model exists.
