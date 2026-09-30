@@ -104,13 +104,19 @@ constraints-free entry with those two actions and no delegation policy
 Basic principals from `config/introspection.json`; the plain RS's is
 `rs-plain`, authorized for its audience. `plain-rs` in introspection mode calls
 it on every request and honors only `active` (`introspectActive`). Each
-request makes a fresh POST, and no result is cached. A non-200 status, a
-network failure, or a malformed body refuses 503 `temporarily_unavailable`
-before the operation runs. A missing or non-`true` `active` refuses 401
-`invalid_token`. No request timeout is configured, so an introspection
-endpoint that hangs stalls the request. Only the `active: false` case has a
+request makes a fresh POST, and no result is cached. Outcomes by response:
+
+- a non-200 status, a network failure, or invalid JSON: 503
+  `temporarily_unavailable`;
+- a JSON object whose `active` is missing or not `true` (including `{}`):
+  401 `invalid_token`;
+- a JSON `null` body: 500 `server_error`, because the `active` read throws.
+
+Each of these refuses before the operation runs. A hanging endpoint is a
+separate case: no request timeout is configured, so the request stays pending
+rather than being refused. Only the `active: false` case has a
 test (`` plain-rs introspection mode > honors only `active`: an inactive token is refused even when its JWT is valid, and an introspected scope grants nothing ``);
-outage, malformed body, missing `active`, and timeout have no test yet. A
+outage, invalid JSON, a `null` body, missing `active`, and a hanging endpoint have no test yet. A
 non-active Mission yields `active: false` with `mission.state`
 (`composite non-active: active:false WITH mission.state (@spec mission#composite-active) > revoked Mission + valid token: only { active, mission }, state revoked, NO top-level or mission authorization_details`).
 
@@ -178,7 +184,7 @@ target that processes the `act` chain and the `mission` claim.
 | Delegated routing (`act`-bearing tokens) | Minted only when every audience is `mission_aware: true`, else `invalid_target` before any side effect | `delegated routing on the cross-org exchange (@spec mission#rs-enforcement) > refuses invalid_target, recording no derivation evidence, when the act-bearing token's audience is not classified Mission-aware, even with a safe scope projection`, `> mints the act-bearing token for an audience classified Mission-aware`; `delegated routing of transaction tokens (@spec mission#rs-enforcement) > refuses invalid_target, opening no approval, an act-bearing transaction token for a Challenge-Issuing Resource not classified Mission-aware, and admits it once the resource is`; JWT-customizer backstop (`formats.customizers.jwt`): no test yet |
 | Delegate calling the plain RS | Not supported: a delegated (`act`-bearing) token is refused for it, and the refusal never creates a Child Mission. Child Missions are a separately enabled capability, not enabled here (the plain RS ceiling entry has no `delegation.children`, `kernel/child-delegation.ts`) | Refusal: the delegated-routing row above; Child Mission path: not enabled, no test |
 | Token expiry | `plain-rs` refuses an expired token; it applies no `exp` tolerance | `plain-rs RFC 9068 / RFC 9449 validation > refuses a wrong typ, a wrong audience or issuer, and an expired token`; the exact clock-tolerance boundary: no test yet |
-| Introspection unavailable or malformed (introspection configuration) | 503 `temporarily_unavailable` and no operation; missing or non-`true` `active` is 401 `invalid_token`; no timeout configured | `introspectActive`; `active: false`: the introspection-mode test above; outage, malformed body, missing `active`, and timeout: no test yet |
+| Introspection failure (introspection configuration) | No operation performed. A non-200 status, a network failure, or invalid JSON gives 503 `temporarily_unavailable`; a missing or non-`true` `active` (including `{}`) gives 401 `invalid_token`; a JSON `null` body gives 500 `server_error`. A hanging endpoint is not refused: with no configured timeout, the request stays pending | `introspectActive`; `active: false`: the introspection-mode test above; outage, invalid JSON, `null` body, missing `active`, and a hanging endpoint: no test yet |
 | Async-delegation with `actor_token` | `invalid_request` for any target before any side effect; an `act`-bearing subject token is refused too | `unsupported actor context on the async-delegation exchange (@spec continuation#transport-async) > refuses invalid_request any exchange presenting an actor_token, to a scope-only or a Mission-aware target, spending no derivation; the same exchange with no actor succeeds with the projected scope`, `> refuses invalid_request a subject_token that already carries act, rather than stripping it` |
 
 ## 4. Provider integration port
@@ -267,7 +273,8 @@ deployment's values: the reference AS and `plain-rs`.
     "plain-rs logs nothing Mission-linked",
     "a projection refusal on a single-use path (deferred redemption, child jwt-bearer, dispatch, expansion poll) lands after that path's own consumption",
     "a restart is not revocation: consumers holding the old key keep accepting pre-restart tokens until exp, and plain-rs rejects post-restart tokens until its JWKS cache refreshes (up to 10 minutes)",
-    "introspection has no configured timeout, so an unresponsive endpoint stalls requests",
+    "introspection has no configured timeout, so an unresponsive endpoint leaves requests pending rather than refused",
+    "a JSON null introspection body fails closed as 500 server_error, not as a defined refusal",
     "provider token acceptance and derivation counting are not coupled atomically (#250)",
     "grants, the issuance index and the delegation-family store are in memory",
     "the scope-projection mapping's integrity is repository review; it is not fetched or signed",
@@ -301,7 +308,10 @@ existing tests only. "No test yet" marks a vector nothing witnesses.
 | Refresh after a projection-only refusal | Token and grant still valid | `core.scope-projection.refresh-preserved-on-projection-refusal` | `refresh preserved on a projection refusal (@spec mission#scope-projection) > a refused rotating refresh leaves the same refresh token valid: once the trusted mapping is repaired it succeeds once, and its reuse gets the ordinary replay treatment` |
 | Delegated token for a Resource Server that is not Mission-aware | `invalid_target`, no side effect, no automatic Child Mission | No ledger row covers the delegated-routing rule | `delegated routing on the cross-org exchange (@spec mission#rs-enforcement) > refuses invalid_target, recording no derivation evidence, when the act-bearing token's audience is not classified Mission-aware, even with a safe scope projection`; `delegated routing of transaction tokens (@spec mission#rs-enforcement) > refuses invalid_target, opening no approval, an act-bearing transaction token for a Challenge-Issuing Resource not classified Mission-aware, and admits it once the resource is` |
 | Token past `exp` at the plain RS | 401 `invalid_token` | No ledger row covers `plain-rs` | `plain-rs RFC 9068 / RFC 9449 validation > refuses a wrong typ, a wrong audience or issuer, and an expired token` |
-| Introspection outage, timeout, malformed body, missing `active` | 503 `temporarily_unavailable` or 401 `invalid_token`, no operation | No ledger row covers `plain-rs` | No test yet |
+| Introspection outage (non-200, network failure) or invalid JSON | 503 `temporarily_unavailable`, no operation | No ledger row covers `plain-rs` | No test yet |
+| Introspection body `{}`, or `active` missing or not `true` | 401 `invalid_token`, no operation | No ledger row covers `plain-rs` | `active: false` only: the introspection-mode test in §2; `{}` and missing `active`: no test yet |
+| Introspection body JSON `null` | 500 `server_error` (a residual), no operation | No ledger row covers `plain-rs` | No test yet |
+| Introspection endpoint hangs | Request stays pending; no timeout is configured, so this is not a refusal outcome | No ledger row covers `plain-rs` | No test yet |
 | Revocation cutting off an introspecting plain RS | Next call denied (401 `invalid_token`) | `core.introspection.composite-active`; `core.grant-binding.termination-gates-every-binding` is still todo and does not cite this test | `revocation with a scope-only Resource Server (@spec mission#scope-projection) > after the Mission is revoked, refresh refuses invalid_grant, introspection returns active false, and the plain RS in introspection mode denies the next call` |
 
 The reference cannot tell an audience that was never mapped from one removed
@@ -329,7 +339,9 @@ existing evidence. #873 still requires the following before it closes:
   each obligation.
 - **The executable acceptance pack's missing cases:**
   - expiration and clock-tolerance boundaries;
-  - introspection outage, timeout, malformed body, and missing `active`;
+  - introspection outage, invalid JSON, a `null` body, missing `active`, and a
+    hanging endpoint (which needs a configured timeout before it can have a
+    refusal outcome);
   - revoke-during-issuance and failure after reservation or artifact
     acceptance (tied to #250);
   - restart and uncertain-recovery behavior for any persistence claim.
