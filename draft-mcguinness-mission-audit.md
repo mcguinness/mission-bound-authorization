@@ -252,11 +252,10 @@ no new evidence object. It is optional, and what it proves is bounded:
 transparency makes misbehavior detectable and attributable, it does not
 make a dishonest issuer honest ({{limits}}).
 
-This document is optional. A deployment that retains evidence without a
-Transparency Service is fully conformant to the issuance profile and its
-companions and is unaffected by this document. It places no new
-requirement on them and defines no new evidence; it registers the
-records they already produce.
+A deployment that retains evidence without a Transparency Service is
+fully conformant to the issuance profile and its companions and is
+unaffected by this document. It places no new requirement on them; it
+registers the records they already produce.
 
 A deployment claims this profile only when it registers Mission evidence
 with a Transparency Service.

@@ -436,13 +436,11 @@ AAuth composes at the shared Mission Context layer: approval, stable
 reference, lifecycle gating where the PS is on path, and governance
 history ({{the-mission}}).
 
-It defines no protocol, no object, and no requirement. It is a map,
-not the territory: every mechanism named points at the profile that
-normatively defines it, and where this document and a profile appear
-to differ, the profile governs.
-
-This document is Informational. It establishes no conformance class
-and defines no new mechanism, claim, or wire format.
+This document is Informational. It defines no protocol, object,
+requirement, or conformance class, and no new mechanism, claim, or wire
+format. It is a map, not the territory: every mechanism named points at
+the profile that normatively defines it, and where this document and a
+profile appear to differ, the profile governs.
 
 Its boundary with the Mission Security Model
 ({{I-D.draft-mcguinness-mission-security-model}}) is deliberate: this
