@@ -18,5 +18,11 @@
     "secret": "dev-introspection-rs-saas",
     "audiences": ["http://localhost:4406/mcp"],
     "disclose": []
+  },
+  {
+    "principal_id": "rs-plain",
+    "secret": "dev-introspection-rs-plain",
+    "audiences": ["http://localhost:4410/api"],
+    "disclose": []
   }
 ]
