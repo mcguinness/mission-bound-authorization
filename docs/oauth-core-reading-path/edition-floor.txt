@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-09-30T00:46:48Z
-Source repository commit: 1dfe99ec53f9f6e62a2d6add1e0fe115709e6e2c
+Generated: 2026-09-30T01:07:45Z
+Source repository commit: 162b63e1bd94f6a99c246c43b584990b2088d893
 Member count: 7
 
 Reading order:
@@ -6199,7 +6199,7 @@ Table of Contents
      15.1.  Authenticated Complete-Set Retrieval
      15.2.  A Typed Selective-Inclusion Proof: a Future Composition
             Point
-   16. Design Context and Extension Boundaries
+   16. Design Context and Boundaries
      16.1.  Why a New Object
      16.2.  Relationship to Adjacent Work
      16.3.  The Mission, the Plan, and Execution
@@ -6368,7 +6368,7 @@ Table of Contents
      |               | state and limits              |              |
      +---------------+-------------------------------+--------------+
      | Mission-aware | Validate the credential and   | Section 11,  |
-     | Resource      | its sender constraint,        | Section 13.4 |
+     | Resource      | any sender constraint,        | Section 13.4 |
      | Server        | enforce the carried           |              |
      |               | authority, and apply any      |              |
      |               | configured Mission            |              |
@@ -6394,8 +6394,7 @@ Table of Contents
       validated and committed when present; presented or required
       submission evidence is checked under Section 4.3; an established
       derivation limit is enforced; opaque tokens require introspection.
-      A condition being absent does not waive its rule when that
-      condition later holds.
+      Each applies whenever its condition holds.
 
    *  *Optional capabilities:* Delegation (Section 14), Introspection as
       a state overlay for JWTs (Section 13), Cross-Domain projection,
@@ -6651,15 +6650,16 @@ Table of Contents
    3.  *Issue.* Still at 12:00, the client redeems the code.  The AS
        resolves and checks the Mission and returns a sender-constrained
        ERP token that expires at 12:05, with the read authority and a
-       mission reference.  The response also supplies the granted
-       authority and, in this example, the Mission identifier and
-       effective expiry.  The access token's five-minute lifetime is
-       distinct from the Mission's one-hour lifetime (Section 10).
+       mission reference.  The response also carries the granted
+       authority, mission_id, and mission_expires_at (Section 6.2).  The
+       access token's five-minute lifetime is distinct from the
+       Mission's one-hour lifetime (Section 10).
 
-   4.  *Use.* The ERP validates the token and proof of possession and
-       permits the authorized read.  The token grants no write
-       authority.  No Mission-state lookup or complete-set retrieval is
-       part of this example's resource request (Section 11).
+   4.  *Use.* The ERP, a Mission-aware Resource Server, validates the
+       token and proof of possession and permits the authorized read.
+       The token grants no write authority.  No Mission-state lookup or
+       complete-set retrieval is part of this example's resource request
+       (Section 11).
 
    5.  *Stop further issuance.* At 12:02 an authorized revocation makes
        the Mission non-active.  A subsequent refresh, if the AS issued a
@@ -10403,7 +10403,10 @@ Table of Contents
    pinning is what defends against post-approval substitution; that
    analysis is stated once, in Section 21.1.1.
 
-16.  Design Context and Extension Boundaries
+16.  Design Context and Boundaries
+
+   This section explains the design choices behind the Mission and
+   records what this document leaves to other work.
 
 16.1.  Why a New Object
 
