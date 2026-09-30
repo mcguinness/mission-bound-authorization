@@ -30,7 +30,6 @@ import Provider, { errors, type Configuration, type KoaContextWithOIDC, type Res
 import {
   delegatedRoutingRefusal,
   earlyScopeRefusal,
-  OIDC_SCOPE_VALUES,
   projectScope,
   type RequestedScope,
   type ScopeProjectionMapping,
@@ -844,9 +843,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
   const configuration: Configuration = {
     clients: opts.clients as never,
     jwks: opts.jwks as never,
-    // @spec mission#scope-projection — the OIDC vocabulary only: a resource
-    // `scope` value is the scope projection's, never a provider scope.
-    scopes: [...OIDC_SCOPE_VALUES],
+    // @spec mission#scope-projection — the OIDC vocabulary only (the prior
+    // list less the synthetic "payments"): a resource `scope` value is the
+    // scope projection's, never a provider scope.
+    scopes: ["openid", "profile", "email"],
     // OIDC claims by scope, sourced from the identity store; put them in the
     // id_token itself (not only at userinfo) so the token carries the subject's
     // identity for the demo. `sub` is always present.
