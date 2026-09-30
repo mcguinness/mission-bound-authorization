@@ -1899,12 +1899,14 @@ ancestor resource is not a safe projection of a narrower <code>prefix</code>
 entry.<a href="#section-3.6-4.1.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-3.6-4.2">
-            <p id="section-3.6-4.2.1"><strong>The actions match without aggregation.</strong> The mapping's <code>scope</code>
-value stands for exactly the entry's <code>actions</code>, action for action.
-A <code>scope</code> value that stands for an action family, an aggregate of
-unrelated actions, or the union of more than one entry's actions
-fails this condition, because the target grants every action the
-union names, not only the entry's.<a href="#section-3.6-4.2.1" class="pilcrow">¶</a></p>
+            <p id="section-3.6-4.2.1"><strong>The actions match without aggregation.</strong> Every action granted by
+the mapped <code>scope</code> value <span class="bcp14">MUST</span> be included in the applicable entry's
+<code>actions</code>; the value <span class="bcp14">MAY</span> grant a proper subset of them. A <code>scope</code>
+value that grants any additional action, including through an
+implied action family, an aggregate of unrelated actions, or the
+union of more than one entry's actions, fails this condition,
+because the target grants every action the union names, not only
+the entry's.<a href="#section-3.6-4.2.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-3.6-4.3">
             <p id="section-3.6-4.3.1"><strong>Every carried <code>constraints</code> key is independently enforced.</strong> For
@@ -2620,16 +2622,22 @@ registry.<a href="#section-7.3-6" class="pilcrow">¶</a></p>
 <p id="appendix-A-2">-00<a href="#appendix-A-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-3.1">
-          <p id="appendix-A-3.1.1">Controls taxonomy retirement (#636): the AS-side no-registered-
+          <p id="appendix-A-3.1.1">Scope Projection's action condition permits a mapped <code>scope</code> value
+to grant a proper subset of the entry's <code>actions</code>, matching the
+issuance profile's subset condition; any additional action still
+fails.<a href="#appendix-A-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-3.2">
+          <p id="appendix-A-3.2.1">Controls taxonomy retirement (#636): the AS-side no-registered-
 narrowing failure-closed cross-reference updated from an
 unrecognized <code>resources</code> value to an unrecognized <code>target_resources</code>
 value, matching the issuance profile's rename. No entry-level
 <code>constraints</code> reference changed; this document's own <code>constraints</code>
 is the RAR entry-level object, unaffected by the retirement of the
-Mission Intent's separate <code>controls</code> bucket.<a href="#appendix-A-3.1.1" class="pilcrow">¶</a></p>
+Mission Intent's separate <code>controls</code> bucket.<a href="#appendix-A-3.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-3.2">
-          <p id="appendix-A-3.2.1">Review response (#637): relocated the Resource Server enforcement
+        <li class="normal" id="appendix-A-3.3">
+          <p id="appendix-A-3.3.1">Review response (#637): relocated the Resource Server enforcement
 duties (exact/prefix resource matching, action matching,
 per-entry <code>constraints</code> enforcement) and the
 <code>mission_constraints_supported</code> protected-resource metadata member
@@ -2640,10 +2648,10 @@ role (Authorization Server vs. Resource Server) so an RS is not
 measured against issuer-only duties (subset/intersection, delegate
 eligibility, Transformation Capabilities declaration) it has no
 reason to implement. Adds this document's conformance-manifest
-source pin and its own requirement rows.<a href="#appendix-A-3.2.1" class="pilcrow">¶</a></p>
+source pin and its own requirement rows.<a href="#appendix-A-3.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-3.3">
-          <p id="appendix-A-3.3.1">Initial version: <code>mission_resource_access</code>, its resource and action
+        <li class="normal" id="appendix-A-3.4">
+          <p id="appendix-A-3.4.1">Initial version: <code>mission_resource_access</code>, its resource and action
 matching, generic constraints, the Common Constraints registry, the
 delegation policy and delegate-matching rules, the subset and
 intersection algebra, and the Resource Boundary Canonicalization
@@ -2652,12 +2660,12 @@ security analysis, relocated without change from
 defined inline (#637). Adds this type's concrete Scope Projection
 safety conditions and issuance-algorithm interlock (#698), and its
 Transformation Capabilities declaration for the issuance profile's
-machine-readable per-type capability map (#645).<a href="#appendix-A-3.3.1" class="pilcrow">¶</a></p>
+machine-readable per-type capability map (#645).<a href="#appendix-A-3.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-3.4">
-          <p id="appendix-A-3.4.1">The abstract names Rich Authorization Requests without a citation
+        <li class="normal" id="appendix-A-3.5">
+          <p id="appendix-A-3.5.1">The abstract names Rich Authorization Requests without a citation
 and states deployment choice without a BCP 14 keyword; the uncited
-RAR metadata reference is removed.<a href="#appendix-A-3.4.1" class="pilcrow">¶</a></p>
+RAR metadata reference is removed.<a href="#appendix-A-3.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
