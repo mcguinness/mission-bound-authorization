@@ -24,6 +24,8 @@ let rs: Server;
 let rsIntrospecting: Server;
 let introspection: Server;
 let active = true;
+/** The DPoP key's thumbprint (a well-formed 43-character jkt). */
+const jkt43 = () => jkt;
 
 async function accessToken(claims: Record<string, unknown> = {}, typ = "at+jwt"): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
@@ -129,10 +131,50 @@ describe("plain-rs RFC 9068 / RFC 9449 validation", () => {
     const once = await proof("GET", `${BASE}/api/reports`, token);
     expect((await call("GET", token, { dpop: once })).status).toBe(200);
     expect((await call("GET", token, { dpop: once })).status).toBe(401);
-    const other = await accessToken({ cnf: { jkt: "not-this-key" } });
+    const stranger = await calculateJwkThumbprint(await exportJWK((await generateKeyPair("ES256")).publicKey));
+    const other = await accessToken({ cnf: { jkt: stranger } });
     const res = await call("GET", other);
     expect(res.status).toBe(401);
     expect(res.headers.get("www-authenticate")).toMatch(/invalid_dpop_proof/);
+  });
+});
+
+describe("plain-rs confirmation methods (RFC 7800, RFC 8705, RFC 9449)", () => {
+  const refusedAs = async (res: Response) => {
+    expect(res.status).toBe(401);
+    expect(((await res.json()) as { error: string; error_description: string }).error_description).toBe(
+      "unsupported or malformed confirmation method",
+    );
+    expect(res.headers.get("www-authenticate")).toMatch(/error="invalid_token"/);
+  };
+
+  it("refuses a certificate-bound (x5t#S256) token rather than accepting it as bearer", async () => {
+    const token = await accessToken({ cnf: { "x5t#S256": "bwcK0esc3ACC3DB2Y5_lESsXE8o9ltc05O89jdN-dg2" } });
+    await refusedAs(await call("GET", token, { scheme: "Bearer", dpop: null }));
+    await refusedAs(await call("GET", token));
+  });
+
+  it("refuses a malformed jkt: wrong length, padded, non-base64url, or not a string", async () => {
+    for (const jkt of [jkt43().slice(0, 42), `${jkt43()}=`, `${jkt43().slice(0, 42)}+`, 42, null, { v: "x" }]) {
+      const token = await accessToken({ cnf: { jkt } });
+      await refusedAs(await call("GET", token));
+      await refusedAs(await call("GET", token, { scheme: "Bearer", dpop: null }));
+    }
+  });
+
+  it("refuses a cnf carrying jkt plus another member, and a cnf that is not an object", async () => {
+    await refusedAs(await call("GET", await accessToken({ cnf: { jkt: jkt43(), "x5t#S256": jkt43() } })));
+    await refusedAs(await call("GET", await accessToken({ cnf: { jkt: jkt43(), kid: "k" } })));
+    for (const cnf of ["jkt", [jkt43()], null, {}]) {
+      await refusedAs(await call("GET", await accessToken({ cnf }), { scheme: "Bearer", dpop: null }));
+    }
+  });
+
+  it("a well-formed jkt-only cnf keeps DPoP handling, and a token with no cnf stays a bearer token", async () => {
+    expect((await call("GET", await accessToken())).status).toBe(200);
+    expect((await call("GET", await accessToken({ cnf: undefined }), { scheme: "Bearer", dpop: null })).status).toBe(
+      200,
+    );
   });
 });
 
