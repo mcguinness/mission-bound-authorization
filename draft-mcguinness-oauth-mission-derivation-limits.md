@@ -40,6 +40,7 @@ normative:
     date: 2026
 
 informative:
+  RFC8785:
   I-D.draft-mcguinness-oauth-mission-child-delegation:
     title: "Mission Child Delegation for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html
@@ -117,8 +118,8 @@ none of its rules:
   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Extensibility");
 - a Mission Record member, `derivation_limit`, under the open record
   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Record");
-- an issuance gate at the token endpoint, refused with the OAuth
-  binding's `invalid_grant` error code and a value of its
+- an issuance gate at the token endpoint, refused with the
+  `invalid_grant` error code and a value of the OAuth binding's
   `mission_error` diagnostic
   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Issuance Gating");
 - a companion-defined member of the introspection `mission` member,
@@ -142,9 +143,9 @@ it ({{I-D.draft-mcguinness-mission-metering}}).
 {::boilerplate bcp14-tagged}
 
 This document uses the terms Mission, Mission Intent, Mission Record,
-Mission Issuer (the "issuer AS" or the "AS"), Approver, approval
-event, Authority Set, and derivation from
-{{I-D.draft-mcguinness-oauth-mission}}.
+Mission Issuer (the "issuer AS" or the "AS"), Resource AS, Approver,
+approval event, Authority Set, Mission-bound token, and derivation
+from {{I-D.draft-mcguinness-oauth-mission}}.
 
 Derivation limit:
 : The AS-established effective ceiling on the number of derivations
@@ -296,8 +297,10 @@ The issuer AS enforces the limit at each derivation. The bound is
 never absent at the issuer when established, and it does not bound
 another domain's local minting ({{cross-domain-counting}}). The
 rendered limit ({{approval-rendering}}) is therefore a bound a named
-party enforces, as the OAuth binding requires of every rendered bound
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Approval").
+party enforces, so rendering it meets the OAuth binding's rule
+against presenting a rendered bound as enforced when no party
+enforces it ({{I-D.draft-mcguinness-oauth-mission}}, Section
+"Mission Approval").
 
 `invalid_grant` alone does not tell a client which gate refused. On a
 refusal under this section the AS SHOULD include, alongside `error`,
@@ -438,12 +441,13 @@ child subtree by default. The derivations summed across an entire
 child subtree can therefore exceed what a single approval appears to
 bound at consent time.
 
-For example, a child-delegation deployment allowing `max_children` 3
-per Mission with `max_child_depth` 2 admits up to 12 descendant
-Missions (3 in the first generation, up to 9 in the second), each with
-its own independent `derivation_limit`; at 10 each, the subtree admits
-up to 120 derivations while no single bound the Approver saw exceeds
-10.
+For example, a child-delegation deployment
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) allowing
+`max_children` 3 per Mission with `max_child_depth` 2 admits up to 12
+descendant Missions (3 in the first generation, up to 9 in the
+second), each with its own independent `derivation_limit`; at 10
+each, the subtree admits up to 120 derivations while no single bound
+the Approver saw exceeds 10.
 
 Cross-domain projection composes separately: local issuance at a
 Resource AS is not counted against the origin issuer's cap
@@ -484,16 +488,16 @@ Intent Members" registry established by
 - Name: `requested_derivation_limit`
 - Status: `stable`
 - Semantics: Client-requested derivation-count ceiling
-  ({{requested-limit}}).
+  ({{derivation-limit}}).
 - Change Controller: IETF
 - Reference: this document, {{requested-limit}}
 
-This document's promotion criteria for the member, which a Designated
-Expert confirms before a `stable` registration
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Intent
-Members Registry"), are met: this document completely defines the
-member's request semantics, the effective limit, counting, and
-enforcement ({{derivation-limit}}, {{counting}}, {{enforcement}}).
+This document's promotion criterion for the member is a complete
+definition of its request semantics, effective limit, counting, and
+enforcement. The definitions in {{derivation-limit}}, {{counting}},
+and {{enforcement}} meet it, which a Designated Expert confirms before
+the `stable` registration ({{I-D.draft-mcguinness-oauth-mission}},
+Section "Mission Intent Members Registry").
 
 `derivation_limit` is a Mission Record member and
 `derivations_remaining` a member of the introspection `mission`
@@ -511,8 +515,8 @@ committed by `intent_hash`, computed as the OAuth binding specifies
 ({{I-D.draft-mcguinness-oauth-mission}}, Sections "Integrity Anchors"
 and "Canonicalization Rules"), with the issuer
 `https://as.example.com`. The canonical-bytes block is the exact JCS
-output, wrapped here for layout only; removing the line breaks, and
-adding no characters, recovers the canonical form.
+{{RFC8785}} output, wrapped here for layout only; removing the line
+breaks, and adding no characters, recovers the canonical form.
 
 `intent_hash`, over this Mission Intent as the envelope `value` with
 `typ` `mission-intent`:
