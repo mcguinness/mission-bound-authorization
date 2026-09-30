@@ -3134,6 +3134,41 @@ legible in the Deployment Profile; it does not make that statement
 checked. Custody assurance stays open until a normative reader or
 verifier for this declaration exists.
 
+An issuance-only deployment ({{entry-ramps}}) publishes a smaller
+shape: no `runtime`, `credential_custody`, or `harness` member, its
+token lifetime stated as the revocation bound where a Resource Server
+does not introspect, and residuals that name the per-action check it
+does not run:
+
+~~~ json
+{
+  "profile": "mission-issuance-only",
+  "assurance_claims": [
+    "approved-record integrity", "bounded revocation latency"
+  ],
+  "mission_issuer": "https://as.example.com",
+  "state_sources": [
+    { "type": "introspection", "max_staleness_seconds": 0 }
+  ],
+  "issuance": {
+    "binding": "oauth-core",
+    "refresh_gated_on_active_state": true,
+    "max_access_token_lifetime_seconds": 300
+  },
+  "resource_servers": {
+    "authorization_details_enforcing": ["https://erp.example.com"],
+    "scope_projection_only": ["https://mail.example.com"],
+    "constraint_enforcement_for_scope_only": "refuse_issuance"
+  },
+  "residual_risks": [
+    "no per-action check within a token lifetime",
+    "revocation up to 300 seconds where no introspection",
+    "scope-only constraints not projectable are refused",
+    "delegated tokens reach Mission-aware resources only"
+  ]
+}
+~~~
+
 Two deployments that both "support Mission" but publish different
 Deployment Profiles provide different security properties, and the
 profile is what makes that difference legible. A deployment lists
