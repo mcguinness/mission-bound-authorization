@@ -59,8 +59,8 @@
     "content_sha256": "2ecac7a1642121e76f782cb12941b64fc1ed0782ae6df8a6e82721d5bc280b1f"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "6f3b9ad9642cf61cf94d5f612d07fc57ec453d30",
-    "content_sha256": "b6877fa2bef49532e64230a5dd774643b2a4d700ec117140b16fc476387d1bfb"
+    "revision": "3b447c4f7d9b60eafd9ba63d52ce2971c227336e",
+    "content_sha256": "0b6f1c20557e6264b3c287f8ad782b8f302948812b9165b68c677d5e4039805d"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7fc9ef45b5fb69f06bd3e90c1a93b6ac71808c10",
@@ -2761,7 +2761,7 @@
    "id": "core.submission.pushed-parameters-authoritative",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "submission-via-par",
-   "text": "the AS MUST ignore any `mission_intent`, `authorization_details`, `scope`, or `resource` presented, and MUST NOT let such a value widen the authority derived from the pushed parameters",
+   "text": "the AS MUST ignore any `mission_intent`, `authorization_details`, `scope`, or `resource` presented",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -2999,7 +2999,7 @@
    "id": "core.approval-basis.standing-consent-recency",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "mission-record",
-   "text": "activating an instance whose `approved_at` is older than the ceiling MUST be refused",
+   "text": "the activating issuer MUST refuse to activate an instance whose `approved_at` is older than the ceiling",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -3592,7 +3592,7 @@
    "id": "core.approval-event.authority-source-rerender",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "approval-event",
-   "text": "A change to the established source before the decision MUST force re-evaluation and re-rendering.",
+   "text": "If any of the following changes between approval rendering and the approval decision, the AS MUST recompute the affected values and the anchors the Mission records, and MUST NOT create the Mission without the Approver's consent to the changed context",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -3828,7 +3828,7 @@
    "id": "core.lifecycle.derivation-cap-exhaustion",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "lifecycle",
-   "text": "the AS MUST maintain a per-Mission count of **derivations** and MUST refuse with `invalid_grant` any derivation that would exceed it",
+   "text": "the AS MUST refuse, with the `invalid_grant` error code, any derivation that would make the number of **derivations** under the Mission exceed it",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -3859,7 +3859,7 @@
    "id": "core.lifecycle.effective-active-before-reliance",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "lifecycle",
-   "text": "the AS MUST evaluate `expires_at` before relying on stored state, and a Mission is effectively `active` only when its stored state is `active` and the decision time is strictly before `expires_at`",
+   "text": "the AS MUST treat a Mission as `active` only when its stored state is `active` and the decision time is strictly before `expires_at`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -4313,8 +4313,8 @@
   {
    "id": "core.approval-authentication.no-token-claim-carriage",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "approval-authentication",
-   "text": "this document defines no Mission Record member for them, and they MUST NOT\nbe carried on, or inferred from, a derived access token",
+   "anchor": "mission-bound-tokens",
+   "text": "An AS MUST NOT use the authentication of an Approver who is not the token's Subject as authentication information about that Subject",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -4326,7 +4326,7 @@
    "surface": "approval-ceremony",
    "assertion": "ignore",
    "observation": {
-    "normative": "the Approver's achieved acr/amr/auth_time is approval-time provenance, not a Mission Intent or Mission Record member, and MUST NOT be carried on or inferred from a derived access token; this is the RFC 9068-claim-repurposing pattern core prohibits"
+    "normative": "an Approver's achieved acr/amr/auth_time is approval-time provenance; when the Approver is not the token's Subject, a derived access token never carries it as authentication information about the Subject (claims that are present follow RFC 9068 Section 2.2.1 and describe the Subject)"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -4505,9 +4505,9 @@
    "id": "core.grant-binding.runtime-join-not-persistent-binding",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "grant-binding",
-   "text": "MUST NOT be modeled as a persistent Mission grant binding: it does not make the joined OAuth grant Mission-bound, and it rests on its own authenticated inputs and evidence, never on this section's binding",
+   "text": "Such a join is not a Mission grant binding: it does not make the joined OAuth grant Mission-bound",
    "role": "PDP",
-   "strength": "MUST NOT",
+   "strength": "stated",
    "applicability": {
     "kind": "unconditional"
    },
@@ -5286,9 +5286,9 @@
    "id": "core.other-types.transformation-boundary-declared",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "other-types",
-   "text": "the AS MUST declare three independent capabilities",
+   "text": "The AS MUST NOT narrow, delegate, or project to `scope` an entry of a type for which it has not declared the corresponding capability",
    "role": "AS",
-   "strength": "MUST",
+   "strength": "MUST NOT",
    "applicability": {
     "kind": "unconditional"
    },
@@ -5527,7 +5527,7 @@
    "id": "core.local-approved-set-verification.retrieval-transport-and-disclosure-gate",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "lasv-retrieval",
-   "text": "its authorization gate MUST be at least as strong as the disclosure privilege for every audience the Mission has issued to, not any single audience's own.",
+   "text": "The retrieval surface MUST refuse a caller that does not hold the disclosure privilege",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -23799,7 +23799,7 @@
    "id": "core.instance-context.current-presenter-binding",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "delegated-instance-context",
-   "text": "When issuing context under this composition, the AS MUST validate the presenting instance's Client Attestation and proof for the exchange, establish its trusted association with the separately authenticated delegate, and bind the output token to an instance-unique key whose possession it verified in that exchange.",
+   "text": "the AS MUST use the presenting instance validated under",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
