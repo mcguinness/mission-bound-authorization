@@ -3137,6 +3137,14 @@ permits; a Mission-creating client that requests authority through
 `authorization_details` does not also request a resource `scope` for
 it.
 
+A refusal caused solely by failure to establish a safe scope
+projection MUST NOT invalidate an otherwise-valid refresh token or its
+authorization grant. Independent expiration, revocation, and
+replay-detection rules continue to apply. An AS meets this by
+establishing the projection before it consumes or rotates the refresh
+token, or within the same atomic issuance, not by disabling rotation
+or restoring a consumed token.
+
 This is the type-agnostic form of the rule; a type's own
 specification states when the mapping in step 3 is safe for that
 type's entries (for `mission_resource_access`,
