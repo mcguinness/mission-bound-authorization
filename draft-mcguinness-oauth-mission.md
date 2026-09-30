@@ -1571,9 +1571,8 @@ parameters describe the requested authentication of the
 principal ({{approval-event}}, step 2). Requesting them implies
 nothing about the authentication claims of an issued token: this
 document does not adopt the token-claim carriage of {{RFC9470}} for
-them (see below), and {{rs-enforcement}} keeps the {{RFC9470}}
-challenge for the token's own Subject, although a derived access
-token carries no `acr`, `amr`, or `auth_time` ({{mission-bound-tokens}}).
+them (see below), and it defines no Resource Server step-up for
+derived tokens ({{rs-enforcement}}).
 
 The Approver's authentication satisfies `acr_values` when it matches
 any one listed value under the deployment's own policy mapping (this
@@ -3008,20 +3007,21 @@ Resource Server that needs more than that assertion adopts the Local
 Approved-Set Verification profile
 ({{local-approved-set-verification}}).
 
-A Resource Server denial falls into one of four cases, each using the
+A Resource Server does not challenge a Mission-bound token with
+`insufficient_user_authentication` ({{Section 3 of RFC9470}}): a
+derived token carries no authentication claims
+({{mission-bound-tokens}}), so no re-authorization could satisfy the
+challenge. A resource's authentication-strength or freshness
+requirement is applied at issuance, as the approval-authentication
+floor for Missions that carry authority for it
+({{approval-authentication}}); stronger or fresher authentication is
+a new approval event (a new Mission or a successor).
+
+A Resource Server denial falls into one of three cases, each using the
 OAuth challenge for its own failure class ({{error-mapping}} gives
 the codes):
 
-1. **Weak or stale token-associated user authentication.** The
-   authentication event associated with the presented token does not
-   meet the resource's requirement: the Resource Server challenges with
-   `insufficient_user_authentication` and the `acr_values` or
-   `max_age` parameters ({{Section 3 of RFC9470}}). This is the
-   authentication behind the presented token's own Subject, a
-   distinct fact from the Approver's approval-time authentication
-   ({{approval-authentication}}); satisfying one does not satisfy the
-   other.
-2. **Sender-constraint or key-binding failure.** The token's proof of
+1. **Sender-constraint or key-binding failure.** The token's proof of
    possession is missing or invalid: the Resource Server challenges with
    `invalid_token`, in the `DPoP` scheme for a DPoP-bound token
    ({{Section 7.1 of RFC9449}}, with `use_dpop_nonce` per
@@ -3029,17 +3029,17 @@ the codes):
    certificate-bound token ({{Section 3 of RFC8705}}). This is not a
    step-up: no fresh user authentication repairs a missing or wrong
    key.
-3. **Insufficient carried authority.** The action is outside the
+2. **Insufficient carried authority.** The action is outside the
    token's carried authority: the Resource Server challenges with
    `insufficient_scope` ({{RFC6750}}), or with the RAR-remediation
    challenge where {{I-D.draft-ietf-oauth-rar-metadata-remediation}}
    is deployed ({{remediation-grains}}). More authority requires a
    new approval, or an expansion where that companion is deployed.
-4. **Unenforceable constraint.** An applicable entry carries a
+3. **Unenforceable constraint.** An applicable entry carries a
    type-defined member or constraint the Resource Server cannot enforce,
-   and the request fails closed under the same base error as case 3.
+   and the request fails closed under the same base error as case 2.
 
-Cases 3 and 4 are identical `403` responses to a client, which cannot
+Cases 2 and 3 are identical `403` responses to a client, which cannot
 tell from them whether a new approval would help. A Mission-aware
 Resource Server SHOULD therefore indicate which of the two cases
 applies by including, alongside `error` ({{RFC6750}}), the
@@ -3139,7 +3139,6 @@ elsewhere in this document that names one of these codes
 | Token exchange using {{delegated-instance-context}}: required Client Attestation fails validation | `invalid_client_attestation` ({{Section 5.2 of I-D.draft-mcguinness-oauth-client-instance-id}}) | no instance-identity disclosure |
 | Token exchange using {{delegated-instance-context}}: required instance-to-delegate or output-key association cannot be established | `invalid_request` ({{Section 2.2.2 of RFC8693}}) | no instance-identity disclosure |
 | Protected resource: a token lacking the `mission` claim, where the resource requires it ({{rs-enforcement}}) | `invalid_token` ({{Section 3.1 of RFC6750}}) | none |
-| Protected resource: weak or stale token-associated user authentication | `insufficient_user_authentication` ({{Section 3 of RFC9470}}) | `acr_values`/`max_age` |
 | Protected resource: DPoP proof missing, invalid, or mismatched | `DPoP` `invalid_token` challenge ({{Section 7.1 of RFC9449}}) | none |
 | Protected resource: DPoP nonce required, missing, or stale | `DPoP` `use_dpop_nonce` challenge ({{Section 9 of RFC9449}}) | fresh nonce |
 | Protected resource: certificate-bound token's presented certificate mismatch | Bearer `invalid_token` challenge ({{Section 3.1 of RFC6750}}, per {{Section 3 of RFC8705}}) | none |
@@ -4313,14 +4312,11 @@ keeps gated and ungated authority from sharing one long-lived token.
 
 ### Denial Detail Disclosure {#denial-disclosure}
 
-The `mission_denial` attribute and the {{RFC9470}}
-`insufficient_user_authentication` challenge ({{rs-enforcement}}) each
-tell a caller which path a denial leads into, and so reveal
-authorization shape: an `insufficient_user_authentication` challenge
-confirms to the presenting party that the authority exists and only the
-token's own associated authentication is weak or stale, while
-`mission_denial: insufficient_authority` denies the authority's
-existence outright. Introspection guards the same class of fact behind
+The `mission_denial` attribute ({{rs-enforcement}}) tells a caller
+which path a denial leads into, and so reveals authorization shape:
+`constraint_unrecognized` confirms to the presenting party that the
+authority exists and only its enforcement is missing, while
+`insufficient_authority` denies the authority's existence outright. Introspection guards the same class of fact behind
 caller authorization ({{caller-authorization-and-minimization}}); a
 Resource Server applies the same care here, including the attribute only
 for a token holder that its deployment accepts learning the distinction
@@ -5911,8 +5907,11 @@ Local Approved-Set Verification:
   gained rows for `invalid_mission_intent_evidence`, `invalid_scope`,
   the governed-client `invalid_request`, the missing-claim
   `invalid_token`, and the delegation refusals. Derived access tokens
-  carry no `acr`, `amr`, or `auth_time`, strengthening RFC 9068, and
-  per-use introspection freshness is stated as strengthening RFC 7662.
+  carry no `acr`, `amr`, or `auth_time`, strengthening RFC 9068, so a
+  Resource Server issues no RFC 9470 step-up challenge for them; a
+  resource's authentication requirement applies at issuance through the
+  approval-authentication floor. Per-use introspection freshness is
+  stated as strengthening RFC 7662.
   The metering members left this document's registry seed, since the
   metering profile registers them. Anchors are unchanged, and no
   conformance capability changed.
