@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-09-30T04:15:06Z
-Source repository commit: 4ff31790adb27ced90ce5c348ad9ea32b3f787de
+Generated: 2026-09-30T04:31:23Z
+Source repository commit: 3dc50a02f1fa2b2691c0a0fde00f5ce6334fd8f9
 Member count: 9
 
 Reading order:
@@ -9135,9 +9135,9 @@ Table of Contents
 
    Unknown scope semantics, unknown Resource Server enforcement
    behavior, or an ambiguous or stale mapping all fail closed under step
-   5.  This rule applies to every issuance path that can emit scope on a
-   Mission-bound token: initial issuance, refresh, Token Exchange, and
-   any other derived-token path.
+   5 (Section 9.6).  This rule applies to every issuance path that can
+   emit scope on a Mission-bound token: initial issuance, refresh, Token
+   Exchange, and any other derived-token path.
 
    This is the type-agnostic form of the rule; a type's own
    specification states when the mapping in step 3 is safe for that
@@ -9703,6 +9703,26 @@ Table of Contents
    |malformed actual RFC |                                                 |                 |
    |8707 resource        |                                                 |                 |
    |parameter            |                                                 |                 |
+   +---------------------+-------------------------------------------------+-----------------+
+   |Authorization or     |invalid_target ([RFC8707])                       |safe             |
+   |token request: the   |                                                 |error_description|
+   |target is scope-only |                                                 |                 |
+   |and no safe          |                                                 |                 |
+   |projection exists for|                                                 |                 |
+   |the applicable       |                                                 |                 |
+   |entries, or its      |                                                 |                 |
+   |scope-projection     |                                                 |                 |
+   |mapping is unknown,  |                                                 |                 |
+   |ambiguous, or stale  |                                                 |                 |
+   |(Section 9.1); or,   |                                                 |                 |
+   |where the AS applies |                                                 |                 |
+   |Section 9.3's        |                                                 |                 |
+   |delegated-token      |                                                 |                 |
+   |routing rule at      |                                                 |                 |
+   |issuance, the        |                                                 |                 |
+   |delegated token's    |                                                 |                 |
+   |target is not known  |                                                 |                 |
+   |to be Mission-aware  |                                                 |                 |
    +---------------------+-------------------------------------------------+-----------------+
    |Authorization        |access_denied ([RFC6749])                        |none unless a    |
    |decision: the        |                                                 |defined extension|
@@ -13114,6 +13134,10 @@ Appendix E.  Document History
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  The Error and Challenge Mapping table maps a scope-projection
+      refusal, and an issuance-time refusal under the delegated-token
+      routing rule, to invalid_target.
 
    *  Stated in the Introduction and Section 17.3.1 that a deployment
       can run this profile alone, with Resource Servers that need not be
