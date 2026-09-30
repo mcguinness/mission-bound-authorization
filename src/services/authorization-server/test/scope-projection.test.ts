@@ -997,6 +997,69 @@ describe("refresh preserved on a projection refusal (@spec mission#scope-project
     expect(decodeJwt(res.body.access_token as string).scope).toBeUndefined();
   });
 
+  const authorizationDetailsMode = { version: "mode-1", mission_aware: false, mode: "authorization_details" };
+
+  it("a refresh omitting scope whose inherited grant the current mapping no longer grants, leaving no scope value to report, is refused invalid_scope before rotation; the restored mapping lets the same token succeed", async () => {
+    const first = await issue([entry([READ])]);
+    expect(first.status, JSON.stringify(first.body)).toBe(200);
+    expect(first.body.scope).toBe("reports.read");
+    const rt = first.body.refresh_token as string;
+    await withPlain(authorizationDetailsMode, async () => {
+      const res = await refresh(rt, first.keys);
+      expect(res.status, JSON.stringify(res.body)).toBe(400);
+      expect(res.body.error).toBe("invalid_scope");
+      expect(res.body.error_description).toMatch(/inherited scope reports\.read can no longer be granted/);
+    });
+    const restored = await refresh(rt, first.keys);
+    expect(restored.status, JSON.stringify(restored.body)).toBe(200);
+    expect(restored.body.scope).toBe("reports.read");
+
+    // A rotating (family) refresh token: the refusal lands before rotation,
+    // so the same token succeeds exactly once after the mapping is restored.
+    const fam = await family();
+    await withPlain(authorizationDetailsMode, async () => {
+      const res = await refresh(fam.rt, fam.acting);
+      expect(res.status, JSON.stringify(res.body)).toBe(400);
+      expect(res.body.error).toBe("invalid_scope");
+    });
+    const once = await refresh(fam.rt, fam.acting);
+    expect(once.status, JSON.stringify(once.body)).toBe(200);
+    expect(once.body.scope).toBe("reports.read reports.write");
+    expect((await refresh(fam.rt, fam.acting)).body.error).toBe("invalid_grant");
+  });
+
+  it("a refresh omitting scope narrows an inherited grant the response can still report: a mode change keeps the OIDC values, an unsafe value drops out, and nothing widens", async () => {
+    const withOidc = await issue([entry([READ])], "openid");
+    expect(withOidc.body.scope).toBe("openid reports.read");
+    await withPlain(authorizationDetailsMode, async () => {
+      const res = await refresh(withOidc.body.refresh_token as string, withOidc.keys);
+      expect(res.status, JSON.stringify(res.body)).toBe(200);
+      expect(res.body.scope).toBe("openid");
+      expect(decodeJwt(res.body.access_token as string).scope).toBeUndefined();
+    });
+
+    const both = await issue([entry([READ, WRITE])]);
+    expect(both.body.scope).toBe("reports.read reports.write");
+    await withPlain(
+      {
+        version: "unsafe-1",
+        mission_aware: false,
+        mode: "scope_only",
+        scopes: {
+          "reports.read": { rights: rights([READ]), mandatory_controls: {} },
+          "reports.write": { rights: rights([WRITE, "reports:report.delete"]), mandatory_controls: {} },
+          "reports.list": { rights: rights([READ]), mandatory_controls: {} },
+        },
+      },
+      async () => {
+        const res = await refresh(both.body.refresh_token as string, both.keys);
+        expect(res.status, JSON.stringify(res.body)).toBe(200);
+        expect(res.body.scope).toBe("reports.read");
+        expect(decodeJwt(res.body.access_token as string).scope).toBe("reports.read");
+      },
+    );
+  });
+
   it("an unauthenticated or wrong-client refresh of a projection-failing token gets the ordinary client error, never a projection error", async () => {
     const { rt, acting } = await family();
     await withPlain(dropped, async () => {

@@ -745,6 +745,33 @@ export function buildProvider(opts: AdapterOptions): Provider {
   ): void {
     const aud = token.resourceServer?.audience;
     const audiences = typeof aud === "string" ? [aud] : Array.isArray(aud) ? (aud as string[]) : [];
+    const { emitted, granted } = decideMissionScope(
+      ctx,
+      audiences,
+      Array.isArray(token.rar) ? token.rar : [],
+    );
+    token.scope = emitted.length ? emitted.join(" ") : undefined;
+    projectedTokens.add(token);
+    responseScopes.set(token, granted.length ? granted.join(" ") : undefined);
+  }
+
+  /**
+   * @spec mission#scope-projection — the scope decision itself, shared by the
+   * save-time projection and the refresh pre-check so the two cannot differ:
+   * the projected resource values (`emitted`) and everything granted
+   * (`granted`: the OIDC values plus `emitted`), or a thrown refusal. A
+   * refresh omitting `scope` inherits the refresh token's granted scope; when
+   * the current mapping no longer grants some of it (a changed mode, or a
+   * value no longer safe), the narrowed grant is issued only while it still
+   * holds a scope value the response can report, and refused `invalid_scope`
+   * when it would hold none (RFC 6749 Section 3.3: a changed grant is
+   * reported, and there is no empty scope).
+   */
+  function decideMissionScope(
+    ctx: unknown,
+    audiences: readonly string[],
+    entries: readonly unknown[],
+  ): { emitted: string[]; granted: string[] } {
     const request = missionScopeRequest(ctx);
     if (!request.oidcGrantable && request.oidc.length) {
       throw new errors.InvalidScope(
@@ -755,15 +782,20 @@ export function buildProvider(opts: AdapterOptions): Provider {
     const outcome = projectScope({
       mapping: opts.scopeProjection,
       audiences,
-      entries: Array.isArray(token.rar) ? token.rar : [],
+      entries,
       ...(request.requested ? { requested: request.requested } : {}),
     });
     if (outcome.outcome === "refuse") throw scopeProjectionError(outcome);
     const emitted = outcome.outcome === "emit" ? outcome.values : [];
-    token.scope = emitted.length ? emitted.join(" ") : undefined;
     const granted = [...request.oidcGranted, ...emitted];
-    projectedTokens.add(token);
-    responseScopes.set(token, granted.length ? granted.join(" ") : undefined);
+    if (request.inherited.length && !granted.length) {
+      throw scopeProjectionError({
+        outcome: "refuse",
+        error: "invalid_scope",
+        reason: `the inherited scope ${request.inherited.join(" ")} can no longer be granted`,
+      });
+    }
+    return { emitted, granted };
   }
 
   /**
@@ -781,6 +813,8 @@ export function buildProvider(opts: AdapterOptions): Provider {
     oidc: string[];
     oidcGranted: string[];
     oidcGrantable: boolean;
+    /** The granted scope a refresh omitting `scope` inherits (empty otherwise). */
+    inherited: string[];
   } {
     const oidc = (ctx as { oidc?: { params?: Record<string, unknown>; entities?: Record<string, unknown> } })
       .oidc;
@@ -795,6 +829,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
     const explicit = splitScope(params.scope);
     let requested: RequestedScope | undefined;
     let oidcValues = explicit.oidc;
+    let inherited: string[] = [];
     if (grantType === "refresh_token" && typeof params.scope === "string") {
       requested = { values: explicit.resource, explicit: true };
     } else if (explicit.resource.length) {
@@ -807,6 +842,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
       const rt = splitScope(entities.RefreshToken?.scope);
       requested = { values: rt.resource, explicit: false };
       oidcValues = rt.oidc;
+      inherited = [...rt.oidc, ...rt.resource];
     }
     const held = new Set((entities.Grant?.getOIDCScope() ?? "").split(" ").filter(Boolean));
     return {
@@ -814,6 +850,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
       oidc: explicit.oidc,
       oidcGranted: oidcGrantable ? oidcValues.filter((v) => held.has(v)) : [],
       oidcGrantable,
+      inherited,
     };
   }
 
@@ -853,14 +890,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
     const resource =
       typeof c.oidc.params.resource === "string" ? c.oidc.params.resource : rt.resource;
     if (typeof resource !== "string") return;
-    const request = missionScopeRequest(ctx);
-    const outcome = projectScope({
-      mapping: opts.scopeProjection,
-      audiences: [resource],
-      entries: Array.isArray(rar) ? rar : [],
-      ...(request.requested ? { requested: request.requested } : {}),
-    });
-    if (outcome.outcome === "refuse") throw scopeProjectionError(outcome);
+    decideMissionScope(ctx, [resource], Array.isArray(rar) ? rar : []);
   }
 
   const configuration: Configuration = {

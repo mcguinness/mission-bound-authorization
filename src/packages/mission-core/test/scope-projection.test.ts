@@ -329,6 +329,29 @@ describe("projectScope (@spec mission#scope-projection)", () => {
     ).toEqual({ outcome: "omit" });
   });
 
+  it("inherited values none of which is still safe refuse invalid_scope; an empty safe set still refuses invalid_target", () => {
+    expect(
+      projectScope({
+        mapping,
+        audiences: [RS],
+        entries: [entry(["read"])],
+        requested: { values: ["r.write"], explicit: false },
+      }),
+    ).toMatchObject({
+      outcome: "refuse",
+      error: "invalid_scope",
+      reason: expect.stringMatching(/inherited scope r\.write/),
+    });
+    expect(
+      projectScope({
+        mapping,
+        audiences: [RS],
+        entries: [entry(["delete"])],
+        requested: { values: ["r.read"], explicit: false },
+      }),
+    ).toMatchObject({ outcome: "refuse", error: "invalid_target" });
+  });
+
   it("an explicit request naming no resource value refuses invalid_scope at a scope-only audience and omits at an authorization_details one", () => {
     const none = { values: [], explicit: true };
     expect(

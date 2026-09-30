@@ -360,7 +360,8 @@ export interface RequestedScope {
    * `invalid_scope`, and so does an explicit request naming no resource value
    * at a `scope`-only target (a refresh whose `scope` is OIDC-only). `false` when the values are inherited (a refresh with
    * no `scope`, which RFC 6749 Section 6 treats as the originally granted
-   * scope): the issuance narrows to what is still safe.
+   * scope): the issuance narrows to what is still safe, and refuses
+   * `invalid_scope` when none of it is.
    */
   explicit: boolean;
 }
@@ -489,8 +490,21 @@ export function projectScope(input: ScopeProjectionInput): ScopeProjectionOutcom
       };
     }
   }
+  if (safeSet.size === 0) {
+    return target("no safe scope projection exists for the applicable entries");
+  }
   const values = [...safeSet].filter((v) => !requested || requested.includes(v)).sort();
   if (values.length === 0) {
+    // Inherited values (a refresh omitting `scope`) none of which is still
+    // safe: the narrowed grant would carry no scope value, which the
+    // response cannot report (RFC 6749 Section 3.3 has no empty scope).
+    if (requested?.length) {
+      return {
+        outcome: "refuse",
+        error: "invalid_scope",
+        reason: `the inherited scope ${requested.join(" ")} can no longer be granted`,
+      };
+    }
     return target("no safe scope projection exists for the applicable entries");
   }
   return { outcome: "emit", scope: values.join(" "), values };
