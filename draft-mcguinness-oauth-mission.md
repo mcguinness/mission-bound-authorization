@@ -320,9 +320,10 @@ the user approved. A token issued for a task remains usable after
 the user's approval lapses or is withdrawn, because nothing ties the
 token's validity to that approval.
 
-This document defines a **Mission**: a structured, explicitly
-approved, integrity-bound OAuth authorization artifact. A Mission is
-created and used in a single chain:
+This document defines a **Mission**: a durable authorization object
+that binds a disclosed task to an explicitly approved Authority Set
+and governs the lifecycle of the authority derived from that
+approval. A Mission is created and used in a single chain:
 
 1. The client submits a structured **Mission Intent** describing the
    task (goal, target resources, task bounds) instead of requesting
@@ -491,10 +492,15 @@ Authority Set:
   ({{authorization-derivation}}).
 
 Mission:
-: The durable, immutable record created at the approval event
-  ({{mission-record}}), identified by a Mission Identifier
-  ({{mission-id}}) and, globally, by the pair (`issuer`, `id`). A
-  Mission is independent of any OAuth grant ({{grant-binding}}).
+: The durable authorization object that binds a disclosed task (its
+  Mission Intent) to an explicitly approved Authority Set and governs
+  the lifecycle of the authority derived from that approval. It is the
+  immutable record created at the approval event ({{mission-record}}),
+  identified by a Mission Identifier ({{mission-id}}) and, globally, by
+  the pair (`issuer`, `id`). A Mission is independent of any OAuth
+  grant ({{grant-binding}}). "The approved task" is shorthand for this
+  binding: the Approver approves the Authority Set, and the task is
+  disclosed and committed beside it.
 
 Mission Grant Binding (Grant Binding):
 : The AS-controlled, functional mapping from one persistent,
