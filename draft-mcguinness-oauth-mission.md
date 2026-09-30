@@ -1589,7 +1589,7 @@ An authorization request whose `scope` includes `openid`
 interaction authenticates, who is the Approver. When the Approver is
 not the Subject established at step 2 of {{approval-event}}, the AS
 MUST refuse such a request, without creating the Mission, with the
-`invalid_scope` error code ({{RFC6749}} Section 4.1.2.1). When the
+`invalid_scope` error code ({{Section 4.1.2.1 of RFC6749}}). When the
 Approver is not the Subject, whether or not `openid` was requested,
 the AS MUST NOT issue an ID Token, serve UserInfo, or establish an
 authentication session for the Subject solely as a result of the
@@ -2812,8 +2812,8 @@ registry of `mission` members. A companion profile of this document MAY
 use short member names coordinated with it; any other extension member
 MUST use a collision-resistant name (for example, a name in a namespace
 the extension controls, per the Collision-Resistant Name guidance of
-{{RFC7519}} Section 4.2) and is defined by the profile that introduces
-it.
+{{Section 4.2 of RFC7519}}) and is defined by the profile that
+introduces it.
 
 A consumer MUST ignore members it does not understand and MUST NOT
 use any additional member to grant or widen authority; the
@@ -4606,27 +4606,27 @@ Three rules apply to the declaration:
 
 ## OAuth Parameters Registration {#oauth-parameters-registration}
 
-This document registers the following in the "OAuth Parameters"
-registry:
+This document requests registration of the following in the "OAuth
+Parameters" registry:
 
 - Name: `mission_intent`
 - Parameter Usage Location: authorization request
-- Change Controller: IESG
+- Change Controller: IETF
 - Specification Document(s): this document, {{submission-via-par}}
 
 - Name: `mission_id`
 - Parameter Usage Location: token response
-- Change Controller: IESG
+- Change Controller: IETF
 - Specification Document(s): this document, {{grant-binding}}
 
 - Name: `mission_error`
 - Parameter Usage Location: token response
-- Change Controller: IESG
+- Change Controller: IETF
 - Specification Document(s): this document, {{lifecycle}}
 
 - Name: `mission_expires_at`
 - Parameter Usage Location: token response
-- Change Controller: IESG
+- Change Controller: IETF
 - Specification Document(s): this document, {{grant-binding}}
 
 PAR {{RFC9126}} carries authorization-request parameters without a
@@ -4641,14 +4641,14 @@ no IANA registry exists; no action is required for it.
 
 ## OAuth Extensions Error Registration {#oauth-extensions-error-registration}
 
-This document registers the following in the "OAuth Extensions Error"
-registry {{RFC6749}}:
+This document requests registration of the following in the "OAuth
+Extensions Error" registry {{RFC6749}}:
 
 - Name: `invalid_mission_intent_evidence`
 - Usage Location: authorization endpoint, token endpoint
 - Protocol Extension: Intent Submission Evidence
   ({{intent-submission-evidence}})
-- Change Controller: IESG
+- Change Controller: IETF
 - Specification Document(s): this document,
   {{intent-submission-evidence}}
 
@@ -4663,47 +4663,47 @@ differently.
 
 ## JSON Web Token Claims Registration {#json-web-token-claims-registration}
 
-This document registers the following in the "JSON Web Token Claims"
-registry:
+This document requests registration of the following in the "JSON Web
+Token Claims" registry:
 
 - Claim Name: `mission`
 - Claim Description: Reference to the Mission a token was derived
   under.
-- Change Controller: IESG
+- Change Controller: IETF
 - Specification Document(s): this document, {{mission-claim}}
 
 ## OAuth Token Introspection Response Registration {#oauth-token-introspection-response-registration}
 
-This document registers the following in the "OAuth Token
+This document requests registration of the following in the "OAuth Token
 Introspection Response" registry ({{RFC7662}}):
 
 - Name: `mission`
 - Description: The Mission a token was derived under, with its current
   lifecycle state when returned by the Mission's issuer
   ({{introspection}}).
-- Change Controller: IESG
+- Change Controller: IETF
 - Specification Document(s): this document, {{introspection}}
 
 ## OAuth Authorization Server Metadata Registration {#oauth-authorization-server-metadata-registration}
 
-This document registers the following in the "OAuth Authorization
-Server Metadata" registry ({{RFC8414}}):
+This document requests registration of the following in the "OAuth
+Authorization Server Metadata" registry ({{RFC8414}}):
 
 - Metadata Name: `mission_bound_authorization_supported`
 - Metadata Description: Boolean indicating that the Authorization
   Server supports the Mission Issuer core surfaces of this document.
-- Change Controller: IESG
+- Change Controller: IETF
 - Specification Document(s): this document, {{discovery}}
 
 ## OAuth Protected Resource Metadata Registration {#oauth-protected-resource-metadata-registration}
 
-This document registers the following in the "OAuth Protected Resource
-Metadata" registry ({{RFC9728}}):
+This document requests registration of the following in the "OAuth
+Protected Resource Metadata" registry ({{RFC9728}}):
 
 - Metadata Name: `mission_bound_authorization_required`
 - Metadata Description: Boolean indicating that the protected resource
   accepts only Mission-bound tokens.
-- Change Controller: IESG
+- Change Controller: IETF
 - Specification Document(s): this document, {{protected-resource-metadata}}
 
 ## Mission Lifecycle States Registry {#iana-lifecycle-states}
