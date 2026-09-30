@@ -146,6 +146,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-derivation-limits:
+    title: "Mission Derivation Limits for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-derivation-limits.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
@@ -412,8 +420,8 @@ separate Mission-awareness requirement ({{rs-enforcement}}).
 
 Some duties apply only when their condition holds: a submitted
 authority proposal, presented or required submission evidence
-({{intent-submission-evidence}}), an established derivation limit,
-or opaque tokens (which require introspection). The optional
+({{intent-submission-evidence}}), or opaque tokens (which require
+introspection). The optional
 capabilities (Delegation, Introspection as a state overlay for JWTs,
 Cross-Domain projection, and Local Approved-Set Verification) are
 adopted explicitly under {{conformance}}. Ordinary JWT consumption
@@ -774,15 +782,6 @@ narrowed `scope`. It has the following members:
   idempotency rules even when the ceiling has since passed
   ({{grant-binding}}).
 
-`requested_derivation_limit`:
-: OPTIONAL. A positive integer (1 or greater). A client-requested
-  ceiling on the number of derivations the issuer AS performs under
-  the Mission. An AS MUST reject a value below 1 with
-  `invalid_request`. This member is a request only: the
-  AS-established effective ceiling, its omission semantics, and its
-  rendering are defined in {{derivation-issuance-policy}}, and its
-  enforcement in {{issuance-gating}}.
-
 The Approver's authentication strength for the approval event is
 requested with the standard `acr_values` and `max_age`
 authorization-request parameters, not on the Intent
@@ -807,8 +806,7 @@ The following is an example of a Mission Intent:
     "Each posted adjustment references a source invoice."
   ],
   "purpose": "urn:example:purpose:reconcile",
-  "expires_at": "2026-12-31T23:59:59Z",
-  "requested_derivation_limit": 200
+  "expires_at": "2026-12-31T23:59:59Z"
 }
 ~~~
 
@@ -1466,9 +1464,7 @@ At the approval event the AS MUST, in order:
 5. Render for consent the derived Authority Set in human-meaningful
    terms, with the `goal`, `task_bounds`, the effective `expires_at`
    (and, when it differs, the requested `intent.expires_at`, so the
-   Approver sees the narrowing), and the established
-   `derivation_limit` ({{derivation-issuance-policy}}), where one
-   applies, as context:
+   Approver sees the narrowing), as context:
    - The consent object is the **derived Authority Set**, what the
      agent may do, not the `goal` or Mission Intent: derivation is
      local policy, and nothing commits that the derived authority
@@ -1839,9 +1835,7 @@ scenario assigns the three `approval_basis` roles.
 
 A Mission is the durable record created at the approval event. Its
 members are immutable after creation except for its `state`, and it
-is identified by a Mission Identifier ({{mission-id}}). The running
-derivation count ({{issuance-gating}}) is AS-side state about the
-Mission, not a member of the immutable record.
+is identified by a Mission Identifier ({{mission-id}}).
 
 Record members do not repeat the `mission` prefix, because the record
 itself is the Mission; prefixed names, such as the `mission_intent`
@@ -2147,15 +2141,6 @@ document defines:
   profile defines, is ordinary narrowing of the granted lifetime, not
   Authority Set derivation; for direct creation under this document
   the only additional ceiling is applicable AS policy.
-
-`derivation_limit`:
-: REQUIRED when an effective derivation ceiling is established for
-  this Mission, whether by requested narrowing or by policy alone
-  ({{derivation-issuance-policy}}), absent otherwise. A positive
-  integer: the AS-established effective ceiling on derivations under
-  this Mission, fixed at the approval event. {{issuance-gating}}
-  defines its enforcement and the running derivation count it is
-  gated against.
 
 The **audit horizon** is the deployment-declared retention window for
 the Mission Record and its evidence: at least the Mission's lifetime
@@ -2486,34 +2471,6 @@ and the decision time is strictly before `expires_at`. Persisting the
 state-distribution companion defines, can happen after the decision
 that observed the boundary.
 
-## Derivation Issuance Policy {#derivation-issuance-policy}
-
-A Mission's derivation limit bounds the number of derivations
-({{issuance-gating}}) the issuer AS performs under it. The limit is
-AS-established operational policy; a client can request a narrower
-ceiling through the Mission Intent's `requested_derivation_limit`
-member ({{mission-intent}}). Omitting `requested_derivation_limit`
-means no client-requested ceiling; the effective limit is then set by
-AS policy alone, which can impose none.
-
-The Mission Record's `derivation_limit` ({{mission-record}}) is the
-immutable, AS-established **effective** ceiling. At the approval
-event the AS establishes it as the minimum of the deployment's own
-policy ceiling for this Mission and the requested
-`requested_derivation_limit`, where one was submitted, so a client's
-request narrows, and never widens, the AS's own policy ceiling. The
-approval surface renders the established value, not only the
-requested one ({{approval-event}}).
-
-This establishment happens afresh at every approval event that
-creates a Mission Record: a Child Mission's, a dispatched Template
-instance's, and an Expansion successor's, exactly as at direct
-approval. An established `derivation_limit` is never inherited
-unchanged from a parent, a template, or a predecessor Mission; each
-Mission Record's ceiling comes only from its own Intent's
-`requested_derivation_limit`, clamped by the deployment's policy for
-that Mission.
-
 ## Issuance Gating {#issuance-gating}
 
 A derivation (defined below) passes these checks, each stated where
@@ -2521,12 +2478,10 @@ cited:
 
 1. the Mission resolves from the presented grant ({{grant-binding}});
 2. the Mission is `active` ({{lifecycle}}, and below);
-3. the derivation stays within any established `derivation_limit`
-   (below);
-4. each emitted entry is a subset of a Mission Authority Set entry
+3. each emitted entry is a subset of a Mission Authority Set entry
    ({{subset}});
-5. any emitted `scope` meets {{scope-projection}}; and
-6. each token's `exp` does not exceed the Mission's `expires_at`
+4. any emitted `scope` meets {{scope-projection}}; and
+5. each token's `exp` does not exceed the Mission's `expires_at`
    ({{mission-bound-tokens}}).
 
 Unless the referenced Mission is `active`, the AS MUST refuse, with
@@ -2536,36 +2491,19 @@ AS MUST refuse, with the `invalid_grant` error code, a derivation
 request it answers after it has acknowledged a revocation of the
 Mission.
 
-When the Mission's `derivation_limit` ({{derivation-issuance-policy}})
-is established, the AS MUST refuse, with the `invalid_grant` error
-code, any derivation that would make the number of **derivations**
-under the Mission exceed it. A derivation is one issuance operation
-the issuer AS performs for a single request: the initial
-authorization-code exchange, a refresh, a Token Exchange, or a
-cross-domain grant issuance
-({{I-D.draft-mcguinness-oauth-mission-cross-domain}}). Each counts as
-exactly one, regardless of how many artifacts it emits: a code
-exchange that returns both an access token and a refresh token is one
-derivation, and a refresh that rotates both is one. Counting follows
-these rules:
-
-- A derivation that fails, including one refused for exceeding the
-  bound, MUST NOT be counted.
-- The AS MUST NOT let concurrent derivations collectively exceed the
-  bound.
-- The count covers only derivations the issuer AS performs. Tokens
-  another domain mints locally under the Mission are not counted by
-  the issuer, which cannot observe them; the cross-domain issuance
-  that authorized them was counted once, and the local issuer bounds
-  its own minting by its policy
-  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
+A derivation is one issuance operation the issuer AS performs for a
+single request: the initial authorization-code exchange, a refresh, a
+Token Exchange, or a cross-domain grant issuance
+({{I-D.draft-mcguinness-oauth-mission-cross-domain}}). A companion
+profile bounds the number of derivations under a Mission
+({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}).
 
 `invalid_grant` alone does not tell a client which gate refused. On a
 refusal under this section the AS SHOULD include, alongside `error`,
 the `mission_error` token-error-response member ({{iana}}) with one
-of the values `mission_revoked`, `mission_expired`,
-`mission_superseded` (where a companion defines supersession), or
-`derivations_exhausted`. The member is diagnostic only: it grants
+of the values `mission_revoked`, `mission_expired`, or
+`mission_superseded` (where a companion defines supersession). The
+member is diagnostic only: it grants
 nothing, an unrecognized value is ignored, and it is returned only to
 the authenticated client presenting the Mission's grant.
 
@@ -3109,7 +3047,6 @@ Mission carries and what holds when that enforcer is absent:
 |---|---|---|
 | `resource` and `actions` | any Resource Server that enforces `mission_resource_access` per its type specification ({{I-D.draft-mcguinness-oauth-mission-resource-access}}, {{rs-enforcement}}) | a scope-only Resource Server is served only where the AS established a safe scope projection ({{scope-projection}}); the AS refuses issuance to it otherwise |
 | per-entry `constraints` | a Resource Server that understands and enforces the key, per that type's specification ({{I-D.draft-mcguinness-oauth-mission-resource-access}}, {{rs-enforcement}}) | a Mission-aware Resource Server fails closed; a scope-only Resource Server is served only where the projection independently accounts for the constraint ({{scope-projection}}) |
-| `derivation_limit` | the issuer AS at each derivation ({{derivation-issuance-policy}}, {{issuance-gating}}) | never absent at the issuer when established; it does not bound another domain's local minting (see the cross-domain companion) |
 
 ## Remediation Grains {#remediation-grains}
 
@@ -3170,7 +3107,7 @@ elsewhere in this document that names one of these codes
 | Authorization or token request: an explicitly requested `scope` value the issuance cannot grant under a scope-projection mapping the AS trusts ({{scope-projection}}) | `invalid_scope` ({{Section 4.1.2.1 of RFC6749}}, {{Section 5.2 of RFC6749}}) | safe `error_description` |
 | Authorization request: `scope` includes `openid` and the Approver is not the Subject ({{approval-authentication}}) | `invalid_scope` ({{Section 4.1.2.1 of RFC6749}}) | safe `error_description` |
 | Authorization decision: the Approver declines, approval authentication fails the floor or a requested `acr_values`/`max_age`, or a well-formed request (including configured-mapping mode) is refused by AS policy | `access_denied` ({{Section 4.1.2.1 of RFC6749}}) | none unless a defined extension applies |
-| Token endpoint: the Mission is revoked, expired, superseded, or its `derivation_limit` is exhausted | `invalid_grant` ({{Section 5.2 of RFC6749}}) | `mission_error` ({{iana}}) |
+| Token endpoint: the Mission is revoked, expired, or superseded | `invalid_grant` ({{Section 5.2 of RFC6749}}) | `mission_error` ({{iana}}) |
 | Token endpoint: the requested RAR subset exceeds the Mission's granted authority | `invalid_authorization_details` ({{Section 6 of RFC9396}}) | safe detail |
 | Token exchange with no actor ({{self-exchange}}): the authenticated client is not the Mission's approved agent | `invalid_request` ({{Section 2.2.2 of RFC8693}}) | safe `error_description` |
 | Delegated token exchange ({{delegation-constraints}}): narrowing leaves no entries for the delegate | `invalid_target` ({{Section 2.2.2 of RFC8693}}) | safe `error_description` |
@@ -3209,10 +3146,6 @@ member: a JSON object with the following members.
   space, including a state a deployed companion profile defines, and
   the consumer's forward-compatibility rule are those of
   {{lifecycle}}.
-- `derivations_remaining`: when `derivation_limit`
-  ({{derivation-issuance-policy}}) is established, the derivations
-  left under the cap at the time of the response, counting committed
-  issuances ({{lifecycle}}) (number).
 - `proposal_hash`: when the Mission records an authority proposal,
   the Mission's `proposal_hash` ({{mission-record}}) (string).
 - `authority_hash`: the Mission's Authority Set commitment
@@ -3223,13 +3156,11 @@ member: a JSON object with the following members.
   ({{mission-record}}), carrying `type` and, for `organizational`,
   `policy` with `id` and `version` only, never the policy `digest`.
 
-Only the Mission `issuer` reports `state`, `derivations_remaining`,
-`proposal_hash`, `authority_hash`, `approval_basis`, and
-`authority_source` ({{only-issuer-reports-state}}).
-`derivations_remaining` lets an issuance-budget consumer plan
-refreshes against the cap, and `proposal_hash`, `authority_hash`,
+Only the Mission `issuer` reports `state`, `proposal_hash`,
+`authority_hash`, `approval_basis`, and `authority_source`
+({{only-issuer-reports-state}}). `proposal_hash`, `authority_hash`,
 `approval_basis`, and `authority_source` are audit and correlation
-signals. None of these five members is an enforcement input
+signals. None of these four members is an enforcement input
 ({{rs-enforcement}}), and each is disclosed only as
 {{caller-authorization-and-minimization}} permits.
 
@@ -3269,10 +3200,9 @@ These rules apply equally to the `mission` member of an
 `active: false` response ({{composite-active}}).
 
 Disclosure is member-scoped as well as caller-scoped.
-`derivations_remaining`, `proposal_hash`, `authority_hash`,
-`approval_basis`, and `authority_source` serve issuance-budget,
-audit, and correlation consumers, not Resource Server enforcement,
-and the AS MUST disclose each only to a caller the deployment has
+`proposal_hash`, `authority_hash`, `approval_basis`, and
+`authority_source` serve audit and correlation consumers, not
+Resource Server enforcement, and the AS MUST disclose each only to a caller the deployment has
 granted that member's disclosure privilege. By default, an
 audience-authorized Resource Server receives the audience-filtered
 enforcement projection above, without them. A `mission` member that a
@@ -3306,9 +3236,9 @@ inactive token. The caller authorization and minimization rules
 
 ## Only the Issuer Reports Mission State {#only-issuer-reports-state}
 
-An AS MUST NOT include `mission.state`, `derivations_remaining`,
-`proposal_hash`, `authority_hash`, `approval_basis`, or
-`authority_source` in an introspection response unless it holds the
+An AS MUST NOT include `mission.state`, `proposal_hash`,
+`authority_hash`, `approval_basis`, or `authority_source` in an
+introspection response unless it holds the
 Mission, that is, unless it is the Mission `issuer`. Introspection at
 a non-issuer Resource AS, which returns only the claim-shape members,
 is specified by the cross-domain companion
@@ -4390,8 +4320,7 @@ exposure at approval time:
 
 `max_depth` bounds the length of a delegation chain, not its breadth:
 only `allowed_delegates` bounds fan-out to many distinct depth-1
-delegates, and `derivation_limit` ({{derivation-issuance-policy}}) caps
-total derivations. Binding each delegated token to the delegate's own
+delegates. Binding each delegated token to the delegate's own
 key ({{delegation}}) confines a compromised delegate to its own
 credential. Short derived-token lifetimes ({{issuance-gating}}), and
 marking delegable only the entries that need delegation, keep this
@@ -4468,14 +4397,6 @@ rather than free-form inference, and the recorded `policy_version`
 names the policy a derivation ran under so the derivation can be
 audited.
 
-An auditor recomputes the expected `derivation_limit` from the
-recorded `requested_derivation_limit` (or its absence) and the
-Mission's `policy_version` ({{authorization-derivation}}) against the
-deployment's retained, versioned policy; a mismatch is a
-policy-application defect to investigate, not a Mission-record
-integrity failure, since neither integrity anchor commits
-`derivation_limit` ({{integrity-anchors}}).
-
 ### Authority Hash Is Not a Mission Identifier {#authority-hash-is-not-a-mission-identifier}
 
 `authority_hash` commits the approved Authority Set, not the Mission.
@@ -4500,29 +4421,22 @@ Delegation depth ({{delegation-constraints}}) resets to 0 at each
 cross-domain hop ({{I-D.draft-mcguinness-oauth-mission-cross-domain}})
 and, where a deployment runs the child-delegation profile, at each child
 generation ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
-`derivation_limit` ({{derivation-issuance-policy}}) is a per-Mission
-bound the issuer AS enforces for that Mission alone; a Child Mission's
-own `derivation_limit` is independent of its parent's, and the parent's
-cap does not bound the child subtree by default.
 
 The aggregate surface that a Mission's descendants can reach (the
 product of delegation depth, the number of trust domains projected into,
-and the number of child generations), together with the derivations
-summed across an entire child subtree, can therefore exceed what a
+and the number of child generations) can therefore exceed what a
 single approval appears to bound at consent time. This is a composition
 property of independently bounded mechanisms.
 
 For example, a child-delegation deployment allowing `max_children` 3 per
 Mission with `max_child_depth` 2 admits up to 12 descendant Missions (3
-in the first generation, up to 9 in the second), each with its own
-independent `derivation_limit`; at 10 each, the subtree admits up to 120
-derivations while no single bound the Approver saw exceeds 10.
+in the first generation, up to 9 in the second) under one root
+Mission.
 
 Cross-domain projection composes separately: a projected grant preserves
 the Mission's lineage rather than rooting a new one, and the Resource
 AS's local issuance under it is bounded by that grant's own lifetime and
-local policy, not counted against the origin issuer's per-Mission
-derivation cap.
+local policy.
 
 A deployment can disclose the composed bound, not only the immediate
 Mission's, at the consent surface, and can impose a global cap out of
@@ -4895,7 +4809,6 @@ This document seeds the registry with the members it defines itself:
 | `task_bounds` | stable | Non-machine-readable prose bounds on the task. | IETF | this document, {{mission-intent}} |
 | `purpose` | stable | URI identifying the task's purpose. | IETF | this document, {{mission-intent}} |
 | `expires_at` | stable | Requested Mission expiry ceiling. | IETF | this document, {{mission-intent}} |
-| `requested_derivation_limit` | stable | Client-requested derivation-count ceiling ({{derivation-issuance-policy}}). | IETF | this document, {{mission-intent}} |
 {: title="Core-defined Mission Intent members"}
 
 Each further document that defines a Mission Intent member requests that
@@ -4953,8 +4866,7 @@ evidence, and proposing concrete authority alongside it on the
       "Each posted adjustment references a source invoice."
     ],
     "purpose": "urn:example:purpose:reconcile",
-    "expires_at": "2026-12-31T23:59:59Z",
-    "requested_derivation_limit": 200
+    "expires_at": "2026-12-31T23:59:59Z"
   }
 }
 ~~~
@@ -5481,13 +5393,10 @@ derivation.
   is narrowed or omitted, and the granted echo reflects that
   ({{authority-proposal}}).
 - **Issuer-established members are not client-supplied.** The issuer
-  establishes `policy_version` ({{authorization-derivation}}),
+  establishes `policy_version` ({{authorization-derivation}}), and
   `authority_source` and `approval_basis` ({{authority-sources}},
-  {{mission-record}}), and the effective `derivation_limit`
-  ({{derivation-issuance-policy}}) at the approval event; no proposal
-  member sets them. A client's `requested_derivation_limit` is an
-  input the issuer clamps, not an independently established ceiling
-  ({{derivation-issuance-policy}}).
+  {{mission-record}}), at the approval event; no proposal member sets
+  them.
 - **No member the ceiling never granted.** A grant-shaped member absent
   from the ceiling, such as a per-entry `delegation` policy, stays
   absent from the derived entry, so a proposal cannot introduce a
@@ -5661,7 +5570,7 @@ JCS sorts each object's members but preserves the array's order (the
   "goal": "Reconcile Q3 invoices",
   "target_resources": ["https://erp.example.com"],
   "expires_at": "2026-12-31T23:59:59Z",
-  "requested_derivation_limit": 20
+  "purpose": "urn:example:purpose:reconcile"
 }
 ~~~
 
@@ -5669,13 +5578,13 @@ Canonical bytes of the envelope:
 
 ~~~ text
 {"iss":"https://as.example.com","typ":"mission-intent","value":{"e
-xpires_at":"2026-12-31T23:59:59Z","goal":"Reconcile Q3 invoices","r
-equested_derivation_limit":20,"target_resources":["https://erp.exa
-mple.com"]}}
+xpires_at":"2026-12-31T23:59:59Z","goal":"Reconcile Q3 invoices","
+purpose":"urn:example:purpose:reconcile","target_resources":["http
+s://erp.example.com"]}}
 ~~~
 
 ~~~ text
-intent_hash = sha-256:r--mF07yZfWRGV6N28A2u_8rUzIG-bNhpvFSS5FhoBk
+intent_hash = sha-256:ug7xNsun-TbvBCr-_uFP74-CBEs8pwlPmD-doEyKDu8
 ~~~
 
 `authority_hash`, over this Authority Set as the envelope `value`
@@ -5932,6 +5841,17 @@ Local Approved-Set Verification:
 
 -01
 
+- Moved the derivation limit to the Mission Derivation Limits
+  companion ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}})
+  with its wire names and rules unchanged: the
+  `requested_derivation_limit` Intent member and its registry entry,
+  the `derivation_limit` record member, the counting and refusal
+  rules, the `derivations_exhausted` diagnostic, the
+  `derivations_remaining` introspection member, and approval
+  rendering. Issuance Gating keeps the definition of a derivation and
+  one informative pointer to the companion, and the integrity-anchor
+  test vector that exercised the member uses `purpose` instead.
+
 - Stated the six properties the core establishes in the
   Implementation Map, added the grant-lineage binding to the
   Introduction's chain, and defined a Mission as the binding of a
@@ -6063,7 +5983,7 @@ Local Approved-Set Verification:
   and `derivation_limit` (Mission Record), with the architecture's
   fan-out characterization removed and the clamp, omission, rendering,
   and audit-recomputation rules stated in a dedicated Derivation
-  Issuance Policy section ({{derivation-issuance-policy}}).
+  Issuance Policy section.
   `agent_deployment` is removed with no replacement member defined in
   this document series; a pointer names what a future Agent Deployment
   Binding profile would own ({{mission-intent}}). `resources` is
