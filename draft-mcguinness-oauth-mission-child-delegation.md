@@ -2122,6 +2122,10 @@ apply unchanged.
 
 \[\[ To be removed from the final specification ]]
 
+- The delegated-token versus Child Mission test adds audience: a
+  sub-agent that calls a Resource Server that is not Mission-aware
+  runs under a Child Mission.
+
 - Client-instance references follow their successors:
   draft-mcguinness-oauth-client-instance-assertion is replaced by
   {I-D.draft-mcguinness-oauth-client-instance-id}, and the
