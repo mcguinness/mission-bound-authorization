@@ -968,8 +968,8 @@ function main() {
   for (const d of drafts) {
     if (d.spec_maturity !== "candidate") continue;
     const text = readFile(path.join(ROOT, d.file), d.file);
-    const head = text.match(/^# Status[^\n]*$/m);
-    // No "# Status" heading at all (true today only for the published OAuth
+    const head = text.match(/^# Status:[^\n]*$/m);
+    // No "# Status:" heading at all (true today only for the published OAuth
     // binding, FAMILY_STATUS_EXEMPT_FILE, which (r) exempts from the block
     // requirement) means nothing to scan; skip rather than exempt by name,
     // so this check still applies the day that file gains a Status section.
