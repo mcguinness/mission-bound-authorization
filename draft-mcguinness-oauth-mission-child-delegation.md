@@ -195,8 +195,6 @@ identifier and actor identity, but it cannot outlive, out-broaden, or
 escape the parent. The child is created through an explicit
 authorization step, not by inheriting a parent harness session.
 
-# Status: An Optional Extension {#optional-status}
-
 This document is optional. It is a layered extension to the issuance
 profile, not a change to it. A deployment that implements
 {{I-D.draft-mcguinness-oauth-mission}} and never creates a Child
@@ -211,13 +209,6 @@ A Mission Issuer claims conformance to this document only when it
 creates Child Missions ({{conformance}}); otherwise it remains a plain
 issuance-profile Mission Issuer. Nothing here places a new requirement
 back on the issuance profile.
-
-<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Role: companion. Spec maturity: experimental. Maintenance: active.
-Adopt when: A sub-agent needs its own Mission outliving a call frame, with cascade termination.
-Requires: Mission-Bound Authorization for OAuth 2.0.
-Also requires, conditionally: Mission Expansion for OAuth 2.0 and Mission Status and Lifecycle for OAuth 2.0 (when cascade revocation reacts to parent lifecycle states); Mission Completion and Entry Discharge for OAuth 2.0 (when the deployment also runs the Entry Discharge companion).
-<!-- family-status: END -->
 
 # Relationship to the Issuance Profile {#issuance-relationship}
 

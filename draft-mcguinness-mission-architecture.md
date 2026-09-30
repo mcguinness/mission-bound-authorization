@@ -441,6 +441,16 @@ not the territory: every mechanism named points at the profile that
 normatively defines it, and where this document and a profile appear
 to differ, the profile governs.
 
+This document is Informational. It establishes no conformance class
+and defines no new mechanism, claim, or wire format.
+
+Its boundary with the Mission Security Model
+({{I-D.draft-mcguinness-mission-security-model}}) is deliberate: this
+document describes components, interfaces, and data flows; the
+security model describes the trusted base and how each component's
+compromise degrades the guarantees. Each profile's own Security
+Considerations remain normative over both.
+
 ## Map of This Document {#map}
 
 Part order follows a reader's needs: the model first (the Mission
@@ -460,24 +470,6 @@ containment matrices ({{prevention-detection}}). The requirements
 the family answers are {{requirements}}; {{document-map}} locates
 every document;
 DRAFTS.md in the repository is the full catalog.
-
-# Status: An Informational Architecture {#status}
-
-This document is Informational. It establishes no conformance class
-and defines no new mechanism, claim, or wire format.
-
-Its boundary with the Mission Security Model
-({{I-D.draft-mcguinness-mission-security-model}}) is deliberate: this
-document describes components, interfaces, and data flows; the
-security model describes the trusted base and how each component's
-compromise degrades the guarantees. Each profile's own Security
-Considerations remain normative over both.
-
-<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Role: guide. Spec maturity: not applicable. Maintenance: active.
-Adopt when: Before adopting anything: the Mission model, invariants, and assurance levels the rest cite.
-Requires: nothing beyond its listed references.
-<!-- family-status: END -->
 
 # Conventions and Terminology {#conventions}
 

@@ -164,8 +164,6 @@ boundaries, adds the actor-identity and origin-principal rules those
 boundaries require, and defines how a destination consumes the
 verified chain.
 
-# Status: An Experimental Extension {#status}
-
 This profile is experimental, and it profiles an experimental
 substrate: it inherits the maturity of Mission Offline Attenuation
 and the attenuating-agent-token substrate that document profiles
@@ -181,13 +179,6 @@ ahead of time: every in-Mission basis-reset or widening mechanism,
 including a domain-transition reset, is prohibited; a new authority
 basis is an Expansion successor or another fresh approval
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
-
-<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Role: companion. Spec maturity: experimental. Maintenance: active-experimental.
-Adopt when: An attenuation chain crosses organizational trust domains.
-Requires: Mission Substrate Requirements; Mission-Bound Authorization for OAuth 2.0; Mission Offline Attenuation for OAuth 2.0; Mission Cross-Domain Projection for OAuth 2.0; Mission Status and Lifecycle for OAuth 2.0.
-Also requires, conditionally: Mission Runtime Evidence (when a local token is minted from a verified Chain).
-<!-- family-status: END -->
 
 # Conventions and Terminology {#conventions-and-terminology}
 

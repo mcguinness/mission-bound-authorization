@@ -231,8 +231,6 @@ fired completion status out of the anchor
 ({{I-D.draft-mcguinness-oauth-mission-discharge}}). The overlay is held
 by the Mission Issuer, versions independently, and only ever grows.
 
-# Status: An Experimental Extension {#optional-status}
-
 This document is optional and experimental: adopt it for evaluation,
 not as a stable interface. It is a layered extension to the issuance
 profile, not a change to it. A deployment that implements
@@ -247,13 +245,6 @@ A Mission Issuer claims conformance to this document only when it
 contains a Mission; otherwise it remains a plain issuance-profile
 Mission Issuer. Nothing here places a new requirement back on the
 issuance profile.
-
-<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Role: companion. Spec maturity: experimental. Maintenance: lab-floor-referenced.
-Adopt when: A live Mission must be narrowed, not ended, on a protected event.
-Requires: Mission Substrate Requirements; Mission-Bound Authorization for OAuth 2.0; Mission Status and Lifecycle for OAuth 2.0.
-Also requires, conditionally: Mission Expansion for OAuth 2.0 (when contained authority is restored via a successor).
-<!-- family-status: END -->
 
 # Relationship to the Issuance Profile {#issuance-relationship}
 

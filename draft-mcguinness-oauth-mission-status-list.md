@@ -97,14 +97,6 @@ meaning of any existing member: the Mission, its lifecycle states,
 and the Mission Status Response are defined in
 {{I-D.draft-mcguinness-oauth-mission-status}}.
 
-# Status: An Optional Profile {#doc-status}
-
-<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Role: companion. Spec maturity: experimental. Maintenance: active.
-Adopt when: A consumer relies on many Missions concurrently and per-Mission status reads do not scale.
-Requires: Mission-Bound Authorization for OAuth 2.0; Mission Status and Lifecycle for OAuth 2.0.
-<!-- family-status: END -->
-
 # Conventions and Terminology {#conventions-and-terminology}
 
 {::boilerplate bcp14-tagged}

@@ -132,7 +132,7 @@ refuse rather than silently ignore it.
 
 --- middle
 
-# Introduction
+# Introduction {#introduction}
 
 Mission-Bound Authorization for OAuth 2.0
 {{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile") bounds
@@ -153,8 +153,6 @@ This document defines that metering layer:
   ({{I-D.draft-mcguinness-mission-authzen}}) for settlement and
   duration-lease renewal.
 
-# Status: An Experimental Extension {#optional-status}
-
 This document is optional and experimental: adopt it for
 evaluation, not as a stable interface. Metering cumulative bounds
 exactly under distributed decision points is a distributed-counting
@@ -172,7 +170,7 @@ The consent-integrity rule of {{consent}} is the boundary that makes
 this safe to omit: a bound is rendered to an Approver only where it is
 actually metered.
 
-## Promotion Criteria {#promotion-criteria}
+# Promotion Criteria {#promotion-criteria}
 
 This section is informative. Promotion moves this accounting model
 from optional evaluation toward the architectural baseline for any
@@ -327,13 +325,6 @@ The criteria are sized to be satisfiable by a reference
 implementation, one deployment not operated by its implementer, and
 one independently implemented counterpart component; they demand
 exercised machinery and stable surfaces, not adoption counts.
-
-<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Role: companion. Spec maturity: experimental. Maintenance: lab-floor-referenced.
-Adopt when: A Mission needs cumulative caps (budget, calls, duration, egress), not just scope.
-Requires: Mission-Bound Runtime Enforcement; Mission Runtime Evidence; Mission Substrate Requirements; Mission-Bound Authorization for OAuth 2.0.
-Also requires, conditionally: Mission-Bound Runtime Enforcement: AuthZEN Profile (when the AuthZEN binding is the runtime wire); Mission Consent Evidence for OAuth 2.0 (when Consent Evidence is recorded).
-<!-- family-status: END -->
 
 # Relationship to the Issuance and Runtime Profiles {#relationship}
 
@@ -700,7 +691,7 @@ bounds nothing beyond that Child Mission itself
 deployed lineage-keyed counter, no per-Mission counter, however many
 Missions in a lineage carry one, adds up to an aggregate bound on the
 lineage.
-This document is experimental ({{optional-status}}), so a deployment
+This document is experimental ({{introduction}}), so a deployment
 running only the stable issuance and runtime profiles has no
 lineage-wide aggregate bound in force at all. A deployment MUST NOT
 render, in an Enforcement Scope Statement or at any consent surface,

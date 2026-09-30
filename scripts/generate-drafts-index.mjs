@@ -4,10 +4,10 @@
 // table, DRAFTS.md's family-counts summary, README.md's per-binding
 // minimum-package table (#709: verbs are the README's public front door, one
 // link out to a catalog that itself exposes the family's other adoption axes
-// as generated, not hand-typed, content), and every draft's own per-file
-// family-status block (#707: role, spec maturity, and conformance-manifest
-// coverage generated from the manifest, never hand-written). Everything
-// outside a file's markers is hand-authored and never touched here.
+// as generated, not hand-typed, content). A draft's own standing (role,
+// maturity, maintenance, adoption trigger, requires) is rendered only in
+// DRAFTS.md's index, never in the draft body. Everything outside a file's
+// markers is hand-authored and never touched here.
 //
 // Usage:
 //   node scripts/generate-drafts-index.mjs           rewrite all blocks in place
@@ -43,16 +43,11 @@ export const REFERENCE_STACKS_END = "<!-- generated:reference-stacks:end -->";
 export const FAMILY_COUNTS_START = "<!-- generated:family-counts:start -->";
 export const FAMILY_COUNTS_END = "<!-- generated:family-counts:end -->";
 
-// The per-draft family-status block (#643, #707): every draft file except
-// the published OAuth binding (see FAMILY_STATUS_EXEMPT_FILE below) carries
-// one of these under its own top-level "# Status" heading.
-export const FAMILY_STATUS_BEGIN = "<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->";
-export const FAMILY_STATUS_END = "<!-- family-status: END -->";
-
-// The published OAuth binding carries no per-file family-status block: its
-// Status is the family's README (a published Internet-Draft on a fixed
-// external track, not a manifest-driven adoption skeleton).
-export const FAMILY_STATUS_EXEMPT_FILE = "draft-mcguinness-oauth-mission.md";
+// Retired per-draft Status content (#643, #707): no draft body may carry a
+// family-status block or a top-level "# Status:" section
+// (validateNoStatusSections).
+export const RETIRED_STATUS_MARKER = "<!-- family-status:";
+export const RETIRED_STATUS_HEADING = /^# Status:/m;
 
 // The one document whose `role` is "core" (#707 ruling): the binding-neutral
 // Mission Substrate Requirements kernel that every binding, including the
@@ -145,22 +140,24 @@ export function escapeCell(value) {
 // organize the prose catalog by, rendered here as data so the grouping shows
 // up in the generated table too, not only as an implicit heading structure.
 // The Implementation column is each draft's derived ledger coverage, beside
-// spec maturity and never folded into it (#707 ruling). It lives here, not
-// in the drafts' own family-status blocks, so a coverage flip rewrites this
-// index and no draft's bytes.
+// spec maturity and never folded into it (#707 ruling). Maintenance and
+// Requires complete a draft's standing. All of it lives here and never in a
+// draft body, so neither a coverage flip nor a manifest edit rewrites the
+// drafts the conformance ledger pins.
 export function renderIndex(manifest, confBySpec) {
+  const bySlug = new Map(manifest.drafts.map((d) => [d.slug, d]));
   const lines = [
     START_MARKER,
     "",
-    "| Document | Role | Spec maturity | Implementation | Verbs | Group | Summary | Pull this in when |",
-    "|---|---|---|---|---|---|---|---|",
+    "| Document | Role | Spec maturity | Implementation | Maintenance | Verbs | Group | Summary | Pull this in when | Requires |",
+    "|---|---|---|---|---|---|---|---|---|---|",
   ];
   for (const d of manifest.drafts) {
     const maturity = maturityDisplay(d.spec_maturity) ?? d.spec_maturity;
     const verbs = (d.verbs || []).join(", ");
     const group = GROUP_SECTION_TITLES[d.group] ?? d.group;
     lines.push(
-      `| [${escapeCell(d.title)}](${editorsCopyUrl(d.slug)}) | ${d.role} | ${maturity} | ${conformanceCell(confBySpec, d.file)} | ${verbs} | ${escapeCell(group)} | ${escapeCell(d.summary)} | ${escapeCell(d.pull_when)} |`
+      `| [${escapeCell(d.title)}](${editorsCopyUrl(d.slug)}) | ${d.role} | ${maturity} | ${conformanceCell(confBySpec, d.file)} | ${d.maintenance} | ${verbs} | ${escapeCell(group)} | ${escapeCell(d.summary)} | ${escapeCell(d.pull_when)} | ${escapeCell(requiresCell(d, bySlug))} |`
     );
   }
   lines.push("", END_MARKER);
@@ -437,59 +434,25 @@ export function conformanceCell(bySpec, file) {
   return `${c.total} row${c.total === 1 ? "" : "s"}: ${parts.join(", ")}`;
 }
 
-// The generated block, markers included, for one draft's own "# Status"
-// section (#643 origin, #707 extension): role, spec maturity, and
-// maintenance, then adoption trigger and typed requires edges. It renders
-// family-manifest.json facts only. Derived ledger coverage is DRAFTS.md's
-// Implementation column (renderIndex), never a line here: the conformance
-// ledger pins each draft's bytes, so a block that rendered ledger counts
-// would make every coverage flip rewrite the drafts it pins and force a
-// re-pin of each.
-export function renderFamilyStatusBlock(d, bySlug) {
-  const lines = [
-    FAMILY_STATUS_BEGIN,
-    `Role: ${d.role}. Spec maturity: ${maturityDisplay(d.spec_maturity) ?? d.spec_maturity}. Maintenance: ${d.maintenance}.`,
-    `Adopt when: ${d.pull_when}`,
-  ];
-  const ar = d.adoption_requires || [];
-  lines.push(ar.length
-    ? `Requires: ${ar.map((s) => bySlug.get(s).title).join("; ")}.`
-    : "Requires: nothing beyond its listed references.");
-  const rw = d.requires_when || [];
-  if (rw.length) {
-    lines.push(`Also requires, conditionally: ${rw.map((e) => e.requires.map((s) => bySlug.get(s).title).join(" and ") + " (when " + e.when + ")").join("; ")}.`);
-  }
-  lines.push(FAMILY_STATUS_END);
-  return lines.join("\n");
+// The Requires cell of DRAFTS.md's index: the manifest's unconditional
+// adoption_requires edges, then any conditional requires_when edges with
+// what activates them.
+export function requiresCell(d, bySlug) {
+  const ar = (d.adoption_requires || []).map((s) => bySlug.get(s).title);
+  const rw = (d.requires_when || []).map((e) => e.requires.map((s) => bySlug.get(s).title).join(" and ") + " (when " + e.when + ")");
+  const base = ar.length ? ar.join("; ") : "nothing beyond its listed references";
+  return rw.length ? `${base}; conditionally, ${rw.join("; ")}` : base;
 }
 
-// Locates a draft's top-level family Status section and returns the
-// [start, end) byte offsets of everything between its heading and the next
-// top-level heading (or end of file). Returns null when the heading is
-// missing. The family heading is always "# Status: <standing>"; matching any
-// heading that merely starts with "Status" once found a protocol section
-// ("# Status Operation" in the AAuth management draft) and spliced the block
-// into that operation's specification.
-export const FAMILY_STATUS_HEADING = /^# Status:[^\n]*$/m;
-export function findStatusSection(text) {
-  const head = text.match(FAMILY_STATUS_HEADING);
-  if (!head) return null;
-  const start = text.indexOf(head[0]) + head[0].length;
-  const rest = text.slice(start);
-  const nextHead = rest.search(/^# [^#\n]/m);
-  const end = nextHead === -1 ? text.length : start + nextHead;
-  return [start, end];
-}
-
-// Returns [] when every non-exempt draft's family-status block matches what
-// the manifest would produce, or one finding per stale/missing block. Never
-// writes.
-export function validateFamilyStatusBlocks(root = ROOT) {
+// Returns [] when no manifest draft carries retired Status content, or one
+// finding per offending draft. A draft's standing is catalog metadata
+// (renderIndex), never body text: in a body, the conformance ledger's byte
+// pin would move with every manifest edit, and a submitted draft would carry
+// repository metadata.
+export function validateNoStatusSections(root = ROOT) {
   const manifest = JSON.parse(fs.readFileSync(path.join(root, "family-manifest.json"), "utf8"));
-  const bySlug = new Map(manifest.drafts.map((d) => [d.slug, d]));
   const findings = [];
   for (const d of manifest.drafts) {
-    if (d.file === FAMILY_STATUS_EXEMPT_FILE) continue;
     let text;
     try {
       text = fs.readFileSync(path.join(root, d.file), "utf8");
@@ -497,53 +460,14 @@ export function validateFamilyStatusBlocks(root = ROOT) {
       findings.push(`${d.file}: cannot read (${e.message})`);
       continue;
     }
-    const bounds = findStatusSection(text);
-    if (!bounds) {
-      findings.push(`${d.file}: missing the top-level "# Status:" section (family skeleton)`);
-      continue;
+    if (text.includes(RETIRED_STATUS_MARKER)) {
+      findings.push(`${d.file}: carries a family-status block; a draft's standing belongs in DRAFTS.md's generated index, not its body`);
     }
-    // Exactly one block per draft: a second copy anywhere, or the only copy
-    // outside the Status section, is misplaced generated text.
-    const copies = text.split(FAMILY_STATUS_BEGIN).length - 1;
-    if (copies > 1) {
-      findings.push(`${d.file}: contains ${copies} family-status blocks; it must carry exactly one, inside its "# Status:" section`);
-      continue;
-    }
-    const section = text.slice(bounds[0], bounds[1]);
-    const expectedBlock = renderFamilyStatusBlock(d, bySlug);
-    const bm = section.match(/<!-- family-status: BEGIN[\s\S]*?END -->/);
-    if (!bm) {
-      findings.push(`${d.file}: family-status block missing from the Status section`);
-    } else if (bm[0] !== expectedBlock) {
-      findings.push(`${d.file}: family-status block does not match the manifest; regenerate it to:\n${expectedBlock}`);
+    if (RETIRED_STATUS_HEADING.test(text)) {
+      findings.push(`${d.file}: carries a "# Status:" section; state applicability in the Introduction and leave standing to DRAFTS.md's generated index`);
     }
   }
   return findings;
-}
-
-// Rewrites every non-exempt draft's family-status block in place. Returns
-// the count of files actually changed (a no-op write is skipped so mtimes
-// and git diffs stay quiet when nothing drifted).
-export function writeFamilyStatusBlocks(root = ROOT) {
-  const manifest = JSON.parse(fs.readFileSync(path.join(root, "family-manifest.json"), "utf8"));
-  const bySlug = new Map(manifest.drafts.map((d) => [d.slug, d]));
-  let changed = 0;
-  for (const d of manifest.drafts) {
-    if (d.file === FAMILY_STATUS_EXEMPT_FILE) continue;
-    const filePath = path.join(root, d.file);
-    const text = fs.readFileSync(filePath, "utf8");
-    const bounds = findStatusSection(text);
-    if (!bounds) throw new Error(`${d.file}: missing the top-level "# Status:" section (family skeleton)`);
-    const [start, end] = bounds;
-    const block = renderFamilyStatusBlock(d, bySlug);
-    const newSection = spliceMarkedBlock(text.slice(start, end), block, FAMILY_STATUS_BEGIN, FAMILY_STATUS_END, d.file);
-    const newText = text.slice(0, start) + newSection + text.slice(end);
-    if (newText !== text) {
-      fs.writeFileSync(filePath, newText);
-      changed += 1;
-    }
-  }
-  return changed;
 }
 
 // The generated block, markers included: a family-wide summary so README and
@@ -627,8 +551,8 @@ export function validateFamilyCounts(root = ROOT) {
 // counterexample (oauth-mission-resource-access: a real Conformance
 // section, real conformance-manifest.json rows, all "todo", entirely
 // unaudited for completeness) slipped past the earlier version of this
-// gate. Coverage/evidence stays a displayed fact (each draft's
-// family-status Implementation: line), never a gate threshold, per the
+// gate. Coverage/evidence stays a displayed fact (DRAFTS.md's
+// Implementation column), never a gate threshold, per the
 // ruling's own text ("do not gate candidate status on a raw percentage").
 export function loadCandidateGate(root = ROOT) {
   return JSON.parse(fs.readFileSync(path.join(root, "candidate-gate.json"), "utf8"));
@@ -737,9 +661,9 @@ export function validateCandidateGate(root = ROOT) {
               findings.push(`${d.slug}: requirement_inventory.report.document_sha256 (${report.document_sha256.slice(0, 16)}) is not sha256(${d.file}) at audited_by ${inv.audited_by.slice(0, 8)} (${atAudit.slice(0, 16)}); the two fields must name the same audited bytes`);
             }
           }
-          // Staleness signal, deliberately non-fatal: a family-status regen
-          // changes a candidate document's bytes (and hence content_sha256)
-          // on every unrelated maturity flip anywhere in the family. Tying
+          // Staleness signal, deliberately non-fatal: an editorial change
+          // to a candidate document moves its bytes (and hence
+          // content_sha256) without touching the audited inventory. Tying
           // the report's frozen digest to that would force a re-audit for a
           // change the report's own substance was never about. Printed so
           // a human notices and judges whether a re-audit is actually
@@ -769,7 +693,7 @@ export function validateCandidateGate(root = ROOT) {
 
     // Criterion 3: a named floor: the document has a real Conformance-
     // titled section. (Representative implementation evidence is displayed,
-    // not gated: see the Implementation: line in the family-status block.)
+    // not gated: see DRAFTS.md's Implementation column.)
     const text = fs.readFileSync(path.join(root, d.file), "utf8");
     if (!/^#{1,2}.*Conformance/m.test(text)) {
       findings.push(`${d.slug}: spec_maturity is "candidate" but ${d.file} has no Conformance-titled section (criterion 3: named interoperability floor)`);
@@ -799,14 +723,14 @@ function main() {
       ...validateReferenceStacks(ROOT),
       ...validateBindingPackages(ROOT),
       ...validateFamilyCounts(ROOT),
-      ...validateFamilyStatusBlocks(ROOT),
+      ...validateNoStatusSections(ROOT),
       ...validateCandidateGate(ROOT),
     ];
     if (findings.length > 0) {
       for (const f of findings) console.error(`drafts-index check FAILED: ${f}`);
       process.exit(1);
     }
-    console.log("drafts-index check OK: DRAFTS.md's index, reference-stacks, and family-counts blocks, README.md's binding-packages block, every draft's family-status block, and the candidate gate, are current.");
+    console.log("drafts-index check OK: DRAFTS.md's index, reference-stacks, and family-counts blocks, README.md's binding-packages block, and the candidate gate, are current, and no draft carries a retired Status section.");
     process.exit(0);
   }
 
@@ -849,13 +773,6 @@ function main() {
     fs.writeFileSync(README_PATH, updatedReadme);
     console.log(`drafts-index: rewrote README.md's binding-packages block (${BINDING_SLUGS.length} bindings).`);
   }
-
-  const changedStatusBlocks = writeFamilyStatusBlocks(ROOT);
-  console.log(
-    changedStatusBlocks === 0
-      ? "drafts-index: every draft's family-status block already current."
-      : `drafts-index: rewrote ${changedStatusBlocks} draft(s)' family-status block.`,
-  );
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

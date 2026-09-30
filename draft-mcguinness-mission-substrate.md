@@ -220,14 +220,6 @@ mapping, the scoped precedence rule for the OAuth-native binding, and
 the change-ownership rule are collected in {{family}} and are not
 needed by an adopter outside that family.
 
-# Status: A Normative Contract for Bindings {#doc-status}
-
-<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Role: core. Spec maturity: candidate. Maintenance: active.
-Adopt when: Runtime implementers consume its commitment construction and kernel contract; binding authors profile it.
-Requires: nothing beyond its listed references.
-<!-- family-status: END -->
-
 # Conventions and Terminology {#conventions-and-terminology}
 
 {::boilerplate bcp14-tagged}

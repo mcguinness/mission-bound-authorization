@@ -216,15 +216,6 @@ A deployment that exposes shaping as a network service may do so
 ({{exposing-shaping-as-a-service}}), but that surface is a local
 implementation detail, not an interoperability contract.
 
-# Status: An Informative Companion {#doc-status}
-
-<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Role: guide. Spec maturity: not applicable. Maintenance: active.
-Adopt when: You need a defined client-side path from user prompt to candidate Mission Intent.
-Requires: nothing beyond its listed references.
-Also requires, conditionally: Mission Substrate Requirements (when shaping evidence digests are produced); Mission-Bound Authorization for OAuth 2.0 (when the OAuth binding is the substrate).
-<!-- family-status: END -->
-
 # Relationship to the Issuance Profile {#relationship}
 
 This document is optional and layered on

@@ -239,14 +239,6 @@ Mission Resource Access Profile
 ({{I-D.draft-mcguinness-oauth-mission-resource-access}}); both are
 referenced, not re-specified, here.
 
-# Status: An Optional Profile {#doc-status}
-
-<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Role: companion. Spec maturity: experimental. Maintenance: active.
-Adopt when: You must observe or change Mission state beyond token expiry (revoke, suspend, complete).
-Requires: Mission-Bound Authorization for OAuth 2.0.
-<!-- family-status: END -->
-
 # Conventions and Terminology {#conventions-and-definitions}
 
 {::boilerplate bcp14-tagged}

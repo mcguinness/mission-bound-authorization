@@ -177,8 +177,6 @@ that attributes an artifact ({{provenance}}), and the rule that makes
 the invariant hold when an artifact crosses between independent Missions
 ({{handoff}}).
 
-# Status: An Experimental Extension {#optional-status}
-
 This document is optional and experimental: adopt it for evaluation, not
 as a stable interface. No Standards-Track document depends on it.
 
@@ -189,12 +187,6 @@ requirement back on the issuance profile, and this document adds no
 constraint to `mission_resource_access`. The provenance
 object and the handoff rule are companion mechanisms that a deployment
 adopts where its agents share durable work products.
-
-<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Role: companion. Spec maturity: experimental. Maintenance: lab-best-effort.
-Adopt when: Artifacts cross into another Mission and must carry provenance, never authority.
-Requires: Mission-Bound Authorization for OAuth 2.0.
-<!-- family-status: END -->
 
 # Relationship to Other Profiles {#relationship}
 

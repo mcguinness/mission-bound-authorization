@@ -342,8 +342,6 @@ This document defines no new mechanism, claim, or wire format. It is a
 model that aids review and deployment; the normative requirements live in
 the profiles it references.
 
-# Status: An Informational Model {#status}
-
 This document is Informational. It does not place normative requirements
 on implementations; the enforcement obligations are defined by the
 selected binding and its companions (for the OAuth binding,
@@ -351,12 +349,6 @@ selected binding and its companions (for the OAuth binding,
 expectation the consolidated model places on a deployment that claims the
 suite, realized by the referenced profile, not a new conformance
 requirement of its own.
-
-<!-- family-status: BEGIN (generated from family-manifest.json; exact-matched by scripts/check-family-manifest.mjs) -->
-Role: guide. Spec maturity: not applicable. Maintenance: active.
-Adopt when: Reviewing or auditing: the one consolidated trust and blast-radius view.
-Requires: nothing beyond its listed references.
-<!-- family-status: END -->
 
 # Conventions and Terminology {#conventions}
 
