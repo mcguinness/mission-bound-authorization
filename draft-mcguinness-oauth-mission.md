@@ -597,7 +597,7 @@ the Mission Issuer:
 ~~~
 
 The flow then leaves the AS: (4) the agent calls the Resource Server
-with the token; the RS enforces the `authorization_details`
+with the token; the Resource Server enforces the `authorization_details`
 statelessly and can check the `mission` claim ({{rs-enforcement}}),
 with no callback to the AS required. (5) A management revoke, or
 `expires_at` passing, moves the Mission to `revoked` or `expired`,
@@ -2954,7 +2954,7 @@ the codes):
 
 1. **Weak or stale token-associated user authentication.** The
    authentication event associated with the presented token does not
-   meet the resource's requirement: the RS challenges with
+   meet the resource's requirement: the Resource Server challenges with
    `insufficient_user_authentication` and the `acr_values` or
    `max_age` parameters ({{Section 3 of RFC9470}}). This is the
    authentication behind the presented token's own Subject, a
@@ -2962,7 +2962,7 @@ the codes):
    ({{approval-authentication}}); satisfying one does not satisfy the
    other.
 2. **Sender-constraint or key-binding failure.** The token's proof of
-   possession is missing or invalid: the RS challenges with
+   possession is missing or invalid: the Resource Server challenges with
    `invalid_token`, in the `DPoP` scheme for a DPoP-bound token
    ({{Section 7.1 of RFC9449}}, with `use_dpop_nonce` per
    {{Section 9 of RFC9449}}) and in the Bearer scheme for a
@@ -2970,14 +2970,14 @@ the codes):
    step-up: no fresh user authentication repairs a missing or wrong
    key.
 3. **Insufficient carried authority.** The action is outside the
-   token's carried authority: the RS challenges with
+   token's carried authority: the Resource Server challenges with
    `insufficient_scope` ({{RFC6750}}), or with the RAR-remediation
    challenge where {{I-D.draft-ietf-oauth-rar-metadata-remediation}}
    is deployed ({{remediation-grains}}). More authority requires a
    new approval, or an expansion where that companion is deployed.
 4. **Unenforceable constraint.** An applicable entry carries a
-   type-defined member or constraint the RS cannot enforce, and the
-   request fails closed under the same base error as case 3.
+   type-defined member or constraint the Resource Server cannot enforce,
+   and the request fails closed under the same base error as case 3.
 
 Cases 3 and 4 are identical `403` responses to a client, which cannot
 tell from them whether a new approval would help. A Mission-aware
@@ -2991,11 +2991,11 @@ applies by including, alongside `error` ({{RFC6750}}), the
   a new approval or an expansion where that companion is deployed.
 
 `constraint_unrecognized`:
-: An applicable entry carries a type-defined member or constraint
-  the RS cannot enforce, and the request fails closed. A client MUST
-  NOT treat this value as inviting retry, step-up, or fresh approval:
-  none of those makes a Resource Server enforce a constraint it does
-  not implement.
+: An applicable entry carries a type-defined member or constraint the
+Resource Server cannot enforce, and the request fails closed. A client
+MUST NOT treat this value as inviting retry, step-up, or fresh approval:
+none of those makes a Resource Server enforce a constraint it does not
+implement.
 
 A value the client does not recognize is treated as
 `insufficient_authority`. A Resource Server SHOULD include the
@@ -3009,8 +3009,8 @@ Mission carries and what holds when that enforcer is absent:
 
 | Bound | Enforced by | When that enforcer is absent |
 |---|---|---|
-| `resource` and `actions` | any Resource Server that enforces `mission_resource_access` per its type specification ({{I-D.draft-mcguinness-oauth-mission-resource-access}}, {{rs-enforcement}}) | a scope-only RS is served only where the AS established a safe scope projection ({{scope-projection}}); the AS refuses issuance to it otherwise |
-| per-entry `constraints` | a Resource Server that understands and enforces the key, per that type's specification ({{I-D.draft-mcguinness-oauth-mission-resource-access}}, {{rs-enforcement}}) | a Mission-aware RS fails closed; a scope-only RS is served only where the projection independently accounts for the constraint ({{scope-projection}}) |
+| `resource` and `actions` | any Resource Server that enforces `mission_resource_access` per its type specification ({{I-D.draft-mcguinness-oauth-mission-resource-access}}, {{rs-enforcement}}) | a scope-only Resource Server is served only where the AS established a safe scope projection ({{scope-projection}}); the AS refuses issuance to it otherwise |
+| per-entry `constraints` | a Resource Server that understands and enforces the key, per that type's specification ({{I-D.draft-mcguinness-oauth-mission-resource-access}}, {{rs-enforcement}}) | a Mission-aware Resource Server fails closed; a scope-only Resource Server is served only where the projection independently accounts for the constraint ({{scope-projection}}) |
 | `derivation_limit` | the issuer AS at each derivation ({{derivation-issuance-policy}}, {{issuance-gating}}) | never absent at the issuer when established; it does not bound another domain's local minting (see the cross-domain companion) |
 
 ## Remediation Grains {#remediation-grains}
@@ -4489,8 +4489,9 @@ above.
 
 The carried `constraints` and a multi-resource Authority Set disclose
 the shape of the task and its business bounds (for example, an amount
-ceiling) to every holder and every audience of a derived token. Per-RS
-single-audience tokens are the minimization measure: they carry only the
+ceiling) to every holder and every audience of a derived token.
+Single-audience tokens, one per Resource Server, are the minimization
+measure: they carry only the
 entries the consuming Resource Server needs, and this document
 recommends them ({{mission-bound-tokens}}).
 
