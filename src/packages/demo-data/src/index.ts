@@ -1302,7 +1302,7 @@ interface ClientSeed {
   redirect_uris: string[];
   token_endpoint_auth_method: string;
   token_endpoint_auth_signing_alg: string;
-  scope: string;
+  scope?: string;
   authorization_details_types: string[];
   /**
    * @spec mission#downgrade-by-omission — the per-client Mission-governance
@@ -1331,7 +1331,10 @@ function loadClients(): [ClientSeed, ...ClientSeed[]] {
         "token_endpoint_auth_signing_alg",
         `clients[${i}]`,
       ),
-      scope: reqString(file, c, "scope", `clients[${i}]`),
+      // @spec mission#scope-projection — OPTIONAL: the OIDC scope values the
+      // client may request. Authority is `authorization_details`, never a
+      // registered resource scope.
+      ...(c.scope !== undefined ? { scope: reqString(file, c, "scope", `clients[${i}]`) } : {}),
       authorization_details_types: reqStringArray(
         file,
         c,
@@ -1699,7 +1702,7 @@ async function buildSeededClient(client: ClientSeed): Promise<SeededClient> {
       token_endpoint_auth_method: client.token_endpoint_auth_method,
       token_endpoint_auth_signing_alg: client.token_endpoint_auth_signing_alg,
       jwks: { keys: [pub] },
-      scope: client.scope,
+      ...(client.scope !== undefined ? { scope: client.scope } : {}),
       authorization_details_types: client.authorization_details_types,
       ...(client.mission_governed !== undefined
         ? { mission_governed: client.mission_governed }
