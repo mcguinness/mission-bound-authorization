@@ -4326,6 +4326,15 @@ self-contained; its reference to the substrate contract
 
 # Security Considerations {#security-considerations}
 
+The security considerations of OAuth 2.0 ({{Section 10 of RFC6749}}),
+the OAuth 2.0 Security Best Current Practice {{RFC9700}}, Rich
+Authorization Requests ({{Section 12 of RFC9396}}), Pushed
+Authorization Requests ({{Section 7 of RFC9126}}), and JWT access
+tokens ({{Section 5 of RFC9068}}) apply to this document. Those of
+Token Exchange ({{Section 5 of RFC8693}}) apply to delegation, and
+those of DPoP ({{Section 11 of RFC9449}}) and mutual TLS
+({{Section 7 of RFC8705}}) apply where a token is sender-constrained.
+
 ## Commitment and Consent Integrity {#sec-commitment}
 
 ### Consent Binding {#consent-binding}
@@ -4418,9 +4427,9 @@ anchors are domain-separated
 The task and the authority are committed separately, rather than folded
 into one hash over the whole Mission, because they are distinct objects
 with distinct uses. `authority_hash` commits what a Resource Server
-enforces and what a cross-domain projection carries, so it MUST be
-verifiable from a token that conveys only the authority, without the
-Intent. `intent_hash` commits the task as audit material, tamper-evident
+enforces and what a cross-domain projection carries, so it is
+computed over the Authority Set alone ({{integrity-anchors}}) and can
+be checked without the Intent. `intent_hash` commits the task as audit material, tamper-evident
 even where the authority is projected without the Intent traveling with
 it. One combined hash could not serve both a token that carries
 authority alone and an auditor that holds the task alone.
@@ -4437,17 +4446,16 @@ shown are not bound by any anchor here. Because of this gap, a buggy or
 malicious rendering layer could mislead the Approver, showing a
 narrower or different task than the Authority Set actually committed,
 without leaving any committed trace. A deployment whose Missions carry
-high-risk authority SHOULD therefore record presentation-level audit
-evidence: for example, a hash over the exact consent disclosure
-rendered to the Approver, retained so the disclosure shown can be
-reconstructed and audited after the fact.
+high-risk authority can record presentation-level audit evidence, for
+example a hash over the exact consent disclosure rendered to the
+Approver, retained so the disclosure shown can be reconstructed and
+audited after the fact.
 
-Binding this on the wire (a
-`consent_rendering_hash` over a structured consent-disclosure object)
-is specified as an OPTIONAL companion profile by Mission Consent
-Evidence {{I-D.draft-mcguinness-oauth-mission-consent-evidence}}; an AS
-that does not implement it MAY record equivalent evidence out of band.
-As that profile makes explicit, such a commitment binds the structured
+Mission Consent Evidence
+{{I-D.draft-mcguinness-oauth-mission-consent-evidence}} binds this on
+the wire, as a `consent_rendering_hash` over a structured
+consent-disclosure object; an AS that does not implement it can
+record equivalent evidence out of band. As that profile makes explicit, such a commitment binds the structured
 disclosure the AS records, not the pixels actually presented; it
 narrows this gap for audit but does not close it.
 
@@ -4455,21 +4463,19 @@ narrows this gap for audit but does not close it.
 
 A token bearing equivalent `authorization_details` but no `mission`
 claim is governed by no Mission state, revocation, or consent
-commitment. A deployment that designates a resource Mission-governed
-MUST NOT issue tokens for that resource outside a Mission, except under
-documented policy exceptions.
+commitment. A deployment can designate a resource, or register a
+client, as Mission-governed; {{authority-proposal}} states the
+issuance-side rules that keep such a resource's tokens and such a
+client's requests inside a Mission.
 
-The same rule has a per-client form: a
-deployment MAY register a client as Mission-governed, and an AS MUST
-reject a bare `authorization_details` request, one carrying no
-`mission_intent`, from a client so registered, so a governed client
-cannot strip the Intent from its submission to obtain ungoverned
-tokens; the client-side face of this duty is stated in
-{{discovery}}. On the enforcement side, a Resource
-Server for such a resource rejects a token lacking the `mission` claim
-({{rs-enforcement}}), and MAY advertise the requirement through
-`mission_bound_authorization_required`
-({{protected-resource-metadata}}).
+A client holding a Mission Intent MUST NOT submit the same authority
+as bare `scope` or `authorization_details` to an AS whose Mission
+support is neither advertised nor otherwise established
+({{discovery}}); it surfaces the inability instead.
+
+On the enforcement side, a Resource Server for such a resource
+rejects a token lacking the `mission` claim and can advertise that
+requirement ({{rs-enforcement}}, {{protected-resource-metadata}}).
 
 ## Agent-Specific Threats {#sec-agent}
 
@@ -4615,12 +4621,10 @@ the token's own associated authentication is weak or stale, where
 `mission_denial: insufficient_authority` denies the authority's
 existence outright. Introspection guards the same class of fact behind caller
 authorization ({{caller-authorization-and-minimization}}); a Resource
-Server applies the same care here. It SHOULD return the attribute
-only on a response to a validly signed, audience-correct token whose
-holder its deployment accepts learning the distinction, and SHOULD
-omit the attribute otherwise; when in doubt,
-`insufficient_authority` is the value that reveals least, and
-omission reveals nothing.
+Server applies the same care here, including the attribute only for
+a token holder that its deployment accepts learning the distinction
+({{rs-enforcement}}). Of the two values, `insufficient_authority`
+reveals least, and omitting the attribute reveals nothing.
 
 ## Credentials and Delegation {#sec-credentials}
 
@@ -4628,10 +4632,7 @@ omission reveals nothing.
 
 Derived tokens are sender-constrained (DPoP {{RFC9449}} or mTLS
 {{RFC8705}}) at the levels set in {{mission-bound-tokens}} and
-{{delegation}}: SHOULD for the primary access token, MUST for
-delegated tokens; the companion sets the same MUST for its
-cross-domain credentials
-({{I-D.draft-mcguinness-oauth-mission-cross-domain}}). A stolen token
+{{delegation}}. A stolen token
 is bounded by the Authority Set and the Mission lifetime regardless,
 but sender-constraint prevents replay by a different party.
 
@@ -4639,25 +4640,23 @@ but sender-constraint prevents replay by a different party.
 
 Delegation ({{delegation}}) widens the set of parties holding
 Mission-derived authority. Because authority only narrows down the
-chain, a compromised actor can act only within the authority it was
-delegated, for the lifetime of the token it holds: the exposure of
-any actor is bounded by its narrowed `authorization_details` times
-its token lifetime. The per-entry delegation constraints
-({{delegation-constraints}}) bound this exposure at approval time:
-non-delegable entries never reach a delegate at all, `max_depth`
-caps how far an entry can propagate, and `allowed_delegates`
-restricts who may receive it. Note that `max_depth` bounds the
-*length* of a delegation chain, not its *breadth*: fan-out to many
-distinct depth-1 delegates is bounded only by `allowed_delegates`, so
-a deployment that needs to limit breadth MUST constrain
-`allowed_delegates` (and MAY use `derivation_limit` to cap total
-derivations, {{derivation-issuance-policy}}). Because each delegated token is bound
-to the delegate's own key ({{delegation}}), a compromised delegate is
-confined to its own narrowed credential: it cannot replay as the
-agent or another actor, and its credential can be revoked by key
-without revoking the rest of the chain. Deployments SHOULD keep
-delegated token lifetimes short and SHOULD make only the entries that
-need delegation delegable.
+chain, a compromised actor can act only within its narrowed
+`authorization_details`, for the lifetime of the token it holds.
+The per-entry delegation constraints ({{delegation-constraints}})
+bound this exposure at approval time:
+
+- a non-delegable entry never reaches a delegate;
+- `max_depth` caps how far an entry can propagate; and
+- `allowed_delegates` restricts who can receive it.
+
+`max_depth` bounds the length of a delegation chain, not its
+breadth: only `allowed_delegates` bounds fan-out to many distinct
+depth-1 delegates, and `derivation_limit`
+({{derivation-issuance-policy}}) caps total derivations. Binding each
+delegated token to the delegate's own key ({{delegation}}) confines
+a compromised delegate to its own credential. Short derived-token
+lifetimes ({{issuance-gating}}), and marking delegable only the
+entries that need delegation, keep this exposure small.
 
 A distinct path deserves its name: audience replay into the
 exchange. A Mission-bound token obtained by or issued to one party,
@@ -4688,31 +4687,25 @@ originally-approved agent, which this profile does not carry in
 `client_id` and instead leaves recorded in the Mission Record
 ({{mission-record}}) at the issuer.
 
-A component that authorizes or
-logs on the approved agent's identity, or that must join a
-delegate's action back to the Mission's approval, MUST NOT assume
-`client_id` carries it. A deployment
-that delegates MUST route delegated Mission-bound traffic, including
-to logging and audit infrastructure, only through components that
-process the `act` chain ({{rs-enforcement}}), and SHOULD review any
-existing component that authorizes or logs solely from `client_id`
-for this gap before exposing it to delegated Mission-bound tokens.
+{{rs-enforcement}} forbids a Resource Server to infer the approved
+agent from `client_id`, and forbids routing a delegated token to a
+component that authorizes or logs on `client_id` without processing
+the `act` chain. An existing component that authorizes or logs
+solely from `client_id` needs review for this gap before it receives
+delegated Mission-bound tokens.
 
 ### Signing and Key Rotation {#key-rotation}
 
 The `mission` claim and `authorization_details` are carried inside
 the {{RFC9068}} JWT and are covered by the AS's token signature; their
-integrity reduces to the AS's signing key. An AS MUST publish its
-verification keys (for example, via {{RFC8414}} `jwks_uri`), and the
-retired-key rule is: rotation retires a key from signing, never from
-resolvability within its retention bound.
+integrity reduces to the AS's signing key. The AS publishes its
+verification keys, and rotation retires a key from signing but keeps
+it resolvable while tokens signed under it remain valid
+({{mission-bound-tokens}}).
 
-For this document's
-artifacts the floor is token lifetime: a verification key stays
-resolvable while tokens signed under it remain valid. Verification
-for audit outlives validity, so the key SHOULD remain resolvable at
-least as long as the audit horizon ({{mission-record}}) of any
-Mission whose tokens were signed under it. A companion
+Verification for audit outlives validity; keeping a key resolvable
+for the audit horizon ({{mission-record}}) of every Mission whose
+tokens it signed lets an auditor verify those tokens later. A companion
 that anchors a longer-lived artifact to the same keys (a status
 assertion, a Mandate, registered evidence) states its own retention
 bound as an extension of this same rule, not a new one.
@@ -4723,14 +4716,13 @@ the issuer publishes the compromised key as revoked, or marks it
 with a compromise time, rather than silently rotating it out.
 
 Key custody carries the model: a compromised issuer signing key
-voids every guarantee the signature carries. Issuer signing keys
-SHOULD be held in non-exportable or HSM/KMS-grade custody with
-dual-controlled generation, and SHOULD be segmented by artifact
-class under distinct `kid` values within the one `jwks_uri`, so that
-high-value, low-volume signing (long-lived evidence and portable
-artifacts) can sit under stricter custody than high-volume online
-token signing; verification is already `kid`-indexed, so the
-segmentation needs no wire change. Recovery from a signing-key
+voids every guarantee the signature carries. Holding issuer signing
+keys in non-exportable, HSM- or KMS-grade custody with
+dual-controlled generation reduces that risk. Segmenting keys by
+artifact class under distinct `kid` values within the one `jwks_uri`
+lets high-value, low-volume signing (long-lived evidence and portable
+artifacts) sit under stricter custody than high-volume token signing;
+verification is `kid`-indexed, so this needs no wire change. Recovery from a signing-key
 compromise is deployment-owned and belongs in the deployment's
 documented procedures.
 
@@ -4743,7 +4735,7 @@ Intent. Both derivation modes ({{authorization-derivation}}) are
 mechanical, a proposal narrowed to policy or a configured mapping,
 rather than free-form inference, and the recorded `policy_version`
 names the policy a derivation ran under so the derivation can be
-audited. General OAuth security guidance {{RFC9700}} applies.
+audited.
 
 ### Authority Hash Is Not a Mission Identifier {#authority-hash-is-not-a-mission-identifier}
 
@@ -4752,15 +4744,19 @@ Two distinct Missions that approve byte-identical authority carry the
 same `authority_hash`: a successor Mission that re-approves the same
 Authority Set, or an unrelated Mission with the same derived authority,
 differs in its `intent_hash`, `approver`, and `id` while sharing the
-`authority_hash`. It is therefore not globally unique to a Mission and
-MUST NOT be used as a Mission Identifier or as a replay or idempotency
-key for a Mission.
+`authority_hash`. It is therefore not globally unique to a Mission,
+and {{integrity-anchors}} forbids its use as a Mission Identifier or
+as a replay or idempotency key for a Mission.
 
 The canonical Mission Identifier names the
 Mission; `authority_hash` names the authority the Mission
 approved. A consumer that needs to bind to or correlate a specific
 Mission uses the Mission Identifier, and `intent_hash` and `approver`
 distinguish Missions that share an Authority Set.
+
+Where a deployment discloses `authority_hash` to a Resource Server,
+it is an audit correlator, not an enforcement input, and not proof
+that the carried entries are a subset of the approved set.
 
 ### Composition and the Effective Ceiling {#composition-and-the-effective-ceiling}
 
@@ -4794,10 +4790,10 @@ the Resource AS's local issuance under it is bounded by that grant's
 own lifetime and local policy, not counted against the origin
 issuer's per-Mission derivation cap.
 
-A deployment SHOULD disclose the composed bound, not only the
-immediate Mission's, at the consent surface, and MAY impose a global
-cap out of band where a single approval's apparent bound must hold in
-practice. Bounding aggregate consumption (calls, spend, or activity
+A deployment can disclose the composed bound, not only the immediate
+Mission's, at the consent surface, and can impose a global cap out of
+band where a single approval's apparent bound must hold in practice.
+Bounding aggregate consumption (calls, spend, or activity
 over the life of a Mission and its descendants) is the metering
 profile's role ({{I-D.draft-mcguinness-mission-metering}}), not a
 property this document or its composition partners provide by
@@ -4818,11 +4814,11 @@ outside the issuer's reach, continues to operate for its own
 remaining lifetime. This is the same residual bound that revocation
 carries ({{revocation}}): a party that already holds a materialized
 credential is bounded by that credential's own lifetime, not by a
-state change at the issuer it can no longer observe in time. A
-deployment that needs containment to take effect quickly against
-already-materialized authority SHOULD keep cross-domain grant and
-offline attenuation root lifetimes short, so the residual window is
-one the next lease or re-mint closes.
+state change at the issuer it can no longer observe in time. Where
+containment needs to take effect quickly against
+already-materialized authority, short cross-domain grant and offline
+attenuation root lifetimes keep that residual window to one the next
+lease or re-mint closes.
 
 # Internationalization Considerations {#i18n}
 
@@ -4835,11 +4831,9 @@ it deliberately rather than by guess.
 
 Three rules keep the declaration honest:
 
-- `goal_lang` is a syntactic declaration. The AS validates
-  well-formedness ({{RFC5646}}, Section 2.1) at submission
-  acceptance and refuses a malformed tag `invalid_request`; it does
-  not verify that the prose is in the declared language, and a
-  consumer MUST NOT treat the tag as a verified property of the
+- `goal_lang` is a syntactic declaration: the AS checks only its
+  well-formedness ({{mission-intent}}), not that the prose is in the
+  declared language, so the tag is not a verified property of the
   text.
 - Rendering to the Approver follows the consent-binding rules
   unchanged ({{consent-binding}}): client prose stays inert text in
@@ -4858,6 +4852,11 @@ Three rules keep the declaration honest:
   set.
 
 # Privacy Considerations {#privacy-considerations}
+
+The privacy considerations of {{Section 13 of RFC9396}},
+{{Section 8 of RFC9126}}, and {{Section 6 of RFC9068}} apply to this
+document, as do those of {{Section 5 of RFC7662}} for introspection
+and {{Section 6 of RFC8693}} for delegation.
 
 A Mission Identifier is a correlation handle: a deployment limits
 exposure by giving stable Mission Identifiers only to parties that
@@ -4912,9 +4911,7 @@ the shape of the task and its business bounds (for example, an amount
 ceiling) to every holder and every audience of a derived token.
 Per-RS single-audience tokens are the minimization measure: they carry
 only the entries the consuming Resource Server needs, and this
-document recommends them ({{mission-bound-tokens}}). The privacy
-considerations of {{RFC9396}} apply to the carried
-`authorization_details`.
+document recommends them ({{mission-bound-tokens}}).
 
 ## Intent Retention and Anchor Disclosure {#intent-retention-and-anchor-disclosure}
 
@@ -4942,22 +4939,18 @@ a disclosure requires, and whether a basis is required and what
 satisfies it is deployment and legal policy outside this protocol.
 
 Where the resource domain requires data-subject consent or another
-basis, that disclosure policy MUST be satisfied in that domain's own
-lane, wherever the deployment evaluates it (the Resource Server, a
-gateway, a policy decision point, or an authorization server acting
-for the domain) and through that lane's mechanisms (claims
-gathering, a resource-domain consent artifact), and access MUST be
-refused while required evidence is absent or invalid. A conforming
-deployment treats that refusal as the resource's answer, never as a
-Mission gap to route around.
+basis, that domain's own lane (the Resource Server, a gateway, a
+policy decision point, or an authorization server acting for the
+domain) evaluates it through that lane's mechanisms, such as claims
+gathering or a resource-domain consent artifact. That lane refuses
+access while required evidence is absent or invalid; the refusal is
+the resource's answer, not a Mission gap to route around.
 
-Mission approval and Mission authority MUST NOT be treated as the
-data subject's consent; a Mission record MAY retain a verified
-consent reference or facts as
-`submission_evidence` ({{mission-record}}), and those facts are
-provenance and policy input only: the resource domain validates them
-independently under its current disclosure policy, and that policy
-remains authoritative.
+Mission approval and Mission authority are not the data subject's
+consent: a Mission record can retain a verified consent reference or
+facts as `submission_evidence` ({{mission-record}}), and those facts
+are provenance and policy input only, which the resource domain
+validates independently under its current disclosure policy.
 
 Third-party personal data can enter through any Intent, proposal,
 authority, or recorded-evidence member:
@@ -4976,10 +4969,10 @@ the Mission record for its audit horizon ({{mission-record}}) and
 concentrates at the AS with the record ({{record-access}}), and the
 committed members are confirmable through the unsalted anchors by
 any party holding a candidate value (the retention consideration
-above). Clients SHOULD reference a
-third party through resource-scoped or pseudonymous identifiers
-rather than identifying prose; an opaque identifier is minimization,
-not anonymity, and personal-data obligations follow it.
+above). Referencing a third party through resource-scoped or
+pseudonymous identifiers, rather than identifying prose, minimizes
+this exposure; an opaque identifier is minimization, not anonymity,
+and personal-data obligations follow it.
 
 Retention
 and erasure follow the deployment's policy. Where approval-event
@@ -5152,7 +5145,7 @@ This document seeds the registry with the states it defines:
 
 | Value | Terminal | Semantics | Change Controller | Reference |
 |---|---|---|---|---|
-| `active` | no | Tokens MAY be derived; the only state from which issuance proceeds. | IETF | this document, {{lifecycle}} |
+| `active` | no | The only state from which tokens are derived. | IETF | this document, {{lifecycle}} |
 | `revoked` | yes | Terminated by the Subject, Approver, or policy. | IETF | this document, {{lifecycle}} |
 | `expired` | yes | The Mission's `expires_at` has passed. | IETF | this document, {{lifecycle}} |
 
@@ -5164,31 +5157,32 @@ registry's policy until it is published.
 ## Mission Intent Members Registry {#iana-intent-members}
 
 IANA is requested to create the "Mission Intent Members" registry.
-The registration policy is Specification Required {{RFC8126}}. A
-Designated Expert reviews a submission for: a `Name` not already
-registered by a different owning specification; and a `Semantics`
-sentence naming what the member means and which specification defines
-its schema, production, and enforcement in full. This registry
-resolves ownership of a short top-level name so two independently
-implemented companions cannot assign it incompatible schemas; it does
-not itself define member semantics, and registering a name confers no
-authority and does not make any AS recognize, implement, or trust it
-({{extensibility}}). A companion profile MAY instead use a
-collision-resistant name and skip registration entirely; registration
-is how a *short* name stays available for reuse across the family.
-Registration does not require IETF review or a Standards Track
-document; a Specification Required reference a Designated Expert can
-review against these criteria suffices.
+The registration policy is Specification Required {{RFC8126}}.
+
+A Designated Expert reviews a submission for:
+
+- a `Name` not already registered by a different owning
+  specification; and
+- a `Semantics` sentence naming what the member means and which
+  specification defines its schema, production, and enforcement in
+  full.
+
+The registry resolves ownership of a short top-level name, so that
+two independently implemented specifications cannot assign it
+incompatible schemas. Registration defines no member semantics and
+confers no authority ({{extensibility}}). A companion profile can
+instead use a collision-resistant name without registering it.
 
 Each registration records:
 
 - **Name**: the member's top-level key in the Mission Intent.
 - **Status**: `stable` or `experimental`. An `experimental` entry's
   owning specification has not completed that specification's own
-  promotion criteria for the member; a Designated Expert MUST NOT
-  register a member `stable` on a specification's unverified say-so,
-  and MUST NOT treat registration itself as a promotion event for an
-  experimental member.
+  promotion criteria for the member. A Designated Expert MUST NOT
+  register a member as `stable` without confirming that its owning
+  specification's promotion criteria are met, and MUST NOT treat
+  registration itself as a promotion event for an experimental
+  member.
 - **Semantics**: one sentence stating what the member means and
   pointing to the section that fully defines it.
 - **Change Controller**: IETF, or the registrant for any other
@@ -5207,20 +5201,6 @@ This document seeds the registry with the members it defines itself:
 | `expires_at` | stable | Requested Mission expiry ceiling. | IETF | this document, {{mission-intent}} |
 | `requested_derivation_limit` | stable | Client-requested derivation-count ceiling ({{derivation-issuance-policy}}). | IETF | this document, {{mission-intent}} |
 {: title="Core-defined Mission Intent members"}
-
-It further seeds the registry with the metering companion's members,
-registered on that profile's behalf; the companion's own document
-owns each member's schema, production, and enforcement in full, and
-this table records ownership only:
-
-| Name | Status | Semantics | Change Controller | Reference |
-|---|---|---|---|---|
-| `max_budget` | stable | Consumption ceiling on a currency-denominated spend bound. | IETF | {{I-D.draft-mcguinness-mission-metering}} |
-| `max_calls` | stable | Consumption ceiling on a call-count bound. | IETF | {{I-D.draft-mcguinness-mission-metering}} |
-| `max_duration` | stable | Consumption ceiling on an elapsed-duration bound. | IETF | {{I-D.draft-mcguinness-mission-metering}} |
-| `max_egress_volume` | stable | Consumption ceiling on a data-egress bound. | IETF | {{I-D.draft-mcguinness-mission-metering}} |
-| `exclusive` | experimental | Consented exclusivity groups over Authority Set selectors, latched PDP-side; NOT promoted (2026-08 assessment against the companion's own promotion criteria found every applicable gate unmet). | IETF | {{I-D.draft-mcguinness-mission-metering}} |
-{: title="Metering-owned Mission Intent members"}
 
 Each further document that defines a Mission Intent member requests
 that member's registration in its own IANA considerations, carrying
