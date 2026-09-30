@@ -3,7 +3,8 @@
 A proposed reference deployment of the issuance-only floor (#873): a
 Mission-aware Authorization Server, Resource Servers that need not be
 Mission-aware, and no PEP or PDP. Every behavioral statement below is true of
-the code on this branch and cites the function or the exact test
+the reference implementation at this revision and cites the function or the
+exact test
 (`describe > it`) that shows it. A path with no witnessing test says "no test
 yet".
 
@@ -92,7 +93,8 @@ non-active Mission yields `active: false` with `mission.state`
 ownership, integrity and update procedure are in `src/config/README.md`.
 `loadScopeProjection` (`packages/demo-data`) parses it strictly: duplicate
 members, unknown members, and a missing or non-boolean `mission_aware` refuse
-at load. The AS reads it at every issuance and never fetches it at runtime.
+at load. The AS loads it at startup (or on a reload) and evaluates every
+issuance against the loaded mapping; it never fetches it at runtime.
 `mission_aware` is the delegated-routing classification: `true` only for a
 target that processes the `act` chain and the `mission` claim.
 
@@ -187,8 +189,10 @@ honest workarounds, not protocol requirements.
 ## 5. Deployment Profile instance
 
 This uses the architecture's issuance-only example shape, filled with this
-deployment's values. `authorization_details_enforcing` lists the two
-authorization_details-consuming Resource Servers that exist here.
+deployment's values. `authorization_details_enforcing` lists only payments:
+`mcp-saas` consumes `authorization_details` but, as shipped, accepts tokens
+from the RAS issuer rather than this AS, so it is not part of this deployment
+until it is configured and tested against it.
 `state_sources` describes the plain RS in introspection mode; every other
 Resource Server relies on the token lifetime.
 
@@ -208,9 +212,7 @@ Resource Server relies on the token lifetime.
     "max_access_token_lifetime_seconds": 300
   },
   "resource_servers": {
-    "authorization_details_enforcing": [
-      "http://localhost:4403/mcp", "http://localhost:4406/mcp"
-    ],
+    "authorization_details_enforcing": ["http://localhost:4403/mcp"],
     "scope_projection_only": ["http://localhost:4410/api"],
     "constraint_enforcement_for_scope_only": "refuse_issuance"
   },
@@ -220,7 +222,7 @@ Resource Server relies on the token lifetime.
     "revocation up to 300 seconds at a Resource Server that does not introspect",
     "scope-only constraints not projectable are refused",
     "delegated tokens reach Mission-aware resources only; only the payments audience is classified mission_aware",
-    "mcp-saas as shipped validates tokens from the RAS issuer; running it against this AS is a configuration change with no test",
+    "mcp-saas is excluded: as shipped it validates tokens from the RAS issuer, and running it against this AS is a configuration change with no test",
     "evidence is the AS's issuance records only: the Mission Record, its lifecycle events, and the per-token issuance index",
     "plain-rs logs nothing Mission-linked",
     "a projection refusal on a single-use path (deferred redemption, child jwt-bearer, dispatch, expansion poll) lands after that path's own consumption",
