@@ -3136,9 +3136,8 @@ parameters describe the requested authentication of the
 principal (<a href="#approval-event" class="auto internal xref">Section 6</a>, step 2). Requesting them implies
 nothing about the authentication claims of an issued token: this
 document does not adopt the token-claim carriage of <span>[<a href="#RFC9470" class="cite xref">RFC9470</a>]</span> for
-them (see below), and <a href="#rs-enforcement" class="auto internal xref">Section 11</a> keeps the <span>[<a href="#RFC9470" class="cite xref">RFC9470</a>]</span>
-challenge for the token's own Subject, although a derived access
-token carries no <code>acr</code>, <code>amr</code>, or <code>auth_time</code> (<a href="#mission-bound-tokens" class="auto internal xref">Section 10</a>).<a href="#section-6.2-2" class="pilcrow">¶</a></p>
+them (see below), and it defines no Resource Server step-up for
+derived tokens (<a href="#rs-enforcement" class="auto internal xref">Section 11</a>).<a href="#section-6.2-2" class="pilcrow">¶</a></p>
 <p id="section-6.2-3">The Approver's authentication satisfies <code>acr_values</code> when it matches
 any one listed value under the deployment's own policy mapping (this
 document defines no global ordering of <code>acr</code> values); <code>max_age</code>
@@ -4856,78 +4855,76 @@ an assertion by the AS, authenticated by the token signature. A
 Resource Server that needs more than that assertion adopts the Local
 Approved-Set Verification profile
 (<a href="#local-approved-set-verification" class="auto internal xref">Section 15</a>).<a href="#section-11-9" class="pilcrow">¶</a></p>
-<p id="section-11-10">A Resource Server denial falls into one of four cases, each using the
+<p id="section-11-10">A Resource Server does not challenge a Mission-bound token with
+<code>insufficient_user_authentication</code> (<span><a href="https://rfc-editor.org/rfc/rfc9470#section-3" class="relref">Section 3</a> of [<a href="#RFC9470" class="cite xref">RFC9470</a>]</span>): a
+derived token carries no authentication claims
+(<a href="#mission-bound-tokens" class="auto internal xref">Section 10</a>), so no re-authorization could satisfy the
+challenge. A resource's authentication-strength or freshness
+requirement is applied at issuance, as the approval-authentication
+floor for Missions that carry authority for it
+(<a href="#approval-authentication" class="auto internal xref">Section 6.2</a>); stronger or fresher authentication is
+a new approval event (a new Mission or a successor).<a href="#section-11-10" class="pilcrow">¶</a></p>
+<p id="section-11-11">A Resource Server denial falls into one of three cases, each using the
 OAuth challenge for its own failure class (<a href="#error-mapping" class="auto internal xref">Section 12</a> gives
-the codes):<a href="#section-11-10" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="normal type-1" id="section-11-11">
-<li id="section-11-11.1">
-          <p id="section-11-11.1.1"><strong>Weak or stale token-associated user authentication.</strong> The
-authentication event associated with the presented token does not
-meet the resource's requirement: the Resource Server challenges with
-<code>insufficient_user_authentication</code> and the <code>acr_values</code> or
-<code>max_age</code> parameters (<span><a href="https://rfc-editor.org/rfc/rfc9470#section-3" class="relref">Section 3</a> of [<a href="#RFC9470" class="cite xref">RFC9470</a>]</span>). This is the
-authentication behind the presented token's own Subject, a
-distinct fact from the Approver's approval-time authentication
-(<a href="#approval-authentication" class="auto internal xref">Section 6.2</a>); satisfying one does not satisfy the
-other.<a href="#section-11-11.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li id="section-11-11.2">
-          <p id="section-11-11.2.1"><strong>Sender-constraint or key-binding failure.</strong> The token's proof of
+the codes):<a href="#section-11-11" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-11-12">
+<li id="section-11-12.1">
+          <p id="section-11-12.1.1"><strong>Sender-constraint or key-binding failure.</strong> The token's proof of
 possession is missing or invalid: the Resource Server challenges with
 <code>invalid_token</code>, in the <code>DPoP</code> scheme for a DPoP-bound token
 (<span><a href="https://rfc-editor.org/rfc/rfc9449#section-7.1" class="relref">Section 7.1</a> of [<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>, with <code>use_dpop_nonce</code> per
 <span><a href="https://rfc-editor.org/rfc/rfc9449#section-9" class="relref">Section 9</a> of [<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>) and in the Bearer scheme for a
 certificate-bound token (<span><a href="https://rfc-editor.org/rfc/rfc8705#section-3" class="relref">Section 3</a> of [<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>). This is not a
 step-up: no fresh user authentication repairs a missing or wrong
-key.<a href="#section-11-11.2.1" class="pilcrow">¶</a></p>
+key.<a href="#section-11-12.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li id="section-11-11.3">
-          <p id="section-11-11.3.1"><strong>Insufficient carried authority.</strong> The action is outside the
+        <li id="section-11-12.2">
+          <p id="section-11-12.2.1"><strong>Insufficient carried authority.</strong> The action is outside the
 token's carried authority: the Resource Server challenges with
 <code>insufficient_scope</code> (<span>[<a href="#RFC6750" class="cite xref">RFC6750</a>]</span>), or with the RAR-remediation
 challenge where <span>[<a href="#I-D.draft-ietf-oauth-rar-metadata-remediation" class="cite xref">I-D.draft-ietf-oauth-rar-metadata-remediation</a>]</span>
 is deployed (<a href="#remediation-grains" class="auto internal xref">Section 11.1</a>). More authority requires a
-new approval, or an expansion where that companion is deployed.<a href="#section-11-11.3.1" class="pilcrow">¶</a></p>
+new approval, or an expansion where that companion is deployed.<a href="#section-11-12.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li id="section-11-11.4">
-          <p id="section-11-11.4.1"><strong>Unenforceable constraint.</strong> An applicable entry carries a
+        <li id="section-11-12.3">
+          <p id="section-11-12.3.1"><strong>Unenforceable constraint.</strong> An applicable entry carries a
 type-defined member or constraint the Resource Server cannot enforce,
-and the request fails closed under the same base error as case 3.<a href="#section-11-11.4.1" class="pilcrow">¶</a></p>
+and the request fails closed under the same base error as case 2.<a href="#section-11-12.3.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
-<p id="section-11-12">Cases 3 and 4 are identical <code>403</code> responses to a client, which cannot
+<p id="section-11-13">Cases 2 and 3 are identical <code>403</code> responses to a client, which cannot
 tell from them whether a new approval would help. A Mission-aware
 Resource Server <span class="bcp14">SHOULD</span> therefore indicate which of the two cases
 applies by including, alongside <code>error</code> (<span>[<a href="#RFC6750" class="cite xref">RFC6750</a>]</span>), the
 <code>mission_denial</code> attribute that this document defines for the
-<code>WWW-Authenticate</code> response header field, with one of two values:<a href="#section-11-12" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-11-13">
-        <dt id="section-11-13.1">
+<code>WWW-Authenticate</code> response header field, with one of two values:<a href="#section-11-13" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-11-14">
+        <dt id="section-11-14.1">
 <code>insufficient_authority</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-11-13.2">
-          <p id="section-11-13.2.1">The action is outside the token's carried authority; more requires
-a new approval or an expansion where that companion is deployed.<a href="#section-11-13.2.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-11-14.2">
+          <p id="section-11-14.2.1">The action is outside the token's carried authority; more requires
+a new approval or an expansion where that companion is deployed.<a href="#section-11-14.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-11-13.3">
+<dt id="section-11-14.3">
 <code>constraint_unrecognized</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-11-13.4">
-          <p id="section-11-13.4.1">An applicable entry carries a type-defined member or constraint the
+        <dd style="margin-left: 1.5em" id="section-11-14.4">
+          <p id="section-11-14.4.1">An applicable entry carries a type-defined member or constraint the
 Resource Server cannot enforce, and the request fails closed. A client
 <span class="bcp14">MUST NOT</span> treat this value as inviting retry, step-up, or fresh approval:
 none of those makes a Resource Server enforce a constraint it does not
-implement.<a href="#section-11-13.4.1" class="pilcrow">¶</a></p>
+implement.<a href="#section-11-14.4.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-11-14">A value the client does not recognize is treated as
+<p id="section-11-15">A value the client does not recognize is treated as
 <code>insufficient_authority</code>. A Resource Server <span class="bcp14">SHOULD</span> include the
 attribute only in a response to a validly signed, audience-correct
 token whose holder its deployment accepts learning the distinction
-(<a href="#denial-disclosure" class="auto internal xref">Section 20.3.2</a>).<a href="#section-11-14" class="pilcrow">¶</a></p>
-<p id="section-11-15">Every bound this document defines is enforced by a party this document
+(<a href="#denial-disclosure" class="auto internal xref">Section 20.3.2</a>).<a href="#section-11-15" class="pilcrow">¶</a></p>
+<p id="section-11-16">Every bound this document defines is enforced by a party this document
 names. The following table summarizes which party enforces each bound a
-Mission carries and what holds when that enforcer is absent:<a href="#section-11-15" class="pilcrow">¶</a></p>
+Mission carries and what holds when that enforcer is absent:<a href="#section-11-16" class="pilcrow">¶</a></p>
 <table class="center" id="table-3">
         <caption><a href="#table-3" class="selfRef">Table 3</a></caption>
 <thead>
@@ -5165,14 +5162,6 @@ elsewhere in this document that names one of these codes
             <td class="text-left" rowspan="1" colspan="1">
               <code>invalid_token</code> (<span><a href="https://rfc-editor.org/rfc/rfc6750#section-3.1" class="relref">Section 3.1</a> of [<a href="#RFC6750" class="cite xref">RFC6750</a>]</span>)</td>
             <td class="text-left" rowspan="1" colspan="1">none</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">Protected resource: weak or stale token-associated user authentication</td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>insufficient_user_authentication</code> (<span><a href="https://rfc-editor.org/rfc/rfc9470#section-3" class="relref">Section 3</a> of [<a href="#RFC9470" class="cite xref">RFC9470</a>]</span>)</td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>acr_values</code>/<code>max_age</code>
-</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Protected resource: DPoP proof missing, invalid, or mismatched</td>
@@ -6584,14 +6573,11 @@ keeps gated and ungated authority from sharing one long-lived token.<a href="#se
           <h4 id="name-denial-detail-disclosure">
 <a href="#section-20.3.2" class="section-number selfRef">20.3.2. </a><a href="#name-denial-detail-disclosure" class="section-name selfRef">Denial Detail Disclosure</a>
           </h4>
-<p id="section-20.3.2-1">The <code>mission_denial</code> attribute and the <span>[<a href="#RFC9470" class="cite xref">RFC9470</a>]</span>
-            <code>insufficient_user_authentication</code> challenge (<a href="#rs-enforcement" class="auto internal xref">Section 11</a>) each
-tell a caller which path a denial leads into, and so reveal
-authorization shape: an <code>insufficient_user_authentication</code> challenge
-confirms to the presenting party that the authority exists and only the
-token's own associated authentication is weak or stale, while
-<code>mission_denial: insufficient_authority</code> denies the authority's
-existence outright. Introspection guards the same class of fact behind
+<p id="section-20.3.2-1">The <code>mission_denial</code> attribute (<a href="#rs-enforcement" class="auto internal xref">Section 11</a>) tells a caller
+which path a denial leads into, and so reveals authorization shape:
+<code>constraint_unrecognized</code> confirms to the presenting party that the
+authority exists and only its enforcement is missing, while
+<code>insufficient_authority</code> denies the authority's existence outright. Introspection guards the same class of fact behind
 caller authorization (<a href="#caller-authorization-and-minimization" class="auto internal xref">Section 13.1</a>); a
 Resource Server applies the same care here, including the attribute only
 for a token holder that its deployment accepts learning the distinction
@@ -9092,8 +9078,11 @@ Considerations to <a href="#authority-proposal" class="auto internal xref">Secti
 gained rows for <code>invalid_mission_intent_evidence</code>, <code>invalid_scope</code>,
 the governed-client <code>invalid_request</code>, the missing-claim
 <code>invalid_token</code>, and the delegation refusals. Derived access tokens
-carry no <code>acr</code>, <code>amr</code>, or <code>auth_time</code>, strengthening RFC 9068, and
-per-use introspection freshness is stated as strengthening RFC 7662.
+carry no <code>acr</code>, <code>amr</code>, or <code>auth_time</code>, strengthening RFC 9068, so a
+Resource Server issues no RFC 9470 step-up challenge for them; a
+resource's authentication requirement applies at issuance through the
+approval-authentication floor. Per-use introspection freshness is
+stated as strengthening RFC 7662.
 The metering members left this document's registry seed, since the
 metering profile registers them. Anchors are unchanged, and no
 conformance capability changed.<a href="#appendix-G-3.2.1" class="pilcrow">¶</a></p>
