@@ -28,7 +28,7 @@ import {
   type JWK,
   SignJWT,
 } from "jose";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import { type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
 import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
@@ -644,6 +644,115 @@ describe("requested scope and the token response (@spec mission#scope-projection
     expect(paid.body.scope).toBeUndefined();
     const carried = decodeJwt(paid.body.access_token as string).authorization_details as AuthorityEntry[];
     expect(carried.some((e) => e.delegation !== undefined)).toBe(true);
+  });
+});
+
+describe("the Intent-only completion workaround is never a client proposal (@spec mission#authority-proposal)", () => {
+  /** PAR -> /auth -> interaction uid and cookies, stopping before any decision. */
+  async function open(extra: Record<string, string>) {
+    const challenge = Buffer.from(
+      await crypto.subtle.digest("SHA-256", new TextEncoder().encode(PKCE_VERIFIER)),
+    ).toString("base64url");
+    const par = await fetch(`${ISSUER}/request`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: "ap-agent",
+        response_type: "code",
+        redirect_uri: REDIRECT_URI,
+        resource: PLAIN,
+        code_challenge: challenge,
+        code_challenge_method: "S256",
+        login_hint: "alice",
+        mission_intent: JSON.stringify({
+          intent: { goal: "Publish the quarterly reports", target_resources: [PLAIN], expires_at: "2027-01-01T00:00:00Z" },
+        }),
+        ...extra,
+        client_assertion: await clientAssertion(),
+        client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+      }).toString(),
+    });
+    expect(par.status).toBe(201);
+    const { request_uri } = (await par.json()) as { request_uri: string };
+    const cookies = new Map<string, string>();
+    const cookie = () => [...cookies].map(([k, v]) => `${k}=${v}`).join("; ");
+    const keep = (res: Response) => {
+      for (const line of res.headers.getSetCookie()) {
+        const [pair] = line.split(";");
+        const eq = (pair as string).indexOf("=");
+        cookies.set((pair as string).slice(0, eq), (pair as string).slice(eq + 1));
+      }
+    };
+    const res = await fetch(`${ISSUER}/auth?${new URLSearchParams({ client_id: "ap-agent", request_uri })}`, {
+      redirect: "manual",
+    });
+    keep(res);
+    const uid = (res.headers.get("location") as string).split("/interaction/")[1] as string;
+    const render = async () => {
+      const page = await fetch(`${ISSUER}/interaction/${uid}`, { headers: { cookie: cookie() } });
+      return { status: page.status, html: await page.text() };
+    };
+    const decide = async () => {
+      const r = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
+        method: "POST",
+        redirect: "manual",
+        headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookie() },
+        body: JSON.stringify({ decision: "approve" }),
+      });
+      keep(r);
+      return r;
+    };
+    const finish = async (first: Response) => {
+      let location = first.headers.get("location") as string;
+      while (location?.startsWith(ISSUER)) {
+        const r = await fetch(location, { redirect: "manual", headers: { cookie: cookie() } });
+        keep(r);
+        location = r.headers.get("location") as string;
+      }
+      return new URL(location).searchParams.get("code");
+    };
+    return { render, decide, finish };
+  }
+  const missionOf = async (code: string) => {
+    const res = await redeem(code, await newKeys());
+    expect(res.status, JSON.stringify(res.body)).toBe(200);
+    const id = (decodeJwt(res.body.access_token as string).mission as { id: string }).id;
+    return as.kernel.get(id);
+  };
+
+  it("an Intent-only Mission commits no proposal_hash, and re-rendering or re-deciding the same interaction still reads no proposal", async () => {
+    const approvals = vi.spyOn(as.kernel, "approve");
+    const flow = await open({});
+    const first = await flow.decide();
+    expect(first.status).toBe(303);
+    // The interaction survives until the redirect is followed: re-render and re-decide are reachable.
+    const again = await flow.render();
+    expect(again.status).toBe(200);
+    expect(again.html).not.toContain("Proposed authority (submitted, untrusted)");
+    const second = await flow.decide();
+    expect(second.status).toBe(303);
+    const code = await flow.finish(second);
+    expect(code).toBeTruthy();
+    const record = await missionOf(code as string);
+    expect(record?.proposal_hash).toBeUndefined();
+    expect((record as { proposed_authority?: unknown } | undefined)?.proposed_authority).toBeUndefined();
+    // Neither decision handed approve() (which computes the anchors) a proposal.
+    expect(approvals.mock.calls.length).toBe(2);
+    for (const [input] of approvals.mock.calls) expect(input.proposedAuthority).toBeUndefined();
+    approvals.mockRestore();
+  });
+
+  it("a client-sent marker key is dropped: a pushed proposal is still the client's proposal, and an Intent-only request stays Intent-only", async () => {
+    const withProposal = await open({
+      authorization_details: JSON.stringify([entry([READ])]),
+      __mission_derived_authorization_details: "true",
+    });
+    const record = await missionOf((await withProposal.finish(await withProposal.decide())) as string);
+    expect(record?.proposal_hash).toBeTruthy();
+
+    const intentOnly = await open({ __mission_derived_authorization_details: "true" });
+    const bare = await missionOf((await intentOnly.finish(await intentOnly.decide())) as string);
+    expect(bare?.proposal_hash).toBeUndefined();
   });
 });
 
