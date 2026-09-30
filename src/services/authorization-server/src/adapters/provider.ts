@@ -39,6 +39,26 @@ import {
 } from "@mission/core";
 
 /**
+ * @spec mission#authority-proposal, mission#scope-projection — the reserved
+ * stored-interaction key marking an `authorization_details` value the AS
+ * wrote itself (the Intent-only completion workaround in `decide`). It is not
+ * an oidc-provider parameter, so a client can never send it: the provider's
+ * parameter allow-list drops it from every PAR and authorization request.
+ */
+export const DERIVED_AUTHORIZATION_DETAILS_MARKER = "__mission_derived_authorization_details";
+
+/**
+ * @spec mission#authority-proposal — the client's authority proposal as the
+ * stored interaction carries it: the `authorization_details` string the
+ * client pushed, or undefined when it pushed none. A value the AS injected
+ * for oidc-provider's completion check is never a proposal.
+ */
+export function clientProposalParam(params: Record<string, unknown>): string | undefined {
+  if (params[DERIVED_AUTHORIZATION_DETAILS_MARKER] === true) return undefined;
+  return typeof params.authorization_details === "string" ? params.authorization_details : undefined;
+}
+
+/**
  * @spec mission#error-mapping — a scope-projection refusal as the OAuth error
  * the core's error-mapping table names for it: `invalid_scope` for an
  * explicitly requested value the issuance cannot grant, `invalid_target` for
@@ -2006,9 +2026,10 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // authorization_details parameter; the rendering distinguishes the
       // submitted proposal (untrusted) from the derived Authority Set (what
       // approval grants).
+      const proposalRaw = clientProposalParam(params);
       const proposal =
-        typeof params.authorization_details === "string"
-          ? kernel.validateProposal(params.authorization_details, intent.target_resources)
+        proposalRaw !== undefined
+          ? kernel.validateProposal(proposalRaw, intent.target_resources)
           : undefined;
       // @spec mission#error-mapping — a well-formed Intent this AS's policy
       // (or the client's own proposal) derives no Authority Set from is a
@@ -3462,9 +3483,10 @@ async function decide(
   // exactly this context, so a change to any of task, proposal, or derived set
   // between rendering and decision is a NEW interaction context and recomputes
   // every anchor.
+  const proposalRaw = clientProposalParam(params);
   const proposedAuthority =
-    typeof params.authorization_details === "string"
-      ? opts.kernel.validateProposal(params.authorization_details, intent.target_resources)
+    proposalRaw !== undefined
+      ? opts.kernel.validateProposal(proposalRaw, intent.target_resources)
       : undefined;
   const approver = principal.sub;
   const subject = typeof params.login_hint === "string" ? params.login_hint : approver;
@@ -3632,8 +3654,13 @@ async function decide(
   // `authorization_details`: the authority this request obtains is carried
   // through RAR, never through a synthetic scope. The grant's rar, not this
   // parameter, is what every token carries.
-  if (typeof params.authorization_details !== "string") {
+  // The value is marked (DERIVED_AUTHORIZATION_DETAILS_MARKER) so every
+  // reader of the stored parameters as a client proposal (the approval render
+  // and a repeated decision on this interaction) treats it as absent, and the
+  // anchors never commit a proposal the client did not send.
+  if (typeof params.authorization_details !== "string" || params[DERIVED_AUTHORIZATION_DETAILS_MARKER] === true) {
     params.authorization_details = JSON.stringify(withoutCapabilitySources(effective));
+    params[DERIVED_AUTHORIZATION_DETAILS_MARKER] = true;
     await details.save(Math.max(1, (details.exp ?? 0) - Math.floor(Date.now() / 1000)));
   }
 
