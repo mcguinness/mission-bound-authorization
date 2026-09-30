@@ -4277,7 +4277,10 @@ depends on when the issuer is compromised, and Tier 2's independent
 pinning is what defends against post-approval substitution; that
 analysis is stated once, in {{consent-binding}}.
 
-# Design Context and Extension Boundaries {#design-context}
+# Design Context and Boundaries {#design-context}
+
+This section explains the design choices behind the Mission and
+records what this document leaves to other work.
 
 ## Why a New Object {#why-a-new-object}
 
