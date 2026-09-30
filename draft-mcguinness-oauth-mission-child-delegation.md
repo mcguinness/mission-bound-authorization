@@ -284,7 +284,13 @@ the delegator exits, or that needs its own revocation and audit
 lifecycle, requires a Child Mission; work that cannot MAY run on a
 delegated token. A harness applies the test at spawn, not by agent
 design: the same sub-agent takes a delegated token when invoked
-inline and a Child Mission when parked on a queue.
+inline and a Child Mission when parked on a queue. Audience is a
+second test: a delegated token reaches only a Mission-aware Resource
+Server ({{I-D.draft-mcguinness-oauth-mission}}), so a sub-agent that
+calls a Resource Server that is not Mission-aware runs under a Child
+Mission even when invoked inline, where child creation is authorized
+({{fanout}}) and that Resource Server can enforce the authority
+projected to it; creating the child establishes neither condition.
 
 ## Relationship to In-Mission Delegation {#child-vs-act}
 
@@ -2108,6 +2114,11 @@ apply unchanged.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The delegated-token versus Child Mission test adds audience: a
+  sub-agent that calls a Resource Server that is not Mission-aware
+  runs under a Child Mission, where child creation is authorized and
+  that Resource Server can enforce the projected authority.
 
 - Client-instance references follow their successors:
   draft-mcguinness-oauth-client-instance-assertion is replaced by

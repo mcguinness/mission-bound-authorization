@@ -282,11 +282,11 @@ authority freely, so a Mission that is never consulted at the point
 of use functions as ambient authority for every consequential action
 inside its envelope.
 
-This document is the runtime layer that closes that gap: the
-enforcement half of the model, and the profile that makes a
-Mission-bound credential more than governance metadata. Its substance is
-one contract, stated once here and elaborated by the rest of the
-document.
+This document is the runtime layer that closes that gap for the
+action classes it covers: the enforcement half of the model, a
+per-action decision composed over the bounds the issuance profile
+already enforces at issuance. Its substance is one contract, stated
+once here and elaborated by the rest of the document.
 
 ## Invariants, Not a Wire Protocol {#not-a-wire-protocol}
 
@@ -3084,7 +3084,8 @@ Three properties govern how this profile scales.
 
 **Token lifetime trades against the enforcement layer.** The
 issuance profile recommends short-lived tokens because, in an
-issuance-only deployment, token expiry is the revocation cutoff.
+issuance-only deployment, token expiry is the revocation cutoff
+wherever a Resource Server does not introspect.
 Where this profile's enforcement covers the high-consequence classes
 with an active-freshness state source, the PDP is the cutoff for the
 actions that matter, and a deployment MAY extend token lifetimes for
@@ -3699,6 +3700,11 @@ worked example shows the concrete record
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The Introduction states this profile as the per-action decision for
+  the action classes it covers, composed over the issuance profile's
+  bounds, and Deployment Considerations names introspection as a
+  cutoff on the issuance-only path.
 
 - Client-instance references follow their successors:
   draft-mcguinness-oauth-client-instance-assertion is replaced by

@@ -2156,11 +2156,34 @@ condition:
 | AS changeable; RAR absent or tokens opaque | MAS first; the OAuth binding once the AS gains the token plane (a peer move, not an upgrade) | A MAS beside the AS; tokens are unchanged, while governance requires approval integration and Mission correlation, and enforcement waits on PEP/PDP coverage with a trustworthy join |
 | AS cannot change (shared, third-party, SaaS) | Standalone MAS, phase by phase | Records and approvals first; enforcement arrives with PEP/PDP coverage |
 | Many Authorization Servers, one governance point | MAS as estate control plane; issuance join per consuming AS | Each AS adds grant redemption only ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) |
-| No PEP/PDP over consequential paths | The OAuth binding where the AS allows; runtime layer next | Lifetime-bounded reliance (short tokens, gated refresh); the runtime overlay added later, where the high-consequence classes live |
+| No PEP/PDP over consequential paths | The OAuth binding where the AS allows; the runtime layer where a class needs it | Lifetime-bounded reliance (short tokens, gated refresh); the runtime overlay added later, where the high-consequence classes live |
 
 Every row shares the record, anchors, and lifecycle, so a ramp is an
 entry point, not a fork: Missions carry unchanged from any row to the
 rows a deployment adopts later.
+
+The last row is a deployment in its own right, the **issuance-only
+deployment**: the Authorization Server and the Mission-creating client
+change, and Resource Servers need not be Mission-aware. A delegated
+token reaches only a Mission-aware Resource Server, so a delegate
+calling any other resource runs under a Child Mission where child
+creation is authorized
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). The OAuth
+binding's invariants carry the deployment: every derived token is a
+subset of the Authority Set, no audience receives a grant it would
+over-grant on, and no credential outlives the Mission; the deployment
+sizes token lifetime to its tolerated staleness. Where the Authorization
+Server offers introspection, a Resource Server that introspects per
+request stops honoring a token at its next request once the Mission
+leaves `active`, with no Mission-specific code
+({{I-D.draft-mcguinness-oauth-mission}}). The deployment claims
+approved-record integrity and bounded revocation latency
+({{assurance-claims-axis}}), and {{deployment-profile}} shows its
+Deployment Profile. The runtime layer
+({{I-D.draft-mcguinness-mission-runtime}}) joins for the
+high-consequence classes and for an action class that needs
+per-action evaluation or evidence, approval bound to a single action,
+or a bound the receiving Resource Server cannot enforce.
 
 One ramp cuts across the rows: the **short mission**. A Mission whose
 `expires_at` sits minutes out, run in records mode with
@@ -2628,8 +2651,8 @@ with the binding; the Mission Deployment Profile
 
 | Level | What a deployment can defensibly grant |
 | --- | --- |
-| Baseline Issuance | Consequential reads that are attributable and killable at the issuance gate, outstanding tokens running to their own expiry: the governed pilot |
-| Runtime-Enforced | Consequential writes inside approved bounds; reversal and compensation stay the orchestration profile's, where adopted |
+| Baseline Issuance | Consequential reads and writes outside the high-consequence classes whose bounds the receiving Resource Server enforces, attributable and killable at the issuance gate, outstanding tokens running to their own expiry or the next introspection |
+| Runtime-Enforced | Consequential actions that need a per-action decision: parameter-bound writes and bounds finer than the receiving Resource Server enforces; reversal and compensation stay the orchestration profile's, where adopted |
 | Governed Agent | Unattended operation and delegation, with Consent Evidence binding each approval event |
 | High-Assurance Agent | The high-consequence classes ({{I-D.draft-mcguinness-mission-runtime}}), under mediated custody and action-bound approval |
 
@@ -3104,6 +3127,41 @@ legible in the Deployment Profile; it does not make that statement
 checked. Custody assurance stays open until a normative reader or
 verifier for this declaration exists.
 
+An issuance-only deployment ({{entry-ramps}}) publishes a smaller
+shape: no `runtime`, `credential_custody`, or `harness` member, its
+token lifetime stated as the revocation bound where a Resource Server
+does not introspect, and residuals that name the per-action check it
+does not run:
+
+~~~ json
+{
+  "profile": "mission-issuance-only",
+  "assurance_claims": [
+    "approved-record integrity", "bounded revocation latency"
+  ],
+  "mission_issuer": "https://as.example.com",
+  "state_sources": [
+    { "type": "introspection", "max_staleness_seconds": 0 }
+  ],
+  "issuance": {
+    "binding": "oauth-core",
+    "refresh_gated_on_active_state": true,
+    "max_access_token_lifetime_seconds": 300
+  },
+  "resource_servers": {
+    "authorization_details_enforcing": ["https://erp.example.com"],
+    "scope_projection_only": ["https://mail.example.com"],
+    "constraint_enforcement_for_scope_only": "refuse_issuance"
+  },
+  "residual_risks": [
+    "no per-action check within a token lifetime",
+    "revocation up to 300 seconds where no introspection",
+    "scope-only constraints not projectable are refused",
+    "delegated tokens reach Mission-aware resources only"
+  ]
+}
+~~~
+
 Two deployments that both "support Mission" but publish different
 Deployment Profiles provide different security properties, and the
 profile is what makes that difference legible. A deployment lists
@@ -3509,6 +3567,13 @@ This document makes no IANA request.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The issuance-only deployment is named under Entry Ramps by Estate
+  with its invariants, introspection cutoff, claims, and runtime
+  triggers; the adoption-ladder table grants Baseline Issuance the
+  reads and writes whose bounds the receiving Resource Server
+  enforces; and the Deployment Profile gains an issuance-only example
+  shape.
 
 - Client-instance references follow their successors:
   draft-mcguinness-oauth-client-instance-assertion is replaced by
