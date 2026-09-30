@@ -273,6 +273,10 @@ describe("projectScope (@spec mission#scope-projection)", () => {
       values: ["r.read"],
       versions: { [RS]: "v1", [RS2]: "v7" },
     });
+    // Independent of audience order: each audience narrows the emitted set.
+    expect(
+      projectScope({ mapping: two, audiences: [RS2, RS], entries: [entry(["read", "write"])] }),
+    ).toMatchObject({ outcome: "emit", values: ["r.read"] });
     expect(
       projectScope({ mapping: two, audiences: [RS, OTHER], entries: [entry(["read"])] }),
     ).toMatchObject({
