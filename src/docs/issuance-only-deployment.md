@@ -52,7 +52,10 @@ Where it sits in the drafts:
 
 **One issuer, one trust domain.** The reference AS
 (`services/authorization-server`, `src/server.ts`) listens on `AS_PORT`
-(default 4400) with issuer `AS_ISSUER` (default `http://localhost:4400`). It
+(default 4400) with issuer `AS_ISSUER` (default `http://localhost:4400`). The
+demo stack with the auth server uses the same `http://localhost:{asPort}`
+issuer (`demo/src/stack.ts`); `config/topology.json` `issuers.as`
+(`https://as.demo`) names only the in-process surfaces that run without it. It
 signs every Mission-bound access token as an RFC 9068 `at+jwt` with the
 `as-token` key (`RS256`, `config/topology.json` `keys.asToken`) and publishes
 its keys at `{issuer}/jwks`.
@@ -146,7 +149,9 @@ target that processes the `act` chain and the `mission` claim.
 These are the hooks an AS implementer builds for this deployment, and where the
 reference builds each one. "Transactional" means the hook must commit
 atomically with the state it depends on. "Async" means it may run after the
-commit without weakening a claim.
+commit without weakening a claim. "In-request" hooks run synchronously inside
+the issuing request and must complete before the response; none of them may be
+deferred.
 
 | Hook | Reference implementation | Consistency |
 |---|---|---|
@@ -215,6 +220,7 @@ Resource Server relies on the token lifetime.
     "revocation up to 300 seconds at a Resource Server that does not introspect",
     "scope-only constraints not projectable are refused",
     "delegated tokens reach Mission-aware resources only; only the payments audience is classified mission_aware",
+    "mcp-saas as shipped validates tokens from the RAS issuer; running it against this AS is a configuration change with no test",
     "evidence is the AS's issuance records only: the Mission Record, its lifecycle events, and the per-token issuance index",
     "plain-rs logs nothing Mission-linked",
     "a projection refusal on a single-use path (deferred redemption, child jwt-bearer, dispatch, expansion poll) lands after that path's own consumption",
