@@ -2982,7 +2982,9 @@ it ({{grant-binding}}).
 For example, the agent narrows the canonical ERP Mission (the worked
 example of {{mission-record}}) to a read-only token, presenting the
 Mission's refresh token with the {{RFC8707}} `resource` parameter and
-narrowing further with `scope`:
+narrowing further with `authorization_details` ({{RFC9396}} Section 6).
+The ERP consumes `authorization_details`, so a resource `scope` for it
+would be refused ({{scope-projection}}):
 
 ~~~
 POST /token HTTP/1.1
@@ -2993,11 +2995,31 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 grant_type=refresh_token
 &refresh_token=rt_4mN8qV2xP7sL1tY9zB3k
 &resource=https%3A%2F%2Ferp.example.com
-&scope=invoices.read
+&authorization_details=%5B%7B%22type%22%3A%22mission_resource_acc...
+~~~
+
+The `authorization_details` value, before form encoding, requests the
+Mission's read entry alone:
+
+~~~ json
+[
+  { "type": "mission_resource_access",
+    "resource": "https://erp.example.com",
+    "actions": ["invoices.read"],
+    "constraints": {
+      "resource_issued_after": "2026-07-01T00:00:00Z",
+      "resource_issued_before": "2026-09-30T23:59:59Z"
+    },
+    "delegation": {
+      "max_depth": 2,
+      "allowed_delegates": [{ "sub_profile": "ai_agent" }]
+    } }
+]
 ~~~
 
 The issuance is a derivation, gated on the Mission being `active`
-({{lifecycle}}). The response echoes the narrowed grant and the
+({{lifecycle}}). The response carries no `scope` member because none
+was requested or granted. It echoes the narrowed grant and the
 `mission_id` reference ({{grant-binding}}); the emitted entry is a
 subset ({{subset}}) of the Mission's read entry, its `constraints`
 carried intact:
