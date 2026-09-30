@@ -2164,11 +2164,33 @@ condition:
 | AS changeable; RAR absent or tokens opaque | MAS first; the OAuth binding once the AS gains the token plane (a peer move, not an upgrade) | A MAS beside the AS; tokens are unchanged, while governance requires approval integration and Mission correlation, and enforcement waits on PEP/PDP coverage with a trustworthy join |
 | AS cannot change (shared, third-party, SaaS) | Standalone MAS, phase by phase | Records and approvals first; enforcement arrives with PEP/PDP coverage |
 | Many Authorization Servers, one governance point | MAS as estate control plane; issuance join per consuming AS | Each AS adds grant redemption only ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) |
-| No PEP/PDP over consequential paths | The OAuth binding where the AS allows; runtime layer next | Lifetime-bounded reliance (short tokens, gated refresh); the runtime overlay added later, where the high-consequence classes live |
+| No PEP/PDP over consequential paths | The OAuth binding where the AS allows; the runtime layer where a class needs it | Lifetime-bounded reliance (short tokens, gated refresh); the runtime overlay added later, where the high-consequence classes live |
 
 Every row shares the record, anchors, and lifecycle, so a ramp is an
 entry point, not a fork: Missions carry unchanged from any row to the
 rows a deployment adopts later.
+
+The last row is a deployment in its own right, the **issuance-only
+deployment**: the Authorization Server and the Mission-creating client
+change, and Resource Servers need not be Mission-aware. A delegated
+token reaches only a Mission-aware Resource Server, so a delegate
+calling any other resource runs under a Child Mission
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). The OAuth
+binding's invariants carry the deployment: every derived token is a
+subset of the Authority Set, no audience receives a grant it would
+over-grant on, no credential outlives the Mission, and token lifetime
+does not exceed the tolerated staleness. Where the Authorization
+Server offers introspection, a Resource Server that introspects per
+request stops honoring a token at its next request once the Mission
+leaves `active`, with no Mission-specific code
+({{I-D.draft-mcguinness-oauth-mission}}). The deployment claims
+approved-record integrity and bounded revocation latency
+({{assurance-claims-axis}}), and {{deployment-profile}} shows its
+Deployment Profile. The runtime layer
+({{I-D.draft-mcguinness-mission-runtime}}) joins for an action class
+that needs per-action evaluation or evidence, approval bound to a
+single action, or a bound the receiving Resource Server cannot
+enforce.
 
 One ramp cuts across the rows: the **short mission**. A Mission whose
 `expires_at` sits minutes out, run in records mode with
