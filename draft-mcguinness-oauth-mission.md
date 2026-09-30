@@ -2982,7 +2982,9 @@ it ({{grant-binding}}).
 For example, the agent narrows the canonical ERP Mission (the worked
 example of {{mission-record}}) to a read-only token, presenting the
 Mission's refresh token with the {{RFC8707}} `resource` parameter and
-narrowing further with `scope`:
+narrowing further with `authorization_details` ({{RFC9396}} Section 6).
+The ERP consumes `authorization_details`, so a resource `scope` for it
+would be refused ({{scope-projection}}):
 
 ~~~
 POST /token HTTP/1.1
@@ -2993,11 +2995,31 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 grant_type=refresh_token
 &refresh_token=rt_4mN8qV2xP7sL1tY9zB3k
 &resource=https%3A%2F%2Ferp.example.com
-&scope=invoices.read
+&authorization_details=%5B%7B%22type%22%3A%22mission_resource_acc...
+~~~
+
+The `authorization_details` value, before form encoding, requests the
+Mission's read entry alone:
+
+~~~ json
+[
+  { "type": "mission_resource_access",
+    "resource": "https://erp.example.com",
+    "actions": ["invoices.read"],
+    "constraints": {
+      "resource_issued_after": "2026-07-01T00:00:00Z",
+      "resource_issued_before": "2026-09-30T23:59:59Z"
+    },
+    "delegation": {
+      "max_depth": 2,
+      "allowed_delegates": [{ "sub_profile": "ai_agent" }]
+    } }
+]
 ~~~
 
 The issuance is a derivation, gated on the Mission being `active`
-({{lifecycle}}). The response echoes the narrowed grant and the
+({{lifecycle}}). The response carries no `scope` member because none
+was requested or granted. It echoes the narrowed grant and the
 `mission_id` reference ({{grant-binding}}); the emitted entry is a
 subset ({{subset}}) of the Mission's read entry, its `constraints`
 carried intact:
@@ -3113,10 +3135,45 @@ To emit `scope` for an entry, the AS:
 
 Unknown `scope` semantics, unknown Resource Server enforcement
 behavior, or an ambiguous or stale mapping all fail closed under step
-5 ({{error-mapping}}). This rule applies to every issuance path that
+5 ({{error-mapping}}). A changed mapping is not by itself stale: the AS
+evaluates each issuance, refresh included, against the target's
+current trusted mapping, and a mapping is stale only when the AS
+cannot establish that it is the current trusted mapping for that
+target. This rule applies to every issuance path that
 can emit `scope` on a Mission-bound token: initial issuance, refresh,
 Token Exchange, and
 any other derived-token path.
+
+Scope projection does not change OAuth response semantics and does
+not make access-token inspection a client requirement. {{RFC6749}}
+Section 3.3 requires the token response to carry `scope` whenever the
+granted scope differs from the requested scope, and its grammar
+defines no empty scope, so an issuance cannot report an ungranted
+requested value by omission. The AS MUST refuse, with `invalid_scope`
+({{error-mapping}}), a request that explicitly names a `scope` value
+the issuance cannot grant: a value the target's trusted mapping names
+but no carried entry makes safe (step 3), or any `scope` value the AS
+associates with a target that consumes `authorization_details` (step
+4). An unknown, ambiguous, or stale mapping is a step 5 failure and
+yields `invalid_target` even when the request also names a `scope`
+value; `invalid_scope` applies only under a mapping the AS trusts.
+Where the AS emits a projected `scope`, a requested `scope`
+narrows it to the requested values, and the token response reports
+the values granted ({{RFC6749}} Section 5.1). Scope values with their
+own semantics, such as `openid` ({{OpenID.Core}}), are unaffected and
+combine with `authorization_details` as {{RFC9396}} Section 3.1
+permits. A Mission-creating client does not request a resource `scope`
+for a target that consumes `authorization_details`; for a `scope`-only
+target, a requested `scope` selects among the values the projection
+can grant.
+
+A refusal caused solely by failure to establish a safe scope
+projection MUST NOT invalidate an otherwise-valid refresh token or its
+authorization grant. Independent expiration, revocation, and
+replay-detection rules continue to apply. An AS meets this by
+establishing the projection before it consumes or rotates the refresh
+token, or within the same atomic issuance, not by disabling rotation
+or restoring a consumed token.
 
 This is the type-agnostic form of the rule; a type's own
 specification states when the mapping in step 3 is safe for that
@@ -3650,7 +3707,8 @@ applies this mapping and does not restate it.
 | PAR: malformed Mission envelope or Intent (schema, unknown member, invalid value) | `invalid_request` | safe `error_description` |
 | PAR or authorization: malformed or unsupported actual RAR object (an entry of a submitted `authorization_details` proposal) | `invalid_authorization_details` ({{RFC9396}}) | RAR-defined detail |
 | Authorization or token request: invalid, unknown, or malformed actual RFC 8707 `resource` parameter | `invalid_target` ({{RFC8707}}) | safe `error_description` |
-| Authorization or token request: the target is `scope`-only and no safe projection exists for the applicable entries, or its scope-projection mapping is unknown, ambiguous, or stale ({{scope-projection}}); or, where the AS applies {{rs-enforcement}}'s delegated-token routing rule at issuance, the delegated token's target is not known to be Mission-aware | `invalid_target` ({{RFC8707}}) | safe `error_description` |
+| Authorization or token request: the target's scope-projection mapping is unknown, ambiguous, or stale, whether or not the request names a `scope` value, or the target is `scope`-only and no safe projection exists for the applicable entries when the request names no `scope` value ({{scope-projection}}); or, where the AS applies {{rs-enforcement}}'s delegated-token routing rule at issuance, the delegated token's target is not known to be Mission-aware | `invalid_target` ({{RFC8707}}) | safe `error_description` |
+| Authorization or token request: an explicitly requested `scope` value the issuance cannot grant under a scope-projection mapping the AS trusts ({{scope-projection}}) | `invalid_scope` ({{RFC6749}}) | safe `error_description` |
 | Authorization decision: the Approver declines, approval authentication fails the floor or a requested `acr_values`/`max_age`, or a well-formed request (including configured-mapping mode) is refused by AS policy | `access_denied` ({{RFC6749}}) | none unless a defined extension applies |
 | Token endpoint: the Mission is revoked, expired, superseded, or its `derivation_limit` is exhausted | `invalid_grant` | `mission_error` ({{iana}}) |
 | Token endpoint: the requested RAR subset exceeds the Mission's granted authority | `invalid_authorization_details` ({{RFC9396}}) | safe detail |
@@ -6460,6 +6518,16 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Scope Projection keeps OAuth response semantics: an explicitly
+  requested `scope` value the issuance cannot grant is refused with
+  `invalid_scope`, a requested `scope` narrows a projected one, and a
+  refusal caused solely by a failed projection does not invalidate an
+  otherwise-valid refresh token. A changed mapping is re-evaluated,
+  not stale by itself. A mapping failure yields `invalid_target` even
+  when a `scope` value is requested; the no-resource-`scope` client
+  guidance covers targets that consume `authorization_details`; and
+  the refresh example narrows with `authorization_details`.
 
 - The Error and Challenge Mapping table maps a scope-projection
   refusal, and an issuance-time refusal under the delegated-token
