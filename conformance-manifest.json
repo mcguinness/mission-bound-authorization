@@ -4819,7 +4819,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "Unit-level only: projectScope proves each audience independently (a value is emitted only when safe at every audience, a stale pin on one audience refuses, mixed modes refuse). No issuance path here mints a multi-audience access token (oidc-provider binds one resource server per token), so no endpoint test observes the clause."
+   "notes": "Unit-level only: projectScope proves each audience independently (a value is emitted only when safe at every audience, mixed modes refuse). No issuance path here mints a multi-audience access token (oidc-provider binds one resource server per token), so no endpoint test observes the clause."
   },
   {
    "id": "core.scope-projection.unknown-stale-mapping-fail-closed",
@@ -4851,7 +4851,13 @@
     },
     {
      "file": "src/services/authorization-server/test/scope-projection.test.ts",
-     "name": "scope projection on derived tokens (@spec mission#scope-projection) > refresh re-projects the same scope, and refuses invalid_target when the mapping no longer proves it or its version changed since the grant was issued",
+     "name": "scope projection on derived tokens (@spec mission#scope-projection) > refresh re-projects against the current mapping: a version bump alone still projects, a mapping that no longer proves the value refuses invalid_target, and an audience removed from the mapping fails closed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "ungrantable requested scope (@spec mission#scope-projection, mission#error-mapping) > refuses invalid_scope at the token endpoint when an authorized requested value is no longer safe, and invalid_target when the target's mapping is unknown even though scope was requested",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -4863,7 +4869,19 @@
     },
     {
      "file": "src/packages/mission-core/test/scope-projection.test.ts",
-     "name": "projectScope (@spec mission#scope-projection) > refuses an unknown audience, a stale version, no audience, and a scope-only target with no safe value",
+     "name": "projectScope (@spec mission#scope-projection) > refuses invalid_target for an unknown audience, no mapping, no audience, and a scope-only target with no safe value",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "projectScope (@spec mission#scope-projection) > an unknown mapping refuses invalid_target even when the request names a scope value",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "projectScope (@spec mission#scope-projection) > evaluates the mapping current at each issuance: a changed version still projects",
      "level": "unit",
      "surface": "token-endpoint"
     },
@@ -4872,9 +4890,15 @@
      "name": "config/scope-projection.json loader (@spec mission#scope-projection) > refuses an ambiguous mapping (a duplicated member name) and an unknown member at load",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/shipped-config.test.ts",
+     "name": "config/scope-projection.json loader (@spec mission#scope-projection) > refuses an audience whose mission_aware is missing or not a boolean (@spec mission#rs-enforcement)",
+     "level": "unit",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Unknown audience (hence unknown Resource Server behavior and scope semantics) and a stale mapping version refuse invalid_target at the token endpoint; an ambiguous mapping (duplicated member) or an unknown member refuses at load, so it never reaches issuance."
+   "notes": "Unknown: an audience absent from the mapping (hence unknown Resource Server behavior and scope semantics) refuses invalid_target at the token endpoint, on initial issuance, refresh, and the cross-org exchange, and still does when the request also names a scope value. Ambiguous or stale, read as not establishable as the current trusted mapping: a mapping that fails the strict load (a duplicated member, an unknown member, a missing or non-boolean mission_aware) never reaches issuance, and an audience removed from the current mapping fails closed on refresh. A changed mapping is not by itself stale: a version bump still re-projects on refresh. There is no per-grant version pin."
   },
   {
    "id": "core.scope-projection.derived-token-issuance-paths",
@@ -4900,7 +4924,7 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/scope-projection.test.ts",
-     "name": "scope projection on derived tokens (@spec mission#scope-projection) > refresh re-projects the same scope, and refuses invalid_target when the mapping no longer proves it or its version changed since the grant was issued",
+     "name": "scope projection on derived tokens (@spec mission#scope-projection) > refresh re-projects against the current mapping: a version bump alone still projects, a mapping that no longer proves the value refuses invalid_target, and an audience removed from the mapping fails closed",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -4935,7 +4959,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "Witnessed: initial issuance, refresh (projection repeated, subset and stale refusals), async-delegation Token Exchange and its family refresh, the cross-org Token Exchange, and the deferred and child jwt-bearer mints (their payments tokens carry no scope). The dispatch and expansion-successor mints run the same save-time projection but no test observes them."
+   "notes": "Witnessed: initial issuance, refresh (re-projection against the current mapping, no-safe-value and removed-mapping refusals, narrower requested scope), async-delegation Token Exchange and its family refresh, the cross-org Token Exchange, and the deferred and child jwt-bearer mints (their payments tokens carry no scope). The dispatch and expansion-successor mints run the same save-time projection but no test observes them."
   },
   {
    "id": "core.scope-projection.ungrantable-requested-scope-refused",
@@ -4957,8 +4981,58 @@
     "normative": "a request that explicitly names a scope value the issuance cannot grant (one the target's mapping names but no carried entry makes safe, or any scope value associated with a target that consumes authorization_details) is refused with invalid_scope rather than issued with an omitted or silently reduced scope"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "ungrantable requested scope (@spec mission#scope-projection, mission#error-mapping) > refuses invalid_scope at the token endpoint when an authorized requested value is no longer safe, and invalid_target when the target's mapping is unknown even though scope was requested",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "ungrantable requested scope (@spec mission#scope-projection, mission#error-mapping) > refuses invalid_scope a Token Exchange naming a value no carried entry makes safe, or an OIDC value where no id_token is issued, and grants a safe requested value",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dtr-endpoint.test.ts",
+     "name": "requested scope on the deferred grant (@spec mission#scope-projection) > refuses a scope on the deferral initiation with invalid_request, and a resource scope for the authorization_details target on the redemption with invalid_scope",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "refresh preserved on a projection refusal (@spec mission#scope-projection) > a refresh naming a narrower scope is granted exactly it; a value never granted refuses invalid_scope without consuming the token (#871)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "ungrantable requested scope (@spec mission#scope-projection, mission#error-mapping) > refuses invalid_scope at PAR a resource scope for an authorization_details target, and a value the scope-only target's mapping does not name",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "ungrantable requested scope (@spec mission#scope-projection, mission#error-mapping) > refuses invalid_scope at the authorization decision a mapped value no carried entry makes safe, before any Mission exists",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "projectScope (@spec mission#scope-projection) > a requested scope narrows the projection; an explicit ungrantable value refuses invalid_scope; an inherited one narrows",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "projectScope (@spec mission#scope-projection) > earlyScopeRefusal: a value for an authorization_details audience or one the mapping does not name; an unknown audience is left to issuance",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Both clauses observed: a resource scope for a target that consumes authorization_details (PAR, deferred redemption) and a mapped value no carried entry makes safe (authorization decision, code exchange, Token Exchange). Precedence: an unknown mapping refuses invalid_target even when a scope is named. A refresh naming a value the refresh token was never granted is refused invalid_scope by oidc-provider's own RFC 6749 Section 6 check, before consumption."
   },
   {
    "id": "core.scope-projection.refresh-preserved-on-projection-refusal",
@@ -4980,8 +5054,28 @@
     "normative": "after a refresh refused solely because no safe scope projection could be established, the same refresh token and its grant remain usable once the projection can be established; independent expiration, revocation, and replay-detection rules still apply"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "refresh preserved on a projection refusal (@spec mission#scope-projection) > a refused rotating refresh leaves the same refresh token valid: once the trusted mapping is repaired it succeeds once, and its reuse gets the ordinary replay treatment",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "refresh preserved on a projection refusal (@spec mission#scope-projection) > an unauthenticated or wrong-client refresh of a projection-failing token gets the ordinary client error, never a projection error",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "scope projection on derived tokens (@spec mission#scope-projection) > refresh re-projects against the current mapping: a version bump alone still projects, a mapping that no longer proves the value refuses invalid_target, and an audience removed from the mapping fails closed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "The projection is decided in oidc-provider's rotateRefreshToken hook, after client authentication and the refresh token's own client, expiry, sender-constraint and reuse checks, and before consumption or rotation. Witnessed on a rotating (async-delegation family) refresh token: refused invalid_target and invalid_scope while the mapping cannot prove the value, then the same token succeeds once after the mapping is repaired, and its reuse is replay-detected (grant revoked). Rotation is not disabled and no consumed token is restored."
   },
   {
    "id": "core.introspection.composite-active",
@@ -22092,8 +22186,33 @@
     "normative": "a mapped scope value is projected only when every action it grants is in the applicable entry's actions; a value granting a proper subset is projected, and one granting any additional action is not"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "requested scope and the token response (@spec mission#scope-projection) > a mapped value granting a proper subset of the entry's actions is a safe projection (@spec resource-access#scope-projection)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "scope projection at the token endpoint (@spec mission#scope-projection) > refuses a scope that aggregates an action the entry does not carry",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "mission_resource_access scope-projection conditions (@spec resource-access#scope-projection) > a value is safe for a constraints-free entry that carries every action it grants",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "mission_resource_access scope-projection conditions (@spec resource-access#scope-projection) > action aggregation: a value granting an action the entry does not carry is not safe",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ]
   },
   {
    "id": "resource-access.transformation-capabilities.projection-undeclared-fallback",
