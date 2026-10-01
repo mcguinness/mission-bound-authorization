@@ -114,9 +114,10 @@ derivation under a Mission on its lifecycle state, its Authority Set,
 and its expiry. It does not bound how many derivations the issuer
 performs. This document adds that bound: a derivation limit on the
 number of derivations the issuer AS performs under a Mission. The limit
-is an issuer-side operational control. It bounds issuance operations at
-the token endpoint, not the authority any derived token carries or how
-often a token already issued is used.
+is an issuer-side operational control. It bounds counted issuance
+operations at the token endpoint, not the authority any derived token
+carries or how often a token already issued is used. The refreshes of
+an async delegation family are not counted ({{refresh-and-exchange}}).
 
 The limit uses these extension seams of the OAuth binding and changes
 none of its rules:
@@ -438,12 +439,13 @@ apply. This section covers what the derivation limit adds.
 
 ## Issuance, Not Authority {#sec-not-authority}
 
-The derivation limit bounds how many issuance operations the issuer
-performs. It does not narrow the Authority Set, shorten a token's
-lifetime, or bound the requests a Resource Server honors under a token
-already issued: a derived token remains usable until its `exp`. A
-deployment that needs to bound use, rather than issuance, adopts a
-runtime control such as metering
+The derivation limit bounds how many counted issuance operations the
+issuer performs; the refreshes of an async delegation family are not
+counted ({{sec-async-family}}). It does not narrow the Authority Set,
+shorten a token's lifetime, or bound the requests a Resource Server
+honors under a token already issued: a derived token remains usable
+until its `exp`. A deployment that needs to bound use, rather than
+issuance, adopts a runtime control such as metering
 ({{I-D.draft-mcguinness-mission-metering}}).
 
 ## Async Delegation Families {#sec-async-family}
