@@ -69,6 +69,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-derivation-limits:
+    title: "Mission Derivation Limits for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-derivation-limits.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-substrate:
     title: "Mission Substrate Requirements"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
@@ -680,8 +688,9 @@ a Mission that is not `active`, and the `active` check MUST be
 atomic with issuance. Each RPT issuance and each upgrade counts as
 one derivation under the Mission; where the Mission's effective
 `derivation_limit` is established, the authorization server MUST
-refuse the derivation that would exceed it, per the issuance
-profile's count-and-gate rule ({{I-D.draft-mcguinness-oauth-mission}}).
+refuse the derivation that would exceed it, per the derivation
+limits profile's count-and-gate rule
+({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}).
 An RPT issued under a Mission MUST
 NOT expire later than the Mission's `expires_at`, and the `exp` of
 each permission within it is likewise capped, so no credential

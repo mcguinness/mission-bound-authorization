@@ -273,6 +273,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-derivation-limits:
+    title: "Mission Derivation Limits for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-derivation-limits.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   OWASP-AGENTIC:
     title: "Agentic AI - Threats and Mitigations, Version 1.0"
     target: https://genai.owasp.org/resource/agentic-ai-threats-and-mitigations/
@@ -1116,6 +1124,7 @@ generations):
   child does not inherit from its parent, and issuer adjudication at
   each child generation
   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}},
+  {{I-D.draft-mcguinness-oauth-mission-derivation-limits}},
   {{I-D.draft-mcguinness-oauth-mission-child-delegation}}). Residual:
   the composed bound across all active dimensions, depth times
   domains times child generations, plus the aggregate derivations a

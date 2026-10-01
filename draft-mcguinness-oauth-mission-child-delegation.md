@@ -71,6 +71,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-derivation-limits:
+    title: "Mission Derivation Limits for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-derivation-limits.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 informative:
   RFC8126:
@@ -1158,7 +1166,8 @@ subset of the parent, it MUST refuse child creation with
 ## Derivation Budget Is Not Inherited {#derivation-budget}
 
 A Child Mission's effective `derivation_limit`
-({{I-D.draft-mcguinness-oauth-mission}}) is established from its own
+({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}, Section
+"Effective Limit") is established from its own
 Mission Intent's `requested_derivation_limit`, clamped by the
 deployment's own policy ceiling for the Child Mission, at child
 creation, and is independent of the parent's: the
@@ -1604,7 +1613,9 @@ The Mission Issuer MUST preserve the old child's `derivation_limit` and
 or make the child ineligible.
 
 This is a carryover-specific exception to starting a new child with a fresh
-derivation counter ({{derivation-budget}}): the replacement continues the old
+derivation counter ({{derivation-budget}};
+{{I-D.draft-mcguinness-oauth-mission-derivation-limits}}, Section
+"Counting Derivations"): the replacement continues the old
 child's remaining budget, despite receiving a new record identifier.
 Metering and exclusivity require defined, atomic transfer or shared-state
 binding; changing the key to `replacement_id` is not a transfer. Fan-out is

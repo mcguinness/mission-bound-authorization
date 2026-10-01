@@ -63,6 +63,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-derivation-limits:
+    title: "Mission Derivation Limits for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-derivation-limits.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 informative:
   RFC8725:
@@ -352,7 +360,7 @@ discovery metadata ({{iana}}). The Grant Minter MUST observe:
    subset. The requester MUST NOT obtain a wider one.
 4. **Derivation event.** Each grant minted is a derivation event.
    Where the Mission's established `derivation_limit`
-   ({{I-D.draft-mcguinness-oauth-mission}}) is set, the MAS MUST count
+   ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}) is set, the MAS MUST count
    grants against it atomically and refuse beyond
    it, which gives that ceiling a binding locus under the standalone
    binding.
