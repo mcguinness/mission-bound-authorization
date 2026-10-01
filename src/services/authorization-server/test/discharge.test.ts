@@ -34,6 +34,7 @@
 
 import { type Server } from "node:http";
 import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN } from "@mission/demo-data";
+import { openStore } from "@mission/store";
 import { decodeJwt } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
@@ -47,6 +48,7 @@ import {
   type DischargeAuthorityPolicy,
   DischargeConflictError,
   DischargeNotFoundError,
+  DischargeSelectorStore,
   entryDigest,
   GateError,
   isSubsetEntry,
@@ -653,6 +655,43 @@ describe("discharge propagation by recorded justification, downward only (#898 f
   });
 });
 
+describe("condition selector mapping for a projected entry (#898 fix 1)", () => {
+  it("gives an ambiguous projected condition no selector, and a uniquely held one its record target", () => {
+    const { kernel } = makeKernel();
+    const audit = { event_type: AUDIT_EVENT };
+    const both = ["payments:invoice.read", "payments:journal.write"];
+    // Two DIFFERENT record entries, each a superset of the projected entry
+    // below; both carry the close condition, only the second the audit one.
+    const record = approve(kernel, [
+      { type: "mission_resource_access", resource: RES, actions: both, constraints: { terminal_when: [{ ...CLOSE_CONDITION }] } },
+      {
+        type: "mission_resource_access",
+        resource: RES,
+        actions: both,
+        constraints: { terminal_when: [{ ...CLOSE_CONDITION }, { ...audit }] },
+      },
+    ]);
+    const [, holder] = record.authority_set as [AuthorityEntry, AuthorityEntry];
+    const projected: AuthorityEntry = {
+      type: "mission_resource_access",
+      resource: RES,
+      actions: ["payments:invoice.read"],
+      constraints: { terminal_when: holder.constraints?.terminal_when ?? [] },
+    };
+    const conditions = projected.constraints?.terminal_when ?? [];
+    const auditIndex = conditions.findIndex((c) => c.event_type === AUDIT_EVENT);
+    const selectors = kernel.dischargeSelectorsFor(record, [projected]);
+    // The close condition is held by both entries: ambiguous, no selector. The
+    // audit condition is held by exactly one: that entry is the target.
+    expect(selectors.map((s) => [s.entry, s.condition])).toEqual([[0, auditIndex]]);
+    expect(kernel.dischargeSelectors.resolve((selectors[0] as { selector: string }).selector)).toEqual({
+      mission_id: record.id,
+      entry_digest: entryDigest(ISS, holder),
+      condition_digest: conditionDigest(audit),
+    });
+  });
+});
+
 // ---------------------------------------------------------------------------
 // The lifecycle endpoint, over real HTTP.
 // ---------------------------------------------------------------------------
@@ -728,6 +767,8 @@ const PORT = 14545;
 const ISSUER = `http://localhost:${PORT}`;
 /** A caller holding `mission_lifecycle` and NOTHING else. */
 const LIFECYCLE_ONLY_TOKEN = "dev-lifecycle-only-token";
+/** A caller holding `mission_discharge` that no condition's mapping admits. */
+const UNMAPPED_SOURCE_TOKEN = "dev-unmapped-source-token";
 const ENDPOINT_AUTHORITY: DischargeAuthorityPolicy = {
   policies: {
     [CLOSE_POLICY]: {
@@ -833,6 +874,11 @@ describe("the discharge operation on the lifecycle endpoint", () => {
         [LIFECYCLE_ONLY_TOKEN]: {
           principal_id: "svc:lifecycle-only",
           scopes: [MISSION_LIFECYCLE_SCOPE],
+        },
+        // Holds the discharge grant, but no condition's mapping admits it.
+        [UNMAPPED_SOURCE_TOKEN]: {
+          principal_id: "svc:unmapped-source",
+          scopes: [MISSION_DISCHARGE_SCOPE],
         },
       },
     });
@@ -1295,6 +1341,250 @@ describe("the discharge operation on the lifecycle endpoint", () => {
     });
     expect(divergent.status).toBe(409);
     expect(await divergent.json()).toMatchObject({ error: "conflict" });
+  });
+
+  // -------------------------------------------------------------------------
+  // Condition selectors (#898 fix 1), on the same endpoint.
+  // -------------------------------------------------------------------------
+
+  describe("condition selectors (#898 fix 1)", () => {
+    /** The issuer's selector for the completing entry of `record`. */
+    const selectorOf = (record: MissionRecord, action = "payments:remittance.send"): string => {
+      const s = selectorsFor(record, action);
+      return as.kernel.dischargeSelectors.selectorFor({
+        mission_id: record.id,
+        entry_digest: s.entry_digest,
+        condition_digest: s.condition_digest,
+      });
+    };
+
+    /** A selector-form discharge body for the completing entry of `record`. */
+    const selectorBody = (
+      record: MissionRecord,
+      over: Record<string, unknown> = {},
+    ): Record<string, unknown> => {
+      const { entry_digest: _e, condition_digest: _c, ...rest } = dischargeBody(record);
+      return { ...rest, condition_selector: selectorOf(record), ...over };
+    };
+
+    it("issues one selector per target, resolving to exactly that target, and discharges it", async () => {
+      // Two entries carrying byte-identical conditions, plus a byte-identical
+      // duplicate of the second: three record entries, two targets.
+      const completing = (actions: string[]): AuthorityEntry => ({
+        type: "mission_resource_access",
+        resource: CANONICAL_RESOURCE,
+        actions,
+        constraints: { terminal_when: [{ event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY }] },
+      });
+      const record = approveOnAs([
+        completing(["payments:invoice.read"]),
+        completing(["payments:remittance.send"]),
+        completing(["payments:remittance.send"]),
+      ]);
+      const issued = as.kernel.dischargeSelectorsFor(record, record.authority_set);
+      expect(issued.map((s) => [s.entry, s.condition])).toEqual([
+        [0, 0],
+        [1, 0],
+        [2, 0],
+      ]);
+      const [read, send, duplicate] = issued.map((s) => s.selector);
+      // Identical condition content on DIFFERENT targets: different selectors.
+      expect(read).not.toBe(send);
+      // The byte-identical duplicate is the same target: the same selector.
+      expect(duplicate).toBe(send);
+      // Asking again never mints a second selector for a target.
+      expect(as.kernel.dischargeSelectorsFor(record, record.authority_set).map((s) => s.selector)).toEqual(
+        [read, send, duplicate],
+      );
+      // Each selector resolves to exactly its own target.
+      const sendSel = selectorsFor(record, "payments:remittance.send");
+      expect(as.kernel.dischargeSelectors.resolve(send as string)).toEqual({
+        mission_id: record.id,
+        entry_digest: sendSel.entry_digest,
+        condition_digest: sendSel.condition_digest,
+      });
+      expect(as.kernel.dischargeSelectors.resolve(read as string)?.entry_digest).toBe(
+        entryDigest(record.issuer, record.authority_set[0] as AuthorityEntry),
+      );
+      // Discharging by the send selector latches the send target (and its
+      // byte-identical duplicate, one equivalence class), never the read entry.
+      const res = await lifecycle(record.id, selectorBody(record, { condition_selector: send }));
+      expect(res.status).toBe(200);
+      expect(await dischargeResultOf(res)).toMatchObject({ outcome: "discharged", current_version: 2 });
+      const after = as.kernel.get(record.id) as MissionRecord;
+      expect(after.discharged?.map((d) => d.entry_digest)).toEqual([sendSel.entry_digest]);
+      expect(as.kernel.effectiveAuthoritySet(after).map((e) => e.actions)).toEqual([
+        ["payments:invoice.read"],
+      ]);
+    });
+
+    it("never derives a selector from the entry's content", () => {
+      // Two Missions with byte-identical entries share entry and condition
+      // digests; only the issuer-held random selector differs.
+      const one = approveOnAs();
+      const two = approveOnAs();
+      const s1 = selectorsFor(one, "payments:remittance.send");
+      const s2 = selectorsFor(two, "payments:remittance.send");
+      expect(s1.entry_digest).toBe(s2.entry_digest);
+      expect(s1.condition_digest).toBe(s2.condition_digest);
+      const sel1 = selectorOf(one);
+      const sel2 = selectorOf(two);
+      expect(sel1).not.toBe(sel2);
+      for (const sel of [sel1, sel2]) {
+        expect(sel).toMatch(/^dcs_[A-Za-z0-9_-]{24}$/);
+        // Nothing of either digest appears in it.
+        expect(sel).not.toContain(s1.entry_digest.slice("sha-256:".length, 16));
+        expect(sel).not.toContain(s1.condition_digest.slice("sha-256:".length, 16));
+      }
+      // A fresh issuer store minting for the SAME target yields a different
+      // value: the selector is not a function of the target at all.
+      const fresh = new DischargeSelectorStore(openStore(""));
+      expect(
+        fresh.selectorFor({ mission_id: one.id, entry_digest: s1.entry_digest, condition_digest: s1.condition_digest }),
+      ).not.toBe(sel1);
+    });
+
+    it("keeps a selector resolvable after its target discharged, through a fresh-nonce event replay", async () => {
+      const record = approveOnAs();
+      const selector = selectorOf(record);
+      // The target discharges by the DIGEST form.
+      const original = dischargeBody(record);
+      expect(await dischargeResultOf(await lifecycle(record.id, original))).toMatchObject({
+        outcome: "discharged",
+      });
+      // The selector still resolves to the same target...
+      expect(as.kernel.dischargeSelectors.resolve(selector)).toMatchObject({ mission_id: record.id });
+      // ...so an at-least-once sender retrying the same occurrence by selector,
+      // under a fresh nonce, recovers the stored result rather than not_found.
+      const { entry_digest: _e, condition_digest: _c, ...rest } = original;
+      const retry = await lifecycle(record.id, { ...rest, nonce: freshNonce(), condition_selector: selector });
+      expect(retry.status).toBe(200);
+      expect(await dischargeResultOf(retry)).toMatchObject({ outcome: "discharged", prior_version: 1, current_version: 2 });
+    });
+
+    it("refuses a request carrying both target forms, or neither, as invalid_request", async () => {
+      const record = approveOnAs();
+      const both = await lifecycle(record.id, { ...dischargeBody(record), condition_selector: selectorOf(record) });
+      expect(both.status).toBe(400);
+      expect(await both.json()).toMatchObject({ error: "invalid_request" });
+      const { entry_digest: _e, condition_digest: _c, ...neitherBody } = dischargeBody(record);
+      const neither = await lifecycle(record.id, neitherBody);
+      expect(neither.status).toBe(400);
+      expect(await neither.json()).toMatchObject({ error: "invalid_request" });
+      // A selector beside only HALF the digest pair still carries both forms.
+      const half = await lifecycle(record.id, {
+        ...neitherBody,
+        nonce: freshNonce(),
+        condition_selector: selectorOf(record),
+        entry_digest: selectorsFor(record, "payments:remittance.send").entry_digest,
+      });
+      expect(half.status).toBe(400);
+      // A malformed selector is a request-shape failure too.
+      const malformed = await lifecycle(record.id, selectorBody(record, { condition_selector: "bad selector!" }));
+      expect(malformed.status).toBe(400);
+      expect(as.kernel.get(record.id)?.discharged).toBeUndefined();
+    });
+
+    it("collapses an unresolvable selector, and one resolving outside the mission_id, into the identical not_found", async () => {
+      const record = approveOnAs();
+      const other = approveOnAs();
+      const responses: Array<Record<string, unknown>> = [];
+      // A well-formed selector that resolves to nothing.
+      const unknown = await lifecycle(record.id, selectorBody(record, { condition_selector: "dcs_unknownSelector000000" }));
+      expect(unknown.status).toBe(404);
+      responses.push((await unknown.json()) as Record<string, unknown>);
+      // A real selector of ANOTHER Mission, presented against this one.
+      const elsewhere = await lifecycle(record.id, selectorBody(record, { condition_selector: selectorOf(other) }));
+      expect(elsewhere.status).toBe(404);
+      responses.push((await elsewhere.json()) as Record<string, unknown>);
+      // A RESOLVING selector presented by a caller its target's mapping does
+      // not admit: knowing a selector authorizes nothing.
+      const unauthorized = await lifecycle(record.id, selectorBody(record), UNMAPPED_SOURCE_TOKEN);
+      expect(unauthorized.status).toBe(404);
+      responses.push((await unauthorized.json()) as Record<string, unknown>);
+      // A digest-form unknown entry, for comparison.
+      const digest = await lifecycle(record.id, dischargeBody(record, { entry_digest: `sha-256:${"D".repeat(43)}` }));
+      expect(digest.status).toBe(404);
+      responses.push((await digest.json()) as Record<string, unknown>);
+      for (const body of responses) {
+        const { nonce, ...rest } = body;
+        expect(nonce).toBeTypeOf("string");
+        expect(rest).toEqual({
+          error: "not_found",
+          error_description: "Mission reference is not found or not visible.",
+        });
+      }
+      expect(as.kernel.get(record.id)?.discharged).toBeUndefined();
+      expect(as.kernel.get(other.id)?.discharged).toBeUndefined();
+    });
+
+    it("shares one deduplication identity between the digest form and the selector form", async () => {
+      const record = approveOnAs();
+      const selector = selectorOf(record);
+      // Selector form FIRST this time.
+      const bySelector = selectorBody(record, { event_id: "close-shared-identity" });
+      expect(await dischargeResultOf(await lifecycle(record.id, bySelector))).toMatchObject({
+        outcome: "discharged",
+        prior_version: 1,
+        current_version: 2,
+      });
+      // The same occurrence in the DIGEST form is a replay, not a new assertion
+      // (no already_discharged) and not a conflict.
+      const byDigest = dischargeBody(record, { event_id: "close-shared-identity" });
+      const replay = await lifecycle(record.id, byDigest);
+      expect(replay.status).toBe(200);
+      expect(await dischargeResultOf(replay)).toMatchObject({
+        outcome: "discharged",
+        prior_version: 1,
+        current_version: 2,
+      });
+      expect(as.kernel.get(record.id)?.version).toBe(2);
+      // And it is the SAME tuple: a divergent assertion in the other form conflicts.
+      const divergent = await lifecycle(record.id, {
+        ...byDigest,
+        nonce: freshNonce(),
+        evidence_ref: "https://close.example/divergent",
+      });
+      expect(divergent.status).toBe(409);
+      expect(selector).toMatch(/^dcs_/);
+    });
+
+    it("never adds a digest to the result of a selector-form request", async () => {
+      const record = approveOnAs();
+      const body = selectorBody(record);
+      const res = await lifecycle(record.id, body);
+      expect(res.status).toBe(200);
+      expect(await dischargeResultOf(res)).toEqual({
+        condition_selector: body.condition_selector,
+        event_id: body.event_id,
+        outcome: "discharged",
+        prior_version: 1,
+        current_version: 2,
+      });
+    });
+
+    it("echoes the current request's form on a fresh-nonce replay of a digest-form original", async () => {
+      const record = approveOnAs();
+      const original = dischargeBody(record, { event_id: "close-cross-form" });
+      expect(await dischargeResultOf(await lifecycle(record.id, original))).toMatchObject({
+        entry_digest: original.entry_digest,
+        outcome: "discharged",
+      });
+      const { entry_digest: _e, condition_digest: _c, ...rest } = original;
+      const retryNonce = freshNonce();
+      const retry = await lifecycle(record.id, { ...rest, nonce: retryNonce, condition_selector: selectorOf(record) });
+      expect(retry.status).toBe(200);
+      const payload = decodeJwt(await retry.text()) as Record<string, unknown>;
+      expect(payload.nonce).toBe(retryNonce);
+      // The stored outcome and versions, with the SELECTOR echoed and no digest.
+      expect(payload.discharge_result).toEqual({
+        condition_selector: selectorOf(record),
+        event_id: "close-cross-form",
+        outcome: "discharged",
+        prior_version: 1,
+        current_version: 2,
+      });
+    });
   });
 });
 

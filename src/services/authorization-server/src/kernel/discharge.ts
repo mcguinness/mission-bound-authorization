@@ -129,53 +129,71 @@ export function dischargeAssertionFingerprint(a: DischargeAssertion): string {
 }
 
 /**
+ * @spec discharge#discharge-operation, discharge#condition-selectors — the two
+ * target forms a `discharge` request names its target in, EXACTLY ONE of them:
+ * a condition selector the Mission Issuer resolves to its target, or the digest
+ * pair a caller holding the record entry computes itself.
+ */
+export type DischargeTargetForm =
+  | { condition_selector: string; entry_digest?: never; condition_digest?: never }
+  | { entry_digest: string; condition_digest: string; condition_selector?: never };
+
+/**
  * @spec discharge#discharge-operation — one `discharge` delivery as the kernel
  * funnel takes it: the AUTHENTICATED discharge authority plus the request's own
- * selectors and audit metadata. The Mission Identifier is the funnel's own
+ * target form and audit metadata. The Mission Identifier is the funnel's own
  * argument. `evidence_ref` / `evidence_digest` are bounded audit metadata: the
  * AS never dereferences the reference and neither member is authorization
  * input. `observed_at` is a caller assertion, validated for syntax and
  * reasonable clock bounds only.
  */
-export interface DischargeRequest {
+export type DischargeRequest = DischargeTargetForm & {
   /** The authenticated discharge authority the mapping is checked against. */
   authority: string;
-  entry_digest: string;
-  condition_digest: string;
   event_type: string;
   event_id: string;
   evidence_ref?: string;
   evidence_digest?: string;
   observed_at?: string;
-}
+};
 
 /** @spec discharge#discharge-result — the three outcomes, and only these three. */
 export type DischargeOutcome = "discharged" | "already_discharged" | "terminal_noop";
 
 /**
  * @spec discharge#discharge-result — the `discharge_result` object the signed
- * Mission Status Response carries as a sibling of `mission`. `prior_version` /
+ * Mission Status Response carries as a sibling of `mission`. The target form
+ * and `event_id` are echoed AS THE CURRENT REQUEST SENT THEM: a selector-form
+ * request's result never carries a digest it did not send. `prior_version` /
  * `current_version` are the versions of the commit THIS result reports: this
  * request's own commit, or, for the replayed event case, the versions the
  * ORIGINAL commit produced. Equal for `already_discharged` and `terminal_noop`.
  */
-export interface DischargeResult {
-  entry_digest: string;
-  condition_digest: string;
+export type DischargeResult = DischargeTargetForm & {
   event_id: string;
   outcome: DischargeOutcome;
   prior_version: number;
   current_version: number;
+};
+
+/** The request's own target form, exactly as sent, for the result echo. */
+export function targetFormOf(input: DischargeTargetForm): DischargeTargetForm {
+  return input.condition_selector !== undefined
+    ? { condition_selector: input.condition_selector }
+    : { entry_digest: input.entry_digest, condition_digest: input.condition_digest };
 }
 
 /**
- * @spec discharge#discharge-anti-oracle — the six refusal classes that COLLAPSE to
+ * @spec discharge#discharge-anti-oracle — the refusal classes that COLLAPSE to
  * the endpoint's `not_found`. The reason is carried here for the issuer's own
- * audit record only; it MUST NOT reach the wire, where all six are one
+ * audit record only; it MUST NOT reach the wire, where all of them are one
  * indistinguishable response.
  */
 export type DischargeRefusalReason =
   | "unknown_mission"
+  // @spec discharge#discharge-anti-oracle — a condition_selector that resolves to
+  // no target, or to a target outside the request's mission_id.
+  | "unknown_selector"
   | "unknown_entry"
   | "no_terminal_when"
   | "unknown_condition"

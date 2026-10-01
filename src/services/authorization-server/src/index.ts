@@ -164,13 +164,21 @@ export {
   type DischargeRefusalReason,
   type DischargeRequest,
   type DischargeResult,
+  type DischargeTargetForm,
   entryDigest,
   EVIDENCE_REF_MAX_CHARS,
   mappingPermits,
   resolveConditionMapping,
+  targetFormOf,
   terminalWhenOf,
   unionConditions,
 } from "./kernel/discharge.js";
+export {
+  CONDITION_SELECTOR_PREFIX,
+  CONDITION_SELECTOR_RE,
+  type DischargeTargetTriple,
+  DischargeSelectorStore,
+} from "./kernel/discharge-selector-store.js";
 export {
   DEFAULT_DISCHARGE_EVENT_TTL_S,
   DEFAULT_LIFECYCLE_NONCE_TTL_S,

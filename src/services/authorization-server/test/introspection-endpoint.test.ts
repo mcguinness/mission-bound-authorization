@@ -41,15 +41,22 @@
 import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 
 import type { Server } from "node:http";
-import { DERIVATION_POLICY, TOPOLOGY } from "@mission/demo-data";
-import { exportJWK, generateKeyPair, importJWK, SignJWT, type CryptoKey, type JWK } from "jose";
+import { DERIVATION_POLICY, DEV_SERVICE_TOKEN, TOPOLOGY } from "@mission/demo-data";
+import { decodeJwt, exportJWK, generateKeyPair, importJWK, SignJWT, type CryptoKey, type JWK } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   ACCESS_TOKEN_TOKEN_TYPE,
   TOKEN_EXCHANGE_GRANT_TYPE,
 } from "../src/adapters/continuation-grant.js";
 import { resourcesForAudiences } from "../src/adapters/provider.js";
-import { buildAuthorizationServer, type AuthorityEntry, type BuiltAs } from "../src/index.js";
+import {
+  buildAuthorizationServer,
+  type AuthorityEntry,
+  type BuiltAs,
+  conditionDigest,
+  entryDigest,
+  type MissionRecord,
+} from "../src/index.js";
 
 const PORT = 14540;
 const ISSUER = `http://localhost:${PORT}`;
@@ -273,6 +280,7 @@ let flow2: FlowResult; // multi-audience: payments + saas
 let flow3: FlowResult; // saas-only (rs-saas positive rows)
 let flow4: FlowResult; // payments; refresh-token rows
 let flow5: FlowResult; // payments; DEDICATED to P1-1/P1-2 (never mutated by other describes)
+let flow6: FlowResult; // payments + saas, every entry completing on the close (discharge_selectors)
 
 const PAYMENTS_PROPOSAL: AuthorityEntry[] = [
   {
@@ -286,6 +294,18 @@ const SAAS_PROPOSAL: AuthorityEntry[] = [
   { type: "mission_resource_access", resource: SAAS, actions: ["ledger:vendor.read"] },
 ];
 
+// @spec discharge#condition-selectors — one completing condition on every entry.
+const CLOSE_EVENT = "accounting-period-closed";
+const CLOSE_AUTHORITY = "close-management-2026-q3";
+const CLOSE_CONDITION = { event_type: CLOSE_EVENT, discharge_authority: CLOSE_AUTHORITY };
+const COMPLETING_PROPOSAL: AuthorityEntry[] = [
+  ...PAYMENTS_PROPOSAL.map((e) => ({
+    ...e,
+    constraints: { ...e.constraints, terminal_when: [{ ...CLOSE_CONDITION }] },
+  })),
+  ...SAAS_PROPOSAL.map((e) => ({ ...e, constraints: { terminal_when: [{ ...CLOSE_CONDITION }] } })),
+];
+
 beforeAll(async () => {
   // @spec mission#introspection (issue #541 P1-4) — generate the AT signing
   // key HERE and inject it, so the test (not BuiltAs) holds the private half.
@@ -293,7 +313,25 @@ beforeAll(async () => {
   testSigningKey = testSigningKeys.privateKey;
   const testTokenSigningJwk = (await exportJWK(testSigningKeys.privateKey)) as JWK;
 
-  as = await buildAuthorizationServer({ issuer: ISSUER, allowHeadlessAdjudication: true, serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS, testTokenSigningJwk });
+  as = await buildAuthorizationServer({
+    issuer: ISSUER,
+    allowHeadlessAdjudication: true,
+    serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
+    testTokenSigningJwk,
+    // @spec discharge#discharge-authority — admits the completing condition
+    // flow6 carries (the shipped dev service principal asserts it), so the
+    // discharge_selectors rows below can drive the lifecycle endpoint too.
+    dischargeAuthority: {
+      policies: {
+        [CLOSE_AUTHORITY]: {
+          mapping_id: "close-management",
+          mapping_version: "1",
+          event_types: [CLOSE_EVENT],
+          principals: ["svc:console"],
+        },
+      },
+    },
+  });
   asServer = as.provider.listen(PORT);
   agentKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
   flow1 = await runFlow({
@@ -331,6 +369,15 @@ beforeAll(async () => {
       expires_at: "2027-01-01T00:00:00Z",
     },
     proposal: PAYMENTS_PROPOSAL,
+    resource: PAYMENTS,
+  });
+  flow6 = await runFlow({
+    intent: {
+      goal: "Pay Acme invoices and reconcile the ledger until the Q3 close",
+      target_resources: [PAYMENTS, SAAS],
+      expires_at: "2027-01-01T00:00:00Z",
+    },
+    proposal: COMPLETING_PROPOSAL,
     resource: PAYMENTS,
   });
   flow5 = await runFlow({
@@ -862,5 +909,126 @@ describe("Mission-bound refresh tokens (@spec mission#introspection)", () => {
     const res = await introspect(flow4.at, { principal: RS_PAYMENTS });
     expect(Object.keys(res.body).sort()).toEqual(["active", "mission"]);
     expect((res.body.mission as { state: string }).state).toBe("revoked");
+  });
+});
+
+describe("discharge_selectors in the introspection projection (@spec discharge#condition-selectors, #898 fix 1)", () => {
+  type Disclosed = { entry: number; condition: number; selector: string };
+  const selectorsOf = (body: Record<string, unknown>): Disclosed[] =>
+    ((body.mission as Record<string, unknown>).discharge_selectors as Disclosed[] | undefined) ?? [];
+
+  it("discloses a selector beside each returned completing entry, and a source discharges with it holding only the projection", async () => {
+    const res = await introspect(flow6.at, { principal: RS_PAYMENTS });
+    expect(res.body.active).toBe(true);
+    const details = res.body.authorization_details as AuthorityEntry[];
+    const selectors = selectorsOf(res.body);
+    // One selector per returned completing condition, and every index points
+    // into THIS response's authorization_details and that entry's terminal_when.
+    const expected = details.flatMap((d, i) =>
+      (d.constraints?.terminal_when ?? []).map((_, j) => [i, j]),
+    );
+    expect(expected.length).toBeGreaterThan(1);
+    expect(selectors.map((s) => [s.entry, s.condition])).toEqual(expected);
+    for (const s of selectors) {
+      expect(details[s.entry]?.constraints?.terminal_when?.[s.condition]).toEqual(CLOSE_CONDITION);
+      expect(s.selector).toMatch(/^[A-Za-z0-9_-]{1,128}$/);
+    }
+    // Identical condition content on different entries: different targets.
+    expect(new Set(selectors.map((s) => s.selector)).size).toBe(selectors.length);
+    // The caller's audience is payments: no selector names a ledger entry the
+    // response did not return, though the record carries one.
+    const record = as.kernel.get(flow6.missionId) as MissionRecord;
+    expect(record.authority_set.some((e) => e.resource === SAAS)).toBe(true);
+    const paymentsDigests = new Set(
+      record.authority_set.filter((e) => e.resource === PAYMENTS).map((e) => entryDigest(ISSUER, e)),
+    );
+    for (const s of selectors) {
+      expect(paymentsDigests.has(as.kernel.dischargeSelectors.resolve(s.selector)?.entry_digest as string)).toBe(
+        true,
+      );
+    }
+
+    // The source names the target by the selector alone: no record entry, no
+    // canonicalization, no digest.
+    // (The money entry: the read entry stays live for the narrowed-credential row.)
+    const target = selectors.find((s) =>
+      details[s.entry]?.actions.includes("payments:remittance.send"),
+    ) as Disclosed;
+    expect(target).toBeDefined();
+    const discharged = await fetch(`${ISSUER}/missions/${flow6.missionId}/lifecycle`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
+      body: JSON.stringify({
+        operation: "discharge",
+        mission_id: flow6.missionId,
+        nonce: "nonce-introspection-selector-1",
+        condition_selector: target.selector,
+        event_type: CLOSE_EVENT,
+        event_id: "close-q3-introspected",
+      }),
+    });
+    expect(discharged.status).toBe(200);
+    const result = (decodeJwt(await discharged.text()) as Record<string, unknown>).discharge_result;
+    expect(result).toEqual({
+      condition_selector: target.selector,
+      event_id: "close-q3-introspected",
+      outcome: "discharged",
+      prior_version: 1,
+      current_version: 2,
+    });
+    // The discharged entry leaves the projection, and so does its selector.
+    const after = await introspect(flow6.at, { principal: RS_PAYMENTS });
+    const afterDetails = after.body.authorization_details as AuthorityEntry[];
+    expect(afterDetails).toHaveLength(details.length - 1);
+    expect(selectorsOf(after.body).map((s) => s.selector)).not.toContain(target.selector);
+    expect(selectorsOf(after.body)).toHaveLength(selectors.length - 1);
+  });
+
+  it("maps a narrowed projection to its record target and gives a projection-added condition no selector", async () => {
+    // A credential narrower than the record entry (one action) that also
+    // carries a condition the record entry does not.
+    const added = { event_type: "audit-window-closed" };
+    const record = as.kernel.get(flow6.missionId) as MissionRecord;
+    const readEntry = record.authority_set.find(
+      (e) => e.resource === PAYMENTS && e.actions.includes("payments:invoice.read"),
+    ) as AuthorityEntry;
+    const crafted = await craftToken({
+      jti: flow6.jti,
+      mission: { id: flow6.missionId, issuer: ISSUER },
+      authorization_details: [
+        {
+          type: "mission_resource_access",
+          resource: PAYMENTS,
+          actions: ["payments:invoice.read"],
+          constraints: { ...readEntry.constraints, terminal_when: [{ ...CLOSE_CONDITION }, added] },
+        },
+      ],
+    });
+    const res = await introspect(crafted, { principal: RS_PAYMENTS });
+    expect(res.body.active).toBe(true);
+    const details = res.body.authorization_details as AuthorityEntry[];
+    expect(details).toHaveLength(1);
+    const conditions = details[0]?.constraints?.terminal_when ?? [];
+    expect(conditions).toHaveLength(2);
+    const closeIndex = conditions.findIndex((c) => c.event_type === CLOSE_EVENT);
+    // Only the condition with a counterpart in the record entry has a target.
+    const selectors = selectorsOf(res.body);
+    expect(selectors.map((s) => [s.entry, s.condition])).toEqual([[0, closeIndex]]);
+    // The narrowed entry resolves to the RECORD entry it is a subset of, under
+    // the same selector the full record entry has.
+    expect(as.kernel.dischargeSelectors.resolve((selectors[0] as Disclosed).selector)).toEqual({
+      mission_id: flow6.missionId,
+      entry_digest: entryDigest(ISSUER, readEntry),
+      condition_digest: conditionDigest(CLOSE_CONDITION),
+    });
+  });
+
+  it("reports discharge_selectors only as the Mission issuer", () => {
+    const record = as.kernel.get(flow6.missionId) as MissionRecord;
+    expect(as.kernel.dischargeSelectorsFor(record, record.authority_set).length).toBeGreaterThan(0);
+    // The same record held under any other issuer yields none.
+    expect(
+      as.kernel.dischargeSelectorsFor({ ...record, issuer: "https://other-as.example" }, record.authority_set),
+    ).toEqual([]);
   });
 });

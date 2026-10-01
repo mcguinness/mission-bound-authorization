@@ -218,8 +218,10 @@ import {
   DISCHARGE_EVENT_ID_RE,
   DischargeConflictError,
   DischargeNotFoundError,
+  type DischargeTargetForm,
   EVIDENCE_REF_MAX_CHARS,
 } from "../kernel/discharge.js";
+import { CONDITION_SELECTOR_RE } from "../kernel/discharge-selector-store.js";
 import {
   LIFECYCLE_ENDPOINT_KEY,
   type LifecycleNonceKey,
@@ -2104,6 +2106,25 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
   const requireServiceToken = (ctx: KoaCtx): boolean => authenticateService(ctx) !== undefined;
 
   /**
+   * @spec discharge#condition-selectors — add `discharge_selectors` to an ACTIVE
+   * introspection `mission` projection, for exactly the `authorization_details`
+   * this response returns to this caller, and only where this deployment
+   * exposes the `discharge` operation. Absent when there is nothing to
+   * disclose, so a projection without a completing entry is unchanged. The
+   * issuer-only rule and the record-target mapping live in the kernel
+   * ({@link MissionKernel.dischargeSelectorsFor}).
+   */
+  const withDischargeSelectors = (
+    record: MissionRecord,
+    mission: Record<string, unknown>,
+    returned: readonly AuthorityEntry[],
+  ): Record<string, unknown> => {
+    if (!enabled("discharge")) return mission;
+    const selectors = kernel.dischargeSelectorsFor(record, returned);
+    return selectors.length > 0 ? { ...mission, discharge_selectors: selectors } : mission;
+  };
+
+  /**
    * @spec discharge#discharge-idempotency — the lifecycle endpoint's `nonce`
    * replay store, constructed once per provider on the kernel's own database.
    */
@@ -2832,6 +2853,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         const narrowed = projectThroughEffective(credentialAuthority, effective);
         const resourceSet = resourcesForAudiences(visibleAudiences, principal.audience_resources);
         const authorization_details = narrowed.filter((e) => resourceSet.has(e.resource));
+        const disclosedMission = withDischargeSelectors(record, mission, authorization_details);
         ctx.body = {
           active: true,
           iss: opts.issuer,
@@ -2842,7 +2864,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           ...(rt.jti ? { jti: rt.jti } : {}),
           ...(rt.jkt ? { cnf: { jkt: rt.jkt } } : {}),
           authorization_details,
-          mission,
+          mission: disclosedMission,
         };
         return;
       }
@@ -3003,6 +3025,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         const narrowed = projectThroughEffective(credentialAuthority, effective);
         const resourceSet = resourcesForAudiences(visible, principal.audience_resources);
         const authorization_details = narrowed.filter((e) => resourceSet.has(e.resource));
+        const disclosedMission = withDischargeSelectors(record, mission, authorization_details);
 
         const cnf = payload.cnf as { jkt?: string } | undefined;
         ctx.body = {
@@ -3018,7 +3041,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           ...(cnf ? { cnf } : {}),
           token_type: cnf?.jkt ? "DPoP" : "Bearer",
           authorization_details,
-          mission,
+          mission: disclosedMission,
         };
       } catch {
         ctx.body = inactive;
@@ -3881,8 +3904,9 @@ const RFC3339_RE = /^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[Zz]|[+-
 /**
  * @spec discharge#discharge-operation, discharge#discharge-anti-oracle,
  * discharge#discharge-result — the `discharge` operation on the Mission Lifecycle
- * endpoint. Request-shape failures are `invalid_request`; the six selector,
- * membership, and target-authorization refusals are ONE `not_found`; a divergent
+ * endpoint. Request-shape failures are `invalid_request` (including a request
+ * naming its target in both forms, or neither); the selector, membership, and
+ * target-authorization refusals are ONE `not_found`; a divergent
  * re-assertion of the same event tuple is `conflict`; success is the endpoint's
  * signed Mission Status Response envelope carrying `discharge_result` as a
  * sibling of `mission`.
@@ -3943,15 +3967,37 @@ async function handleDischarge(input: {
   }
   const entryDigestValue = body.entry_digest;
   const conditionDigestValue = body.condition_digest;
+  const selectorValue = body.condition_selector;
   const eventType = body.event_type;
   const eventId = body.event_id;
-  if (!isFamilyDigest(entryDigestValue)) {
-    input.sendInvalidRequest("entry_digest must be a sha-256: prefixed digest");
+  // @spec discharge#discharge-operation — the target is named in EXACTLY ONE of
+  // two forms: a condition selector, or the digest pair. Both, or neither, is
+  // refused `invalid_request`.
+  const hasSelector = selectorValue !== undefined;
+  const hasDigests = entryDigestValue !== undefined || conditionDigestValue !== undefined;
+  if (hasSelector === hasDigests) {
+    input.sendInvalidRequest(
+      "discharge names its target by condition_selector or by entry_digest and condition_digest, exactly one",
+    );
     return;
   }
-  if (!isFamilyDigest(conditionDigestValue)) {
-    input.sendInvalidRequest("condition_digest must be a sha-256: prefixed digest");
-    return;
+  let target: DischargeTargetForm;
+  if (hasSelector) {
+    if (typeof selectorValue !== "string" || !CONDITION_SELECTOR_RE.test(selectorValue)) {
+      input.sendInvalidRequest("condition_selector must be 1*128 ALPHA / DIGIT / '-' / '_'");
+      return;
+    }
+    target = { condition_selector: selectorValue };
+  } else {
+    if (!isFamilyDigest(entryDigestValue)) {
+      input.sendInvalidRequest("entry_digest must be a sha-256: prefixed digest");
+      return;
+    }
+    if (!isFamilyDigest(conditionDigestValue)) {
+      input.sendInvalidRequest("condition_digest must be a sha-256: prefixed digest");
+      return;
+    }
+    target = { entry_digest: entryDigestValue, condition_digest: conditionDigestValue };
   }
   if (typeof eventType !== "string" || eventType.length === 0) {
     input.sendInvalidRequest("event_type must be a non-empty string");
@@ -4014,8 +4060,7 @@ async function handleDischarge(input: {
       const { result } = kernel.discharge(missionId, {
         // The AUTHENTICATED discharge authority, never a request-supplied value.
         authority: principal.principal_id,
-        entry_digest: entryDigestValue,
-        condition_digest: conditionDigestValue,
+        ...target,
         event_type: eventType,
         event_id: eventId,
         ...(typeof evidenceRef === "string" ? { evidence_ref: evidenceRef } : {}),
@@ -4038,7 +4083,7 @@ async function handleDischarge(input: {
     input.sendJws(jws);
   } catch (e) {
     if (e instanceof DischargeNotFoundError) {
-      // All six refusal classes, indistinguishable on the wire; the reason is
+      // Every refusal class, indistinguishable on the wire; the reason is
       // recorded issuer-side only (e.reason).
       input.sendNotFound();
       return;

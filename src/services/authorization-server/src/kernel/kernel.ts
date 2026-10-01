@@ -48,12 +48,14 @@ import {
 import type { DerivationPolicy, ExpiryCeilings } from "./derive.js";
 import {
   deriveAuthoritySet,
+  isSubsetEntry,
   isSubsetSet,
   resolveDerivationLimit,
   resolveEffectiveExpiry,
 } from "./derive.js";
 import {
   assertDischargeAuthoritiesResolvable,
+  conditionCanonicalBytes,
   conditionDigest,
   type DischargeAuthorityPolicy,
   dischargeAssertionFingerprint,
@@ -64,9 +66,11 @@ import {
   entryDigest,
   mappingPermits,
   resolveConditionMapping,
+  targetFormOf,
   terminalWhenOf,
 } from "./discharge.js";
 import { DischargeMappingPinStore } from "./discharge-pin-store.js";
+import { DischargeSelectorStore } from "./discharge-selector-store.js";
 import { justifyingIndex } from "./child-delegation.js";
 import {
   DEFAULT_DISCHARGE_EVENT_TTL_S,
@@ -126,6 +130,7 @@ import {
   type ParentRef,
   type TemplateRef,
   TERMINAL_STATES,
+  type TerminalWhenCondition,
 } from "./types.js";
 
 /** Retry budget for random Status List index allocation on UNIQUE collision. */
@@ -450,6 +455,12 @@ export class MissionKernel {
    */
   readonly dischargePins: DischargeMappingPinStore;
   /**
+   * @spec discharge#condition-selectors — the issuer-held selector table: one
+   * opaque selector per (mission_id, entry_digest, condition_digest) target,
+   * never committed and never deleted while the record lives.
+   */
+  readonly dischargeSelectors: DischargeSelectorStore;
+  /**
    * @spec control-plane#fanout — the durable lifecycle fan-out. On THIS
    * kernel's database, so an event row commits in the same transaction as the
    * state write it describes.
@@ -539,6 +550,7 @@ export class MissionKernel {
     });
     this.derivationReservations = new DerivationReservationStore(this.db, { now: this.now });
     this.dischargePins = new DischargeMappingPinStore(this.db);
+    this.dischargeSelectors = new DischargeSelectorStore(this.db, this.now);
   }
 
   validateIntent(raw: string): MissionIntent {
@@ -1698,12 +1710,19 @@ export class MissionKernel {
    * on the entry's equivalence class, one version increment, one result record,
    * and one notification.
    *
+   * TARGET FORMS (@spec discharge#condition-selectors): the request names its
+   * target by a `condition_selector` or by the digest pair. A selector is
+   * resolved here, first; one that resolves to nothing, or outside `id`, joins
+   * the `not_found` collapse, and everything after works on the RESOLVED
+   * digests, so both forms share one event tuple and one fingerprint. The
+   * result echoes the CURRENT request's form, including on an event replay.
+   *
    * VALIDATION ORDER IS NORMATIVE (@spec discharge#discharge-anti-oracle): selector
    * existence (`mission_id`, `entry_digest`, `condition_digest` all resolve, the
    * entry carries `terminal_when`, `event_type` matches the named condition),
    * then condition membership (the condition is looked up INSIDE the named
    * entry, so membership is the same lookup), then target authorization, and
-   * only then is a terminal Mission distinguished. All six refusals raise {@link
+   * only then is a terminal Mission distinguished. Every refusal raises {@link
    * DischargeNotFoundError}, which the endpoint collapses to one `not_found`, so
    * a terminal Mission is never a selector-existence oracle and an unauthorized
    * caller learns nothing about the selectors.
@@ -1719,24 +1738,42 @@ export class MissionKernel {
     const found = this.get(id);
     if (!found) throw new DischargeNotFoundError("unknown_mission", `unknown mission: ${id}`);
     const record = this.applyExpiry(found);
+    // --- target resolution (@spec discharge#condition-selectors) ---
+    // A selector resolves to its target; one that resolves to none, or to a
+    // target outside this request's mission_id, joins the same collapse as an
+    // unknown digest. From here on the RESOLVED digests are the target, so the
+    // event tuple and the fingerprint below are the digest form's exactly.
+    let target: { entry_digest: string; condition_digest: string };
+    if (input.condition_selector !== undefined) {
+      const resolved = this.dischargeSelectors.resolve(input.condition_selector);
+      if (!resolved || resolved.mission_id !== record.id) {
+        throw new DischargeNotFoundError(
+          "unknown_selector",
+          "condition_selector resolves to no target in this Mission",
+        );
+      }
+      target = { entry_digest: resolved.entry_digest, condition_digest: resolved.condition_digest };
+    } else {
+      target = { entry_digest: input.entry_digest, condition_digest: input.condition_digest };
+    }
     // --- selector existence + condition membership ---
     // Every entry resolving to `entry_digest` is byte-identical (that is what
     // the digest means), so the first one carries the conditions of them all.
     const entry = record.authority_set.find(
-      (e) => entryDigest(record.issuer, e) === input.entry_digest,
+      (e) => entryDigest(record.issuer, e) === target.entry_digest,
     );
     if (!entry) {
-      throw new DischargeNotFoundError("unknown_entry", `no entry with digest ${input.entry_digest}`);
+      throw new DischargeNotFoundError("unknown_entry", `no entry with digest ${target.entry_digest}`);
     }
     const conditions = terminalWhenOf(entry);
     if (!conditions) {
       throw new DischargeNotFoundError("no_terminal_when", "entry carries no terminal_when");
     }
-    const condition = conditions.find((c) => conditionDigest(c) === input.condition_digest);
+    const condition = conditions.find((c) => conditionDigest(c) === target.condition_digest);
     if (!condition) {
       throw new DischargeNotFoundError(
         "unknown_condition",
-        `entry has no condition with digest ${input.condition_digest}`,
+        `entry has no condition with digest ${target.condition_digest}`,
       );
     }
     if (condition.event_type !== input.event_type) {
@@ -1750,7 +1787,7 @@ export class MissionKernel {
     // (identifier, version, and resolved content), never the live policy: an
     // edit to the policy after approval must not retroactively change who may
     // discharge an already-approved entry.
-    const mapping = this.dischargePins.find(record.id, input.entry_digest, input.condition_digest);
+    const mapping = this.dischargePins.find(record.id, target.entry_digest, target.condition_digest);
     if (!mapping) {
       throw new DischargeNotFoundError(
         "unpinned_mapping",
@@ -1763,11 +1800,9 @@ export class MissionKernel {
         `${input.authority} is not a discharge authority for '${input.event_type}' on this condition`,
       );
     }
-    const selectors = {
-      entry_digest: input.entry_digest,
-      condition_digest: input.condition_digest,
-      event_id: input.event_id,
-    };
+    // @spec discharge#discharge-result — the echo is the CURRENT request's
+    // target form and event_id, whichever form the stored occurrence used.
+    const selectors = { ...targetFormOf(input), event_id: input.event_id };
     // --- event-level dedup (@spec discharge#discharge-idempotency) ---
     // Scoped by the five-part tuple and qualified by the assertion fingerprint.
     // Evaluated BEFORE the terminal check: an at-least-once sender's retry under
@@ -1777,14 +1812,14 @@ export class MissionKernel {
     const eventKey: DischargeEventKey = {
       authority: input.authority,
       missionId: record.id,
-      entryDigest: input.entry_digest,
-      conditionDigest: input.condition_digest,
+      entryDigest: target.entry_digest,
+      conditionDigest: target.condition_digest,
       eventId: input.event_id,
     };
     const fingerprint = dischargeAssertionFingerprint({
       mission_id: record.id,
-      entry_digest: input.entry_digest,
-      condition_digest: input.condition_digest,
+      entry_digest: target.entry_digest,
+      condition_digest: target.condition_digest,
       event_type: input.event_type,
       event_id: input.event_id,
       ...(input.evidence_ref !== undefined ? { evidence_ref: input.evidence_ref } : {}),
@@ -1839,7 +1874,7 @@ export class MissionKernel {
     // condition against an already-latched entry, a sibling condition or the
     // same condition under a different event_id, is acknowledged
     // already_discharged and never re-latches or re-increments.
-    if (record.discharged?.some((d) => d.entry_digest === input.entry_digest)) {
+    if (record.discharged?.some((d) => d.entry_digest === target.entry_digest)) {
       const result: DischargeResult = {
         ...selectors,
         outcome: "already_discharged",
@@ -1857,8 +1892,8 @@ export class MissionKernel {
       record,
       [
         {
-          entry_digest: input.entry_digest,
-          condition_digest: input.condition_digest,
+          entry_digest: target.entry_digest,
+          condition_digest: target.condition_digest,
           event_type: input.event_type,
           event_id: input.event_id,
         },
@@ -2004,6 +2039,74 @@ export class MissionKernel {
       }
       if (latches.length > 0) this.latchDischarge(fresh, latches);
     }
+  }
+
+  /**
+   * @spec discharge#condition-selectors — the `discharge_selectors` member of an
+   * introspection `mission` projection, for the `projected` entries the SAME
+   * response returns to its caller in `authorization_details` (`entry` indexes
+   * that array, `condition` the entry's `terminal_when`). Nothing is disclosed
+   * for an entry the caller is not returned, and nothing at all unless this AS
+   * is the Mission's `issuer`.
+   *
+   * MAPPING A PROJECTED ENTRY TO ITS RECORD TARGET. A selector names a target
+   * on the immutable record entry, but a projected entry can be narrower than
+   * it (a token projection, containment). The rule, in order:
+   *  1. EXACT: a record entry whose `entry_digest` equals the projected entry's
+   *     is the target entry (byte-identical duplicates share that digest and so
+   *     one target), provided it carries the condition.
+   *  2. Otherwise SUBSET: the record entries the projected entry is a subset of
+   *     that carry the condition, by `condition_digest`. Exactly one distinct
+   *     `entry_digest` among them is the target entry.
+   *  3. Otherwise (no candidate, or more than one: AMBIGUOUS) that condition
+   *     gets no selector. A condition with no counterpart in the record entry,
+   *     such as one a projection added, therefore has no target and no selector.
+   */
+  dischargeSelectorsFor(
+    record: MissionRecord,
+    projected: readonly AuthorityEntry[],
+  ): Array<{ entry: number; condition: number; selector: string }> {
+    // @spec discharge#condition-selectors — only the Mission issuer reports them.
+    if (record.issuer !== this.opts.issuer) return [];
+    const recordEntries = record.authority_set.map((e) => ({
+      entry: e,
+      digest: entryDigest(record.issuer, e),
+    }));
+    const carries = (e: AuthorityEntry, cDigest: string): boolean =>
+      terminalWhenOf(e)?.some((c) => conditionDigestOrUndefined(c) === cDigest) ?? false;
+    const out: Array<{ entry: number; condition: number; selector: string }> = [];
+    projected.forEach((p, i) => {
+      const conditions = terminalWhenOf(p);
+      if (!conditions) return;
+      const pDigest = entryDigest(record.issuer, p);
+      const exact = recordEntries.find((r) => r.digest === pDigest);
+      conditions.forEach((c, j) => {
+        const cDigest = conditionDigestOrUndefined(c);
+        if (cDigest === undefined) return;
+        let targetDigest: string | undefined;
+        if (exact) {
+          if (carries(exact.entry, cDigest)) targetDigest = exact.digest;
+        } else {
+          const holders = new Set(
+            recordEntries
+              .filter((r) => isSubsetEntry(p, r.entry) && carries(r.entry, cDigest))
+              .map((r) => r.digest),
+          );
+          if (holders.size === 1) targetDigest = [...holders][0];
+        }
+        if (targetDigest === undefined) return;
+        out.push({
+          entry: i,
+          condition: j,
+          selector: this.dischargeSelectors.selectorFor({
+            mission_id: record.id,
+            entry_digest: targetDigest,
+            condition_digest: cDigest,
+          }),
+        });
+      });
+    });
+    return out;
   }
 
   /**
@@ -2905,4 +3008,11 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
       ? { discharged: JSON.parse(row.discharged_json as string) as DischargedEntry[] }
       : {}),
   };
+}
+
+/** `condition_digest`, or undefined for a structurally invalid condition (never throws). */
+function conditionDigestOrUndefined(condition: unknown): string | undefined {
+  return conditionCanonicalBytes(condition) === undefined
+    ? undefined
+    : conditionDigest(condition as TerminalWhenCondition);
 }
