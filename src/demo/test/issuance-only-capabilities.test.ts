@@ -49,6 +49,12 @@ const ASSERTION_TYPE = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
 const REDIRECT_URI = "http://localhost:9999/cb";
 const VERIFIER = "issuance-only-capabilities-verifier-0123456789-0123456789";
 const READ = [{ type: "mission_resource_access", resource: PLAIN_RS_AUDIENCE, actions: ["reports:report.read"] }];
+/**
+ * Metadata members no assembly advertises (#897): no capability controls them,
+ * because the provider serves neither surface. The token endpoint parses no
+ * `mission_attenuation_root`, and no route serves the in-process catalog.
+ */
+const WITHDRAWN_MEMBERS = ["mission_attenuation_supported", "service_catalog_endpoint"];
 
 const AS_PORT = 14664;
 const RS_PORT = 14665;
@@ -470,15 +476,14 @@ describe("the issuance-only launcher refuses every excluded path (#873)", () => 
     // no client registers a response type that uses it.
     expect(meta.grant_types_supported).toEqual(["implicit", "authorization_code", "refresh_token"]);
     for (const member of [
-      "mission_attenuation_supported",
       "mission_child_delegation_supported",
       "identity_continuation_supported",
       "delegated_refresh_token_profile_supported",
-      "service_catalog_endpoint",
       "transaction_authorization_endpoint",
       "userinfo_endpoint",
       "end_session_endpoint",
       "revocation_endpoint",
+      ...WITHDRAWN_MEMBERS,
     ]) {
       expect(meta, member).not.toHaveProperty(member);
     }
@@ -549,7 +554,7 @@ describe("capability gates the launcher's wiring shadows, and the default assemb
     }
   });
 
-  it("the default assembly (no capability set) is the full provider: every grant registered and every member advertised", async () => {
+  it("the default assembly (no capability set) is the full provider: every grant registered and every capability member advertised, and no withdrawn member", async () => {
     const { issuer, close } = await boot(14668, {});
     try {
       const meta = (await (await fetch(`${issuer}/.well-known/openid-configuration`)).json()) as Json;
@@ -557,16 +562,17 @@ describe("capability gates the launcher's wiring shadows, and the default assemb
         new Set(["implicit", "authorization_code", "refresh_token", DEFERRED, JWT_BEARER, DISPATCH, TE]),
       );
       for (const member of [
-        "mission_attenuation_supported",
         "mission_child_delegation_supported",
         "identity_continuation_supported",
         "delegated_refresh_token_profile_supported",
-        "service_catalog_endpoint",
         "userinfo_endpoint",
         "end_session_endpoint",
         "revocation_endpoint",
       ]) {
         expect(meta, member).toHaveProperty(member);
+      }
+      for (const member of WITHDRAWN_MEMBERS) {
+        expect(meta, member).not.toHaveProperty(member);
       }
     } finally {
       await close();
