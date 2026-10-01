@@ -168,6 +168,88 @@ The standalone profile retires only once that revision is released and
 covers all of it. Folding it into the Mission AAuth binding stays
 rejected, since that would strand the bare-AAuth audience.
 
+## Issue Convention
+
+These rules apply to every issue, whether a person or an agent files or
+edits it. #302 holds the stack rank for the open set.
+
+### Body
+
+An issue body is canonical: when a ruling lands or a PR merges, edit
+the body (Current state, Decisions of record) rather than only adding a
+comment. Comments are history. Use these headings, in this order:
+
+- **Problem**: the gap or decision, stated as a fact about the drafts or
+  code on `main`, not the thread's history.
+- **Current state**: what has merged (PR, commit, `src/PLAN.md` D-row)
+  and what remains.
+- **Decisions of record**: each owner ruling, cited by comment permalink
+  or D-row. A review or recommendation posted under the owner's account
+  is a ruling only when a D-row records it as ruled or the comment says
+  it is the owner's ruling, approval, or plan of record. Anything else
+  goes under Analysis or Open questions.
+- **Analysis**: why it matters, the constraints that apply, the options.
+- **Sketch**: numbered steps a builder can execute (files, ledger rows,
+  tests, re-pins), then the alternatives and the recommendation.
+- **Acceptance**: observable checks.
+- **Dependencies**: Blocked by, Blocks, Related.
+- **Open questions**: each owner ruling still needed, with a
+  recommended answer.
+
+A `parked` issue replaces Sketch with **Trigger** (the named condition)
+and **When triggered** (the first steps). A `tracking` issue uses
+**Purpose**, **Items** (a status table), **Rules** and **Exit
+condition**.
+
+Bodies are self-contained. Do not cite files that exist only in a local
+checkout; carry the needed content into the body. Write another
+repository's issues as `owner/repo#N` (upstream AAuth is
+`dickhardt/AAuth#N`) and review-finding numbers as "finding N", so
+GitHub does not autolink them to this repository's issues. No
+em-dashes.
+
+### Labels
+
+- Exactly one tier: `now` (executable, no open dependency), `decide`
+  (needs an owner ruling; the body states the question and a
+  recommended answer), `blocked` (waits on an open issue named in
+  Dependencies), `roadmap` (later, no trigger), `parked` (deferred until
+  a named trigger), or `tracking` (open by design).
+- Exactly one priority, `P1` (next round), `P2` or `P3`, on every issue
+  that is not `parked` or `tracking`.
+- At most one type: `bug`, `enhancement`, `documentation`, or
+  `question`. Trackers carry none.
+- `upstream` when the issue has an owner-only external action (a send,
+  an upstream filing, a working-group engagement).
+
+Change a tier or priority only with a recorded reason. A parked issue
+moves only on its trigger or the owner's word.
+
+### Filing
+
+Search open issues first (`gh issue list --search`); extend an existing
+issue rather than filing a duplicate. A new issue gets its tier,
+priority and type labels when it is filed, and a row in #302. Re-read
+#302's current body immediately before editing it; never write it back
+from an earlier copy.
+
+### Closing, splitting, reissuing
+
+- A PR body uses `Fixes #N` or `Closes #N` only when the PR resolves
+  every item in the issue. Move any remaining item to its own issue
+  first, and say so in both bodies.
+- Before reopening an issue a PR closed, read its current body: items
+  may have been split out on purpose.
+- Close a superseded issue with a comment naming its successor, and the
+  `duplicate` or `completed` reason.
+- An issue cited from the ledger, `src/PLAN.md` or other issues keeps
+  its number; a thread that has grown hard to read gets a rewritten
+  body, not a new issue.
+- Every ledger row with `blocked_by` points at an open issue; when that
+  issue closes, repoint the row.
+- A ruling or merge that changes an issue also gets one D-row in
+  `src/PLAN.md` (committed directly to `main`).
+
 ## Working Group Information
 
 Discussion of this work occurs on the [Web Authorization Protocol

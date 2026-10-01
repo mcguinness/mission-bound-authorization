@@ -63,6 +63,8 @@ export {
   GateError,
   LifecycleConflictError,
   ObservationWatermarkError,
+  STATUS_SIGNING_ALG,
+  type DischargeReceiptObservation,
   type ObservationWatermark,
   type StatusObservation,
   type StatusObservationOptions,
@@ -120,6 +122,7 @@ export {
   MISSION_DISCHARGE_SCOPE,
   MISSION_LIFECYCLE_SCOPE,
   MISSION_STATUS_RESPONSE_MEDIA_TYPE,
+  MISSION_STATUS_SCOPE,
   type ServiceTokenPrincipal,
 } from "./adapters/provider.js";
 export {
@@ -145,32 +148,45 @@ export {
   type EffectiveAuthoritySource,
   isSubsetEntry,
   isSubsetSet,
+  type OriginProjection,
   projectThroughEffective,
+  projectThroughEffectiveWithOrigin,
   SourceUnavailableError,
 } from "./kernel/derive.js";
 export {
-  assertDischargePoliciesResolvable,
+  assertDischargeAuthoritiesResolvable,
   conditionDigest,
   conditionsNoBroader,
   DISCHARGE_EVENT_ID_RE,
-  DISCHARGE_POLICY_RE,
+  DISCHARGE_RECEIPT_MEDIA_TYPE,
+  DISCHARGE_RECEIPT_TYP,
+  DISCHARGE_AUTHORITY_RE,
   type DischargeAssertion,
   type DischargeAuthorityMapping,
   type DischargeAuthorityPolicy,
   dischargeAssertionFingerprint,
   DischargeConflictError,
   DischargeNotFoundError,
+  DischargeTraversalError,
   type DischargeOutcome,
   type DischargeRefusalReason,
   type DischargeRequest,
   type DischargeResult,
+  type DischargeTargetForm,
   entryDigest,
   EVIDENCE_REF_MAX_CHARS,
   mappingPermits,
   resolveConditionMapping,
+  targetFormOf,
   terminalWhenOf,
   unionConditions,
 } from "./kernel/discharge.js";
+export {
+  CONDITION_SELECTOR_PREFIX,
+  CONDITION_SELECTOR_RE,
+  type DischargeTargetTriple,
+  DischargeSelectorStore,
+} from "./kernel/discharge-selector-store.js";
 export {
   DEFAULT_DISCHARGE_EVENT_TTL_S,
   DEFAULT_LIFECYCLE_NONCE_TTL_S,
@@ -330,6 +346,8 @@ export {
   type CarryoverCommittedResult,
   type CarryoverConfig,
   type CarryoverEntry,
+  type CarryoverEntryPair,
+  carryoverEntryPairs,
   type CarryoverEvidence,
   type CarryoverExclusionPolicy,
   type CarryoverExternalState,
@@ -722,7 +740,7 @@ export async function buildAuthorizationServer(opts: {
   /**
    * @spec discharge#discharge-authority — the issuer-held discharge-authority
    * policy handed to the kernel: which principals may assert which
-   * `event_type`, resolved through a condition's `discharge_policy` selector or
+   * `event_type`, resolved through a condition's `discharge_authority` value or
    * the baseline mapping. Absent (the default) FAILS CLOSED: no condition can
    * enter a record and no discharge is ever authorized.
    */
