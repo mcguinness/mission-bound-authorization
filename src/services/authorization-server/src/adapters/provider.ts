@@ -700,6 +700,54 @@ export function buildProvider(opts: AdapterOptions): Provider {
   }
 
   /**
+   * @spec mission#mission-bound-tokens — the Mission whose `expires_at` bounds
+   * a credential saved under `grantId`, resolved the way issuance resolves it:
+   * the Mission's own grant, then the delegation-family store, then the durable
+   * bound-grant index (which refuses an index hit whose Mission is gone).
+   * Undefined for a grant that was never Mission-bound.
+   */
+  function missionForGrant(grantId: string | undefined): MissionRecord | undefined {
+    if (!grantId) return undefined;
+    const record = kernel.findByGrant(grantId);
+    if (record) return record;
+    const fam = opts.familyStore?.resolve(grantId);
+    if (fam) return kernel.get(fam.missionId);
+    return missionForBoundGrant(grantId);
+  }
+
+  /**
+   * @spec mission#mission-bound-tokens — "A credential the Mission Issuer
+   * derives MUST have an `exp` that does not exceed the Mission's
+   * `expires_at`." The lifetime of a credential saved under a Mission-bound
+   * grant is the configured lifetime or the Mission's remaining whole seconds,
+   * whichever is shorter. A non-Mission grant keeps `configured` unchanged.
+   *
+   * oidc-provider evaluates a token's lifetime BEFORE `extraTokenClaims` runs
+   * the state gate (lib/models/formats/opaque.js 9.10.0 L28 before L39), and
+   * saves a rotated refresh token before the access token is gated (the
+   * refresh_token grant, L168 before L216). So this hook is reached for a
+   * Mission at or past `expires_at`, and it never returns a 0 or negative
+   * lifetime: it runs the state gate itself, which commits the expiry and
+   * refuses exactly as the gate does, and a Mission with under one second left
+   * is refused the same way rather than given a token that outlives it.
+   */
+  function clampToMission(configured: number, grantId: string | undefined): number {
+    const record = missionForGrant(grantId);
+    if (!record) return configured;
+    const remaining = Math.floor((Date.parse(record.expires_at) - Date.now()) / 1000);
+    if (remaining >= 1) return Math.min(configured, remaining);
+    try {
+      kernel.gateActive(record.id);
+    } catch (e) {
+      if (e instanceof GateError) {
+        throw new MissionGrantError(e.message, gateErrorToMissionError(e.reason, kernel.get(record.id)?.state));
+      }
+      throw e;
+    }
+    throw new MissionGrantError("the Mission expires before a credential can be issued", "mission_expired");
+  }
+
+  /**
    * @spec issuance-grant#effective-set-projection (#617 review 1) — project
    * through the source, mapping the TRANSIENT class to
    * `temporarily_unavailable` (HTTP 503) rather than letting it read as a
@@ -1307,13 +1355,32 @@ export function buildProvider(opts: AdapterOptions): Provider {
         },
       },
     } as never,
+    // @spec mission#mission-bound-tokens — every credential oidc-provider
+    // issues under a Mission-bound grant is clamped to the Mission's
+    // `expires_at` (clampToMission). Each configured lifetime is oidc-provider's
+    // own default (lib/helpers/defaults.js, 9.10.0), so a non-Mission token is
+    // unchanged. A partial ttl override deep-merges with the defaults. Regular
+    // functions (not arrows) satisfy checkTTL.
     ttl: {
+      // The resource server's lifetime (resourceServerInfoFor), or 1 hour.
+      AccessToken: function AccessTokenTTL(_ctx, token) {
+        const t = token as { grantId?: string; resourceServer?: { accessTokenTTL?: number } };
+        return clampToMission(t.resourceServer?.accessTokenTTL || 60 * 60, t.grantId);
+      },
+      AuthorizationCode: function AuthorizationCodeTTL(_ctx, code) {
+        return clampToMission(60, (code as { grantId?: string }).grantId);
+      },
+      // An ID Token is not saved, but it is issued under the grant: its
+      // AccessToken entity carries the grant id on both the code exchange and
+      // refresh.
+      IdToken: function IdTokenTTL(ctx) {
+        const at = (ctx as { oidc?: { entities?: { AccessToken?: { grantId?: string } } } } | undefined)?.oidc
+          ?.entities?.AccessToken;
+        return clampToMission(60 * 60, at?.grantId);
+      },
       // @spec async-delegation — absolute-lifetime clamp. A per-delegation family
-      // refresh token never outlives its Mission: its lifetime is bounded by the
-      // Mission's expires_at. Any other refresh token keeps the oidc-provider
-      // default (lib/helpers/defaults.js RefreshTokenTTL, 9.10.0 L397: 14 days). A
-      // partial ttl override deep-merges with the defaults, so AccessToken et al.
-      // are unaffected. A regular function (not arrow) satisfies checkTTL.
+      // refresh token never outlives its Mission (floored at 1 s, as before).
+      // Any other refresh token is oidc-provider's 14 days, clamped.
       RefreshToken: function RefreshTokenTTL(_ctx, token) {
         const grantId = (token as { grantId?: string }).grantId;
         const fam = grantId ? opts.familyStore?.resolve(grantId) : undefined;
@@ -1323,7 +1390,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
             return Math.max(1, Math.floor((Date.parse(record.expires_at) - Date.now()) / 1000));
           }
         }
-        return 14 * 24 * 60 * 60;
+        return clampToMission(14 * 24 * 60 * 60, grantId);
       },
     },
   };

@@ -1063,13 +1063,16 @@ describe("async-delegation terminal paths (@spec async-delegation)", () => {
     // explicitly (the same applyExpiry the kernel runs lazily). This exercises the
     // SAME single fan-out funnel as revoke/complete/cascade/supersede, keyed on
     // commit.id, proving the subscriber is not revoke-specific.
-    const shortExp = new Date(Date.now() + 1_000).toISOString();
+    // 3 s, not less: every credential is clamped to the Mission's expires_at
+    // (@spec mission#mission-bound-tokens), the authorization code included, so
+    // the code flow and the exchange need the Mission to outlive them.
+    const shortExp = new Date(Date.now() + 3_000).toISOString();
     const { missionId, baseAccessToken } = await issueBaseMission(shortExp);
     await asyncDelegate(baseAccessToken);
     const grantId = as.delegationFamilyStore.familiesForMission(missionId)[0] as string;
     expect(as.delegationFamilyStore.resolve(grantId)?.missionId).toBe(missionId);
 
-    await sleep(1_200); // past shortExp
+    await sleep(Date.parse(shortExp) - Date.now() + 200); // past shortExp
     // Land the lazy expiry: applyExpiry commits `expired` and fires the fan-out
     // (familyStore terminal marking is synchronous, so resolve is undefined at once).
     const rec = as.kernel.get(missionId);
