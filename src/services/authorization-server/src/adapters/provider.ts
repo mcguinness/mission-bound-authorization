@@ -442,7 +442,7 @@ export interface AdapterOptions {
    * a no-op, so no existing refresh/token path changes.
    */
   familyStore?: DelegationFamilyStore;
-  /** Trusted Chain Authority issuers of ICAs (iss + jwks). */
+  /** Trusted Chain Authority issuers of ICAs (iss + jwks + the RAS audiences each attests for). */
   chainAuthorityIssuers?: ContinuationIssuer[];
   /** Shared (iss, jti) ICA replay cache (from newReplayCache()). */
   continuationReplay?: ContinuationReplay;

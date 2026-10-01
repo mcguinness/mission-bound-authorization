@@ -498,6 +498,9 @@ function rootMissionContinuation(
     anchorId,
     missionId: commit.id,
     actor: { iss: commit.issuer, sub: commit.client_id },
+    // No root ID-JAG carries this hop: its RAS audience is this AS, where the
+    // Mission's grant is issued (ICA -02 5.1.2).
+    audience: commit.issuer,
   });
 }
 
@@ -632,8 +635,10 @@ export async function buildAuthorizationServer(opts: {
   onLifecycleCommit?: (commit: LifecycleCommit) => void;
   /**
    * @spec id-continuation-assertion — override the trusted Chain Authority
-   * issuers of ICAs. Defaults to the AS acting as its own Chain Authority (its
-   * jwks_uri keys). Tests inject a dedicated Chain Authority key.
+   * issuers of ICAs, each scoped to the RAS audiences it attests for (ICA -02
+   * 7.3). Defaults to the AS acting as its own Chain Authority for its own
+   * hops, under its as-continuation key only. Tests inject a dedicated Chain
+   * Authority key.
    */
   chainAuthorityIssuers?: ContinuationIssuer[];
   /**
@@ -978,12 +983,17 @@ export async function buildAuthorizationServer(opts: {
   const creationIdempotency = new CreationIdempotencyStore(kernel);
 
   // @spec id-continuation-assertion — continuation-grant defaults. The AS is its
-  // OWN Chain Authority in the demo (ICAs trusted when signed by a key on its
-  // jwks_uri). The resource->AS map mirrors the demo cross-domain wiring
-  // (stack.ts). The subject resolver is deterministic over a constant salt.
+  // OWN Chain Authority in the demo, trusted only under its continuation-purpose
+  // as-continuation key, not every key on its jwks_uri (D39 per-purpose), and
+  // only for its own hops: the roots it accepts as their RAS (ICA -02 5.5.3
+  // rule 3, 7.3). That key also signs the continuation ID-JAG; the validator's
+  // pinned ICA typ keeps the two token types apart. The resource->AS map
+  // mirrors the demo cross-domain wiring (stack.ts). The subject resolver is
+  // deterministic over a constant salt.
   const publicJwks = { keys: [tokenJwkPub, statusJwkPub, txnJwkPub, continuationJwkPub] };
-  const chainAuthorityIssuers: ContinuationIssuer[] =
-    opts.chainAuthorityIssuers ?? [{ iss: opts.issuer, jwks: publicJwks as never }];
+  const chainAuthorityIssuers: ContinuationIssuer[] = opts.chainAuthorityIssuers ?? [
+    { iss: opts.issuer, jwks: { keys: [continuationJwkPub] } as never, attestsFor: [] },
+  ];
   const resourceToAs =
     opts.resourceToAs ??
     ((r: string) => (r === TOPOLOGY.resources.saas ? TOPOLOGY.issuers.ras : opts.issuer));

@@ -73,6 +73,23 @@ export class ContinuationAssertionError extends Error {
 export interface ContinuationIssuer {
   iss: string;
   jwks: { keys: JWK[] };
+  /**
+   * @spec id-continuation-assertion — the RAS audiences whose hops this issuer
+   * is trusted to attest, beyond its own (ICA -02 7.3: "MUST scope CAI trust by
+   * issuer, keys, tenant, and the RAS it attests for"). An issuer whose `iss`
+   * is a hop's recorded audience is that hop's accepting RAS and attests it
+   * without being listed (5.5.3 rule 3).
+   */
+  attestsFor: string[];
+}
+
+/**
+ * @spec id-continuation-assertion — issuer trust for one hop (ICA -02 5.5.3
+ * rule 3): the issuer is the hop's accepting RAS, or is trusted to attest that
+ * RAS's hops.
+ */
+export function issuerAttestsFor(issuer: ContinuationIssuer, rasAudience: string): boolean {
+  return issuer.iss === rasAudience || issuer.attestsFor.includes(rasAudience);
 }
 
 /** The single current-actor node carried by an ICA (no nesting). */

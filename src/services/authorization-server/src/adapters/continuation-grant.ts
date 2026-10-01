@@ -33,6 +33,7 @@ import {
   checkContinuationFreshness,
   ContinuationAssertionError,
   IDENTITY_CONTINUATION_TOKEN_TYPE,
+  issuerAttestsFor,
   type ValidatedContinuation,
   validateContinuationAssertion,
 } from "../kernel/continuation-assertion.js";
@@ -352,6 +353,17 @@ export async function handleTokenExchangeGrant(
     }
     throw e;
   }
+  // @spec id-continuation-assertion — rule 3 for the referenced hop: the
+  // assertion's issuer MUST be the hop's accepting RAS or an issuer trusted to
+  // attest that RAS's hops (ICA -02 5.5.3 rule 3, 7.3), checked against the
+  // audience recorded for the hop and the current trust configuration, before
+  // any chain-state code. An unknown handle has no recorded RAS; rule 4
+  // refuses it below.
+  const hopAudience = store.hopAudience(ica.handle);
+  const icaIssuer = issuers.find((i) => i.iss === ica.iss);
+  if (hopAudience !== undefined && (!icaIssuer || !issuerAttestsFor(icaIssuer, hopAudience))) {
+    throw new errors.InvalidRequest("continuation assertion issuer is not trusted for this hop's RAS");
+  }
 
   // Rule 5: the current actor and its key proof. Client auth already ran: the
   // presenter's canonical actor identity is (AS issuer, client_id), the
@@ -545,6 +557,7 @@ export async function handleTokenExchangeGrant(
           actor: { iss: currentActor.iss, sub: currentActor.sub },
           cnfJkt: jkt,
           priorHandle: ica.handle,
+          audience,
         });
       },
     }));

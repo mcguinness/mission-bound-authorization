@@ -13,6 +13,7 @@ import {
   type ContinuationIssuer,
   ContinuationAssertionError,
   IDENTITY_CONTINUATION_JWT_TYP,
+  issuerAttestsFor,
   validateContinuationAssertion,
 } from "../src/kernel/continuation-assertion.js";
 import { newReplayCache } from "../src/kernel/instance-assertion.js";
@@ -30,7 +31,7 @@ beforeAll(async () => {
   const pub = await exportJWK(keys.publicKey);
   pub.kid = "ca-key";
   jkt = await calculateJwkThumbprint(pub);
-  issuers = [{ iss: CA, jwks: { keys: [pub] } }];
+  issuers = [{ iss: CA, jwks: { keys: [pub] }, attestsFor: [] }];
 });
 
 interface MintOpts {
@@ -146,6 +147,15 @@ describe("validateContinuationAssertion — freshness within one clock skew (@sp
     await expect(validateContinuationAssertion(await mintICA({ over: { nbf: "soon" } }), ctx())).rejects.toThrow(
       /nbf is not a NumericDate/,
     );
+  });
+});
+
+describe("issuerAttestsFor (@spec id-continuation-assertion)", () => {
+  it("trusts an issuer for its own hops and the RASes it is configured for, and no other", () => {
+    const cai = { iss: "https://cai.example", jwks: { keys: [] }, attestsFor: ["https://ras-a.example"] };
+    expect(issuerAttestsFor(cai, "https://ras-a.example")).toBe(true);
+    expect(issuerAttestsFor(cai, "https://cai.example")).toBe(true); // the accepting RAS itself
+    expect(issuerAttestsFor(cai, "https://ras-b.example")).toBe(false);
   });
 });
 

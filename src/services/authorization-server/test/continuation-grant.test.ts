@@ -49,6 +49,8 @@ import {
 const PORT = 14475;
 const ISSUER = `http://localhost:${PORT}`;
 const CA = "https://chain-authority.example"; // the injected Chain Authority
+const CAI_OTHER = "https://cai-other.example"; // trusted only for OTHER_RAS's hops
+const OTHER_RAS = "https://ras.other.test";
 const RESOURCE = CANONICAL_RESOURCE; // in DERIVATION_POLICY's ceiling
 const RAS_AUD = "https://ras.ledgercloud.test"; // the target Resource AS (audience)
 const RESOURCE_B = "https://api.ledgercloud.test/v1"; // a second resource the same RAS serves
@@ -74,6 +76,8 @@ let as: BuiltAs;
 let asServer: Server;
 let clientKey: CryptoKey; // ap-agent private_key_jwt key (kid ap-agent-auth)
 let caKeys: Keys; // Chain Authority ICA signing key
+let otherCaiKeys: Keys; // CAI_OTHER's ICA signing key
+let rasCaiKeys: Keys; // RAS_AUD's own ICA signing key (the accepting RAS as its own issuer)
 let agentKeys: Keys; // the agent's DPoP key
 let agentJkt: string;
 let remoteJwks: ReturnType<typeof createRemoteJWKSet>;
@@ -119,6 +123,7 @@ function newLineage(
     missionId: mission.id,
     actor: { iss: ISSUER, sub: "ap-agent" },
     cnfJkt: agentJkt,
+    audience: ISSUER, // as approval-time rooting records it
   });
   return { missionId: mission.id, handle };
 }
@@ -162,8 +167,17 @@ function approveLineage(
   return { missionId: mission.id, handle: handles[0] as string };
 }
 
+/** The issuer that signs an ICA: its `iss`, header `kid` and private key. */
+interface Signer {
+  iss: string;
+  kid: string;
+  key: CryptoKey;
+  alg?: string;
+}
+
 interface IcaOpts {
   handle?: string;
+  signer?: Signer;
   cnfJkt?: string;
   act?: { iss: string; sub: string };
   iatSec?: number;
@@ -181,14 +195,15 @@ async function mintICA(handle: string, opts: IcaOpts = {}): Promise<string> {
     act: opts.act ?? { iss: ISSUER, sub: "ap-agent" },
     ...opts.over,
   };
+  const signer = opts.signer ?? { iss: CA, kid: "ca-key", key: caKeys.privateKey };
   return new SignJWT(base)
-    .setProtectedHeader({ alg: "ES256", kid: "ca-key", typ: IDENTITY_CONTINUATION_JWT_TYP })
-    .setIssuer(CA)
+    .setProtectedHeader({ alg: signer.alg ?? "ES256", kid: signer.kid, typ: IDENTITY_CONTINUATION_JWT_TYP })
+    .setIssuer(signer.iss)
     .setAudience(opts.aud ?? ISSUER)
     .setIssuedAt(opts.iatSec ?? now)
     .setExpirationTime(opts.expSec ?? now + 120)
     .setJti(crypto.randomUUID())
-    .sign(caKeys.privateKey);
+    .sign(signer.key);
 }
 
 /** An actor_token as a pre--02 client sent it: signed by the DPoP key, cnf.jkt = the presenter jkt. */
@@ -281,13 +296,23 @@ async function tokenExchange(f: ExchangeFields, t: Target = { issuer: ISSUER, cl
 beforeAll(async () => {
   caKeys = await generateKeyPair("ES256", { extractable: true });
   const caPub = { ...(await exportJWK(caKeys.publicKey)), kid: "ca-key", alg: "ES256", use: "sig" };
+  otherCaiKeys = await generateKeyPair("ES256", { extractable: true });
+  const otherCaiPub = { ...(await exportJWK(otherCaiKeys.publicKey)), kid: "other-cai-key", alg: "ES256" };
+  rasCaiKeys = await generateKeyPair("ES256", { extractable: true });
+  const rasCaiPub = { ...(await exportJWK(rasCaiKeys.publicKey)), kid: "ras-cai-key", alg: "ES256" };
   agentKeys = await generateKeyPair("ES256", { extractable: true });
   agentJkt = await calculateJwkThumbprint(await exportJWK(agentKeys.publicKey));
 
   as = await buildAuthorizationServer({
     issuer: ISSUER,
     allowHeadlessAdjudication: true,
-    chainAuthorityIssuers: [{ iss: CA, jwks: { keys: [caPub] } }],
+    chainAuthorityIssuers: [
+      // Trusted for the root hops (this AS) and the child hops (RAS_AUD).
+      { iss: CA, jwks: { keys: [caPub] }, attestsFor: [ISSUER, RAS_AUD] },
+      { iss: CAI_OTHER, jwks: { keys: [otherCaiPub] }, attestsFor: [OTHER_RAS] },
+      // The accepting RAS itself, trusted for its own hops only.
+      { iss: RAS_AUD, jwks: { keys: [rasCaiPub] }, attestsFor: [] },
+    ],
     resourceToAs: RESOURCE_TO_AS,
     // Deterministic subjectResolver is the default (a stable digest over ISSUER).
   });
@@ -356,6 +381,8 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     const freshHandle = payload.identity_continuation_handle as string;
     expect(freshHandle).not.toBe(handle);
     expect(as.continuationStore.resolve(freshHandle)?.missionId).toBe(missionId);
+    // The child hop records the RAS audience its ID-JAG names (ICA -02 5.1.2).
+    expect(as.continuationStore.resolve(freshHandle)?.audience).toBe(RAS_AUD);
 
     // Collapsed act: a single actor's continuation keeps a depth-1 lineage (no
     // nested `act`). NB: on this path the current-actor check forces the ICA
@@ -711,7 +738,7 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
   it("(e1) a terminal handle on a live Mission (its session ended) -> invalid_continuation", async () => {
     const { missionId } = newLineage("apev-e1");
     const anchorId = as.continuationStore.rootSessionAnchor({ missionId, sessionId: "sess-e1", authEnvelope: {} });
-    const handle = as.continuationStore.mint({ anchorId, missionId, actor: { iss: ISSUER, sub: "ap-agent" } });
+    const handle = as.continuationStore.mint({ anchorId, missionId, actor: { iss: ISSUER, sub: "ap-agent" }, audience: ISSUER });
     as.continuationStore.terminateSession("sess-e1");
     const res = await tokenExchange({ subjectToken: await mintICA(handle) });
     const body = (await res.json()) as { error?: string; error_description?: string };
@@ -795,6 +822,106 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
 });
 
 /**
+ * @spec id-continuation-assertion — issuer trust is scoped per RAS (ICA -02
+ * 5.5.3 rule 3, 7.3): an assertion's issuer must be the referenced hop's
+ * accepting RAS, or an issuer trusted to attest that RAS's hops, read against
+ * the audience recorded for the hop.
+ */
+describe("continuation issuer trust per RAS (@spec id-continuation-assertion)", () => {
+  const otherCai = (): Signer => ({ iss: CAI_OTHER, kid: "other-cai-key", key: otherCaiKeys.privateKey });
+  const rasCai = (): Signer => ({ iss: RAS_AUD, kid: "ras-cai-key", key: rasCaiKeys.privateKey });
+
+  it("an issuer trusted only for another RAS cannot attest this hop: invalid_request, with no hop recorded and no derivation counted", async () => {
+    const { missionId, handle } = newLineage("apev-i1");
+    const hops = as.continuationStore.handlesForMission(missionId).length;
+    const res = await tokenExchange({ subjectToken: await mintICA(handle, { signer: otherCai() }) });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toMatch(/not trusted for this hop's RAS/);
+    expect(as.continuationStore.handlesForMission(missionId)).toHaveLength(hops);
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(0);
+  });
+
+  it("the same issuer attests a hop whose recorded RAS it is trusted for", async () => {
+    const { missionId, handle } = newLineage("apev-i2");
+    const anchorId = as.continuationStore.resolve(handle)?.anchor.anchorId as string;
+    const otherHop = as.continuationStore.mint({
+      anchorId,
+      missionId,
+      actor: { iss: ISSUER, sub: "ap-agent" },
+      priorHandle: handle,
+      audience: OTHER_RAS,
+    });
+    const res = await tokenExchange({ subjectToken: await mintICA(otherHop, { signer: otherCai() }) });
+    expect(res.status, await res.clone().text()).toBe(200);
+  });
+
+  it("the accepting RAS attests its own hop without being listed, and no other RAS's hop", async () => {
+    const { handle } = newLineage("apev-i3");
+    // A first continuation to RAS_AUD records a child hop whose audience is RAS_AUD.
+    const first = await tokenExchange({ subjectToken: await mintICA(handle) });
+    const firstBody = (await first.json()) as { access_token?: string };
+    expect(first.status, JSON.stringify(firstBody)).toBe(200);
+    const childHop = decodeJwt(firstBody.access_token as string).identity_continuation_handle as string;
+    const own = await tokenExchange({ subjectToken: await mintICA(childHop, { signer: rasCai() }) });
+    expect(own.status, await own.clone().text()).toBe(200);
+    // The root hop's RAS is this AS, so RAS_AUD cannot attest it.
+    const root = await tokenExchange({ subjectToken: await mintICA(handle, { signer: rasCai() }) });
+    const rootBody = (await root.json()) as { error?: string; error_description?: string };
+    expect(root.status, JSON.stringify(rootBody)).toBe(400);
+    expect(rootBody.error).toBe("invalid_request");
+    expect(rootBody.error_description).toMatch(/not trusted for this hop's RAS/);
+  });
+});
+
+/**
+ * @spec id-continuation-assertion — the default trust configuration: with no
+ * issuers injected, the AS trusts itself only under its continuation-purpose
+ * as-continuation key, not every key on its jwks_uri (ICA -02 7.3).
+ */
+describe("continuation default issuer trust (@spec id-continuation-assertion)", () => {
+  const PORT3 = 14478;
+  const ISSUER3 = `http://localhost:${PORT3}`;
+  let as3: BuiltAs;
+  let server3: Server;
+  let target3: Target;
+  let tokenKey: CryptoKey;
+
+  beforeAll(async () => {
+    const { alg } = TOPOLOGY.keys.asToken;
+    const tokenKeys = await generateKeyPair(alg, { extractable: true });
+    tokenKey = tokenKeys.privateKey;
+    as3 = await buildAuthorizationServer({
+      issuer: ISSUER3,
+      allowHeadlessAdjudication: true,
+      // A test-held AS token key, so the test can sign with a key on jwks_uri.
+      testTokenSigningJwk: await exportJWK(tokenKeys.privateKey),
+      resourceToAs: (r: string) => (r === RESOURCE ? RAS_AUD : ISSUER3),
+    });
+    server3 = as3.provider.listen(PORT3);
+    target3 = { issuer: ISSUER3, clientKey: (await importJWK(as3.agentClientJwk as never, "ES256")) as CryptoKey };
+  });
+
+  afterAll(() => {
+    server3?.close();
+  });
+
+  it("an ICA signed by the AS token key is refused: the default trusts only the as-continuation key", async () => {
+    const { handle } = approveLineage("apev-default-trust", as3);
+    const signer: Signer = { iss: ISSUER3, kid: TOPOLOGY.keys.asToken.kid, key: tokenKey, alg: TOPOLOGY.keys.asToken.alg };
+    const res = await tokenExchange(
+      { subjectToken: await mintICA(handle, { signer, aud: ISSUER3, act: { iss: ISSUER3, sub: "ap-agent" } }) },
+      target3,
+    );
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toMatch(/verification failed/);
+  });
+});
+
+/**
  * @spec id-continuation-assertion — error precedence (ICA -02 5.5.6): when
  * several rules fail, the code of the earliest. Each case pairs two failures
  * whose codes differ, so the response shows which rule ran first.
@@ -810,6 +937,16 @@ describe("continuation error precedence (@spec id-continuation-assertion)", () =
     expect(res.status, JSON.stringify(body)).toBe(400);
     return body.error;
   };
+
+  it("issuer trust for the hop's RAS precedes key proof and chain state: an issuer not trusted for a terminal hop's RAS is invalid_request", async () => {
+    const { missionId, handle } = newLineage("apev-p0");
+    as.kernel.transition(missionId, "revoke");
+    const foreign = await mintICA(handle, { signer: { iss: CAI_OTHER, kid: "other-cai-key", key: otherCaiKeys.privateKey } });
+    expect(await errorOf(await tokenExchange({ subjectToken: foreign }))).toBe("invalid_request");
+    expect(await errorOf(await tokenExchange({ subjectToken: foreign, noDpop: true }))).toBe("invalid_request");
+    // The trusted issuer reaches the chain-state code.
+    expect(await errorOf(await tokenExchange({ subjectToken: await mintICA(handle) }))).toBe("invalid_continuation");
+  });
 
   it("a malformed assertion precedes a missing DPoP proof and a requested scope: invalid_request", async () => {
     const { handle } = newLineage("apev-p1");
@@ -937,6 +1074,8 @@ describe("continuation lifecycle invariants (@spec id-continuation-assertion)", 
     const resolved = as.continuationStore.resolve(handle);
     expect(resolved?.missionId).toBe(missionId);
     expect(resolved?.anchor.anchorType).toBe("grant");
+    // No root ID-JAG carries this hop: its recorded RAS audience is the AS.
+    expect(resolved?.audience).toBe(ISSUER);
     expect(resolved?.authEnvelope.acr).toBeUndefined();
     expect(resolved?.authEnvelope.authTime).toBeGreaterThanOrEqual(approxNow - 5);
     expect(resolved?.authEnvelope.authTime).toBeLessThanOrEqual(approxNow + 5);
@@ -1038,6 +1177,7 @@ describe("continuation lifecycle invariants (@spec id-continuation-assertion)", 
       missionId,
       actor: { iss: ISSUER, sub: "ap-agent" },
       cnfJkt: agentJkt,
+      audience: ISSUER,
     });
     expect(as.continuationStore.resolve(sessionHandle)?.anchor.anchorType).toBe("session");
 
@@ -1078,7 +1218,7 @@ describe("continuation hop-count limit (@spec id-continuation-assertion)", () =>
     as2 = await buildAuthorizationServer({
       issuer: ISSUER2,
       allowHeadlessAdjudication: true,
-      chainAuthorityIssuers: [{ iss: CA, jwks: { keys: [caPub] } }],
+      chainAuthorityIssuers: [{ iss: CA, jwks: { keys: [caPub] }, attestsFor: [ISSUER2, RAS_AUD] }],
       resourceToAs: (r: string) => (r === RESOURCE ? RAS_AUD : ISSUER2),
       continuationHopLimit: 2,
     });
@@ -1107,7 +1247,7 @@ describe("continuation hop-count limit (@spec id-continuation-assertion)", () =>
 
     // The limit is per chain: a second anchor of the same Mission continues.
     const anchorId = as2.continuationStore.rootGrantAnchor({ missionId, authEnvelope: {} });
-    const other = as2.continuationStore.mint({ anchorId, missionId, actor: ACT2 });
+    const other = as2.continuationStore.mint({ anchorId, missionId, actor: ACT2, audience: ISSUER2 });
     const ok = await tokenExchange({ subjectToken: await mintICA(other, { aud: ISSUER2, act: ACT2 }) }, target2);
     expect(ok.status, await ok.clone().text()).toBe(200);
   });

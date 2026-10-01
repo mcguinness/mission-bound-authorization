@@ -52,6 +52,7 @@ CREATE TABLE continuation_handles (
   actor_sub TEXT,
   cnf_jkt TEXT,
   prior_handle TEXT,
+  audience TEXT NOT NULL,
   state TEXT NOT NULL,
   created_at INTEGER NOT NULL
 ) STRICT;
@@ -93,6 +94,8 @@ export interface ResolvedAnchor {
 export interface ResolvedContinuation {
   missionId: string;
   anchor: ResolvedAnchor;
+  /** The RAS audience recorded for this hop ({@link ContinuationStore.mint}). */
+  audience: string;
   /** `mint` always writes both; optional only because the columns are nullable. */
   actor: { iss?: string; sub?: string };
   authEnvelope: AuthEnvelope;
@@ -127,6 +130,7 @@ interface HandleRow {
   actor_iss: string | null;
   actor_sub: string | null;
   cnf_jkt: string | null;
+  audience: string;
   state: string;
 }
 
@@ -198,13 +202,21 @@ export class ContinuationStore {
      */
     cnfJkt?: string;
     priorHandle?: string;
+    /**
+     * @spec id-continuation-assertion — the RAS audience of this hop, "root or
+     * child" (ICA -02 5.1.2): a child hop's is the audience of the ID-JAG that
+     * names it. A root rooted at Mission approval has no root ID-JAG, so its
+     * audience is the AS issuer, where the Mission's grant is issued and
+     * redeemed. Issuer trust for the hop is checked against it (5.5.3 rule 3).
+     */
+    audience: string;
   }): string {
     const handle = input.handle ?? newContinuationHandle();
     this.db
       .prepare(
         `INSERT INTO continuation_handles
-         (handle, anchor_id, mission_id, actor_iss, actor_sub, cnf_jkt, prior_handle, state, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?)`,
+         (handle, anchor_id, mission_id, actor_iss, actor_sub, cnf_jkt, prior_handle, audience, state, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)`,
       )
       .run(
         handle,
@@ -214,9 +226,23 @@ export class ContinuationStore {
         input.actor.sub,
         input.cnfJkt ?? null,
         input.priorHandle ?? null,
+        input.audience,
         this.now().getTime(),
       );
     return handle;
+  }
+
+  /**
+   * @spec id-continuation-assertion — the RAS audience recorded for an issued
+   * hop, active or terminal; undefined for a handle this store never minted.
+   * Issuer trust for the hop's RAS is established before any chain-state code
+   * (ICA -02 5.5.6), so this read does not look at state.
+   */
+  hopAudience(handle: string): string | undefined {
+    const row = this.db.prepare("SELECT audience FROM continuation_handles WHERE handle = ?").get(handle) as
+      | { audience: string }
+      | undefined;
+    return row?.audience;
   }
 
   /**
@@ -238,7 +264,7 @@ export class ContinuationStore {
   lookup(handle: string): HandleLookup {
     const h = this.db
       .prepare(
-        "SELECT handle, anchor_id, mission_id, actor_iss, actor_sub, cnf_jkt, state FROM continuation_handles WHERE handle = ?",
+        "SELECT handle, anchor_id, mission_id, actor_iss, actor_sub, cnf_jkt, audience, state FROM continuation_handles WHERE handle = ?",
       )
       .get(handle) as HandleRow | undefined;
     if (!h) return { status: "unknown" };
@@ -264,6 +290,7 @@ export class ContinuationStore {
         ...(a.session_id != null ? { sessionId: a.session_id } : {}),
         state: a.state as ContinuationState,
       },
+      audience: h.audience,
       actor: {
         ...(h.actor_iss != null ? { iss: h.actor_iss } : {}),
         ...(h.actor_sub != null ? { sub: h.actor_sub } : {}),
