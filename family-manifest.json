@@ -2344,6 +2344,7 @@
     "draft-mcguinness-mission-metering",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-child-delegation",
+    "draft-mcguinness-oauth-mission-continuation",
     "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-template"

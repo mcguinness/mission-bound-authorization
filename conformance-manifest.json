@@ -95,12 +95,12 @@
     "content_sha256": "9448fa23fdc05360cb9adef4a8d7f7334b55ac0ccf85cae18dcc0d8df807652f"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "40dcd8aafb590df09de07d6e29719d008df5b168",
-    "content_sha256": "d1d8a48d031bcb628651e1127ece804c4086e2660dfb85e3d87b2e482212f129"
+    "revision": "d79e5495cd0b853e4a1d1b6d9d8ac7051e77c7ce",
+    "content_sha256": "15cff8db987ed9965afab530edad1ac9b0e911abde469d9a98f14a85f17a9918"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
-    "revision": "40dcd8aafb590df09de07d6e29719d008df5b168",
-    "content_sha256": "a2457ae90d691516191928c05e9670b7298b8fc45414c7181ba28590c72e1898"
+    "revision": "d79e5495cd0b853e4a1d1b6d9d8ac7051e77c7ce",
+    "content_sha256": "c9c4ae9bf29af07b52513d92b9b8809467e1aeb0503717f105d3c4e990ee8752"
    }
   }
  },
@@ -2901,7 +2901,7 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "derivation_limit = min(deployment policy ceiling, requested_derivation_limit) when both are present; whichever is present alone when only one is; null (no ceiling) when neither is present, never unbounded-by-omission as a hardcoded default. This establishment happens afresh at every approval event that creates a Mission Record (direct, Child Mission, dispatched Template instance, Expansion successor); an established derivation_limit is never inherited unchanged from a parent, a template, or a predecessor Mission.",
+    "normative": "derivation_limit = min(deployment policy ceiling, requested_derivation_limit) when both are present; whichever is present alone when only one is; null (no ceiling) when neither is present, never unbounded-by-omission as a hardcoded default. This establishment happens afresh at every approval event that creates a Mission Record (direct, Child Mission, dispatched Template instance, Expansion successor); an established derivation_limit is never inherited unchanged from a parent, a template, or a predecessor Mission, except that a Child Delegation carryover replacement preserves the old child's derivation_limit and derivation count.",
     "local": "the demo deployment's own policy.json ceiling is null (no ceiling) by default, so this row's own kernel.test.ts test constructs a LOCAL kernel with a narrower policy ceiling to exercise the clamp in both directions plus the omission case; child-delegation.ts and template.ts already established fresh per-surface; expansion.ts previously inherited the predecessor's derivation_limit unchanged (a pre-existing, untested, undocumented default) and is corrected here to establish fresh from the successor's own Intent, matching the other three surfaces and this section's text"
    },
    "level": "unit",
@@ -3906,6 +3906,65 @@
      "surface": "token-endpoint"
     }
    ]
+  },
+  {
+   "id": "derivation-limits.counting.async-family-refreshes-uncounted",
+   "spec": "draft-mcguinness-oauth-mission-derivation-limits.md",
+   "anchor": "refresh-and-exchange",
+   "text": "the exchange that creates the family is one derivation, and the family's successive refreshes are not counted again",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "derivation-limits.limit"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "under the Continuation profile's async delegation transport, the family-creating exchange increments the derivation count by exactly one and the family's later refreshes leave it unchanged, while an ordinary refresh still counts",
+    "local": "requires the deployment to also offer Continuation's async delegation transport"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "async-delegation single count (@spec async-delegation) > derivation_count rises by exactly 1 across issuance + N refreshes",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "async-delegation single count (@spec async-delegation) > regression: an ordinary code-flow refresh STILL increments derivation_count",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#885 ruling (2026-10-01). The implementation already coalesced (continuation-grant.ts spends gateDerivation once at family creation; later refreshes re-gate with gateActive), so the ruling moved the spec to the implementation, not the reverse."
+  },
+  {
+   "id": "derivation-limits.rendering.async-family-disclosure",
+   "spec": "draft-mcguinness-oauth-mission-derivation-limits.md",
+   "anchor": "approval-rendering",
+   "text": "Where the AS supports the Continuation profile's async delegation transport, the rendering MUST also state that the refreshes of an async delegation family are not counted against the limit",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "derivation-limits.limit"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where the AS supports async delegation, the approval rendering of an established derivation_limit states that async delegation family refreshes are not counted against it",
+    "local": "requires the deployment to also offer Continuation's async delegation transport"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#885 ruling (2026-10-01). No implementation witness yet."
   },
   {
    "id": "core.lifecycle.mission-error-diagnostic",
