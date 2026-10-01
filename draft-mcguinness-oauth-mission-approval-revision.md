@@ -224,9 +224,9 @@ accepted after the approval resolved cannot reopen it.
 
 # Revisable Approval {#revisable}
 
-A client signals that it accepts a narrowing revision by including
-`mission_revisable` among its `completion_mode` values alongside
-`deferred`:
+A client signals that it accepts a narrowing revision by
+including `mission_revisable` among its `completion_mode` values
+alongside `deferred`:
 
 ~~~ text
 completion_mode=deferred mission_revisable
@@ -395,15 +395,17 @@ MUST NOT honor that `request_uri` at the authorization endpoint.
 The PAR endpoint reports a failed revision with a specific error:
 
 - An expired or already-consumed `mission_revision_handle` yields
-`invalid_grant`. - A malformed revision (unparseable, or structurally
-invalid against the Mission Intent member definitions) yields
-`invalid_request`. - A revision whose re-derived Authority Set does not
-narrow every dimension named in `mission_rejected_scope` or
-`mission_rejected_authorization_details` yields
-`mission_revision_not_narrowing` ({{iana}}). - When the deferral
-resolved (to `access_denied`, `expired_token`, or an approval) while the
-revision was in flight, the endpoint yields `invalid_grant` and the
-resolution is conveyed on the next poll of the `deferral_code`.
+  `invalid_grant`.
+- A malformed revision (unparseable, or structurally invalid against the
+  Mission Intent member definitions) yields `invalid_request`.
+- A revision whose re-derived Authority Set does not narrow every
+  dimension named in `mission_rejected_scope` or
+  `mission_rejected_authorization_details` yields
+  `mission_revision_not_narrowing` ({{iana}}).
+- When the deferral resolved (to `access_denied`, `expired_token`, or an
+  approval) while the revision was in flight, the endpoint yields
+  `invalid_grant` and the resolution is conveyed on the next poll of the
+  `deferral_code`.
 
 For example, a revision that keeps a refused write action yields:
 
@@ -651,26 +653,30 @@ considerations apply in full, including:
 This section adds only what the revision handshake introduces.
 
 - Narrowing only. A revision MUST NOT broaden the proposed Mission on
-any dimension. The Mission Issuer enforces the subset relation per
-parameter (scope, resource, `authorization_details`) before re-review. -
-Single-use handle. A `mission_revision_handle` MUST be invalidated after
-one submission, success or failure. A new handle is issued on a
-subsequent revision-required response. - Sender-constraint continuity.
-The handle MUST be sender-constrained to the same key as the
-`deferral_code`. An attacker holding the handle without the key cannot
-push a revision. - Handle lifetime. The handle lifetime MUST NOT exceed
-the remaining lifetime of the `deferral_code`, and SHOULD be shorter
-when the handle is exposed to orchestration layers outside the OAuth
-client. - Stale consent. A re-reviewed revision MUST be presented to the
-reviewer as a new disclosure with a fresh consent commitment
-({{integration}}); prior consent does not transfer. - Policy disclosure.
-`mission_rejected_scope` and `mission_rejected_authorization_details`
-can reveal policy boundaries; a Mission Issuer SHOULD disclose only the
-minimum needed to narrow and MAY omit them. - Revision bounding. The
-revision-cycle bound and the mandatory `access_denied` resolution at the
-bound ({{revision-submission}}) keep a client from driving an unbounded
-reshape-and-retry loop to wear down a reviewer. A Mission Issuer SHOULD
-log excessive revision cycles as a security event.
+  any dimension. The Mission Issuer enforces the subset relation per
+  parameter (scope, resource, `authorization_details`) before
+  re-review.
+- Single-use handle. A `mission_revision_handle` MUST be invalidated
+  after one submission, success or failure. A new handle is issued on a
+  subsequent revision-required response.
+- Sender-constraint continuity. The handle MUST be sender-constrained to
+  the same key as the `deferral_code`. An attacker holding the handle
+  without the key cannot push a revision.
+- Handle lifetime. The handle lifetime MUST NOT exceed the remaining
+  lifetime of the `deferral_code`, and SHOULD be shorter when the handle
+  is exposed to orchestration layers outside the OAuth client.
+- Stale consent. A re-reviewed revision MUST be presented to the
+  reviewer as a new disclosure with a fresh consent commitment
+  ({{integration}}); prior consent does not transfer.
+- Policy disclosure. `mission_rejected_scope` and
+  `mission_rejected_authorization_details` can reveal policy boundaries;
+  a Mission Issuer SHOULD disclose only the minimum needed to narrow and
+  MAY omit them.
+- Revision bounding. The revision-cycle bound and the mandatory
+  `access_denied` resolution at the bound ({{revision-submission}})
+  keep a client from driving an unbounded reshape-and-retry loop to
+  wear down a reviewer. A Mission Issuer SHOULD log excessive revision
+  cycles as a security event.
 
 # Privacy Considerations {#privacy-considerations}
 
