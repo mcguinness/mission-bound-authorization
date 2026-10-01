@@ -2669,18 +2669,19 @@ residual the transition does not reach.
 
 | Rung | Binding | Property | Stops at commit | Runs to its own bound |
 |---|---|---|---|---|
-| Baseline Issuance | OAuth binding, structured-authority | Baseline, a new-derivation kill ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Containment Properties") | New derivation, delegation, cross-domain projection, and offline attenuation roots minted after the transition ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Derivation Gating") | Tokens already issued, to `exp`, and a consequential read under the token-lifetime default, the same bound ({{I-D.draft-mcguinness-mission-runtime}}); pre-transition projection grants and attenuation roots (note 1) |
+| Baseline Issuance | OAuth binding, structured-authority | Baseline, a new-derivation kill ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Containment Properties") | New derivation, delegation, and cross-domain projection minted after the transition ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Derivation Gating") | Tokens already issued, to `exp`, and a consequential read under the token-lifetime default, the same bound ({{I-D.draft-mcguinness-mission-runtime}}); pre-transition projection grants (note 1) |
 | Baseline Issuance | Standalone MAS, no credential-carried authority | Neither; the runtime layer is the only cutoff, and it is absent at this rung | Nothing at the resource; the transition commits and is visible on the Mission Status Response and the introspection projection ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Visibility") | Every action, to the resource's own bound, if any (note 2) |
 | Runtime-Enforced | Any binding, a class using a containment-aware state source within its published bound (note 3) | Runtime-Enforced for that class ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Containment Properties"); Baseline only for the classes in note 4 | The contained capability, denied at the class's next gated action once the source reflects the overlay, within the staleness bound plus the permit window plus the class's execution bound ({{I-D.draft-mcguinness-mission-runtime}}) | Paths no action-time gate reaches: token lifetime where issuance is gated, otherwise no bound |
 | Baseline Issuance | MAS as estate control plane, issuance join at each consuming AS | Baseline, from Derivation Gating at the Mission Issuer ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Derivation Gating"); the consuming AS's checks are not containment-aware on their own (note 5) | New grant minting only: the Mission Issuer's Derivation Gating evaluates the Effective Authority Set, so a grant minted after the transition excludes contained authority ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Derivation Gating") | An outstanding grant redeems once, to its own maximum lifetime of 300 seconds, at any consuming AS whose redemption check is active-only rather than containment-aware ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}, Section "Redemption") |
+| Runtime-Enforced | OAuth binding with offline attenuation, a consumer whose check is active-state only (note 6) | Baseline ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Containment Properties"): a contained Mission stays `active` | New attenuation roots, which exclude contained authority ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Derivation Gating") | Roots minted before the transition, to their own lifetime (note 6) |
 
 Notes:
 
 1. Under the OAuth binding at Baseline Issuance, a cross-domain
-   projection grant already redeemed and an offline attenuation root
-   already minted before the transition each run to its own lifetime or
-   `del_max_depth` ({{I-D.draft-mcguinness-oauth-mission-containment}},
-   Section "The Materialized-Capability Residual").
+   projection grant already redeemed before the transition runs to its
+   own lifetime ({{I-D.draft-mcguinness-oauth-mission-containment}},
+   Section "The Materialized-Capability Residual"). Offline attenuation
+   is not accepted at this rung (note 6).
 2. Under the standalone MAS at Baseline Issuance, every action runs to
    whatever native credential, session, or resource-local bound the
    resource enforces on its own, if any. It does so until runtime
@@ -2707,6 +2708,22 @@ Notes:
    Effective Authority Set
    ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}, Section
    "Redemption").
+6. Under the OAuth binding with offline attenuation, a consumer accepts
+   a chain only under runtime enforcement, with a fresh active-state
+   check on every presentation regardless of action class
+   ({{I-D.draft-mcguinness-oauth-mission-attenuation}}, Section "The
+   Kill Switch Requires Runtime Enforcement"), so no Baseline-only,
+   lifetime-only path accepts one. Revoking the Mission fails that
+   check, so acceptance of every chain stops within the deployment's
+   declared freshness bound. Containing an entry leaves the Mission
+   `active`, so the same check does not stop a root minted before the
+   transition from supporting the contained capability: the root keeps
+   minting narrower children for its own lifetime, and its
+   `del_max_depth` limits how deep they go, not how long they live
+   ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "The
+   Materialized-Capability Residual"). Claiming the Runtime-Enforced
+   property for attenuated chains needs a containment-aware action-time
+   check (note 3).
 
 None of this closes the conforming Baseline residual on a path or for
 a class no containment-aware action-time gate reaches. For a class a
@@ -2937,32 +2954,33 @@ and compromise analysis are the Mission Security Model's
 introduces composition, and its security subject matter is the risks
 that emerge only at composition:
 
-- stale state and materialized authority: an already-issued
-  credential, redeemed grant, or minted attenuation root stays
-  usable to its artifact-specific bound only where no timely
-  state-aware or action-time gate reaches it; where one does,
-  reliance ends at that earlier gate ({{validity-model}},
+- stale state and materialized authority: an already-issued credential,
+  redeemed grant, or minted attenuation root stays usable to its
+  artifact-specific bound only where no timely state-aware or
+  action-time gate reaches it, and, for a contained capability, where no
+  containment-aware gate does ({{kill-switch-composition}}); where one
+  does, reliance ends at that earlier gate ({{validity-model}},
   {{kill-switch-composition}});
-- unmediated paths: enforcement claims hold only inside the declared
-  PEP boundary, and the Enforcement Scope Statement's exclusions are
-  where a compromised agent goes first;
+- unmediated paths: enforcement claims hold only inside the declared PEP
+  boundary, and the Enforcement Scope Statement's exclusions are where a
+  compromised agent goes first;
 - semantic-derivation trust: the derivation boundary
   ({{derivation-boundary}}) concentrates meaning-to-authority
-  translation at the issuer, and the anchors commit its output, not
-  its correctness;
+  translation at the issuer, and the anchors commit its output, not its
+  correctness;
 - component compromise: issuer, PDP, PEP, state source, and evidence
   producer each void a different guarantee when compromised, and the
   security model prices each;
 - context splicing and join ambiguity: independently valid identity,
   credential, and Mission facts compose into an unauthorized whole
-  wherever they are combined without an authorized joining
-  authority, verified inputs, an association policy, and conflict
-  handling ({{I-D.draft-mcguinness-mission-substrate}});
+  wherever they are combined without an authorized joining authority,
+  verified inputs, an association policy, and conflict handling
+  ({{I-D.draft-mcguinness-mission-substrate}});
 - false but correctly signed evidence: signatures make records
   tamper-evident, never true; and
-- correlation: the Mission Identifier, actor chain, and evidence
-  joins that make audit possible are the same joins that correlate
-  activity across audiences ({{privacy-considerations}}).
+- correlation: the Mission Identifier, actor chain, and evidence joins
+  that make audit possible are the same joins that correlate activity
+  across audiences ({{privacy-considerations}}).
 
 # Privacy Considerations {#privacy-considerations}
 
