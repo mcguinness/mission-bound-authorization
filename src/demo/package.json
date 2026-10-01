@@ -15,6 +15,7 @@
     "@mission/mcp-payments": "workspace:*",
     "@mission/mcp-saas": "workspace:*",
     "@mission/pdp": "workspace:*",
+    "@mission/plain-rs": "workspace:*",
     "@mission/ras": "workspace:*",
     "@mission/telemetry": "workspace:*",
     "@mission/transparency": "workspace:*",

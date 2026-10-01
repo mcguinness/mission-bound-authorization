@@ -68,6 +68,7 @@ import {
   resourceServerInfoFor,
 } from "./provider.js";
 import type { AdapterOptions } from "./provider.js";
+import { capabilityEnabled, type ProviderCapability } from "./capabilities.js";
 
 /** @spec RFC 8693 §2.1 — the token-exchange grant type. */
 export const TOKEN_EXCHANGE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:token-exchange";
@@ -147,6 +148,14 @@ export async function handleTokenExchangeGrant(
   ctx: KoaContextWithOIDC,
 ): Promise<void> {
   const params = ctx.oidc.params as Record<string, unknown>;
+  // Deployment capability controls (adapters/capabilities.ts): the exchange
+  // grant is registered when any profile is on, so a request for a profile this
+  // deployment disabled is refused here, before any token is read.
+  const profileDisabled = (capability: ProviderCapability): boolean => {
+    if (capabilityEnabled(opts, capability)) return false;
+    txError(ctx, 400, "invalid_request", `this token exchange (${capability}) is not enabled on this deployment`);
+    return true;
+  };
 
   // @spec async-delegation — dispatch. `request_refresh_token` selects the
   // async-delegation transport (a base mission access token in; a per-delegation
@@ -156,6 +165,7 @@ export async function handleTokenExchangeGrant(
   // is the discriminator on every subsequent hop.
   const requestRefresh = params.request_refresh_token;
   if (requestRefresh === "true" || requestRefresh === true) {
+    if (profileDisabled("async-delegation")) return;
     await handleAsyncDelegationExchange(opts, provider, ctx);
     return;
   }
@@ -173,6 +183,7 @@ export async function handleTokenExchangeGrant(
   // exchange also requests an access token, and the subject_token_type is the
   // discriminator RFC 8693 provides for exactly this.
   if (params.subject_token_type === "urn:ietf:params:oauth:token-type:mission-delegation-chain") {
+    if (profileDisabled("cross-org")) return;
     await handleCrossOrgChainExchange(
       {
         issuer: opts.issuer,
@@ -188,13 +199,16 @@ export async function handleTokenExchangeGrant(
     return;
   }
   if (params.requested_token_type === JWT_TOKEN_TYPE) {
+    if (profileDisabled("child-delegation")) return;
     await handleChildCreationExchange(opts, provider, ctx);
     return;
   }
   if (params.requested_token_type === ACCESS_TOKEN_TOKEN_TYPE) {
+    if (profileDisabled("expansion")) return;
     await handleExpansionExchange(opts, provider, ctx);
     return;
   }
+  if (profileDisabled("continuation")) return;
 
   // @spec mission#scope-projection — this exchange issues an identity
   // grant, not a Mission-bound access token: a requested `scope` cannot be

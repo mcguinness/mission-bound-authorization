@@ -22,6 +22,7 @@ import type { ScopeProjectionMapping } from "@mission/core";
 import { exportJWK, generateKeyPair, importJWK, type CryptoKey, type JWK } from "jose";
 import type Provider from "oidc-provider";
 import type { ApprovalSessionStore } from "./adapters/approval-resolution.js";
+import { capabilityEnabled, type ProviderCapability } from "./adapters/capabilities.js";
 export { ApprovalSessionStore, MISSION_APPROVAL_SCOPE, type ApprovalPrincipal } from "./adapters/approval-resolution.js";
 import {
   buildProvider,
@@ -108,6 +109,12 @@ export {
   type TombstoneRetentionInputs,
 } from "./kernel/tombstones.js";
 export type { ProtectedEventSource } from "./adapters/provider.js";
+export {
+  ALL_PROVIDER_CAPABILITIES,
+  capabilityEnabled,
+  type ProviderCapability,
+  TOKEN_EXCHANGE_CAPABILITIES,
+} from "./adapters/capabilities.js";
 export {
   DEFAULT_SERVICE_TOKEN_PRINCIPALS,
   MISSION_DISCHARGE_SCOPE,
@@ -713,6 +720,13 @@ export async function buildAuthorizationServer(opts: {
    * bumps its `version`) observes the next issuance under the new mapping.
    */
   scopeProjection?: ScopeProjectionMapping;
+  /**
+   * The deployment's enabled capabilities (`adapters/capabilities.ts`).
+   * Absent: every capability is on, which is the full reference assembly. A
+   * disabled capability refuses with its path's standard error, and with
+   * child delegation off the child client is not registered.
+   */
+  capabilities?: ReadonlySet<ProviderCapability>;
 }): Promise<BuiltAs> {
   // Per-purpose keys on one jwks_uri (@spec mission#as-metadata; matrix D39):
   // as-token signs tokens, as-status signs Status responses, as-txn signs
@@ -972,7 +986,12 @@ export async function buildAuthorizationServer(opts: {
     expansionDeferrals,
     creationIdempotency,
     statusListPublisher,
-    clients: [agent.metadata, child.metadata, governed.metadata, ...(opts.testClients ?? [])],
+    clients: [
+      agent.metadata,
+      ...(capabilityEnabled(opts, "child-delegation") ? [child.metadata] : []),
+      governed.metadata,
+      ...(opts.testClients ?? []),
+    ],
     jwks: { keys: [tokenJwk, statusJwkPriv, txnJwkPriv, continuationJwkPriv] },
     publicJwks,
     allowHeadlessAdjudication: opts.allowHeadlessAdjudication ?? false,
@@ -1054,6 +1073,7 @@ export async function buildAuthorizationServer(opts: {
       : {}),
     // @spec mission#scope-projection — the trusted out-of-band mapping.
     scopeProjection: opts.scopeProjection ?? SCOPE_PROJECTION,
+    ...(opts.capabilities ? { capabilities: opts.capabilities } : {}),
   });
   // @spec async-delegation — publish the provider to the terminal subscriber now
   // that construction is complete (no lifecycle commit could have fired earlier).
