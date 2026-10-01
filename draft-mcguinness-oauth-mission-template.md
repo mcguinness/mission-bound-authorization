@@ -38,6 +38,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-submission-evidence:
+    title: "Mission Intent Submission Evidence for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-submission-evidence.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-consent-evidence:
     title: "Mission Consent Evidence for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html
@@ -670,7 +678,8 @@ instance with:
   dispatch intent from which the instance Authority Set is derived
   ({{dispatch}}), and its OPTIONAL `evidence` array carries Intent
   Submission Evidence under that profile's dispatch, refusal, and
-  never-authority rules.
+  never-authority rules and those of
+  {{I-D.draft-mcguinness-oauth-mission-submission-evidence}}.
 
 `authorization_details`:
 : OPTIONAL. The Dispatcher's authority proposal: the standard

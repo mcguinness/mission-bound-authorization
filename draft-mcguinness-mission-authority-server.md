@@ -513,8 +513,9 @@ The endpoint serves two operations, dispatched by request media type:
 The request body is a Mission Intent Submission envelope as the
 issuance profile defines it, `intent` plus OPTIONAL `evidence`, and
 the issuance profile's validation and Intent Submission Evidence
-rules apply unchanged ({{I-D.draft-mcguinness-oauth-mission}},
-{{I-D.draft-mcguinness-oauth-mission-submission-evidence}}): the
+rules ({{I-D.draft-mcguinness-oauth-mission}}) and those of
+{{I-D.draft-mcguinness-oauth-mission-submission-evidence}} apply
+unchanged: the
 submission is untrusted client input and never authority; the MAS
 MUST bound its total size, array lengths, evidence entry count, and
 evidence verification cost

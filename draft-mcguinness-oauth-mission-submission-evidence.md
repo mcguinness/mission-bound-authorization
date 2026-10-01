@@ -39,6 +39,31 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-mission-shaping:
+    title: "Mission Intent Shaping"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-child-delegation:
+    title: "Mission Child Delegation for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-approval-revision:
+    title: "Mission Approval Revision for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval-revision.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  RFC7800:
   I-D.draft-mcguinness-oauth-mission-expansion:
     title: "Mission Expansion for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html
@@ -130,7 +155,9 @@ Evidence").
 These rules apply alongside the OAuth binding's "reject, do not
 ignore" and "policy input, not authority" rules
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Intent Submission
-Evidence").
+Evidence"), on every surface that carries the Submission envelope:
+PAR, and each carriage a companion profile defines. They apply to
+every submission, including one that carries no `evidence` member.
 
 ## Required Evidence Is Resolved Before Derivation {#required-evidence}
 
@@ -145,7 +172,9 @@ Proposal").
 ## Evidence Binds One Exact Intent {#intent-binding}
 
 Evidence bound to an `intent_hash` applies only to that exact
-semantic Intent. When a shaping or approval revision changes
+semantic Intent. When a shaping
+({{I-D.draft-mcguinness-mission-shaping}}) or approval revision
+({{I-D.draft-mcguinness-oauth-mission-approval-revision}}) changes
 `intent_hash`, the AS MUST NOT treat evidence bound to the
 predecessor Intent as evidence for the revised Intent, unless the
 evidence type's specification explicitly authorizes that
@@ -156,7 +185,8 @@ transformation and defines how its lineage is verified.
 The AS establishes the presenter through the containing exchange:
 client authentication and, where present, proof of possession. An
 entry that names an authorized presenter (a `client_id`, a `cnf` key
-binding) MUST match the established presenter, and a mismatch fails
+binding {{RFC7800}}) MUST match the established presenter, and a
+mismatch fails
 that entry's verification. Evidence is never an alternative
 client-authentication mechanism and never selects the presenter.
 
@@ -181,8 +211,10 @@ carriage that a companion profile defines.
 
 On a surface that carries a Mission-creation idempotency fingerprint
 (the expansion and child-creation token exchanges,
-{{I-D.draft-mcguinness-oauth-mission-expansion}}), presented evidence
-is a member of that fingerprint, which the owning profile lists.
+{{I-D.draft-mcguinness-oauth-mission-expansion}},
+{{I-D.draft-mcguinness-oauth-mission-child-delegation}}), presented
+evidence is a member of that fingerprint, which the owning profile
+lists.
 Recovery of a completed operation on those surfaces returns the
 recorded outcome without re-verifying the presented evidence, even
 when an artifact's freshness or status has since lapsed. PAR-based
@@ -198,16 +230,16 @@ Evidence") and MUST implement:
 
 - required-evidence resolution ({{required-evidence}});
 - Intent binding ({{intent-binding}});
-- presenter agreement ({{presenter-binding}});
-- the verification bound ({{verification-bounds}});
-- error placement ({{error-responses}}); and
-- on a surface that carries a Mission-creation idempotency
-  fingerprint, the treatment of presented evidence
-  ({{creation-idempotency}}).
+- presenter agreement ({{presenter-binding}}); and
+- the verification bound ({{verification-bounds}}).
+
+It returns errors as {{error-responses}} describes and, on a surface
+that carries a Mission-creation idempotency fingerprint, treats
+presented evidence as {{creation-idempotency}} describes.
 
 A specification that defines an evidence type follows the entry
-convention ({{entry-convention}}), and an AS that supports that type
-processes its entries under this document.
+convention ({{entry-convention}}). An AS that supports an evidence
+type conforms to this document.
 
 Verified evidence is not copied into the Authority Set, and the facts
 the Mission Record retains are not carried on the `mission` claim

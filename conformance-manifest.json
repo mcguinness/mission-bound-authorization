@@ -101,10 +101,6 @@
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "40dcd8aafb590df09de07d6e29719d008df5b168",
     "content_sha256": "a2457ae90d691516191928c05e9670b7298b8fc45414c7181ba28590c72e1898"
-   },
-   "draft-mcguinness-oauth-mission-submission-evidence.md": {
-    "revision": "9ca4bf86ad8fd0ce98e083b37f2b488222a93ce6",
-    "content_sha256": "43e3c3edc6059ad8d1274ac327691a262ff5881755453230ef8c93c38fa43d98"
    }
   }
  },

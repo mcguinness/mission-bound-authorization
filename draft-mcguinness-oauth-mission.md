@@ -430,11 +430,12 @@ Some duties apply only when their condition holds: a submitted
 authority proposal, presented or required submission evidence
 ({{intent-submission-evidence}},
 {{I-D.draft-mcguinness-oauth-mission-submission-evidence}}), or
-opaque tokens (which require introspection). The optional capabilities (Delegation, Introspection
-as a state overlay for JWTs, Cross-Domain projection, and Local
-Approved-Set Verification) are adopted explicitly under
-{{conformance}}. Ordinary JWT consumption does not require retrieving
-the Mission Record or recomputing the complete approved Authority Set.
+opaque tokens (which require introspection). The optional
+capabilities (Delegation, Introspection as a state overlay for JWTs,
+Cross-Domain projection, and Local Approved-Set Verification) are
+adopted explicitly under {{conformance}}. Ordinary JWT consumption
+does not require retrieving the Mission Record or recomputing the
+complete approved Authority Set.
 
 ## Applicability {#applicability}
 
@@ -1056,10 +1057,11 @@ The AS processes a submission in this order:
 4. Resolve the evidence types policy requires, and refuse a
    submission missing a required type
    ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}).
-5. Verify every `evidence` entry under its type's rules
-   ({{intent-submission-evidence}}), verifying that intent-bound
+5. Verify every `evidence` entry under its type's rules, including
+   that intent-bound evidence is bound to this AS
+   ({{intent-submission-evidence}}), and verify that intent-bound
    evidence names exactly the provisional `intent_hash` and is bound
-   to this AS and to the established presenter
+   to the established presenter
    ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}).
 6. Apply admission policy and derive the Authority Set independently
    ({{authorization-derivation}}).

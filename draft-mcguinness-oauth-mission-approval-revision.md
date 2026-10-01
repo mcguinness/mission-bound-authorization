@@ -377,11 +377,10 @@ it. Intent Submission Evidence bound to the proposed Mission's
 "Evidence Binds One Exact Intent"): evidence a policy requires is
 presented anew on the revision submission's envelope, bound to the
 revised Intent, unless the evidence type's specification authorizes
-defined transformations and verifies their lineage. The submission
-evidence profile's required-evidence resolution
-({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, Section
-"Required Evidence Is Resolved Before Derivation") applies to the
-revision submission as to any submission.
+defined transformations and verifies their lineage. Required-evidence
+resolution ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}},
+Section "Required Evidence Is Resolved Before Derivation") applies to
+the revision submission as to any submission.
 
 The client continues polling the existing `deferral_code`; the revision
 does not start a new approval. A PAR `request_uri` returned on the
