@@ -474,11 +474,18 @@ task graph node to a Mission reference:
   profile discloses it to it.
 
 `status_checked_at`:
-: REQUIRED when the harness has checked status. An RFC 3339 timestamp.
+: REQUIRED when the harness has checked status. An RFC 3339 timestamp:
+  when the harness observed the status it relies on, never earlier
+  than that status's issuance (a Mission Status Response's `iat`,
+  {{I-D.draft-mcguinness-oauth-mission-status}}).
 
 `status_expires_at`:
 : REQUIRED when the harness relies on a status lease. An RFC 3339
-  timestamp after which the status MUST NOT be used for continuation.
+  timestamp after which the status MUST NOT be used for continuation:
+  the end of the harness's reliance. For a Mission Status Response it
+  never exceeds the response's `mission.fresh_until`
+  ({{I-D.draft-mcguinness-oauth-mission-status}}), and deployment
+  policy can set it earlier.
 
 `state`:
 : REQUIRED when known. The last Mission state established by the
