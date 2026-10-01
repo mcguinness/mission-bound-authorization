@@ -2774,6 +2774,15 @@ registered by {{I-D.draft-mcguinness-oauth-mission}}.
 
 --- back
 
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- The state observation's `mission_status_issued_at` is a Mission
+  Status Response's `iat`, never later than `freshness_at`, and
+  `mission_status_expires_at` and the state valid-through are its
+  `mission.fresh_until`, not its `exp`, or a lease's end.
+
 # Acknowledgments
 {:numbered="false"}
 
