@@ -692,10 +692,10 @@ revocation, a runtime or state-aware re-check, or the credential's
 own expiry ({{validity-model}}).
 
 Companions add states (`suspended`, `completed`, `superseded`,
-`cascaded`), and one rule keeps that safe without a registry: a
-consumer treats every state other than the exact value `active`,
-including one it does not recognize, as non-active (the OAuth
-binding's Mission Lifecycle and Gating section).
+`cascaded`), and one rule keeps that safe without a registry: a consumer
+treats every state other than the exact value `active`, including one it
+does not recognize, as non-active, so an unrecognized state fails safe
+(the OAuth binding's Mission Lifecycle and Gating section).
 
 AAuth realizes the separation differently. Its exact-byte `s256`
 commits the private approved mission blob, and `{approver, s256}` is
@@ -895,16 +895,15 @@ Agent (client):
   A deployment may authenticate concrete agent instances with client
   instance identification, which extends attestation-based client
   authentication
-  ({{I-D.draft-ietf-oauth-attestation-based-client-auth}}), and
-  endorse its attesters in client metadata
+  ({{I-D.draft-ietf-oauth-attestation-based-client-auth}}), and endorse
+  its attesters in client metadata
   ({{I-D.draft-mcguinness-oauth-client-instance-id}},
-  {{I-D.draft-mcguinness-oauth-client-attesters}}), sharpening joins
-  and evidence attribution to instance granularity. Instance evidence
-  alone identifies no actor or delegate
-  ({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 5);
-  SPIFFE workload credentials
-  ({{I-D.draft-ietf-oauth-spiffe-client-auth}}) on their own convey no
-  instance identity under that profile
+  {{I-D.draft-mcguinness-oauth-client-attesters}}), sharpening joins and
+  evidence attribution to instance granularity without touching the
+  Mission model. Instance evidence alone identifies no actor or delegate
+  ({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 5); SPIFFE
+  workload credentials ({{I-D.draft-ietf-oauth-spiffe-client-auth}}) on
+  their own convey no instance identity under that profile
   ({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 8.2); and
   none of these mechanisms defines the Mission actor, delegation,
   intent, lifecycle, or evidence semantics defined here.
@@ -1087,11 +1086,13 @@ the audit feed.
 
 The chain is actor lineage, not authority lineage. An `act` chain
 records who acted through whom; it does not carry what task was
-approved, how authority narrowed at each derivation, whether the
-task remains `active`, or which parameter constraints bind. Those
-travel in the Mission's own constructs: the anchors, the Authority
-Set, the lifecycle state, and Child Mission lineage
-({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
+approved, how authority narrowed at each derivation, whether the task
+remains `active`, or which parameter constraints bind. Those travel in
+the Mission's own constructs: the anchors, the Authority Set, the
+lifecycle state, and Child Mission lineage
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). Reading an
+actor chain as authorization provenance is the gap the Mission's lineage
+exists to close.
 
 ## Agent Identity, Agent Deployment, and Mission {#three-objects}
 
@@ -1102,12 +1103,12 @@ lifecycle-bearing objects. Each has its own owner, lifecycle, and
 revocation, and the model stays clean only while none absorbs
 another's job:
 
-Agent identity (who is acting): : The logical agent and, where client
-instance identification is deployed, the concrete instance
-({{components}}). Owned by the deployment's agent IAM, a registry or
-directory outside this family, and consumed, in the OAuth binding, as
-the `client_id`, the client-instance attestation, and validated Instance
-Context.
+Agent identity (who is acting):
+: The logical agent and, where client instance identification is
+  deployed, the concrete instance ({{components}}). Owned by the
+  deployment's agent IAM, a registry or directory outside this family,
+  and consumed, in the OAuth binding, as the `client_id`, the
+  client-instance attestation, and validated Instance Context.
 
 Agent Deployment (what is running):
 : The approved behavioral version of the agent: its code, model,
@@ -1314,7 +1315,7 @@ ceiling ({{I-D.draft-mcguinness-mission-discovery}}).
 
 The AAuth binding carries this verb natively through its management
 companion for status, termination, and delegation-tree queries
-({{I-D.draft-mcguinness-mission-aauth-management}}). The approved
+({{I-D.draft-mcguinness-mission-aauth-management}}). Its native approved
 lifetime bound is AAuth's own `expires_at`, profiled by the expiry
 document ({{I-D.draft-mcguinness-aauth-mission-expiry}}).
 
@@ -1917,11 +1918,12 @@ strong one:
   Credential-Bound claims.
 
 Only the third earns the term: a `mission` claim alone is a reference,
-not Mission-bound authorization. What the strong class requires is the
-`credential-mission-bound` equivalence of the binding properties
-({{binding-properties}}): six conditions, each mapped to what discharges
-it, earned only where all hold together. The OAuth binding discharges
-the equivalence through its own conformance rule.
+not Mission-bound authorization. The family reserves "Mission-bound" for
+that class, and its definition is the `credential-mission-bound`
+equivalence of the binding properties ({{binding-properties}}): six
+conditions, each mapped to what discharges it, earned only where all
+hold together. The OAuth binding discharges the equivalence through its
+own conformance rule.
 
 ## The Mission-Bound Credential
 
@@ -2572,7 +2574,7 @@ The mechanism mapping is conservative:
 | Mission Join Assertion | A stronger, token- and key-specific `credential-correlated`, still never issuance |
 | Trusted harness | `work-item-bound`, where its attacher requirements hold |
 | Native or issuance-grant-derived token | `credential-mission-bound`, and `presenter-key-bound` where its confirmation binding is in force end to end |
-| Instance Context | `instance-bound` for the path, where its association with the presenter is established over an instance-unique confirmation key and, for context preserved from an input token, authenticated provenance ({{I-D.draft-mcguinness-oauth-client-instance-id}}, Sections 7.3 and 7.5) |
+| Instance Context | what makes the path `instance-bound`, where its association with the presenter is established over an instance-unique confirmation key and, for context preserved from an input token, authenticated provenance ({{I-D.draft-mcguinness-oauth-client-instance-id}}, Sections 7.3 and 7.5) |
 | Verified transaction token | The portable `action-bound` form |
 | AuthZEN runtime permit | The channel-bound `action-bound` form, under that binding's conditions |
 {: title="Mission binding mechanisms"}
@@ -2640,16 +2642,17 @@ property its consumers obtain.
 
 ## Composed Kill-Switch Reality {#kill-switch-composition}
 
-"Baseline" and "Runtime-Enforced" name two different things that
-share spelling. Above, they name a level a deployment adopts. The
-containment profile uses the same two words for a property a
-consumer obtains per action class
-({{I-D.draft-mcguinness-oauth-mission-containment}}, Section
-"Containment Properties"). The two are not 1:1. A Runtime-Enforced
-deployment can still provide only the Baseline property for a class
-its Enforcement Scope Statement leaves lifecycle-gated-only, because
-the property requires a state-observable substrate per class, not
-per deployment ({{I-D.draft-mcguinness-mission-runtime}}).
+"Baseline" and "Runtime-Enforced" name two different things that share
+spelling. Above, they name a level a deployment adopts. The containment
+profile uses the same two words for a property a consumer obtains per
+action class ({{I-D.draft-mcguinness-oauth-mission-containment}},
+Section "Containment Properties"). The two are not 1:1. A
+Runtime-Enforced deployment can still provide only the Baseline property
+for a class its Enforcement Scope Statement leaves lifecycle-gated-only,
+because the property requires a state-observable substrate per class,
+not per deployment ({{I-D.draft-mcguinness-mission-runtime}}). A row can
+therefore carry a Runtime-Enforced rung and a Baseline property together
+without contradiction.
 
 Each row below assumes a deployment that runs the containment
 profile, at the row's rung and under its binding. A rung and a
@@ -2673,9 +2676,8 @@ Notes:
 
 1. Under the OAuth binding at Baseline Issuance, a cross-domain
    projection grant already redeemed and an offline attenuation root
-   already minted before the transition each run to its own lifetime
-   or `del_max_depth`
-   ({{I-D.draft-mcguinness-oauth-mission-containment}},
+   already minted before the transition each run to its own lifetime or
+   `del_max_depth` ({{I-D.draft-mcguinness-oauth-mission-containment}},
    Section "The Materialized-Capability Residual").
 2. Under the standalone MAS at Baseline Issuance, every action runs to
    whatever native credential, session, or resource-local bound the
@@ -2683,24 +2685,24 @@ Notes:
    enforcement over a freshness source arrives or the issuance join
    restores a gate
    ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}).
-3. Under any binding, a containment-aware state source is full Status
-   or introspection carrying `containment_version`, or Signals
-   carrying the overlay change.
+3. Under any binding, a containment-aware state source is full Status or
+   introspection carrying `containment_version`, or Signals carrying the
+   overlay change.
 4. Under any binding, where a class is checked only against an
-   active-but-not-containment-aware source, left
-   lifecycle-gated-only, or gated only by fresh derivation, it gets
-   the Baseline property only, regardless of rung
-   ({{I-D.draft-mcguinness-mission-runtime}}). A fresh derivation
-   narrows what it mints and can shorten the residual, but it checks
-   nothing at action time
+   active-but-not-containment-aware source, left lifecycle-gated-only,
+   or gated only by fresh derivation, it gets the Baseline property
+   only, regardless of rung ({{I-D.draft-mcguinness-mission-runtime}}).
+   A fresh derivation narrows what it mints and can shorten the
+   residual, but it checks nothing at action time, so it carries the
+   Baseline property, not the Runtime-Enforced one
    ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section
    "Containment Properties").
-5. Under the MAS as estate control plane, the consuming AS's
-   redemption and refresh checks are the issuance profile's ordinary
-   `active` gate, and a contained Mission stays `active`. Those checks
-   are therefore not containment-aware on their own, unless the
-   consuming AS separately retrieves and applies the containment
-   overlay or current Effective Authority Set
+5. Under the MAS as estate control plane, the consuming AS's redemption
+   and refresh checks are the issuance profile's ordinary `active` gate,
+   and a contained Mission stays `active`. Those checks are therefore
+   not containment-aware on their own, unless the consuming AS
+   separately retrieves and applies the containment overlay or current
+   Effective Authority Set
    ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}, Section
    "Redemption").
 
@@ -2962,13 +2964,14 @@ that emerge only at composition:
 
 # Privacy Considerations {#privacy-considerations}
 
-Each binding's privacy properties are its own. In the OAuth binding,
-those of the Mission record and the Mission Intent are that binding's
-({{I-D.draft-mcguinness-oauth-mission}}) and each adopted profile's;
-this document describes them and adds no data element of its own. The
-OAuth binding's Privacy Considerations cover Mission Identifier
-correlation, token payload disclosure, and Intent retention, with the
-audit profile's erasure record as the transparency-side mechanism
+The privacy properties of the Mission record and the Mission Intent are
+the OAuth binding's ({{I-D.draft-mcguinness-oauth-mission}}), for it and
+for the bindings that import its record, and each adopted profile's; the
+AAuth binding's are its own, below. This document describes them and
+adds no data element of its own. The OAuth binding's Privacy
+Considerations cover Mission Identifier correlation, token payload
+disclosure, and Intent retention, with the audit profile's erasure
+record as the transparency-side mechanism
 ({{I-D.draft-mcguinness-mission-audit}}). The status profile's
 anti-oracle property bounds what its status surfaces disclose
 ({{I-D.draft-mcguinness-oauth-mission-status}}).
