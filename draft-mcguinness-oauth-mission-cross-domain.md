@@ -99,13 +99,6 @@ informative:
   I-D.draft-mcguinness-oauth-domain-authorized-issuer:
   I-D.draft-mcguinness-oauth-actor-receipts:
   I-D.draft-mcguinness-oauth-id-continuation-assertion:
-    title: "Identity Continuation Assertion for OAuth 2.0 Token Exchange"
-    target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-id-continuation-assertion/
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   I-D.draft-zhu-oauth-async-delegation:
   I-D.draft-mcguinness-oauth-mission-continuation:
     title: "Mission Continuation: Authorization Continuity for Mission-Bound Authorization"
@@ -432,7 +425,8 @@ that carries a continuation ACROSS a trust boundary the origin does
 not control; Identity Continuation
 ({{I-D.draft-mcguinness-oauth-id-continuation-assertion}}) and async
 delegation ({{I-D.draft-zhu-oauth-async-delegation}}) are the
-intra-domain transports.
+transports within that boundary: every Identity Continuation hop
+reaches a Resource AS that trusts the same identity provider.
 
 What the profile adds over this document is
 the Mission binding common to every transport: a continuation handle

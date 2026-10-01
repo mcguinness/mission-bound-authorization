@@ -58,13 +58,6 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-oauth-id-continuation-assertion:
-    title: "Identity Continuation Assertion for OAuth 2.0 Token Exchange"
-    target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-id-continuation-assertion/
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   I-D.draft-zhu-oauth-async-delegation:
   I-D.draft-mcguinness-oauth-mission-continuation:
     title: "Mission Continuation: Authorization Continuity for Mission-Bound Authorization"
@@ -1446,8 +1439,9 @@ authorization-continuity profile, which keeps three easily conflated
 things apart. Identity continuity, who is acting and how that identity
 legitimately continues, rides a transport rather than this profile:
 Identity Continuation
-({{I-D.draft-mcguinness-oauth-id-continuation-assertion}}) for a
-short-lived, sender-constrained hop within a domain; async delegation
+({{I-D.draft-mcguinness-oauth-id-continuation-assertion}}) for
+short-lived, sender-constrained hops among Resource Authorization
+Servers that trust a common identity provider; async delegation
 ({{I-D.draft-zhu-oauth-async-delegation}}) for a long-running,
 disconnected task; and the cross-domain grant
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) across a trust
