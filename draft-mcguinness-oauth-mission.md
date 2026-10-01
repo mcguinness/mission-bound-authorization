@@ -1096,7 +1096,8 @@ was submitted ({{authority-proposal}}), the AS derives the
 **Authority Set**: one or more {{RFC9396}} `authorization_details`
 entries of an AS-supported type ({{other-types}}). Derivation is
 mechanical. It happens once, at the approval event, over the
-derivation policy then in force, in one of two modes:
+derivation policy then in force, as one procedure whose candidate
+entries depend on whether an authority proposal was submitted:
 
 - **Narrowing mode** (preferred where the client can author
   `authorization_details`): the client submitted an authority
@@ -2316,7 +2317,7 @@ exactly as recorded ({{test-vectors}}). A companion that cites an
 entry by digest (a decision record naming the entry it evaluated,
 containment or completion state keyed to an entry) computes it this
 way. Entries whose canonical commitment envelopes are identical
-produce the same digest, and within one Mission record every recorded
+produce the same digest, and within one Mission Record every recorded
 entry resolving to the same digest forms one selector equivalence
 class; the class is defined by the canonical bytes, not by
 pre-canonical source text the record does not preserve.
@@ -2457,7 +2458,7 @@ holds these states. A companion profile MAY register an additional
 state for a lifecycle it introduces (for example, a paused or
 superseded state); only `active` permits issuance.
 
-Wherever a Mission state is reported, including the Mission record
+Wherever a Mission state is reported, including the Mission Record
 and the introspection `mission` member, a consumer MUST treat only
 the exact value `active` as permitting derivation or continued
 reliance, and MUST treat every other value, including one it does
@@ -2786,7 +2787,7 @@ specification states when the mapping in step 3 is safe for that
 type's entries (for `mission_resource_access`,
 {{I-D.draft-mcguinness-oauth-mission-resource-access}}).
 
-A runtime profile's enforcement-scope declarations
+The runtime profile's enforcement-scope declarations
 ({{I-D.draft-mcguinness-mission-runtime}}) can reference the same
 mapping for the paths it covers; this rule does not depend on that
 profile.
@@ -3098,6 +3099,7 @@ elsewhere in this document that names one of these codes
 | PAR: malformed Submission envelope or Intent (schema, unknown member, invalid value) | `invalid_request` ({{Section 5.2 of RFC6749}}) | safe `error_description` |
 | PAR, or a companion's token-endpoint submission: a presented evidence entry of an unsupported type, or failing its type's validation or verification ({{intent-submission-evidence}}), or a required evidence type absent ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}) | `invalid_mission_intent_evidence` ({{intent-submission-evidence}}) | safe `error_description` |
 | PAR or authorization: malformed or unsupported actual RAR object (an entry of a submitted `authorization_details` proposal) | `invalid_authorization_details` ({{Section 5 of RFC9396}}) | RAR-defined detail |
+| PAR: a proposed entry, valid for its type, whose `resource` is not among the Intent's `target_resources` ({{authority-proposal}}) | `invalid_request` ({{Section 5.2 of RFC6749}}) | safe `error_description` |
 | Request from a client registered as Mission-governed: `authorization_details` without `mission_intent` ({{authority-proposal}}) | `invalid_request` ({{Section 4.1.2.1 of RFC6749}}, {{Section 5.2 of RFC6749}}) | safe `error_description` |
 | Authorization or token request: invalid, unknown, or malformed actual RFC 8707 `resource` parameter, or a token-endpoint `resource` outside the Mission's Authority Set | `invalid_target` ({{Section 2 of RFC8707}}) | safe `error_description` |
 | Authorization or token request: the target's scope-projection mapping is unknown, ambiguous, or stale, whether or not the request names a `scope` value, or the target is `scope`-only and no safe projection exists for the applicable entries when the request names no `scope` value ({{scope-projection}}); or, where the AS applies {{rs-enforcement}}'s delegated-token routing rule at issuance, the delegated token's target is not known to be Mission-aware | `invalid_target` ({{Section 2 of RFC8707}}) | safe `error_description` |
@@ -3729,9 +3731,11 @@ parameter {{RFC8414}}:
 
 A deployment can instead arrange Mission-bound authorization,
 including its supported types and schemas, out of band. A client
-holding a Mission Intent does not downgrade the task to an ungoverned
-request ({{downgrade-by-omission}}); where the deployment's AS cannot
-change, the standalone Mission Authority Server
+holding a Mission Intent MUST NOT submit the same authority as bare
+`scope` or `authorization_details` to an AS whose Mission support is
+neither advertised nor otherwise established; it surfaces the
+inability instead ({{downgrade-by-omission}}). Where the deployment's
+AS cannot change, the standalone Mission Authority Server
 ({{I-D.draft-mcguinness-mission-authority-server}}) is the governed
 alternative.
 
@@ -3772,11 +3776,6 @@ for the companion's cross-domain grant issuance. Absent such a signal,
 a capability is discovered out of band or by attempt: a Token
 Exchange, a cross-domain grant issuance, or an introspection request
 fails if the issuer does not support it.
-
-This member and the `mission_bound_authorization_required` member of
-{{protected-resource-metadata}} are discovery data whose integrity
-rests on the metadata retrieval protections of {{RFC8414}} and
-{{RFC9728}}; the security considerations of those documents apply.
 
 # Protected Resource Metadata {#protected-resource-metadata}
 
@@ -4007,14 +4006,20 @@ client, as Mission-governed; {{authority-proposal}} states the
 issuance-side rules that keep such a resource's tokens and such a
 client's requests inside a Mission.
 
-A client holding a Mission Intent MUST NOT submit the same authority
-as bare `scope` or `authorization_details` to an AS whose Mission
-support is neither advertised nor otherwise established
-({{discovery}}); it surfaces the inability instead.
+On the client side, a client holding a Mission Intent does not fall
+back to an ordinary request where Mission support is not established
+({{discovery}}).
 
 On the enforcement side, a Resource Server for such a resource
 rejects a token lacking the `mission` claim and can advertise that
 requirement ({{rs-enforcement}}, {{protected-resource-metadata}}).
+
+The `mission_bound_authorization_supported` ({{discovery}}) and
+`mission_bound_authorization_required`
+({{protected-resource-metadata}}) members are discovery data whose
+integrity rests on the metadata retrieval protections of {{RFC8414}}
+and {{RFC9728}}; the security considerations of those documents
+apply.
 
 ## Agent-Specific Threats {#sec-agent}
 
@@ -4048,7 +4053,7 @@ approved Authority Set, an injected agent can read what the Mission
 permits and write to a sink the Mission permits, and the flat subset and
 constraint model cannot express "may read secrets, may write documents,
 but not write secrets into documents." Constraining exfiltration by a
-compromised agent is the runtime enforcement layer's role
+compromised agent is the runtime layer's role
 ({{runtime-boundary}}), and even there it is bounded, not closed
 ({{I-D.draft-mcguinness-mission-runtime}}). Preventing misuse of data
 within the authorized scope needs a separate taint or information-flow
@@ -4126,7 +4131,7 @@ composite result is `active: false` once the Mission is no longer
 `active` ({{composite-active}}), so a Resource Server that introspects
 per request stops honoring the token at its next request.
 
-A runtime enforcement layer ({{I-D.draft-mcguinness-mission-runtime}}),
+A runtime layer ({{I-D.draft-mcguinness-mission-runtime}}),
 outside the scope of this document, evaluates each consequential action
 against the Mission, with parameter binding, and records evidence for
 the actions it covers. A deployment adds one for an action class that
@@ -4392,7 +4397,7 @@ entries the consuming Resource Server needs, as
 
 ## Intent Retention and Anchor Disclosure {#intent-retention-and-anchor-disclosure}
 
-The Mission record's Intent members (`goal`, `task_bounds`) are
+The Mission Record's Intent members (`goal`, `task_bounds`) are
 personal-data sinks: they carry whatever task description the user
 supplied, and their retention and erasure follow {{record-access}}. The
 integrity anchors are unsalted commitments: a party holding a candidate
@@ -4421,7 +4426,7 @@ required evidence is absent or invalid; the refusal is the resource's
 answer, and Mission authority does not override it.
 
 Mission approval and Mission authority are not the data subject's
-consent: a Mission record can retain a verified consent reference or
+consent: a Mission Record can retain a verified consent reference or
 facts as `submission_evidence` ({{mission-record}}), and those facts are
 provenance and policy input only, which the resource domain validates
 independently under its current disclosure policy.
@@ -4438,7 +4443,7 @@ authority, or recorded-evidence member:
   Set entries that reach tokens ({{mission-bound-tokens}});
 - `submission_evidence` facts, including a consent reference.
 
-Whatever the member, it persists on the Mission record for its audit
+Whatever the member, it persists on the Mission Record for its audit
 horizon ({{mission-record}}), concentrates at the AS with the record
 ({{record-access}}), and, if committed, is confirmable through the
 unsalted anchors by any party holding a candidate value
@@ -4449,7 +4454,7 @@ minimization, not anonymity, and personal-data obligations follow it.
 
 ## Mission Record and Evidence Access {#record-access}
 
-The Mission record concentrates the task, its authority, and its
+The Mission Record concentrates the task, its authority, and its
 principals at the AS, and every evidence artifact joins on the Mission
 Identifier, so the join is a correlation surface equal to the identifier
 itself. Tokens carry references and authority, not the record: nothing
@@ -4468,7 +4473,7 @@ the audit transparency profile ({{I-D.draft-mcguinness-mission-audit}}),
 its erasure record and data-subject-request basis are the
 transparency-side mechanism: it records an erasure but neither performs
 one nor overrides retention law, and it leaves the operational Mission
-record and its audit-horizon retention floor untouched.
+Record and its audit-horizon retention floor untouched.
 
 # Internationalization Considerations {#i18n}
 
@@ -5680,6 +5685,16 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Stated the client no-downgrade requirement in Authorization Server
+  Metadata, where discovery establishes Mission support; Downgrade by
+  Omission keeps the threat analysis and now holds the
+  metadata-integrity note. Added the existing `invalid_request`
+  refusal of a proposed entry outside `target_resources` to the error
+  mapping table. Presented derivation as one procedure whose two
+  named modes differ in where candidate entries come from, and made
+  "Mission Record" and "runtime layer" consistent. No requirement or
+  wire behavior changed.
 
 - Clarified that a Mission Issuer can conform without supporting any
   Intent Submission Evidence types. The submission-processing

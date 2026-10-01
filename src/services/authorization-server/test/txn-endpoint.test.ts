@@ -230,6 +230,7 @@ async function issueBaseMissionToken(
     max_amount: { amount: "500.00", currency: "USD" },
     vendors: ["acme"],
   },
+  expiresAt = "2027-01-01T00:00:00Z",
 ): Promise<{ token: string; missionId: string }> {
   const verifier = "txn-endpoint-verifier-0123456789-0123456789-01234";
   const challenge = Buffer.from(
@@ -240,7 +241,7 @@ async function issueBaseMissionToken(
     intent: {
       goal: "Pay Acme invoices and send remittance",
       target_resources: [RESOURCE],
-      expires_at: "2027-01-01T00:00:00Z",
+      expires_at: expiresAt,
     },
   });
   const authorizationDetails = JSON.stringify([
@@ -848,6 +849,29 @@ describe("two-phase expiry and idempotency (@spec txn-authorization#two-phase-ex
     ).json()) as { access_token: string };
     expect(second.access_token).toBe(first.access_token);
     expect(decodeJwt(second.access_token).jti).toBe(decodeJwt(first.access_token).jti);
+  });
+
+  it("a Mission ending before every other term bounds the transaction token's exp (@spec mission#mission-bound-tokens)", async () => {
+    const short = await issueBaseMissionToken(dpopKeys, new Map(), undefined, new Date(Date.now() + 60_000).toISOString());
+    const missionExpS = Math.floor(Date.parse(as.kernel.get(short.missionId)?.expires_at as string) / 1000);
+    approvalOverrides.set(taskFor("txn_exp_mission"), new Date(Date.now() + 5_000_000).toISOString());
+    const shortRecord = as.kernel.get(short.missionId) as { authority_set: AuthorityEntry[] };
+    const challenge = await challengeFor("txn_exp_mission", {
+      mission: decodeJwt(short.token).mission as Record<string, unknown>,
+      authorization_details: shortRecord.authority_set
+        .filter((e) => e.actions.includes("payments:remittance.send"))
+        .map(({ capability_sources: _issuerProvenance, ...e }) => ({ ...e, actions: ["payments:remittance.send"] })),
+    });
+    const submitted = await submit(challenge, { token: short.token });
+    const init = (await submitted.json()) as { transaction_authorization_id: string };
+    expect(submitted.status, JSON.stringify(init)).toBe(200);
+    await ars.adjudicate(taskFor("txn_exp_mission"), "approve", "bob");
+    const res = await postTransaction({ transaction_authorization_id: init.transaction_authorization_id });
+    const body = (await res.json()) as { access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    const claims = decodeJwt(body.access_token as string) as { iat: number; exp: number };
+    expect(claims.exp).toBeLessThanOrEqual(missionExpS);
+    expect(claims.exp).toBeGreaterThan(Math.floor(Date.now() / 1000));
   });
 
   it("bounds the token by the earliest live term, never by the challenge exp", async () => {
