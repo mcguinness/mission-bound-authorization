@@ -786,19 +786,19 @@ No single lever closes the gap; a deployment composes the ones its
 risk warrants ({{assurance-levels}}), and the verbs of {{layers}}
 organize the levers by the question each answers.
 
-What approval commits is broader than the structured Authority Set
-alone: it also commits the rendered intent context (`goal`,
-`task_bounds`, and, where it differs, the requested ceiling), the
-effective `expires_at`, and the rendered `derivation_limit` and any
-metering bound
+In the OAuth binding, what approval commits is broader than the
+structured Authority Set alone: it also commits the rendered intent
+context (`goal`, `task_bounds`, and, where it differs, the requested
+ceiling), the effective `expires_at`, and the rendered
+`derivation_limit` and any metering bound
 ({{I-D.draft-mcguinness-oauth-mission}},
 {{I-D.draft-mcguinness-oauth-mission-derivation-limits}},
 {{I-D.draft-mcguinness-mission-metering}}). Concrete request values,
 current consumption, and action sequencing are decision-time facts,
 evaluated later by runtime policy, metering, or action-bound
-(transaction) approval; core does not require them to be re-rendered
-to the original Approver, though action-bound approval may re-render
-exactly that.
+(transaction) approval; the OAuth binding does not require them to be
+re-rendered to the original Approver, though action-bound approval may
+re-render exactly that.
 
 The lifecycle control gates new derivation from the envelope; a
 credential already materialized under it keeps running to its own bound
@@ -1102,12 +1102,12 @@ lifecycle-bearing objects. Each has its own owner, lifecycle, and
 revocation, and the model stays clean only while none absorbs
 another's job:
 
-Agent identity (who is acting):
-: The logical agent and, where client instance identification is
-  deployed, the concrete instance ({{components}}). Owned by the
-  deployment's agent IAM, a registry or directory outside this family,
-  and consumed as the `client_id`, the client-instance attestation, and
-  validated Instance Context.
+Agent identity (who is acting): : The logical agent and, where client
+instance identification is deployed, the concrete instance
+({{components}}). Owned by the deployment's agent IAM, a registry or
+directory outside this family, and consumed, in the OAuth binding, as
+the `client_id`, the client-instance attestation, and validated Instance
+Context.
 
 Agent Deployment (what is running):
 : The approved behavioral version of the agent: its code, model,
@@ -1167,13 +1167,13 @@ instance steps are the `presenter-key-bound` and `instance-bound`
 binding properties ({{binding-properties}}); none of these steps is an
 assurance level.
 
-In the division of labor with agent IAM, agent identity preserves who
-is acting, and the Mission preserves why their authority exists. The
-registry and workload identity authenticate an approved agent
-instance; the Mission and its derived Authority Set say what
-sanctioned work that instance carries; per-hop credentials narrow;
-the runtime layer enforces each action and parameter; and the
-evidence layer joins what was approved, decided, and done.
+In the division of labor with agent IAM, agent identity preserves who is
+acting, and the Mission preserves why their authority exists. The
+registry and workload identity authenticate an approved agent instance;
+the Mission and, where the binding derives one, its Authority Set say
+what sanctioned work that instance carries; per-hop credentials narrow;
+the runtime layer enforces each action and parameter; and the evidence
+layer joins what was approved, decided, and done.
 
 # The Mission Verbs {#layers}
 
@@ -1755,14 +1755,15 @@ decision and never widens one
 
 ## The Authority Derivation Boundary {#derivation-boundary}
 
-Deriving the Authority Set from the Mission Intent is the semantic heart
-of the model and the one step the family deliberately does not
-standardize. The consequence is a trust boundary: interoperability
-begins at the committed result, not at the Intent. A Mission Intent has
-no portable semantics; two conforming Authorization Servers can derive
-different Authority Sets from the same Intent, and audit can establish
-what was derived (against `intent_hash` and `policy_version`), never
-whether it was the right reading of the task.
+In the authority-bearing bindings, deriving the Authority Set from the
+Mission Intent is the semantic heart of the model and the one step the
+family deliberately does not standardize. The consequence is a trust
+boundary: interoperability begins at the committed result, not at the
+Intent. A Mission Intent has no portable semantics; two conforming
+Mission Issuers can derive different Authority Sets from the same
+Intent, and audit can establish what was derived (against `intent_hash`
+and `policy_version`), never whether it was the right reading of the
+task.
 
 A deployment whose partners must reason about its derivations can
 publish a derivation policy identifier and test fixtures that pin
@@ -2872,10 +2873,10 @@ each signing key it operates, as a list keyed by key and application
 rather than one row per key class. Each entry names its key class, one
 of the five classes {{I-D.draft-mcguinness-mission-security-model}}
 enumerates: issuer signing, evidence signing, agent sender-constraint,
-mediating-PEP custody, attenuation roots. It names the artifact
-classes or `kid` selector it covers (core recommends segmenting issuer
-signing keys by artifact class under distinct `kid` values within one
-`jwks_uri`, {{I-D.draft-mcguinness-oauth-mission}}). It also states
+mediating-PEP custody, attenuation roots. It names the artifact classes
+or `kid` selector it covers (the OAuth binding recommends segmenting
+issuer signing keys by artifact class under distinct `kid` values within
+one `jwks_uri`, {{I-D.draft-mcguinness-oauth-mission}}). It also states
 the holder, whether the key is exportable, its generation and
 signing-use controls, a reference to its documented compromise-recovery
 procedure, and any attestation or verifier reference for that key.
@@ -2931,15 +2932,16 @@ that emerge only at composition:
 
 # Privacy Considerations {#privacy-considerations}
 
-The privacy properties of the Mission record and the Mission Intent
-are the OAuth binding's ({{I-D.draft-mcguinness-oauth-mission}}) and
-each adopted profile's; this document describes them and adds no data
-element of its own. The OAuth binding's Privacy Considerations cover
-Mission Identifier correlation, token payload disclosure, and Intent
-retention, with the audit profile's erasure record as the
-transparency-side mechanism ({{I-D.draft-mcguinness-mission-audit}}).
-The status profile's anti-oracle property bounds what its status
-surfaces disclose ({{I-D.draft-mcguinness-oauth-mission-status}}).
+Each binding's privacy properties are its own. In the OAuth binding,
+those of the Mission record and the Mission Intent are that binding's
+({{I-D.draft-mcguinness-oauth-mission}}) and each adopted profile's;
+this document describes them and adds no data element of its own. The
+OAuth binding's Privacy Considerations cover Mission Identifier
+correlation, token payload disclosure, and Intent retention, with the
+audit profile's erasure record as the transparency-side mechanism
+({{I-D.draft-mcguinness-mission-audit}}). The status profile's
+anti-oracle property bounds what its status surfaces disclose
+({{I-D.draft-mcguinness-oauth-mission-status}}).
 
 Read across profiles, the dataflow concentrates in three places: the
 record and its evidence at the issuer (task prose, principals,
