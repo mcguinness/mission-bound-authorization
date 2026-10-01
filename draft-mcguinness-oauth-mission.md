@@ -3730,9 +3730,11 @@ parameter {{RFC8414}}:
 
 A deployment can instead arrange Mission-bound authorization,
 including its supported types and schemas, out of band. A client
-holding a Mission Intent does not downgrade the task to an ungoverned
-request ({{downgrade-by-omission}}); where the deployment's AS cannot
-change, the standalone Mission Authority Server
+holding a Mission Intent MUST NOT submit the same authority as bare
+`scope` or `authorization_details` to an AS whose Mission support is
+neither advertised nor otherwise established; it surfaces the
+inability instead ({{downgrade-by-omission}}). Where the deployment's
+AS cannot change, the standalone Mission Authority Server
 ({{I-D.draft-mcguinness-mission-authority-server}}) is the governed
 alternative.
 
@@ -4008,10 +4010,9 @@ client, as Mission-governed; {{authority-proposal}} states the
 issuance-side rules that keep such a resource's tokens and such a
 client's requests inside a Mission.
 
-A client holding a Mission Intent MUST NOT submit the same authority
-as bare `scope` or `authorization_details` to an AS whose Mission
-support is neither advertised nor otherwise established
-({{discovery}}); it surfaces the inability instead.
+On the client side, a client holding a Mission Intent does not fall
+back to an ordinary request where Mission support is not established
+({{discovery}}).
 
 On the enforcement side, a Resource Server for such a resource
 rejects a token lacking the `mission` claim and can advertise that
