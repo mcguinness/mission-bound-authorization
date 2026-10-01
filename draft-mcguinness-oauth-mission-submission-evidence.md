@@ -171,6 +171,17 @@ Proposal").
 
 ## Evidence Binds One Exact Intent {#intent-binding}
 
+The owning evidence type's specification defines how intent-bound
+evidence identifies its intended AS and how that binding is verified.
+The AS MUST refuse an intent-bound entry that does not verifiably
+identify this AS, with `invalid_mission_intent_evidence`. This includes
+an absent binding or a binding to a different AS.
+
+Before derivation, the AS verifies that intent-bound evidence is
+bound to this AS, names exactly the provisional `intent_hash`
+computed from the submitted Intent, and agrees with the presenter
+established by the containing exchange ({{presenter-binding}}).
+
 Evidence bound to an `intent_hash` applies only to that exact
 semantic Intent. When a shaping
 ({{I-D.draft-mcguinness-mission-shaping}}) or approval revision
@@ -311,6 +322,15 @@ the OAuth binding ({{I-D.draft-mcguinness-oauth-mission}}, Section
 \[\[ To be removed from the final specification ]]
 
 -00
+
+- Clarified the boundary with the OAuth binding: the framework owns
+  the pre-derivation checks on intent-bound evidence, including its
+  AS, exact-Intent, and presenter binding. An intent-bound entry whose
+  intended-AS binding is absent, invalid, or identifies another AS is
+  refused with `invalid_mission_intent_evidence`; its evidence type
+  defines how the binding is expressed and verified. The OAuth binding
+  keeps its evidence dispatch and refusal rules and permits an AS that
+  supports no evidence types.
 
 - Initial version. Carries the Intent Submission Evidence framework of
   Mission-Bound Authorization for OAuth 2.0 with its wire names and
