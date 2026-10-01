@@ -1769,7 +1769,9 @@ the substrate contract by touch
 ({{I-D.draft-mcguinness-mission-substrate}}).
 
 The remainder of this section documents that instantiation: eight
-primitives, each with its normative home and its consumers. Every
+primitives, each with its normative home and its consumers, six in
+the table below and the Mission-Bound Credential and Approval
+Fidelity in subsections of their own. Every
 sentence mirrors a rule the named profile states normatively. None of
 these OAuth-binding representations or stronger semantics is
 required verbatim by the binding-neutral kernel, although several
