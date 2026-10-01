@@ -3610,6 +3610,21 @@ bound profiled by `aauth-mission-expiry`.
 
 \[\[ To be removed from the final specification ]]
 
+- Reading order and section ownership, with no change to any
+  profile's requirements. A Mission's Life leads the model; Meaning
+  and Derivation gathers the ontology contract, the derivation
+  boundary, and approval fidelity; the binding comparison, now with
+  GNAP, sits with the substrate; Assurance opens with a table of the
+  frames it uses and folds the reference stacks into the levels; and
+  each deployment pattern has its own subsection. Requirements, the
+  conventional-stack comparison, the worked composition, error
+  surfaces, illustrative verification guidance, the Deployment
+  Profile shapes, and the trimmed document map are appendices. The
+  verb spine carries an overlay of owning documents and packages.
+  Repeated explanations have one home, and a repetition that
+  qualifies a guarantee keeps a short local summary. The model is
+  stated binding-neutrally, with each realization labeled.
+
 - Editorial corrections, with no change to any profile's
   requirements. The capability-kill property is stated per action
   class and consumer rather than per assurance level, matching the
