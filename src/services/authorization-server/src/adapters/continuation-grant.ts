@@ -35,6 +35,7 @@ import {
   type ValidatedContinuation,
   validateContinuationAssertion,
 } from "../kernel/continuation-assertion.js";
+import { DEFAULT_CONTINUATION_HOP_LIMIT, newContinuationHandle } from "../kernel/continuation-store.js";
 import { ID_JAG_TOKEN_TYPE, issueCrossDomainGrant } from "../kernel/cross-domain.js";
 import {
   type EffectiveAuthoritySource,
@@ -132,6 +133,16 @@ function txError(ctx: KoaContextWithOIDC, status: number, error: string, descrip
   ctx.status = status;
   ctx.body = { error, error_description: description };
   ctx.set("cache-control", "no-store");
+}
+
+/** A continuation refusal raised from inside issuance (beforeSign), carrying its wire code. */
+class ContinuationRefusal extends Error {
+  constructor(
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+  }
 }
 
 /**
@@ -303,6 +314,7 @@ export async function handleTokenExchangeGrant(
   if (!store || !issuers || !replay || !resourceToAs || !subjectResolver || !signKey || !signKid) {
     throw new errors.InvalidRequest("token-exchange continuation grant is not configured");
   }
+  const hopLimit = opts.continuationHopLimit ?? DEFAULT_CONTINUATION_HOP_LIMIT;
 
   // Client auth: the authenticated presenter. Its canonical actor identity is
   // (AS issuer, client_id), the contract the Chain Authority MUST mint the ICA
@@ -375,6 +387,14 @@ export async function handleTokenExchangeGrant(
     return;
   }
   const resolved = found.continuation;
+  // @spec id-continuation-assertion — the chain's finite hop-count limit (ICA
+  // -02 6.3), a limit and so invalid_grant (5.5.6). Checked here, before any
+  // side effect, and again where the hop is recorded.
+  const hopLimitReached = (): boolean => store.hopCount(resolved.anchor.anchorId) >= hopLimit;
+  if (hopLimitReached()) {
+    txError(ctx, 400, "invalid_grant", "continuation hop-count limit reached");
+    return;
+  }
 
   // Step 6: invalid_target — the resource MUST be served by the named audience.
   if (resourceToAs(resource) !== audience) {
@@ -406,14 +426,10 @@ export async function handleTokenExchangeGrant(
   }
   // Audience-local, deterministic sub (NOT the global mission subject).
   const localSub = subjectResolver(audience, record.subject);
-  // Fresh new-hop handle, bound to the SAME anchor/Mission, linked to the prior.
-  const freshHandle = store.mint({
-    anchorId: resolved.anchor.anchorId,
-    missionId: resolved.missionId,
-    actor: { iss: currentActor.iss, sub: currentActor.sub },
-    cnfJkt: jkt,
-    priorHandle: ica.handle,
-  });
+  // Fresh new-hop handle, named in the ID-JAG but recorded only in beforeSign
+  // below, once the Mission gate has admitted the grant: a refused request
+  // leaves no orphan hop (@spec id-continuation-assertion, ICA -02 5.5.4).
+  const freshHandle = newContinuationHandle();
   // Collapse the current actor over the ICA hop lineage. Because the step-8
   // check forces currentActor === ICA act and the ICA `act` is single-level, this
   // ALWAYS collapses to a depth-1 lineage (a single actor's multi-hop
@@ -442,8 +458,26 @@ export async function handleTokenExchangeGrant(
       identityContinuationHandle: freshHandle,
       act: collapsedAct,
       authEnvelope,
+      // The child hop, bound to the SAME anchor/Mission, linked to the prior.
+      beforeSign: () => {
+        if (hopLimitReached()) {
+          throw new ContinuationRefusal("invalid_grant", "continuation hop-count limit reached");
+        }
+        store.mint({
+          handle: freshHandle,
+          anchorId: resolved.anchor.anchorId,
+          missionId: resolved.missionId,
+          actor: { iss: currentActor.iss, sub: currentActor.sub },
+          cnfJkt: jkt,
+          priorHandle: ica.handle,
+        });
+      },
     }));
   } catch (e) {
+    if (e instanceof ContinuationRefusal) {
+      txError(ctx, 400, e.code, e.message);
+      return;
+    }
     // A non-active / expired / contained / cap-exhausted Mission (gate path ->
     // distinct description from the store path in step 5).
     if (e instanceof GateError) {

@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { ContinuationStore } from "../src/kernel/continuation-store.js";
+import { ContinuationStore, newContinuationHandle } from "../src/kernel/continuation-store.js";
 import type { LifecycleCommit } from "../src/kernel/types.js";
 
 /** The exact handle shape the ICA validator accepts (continuation-assertion.ts). */
@@ -94,6 +94,30 @@ describe("ContinuationStore.lookup (@spec id-continuation-assertion)", () => {
     // Only the anchor ends; the handle row itself stays active.
     store.db.prepare("UPDATE continuation_anchors SET state = 'terminal' WHERE anchor_id = ?").run(anchorId);
     expect(store.lookup(handle)).toEqual({ status: "terminal" });
+  });
+});
+
+describe("ContinuationStore.hopCount (@spec id-continuation-assertion)", () => {
+  it("counts every hop of one chain, root included, and only that chain", () => {
+    const store = new ContinuationStore();
+    const a1 = store.rootGrantAnchor({ missionId: "msn_1", authEnvelope: {} });
+    const a2 = store.rootGrantAnchor({ missionId: "msn_1", authEnvelope: {} });
+    const root = store.mint({ anchorId: a1, missionId: "msn_1", actor: ACTOR });
+    expect(store.hopCount(a1)).toBe(1);
+    store.mint({ anchorId: a1, missionId: "msn_1", actor: ACTOR, priorHandle: root });
+    store.mint({ anchorId: a1, missionId: "msn_1", actor: ACTOR, priorHandle: root });
+    expect(store.hopCount(a1)).toBe(3);
+    expect(store.hopCount(a2)).toBe(0);
+  });
+
+  it("records a hop under a caller-generated handle", () => {
+    const store = new ContinuationStore();
+    const anchorId = store.rootGrantAnchor({ missionId: "msn_1", authEnvelope: {} });
+    const handle = newContinuationHandle();
+    expect(handle).toMatch(ICA_HANDLE);
+    expect(store.lookup(handle)).toEqual({ status: "unknown" });
+    expect(store.mint({ handle, anchorId, missionId: "msn_1", actor: ACTOR })).toBe(handle);
+    expect(store.resolve(handle)?.missionId).toBe("msn_1");
   });
 });
 

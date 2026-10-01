@@ -445,6 +445,11 @@ export interface AdapterOptions {
   chainAuthorityIssuers?: ContinuationIssuer[];
   /** Shared (iss, jti) ICA replay cache (from newReplayCache()). */
   continuationReplay?: ContinuationReplay;
+  /**
+   * @spec id-continuation-assertion — the finite per-chain hop-count limit (ICA
+   * -02 6.3). Defaults to DEFAULT_CONTINUATION_HOP_LIMIT.
+   */
+  continuationHopLimit?: number;
   /** Resource -> authoritative AS map (reused from the demo cross-domain wiring). */
   resourceToAs?: (resource: string) => string;
   /** Deterministic audience-local subject resolver. */

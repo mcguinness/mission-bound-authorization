@@ -128,7 +128,10 @@ function newLineage(
  * rootMissionContinuation). Returns the mission id and that AUTO-rooted handle, so
  * the lifecycle tests prove approval-time rooting rather than test-only rooting.
  */
-function approveLineage(eventId: string): {
+function approveLineage(
+  eventId: string,
+  built: BuiltAs = as,
+): {
   missionId: string;
   handle: string;
 } {
@@ -139,7 +142,7 @@ function approveLineage(eventId: string): {
       expires_at: MISSION_EXP,
     }),
   );
-  const mission = as.kernel.approve({
+  const mission = built.kernel.approve({
     intent,
     proposedAuthority: [
       {
@@ -149,12 +152,12 @@ function approveLineage(eventId: string): {
         constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
       },
     ],
-    subject: { iss: ISSUER, sub: "alice" },
-    approver: { iss: ISSUER, sub: "bob" },
+    subject: { iss: built.issuer, sub: "alice" },
+    approver: { iss: built.issuer, sub: "bob" },
     clientId: "ap-agent",
     approvalEventId: eventId,
   });
-  const handles = as.continuationStore.handlesForMission(mission.id);
+  const handles = built.continuationStore.handlesForMission(mission.id);
   return { missionId: mission.id, handle: handles[0] as string };
 }
 
@@ -164,6 +167,7 @@ interface IcaOpts {
   act?: { iss: string; sub: string };
   iatSec?: number;
   expSec?: number;
+  aud?: string;
   over?: Record<string, unknown>;
 }
 
@@ -179,7 +183,7 @@ async function mintICA(handle: string, opts: IcaOpts = {}): Promise<string> {
   return new SignJWT(base)
     .setProtectedHeader({ alg: "ES256", kid: "ca-key", typ: IDENTITY_CONTINUATION_JWT_TYP })
     .setIssuer(CA)
-    .setAudience(ISSUER)
+    .setAudience(opts.aud ?? ISSUER)
     .setIssuedAt(opts.iatSec ?? now)
     .setExpirationTime(opts.expSec ?? now + 120)
     .setJti(crypto.randomUUID())
@@ -197,16 +201,22 @@ async function mintActorToken(over: Record<string, unknown> = {}): Promise<strin
     .sign(agentKeys.privateKey);
 }
 
-async function clientAssertion(): Promise<string> {
+/** The AS a request goes to: its issuer and the ap-agent client key it registered. */
+interface Target {
+  issuer: string;
+  clientKey: CryptoKey;
+}
+
+async function clientAssertion(t: Target): Promise<string> {
   return new SignJWT({})
     .setProtectedHeader({ alg: "ES256", kid: "ap-agent-auth" })
     .setIssuer("ap-agent")
     .setSubject("ap-agent")
-    .setAudience(ISSUER)
+    .setAudience(t.issuer)
     .setIssuedAt()
     .setExpirationTime("2m")
     .setJti(crypto.randomUUID())
-    .sign(clientKey);
+    .sign(t.clientKey);
 }
 
 async function dpopProof(htu: string, htm: string, extra: Record<string, unknown> = {}): Promise<string> {
@@ -228,8 +238,8 @@ interface ExchangeFields {
 }
 
 /** POST /token with the token-exchange grant + private_key_jwt + DPoP (nonce retry). */
-async function tokenExchange(f: ExchangeFields): Promise<Response> {
-  const htu = `${ISSUER}/token`;
+async function tokenExchange(f: ExchangeFields, t: Target = { issuer: ISSUER, clientKey }): Promise<Response> {
+  const htu = `${t.issuer}/token`;
   const params: Record<string, string> = {
     grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
     requested_token_type: f.requestedTokenType ?? ID_JAG_TOKEN_TYPE,
@@ -246,7 +256,7 @@ async function tokenExchange(f: ExchangeFields): Promise<Response> {
       headers: { "content-type": "application/x-www-form-urlencoded", dpop: await dpopProof(htu, "POST", extra) },
       body: new URLSearchParams({
         ...params,
-        client_assertion: await clientAssertion(),
+        client_assertion: await clientAssertion(t),
         client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
       }).toString(),
     });
@@ -550,6 +560,17 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     expect(body.mission_error).toBe("mission_revoked");
   });
 
+  it("(b5) a refusal at the Mission gate records no child hop (the hop is recorded only once the gate admits)", async () => {
+    const { missionId, handle } = newLineage("apev-b5");
+    as.kernel.transition(missionId, "suspend");
+    const before = as.continuationStore.handlesForMission(missionId).length;
+    const res = await tokenExchange({ subjectToken: await mintICA(handle) });
+    const body = (await res.json()) as { error?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("unauthorized_client");
+    expect(as.continuationStore.handlesForMission(missionId)).toHaveLength(before);
+  });
+
   it("(b) a replayed ICA jti -> rejected (single-use, consumed at issuance commit)", async () => {
     const { handle } = newLineage("apev-b");
     const ica = await mintICA(handle);
@@ -816,5 +837,66 @@ describe("continuation lifecycle invariants (@spec id-continuation-assertion)", 
     const second = approveLineage("apev-life-idem");
     expect(second.missionId).toBe(first.missionId);
     expect(as.continuationStore.handlesForMission(first.missionId)).toHaveLength(1);
+  });
+});
+
+/**
+ * @spec id-continuation-assertion — the finite per-chain hop-count limit (ICA
+ * -02 6.3), on a second AS built with a limit of 2: the auto-rooted hop plus
+ * one continuation fill the chain.
+ */
+describe("continuation hop-count limit (@spec id-continuation-assertion)", () => {
+  const PORT2 = 14476;
+  const ISSUER2 = `http://localhost:${PORT2}`;
+  const ACT2 = { iss: ISSUER2, sub: "ap-agent" };
+  let as2: BuiltAs;
+  let server2: Server;
+  let target2: Target;
+
+  beforeAll(async () => {
+    const caPub = { ...(await exportJWK(caKeys.publicKey)), kid: "ca-key", alg: "ES256", use: "sig" };
+    as2 = await buildAuthorizationServer({
+      issuer: ISSUER2,
+      allowHeadlessAdjudication: true,
+      chainAuthorityIssuers: [{ iss: CA, jwks: { keys: [caPub] } }],
+      resourceToAs: (r: string) => (r === RESOURCE ? RAS_AUD : ISSUER2),
+      continuationHopLimit: 2,
+    });
+    server2 = as2.provider.listen(PORT2);
+    target2 = { issuer: ISSUER2, clientKey: (await importJWK(as2.agentClientJwk as never, "ES256")) as CryptoKey };
+  });
+
+  afterAll(() => {
+    server2?.close();
+  });
+
+  it("refuses a continuation past the chain's limit with invalid_grant, recording no hop and counting no derivation; another chain of the same Mission is unaffected", async () => {
+    const { missionId, handle } = approveLineage("apev-hop-limit", as2);
+    const first = await tokenExchange({ subjectToken: await mintICA(handle, { aud: ISSUER2, act: ACT2 }) }, target2);
+    expect(first.status, await first.clone().text()).toBe(200);
+
+    const handlesBefore = as2.continuationStore.handlesForMission(missionId).length;
+    const countBefore = as2.kernel.get(missionId)?.derivation_count;
+    const refused = await tokenExchange({ subjectToken: await mintICA(handle, { aud: ISSUER2, act: ACT2 }) }, target2);
+    const body = (await refused.json()) as { error?: string; error_description?: string };
+    expect(refused.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    expect(body.error_description).toMatch(/hop-count limit/);
+    expect(as2.continuationStore.handlesForMission(missionId)).toHaveLength(handlesBefore);
+    expect(as2.kernel.get(missionId)?.derivation_count).toBe(countBefore);
+
+    // The limit is per chain: a second anchor of the same Mission continues.
+    const anchorId = as2.continuationStore.rootGrantAnchor({ missionId, authEnvelope: {} });
+    const other = as2.continuationStore.mint({ anchorId, missionId, actor: ACT2 });
+    const ok = await tokenExchange({ subjectToken: await mintICA(other, { aud: ISSUER2, act: ACT2 }) }, target2);
+    expect(ok.status, await ok.clone().text()).toBe(200);
+  });
+
+  it("the build refuses an unbounded or non-positive hop-count limit", async () => {
+    for (const continuationHopLimit of [Number.POSITIVE_INFINITY, 0, 1.5]) {
+      await expect(
+        buildAuthorizationServer({ issuer: "http://localhost:14479", continuationHopLimit }),
+      ).rejects.toThrow(/continuationHopLimit/);
+    }
   });
 });

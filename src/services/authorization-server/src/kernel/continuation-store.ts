@@ -57,6 +57,21 @@ CREATE TABLE continuation_handles (
 ) STRICT;
 `;
 
+/**
+ * @spec id-continuation-assertion — the IdP's default hop-count limit (ICA -02
+ * 6.3: "The IdP MUST enforce a finite hop-count limit on every chain, either
+ * the tenant's configured value or the IdP's default"). A chain is one anchor;
+ * the root hop counts, and every continuation records a hop, so the limit also
+ * bounds how often one chain can be continued. A deployment overrides it with
+ * the `continuationHopLimit` build option.
+ */
+export const DEFAULT_CONTINUATION_HOP_LIMIT = 64;
+
+/** A fresh continuation handle: 144 bits of entropy, base64url, within the ICA handle bounds (22-256 chars). */
+export function newContinuationHandle(): string {
+  return `ich_${randomBytes(18).toString("base64url")}`;
+}
+
 export type AnchorType = "grant" | "session";
 export type ContinuationState = "active" | "terminal";
 
@@ -162,10 +177,13 @@ export class ContinuationStore {
   }
 
   /**
-   * Mint a fresh continuation handle bound to an anchor and Mission. 144 bits
-   * of entropy, base64url, within the ICA handle bounds (22-256 chars).
+   * Record a continuation hop bound to an anchor and Mission, under a fresh
+   * handle ({@link newContinuationHandle}) unless the caller pre-generated one
+   * (the continuation exchange names the hop in the ID-JAG it signs, and records
+   * it only once the Mission gate has admitted the grant).
    */
   mint(input: {
+    handle?: string;
     anchorId: string;
     missionId: string;
     actor: { iss: string; sub: string };
@@ -181,7 +199,7 @@ export class ContinuationStore {
     cnfJkt?: string;
     priorHandle?: string;
   }): string {
-    const handle = `ich_${randomBytes(18).toString("base64url")}`;
+    const handle = input.handle ?? newContinuationHandle();
     this.db
       .prepare(
         `INSERT INTO continuation_handles
@@ -254,6 +272,17 @@ export class ContinuationStore {
       ...(h.cnf_jkt != null ? { cnfJkt: h.cnf_jkt } : {}),
     };
     return { status: "active", continuation };
+  }
+
+  /**
+   * @spec id-continuation-assertion — the hop count of one chain (ICA -02 6.3):
+   * every hop recorded under the anchor, across all branches, root included.
+   */
+  hopCount(anchorId: string): number {
+    const row = this.db
+      .prepare("SELECT COUNT(*) AS n FROM continuation_handles WHERE anchor_id = ?")
+      .get(anchorId) as { n: number };
+    return row.n;
   }
 
   /**
