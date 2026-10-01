@@ -19,7 +19,7 @@
  * (`onLifecycleCommit`) marks all of its anchors and handles terminal; a
  * session ending (`terminateSession`) marks only its session-anchored anchors
  * and their handles terminal (grant anchors survive). A terminal handle OR
- * anchor makes `resolve` return undefined.
+ * anchor makes `lookup` report `terminal` and `resolve` return undefined.
  *
  * Structure mirrors `DeferralStore` (SQLite via `openStore`), but holds no
  * kernel reference: every operation is self-contained local state and
@@ -57,6 +57,21 @@ CREATE TABLE continuation_handles (
 ) STRICT;
 `;
 
+/**
+ * @spec id-continuation-assertion — the IdP's default hop-count limit (ICA -02
+ * 6.3: "The IdP MUST enforce a finite hop-count limit on every chain, either
+ * the tenant's configured value or the IdP's default"). A chain is one anchor;
+ * the root hop counts, and every continuation records a hop, so the limit also
+ * bounds how often one chain can be continued. A deployment overrides it with
+ * the `continuationHopLimit` build option.
+ */
+export const DEFAULT_CONTINUATION_HOP_LIMIT = 64;
+
+/** A fresh continuation handle: 144 bits of entropy, base64url, within the ICA handle bounds (22-256 chars). */
+export function newContinuationHandle(): string {
+  return `ich_${randomBytes(18).toString("base64url")}`;
+}
+
 export type AnchorType = "grant" | "session";
 export type ContinuationState = "active" | "terminal";
 
@@ -83,6 +98,16 @@ export interface ResolvedContinuation {
   authEnvelope: AuthEnvelope;
   cnfJkt?: string;
 }
+
+/**
+ * @spec id-continuation-assertion — what a presented handle identifies. The
+ * continuation exchange refuses an unknown handle and a terminal one with
+ * different codes (ICA -02 5.5.6), so the store keeps the two apart.
+ */
+export type HandleLookup =
+  | { status: "unknown" }
+  | { status: "terminal" }
+  | { status: "active"; continuation: ResolvedContinuation };
 
 interface AnchorRow {
   anchor_id: string;
@@ -152,10 +177,13 @@ export class ContinuationStore {
   }
 
   /**
-   * Mint a fresh continuation handle bound to an anchor and Mission. 144 bits
-   * of entropy, base64url, within the ICA handle bounds (22-256 chars).
+   * Record a continuation hop bound to an anchor and Mission, under a fresh
+   * handle ({@link newContinuationHandle}) unless the caller pre-generated one
+   * (the continuation exchange names the hop in the ID-JAG it signs, and records
+   * it only once the Mission gate has admitted the grant).
    */
   mint(input: {
+    handle?: string;
     anchorId: string;
     missionId: string;
     actor: { iss: string; sub: string };
@@ -164,14 +192,14 @@ export class ContinuationStore {
      * INITIAL handle rooted at Mission approval has no DPoP key yet (a real
      * deployment supplies the root auth event's cnf; the demo omits it). This is
      * a type widening, not a behaviour change: every chained-hop caller still
-     * passes a string and gets an identical row, and the four-signal check at
+     * passes a string and gets an identical row, and the current-actor check at
      * /token validates the PRESENTED key, never this stored value (`resolve`
      * already returns `cnfJkt` as optional).
      */
     cnfJkt?: string;
     priorHandle?: string;
   }): string {
-    const handle = `ich_${randomBytes(18).toString("base64url")}`;
+    const handle = input.handle ?? newContinuationHandle();
     this.db
       .prepare(
         `INSERT INTO continuation_handles
@@ -196,25 +224,38 @@ export class ContinuationStore {
    * or when the handle or its anchor is terminal. Never consumes the handle.
    */
   resolve(handle: string): ResolvedContinuation | undefined {
+    const found = this.lookup(handle);
+    return found.status === "active" ? found.continuation : undefined;
+  }
+
+  /**
+   * Classify a presented handle: `unknown` when this store never minted it,
+   * `terminal` when the handle or its anchor is terminal (an issued hop that is
+   * permanently unusable), else `active` with the resolved continuation. A
+   * handle whose anchor row is missing is `terminal` (fail closed). Never
+   * consumes the handle.
+   */
+  lookup(handle: string): HandleLookup {
     const h = this.db
       .prepare(
         "SELECT handle, anchor_id, mission_id, actor_iss, actor_sub, cnf_jkt, state FROM continuation_handles WHERE handle = ?",
       )
       .get(handle) as HandleRow | undefined;
-    if (!h || h.state === "terminal") return undefined;
+    if (!h) return { status: "unknown" };
+    if (h.state === "terminal") return { status: "terminal" };
     const a = this.db
       .prepare(
         "SELECT anchor_id, anchor_type, mission_id, session_id, auth_time, acr, amr, state FROM continuation_anchors WHERE anchor_id = ?",
       )
       .get(h.anchor_id) as AnchorRow | undefined;
-    if (!a || a.state === "terminal") return undefined;
+    if (!a || a.state === "terminal") return { status: "terminal" };
 
     const authEnvelope: AuthEnvelope = {
       ...(a.auth_time != null ? { authTime: a.auth_time } : {}),
       ...(a.acr != null ? { acr: a.acr } : {}),
       ...(a.amr != null ? { amr: JSON.parse(a.amr) as string[] } : {}),
     };
-    return {
+    const continuation: ResolvedContinuation = {
       missionId: h.mission_id,
       anchor: {
         anchorId: a.anchor_id,
@@ -230,6 +271,18 @@ export class ContinuationStore {
       authEnvelope,
       ...(h.cnf_jkt != null ? { cnfJkt: h.cnf_jkt } : {}),
     };
+    return { status: "active", continuation };
+  }
+
+  /**
+   * @spec id-continuation-assertion — the hop count of one chain (ICA -02 6.3):
+   * every hop recorded under the anchor, across all branches, root included.
+   */
+  hopCount(anchorId: string): number {
+    const row = this.db
+      .prepare("SELECT COUNT(*) AS n FROM continuation_handles WHERE anchor_id = ?")
+      .get(anchorId) as { n: number };
+    return row.n;
   }
 
   /**

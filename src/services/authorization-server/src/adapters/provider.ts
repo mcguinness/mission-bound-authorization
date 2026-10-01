@@ -207,6 +207,7 @@ import {
 } from "./transaction-authorization.js";
 export type { TxnArs } from "./transaction-authorization.js";
 import { successorMissionClaim } from "../kernel/expansion.js";
+import { ID_JAG_TOKEN_TYPE } from "../kernel/cross-domain.js";
 import {
   authorizationDetailsTypesMetadata,
   validateMissionResourceAccessSchema,
@@ -461,6 +462,11 @@ export interface AdapterOptions {
   chainAuthorityIssuers?: ContinuationIssuer[];
   /** Shared (iss, jti) ICA replay cache (from newReplayCache()). */
   continuationReplay?: ContinuationReplay;
+  /**
+   * @spec id-continuation-assertion — the finite per-chain hop-count limit (ICA
+   * -02 6.3). Defaults to DEFAULT_CONTINUATION_HOP_LIMIT.
+   */
+  continuationHopLimit?: number;
   /** Resource -> authoritative AS map (reused from the demo cross-domain wiring). */
   resourceToAs?: (resource: string) => string;
   /** Deterministic audience-local subject resolver. */
@@ -1663,6 +1669,11 @@ export function buildProvider(opts: AdapterOptions): Provider {
         // `scope` is honored or refused, never stripped unseen.
         "scope",
       ]),
+      // @spec id-continuation-assertion — the ICA continuation exchange takes
+      // zero or more `resource` (ICA -02 5.5.3 rule 1), so it is the one
+      // repeatable parameter of this grant. Every other exchange refuses a
+      // repeated `resource` itself (handleTokenExchangeGrant), as before.
+      new Set(["resource"]),
     );
   }
 
@@ -3410,7 +3421,12 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // @spec id-continuation-assertion#discovery: this AS runs the RFC 8693
       // token-exchange continuation grant (ICA subject token -> continuation
       // ID-JAG), signed by the dedicated as-continuation key on the jwks_uri.
-      if (enabled("continuation")) meta.identity_continuation_supported = true;
+      // The continuation ID-JAG is still the id-jag token type, so the AS also
+      // lists it as a requested token type it issues (ICA -02 7.1).
+      if (enabled("continuation")) {
+        meta.identity_continuation_supported = true;
+        meta.identity_chaining_requested_token_types_supported = [ID_JAG_TOKEN_TYPE];
+      }
       // @spec async-delegation#discovery: this AS runs the async-delegation
       // continuation transport (RFC 8693 token exchange with request_refresh_token
       // -> a per-delegation grant with a rotated, sender-constrained refresh token).

@@ -98,15 +98,19 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
  * Validate an ICA presented as an RFC 8693 subject token. `audience` MUST be
  * the AS issuer identifier (the token-exchange endpoint's own identity), NOT
  * `${issuer}/token`. `presenterJkt` is the DPoP proof thumbprint that the ICA's
- * `cnf.jkt` MUST equal (sender-constraint).
+ * `cnf.jkt` MUST equal (sender-constraint), and `replay` the cache whose `jti`
+ * check it applies. Both are optional for a caller that runs those checks at
+ * its own rule positions: the continuation exchange checks the presenter key
+ * after well-formedness and replay after chain state (@spec
+ * id-continuation-assertion, ICA -02 5.5.6).
  */
 export async function validateContinuationAssertion(
   assertion: string,
   ctx: {
     audience: string;
     issuers: ContinuationIssuer[];
-    presenterJkt: string;
-    replay: ReplayCache;
+    presenterJkt?: string;
+    replay?: ReplayCache;
   },
 ): Promise<ValidatedContinuation> {
   // 1. Locate the issuer by the assertion's iss (unverified payload peek).
@@ -167,8 +171,9 @@ export async function validateContinuationAssertion(
       "continuation assertion cnf MUST contain exactly jkt",
     );
   }
-  // An ICA is definitionally DPoP-bound: the sender-constraint is unconditional.
-  if (cnf.jkt !== ctx.presenterJkt) {
+  // An ICA is definitionally DPoP-bound: the sender-constraint is unconditional
+  // (applied here, or by the caller that omitted presenterJkt).
+  if (ctx.presenterJkt !== undefined && cnf.jkt !== ctx.presenterJkt) {
     throw new ContinuationAssertionError(
       "invalid_request",
       "presenter key does not match assertion cnf.jkt",
@@ -220,14 +225,14 @@ export async function validateContinuationAssertion(
   //
   // @spec issuance-grant#effective-set-projection (#617 review 1) —
   // "consumption is atomic with issuance". Validation checks the `jti` is
-  // unseen; RECORDING belongs to the caller, atomically with successful
-  // issuance ({@link ReplayCache.recordOnce}, continuation-grant.ts step 11).
+  // unseen; RECORDING belongs to the caller, once the Mission gate admits and
+  // before the grant is signed (`recordOnce` in continuation-grant.ts).
   // Recording here (the prior behavior) consumed a single-use assertion on
   // EVERY later failure, including a transient authority-source outage and a
   // Mission gate refusal that a retry would pass, permanently burning a
   // credential whose authorization was intact.
   const jti = payload.jti;
-  if (typeof jti !== "string" || ctx.replay.seen(issuer.iss, jti)) {
+  if (typeof jti !== "string" || ctx.replay?.seen(issuer.iss, jti)) {
     throw new ContinuationAssertionError("invalid_grant", "assertion replay or missing jti");
   }
 

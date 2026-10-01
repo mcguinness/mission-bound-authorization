@@ -85,6 +85,18 @@ describe("validateContinuationAssertion — accepts", () => {
   });
 });
 
+describe("validateContinuationAssertion — caller-ordered checks (@spec id-continuation-assertion)", () => {
+  it("without presenterJkt and replay, it checks neither (the continuation exchange applies them at rules 5 and 6)", async () => {
+    const shared = ctx();
+    const assertion = await mintICA();
+    const first = await validateContinuationAssertion(assertion, shared);
+    expect(shared.replay.recordOnce(first.iss, first.jti)).toBe(true);
+    const v = await validateContinuationAssertion(assertion, { audience: AS, issuers });
+    expect(v.jti).toBe(first.jti);
+    expect(v.cnf.jkt).toBe(jkt);
+  });
+});
+
 describe("validateContinuationAssertion — rejects", () => {
   it("unknown issuer", async () => {
     await expect(

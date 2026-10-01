@@ -157,6 +157,35 @@ describe("issueCrossDomainGrant — continuation ID-JAG (extended path)", () => 
     expect(act.act?.sub).toBe("ap-agent");
   });
 
+  it("beforeSign runs only once the gate admits the grant, and its throw aborts issuance (@spec id-continuation-assertion)", async () => {
+    // Gate refusal: the hook never runs.
+    const suspended = approve(20);
+    kernel.transition(suspended.id, "suspend");
+    let calls = 0;
+    await expect(
+      issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
+        ...legacyInput(suspended.id),
+        beforeSign: () => {
+          calls += 1;
+        },
+      }),
+    ).rejects.toMatchObject({ reason: "mission_not_active" });
+    expect(calls).toBe(0);
+
+    // Admitted: the hook runs once; a throw from it surfaces and nothing is signed.
+    const active = approve(21);
+    await expect(
+      issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
+        ...legacyInput(active.id),
+        beforeSign: () => {
+          calls += 1;
+          throw new Error("hook refused");
+        },
+      }),
+    ).rejects.toThrow(/hook refused/);
+    expect(calls).toBe(1);
+  });
+
   it("omits absent auth-envelope sub-fields (partial envelope)", async () => {
     const record = approve(2);
     const { grant } = await issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {

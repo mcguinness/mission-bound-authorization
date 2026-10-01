@@ -35,7 +35,7 @@ import { IssuerEvidenceStore } from "./kernel/issuer-evidence.js";
 import { defaultSubjectResolver, type SubjectResolver } from "./adapters/continuation-grant.js";
 import type { CarryoverConfig } from "./kernel/carryover.js";
 import type { ContinuationIssuer } from "./kernel/continuation-assertion.js";
-import { ContinuationStore } from "./kernel/continuation-store.js";
+import { ContinuationStore, DEFAULT_CONTINUATION_HOP_LIMIT } from "./kernel/continuation-store.js";
 import { DelegationFamilyStore } from "./kernel/delegation-family-store.js";
 import { DeferralStore, ExpansionDeferralStore } from "./kernel/deferred.js";
 import {
@@ -281,9 +281,11 @@ export {
 } from "./kernel/continuation-assertion.js";
 export {
   ContinuationStore,
+  DEFAULT_CONTINUATION_HOP_LIMIT,
   type AnchorType,
   type ContinuationState,
   type AuthEnvelope,
+  type HandleLookup,
   type ResolvedAnchor,
   type ResolvedContinuation,
 } from "./kernel/continuation-store.js";
@@ -493,9 +495,9 @@ export {
  * approval here.
  *
  * The initial handle binds the Mission's actor: the agent CLIENT
- * (iss = AS issuer, sub = client_id), matching the /token four-signal contract's
- * `currentActor`. No cnf is bound (no DPoP key exists at approval); the four-signal
- * check validates the PRESENTED key at /token, never this stored handle's cnf.
+ * (iss = AS issuer, sub = client_id), matching the /token current-actor check's
+ * `currentActor`. No cnf is bound (no DPoP key exists at approval); that check
+ * validates the PRESENTED key at /token, never this stored handle's cnf.
  */
 function rootMissionContinuation(
   store: ContinuationStore,
@@ -650,6 +652,12 @@ export async function buildAuthorizationServer(opts: {
    * jwks_uri keys). Tests inject a dedicated Chain Authority key.
    */
   chainAuthorityIssuers?: ContinuationIssuer[];
+  /**
+   * @spec id-continuation-assertion — the IdP's finite hop-count limit for
+   * every continuation chain (ICA -02 6.3), a positive integer. Defaults to
+   * {@link DEFAULT_CONTINUATION_HOP_LIMIT}.
+   */
+  continuationHopLimit?: number;
   /** Resource -> authoritative AS map. Defaults to the demo cross-domain map. */
   resourceToAs?: (resource: string) => string;
   /** Deterministic audience-local subject resolver. Defaults to a stable digest. */
@@ -996,6 +1004,10 @@ export async function buildAuthorizationServer(opts: {
     opts.resourceToAs ??
     ((r: string) => (r === TOPOLOGY.resources.saas ? TOPOLOGY.issuers.ras : opts.issuer));
   const subjectResolver = opts.subjectResolver ?? defaultSubjectResolver(opts.issuer);
+  const continuationHopLimit = opts.continuationHopLimit ?? DEFAULT_CONTINUATION_HOP_LIMIT;
+  if (!Number.isSafeInteger(continuationHopLimit) || continuationHopLimit < 1) {
+    throw new Error("continuationHopLimit must be a finite positive integer (ICA -02 6.3)");
+  }
 
   const provider = buildProvider({
     issuer: opts.issuer,
@@ -1073,6 +1085,7 @@ export async function buildAuthorizationServer(opts: {
     familyStore: delegationFamilyStore,
     chainAuthorityIssuers,
     continuationReplay: newReplayCache(),
+    continuationHopLimit,
     resourceToAs,
     subjectResolver,
     continuationGrantKey: continuationKeys.privateKey,

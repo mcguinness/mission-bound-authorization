@@ -69,6 +69,14 @@ export interface IssueGrantInput {
    */
   authEnvelope?: { auth_time?: number; acr?: string; amr?: string[] };
   /**
+   * @spec id-continuation-assertion — runs once the derivation gate, the count
+   * and the audience projection have admitted the grant, and before it is
+   * signed. A throw aborts issuance: nothing is signed. The continuation
+   * exchange reserves its assertion and records its child hop here, so a
+   * refused request leaves neither.
+   */
+  beforeSign?: () => void;
+  /**
    * @spec control-plane#serialization — OPTIONAL durable operation identity.
    * When supplied, the counted derivation is reserved against it and a repeat
    * of the same identity REPLAYS the recorded grant instead of counting a
@@ -129,6 +137,7 @@ async function mintCrossDomainGrant(
     input.targetAs,
   );
   if (scoped.length === 0) throw new Error("no audience-scoped authority for the target Resource AS");
+  input.beforeSign?.();
 
   const nowS = Math.floor(kernel.nowDate().getTime() / 1000);
   const missionExp = Math.floor(Date.parse(record.expires_at) / 1000);
