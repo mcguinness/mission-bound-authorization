@@ -49,6 +49,7 @@ import {
   MAX_CHILD_DEPTH,
 } from "./child-delegation.js";
 import { type DelegateCandidate, delegatePermitted } from "./delegate-matcher.js";
+import { entryDigest } from "./discharge.js";
 import { isSubsetSet } from "./derive.js";
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
@@ -696,6 +697,14 @@ export type CarryoverMapRow =
       outcome: "carried";
       replacement_id: string;
       approval_event_id: string;
+      /**
+       * @spec child-delegation#carryover-evidence — for each carried entry, the
+       * OLD RECORD entry's `entry_digest` paired with the replacement record
+       * entry's, at most one counterpart per old entry. Computed during
+       * re-derivation, never inferred later; discharge forwarding resolves
+       * only through it (@spec discharge#discharge-carryover).
+       */
+      entry_pairs: CarryoverEntryPair[];
     }
   | {
       old_child: CarryoverRef;
@@ -708,6 +717,45 @@ export type CarryoverMapRow =
     };
 
 export type CarryoverMap = CarryoverMapRow[];
+
+/** One carried entry's correspondence: old record entry to replacement record entry. */
+export interface CarryoverEntryPair {
+  entry_digest: string;
+  replacement_entry_digest: string;
+}
+
+/**
+ * @spec child-delegation#carryover-evidence — pair each carried entry's OLD
+ * RECORD `entry_digest` with its replacement entry's. `origins` are the old
+ * child's approved entries behind each effective entry and `authority` the
+ * replacement set derived index-for-index from those effective entries (the
+ * inheritance steps map one entry to one entry), so position i pairs. Two
+ * byte-identical old entries share a digest and so one pair; an old entry is
+ * never given two counterparts.
+ */
+export function carryoverEntryPairs(
+  issuer: string,
+  origins: readonly AuthorityEntry[],
+  authority: readonly AuthorityEntry[],
+): CarryoverEntryPair[] {
+  if (origins.length !== authority.length) {
+    throw new Error("carryover re-derivation did not map the old child's entries one to one");
+  }
+  const byOld = new Map<string, string>();
+  origins.forEach((origin, i) => {
+    const old = entryDigest(issuer, origin);
+    const replacement = entryDigest(issuer, authority[i] as AuthorityEntry);
+    const prior = byOld.get(old);
+    if (prior !== undefined && prior !== replacement) {
+      throw new Error(`carryover would give old entry ${old} two counterparts`);
+    }
+    byOld.set(old, replacement);
+  });
+  return [...byOld.entries()].map(([entry_digest, replacement_entry_digest]) => ({
+    entry_digest,
+    replacement_entry_digest,
+  }));
+}
 
 /** @spec child-delegation#carryover-evidence — the retained Carryover Evidence. */
 export interface CarryoverEvidence {
@@ -1325,6 +1373,7 @@ export function applyCarryoverInCallerTx(
   const replacements: MissionRecord[] = [];
   const childEvidence: ChildEvidence[] = [];
   const carriedTo = new Map<string, string>();
+  const entryPairsOf = new Map<string, CarryoverEntryPair[]>();
   const parentRecordOf = new Map<string, MissionRecord>([[manifest.predecessor.mission_id, successor]]);
   const generationOrder = [...carryEntries].sort((a, b) => a.depth - b.depth || (a.child_id < b.child_id ? -1 : 1));
 
@@ -1345,8 +1394,18 @@ export function applyCarryoverInCallerTx(
       );
     }
     const parentEffective = kernel.effectiveAuthoritySet(newParent);
-    const oldChildEffective = kernel.effectiveAuthoritySet(oldChild);
+    // The effective entries WITH their approved origins: the pairing below
+    // names the old RECORD entry, whose bytes a containment rewrite changes.
+    const oldChildWithOrigin = kernel.effectiveEntriesWithOrigin(oldChild);
+    const oldChildEffective = oldChildWithOrigin.map((e) => e.entry);
     const authority = replacementAuthority(oldChildEffective, parentEffective);
+    // @spec child-delegation#carryover-evidence — the per-entry pairing,
+    // computed here during re-derivation rather than inferred later.
+    const pairs = carryoverEntryPairs(
+      issuer,
+      oldChildWithOrigin.map((e) => e.origin),
+      authority,
+    );
     // Ordinary strict-subset against the prospective parent.
     if (!isSubsetSet(authority, parentEffective)) {
       throw new CarryoverError("snapshot_moved", `${entry.child_id} no longer derives under its prospective parent`);
@@ -1504,7 +1563,11 @@ export function applyCarryoverInCallerTx(
         `the recomputed expiry of ${entry.child_id} exceeds the rendered ceiling`,
       );
     }
-    kernel.insertRecord(record);
+    // @spec discharge#discharge-authority — a carried condition does not first
+    // enter the replacement: its discharge-authority pin is the old child's,
+    // inherited through the pairing, never resolved again.
+    kernel.insertRecord(record, undefined, { inheritPinsFrom: { missionId: oldChild.id, pairs } });
+    entryPairsOf.set(entry.child_id, pairs);
     // @spec child-delegation#carryover-no-reset — the transaction-participating
     // external transfer. A throw here rolls the whole batch back, records
     // included; nothing is compensated after the fact.
@@ -1558,6 +1621,7 @@ export function applyCarryoverInCallerTx(
         outcome: "carried",
         replacement_id: replacementId,
         approval_event_id: entry.replacement.approval_event_id as string,
+        entry_pairs: entryPairsOf.get(record.id) ?? [],
       });
     } else {
       const reason = excluded.get(record.id) ?? entry?.reason ?? "unrendered_descendant";

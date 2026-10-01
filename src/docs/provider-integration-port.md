@@ -106,7 +106,7 @@ the store.
 | Source and authority derivation | Yes | `kernel.derive`; the source gates in `kernel.approve` (§3.3) | Computed before the record transaction | None | Nothing written before §4.1 | Yes, HTTP; gate detail is kernel-level (§3.3) | Decision-time `scope` check ignores `capability_sources` (§3.3) |
 | Record and grant binding | Yes | `kernel.approve` and `insertRecord`; `grant.save()`; `kernel.bindGrant`; the code on the resume request (§3.4) | Only the record commit is transactional (§4.1); grant, binding and code are separate writes | Publication of the activating event | A crash before binding leaves an orphan `active` Mission; provider state is lost at restart (§4.5) | Partial (§3.4) | `{#approval-event}` step 7 atomicity not met; a repeated decision binds a second grant (§3.4) |
 | Issuance | Yes | `at.save()`: `extraTokenClaims`, `formats.customizers.jwt`, `access_token.issued` (§3.5) | The counter `UPDATE` autocommits before signing; no acceptance callback (§4.2) | None before delivery | The count stays consumed; nothing reconciles it (§4.3) | Yes, HTTP (§3.5) | Uncoupled counter; `exp` not bounded by `expires_at`; revoke-versus-issue window (§3.5) |
-| Refresh and revocation gating | Yes | `rotateRefreshToken`; the gates in `extraTokenClaims`; the lifecycle route (§3.6) | The lifecycle commit is one kernel transaction; grant destruction follows it | Grant destruction and publication | File-backed state survives; provider grants do not (§4.5) | Yes, HTTP (§3.6) | The state gate runs after rotation consumes the presented token (§3.6) |
+| Refresh and revocation gating | Yes | `rotateRefreshToken`; the gates in `extraTokenClaims`; the lifecycle route (§3.6) | The lifecycle commit is one kernel transaction; grant destruction follows it | Grant destruction and publication | File-backed state survives; provider grants do not (§4.5) | Yes, HTTP (§3.6) | A state change between the refresh pre-check and the save-time gate is refused after rotation consumes the presented token (§3.6; #250) |
 | Scope projection | Yes (`plain-rs` is `scope_only`) | `earlyScopeRefusal`; the decision check; `decideMissionScope`; `preCheckRefreshProjection`; the JWT customizer (§3.7) | In request, before the state gate and before refresh consumption; reads only | None | The mapping is configuration, strictly loaded at boot | Yes, HTTP (§3.7) | Code-exchange refusal after code consumption; JWT-customizer backstop has no test (§3.7) |
 | Protected introspection | JWT-plus-introspection configuration only | `/introspect` route in `makeRoutes` (§3.8) | Per-request read of current kernel state; may commit an expiry | None | Index and keys are per boot; pre-restart tokens introspect `active: false` | Yes, HTTP (§3.8) | No test for a signed token with no issuance record (§3.8) |
 
@@ -357,8 +357,9 @@ the store.
 - **Refresh hook.** oidc-provider's `refresh_token` grant checks the
   token's client, expiry and sender constraint, any requested `scope`, and
   the grant (`lib/actions/grants/refresh_token.js` L55-118). It then awaits
-  `rotateRefreshToken` (L133-135), where `probeAuthoritySource` and
-  `preCheckRefreshProjection` run. When rotation applies, it consumes the
+  `rotateRefreshToken` (L133-135), where `probeAuthoritySource`,
+  `preCheckRefreshProjection` and `preCheckRefreshMissionState` run. When
+  rotation applies, it consumes the
   presented token (L137) and saves the rotated one (L168). Then
   `rarForRefreshTokenResponse` re-projects the grant's `rar` through the
   effective set (`rarThroughEffectiveSet`, L212), and `at.save()` (L216) runs
@@ -372,6 +373,17 @@ the store.
   so the rotated refresh token, a family token included, is never saved past
   the Mission's `expires_at`. The presented token is still consumed first
   (L137).
+- **State pre-check (#914).** `preCheckRefreshMissionState` runs the save-time
+  gate's checks in `rotateRefreshToken`, before consumption, with nothing
+  counted. It resolves the grant's Mission the same way (`missionGateTarget`)
+  and runs `kernel.checkDerivation` for an approval grant (the expiry clock,
+  the lineage walk, the effective-set gate and the cap read, with no counter
+  write) or the same `gateActive` for a family grant or an index hit. A family
+  refresh is therefore never counted and never refused for the Mission's cap. A
+  `GateError` maps through the same `missionGateRefusal`, so the wire refusal
+  is unchanged. It is non-consuming, not read-only: an expiry it discovers
+  commits, as the gate's does. The save-time gate still runs and stays
+  authoritative.
 - **Rotation rule.** `rotateRefreshToken` always rotates a family grant.
   Otherwise it inlines oidc-provider's default (`lib/helpers/defaults.js`
   L528-547): rotate a public client's token that is not sender-constrained,
@@ -401,21 +413,29 @@ the store.
   - `M1 tracer slice > suspend gates refresh with invalid_grant; resume restores issuance` (`tracer.test.ts`)
   - `M1 tracer slice > revocation destroys the grant: refresh fails and introspection reports the state` (`tracer.test.ts`)
   - `revocation with a scope-only Resource Server (@spec mission#scope-projection) > after the Mission is revoked, refresh refuses invalid_grant, introspection returns active false, and the plain RS in introspection mode denies the next call` (`scope-projection.test.ts`). It revokes through `kernel.transition`, not the lifecycle route, so the gate alone refuses.
+  - `refresh pre-check: a refused refresh consumes nothing (@spec mission#issuance-gating, #914) > rotating approval grant: a refresh refused while suspended saves no refresh token, the same token refreshes after resume, and its replay is still reuse` (`refresh-precheck.test.ts`)
+  - `refresh pre-check: a refused refresh consumes nothing (@spec mission#issuance-gating, #914) > delegation-family grant: a family refresh refused while suspended saves no refresh token, the same token refreshes after resume, and its replay is still reuse` (`refresh-precheck.test.ts`)
+  - `refresh pre-check: a refused refresh consumes nothing (@spec mission#issuance-gating, #914) > approval grant with an exhausted derivation cap: refused derivations_exhausted without counting or consuming, so the same token is refused by the gate again, never as reuse` (`refresh-precheck.test.ts`)
+  - `refresh pre-check: a refused refresh consumes nothing (@spec mission#issuance-gating, #914) > delegation-family grant over an exhausted cap: the family refresh is not refused for the Mission's cap and counts nothing` (`refresh-precheck.test.ts`)
+  - `refresh pre-check: a refused refresh consumes nothing (@spec mission#issuance-gating, #914) > residual: a suspension landing between the pre-check and the save-time gate is still refused by that gate, after rotation (#250)` (`refresh-precheck.test.ts`)
 - **Tests (kernel-level):**
   - `lifecycle (@spec status#legal-transitions) > gates derivation on state and derivation cap (@spec mission#lifecycle)` (`kernel.test.ts`)
   - `kernel.gateActive (@spec mission#lifecycle) > a non-active (suspended) mission throws GateError` (`gate-active.test.ts`)
   - `basic governance gate: state-gated issuance and derivation (@spec mission-substrate#basic-gate) > a persisted state value outside the recognized lifecycle set fails closed, never treated as active` (`kernel.test.ts`)
 - **Unsupported or residual.**
-  - **The state gate runs after rotation.** On a rotating refresh the
-    presented token is consumed and a rotated one saved before
-    `extraTokenClaims` gates state. A refresh refused because the Mission is
-    `suspended`, or because the cap is exhausted, has spent the presented
-    token, and the rotated one is never delivered. After a `resume` the client
-    holds only the consumed token. Presenting it again is reuse:
-    oidc-provider destroys it and revokes the grant (`refresh_token.js`
-    L121-127). The tracer suspend test uses a non-rotating approval grant and
-    does not reach this case. `preCheckRefreshProjection` covers projection
-    refusals only (§3.7). Code reading; no test yet.
+  - **The state pre-check is a partial fix.** A refresh refused for Mission
+    state, lineage, effective set or cap is refused before rotation when the
+    pre-check detects it, so the presented token stays valid and works after a
+    `resume`. A suspension, or another derivation, landing between the
+    pre-check and the save-time gate is still refused there, after the
+    presented token is consumed and a rotated one saved: after a `resume` the
+    client's token is reuse, and oidc-provider revokes the grant
+    (`refresh_token.js` L121-127). Only refusals detected before rotation
+    consume nothing. Closing that window is #250's cross-step atomic domain. A
+    family whose effective set is fully contained is refused at the `rar` hook
+    (L212), after rotation, because the family's gate checks live state only;
+    containment is restored only through an Expansion successor, so nothing is
+    lost.
   - The JWT-only `plain-rs` keeps accepting an issued token until its `exp`
     plus the clock tolerance (the revocation test above;
     `issuance-only-deployment.md` §2).
@@ -639,8 +659,11 @@ none of that work.
 These gaps are not named in #250's items, and their owner is not verified:
 
 - the approval commit ordering against code issuance (§3.4);
-- the state gate after rotation (§3.6);
 - external Subjects (§3.2).
+
+The state gate after rotation (§3.6) is partly fixed by the refresh pre-check
+(#914). What remains, a state change between the pre-check and the save-time
+gate, is the pre-check-to-commit window of #250's cross-step atomic domain.
 
 ## 5. Unsupported and residual
 
@@ -666,8 +689,8 @@ These gaps are not named in #250's items, and their owner is not verified:
 - An abandoned redirect leaves an `active` Mission with no code (§3.4).
 - A crash after the record commit leaves an `active` Mission with no grant on
   the file-backed kernel (§3.4).
-- The state gate runs after rotation consumes the presented refresh token
-  (§3.6).
+- A state change between the refresh pre-check and the save-time gate is
+  refused after rotation consumes the presented refresh token (§3.6; #250).
 - A projection refusal at the code exchange lands after code consumption
   (§3.7).
 - The decision-time `scope` check ignores `capability_sources` (§3.3).
@@ -691,8 +714,7 @@ These gaps are not named in #250's items, and their owner is not verified:
   decision; a lineage resolving to more than one Mission (§3.4).
 - Issuance: revoke versus issue; any failure after the counter `UPDATE`
   (§3.5, §4.3).
-- Gating: a rotating refresh refused by the state gate; refresh against an
-  earlier grant after revocation (§3.6).
+- Gating: refresh against an earlier grant after revocation (§3.6).
 - Scope projection: `derivation_count` after a code or refresh projection
   refusal; the JWT-customizer backstop (§3.7).
 - Introspection: a signed token with no issuance record (§3.8).

@@ -46,6 +46,7 @@ normative:
     date: 2026
   RFC9068:
   RFC9325:
+  RFC9728:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
@@ -495,8 +496,12 @@ MAS's mission submission endpoint, published as
 served over TLS 1.2 or later (TLS 1.3 RECOMMENDED), following the
 recommendations of {{RFC9325}}. The endpoint MUST authenticate the
 client using the authentication mechanisms of the Mission Status
-endpoint ({{I-D.draft-mcguinness-oauth-mission-status}}): mTLS,
-DPoP-bound bearer, or private-key JWT. How clients register with a
+endpoint ({{I-D.draft-mcguinness-oauth-mission-status}}): mTLS client
+authentication, a DPoP- or mTLS-bound access token, or private-key JWT,
+with a token's audience and a client assertion's `aud` naming this
+endpoint. It advertises the methods it accepts in
+`mission_submission_endpoint_auth_methods_supported` ({{discovery}}).
+How clients register with a
 MAS is deployment-defined; the identifier the MAS authenticates is
 recorded as the Mission's `client_id`.
 
@@ -1114,8 +1119,33 @@ from AS metadata {{RFC8414}}, resolved from this document instead:
 : REQUIRED. A string containing a URL. The mission submission endpoint
   ({{mission-submission}}).
 
+`mission_submission_endpoint_auth_methods_supported`:
+: REQUIRED. A JSON array of strings naming the authentication methods
+  the mission submission endpoint accepts, from the value space of
+  `mission_status_endpoint_auth_methods_supported`
+  ({{I-D.draft-mcguinness-oauth-mission-status}}). Here `access_token`
+  names a sender-constrained access token whose audience, required
+  scope, and sender constraint the MAS publishes in this endpoint's
+  Protected Resource Metadata {{RFC9728}}.
+
+`mission_submission_endpoint_auth_signing_alg_values_supported`:
+: REQUIRED when `mission_submission_endpoint_auth_methods_supported`
+  lists `private_key_jwt`. A JSON array of strings: the client-assertion
+  algorithms this endpoint accepts, with the semantics of
+  `mission_status_endpoint_auth_signing_alg_values_supported`
+  ({{I-D.draft-mcguinness-oauth-mission-status}}).
+
 `mission_status_endpoint`:
 : REQUIRED. A string containing a URL. Semantics per
+  {{I-D.draft-mcguinness-oauth-mission-status}}.
+
+`mission_status_endpoint_auth_methods_supported`:
+: REQUIRED. Semantics per
+  {{I-D.draft-mcguinness-oauth-mission-status}}.
+
+`mission_status_endpoint_auth_signing_alg_values_supported`:
+: REQUIRED when `mission_status_endpoint_auth_methods_supported` lists
+  `private_key_jwt`. Semantics per
   {{I-D.draft-mcguinness-oauth-mission-status}}.
 
 `mission_status_signing_alg_values_supported`:
@@ -1126,18 +1156,14 @@ from AS metadata {{RFC8414}}, resolved from this document instead:
 : REQUIRED. A string containing a URL. Semantics per
   {{I-D.draft-mcguinness-oauth-mission-status}}.
 
-`mission_auth_methods_supported`:
-: REQUIRED. A JSON array of strings. The caller authentication
-  mechanisms the MAS accepts at the submission, status, and lifecycle
-  endpoints, from the mechanism set of
-  {{I-D.draft-mcguinness-oauth-mission-status}}. A value naming a
-  client authentication method is an entry of the IANA "OAuth Token
-  Endpoint Authentication Methods" registry (`tls_client_auth` for
-  mTLS, `private_key_jwt`), following the discovery pattern of the
-  {{RFC8414}} `*_endpoint_auth_methods_supported` members. The
-  DPoP-bound access token mechanism is token presentation rather than
-  client authentication, so no registry entry names it; this document
-  uses `dpop_bound_token`.
+`mission_lifecycle_endpoint_auth_methods_supported`:
+: REQUIRED. Semantics per
+  {{I-D.draft-mcguinness-oauth-mission-status}}.
+
+`mission_lifecycle_endpoint_auth_signing_alg_values_supported`:
+: REQUIRED when `mission_lifecycle_endpoint_auth_methods_supported`
+  lists `private_key_jwt`. Semantics per
+  {{I-D.draft-mcguinness-oauth-mission-status}}.
 
 `mission_join_assertion_endpoint`:
 : OPTIONAL. A string containing a URL. The join-assertion endpoint
@@ -1169,13 +1195,23 @@ Example:
   "issuer": "https://mas.example.com",
   "mission_submission_endpoint":
     "https://mas.example.com/mas/mission/submit",
+  "mission_submission_endpoint_auth_methods_supported":
+    ["access_token", "private_key_jwt"],
+  "mission_submission_endpoint_auth_signing_alg_values_supported":
+    ["ES256"],
   "mission_status_endpoint":
     "https://mas.example.com/mas/mission/status",
+  "mission_status_endpoint_auth_methods_supported":
+    ["access_token", "private_key_jwt"],
+  "mission_status_endpoint_auth_signing_alg_values_supported":
+    ["ES256"],
   "mission_status_signing_alg_values_supported": ["ES256"],
   "mission_lifecycle_endpoint":
     "https://mas.example.com/mas/mission/lifecycle",
-  "mission_auth_methods_supported":
-    ["dpop_bound_token", "private_key_jwt"],
+  "mission_lifecycle_endpoint_auth_methods_supported":
+    ["access_token", "private_key_jwt"],
+  "mission_lifecycle_endpoint_auth_signing_alg_values_supported":
+    ["ES256"],
   "mission_join_assertion_endpoint":
     "https://mas.example.com/mas/mission/join-assertion",
   "mission_max_stale_seconds": 60,
@@ -1645,7 +1681,15 @@ token binding instead of operating a mapping table. A MAS that
 supports the upgrade publishes its join-assertion endpoint as
 `mission_join_assertion_endpoint` ({{discovery}}). The endpoint MUST
 meet the TLS and caller-authentication requirements of the mission
-submission endpoint ({{mission-submission}}).
+submission endpoint ({{mission-submission}}), and accepts the
+authentication methods and client-assertion algorithms advertised for
+it. A client assertion's `aud` and a caller-authentication access
+token's audience MUST name the join-assertion endpoint. For
+access-token authentication, the MAS publishes Protected Resource
+Metadata {{RFC9728}} for this endpoint, identifying its resource,
+required scope, and accepted sender constraints. That caller token is
+distinct from the acting `access_token` the request body carries
+({{join-assertion-request}}), the credential whose join is asserted.
 
 ## Assertion Request {#join-assertion-request}
 
@@ -2529,10 +2573,15 @@ for each, Change Controller IETF and Reference this document:
 
 - `issuer`
 - `mission_submission_endpoint`
+- `mission_submission_endpoint_auth_methods_supported`
+- `mission_submission_endpoint_auth_signing_alg_values_supported`
 - `mission_status_endpoint`
+- `mission_status_endpoint_auth_methods_supported`
+- `mission_status_endpoint_auth_signing_alg_values_supported`
 - `mission_status_signing_alg_values_supported`
 - `mission_lifecycle_endpoint`
-- `mission_auth_methods_supported`
+- `mission_lifecycle_endpoint_auth_methods_supported`
+- `mission_lifecycle_endpoint_auth_signing_alg_values_supported`
 - `mission_join_assertion_endpoint`
 - `mission_event_stream_endpoint`
 - `mission_max_stale_seconds`
@@ -2581,6 +2630,14 @@ document requests no IANA action for it.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Authentication discovery mirrors the Status draft: per-endpoint
+  `*_auth_methods_supported` and `*_auth_signing_alg_values_supported`
+  members for the submission, status, and lifecycle endpoints replace
+  `mission_auth_methods_supported`, and the submission endpoint accepts
+  all three Status mechanisms, including mTLS-bound access tokens. The
+  join-assertion endpoint shares the submission methods but names its
+  own token audience and Protected Resource Metadata.
 
 - Specify the PEP/PDP responsibilities for required instance-bound joins
   and their refusal behavior. Join Assertions continue to carry no

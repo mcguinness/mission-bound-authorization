@@ -378,13 +378,12 @@ export class ResourceAuthorizationServer {
     return {
       issuer: this.cfg.issuer,
       grant_types_supported: [JWT_BEARER_GRANT],
-      // @spec id-continuation-assertion — the RAS redeems both the base ID-JAG
-      // and the continuation ID-JAG (same JWT-bearer grant, continuation claims
-      // preserved into the local token).
-      authorization_grant_profiles_supported: [
-        "urn:ietf:params:oauth:grant-profile:id-jag",
-        "urn:ietf:params:oauth:grant-profile:id-jag-continuation",
-      ],
+      // @spec id-continuation-assertion — the RAS redeems a continuation ID-JAG
+      // with the same JWT-bearer grant as a base one, but it binds no
+      // identity_continuation_handle to the local token it mints and has no
+      // jwt-dpop redemption, so it advertises only the base profile, not
+      // id-jag-continuation (ICA -02 5.2, 7.2).
+      authorization_grant_profiles_supported: ["urn:ietf:params:oauth:grant-profile:id-jag"],
       "io.modelcontextprotocol/enterprise-managed-authorization": { enabled: true },
     };
   }
