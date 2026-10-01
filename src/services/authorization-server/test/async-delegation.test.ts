@@ -39,7 +39,7 @@ import {
   jwtVerify,
   SignJWT,
 } from "jose";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { CHILD_JWT_BEARER_GRANT_TYPE } from "../src/adapters/child-grant.js";
 import { TOKEN_EXCHANGE_GRANT_TYPE, ACCESS_TOKEN_TOKEN_TYPE, JWT_TOKEN_TYPE } from "../src/adapters/continuation-grant.js";
 import { buildAuthorizationServer, type BuiltAs, SourceUnavailableError } from "../src/index.js";
@@ -1044,6 +1044,96 @@ describe("async-delegation terminal paths (@spec async-delegation)", () => {
     expect(at.exp - at.iat).toBeLessThan(300);
     const rotated = (await as.provider.RefreshToken.find(body.refresh_token)) as { exp: number } | undefined;
     expect(rotated?.exp).toBeLessThanOrEqual(missionExp);
+  });
+
+  /**
+   * Count the refresh tokens oidc-provider saves while `fn` runs, with
+   * `Date.now` (the clock token lifetimes are computed on) fixed at `nowMs`.
+   * The kernel's own clock stays real time, so the Mission is still `active`.
+   */
+  async function refreshTokensSavedAt<T>(nowMs: number, fn: () => Promise<T>): Promise<{ result: T; saved: number }> {
+    let saved = 0;
+    const onSaved = () => {
+      saved += 1;
+    };
+    as.provider.on("refresh_token.saved", onSaved);
+    vi.spyOn(Date, "now").mockReturnValue(nowMs);
+    try {
+      return { result: await fn(), saved };
+    } finally {
+      vi.restoreAllMocks();
+      as.provider.removeListener("refresh_token.saved", onSaved);
+    }
+  }
+
+  /** A Mission expires_at at a whole second plus 500 ms, `seconds` out. */
+  const halfSecondExpiry = (seconds: number): { iso: string; ms: number } => {
+    const ms = (Math.floor(Date.now() / 1000) + seconds) * 1000 + 500;
+    return { iso: new Date(ms).toISOString(), ms };
+  };
+
+  it("fractional-second boundary: an async-delegation exchange with 0.9 s of Mission left is refused mission_expired and saves no family refresh token (@spec mission#mission-bound-tokens)", async () => {
+    const expiry = halfSecondExpiry(10);
+    const { baseAccessToken } = await issueBaseMission(expiry.iso);
+    const { result: res, saved } = await refreshTokensSavedAt(expiry.ms - 900, () => asyncDelegate(baseAccessToken));
+    const body = (await res.json()) as { error?: string; mission_error?: string; refresh_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    expect(body.mission_error).toBe("mission_expired");
+    expect(body.refresh_token).toBeUndefined();
+    expect(saved).toBe(0);
+  });
+
+  it("fractional-second boundary: a family refresh token lives exactly until expires_at, and a family refresh with 0.9 s left is refused mission_expired with no refresh token saved (@spec mission#mission-bound-tokens)", async () => {
+    const expiry = halfSecondExpiry(20);
+    const { missionId, baseAccessToken } = await issueBaseMission(expiry.iso);
+    // Open the family 5.4 s before expires_at: its refresh token's lifetime is
+    // the Mission's remaining whole seconds, so it expires at floor(expires_at).
+    const opened = await refreshTokensSavedAt(expiry.ms - 5_400, () => asyncDelegate(baseAccessToken));
+    const family = (await opened.result.json()) as { refresh_token: string };
+    expect(opened.result.status, JSON.stringify(family)).toBe(200);
+    expect(opened.saved).toBe(1);
+    const missionExp = Math.floor(Date.parse(as.kernel.get(missionId)?.expires_at as string) / 1000);
+    const stored = (await as.provider.RefreshToken.find(family.refresh_token)) as { exp: number };
+    expect(stored.exp).toBe(missionExp);
+
+    // 0.9 s before expires_at the presented token is still valid, so the
+    // refresh reaches rotation: the rotated token would have under a second.
+    const { result: res, saved } = await refreshTokensSavedAt(expiry.ms - 900, () => refreshFamily(family.refresh_token));
+    const body = (await res.json()) as { error?: string; mission_error?: string; refresh_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    expect(body.mission_error).toBe("mission_expired");
+    expect(body.refresh_token).toBeUndefined();
+    expect(saved).toBe(0);
+  });
+
+  it("family lifetime policy: on a Mission longer than 14 days the family refresh token still lives exactly until expires_at (@spec mission#mission-bound-tokens)", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission(FAR_EXP);
+    const { refresh_token } = (await (await asyncDelegate(baseAccessToken)).json()) as { refresh_token: string };
+    const stored = (await as.provider.RefreshToken.find(refresh_token)) as { iat: number; exp: number };
+    const missionExp = Math.floor(Date.parse(as.kernel.get(missionId)?.expires_at as string) / 1000);
+    expect(stored.exp - stored.iat).toBeGreaterThan(14 * 24 * 60 * 60);
+    expect(stored.exp).toBeLessThanOrEqual(missionExp);
+    expect(missionExp - stored.exp).toBeLessThanOrEqual(1);
+  });
+
+  it("fractional-second boundary: a family refresh token saved 0.9 s before an expires_at at .95 s is refused, never given the 1 s that would outlive the Mission (@spec mission#mission-bound-tokens)", async () => {
+    const ms = (Math.floor(Date.now() / 1000) + 20) * 1000 + 950;
+    const { missionId, baseAccessToken } = await issueBaseMission(new Date(ms).toISOString());
+    const { refresh_token } = (await (await asyncDelegate(baseAccessToken)).json()) as { refresh_token: string };
+    expect(refresh_token).toBeTruthy();
+    const grantId = as.delegationFamilyStore.familiesForMission(missionId)[0] as string;
+    const client = await as.provider.Client.find("ap-agent");
+    // floor(now) + 1 here would be one second past floor(expires_at), 50 ms
+    // past expires_at itself: the overrun a 1 s floor produced.
+    vi.spyOn(Date, "now").mockReturnValue(ms - 900);
+    try {
+      const rt = new as.provider.RefreshToken({ accountId: "alice", client, grantId });
+      await expect(rt.save()).rejects.toMatchObject({ error: "invalid_grant", missionError: "mission_expired" });
+    } finally {
+      vi.restoreAllMocks();
+    }
   });
 
   it(

@@ -4630,7 +4630,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "no derived credential's exp exceeds the Mission's expires_at",
-    "local": "every credential the issuer derives under a Mission, driven per path against a Mission (or Child, successor or dispatched instance) ending inside the credential's configured lifetime: the code exchange's access token, refresh token, authorization code and ID Token; non-rotating and rotating refresh (access token and rotated refresh token); the async-delegation initial access token, family refresh token, family refresh access token and rotated family refresh token; the AROP deferred access token; the child-bound assertion and child access token; the dispatched instance access token; the expansion successor access token; the ID-JAG continuation grant; and the transaction token. A Mission past expires_at, or with under one second left, is refused rather than minted: invalid_grant mission_expired at the token endpoint, and access_denied at the authorization endpoint's resume, where the authorization code is minted. Not driven here, because this AS does not derive them from its own Mission: the cross-org audience-local token (bounded by the presented chain's leaf exp, whose nesting the chain verifier enforces; the cross-org companion governs that transitive bound), attenuation roots (clamped to expires_at in kernel/attenuation.ts but not reachable from an AS endpoint) and holder-signed attenuation children"
+    "local": "every credential the issuer derives under a Mission, driven per path against a Mission (or Child, successor or dispatched instance) ending inside the credential's configured lifetime: the code exchange's access token, refresh token, authorization code and ID Token; non-rotating and rotating refresh (access token and rotated refresh token); the async-delegation initial access token, family refresh token (which lives exactly until expires_at, with no 1 s floor, and is refused at the fractional-second boundary on both the exchange and the family refresh), family refresh access token and rotated family refresh token; the AROP deferred access token; the child-bound assertion and child access token; the dispatched instance access token; the expansion successor access token; the ID-JAG continuation grant; and the transaction token. A Mission past expires_at, or with under one second left, is refused rather than minted: invalid_grant mission_expired at the token endpoint, and access_denied at the authorization endpoint's resume, where the authorization code is minted. Not driven here, because this AS does not derive them from its own Mission: the cross-org audience-local token (bounded by the presented chain's leaf exp, whose nesting the chain verifier enforces; the cross-org companion governs that transitive bound), attenuation roots (clamped to expires_at in kernel/attenuation.ts but not reachable from an AS endpoint) and holder-signed attenuation children"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -4680,6 +4680,30 @@
     {
      "file": "src/services/authorization-server/test/async-delegation.test.ts",
      "name": "async-delegation terminal paths (@spec async-delegation) > absolute-lifetime: the refresh token cannot outlive the Mission (ttl.RefreshToken clamp)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "async-delegation terminal paths (@spec async-delegation) > fractional-second boundary: an async-delegation exchange with 0.9 s of Mission left is refused mission_expired and saves no family refresh token (@spec mission#mission-bound-tokens)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "async-delegation terminal paths (@spec async-delegation) > fractional-second boundary: a family refresh token lives exactly until expires_at, and a family refresh with 0.9 s left is refused mission_expired with no refresh token saved (@spec mission#mission-bound-tokens)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "async-delegation terminal paths (@spec async-delegation) > family lifetime policy: on a Mission longer than 14 days the family refresh token still lives exactly until expires_at (@spec mission#mission-bound-tokens)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "async-delegation terminal paths (@spec async-delegation) > fractional-second boundary: a family refresh token saved 0.9 s before an expires_at at .95 s is refused, never given the 1 s that would outlive the Mission (@spec mission#mission-bound-tokens)",
      "level": "endpoint",
      "surface": "token-endpoint"
     },

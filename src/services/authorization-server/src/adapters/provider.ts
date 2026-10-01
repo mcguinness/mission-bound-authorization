@@ -1408,18 +1408,17 @@ export function buildProvider(opts: AdapterOptions): Provider {
         return clampToMission(60 * 60, at?.grantId);
       },
       // @spec async-delegation — absolute-lifetime clamp. A per-delegation family
-      // refresh token never outlives its Mission (floored at 1 s, as before).
+      // refresh token lives exactly until its Mission's expires_at (no
+      // configured cap), through the same clamp and refusal as every other
+      // credential: no 1 s floor, so under one second left it is refused.
       // Any other refresh token is oidc-provider's 14 days, clamped.
       RefreshToken: function RefreshTokenTTL(_ctx, token) {
         const grantId = (token as { grantId?: string }).grantId;
         const fam = grantId ? opts.familyStore?.resolve(grantId) : undefined;
-        if (fam) {
-          const record = kernel.get(fam.missionId);
-          if (record) {
-            return Math.max(1, Math.floor((Date.parse(record.expires_at) - Date.now()) / 1000));
-          }
-        }
-        return clampToMission(14 * 24 * 60 * 60, grantId);
+        // Uncapped only when the family's Mission resolves, so the clamp always
+        // bounds it; otherwise the ordinary 14-day value applies.
+        const familyBound = fam !== undefined && kernel.get(fam.missionId) !== undefined;
+        return clampToMission(familyBound ? Number.POSITIVE_INFINITY : 14 * 24 * 60 * 60, grantId);
       },
     },
   };
