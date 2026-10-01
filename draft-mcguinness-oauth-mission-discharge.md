@@ -517,8 +517,12 @@ without reconstructing the immutable record entry.
 - Knowing a selector authorizes nothing. Discharge authority
   ({{discharge-authority}}) and the pinned mapping decide, exactly as
   for the digest form.
-- The Mission Issuer MUST keep a selector resolvable for as long as
-  its target can still be discharged.
+- The Mission Issuer MUST keep a selector resolvable while its target
+  can still be discharged, directly or by forwarding after carryover
+  ({{discharge-carryover}}), and for at least as long as
+  {{discharge-idempotency}} requires event-deduplication state to be
+  retained, so a delayed assertion and a fresh-`nonce` event replay
+  can still resolve it.
 
 Where the AS supports token introspection {{RFC7662}} for
 Mission-bound tokens ({{I-D.draft-mcguinness-oauth-mission}}, Section

@@ -6507,7 +6507,7 @@
    "id": "status.discharge.selector-retention",
    "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "condition-selectors",
-   "text": "The Mission Issuer MUST keep a selector resolvable for as long as its target can still be discharged.",
+   "text": "The Mission Issuer MUST keep a selector resolvable while its target can still be discharged, directly or by forwarding after carryover",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
