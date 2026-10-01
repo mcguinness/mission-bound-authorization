@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-01T19:45:07Z
-Source repository commit: 8d4344e2288f899a4cacf1ba6f80ec95ca9dfc48
+Generated: 2026-10-01T20:12:30Z
+Source repository commit: d718199a488da20be66122d6c70cf4b472636869
 Member count: 7
 
 Reading order:
@@ -14452,7 +14452,7 @@ Table of Contents
       array of strings naming the authentication methods the Mission
       Status endpoint (Section 3) accepts.  Its value space is a closed
       set defined by this document, not the OAuth Token Endpoint
-      Authentication Methods registry: mtls_client_auth (mutual-TLS
+      Authentication Methods registry: tls_client_auth (mutual-TLS
       client authentication [RFC8705]), private_key_jwt (private-key JWT
       client authentication [RFC7523]), and access_token (a
       mission_status-scoped, sender-constrained access token, whose
@@ -14506,6 +14506,11 @@ Table of Contents
       (Section 6).  When absent, no bound is declared, and a consumer
       sizes reliance to token lifetime alone.
 
+   When an endpoint's *_auth_methods_supported member is absent, the
+   methods that endpoint accepts are known only by out-of-band
+   configuration; token_endpoint_auth_methods_supported [RFC8414]
+   describes the token endpoint alone and is never read in its place.
+
    DPoP and mTLS support for issued credentials are read from the
    standard dpop_signing_alg_values_supported [RFC9449] and
    tls_client_certificate_bound_access_tokens [RFC8705] metadata; this
@@ -14537,14 +14542,15 @@ Table of Contents
      "mission_status_endpoint":
        "https://as.example.com/as/mission/status",
      "mission_status_endpoint_auth_methods_supported":
-       ["mtls_client_auth", "private_key_jwt", "access_token"],
+       ["tls_client_auth", "private_key_jwt", "access_token"],
      "mission_status_endpoint_auth_signing_alg_values_supported": ["ES256"],
      "mission_status_signing_alg_values_supported": ["ES256"],
      "mission_lifecycle_endpoint":
        "https://as.example.com/as/mission/lifecycle",
      "mission_lifecycle_endpoint_auth_methods_supported":
-       ["mtls_client_auth", "private_key_jwt", "access_token"],
-     "mission_lifecycle_endpoint_auth_signing_alg_values_supported": ["ES256"],
+       ["tls_client_auth", "private_key_jwt", "access_token"],
+     "mission_lifecycle_endpoint_auth_signing_alg_values_supported":
+       ["ES256"],
      "mission_max_stale_seconds": 60
    }
 
@@ -14987,6 +14993,11 @@ Informative References
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The mutual-TLS method value is tls_client_auth, the registered
+      [RFC8705] spelling, and an absent endpoint auth-methods member is
+      never read from token-endpoint metadata.  The Mission Authority
+      Server publishes the same per-endpoint members.
 
    *  A refresh against a suspended Mission is checked, and refused,
       before its refresh token is consumed, so a resume restores refresh
