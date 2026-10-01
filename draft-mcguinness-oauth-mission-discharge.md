@@ -240,11 +240,11 @@ Access Profile's naming convention ({{iana}}).
     are deployment- or registry-defined and opaque to this document, as
     `purpose` is ({{I-D.draft-mcguinness-oauth-mission}}).
 
-  `discharge_policy`:
+  `discharge_authority`:
   : OPTIONAL. A string, `1*64( ALPHA / DIGIT / "-" / "_" / ":" / "." )`
-    {{RFC5234}}, opaque. A stable selector naming the AS-side
-    discharge-authority mapping for this condition
-    ({{discharge-authority}}).
+    {{RFC5234}}, opaque. It names the authority approved to assert
+    this condition, which the AS resolves to its discharge-authority
+    mapping ({{discharge-authority}}).
 
 The `terminal_when` array is part of the entry's `constraints` and so of
 the Authority Set: it is committed by `authority_hash` and reproducible
@@ -587,21 +587,33 @@ Status Operation", subsection "Authentication"), sender-constrained
 where the deployment's profile requires it, and MUST bind the
 asserting principal.
 
-A `terminal_when` condition MAY carry `discharge_policy` (OPTIONAL): a
-stable, opaque selector naming the AS-side authority mapping for that
-condition ({{iana-terminal-when}}). The AS MUST resolve and validate
-the selector whenever a condition first enters an immutable
-Mission-record entry: at Mission creation, and at every later point
-where a derived entry can carry a new condition (child creation,
+A `terminal_when` condition MAY carry `discharge_authority`
+(OPTIONAL): a stable, opaque name for the authority approved to assert
+that condition, which the AS resolves to its discharge-authority
+mapping ({{iana-terminal-when}}). The AS MUST resolve and validate the
+`discharge_authority` value whenever a condition first enters an
+immutable Mission-record entry: at Mission creation, and at every later
+point where a derived entry can carry a new condition (child creation,
 expansion, Token Exchange or other derivation, and any further profile
 that adds a condition), refusing the Intent or the derivation whose
-selector maps to nothing. The AS binds the resolved mapping's
-identifier and version to that exact `condition_digest` in
-issuer-held metadata.
+value maps to nothing. The AS binds the resolved mapping's identifier
+and version to that exact `condition_digest` in issuer-held metadata.
+
+The approved meaning of a condition's authority is fixed for that
+condition: the source authority the mapping names, with its resource
+and tenant boundary. Because the binding pins the mapping's identifier
+and version, a later policy change never re-points who may assert an
+existing condition, and changing the authority itself takes a new
+condition under a new approval. The operational credentials of the
+same authority, such as its keys, can rotate or be revoked without
+changing the condition. An approval interface that renders a condition
+names the authority the AS resolved, not only the `discharge_authority`
+string; controlling an `event_type` value confers no authority to
+assert it.
 
 A requesting client MUST NOT select an
-arbitrary otherwise-valid policy merely because adding a condition is
-narrowing: an unchecked choice of mapping for a newly added condition
+arbitrary otherwise-valid authority merely because adding a condition
+is narrowing: an unchecked choice of mapping for a newly added condition
 could still force the premature discharge that {{completion-security}}
 warns against, a denial-of-service on the task and an early
 retirement of its own guardrail. The member is never a raw principal
@@ -748,25 +760,25 @@ bounded to under 500 USD and discharged when the Q3 close is finalized:
       "max_amount": { "amount": "500.00", "currency": "USD" },
       "terminal_when": [
         { "event_type": "accounting-period-closed",
-          "discharge_policy": "close-management-2026-q3" } ] } }
+          "discharge_authority": "close-management-2026-q3" } ] } }
 ]
 ~~~
 
-`discharge_policy` names the AS-side authority mapping approved for
-this condition: the close-management system's workload identity, not
+`discharge_authority` names the authority approved to assert this
+condition: the close-management system's workload identity, not
 `alice`'s agent, may assert `accounting-period-closed`
 ({{discharge-authority}}). The agent cannot drive its own discharge: it
 holds no `mission_discharge` authorization for that `event_type`.
 
-While the period is open, the Authorization Server derives both
-entries. When the finance team finalizes the Q3 close, the
-close-management system calls `discharge` on the Mission Lifecycle
-endpoint, naming the write entry's `entry_digest`, this condition's
-`condition_digest`, `event_type` `accounting-period-closed`, and an
-`event_id` for its own occurrence record. The Authorization Server
-authenticates the caller against the resolved `discharge_policy`
-mapping, commits the latch, and returns a signed `discharge_result` of
-outcome `discharged` ({{discharge-result}}).
+While the period is open, the Authorization Server derives both entries.
+When the finance team finalizes the Q3 close, the close-management
+system calls `discharge` on the Mission Lifecycle endpoint, naming the
+write entry's `entry_digest`, this condition's `condition_digest`,
+`event_type` `accounting-period-closed`, and an `event_id` for its own
+occurrence record. The Authorization Server authenticates the caller
+against the resolved `discharge_authority` mapping, commits the latch,
+and returns a signed `discharge_result` of outcome `discharged`
+({{discharge-result}}).
 
 From then on the
 Authorization Server refuses to derive the write entry: a refresh
@@ -836,7 +848,7 @@ name a business event, a case, or a record whose mere existence is
 sensitive, and it rides the token where the entry is carried. A
 deployment SHOULD treat it as it treats other authority detail, and
 SHOULD avoid event identifiers that disclose more than the consuming
-party needs. `discharge_policy` is an opaque selector and does not
+party needs. `discharge_authority` is an opaque name and does not
 itself name a business event, but its resolution is deployment-defined
 and MAY correlate with a class of sensitive events; a deployment
 SHOULD weigh that when publishing its meaning. The `event_id`,
@@ -866,12 +878,12 @@ registration's required fields:
 - Key Name: `terminal_when`
 - Value Space: a JSON array of one or more completion-condition
   objects, each with a REQUIRED `event_type` (string) and an OPTIONAL
-  `discharge_policy` (string, an opaque selector); no two conditions
-  in one array share a canonical form ({{terminal-when}}). This Value
-  Space is a breaking change, while this experimental draft's
-  registration is still open, to the one a prior revision registered:
-  `event_source` and `max_staleness` are removed and `discharge_policy`
-  is added.
+  `discharge_authority` (string, an opaque authority name); no two
+  conditions in one array share a canonical form ({{terminal-when}}).
+  This Value Space is a breaking change, while this experimental
+  draft's registration is still open, to the one a prior revision
+  registered: `event_source` and `max_staleness` are removed and
+  `discharge_authority` is added.
 - Subset Rule: a candidate value is no broader than a reference value
   when the candidate's condition array contains every condition of the
   reference, compared structurally after the issuance profile's

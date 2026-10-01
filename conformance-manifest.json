@@ -6411,7 +6411,7 @@
    "id": "status.discharge.policy-resolution-on-condition-entry",
    "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-authority",
-   "text": "The AS MUST resolve and validate the selector whenever a condition first enters an immutable Mission-record entry",
+   "text": "The AS MUST resolve and validate the `discharge_authority` value whenever a condition first enters an immutable Mission-record entry",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -6424,7 +6424,7 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "discharge_policy is resolved and validated whenever a condition enters an immutable Mission-record entry, including a condition a derived entry adds after activation (child creation, expansion, or another derivation), refusing the Intent or derivation when the selector maps to nothing"
+    "normative": "discharge_authority is resolved and validated whenever a condition enters an immutable Mission-record entry, including a condition a derived entry adds after activation (child creation, expansion, or another derivation), refusing the Intent or derivation when the selector maps to nothing"
    },
    "level": "endpoint",
    "coverage": "partial",
