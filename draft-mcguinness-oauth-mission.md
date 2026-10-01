@@ -5710,6 +5710,15 @@ Cross-Domain:
 
 -01
 
+- Separated exact `target_resources` membership, checked for the
+  Authority Set and for a proposal at submission, from later token
+  narrowing under the subset rule. Made the per-capability
+  transformation rule the single home: audience projection to a
+  Resource AS needs `narrowing`, and without it a delegated token
+  includes an entry only unchanged. Defined delegation depth as
+  issuer-side accounting over an `act` chain the AS authored, with
+  prior actors not authorization inputs at a Resource Server.
+
 - Stated the client no-downgrade requirement in Authorization Server
   Metadata, where discovery establishes Mission support; Downgrade by
   Omission keeps the threat analysis and now holds the
