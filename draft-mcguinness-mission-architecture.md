@@ -2310,7 +2310,7 @@ The levels, cumulative:
   than organizational ({{I-D.draft-mcguinness-mission-runtime}},
   {{I-D.draft-mcguinness-mission-harness}}).
 
-Read as an adoption ladder, each level makes a broader class of agent
+Read in adoption order, each level makes a broader class of agent
 work defensible to grant. The mapping is informative: the action
 classes are the runtime profile's
 ({{I-D.draft-mcguinness-mission-runtime}}), resource policy remains
@@ -2369,7 +2369,7 @@ membership.
 
 ## Assurance Claims {#assurance-claims-axis}
 
-The levels are the adoption ladder: what a deployment has built, in
+The levels are adoption bundles: what a deployment has built, in
 the order deployments build it. What a deployment can prove is an
 orthogonal axis, claimed as named **assurance claims**, each with a
 proof obligation an existing profile fixes, and listed in the
