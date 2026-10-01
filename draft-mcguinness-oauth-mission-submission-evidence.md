@@ -206,7 +206,8 @@ Evidence") and MUST implement:
   ({{creation-idempotency}}).
 
 A specification that defines an evidence type follows the entry
-convention ({{entry-convention}}).
+convention ({{entry-convention}}), and an AS that supports that type
+processes its entries under this document.
 
 Verified evidence is not copied into the Authority Set, and the facts
 the Mission Record retains are not carried on the `mission` claim

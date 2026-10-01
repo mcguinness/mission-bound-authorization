@@ -868,7 +868,9 @@ The question: how does a user's request become a candidate approved
 task? In OAuth, the boundary is the client side and Intent Shaping
 produces an untrusted Mission Intent
 ({{I-D.draft-mcguinness-mission-shaping}}), entering through Pushed
-Authorization Requests {{RFC9126}} or the MAS submission endpoint. In
+Authorization Requests {{RFC9126}} or the MAS submission endpoint,
+with any Intent Submission Evidence processed under
+{{I-D.draft-mcguinness-oauth-mission-submission-evidence}}. In
 AAuth, the agent sends the native description and requested tools to
 the Person Server's mission endpoint. The AAuth binding defines no
 Mission Intent or dependency on the shaping profile.

@@ -511,18 +511,19 @@ request: a `mission_intent` top-level member, registered for the
 GNAP Grant Request Parameters registry ({{iana}}). This binding
 defines no new endpoint; the grant endpoint is the intake.
 
-The `mission_intent` value is a Mission Intent Submission envelope
-as the issuance profile defines it, `intent` plus OPTIONAL
-`evidence`, under that profile's syntactic and Intent Submission
-Evidence rules (the envelope and the Intent are both closed at the
-top level, the authorization server MUST bound size, array lengths,
-evidence entry count, and evidence verification cost
+The `mission_intent` value is a Mission Intent Submission envelope as
+the issuance profile defines it, `intent` plus OPTIONAL `evidence`,
+under that profile's syntactic and Intent Submission Evidence rules and
+those of {{I-D.draft-mcguinness-oauth-mission-submission-evidence}} (the
+envelope and the Intent are both closed at the top level, the
+authorization server MUST bound size, array lengths, evidence entry
+count, and evidence verification cost
 ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, Section
-"Bounded Verification"), presented evidence is dispatched by type
-and refused when unsupported or failing, and the submission is
-untrusted client input, never authority). The grant request's
-signature attributes the submission to the client instance's key;
-attribution confers no authority.
+"Bounded Verification"), presented evidence is dispatched by type and
+refused when unsupported or failing, and the submission is untrusted
+client input, never authority). The grant request's signature attributes
+the submission to the client instance's key; attribution confers no
+authority.
 
 The grant request's access rights are this binding's authority
 proposal, replacing the issuance profile's PAR-only carriage rule:

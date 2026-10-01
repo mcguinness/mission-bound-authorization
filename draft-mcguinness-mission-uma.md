@@ -508,23 +508,22 @@ parameter.
 A Mission Intent claim token is a JWT whose payload carries a
 `mission_intent` claim: a Mission Intent Submission envelope as the
 issuance profile defines it, `intent` plus OPTIONAL `evidence`, under
-that profile's syntactic and Intent Submission Evidence rules (the
+that profile's syntactic and Intent Submission Evidence rules and those
+of {{I-D.draft-mcguinness-oauth-mission-submission-evidence}} (the
 envelope and the Intent are both closed at the top level, the
 authorization server MUST bound size, array lengths, evidence entry
 count, and evidence verification cost
 ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, Section
-"Bounded Verification"), presented evidence is dispatched by type
-and refused when unsupported or failing, and the submission is
-untrusted client input, never authority). The payload
-MAY additionally carry an `authorization_details` claim: the
-client's authority proposal, an array of `authorization_details`
-objects. This claim replaces the issuance profile's PAR-only
-proposal carriage; its validation, derivation, recording, and
-hashing rules apply unchanged, and the proposal itself carries no
-authority ({{I-D.draft-mcguinness-oauth-mission}}). A Mission created
-from a push carrying one records `proposed_authority`
-and `proposal_hash` as the issuance profile's Mission record defines
-them.
+"Bounded Verification"), presented evidence is dispatched by type and
+refused when unsupported or failing, and the submission is untrusted
+client input, never authority). The payload MAY additionally carry an
+`authorization_details` claim: the client's authority proposal, an array
+of `authorization_details` objects. This claim replaces the issuance
+profile's PAR-only proposal carriage; its validation, derivation,
+recording, and hashing rules apply unchanged, and the proposal itself
+carries no authority ({{I-D.draft-mcguinness-oauth-mission}}). A Mission
+created from a push carrying one records `proposed_authority` and
+`proposal_hash` as the issuance profile's Mission record defines them.
 
 The JWT MAY be signed by the client for attribution; a
 signature confers no authority. Its `claim_token_format` identifier
