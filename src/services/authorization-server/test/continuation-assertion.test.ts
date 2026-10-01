@@ -19,7 +19,7 @@ import {
 import { newReplayCache } from "../src/kernel/instance-assertion.js";
 
 const AS = "https://as.test";
-const CA = "https://chain-authority.example";
+const CAI = "https://cai.example";
 const HANDLE = "ich_0123456789abcdefABCD"; // 24 chars, base64url
 
 let keys: { privateKey: CryptoKey; publicKey: CryptoKey };
@@ -29,9 +29,9 @@ let issuers: ContinuationIssuer[];
 beforeAll(async () => {
   keys = await generateKeyPair("ES256", { extractable: true });
   const pub = await exportJWK(keys.publicKey);
-  pub.kid = "ca-key";
+  pub.kid = "cai-key";
   jkt = await calculateJwkThumbprint(pub);
-  issuers = [{ iss: CA, jwks: { keys: [pub] }, attestsFor: [] }];
+  issuers = [{ iss: CAI, jwks: { keys: [pub] }, attestsFor: [] }];
 });
 
 interface MintOpts {
@@ -51,13 +51,13 @@ async function mintICA(opts: MintOpts = {}): Promise<string> {
   const base: Record<string, unknown> = {
     identity_continuation_handle: HANDLE,
     cnf: { jkt },
-    act: { iss: CA, sub: "agent-7" },
+    act: { iss: CAI, sub: "agent-7" },
     ...opts.over,
   };
   for (const k of opts.omit ?? []) delete base[k];
   return new SignJWT(base)
-    .setProtectedHeader({ alg: "ES256", kid: "ca-key", typ: opts.typ ?? IDENTITY_CONTINUATION_JWT_TYP })
-    .setIssuer(opts.iss ?? CA)
+    .setProtectedHeader({ alg: "ES256", kid: "cai-key", typ: opts.typ ?? IDENTITY_CONTINUATION_JWT_TYP })
+    .setIssuer(opts.iss ?? CAI)
     .setAudience(opts.aud ?? AS)
     .setIssuedAt(iat)
     .setExpirationTime(exp)
@@ -70,10 +70,10 @@ const ctx = () => ({ audience: AS, issuers, presenterJkt: jkt, replay: newReplay
 describe("validateContinuationAssertion — accepts", () => {
   it("validates a well-formed ICA and surfaces handle/act/cnf", async () => {
     const v = await validateContinuationAssertion(await mintICA(), ctx());
-    expect(v.iss).toBe(CA);
+    expect(v.iss).toBe(CAI);
     expect(v.aud).toBe(AS);
     expect(v.handle).toBe(HANDLE);
-    expect(v.act).toEqual({ iss: CA, sub: "agent-7" });
+    expect(v.act).toEqual({ iss: CAI, sub: "agent-7" });
     expect(v.cnf.jkt).toBe(jkt);
     expect(v.jti).toBeTruthy();
   });
@@ -262,7 +262,7 @@ describe("validateContinuationAssertion — rejects", () => {
   it("act carrying a nested act", async () => {
     await expect(
       validateContinuationAssertion(
-        await mintICA({ over: { act: { iss: CA, sub: "agent-7", act: { iss: CA, sub: "inner" } } } }),
+        await mintICA({ over: { act: { iss: CAI, sub: "agent-7", act: { iss: CAI, sub: "inner" } } } }),
         ctx(),
       ),
     ).rejects.toThrow(/act MUST NOT carry act/);
@@ -271,7 +271,7 @@ describe("validateContinuationAssertion — rejects", () => {
   it("act carrying a per-hop cnf", async () => {
     await expect(
       validateContinuationAssertion(
-        await mintICA({ over: { act: { iss: CA, sub: "agent-7", cnf: { jkt } } } }),
+        await mintICA({ over: { act: { iss: CAI, sub: "agent-7", cnf: { jkt } } } }),
         ctx(),
       ),
     ).rejects.toThrow(/act MUST NOT carry cnf/);
@@ -279,7 +279,7 @@ describe("validateContinuationAssertion — rejects", () => {
 
   it("act missing sub", async () => {
     await expect(
-      validateContinuationAssertion(await mintICA({ over: { act: { iss: CA } } }), ctx()),
+      validateContinuationAssertion(await mintICA({ over: { act: { iss: CAI } } }), ctx()),
     ).rejects.toThrow(/act missing non-empty sub/);
   });
 

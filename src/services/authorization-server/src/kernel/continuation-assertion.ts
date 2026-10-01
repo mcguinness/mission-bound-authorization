@@ -2,9 +2,10 @@
  * @spec draft-mcguinness-oauth-id-continuation-assertion-00 — the Identity
  * Continuation Assertion (ICA) subject-token validator.
  *
- * An ICA is a short-lived, DPoP-bound JWT minted by a Chain Authority and
- * presented at the token endpoint as an RFC 8693 subject token to continue a
- * Mission's delegation chain across an intra-domain hop (yielding an ID-JAG).
+ * An ICA is a short-lived, DPoP-bound JWT minted by a Continuation Assertion
+ * Issuer (CAI) and presented at the token endpoint as an RFC 8693 subject
+ * token to continue a Mission's delegation chain across an intra-domain hop
+ * (yielding an ID-JAG).
  * It carries a continuation HANDLE (the durable lineage reference) plus the
  * single current-actor `act` node, and deliberately carries NO identity or
  * authorization claims of its own: `sub`, `auth_time`, `acr`, `amr`, `sid`,
@@ -69,7 +70,7 @@ export class ContinuationAssertionError extends Error {
   }
 }
 
-/** A trusted Chain Authority issuer of ICAs. */
+/** A trusted Continuation Assertion Issuer (CAI) of ICAs. */
 export interface ContinuationIssuer {
   iss: string;
   jwks: { keys: JWK[] };

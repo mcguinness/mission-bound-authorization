@@ -349,7 +349,7 @@ export async function handleTokenExchangeGrant(
   // Wiring guard: the grant is registered unconditionally, so a request can
   // reach here even when the continuation options were not composed.
   const store = opts.continuationStore;
-  const issuers = opts.chainAuthorityIssuers;
+  const issuers = opts.continuationAssertionIssuers;
   const replay = opts.continuationReplay;
   const resourceToAs = opts.resourceToAs;
   const subjectResolver = opts.subjectResolver;
@@ -396,8 +396,8 @@ export async function handleTokenExchangeGrant(
 
   // Rule 5: the current actor and its key proof. Client auth already ran: the
   // presenter's canonical actor identity is (AS issuer, client_id), the
-  // contract the Chain Authority MUST mint the ICA `act` against (ICA -02
-  // 5.5.2).
+  // contract the Continuation Assertion Issuer MUST mint the ICA `act` against
+  // (ICA -02 5.5.2).
   const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
   const currentActor = { iss: opts.issuer, sub: client.clientId };
 

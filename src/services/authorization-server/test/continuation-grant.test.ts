@@ -6,7 +6,7 @@
  * ICA subject token in, a Mission-rooted continuation ID-JAG out, with the
  * current-actor check and the RFC 8693 error taxonomy.
  *
- * The ICA `act` (minted by the Chain Authority against (AS, client_id)) MUST
+ * The ICA `act` (minted by the Continuation Assertion Issuer against (AS, client_id)) MUST
  * equal the private_key_jwt presenter's canonical actor identity (raw ===,
  * case-sensitive), and the DPoP proof key MUST be the ICA's cnf.jkt. The
  * request carries no actor_token or actor_token_type (ICA -02 5.5.1).
@@ -19,7 +19,7 @@
  * SignJWT — never provider.AccessToken).
  *
  * Setup drives the store directly (rootGrantAnchor + mint) and mints ICAs with a
- * dedicated Chain Authority key injected via chainAuthorityIssuers.
+ * dedicated Continuation Assertion Issuer key injected via continuationAssertionIssuers.
  */
 
 import { type Server } from "node:http";
@@ -48,7 +48,7 @@ import {
 
 const PORT = 14475;
 const ISSUER = `http://localhost:${PORT}`;
-const CA = "https://chain-authority.example"; // the injected Chain Authority
+const CAI = "https://cai.example"; // the injected Continuation Assertion Issuer
 const CAI_OTHER = "https://cai-other.example"; // trusted only for OTHER_RAS's hops
 const OTHER_RAS = "https://ras.other.test";
 const RESOURCE = CANONICAL_RESOURCE; // in DERIVATION_POLICY's ceiling
@@ -75,7 +75,7 @@ type Keys = { privateKey: CryptoKey; publicKey: CryptoKey };
 let as: BuiltAs;
 let asServer: Server;
 let clientKey: CryptoKey; // ap-agent private_key_jwt key (kid ap-agent-auth)
-let caKeys: Keys; // Chain Authority ICA signing key
+let caiKeys: Keys; // the Continuation Assertion Issuer's ICA signing key
 let otherCaiKeys: Keys; // CAI_OTHER's ICA signing key
 let rasCaiKeys: Keys; // RAS_AUD's own ICA signing key (the accepting RAS as its own issuer)
 let agentKeys: Keys; // the agent's DPoP key
@@ -189,7 +189,7 @@ interface IcaOpts {
   over?: Record<string, unknown>;
 }
 
-/** Mint an ICA signed by the Chain Authority key (iss=CA, aud=AS issuer). */
+/** Mint an ICA signed by the Continuation Assertion Issuer key (iss=CAI, aud=AS issuer). */
 async function mintICA(handle: string, opts: IcaOpts = {}): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const base: Record<string, unknown> = {
@@ -198,7 +198,7 @@ async function mintICA(handle: string, opts: IcaOpts = {}): Promise<string> {
     act: opts.act ?? { iss: ISSUER, sub: "ap-agent" },
     ...opts.over,
   };
-  const signer = opts.signer ?? { iss: CA, kid: "ca-key", key: caKeys.privateKey };
+  const signer = opts.signer ?? { iss: CAI, kid: "cai-key", key: caiKeys.privateKey };
   return new SignJWT(base)
     .setProtectedHeader({ alg: signer.alg ?? "ES256", kid: signer.kid, typ: IDENTITY_CONTINUATION_JWT_TYP })
     .setIssuer(signer.iss)
@@ -311,8 +311,8 @@ async function tokenExchange(f: ExchangeFields, t: Target = { issuer: ISSUER, cl
 }
 
 beforeAll(async () => {
-  caKeys = await generateKeyPair("ES256", { extractable: true });
-  const caPub = { ...(await exportJWK(caKeys.publicKey)), kid: "ca-key", alg: "ES256", use: "sig" };
+  caiKeys = await generateKeyPair("ES256", { extractable: true });
+  const caiPub = { ...(await exportJWK(caiKeys.publicKey)), kid: "cai-key", alg: "ES256", use: "sig" };
   otherCaiKeys = await generateKeyPair("ES256", { extractable: true });
   const otherCaiPub = { ...(await exportJWK(otherCaiKeys.publicKey)), kid: "other-cai-key", alg: "ES256" };
   rasCaiKeys = await generateKeyPair("ES256", { extractable: true });
@@ -339,9 +339,9 @@ beforeAll(async () => {
         jwks: { keys: [{ ...(await exportJWK(svcKeys.publicKey)), kid: "svc-b-auth", alg: "ES256" }] },
       },
     ],
-    chainAuthorityIssuers: [
+    continuationAssertionIssuers: [
       // Trusted for the root hops (this AS) and the child hops (RAS_AUD).
-      { iss: CA, jwks: { keys: [caPub] }, attestsFor: [ISSUER, RAS_AUD] },
+      { iss: CAI, jwks: { keys: [caiPub] }, attestsFor: [ISSUER, RAS_AUD] },
       { iss: CAI_OTHER, jwks: { keys: [otherCaiPub] }, attestsFor: [OTHER_RAS] },
       // The accepting RAS itself, trusted for its own hops only.
       { iss: RAS_AUD, jwks: { keys: [rasCaiPub] }, attestsFor: [] },
@@ -735,7 +735,7 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     const { missionId, handle } = newLineage("apev-c3");
     for (const act of [
       { iss: ISSUER, sub: "ap-agent-imposter" }, // another sub at the same issuer
-      { iss: CA, sub: "ap-agent" }, // the same sub at another actor identity authority
+      { iss: CAI, sub: "ap-agent" }, // the same sub at another actor identity authority
     ]) {
       const res = await tokenExchange({ subjectToken: await mintICA(handle, { act }) });
       const body = (await res.json()) as { error?: string; error_description?: string };
@@ -1383,11 +1383,11 @@ describe("continuation hop-count limit (@spec id-continuation-assertion)", () =>
   let target2: Target;
 
   beforeAll(async () => {
-    const caPub = { ...(await exportJWK(caKeys.publicKey)), kid: "ca-key", alg: "ES256", use: "sig" };
+    const caiPub = { ...(await exportJWK(caiKeys.publicKey)), kid: "cai-key", alg: "ES256", use: "sig" };
     as2 = await buildAuthorizationServer({
       issuer: ISSUER2,
       allowHeadlessAdjudication: true,
-      chainAuthorityIssuers: [{ iss: CA, jwks: { keys: [caPub] }, attestsFor: [ISSUER2, RAS_AUD] }],
+      continuationAssertionIssuers: [{ iss: CAI, jwks: { keys: [caiPub] }, attestsFor: [ISSUER2, RAS_AUD] }],
       resourceToAs: (r: string) => (r === RESOURCE ? RAS_AUD : ISSUER2),
       continuationHopLimit: 2,
     });

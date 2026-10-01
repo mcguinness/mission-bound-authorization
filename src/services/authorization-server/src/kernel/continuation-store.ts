@@ -9,11 +9,11 @@
  * session id, so it can be terminated when that session ends).
  *
  * A continuation HANDLE is a durable reference bound to an anchor and Mission.
- * A Chain Authority mints a handle for each intra-domain hop; the handle is
- * carried inside an ICA (see continuation-assertion.ts) and RESOLVED here to
- * recover the Mission, current actor, root auth envelope, and DPoP key. The
- * presented handle is NOT single-use: a hop record persists across
- * continuations, so `resolve` never consumes it.
+ * The AS mints a handle for each hop it creates; a Continuation Assertion
+ * Issuer carries it inside an ICA (see continuation-assertion.ts), and it is
+ * RESOLVED here to recover the Mission, current actor, root auth envelope,
+ * and DPoP key. The presented handle is NOT single-use: a hop record persists
+ * across continuations, so `resolve` never consumes it.
  *
  * Terminal propagation: a Mission reaching a terminal lifecycle state
  * (`onLifecycleCommit`) marks all of its anchors and handles terminal; a

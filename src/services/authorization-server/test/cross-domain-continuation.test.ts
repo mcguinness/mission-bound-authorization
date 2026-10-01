@@ -30,7 +30,7 @@ import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 const AS_ISS = "https://as.test";
 const RAS_ISS = "https://ras.ledgercloud.test";
 const RESOURCE = "https://saas.ledgercloud.test/mcp";
-const CA = "https://chain-authority.example";
+const CAI = "https://cai.example";
 const RESOURCE_TO_AS = (r: string) => (r === RESOURCE ? RAS_ISS : AS_ISS);
 
 // Ceiling includes exactly the resource the ID-JAG is audienced to.
@@ -94,9 +94,9 @@ describe("issueCrossDomainGrant — continuation ID-JAG (extended path)", () => 
     // A realistic collapsed lineage: the same actor takes a fresh hop over an
     // inbound chain where it is already the outermost hop, so the caller's
     // `extendChainCollapsing` keeps a depth-1 `act` (no duplicate entry).
-    const inbound: ActObject = { iss: CA, sub: "agent-7" };
-    const builtAct = extendChainCollapsing({ iss: CA, sub: "agent-7" }, inbound);
-    expect(builtAct).toEqual({ iss: CA, sub: "agent-7" }); // collapsed, depth 1
+    const inbound: ActObject = { iss: CAI, sub: "agent-7" };
+    const builtAct = extendChainCollapsing({ iss: CAI, sub: "agent-7" }, inbound);
+    expect(builtAct).toEqual({ iss: CAI, sub: "agent-7" }); // collapsed, depth 1
 
     const { grant } = await issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
       ...legacyInput(record.id),
