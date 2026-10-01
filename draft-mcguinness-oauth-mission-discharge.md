@@ -893,9 +893,14 @@ instead.
   as by matching resource and condition
   ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section
   "Carryover Evidence and Observation"). A chain of carryovers resolves
-  through each recorded pairing in turn. A targeted entry with no
-  recorded counterpart holds no authority in the replacement, and the
-  request is answered as without forwarding, with `terminal_noop`.
+  through each recorded pairing in turn. The AS MUST check the targeted
+  entry's own latch in the old child before forwarding: an entry the
+  old child had already discharged answers `already_discharged`
+  without forwarding, since the replacement's effective set excludes
+  it, and an exact event replay is handled first by
+  {{discharge-idempotency}}. A targeted entry with no recorded
+  counterpart for any other reason holds no authority in the
+  replacement, and the request answers `terminal_noop`.
 - **Authorization.** The AS MUST authorize the caller against the
   replacement's pinned mapping for the fired condition
   ({{discharge-authority}}). A caller that mapping does not admit gets
@@ -930,9 +935,16 @@ consumer MUST validate `typ` exactly and MUST NOT accept a Discharge
 Receipt as a Mission Status Response, or a Mission Status Response as
 a Discharge Receipt ({{RFC8725}}, Sections 3.11 and 3.12).
 
-Its payload carries `iss`, `aud`, `nonce`, `iat`, and `exp` as the
-Status profile's response envelope does, with `aud` the authenticated
-requester's identifier, and a `discharge_receipt` object with:
+Its payload carries `iss`, `aud`, `nonce`, `iat`, `exp`, and a
+`discharge_receipt` object. The AS MUST set `aud` to the authenticated
+requester's identifier and `nonce` to the request's own `nonce`, as
+for the Status profile's state-only response
+({{I-D.draft-mcguinness-oauth-mission-status}}, Section "Response").
+The `nonce` rules of {{discharge-idempotency}} apply to a receipt as to
+the envelope: a byte-identical retransmission replays the stored
+receipt bytes, and a fresh-`nonce` replay of the same event returns a
+new receipt echoing the new `nonce`. The `discharge_receipt` object
+has:
 
 - `mission_id`: the Mission the request targeted;
 - `event_id` and the target form, echoed as the request sent them; and

@@ -6768,6 +6768,54 @@
    "notes": "#898 fix 3. Implementation lands with the #898 implementation PR."
   },
   {
+   "id": "status.discharge.forward-latch-first",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-carryover",
+   "text": "The AS MUST check the targeted entry's own latch in the old child before forwarding",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a delayed assertion against an entry the old child had already discharged before carryover answers already_discharged and forwards nothing"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 spec review. An entry the old child had already discharged answers already_discharged without forwarding; implementation lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.receipt-aud-nonce",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-receipt",
+   "text": "The AS MUST set `aud` to the authenticated requester's identifier and `nonce` to the request's own `nonce`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Discharge Receipt's aud is the authenticated requester and its nonce the request's own; a byte-identical retransmission replays the stored receipt bytes and a fresh-nonce event replay returns a new receipt"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 spec review. Implementation lands with the #898 implementation PR."
+  },
+  {
    "id": "status.discharge.receipt-typ-exclusive",
    "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-receipt",
