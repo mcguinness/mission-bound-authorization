@@ -3933,7 +3933,7 @@
    "assertion": "no-side-effect",
    "observation": {
     "normative": "a failed or refused derivation leaves the derivation count unchanged",
-    "local": "asserted on the expansion nothing_to_expand refusal path; not yet driven at the cap boundary itself"
+    "local": "asserted on the expansion nothing_to_expand refusal path, and now also at the cap boundary itself on a rotating refresh refused derivations_exhausted by the non-consuming pre-check (#914): the count stays at the cap across two refused attempts. Moving the row to tested is left to an owner ruling"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -3941,6 +3941,12 @@
     {
      "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
      "name": "expansion wire: NON-WIDENING request is REFUSED (@spec expansion#nothing-to-expand) > a pure subset request refuses (invalid_request + nothing_to_expand): predecessor stays active, nothing created or reserved, no derivation consumed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/refresh-precheck.test.ts",
+     "name": "refresh pre-check: a refused refresh consumes nothing (@spec mission#issuance-gating, #914) > approval grant with an exhausted derivation cap: refused derivations_exhausted without counting or consuming, so the same token is refused by the gate again, never as reuse",
      "level": "endpoint",
      "surface": "token-endpoint"
     }

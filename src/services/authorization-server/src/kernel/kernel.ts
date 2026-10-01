@@ -460,6 +460,23 @@ export interface KernelOptions {
   strictObservationWatermark?: boolean;
 }
 
+/**
+ * @spec mission#issuance-gating — the derivation cap rule (the Derivation
+ * Limits companion): a Mission derives while it has no limit or its count is
+ * below it. The counter's conditional `UPDATE`
+ * ({@link MissionKernel.gateDerivation}) applies the same rule to the STORED
+ * row, which is authoritative against a stale snapshot; this form is for a
+ * read that must not count.
+ */
+function withinDerivationCap(record: MissionRecord): boolean {
+  return record.derivation_limit === null || record.derivation_count < record.derivation_limit;
+}
+
+/** The cap refusal, identical from the counted gate and the non-counting check. */
+function derivationCapExhausted(id: string): GateError {
+  return new GateError("derivation_cap_exhausted", `mission ${id} derivation cap exhausted`);
+}
+
 export class MissionKernel {
   readonly db: Database;
   /**
@@ -2560,6 +2577,25 @@ export class MissionKernel {
   }
 
   /**
+   * @spec mission#issuance-gating — {@link gateDerivation} WITHOUT the
+   * count: the same state half ({@link gateDerivable}: expiry clock, lineage
+   * walk, effective-set gate) and the same cap rule read against the stored
+   * count, with NO counter write (Derivation Limits: a refused derivation is
+   * never counted). A refresh pre-check runs it before oidc-provider consumes
+   * and rotates the presented refresh token (#914).
+   *
+   * Non-consuming, not read-only: an expiry it discovers commits, exactly as
+   * the gate's does. It is advisory: the counted gate stays authoritative, and
+   * a suspension or a concurrent derivation between this check and that gate
+   * is still refused there (the window #250 owns).
+   */
+  checkDerivation(id: string): MissionRecord {
+    const record = this.gateDerivable(id);
+    if (!withinDerivationCap(record)) throw derivationCapExhausted(id);
+    return record;
+  }
+
+  /**
    * The state half of the derivation gate: the expiry clock, the lineage walk
    * and the effective-set gate, with NO counter write.
    *
@@ -2611,9 +2647,7 @@ export class MissionKernel {
     const changed = this.db
       .prepare("UPDATE missions SET derivation_count = derivation_count + 1 WHERE id = ? AND (derivation_limit IS NULL OR derivation_count < derivation_limit)")
       .run(id);
-    if (changed.changes !== 1) {
-      throw new GateError("derivation_cap_exhausted", `mission ${id} derivation cap exhausted`);
-    }
+    if (changed.changes !== 1) throw derivationCapExhausted(id);
     return this.mustGet(id);
   }
 
