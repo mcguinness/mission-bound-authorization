@@ -2848,143 +2848,14 @@ security review can read. It is one artifact, not a second one: each
 fact's owning profile governs its meaning and normative force, and
 this document fixes no serialization. A machine-readable manifest
 schema, with stable claim identifiers and validation rules, is
-deferred family work; until it exists, the shape below is
-illustrative and the per-profile statements are the checkable form.
+deferred family work; until it exists, the shapes in
+{{deployment-profile-examples}} are illustrative and the per-profile
+statements are the checkable form.
 
 Its distinguishing field is `residual_risks`: the profile is not
 credible unless it states, in the same object as its guarantees, what
-it does not cover. An illustrative shape, for a deployment that
-runs mediated credential custody but makes neither High-Assurance
-claim: the agent-compromise-resistant claim requires the runtime
-profile's per-condition evidence bindings (EAT profile and claim
-identifiers, measurements, appraisal policy, attester identity,
-freshness, signed approval configuration, rendering evidence, and a
-path-completeness audit), and this shape's generic attestation
-reference is declaration input, not that proof. The `key_custody`
-entries below are declarations under the same rule: a custody
-statement made legible, not a checked assurance grade (the member's
-definition below states the open verifier gap):
+it does not cover.
 
-~~~ json
-{
-  "profile": "mission-governed-agent-runtime",
-  "assurance_claims": [
-    "action-time enforcement", "parameter-bound enforcement",
-    "bounded revocation latency"
-  ],
-  "mission_issuer": "https://as.example.com",
-  "state_sources": [
-    { "type": "status_endpoint", "max_staleness_seconds": 30 }
-  ],
-  "issuance": {
-    "binding": "oauth-core",
-    "mission_claim_required": true,
-    "refresh_gated_on_active_state": true
-  },
-  "runtime": {
-    "pdp": "authzen",
-    "pep_locations": ["tool-gateway", "browser-action-proxy"],
-    "mediated_action_classes": [
-      "irreversible_action", "external_commitment",
-      "privileged_administration"
-    ],
-    "action_bound_approval_classes": [
-      "irreversible_action", "external_commitment",
-      "privileged_administration"
-    ],
-    "unmediated_exclusions": [
-      "internal_reasoning", "local_cache_read"
-    ]
-  },
-  "credential_custody": {
-    "held_by": "pep",
-    "sender_constrained": true,
-    "key_generated_in_pep": true,
-    "agent_receives_bearer_token": false
-  },
-  "key_custody": [
-    {
-      "key_class": "issuer_signing",
-      "artifact_classes": ["mission_tokens"],
-      "kid_selector": "issuer-token-2026",
-      "holder": "hsm_or_kms",
-      "exportable": false,
-      "generation": "dual_controlled",
-      "signing_use_controls": "online_token_signing",
-      "compromise_recovery_ref": "https://ops.example.com/procedures/issuer-key-compromise"
-    },
-    {
-      "key_class": "issuer_signing",
-      "artifact_classes": ["registered_evidence", "portable_artifacts"],
-      "kid_selector": "issuer-evidence-2026",
-      "holder": "hsm_or_kms",
-      "exportable": false,
-      "generation": "dual_controlled",
-      "signing_use_controls": "low_volume_high_value_signing",
-      "compromise_recovery_ref": "https://ops.example.com/procedures/issuer-key-compromise"
-    },
-    {
-      "key_class": "mediating_pep_custody",
-      "artifact_classes": ["sender_constraint_proof"],
-      "kid_selector": "pep-dpop-2026",
-      "holder": "software",
-      "exportable": false,
-      "generation": "generated_in_pep",
-      "signing_use_controls": "per_session_sender_constraint",
-      "compromise_recovery_ref": "https://ops.example.com/procedures/pep-key-rotation",
-      "attestation_ref": "https://attest.example.com/pep/2026"
-    }
-  ],
-  "approval_rendering": {
-    "rendered_by": "agent-isolated-component"
-  },
-  "execution_environment": {
-    "attestation_ref": "https://attest.example.com/runtime/2026"
-  },
-  "harness": {
-    "subagent_inheritance": "explicit_delegation_only",
-    "resume_requires_active_state": true,
-    "cached_credentials_revalidated": true,
-    "secondary_egress_enumerated": true
-  },
-  "exposure": {
-    "taint_rule": "enforced",
-    "egress_channels_enumerated": true,
-    "egress_mediated": true
-  },
-  "standing_charters": {
-    "ceiling_review_cadence_days": 90,
-    "per_drawdown_bound": "single_entry_delta",
-    "drawdown_rate_bound_per_chain_per_hour": 60
-  },
-  "resource_servers": {
-    "authorization_details_enforcing": ["https://erp.example.com"],
-    "scope_projection_only": ["https://mail.example.com"],
-    "constraint_enforcement_for_scope_only": "runtime_pep"
-  },
-  "evidence": {
-    "decision_evidence": true,
-    "execution_evidence": true,
-    "retention_days": 365,
-    "field_classification": "evidence-schema-v2",
-    "evidence_access_audited": true,
-    "erasure_policy": "erasure-records",
-    "transparency": {
-      "service_operator": "third_party",
-      "monitor": "sec-ops",
-      "registration_time_bound_seconds": 3600
-    }
-  },
-  "residual_risks": [
-    "mediated custody is declared, not evidenced: no High-Assurance claim is made",
-    "unmediated local reasoning is outside enforcement",
-    "revocation latency up to 30 seconds",
-    "PEP compromise is not prevented",
-    "per-entry constraints reach scope-only resources only via the PEP",
-    "long-term memory and provider model context are not Mission-scoped exposure points"
-  ]
-}
-~~~
 
 The `evidence` member carries the deployment's evidence-handling
 posture beside its guarantees: the field-classification scheme its
@@ -3014,46 +2885,9 @@ legible in the Deployment Profile; it does not make that statement
 checked. Custody assurance stays open until a normative reader or
 verifier for this declaration exists.
 
-An issuance-only deployment ({{entry-ramps}}) publishes a smaller
-shape: no `runtime`, `credential_custody`, or `harness` member, its
-token lifetime stated as the revocation bound where a Resource Server
-does not introspect, and residuals that name the per-action check it
-does not run:
-
-~~~ json
-{
-  "profile": "mission-issuance-only",
-  "assurance_claims": [
-    "approved-record integrity", "bounded revocation latency"
-  ],
-  "mission_issuer": "https://as.example.com",
-  "state_sources": [
-    { "type": "introspection", "max_staleness_seconds": 0 }
-  ],
-  "issuance": {
-    "binding": "oauth-core",
-    "refresh_gated_on_active_state": true,
-    "max_access_token_lifetime_seconds": 300
-  },
-  "resource_servers": {
-    "authorization_details_enforcing": ["https://erp.example.com"],
-    "scope_projection_only": ["https://mail.example.com"],
-    "constraint_enforcement_for_scope_only": "refuse_issuance"
-  },
-  "residual_risks": [
-    "no per-action check within a token lifetime",
-    "revocation up to 300 seconds where no introspection",
-    "scope-only constraints not projectable are refused",
-    "delegated tokens reach Mission-aware resources only"
-  ]
-}
-~~~
-
 Two deployments that both "support Mission" but publish different
 Deployment Profiles provide different security properties, and the
-profile is what makes that difference legible. A deployment lists
-its assurance claims ({{assurance-claims-axis}}) here, beside the
-residuals each leaves.
+profile is what makes that difference legible.
 
 # Security Considerations {#security-considerations}
 
@@ -3492,6 +3326,180 @@ binding's Mission Lifecycle and Gating and grant-binding rules,
    is refused after a terminal transition; and
 2. a bare client-supplied Mission identifier creates no binding:
    the grant, never the identifier, determines the Mission.
+
+# Deployment Profile Example Shapes {#deployment-profile-examples}
+
+These shapes are illustrative. This document fixes no serialization,
+and each fact's owning profile governs its meaning
+({{deployment-profile}}).
+
+An illustrative shape, for a deployment that
+runs mediated credential custody but makes neither High-Assurance
+claim: the agent-compromise-resistant claim requires the runtime
+profile's per-condition evidence bindings (EAT profile and claim
+identifiers, measurements, appraisal policy, attester identity,
+freshness, signed approval configuration, rendering evidence, and a
+path-completeness audit), and this shape's generic attestation
+reference is declaration input, not that proof. The `key_custody`
+entries below are declarations under the same rule: a custody
+statement made legible, not a checked assurance grade (the member's
+definition in {{deployment-profile}} states the open verifier gap):
+
+~~~ json
+{
+  "profile": "mission-governed-agent-runtime",
+  "assurance_claims": [
+    "action-time enforcement", "parameter-bound enforcement",
+    "bounded revocation latency"
+  ],
+  "mission_issuer": "https://as.example.com",
+  "state_sources": [
+    { "type": "status_endpoint", "max_staleness_seconds": 30 }
+  ],
+  "issuance": {
+    "binding": "oauth-core",
+    "mission_claim_required": true,
+    "refresh_gated_on_active_state": true
+  },
+  "runtime": {
+    "pdp": "authzen",
+    "pep_locations": ["tool-gateway", "browser-action-proxy"],
+    "mediated_action_classes": [
+      "irreversible_action", "external_commitment",
+      "privileged_administration"
+    ],
+    "action_bound_approval_classes": [
+      "irreversible_action", "external_commitment",
+      "privileged_administration"
+    ],
+    "unmediated_exclusions": [
+      "internal_reasoning", "local_cache_read"
+    ]
+  },
+  "credential_custody": {
+    "held_by": "pep",
+    "sender_constrained": true,
+    "key_generated_in_pep": true,
+    "agent_receives_bearer_token": false
+  },
+  "key_custody": [
+    {
+      "key_class": "issuer_signing",
+      "artifact_classes": ["mission_tokens"],
+      "kid_selector": "issuer-token-2026",
+      "holder": "hsm_or_kms",
+      "exportable": false,
+      "generation": "dual_controlled",
+      "signing_use_controls": "online_token_signing",
+      "compromise_recovery_ref": "https://ops.example.com/procedures/issuer-key-compromise"
+    },
+    {
+      "key_class": "issuer_signing",
+      "artifact_classes": ["registered_evidence", "portable_artifacts"],
+      "kid_selector": "issuer-evidence-2026",
+      "holder": "hsm_or_kms",
+      "exportable": false,
+      "generation": "dual_controlled",
+      "signing_use_controls": "low_volume_high_value_signing",
+      "compromise_recovery_ref": "https://ops.example.com/procedures/issuer-key-compromise"
+    },
+    {
+      "key_class": "mediating_pep_custody",
+      "artifact_classes": ["sender_constraint_proof"],
+      "kid_selector": "pep-dpop-2026",
+      "holder": "software",
+      "exportable": false,
+      "generation": "generated_in_pep",
+      "signing_use_controls": "per_session_sender_constraint",
+      "compromise_recovery_ref": "https://ops.example.com/procedures/pep-key-rotation",
+      "attestation_ref": "https://attest.example.com/pep/2026"
+    }
+  ],
+  "approval_rendering": {
+    "rendered_by": "agent-isolated-component"
+  },
+  "execution_environment": {
+    "attestation_ref": "https://attest.example.com/runtime/2026"
+  },
+  "harness": {
+    "subagent_inheritance": "explicit_delegation_only",
+    "resume_requires_active_state": true,
+    "cached_credentials_revalidated": true,
+    "secondary_egress_enumerated": true
+  },
+  "exposure": {
+    "taint_rule": "enforced",
+    "egress_channels_enumerated": true,
+    "egress_mediated": true
+  },
+  "standing_charters": {
+    "ceiling_review_cadence_days": 90,
+    "per_drawdown_bound": "single_entry_delta",
+    "drawdown_rate_bound_per_chain_per_hour": 60
+  },
+  "resource_servers": {
+    "authorization_details_enforcing": ["https://erp.example.com"],
+    "scope_projection_only": ["https://mail.example.com"],
+    "constraint_enforcement_for_scope_only": "runtime_pep"
+  },
+  "evidence": {
+    "decision_evidence": true,
+    "execution_evidence": true,
+    "retention_days": 365,
+    "field_classification": "evidence-schema-v2",
+    "evidence_access_audited": true,
+    "erasure_policy": "erasure-records",
+    "transparency": {
+      "service_operator": "third_party",
+      "monitor": "sec-ops",
+      "registration_time_bound_seconds": 3600
+    }
+  },
+  "residual_risks": [
+    "mediated custody is declared, not evidenced: no High-Assurance claim is made",
+    "unmediated local reasoning is outside enforcement",
+    "revocation latency up to 30 seconds",
+    "PEP compromise is not prevented",
+    "per-entry constraints reach scope-only resources only via the PEP",
+    "long-term memory and provider model context are not Mission-scoped exposure points"
+  ]
+}
+~~~
+
+An issuance-only deployment ({{issuance-only}}) publishes a smaller
+shape: no `runtime`, `credential_custody`, or `harness` member, its
+token lifetime stated as the revocation bound where a Resource Server
+does not introspect, and residuals that name the per-action check it
+does not run:
+
+~~~ json
+{
+  "profile": "mission-issuance-only",
+  "assurance_claims": [
+    "approved-record integrity", "bounded revocation latency"
+  ],
+  "mission_issuer": "https://as.example.com",
+  "state_sources": [
+    { "type": "introspection", "max_staleness_seconds": 0 }
+  ],
+  "issuance": {
+    "binding": "oauth-core",
+    "refresh_gated_on_active_state": true,
+    "max_access_token_lifetime_seconds": 300
+  },
+  "resource_servers": {
+    "authorization_details_enforcing": ["https://erp.example.com"],
+    "scope_projection_only": ["https://mail.example.com"],
+    "constraint_enforcement_for_scope_only": "refuse_issuance"
+  },
+  "residual_risks": [
+    "no per-action check within a token lifetime",
+    "revocation up to 300 seconds where no introspection",
+    "scope-only constraints not projectable are refused",
+    "delegated tokens reach Mission-aware resources only"
+  ]
+}
+~~~
 
 # Mission Document Map {#document-map}
 
