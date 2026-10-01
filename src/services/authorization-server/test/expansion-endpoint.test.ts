@@ -557,6 +557,27 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
     expect(pb.mission_expires_at).toBe(successor?.expires_at);
   });
 
+  it("a successor ending inside the token lifetime gets an access token that expires no later than it (@spec mission#mission-bound-tokens)", async () => {
+    const pred = await issuePredecessor(["payments:invoice.read"]);
+    const opened = await expandViaExchange(
+      pred.accessToken,
+      "Widen for one minute",
+      ["payments:invoice.read", "payments:remittance.send"],
+      undefined,
+      new Date(Date.now() + 60_000).toISOString(), // inside the 300 s lifetime
+    );
+    const ob = (await opened.json()) as { error?: string; deferral_code?: string };
+    expect(opened.status, JSON.stringify(ob)).toBe(400);
+    approveDeferral(ob.deferral_code as string);
+    const poll = await pollExpansion(ob.deferral_code as string);
+    const pb = (await poll.json()) as { access_token?: string; mission_id?: string };
+    expect(poll.status, JSON.stringify(pb)).toBe(200);
+    const successorExp = Math.floor(Date.parse(as.kernel.get(pb.mission_id as string)?.expires_at as string) / 1000);
+    const at = decodeJwt(pb.access_token as string) as { iat: number; exp: number };
+    expect(at.exp).toBeLessThanOrEqual(successorExp);
+    expect(at.exp - at.iat).toBeLessThan(300);
+  });
+
   it("@spec mission#approval-event: a ceiling that passes while the approval pends creates NO Mission (access_denied)", async () => {
     const pred = await issuePredecessor(["payments:invoice.read"]);
     const opened = await expandViaExchange(pred.accessToken, "Widen to add remittance", [

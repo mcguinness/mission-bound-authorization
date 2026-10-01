@@ -150,12 +150,27 @@ target that processes the `act` chain and the `mission` claim.
 
 **Lifetimes.**
 
+- **No credential outlives the Mission.** Every credential issued under a
+  Mission-bound grant has its configured lifetime or the Mission's remaining
+  whole seconds, whichever is shorter (`clampToMission` and the `ttl`
+  configuration in `buildProvider`). A Mission with under one second left is
+  refused `invalid_grant` `mission_expired` at the token endpoint, never given
+  a token:
+  `credentials never outlive the Mission (@spec mission#mission-bound-tokens) > code exchange: the access token, refresh token and authorization code all expire no later than a Mission ending inside their lifetimes`,
+  `> a credential minted with under one second of Mission left is refused, never given a 0 s or overrunning lifetime`.
 - **Access tokens:** 300 seconds (`config/topology.json`
-  `ttls.accessTokenSeconds`). A deferred token is clamped to its approval
-  expiry; child and dispatch tokens are clamped to the Mission's `expires_at`.
-- **Refresh tokens:** oidc-provider's 14-day default (`ttl.RefreshToken` in
-  `buildProvider`). A delegation-family refresh token is clamped to the
-  Mission's `expires_at`.
+  `ttls.accessTokenSeconds`), clamped as above. A deferred token is also
+  clamped to its approval expiry.
+- **Refresh tokens:** oidc-provider's 14-day default, clamped as above. A
+  refresh presented after `expires_at` is refused because the refresh token
+  itself has expired, so the refusal is `invalid_grant` with no
+  `mission_error`:
+  `credentials never outlive the Mission (@spec mission#mission-bound-tokens) > a refresh after expires_at is refused invalid_grant by the expired refresh token itself, before the state gate (no mission_error)`.
+- **Authorization codes and ID Tokens:** oidc-provider's 60 seconds and 1
+  hour, clamped as above. The code is minted at the authorization endpoint's
+  resume, so a code the clamp refuses there redirects `access_denied`, never
+  `invalid_grant`, and no code is issued:
+  `credentials never outlive the Mission (@spec mission#mission-bound-tokens) > an authorization resumed with under one second of Mission left redirects access_denied, never invalid_grant, and issues no code`.
 - **Refresh gating:** refresh is gated on Mission state.
 
 **Clocks and keys.**
@@ -230,7 +245,9 @@ reference builds each one. "Transactional" means the hook must commit
 atomically with the state it depends on. "Async" means it may run after the
 commit without weakening a claim. "In-request" hooks run synchronously inside
 the issuing request and must complete before the response; none of them may be
-deferred.
+deferred. The full obligation matrix, with transaction and acceptance
+boundaries, crash and recovery behavior, tests, and residuals for each hook,
+is in [`provider-integration-port.md`](provider-integration-port.md).
 
 | Hook | Reference implementation | Consistency |
 |---|---|---|
@@ -238,7 +255,7 @@ deferred.
 | Principal resolution | Client: oidc-provider `private_key_jwt` (`config/clients.json`). Subject: `login_hint` checked against `knownSubjects` and `approverApprovesFor`. Authority source gates inside `kernel.approve` | In-request, before derivation |
 | Derive-and-commit issuance | `kernel.derive` at the decision, then `kernel.approve` (anchors and record through `insertRecord`, deduplicated on `approval_event_id`), then `grant.save()` and `kernel.bindGrant` | MUST be transactional for the record and its anchors. In the reference, `bindGrant` is a separate write after the grant save, not in the record's transaction. Provider token acceptance and derivation counting are not coupled atomically: the provider access-token hook counts inside the provider's own token save, with no reservation, operation identity, or acceptance callback (`src/docs/control-plane-deployment.md`; #250) |
 | Grant-to-Mission lookup | `kernel.findByGrant`, the delegation-family store, and the durable append-only `MissionBoundGrantStore`; `missionForBoundGrant` fails closed when the index names a grant whose Mission is gone | Read at every issuance |
-| Refresh and revocation gating | `extraTokenClaims` runs `gateDerivation` (conditional counter update) or `gateActive`; `rarThroughEffectiveSet` re-projects through the effective set; `kernel.transition` compare-and-sets state. Family grants are destroyed by the durable subscriber `delegation-family-grant-revoke` (`index.ts`) | The state gate and the counter update are one conditional update, but the count is not coupled to the provider's token acceptance (see derive-and-commit). Family-grant destruction MAY be async, because the gate refuses first |
+| Refresh and revocation gating | `extraTokenClaims` runs `gateDerivation` (the state check `gateDerivable`, then the cap-conditioned counter update `countDerivationInCallerTx`) or `gateActive`; before that, `rotateRefreshToken` runs the same checks without counting (`preCheckRefreshMissionState`: `kernel.checkDerivation`, or `gateActive` for a family), so a refusal it detects consumes no refresh token (#914; `provider-integration-port.md` §3.6); `rarThroughEffectiveSet` re-projects through the effective set; `kernel.transition` compare-and-sets state. Family grants are destroyed by the durable subscriber `delegation-family-grant-revoke` (`index.ts`) | The state check and the counter update are adjacent synchronous calls with no `await` between them, so they do not interleave within one process, but they are not one conditional update; the count is also not coupled to the provider's token acceptance (see derive-and-commit). Family-grant destruction MAY be async, because the gate refuses first. A suspension or derivation landing between the refresh pre-check and the save-time gate is still refused there, after rotation (#250) |
 | Scope projection | `decideMissionScope`, shared by the save-time `projectMissionBoundScope` (in `extraTokenClaims`, before the state gates) and the refresh pre-check `preCheckRefreshProjection` (in `rotateRefreshToken`, after client authentication and the token's own checks, before consumption). Also: `earlyScopeRefusal` at PAR, the decision-time check, the async-delegation and cross-org pre-checks, and the response-`scope` middleware | In-request, before any side effect of the issuing request; the refresh pre-check MUST precede consumption |
 | Introspection composite `active` | `/introspect` in `makeRoutes`: signature, `at+jwt`, the RFC 9068 claim set, the issuance index (`TokenIssuanceStore`) and `isGrantLive`, then Mission state; audience-minimized through `resourcesForAudiences` | Reads current state per request |
 | JWT customizer backstop | `formats.customizers.jwt`: applies the projection's decision and refuses a Mission-bound JWT the projection did not decide, or an `act`-bearing one to a non-Mission-aware audience | In-request |
@@ -508,8 +525,8 @@ launcher refuses every excluded path (#873)` unless the row says otherwise.
 | Dev ordinary-token route | Off | 501 `temporarily_unavailable` | `the dev ordinary-token route answers 501 temporarily_unavailable`, and the same wired-assembly test |
 | OIDC (`openid`, `profile`, `email`, `offline_access`; userinfo; RP-initiated logout) | Off | 400 `invalid_scope` at PAR, with or without a Mission Intent; `/me` and `/session/end` are not served (404). No grant can carry `openid`, so no ID Token is issued | `OIDC is off: openid is refused invalid_scope at PAR, and userinfo and RP-initiated logout are not served` |
 | RFC 7009 token revocation (`/token/revocation`) | Off | 404, not served. Mission revocation is the lifecycle `revoke` | `RFC 7009 token revocation is not served (404)` |
-| `mission_attenuation_supported` | Off | Not advertised. The provider parses no `mission_attenuation_root`, even with the member on | `the metadata advertises only the enabled surface` |
-| `service_catalog_endpoint` | Off | Not advertised. No HTTP route serves `/service-catalog` in any assembly | the same |
+| `mission_attenuation_supported` | Never advertised | No capability controls it, and no assembly advertises it. The token endpoint parses no `mission_attenuation_root`. The member returns only with that surface and an integration test that exercises it | `the metadata advertises only the enabled surface`, and `capability gates the launcher's wiring shadows, and the default assembly (#873) > the default assembly (no capability set) is the full provider: every grant registered and every capability member advertised, and no withdrawn member` |
+| `service_catalog_endpoint` | Never advertised | No capability controls it, and no assembly advertises it. The catalog is in-process; no HTTP route serves it. The member returns only with a served route and an integration test that fetches it | the same two tests |
 | Runtime profiles (PEP, PDP, enforcement scope) | Off | Not started: no PDP, PEP or `mcp-payments` runs | |
 | Mission Signals | Off | No lifecycle subscriber is injected | |
 
@@ -532,7 +549,7 @@ The child-creation, continuation, cross-org and expansion branch gates have
 no test of their own yet.
 
 **The default stays the full provider.**
-`capability gates the launcher's wiring shadows, and the default assembly (#873) > the default assembly (no capability set) is the full provider: every grant registered and every member advertised`.
+`capability gates the launcher's wiring shadows, and the default assembly (#873) > the default assembly (no capability set) is the full provider: every grant registered and every capability member advertised, and no withdrawn member`.
 
 A reader adopting this deployment depends only on the "On" rows.
 
