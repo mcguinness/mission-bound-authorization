@@ -562,3 +562,19 @@ respective documents
 constrains their use and introduces none of its own.
 
 --- back
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Aligned with the published Identity Continuation Assertion (-02): the
+  transport runs among Resource Authorization Servers that trust a
+  common IdP, its assertion issuer is the Continuation Assertion
+  Issuer, the Mission binds the chain authorization, lifecycle anchor,
+  and chain ending, single use is keyed on `(iss, jti)`, and Privacy
+  Considerations notes that a chain remains correlatable (#906).
+- The Identity Continuation Transport states the refusal codes at that
+  exchange, those of the Identity Continuation Assertion in place of
+  the issuance profile's `invalid_grant`, as the issuance profile
+  permits for a Token Exchange profile that assigns its own code. The
+  `mission_error` diagnostic requirements are unchanged (#921).
