@@ -349,13 +349,16 @@ Table of Contents
    A Mission Intent claim token is a JWT whose payload carries a
    mission_intent claim: a Mission Intent Submission envelope as the
    issuance profile defines it, intent plus OPTIONAL evidence, under
-   that profile's syntactic and Intent Submission Evidence rules (the
-   envelope and the Intent are both closed at the top level, the
+   that profile's syntactic and Intent Submission Evidence rules and
+   those of [I-D.draft-mcguinness-oauth-mission-submission-evidence]
+   (the envelope and the Intent are both closed at the top level, the
    authorization server MUST bound size, array lengths, evidence entry
-   count, and evidence verification cost, presented evidence is
-   dispatched by type and refused when unsupported or failing, and the
-   submission is untrusted client input, never authority).  The payload
-   MAY additionally carry an authorization_details claim: the client's
+   count, and evidence verification cost
+   ([I-D.draft-mcguinness-oauth-mission-submission-evidence],
+   Section "Bounded Verification"), presented evidence is dispatched by
+   type and refused when unsupported or failing, and the submission is
+   untrusted client input, never authority).  The payload MAY
+   additionally carry an authorization_details claim: the client's
    authority proposal, an array of authorization_details objects.  This
    claim replaces the issuance profile's PAR-only proposal carriage; its
    validation, derivation, recording, and hashing rules apply unchanged,
@@ -1208,6 +1211,12 @@ Table of Contents
               2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-derivation-
               limits.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-submission-evidence]
+              McGuinness, K., "Mission Intent Submission Evidence for
+              OAuth 2.0", 2026, <https://mcguinness.github.io/mission-
+              bound-authorization/draft-mcguinness-oauth-mission-
+              submission-evidence.html>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,

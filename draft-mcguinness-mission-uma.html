@@ -1576,21 +1576,22 @@ parameter.<a href="#section-5-1" class="pilcrow">¶</a></p>
 <p id="section-5-2">A Mission Intent claim token is a JWT whose payload carries a
 <code>mission_intent</code> claim: a Mission Intent Submission envelope as the
 issuance profile defines it, <code>intent</code> plus <span class="bcp14">OPTIONAL</span> <code>evidence</code>, under
-that profile's syntactic and Intent Submission Evidence rules (the
+that profile's syntactic and Intent Submission Evidence rules and those
+of <span>[<a href="#I-D.draft-mcguinness-oauth-mission-submission-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-submission-evidence</a>]</span> (the
 envelope and the Intent are both closed at the top level, the
 authorization server <span class="bcp14">MUST</span> bound size, array lengths, evidence entry
-count, and evidence verification cost, presented evidence is
-dispatched by type and refused when unsupported or failing, and the
-submission is untrusted client input, never authority). The payload
-<span class="bcp14">MAY</span> additionally carry an <code>authorization_details</code> claim: the
-client's authority proposal, an array of <code>authorization_details</code>
-objects. This claim replaces the issuance profile's PAR-only
-proposal carriage; its validation, derivation, recording, and
-hashing rules apply unchanged, and the proposal itself carries no
-authority (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). A Mission created
-from a push carrying one records <code>proposed_authority</code>
-and <code>proposal_hash</code> as the issuance profile's Mission record defines
-them.<a href="#section-5-2" class="pilcrow">¶</a></p>
+count, and evidence verification cost
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-submission-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-submission-evidence</a>]</span>, Section
+"Bounded Verification"), presented evidence is dispatched by type and
+refused when unsupported or failing, and the submission is untrusted
+client input, never authority). The payload <span class="bcp14">MAY</span> additionally carry an
+<code>authorization_details</code> claim: the client's authority proposal, an array
+of <code>authorization_details</code> objects. This claim replaces the issuance
+profile's PAR-only proposal carriage; its validation, derivation,
+recording, and hashing rules apply unchanged, and the proposal itself
+carries no authority (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). A Mission
+created from a push carrying one records <code>proposed_authority</code> and
+<code>proposal_hash</code> as the issuance profile's Mission record defines them.<a href="#section-5-2" class="pilcrow">¶</a></p>
 <p id="section-5-3">The JWT <span class="bcp14">MAY</span> be signed by the client for attribution; a
 signature confers no authority. Its <code>claim_token_format</code> identifier
 is:<a href="#section-5-3" class="pilcrow">¶</a></p>
@@ -2557,6 +2558,10 @@ document's control.<a href="#section-15-1" class="pilcrow">¶</a></p>
 <dt id="I-D.draft-mcguinness-oauth-mission-derivation-limits">[I-D.draft-mcguinness-oauth-mission-derivation-limits]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Derivation Limits for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-derivation-limits.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-derivation-limits.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-submission-evidence">[I-D.draft-mcguinness-oauth-mission-submission-evidence]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Intent Submission Evidence for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-submission-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-submission-evidence.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC2119">[RFC2119]</dt>
         <dd>

@@ -1786,10 +1786,14 @@ parameter (<a href="#submission-status" class="auto internal xref">Section 4.2</
 <p id="section-4.1-1">The request body is a Mission Intent Submission envelope as the
 issuance profile defines it, <code>intent</code> plus <span class="bcp14">OPTIONAL</span> <code>evidence</code>, and
 the issuance profile's validation and Intent Submission Evidence
-rules apply unchanged (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): the
+rules (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) and those of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-submission-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-submission-evidence</a>]</span> apply
+unchanged: the
 submission is untrusted client input and never authority; the MAS
 <span class="bcp14">MUST</span> bound its total size, array lengths, evidence entry count, and
-evidence verification cost; and the envelope and the Intent are both
+evidence verification cost
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-submission-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-submission-evidence</a>]</span>, Section
+"Bounded Verification"); and the envelope and the Intent are both
 closed at the top level. The issuance profile's OAuth error outcomes
 map to this endpoint's error codes (<a href="#submission-errors" class="auto internal xref">Section 4.3</a>):<a href="#section-4.1-1" class="pilcrow">¶</a></p>
 <ul class="normal">
@@ -1813,8 +1817,10 @@ can distinguish a syntax error from an authority-derivation failure.<a href="#se
           <li class="normal" id="section-4.1-2.3">
             <p id="section-4.1-2.3.1">An Intent Submission Evidence entry of an unsupported type, an
 entry that fails its type's verification, or a policy-required
-evidence type absent from the submission <span class="bcp14">MUST</span> be refused with
-<code>invalid_intent_evidence</code> (the MAS equivalent of the issuance
+evidence type absent from the submission
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-submission-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-submission-evidence</a>]</span>, Section
+"Required Evidence Is Resolved Before Derivation") <span class="bcp14">MUST</span> be refused
+with <code>invalid_intent_evidence</code> (the MAS equivalent of the issuance
 profile's <code>invalid_mission_intent_evidence</code>); presented evidence is
 never silently ignored.<a href="#section-4.1-2.3.1" class="pilcrow">¶</a></p>
 </li>
@@ -4592,6 +4598,10 @@ document requests no IANA action for it.<a href="#section-19.5-1" class="pilcrow
 <dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-submission-evidence">[I-D.draft-mcguinness-oauth-mission-submission-evidence]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Intent Submission Evidence for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-submission-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-submission-evidence.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="MCP-META">[MCP-META]</dt>
         <dd>

@@ -1217,16 +1217,19 @@ bound on the authority a token carries or on how that token is used.<a href="#se
                 <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-issuance-not-authority" class="internal xref">Issuance, Not Authority</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2">
-                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-delegation-fan-out" class="internal xref">Delegation Fan-Out</a></p>
+                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-async-delegation-families" class="internal xref">Async Delegation Families</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.3">
-                <p id="section-toc.1-1.9.2.3.1"><a href="#section-9.3" class="auto internal xref">9.3</a>.  <a href="#name-composition-across-missions" class="internal xref">Composition Across Missions</a></p>
+                <p id="section-toc.1-1.9.2.3.1"><a href="#section-9.3" class="auto internal xref">9.3</a>.  <a href="#name-delegation-fan-out" class="internal xref">Delegation Fan-Out</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.4">
-                <p id="section-toc.1-1.9.2.4.1"><a href="#section-9.4" class="auto internal xref">9.4</a>.  <a href="#name-audit-recomputation" class="internal xref">Audit Recomputation</a></p>
+                <p id="section-toc.1-1.9.2.4.1"><a href="#section-9.4" class="auto internal xref">9.4</a>.  <a href="#name-composition-across-missions" class="internal xref">Composition Across Missions</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.5">
-                <p id="section-toc.1-1.9.2.5.1"><a href="#section-9.5" class="auto internal xref">9.5</a>.  <a href="#name-concurrent-derivation" class="internal xref">Concurrent Derivation</a></p>
+                <p id="section-toc.1-1.9.2.5.1"><a href="#section-9.5" class="auto internal xref">9.5</a>.  <a href="#name-audit-recomputation" class="internal xref">Audit Recomputation</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.6">
+                <p id="section-toc.1-1.9.2.6.1"><a href="#section-9.6" class="auto internal xref">9.6</a>.  <a href="#name-concurrent-derivation" class="internal xref">Concurrent Derivation</a></p>
 </li>
             </ul>
 </li>
@@ -1271,9 +1274,10 @@ derivation under a Mission on its lifecycle state, its Authority Set,
 and its expiry. It does not bound how many derivations the issuer
 performs. This document adds that bound: a derivation limit on the
 number of derivations the issuer AS performs under a Mission. The limit
-is an issuer-side operational control. It bounds issuance operations at
-the token endpoint, not the authority any derived token carries or how
-often a token already issued is used.<a href="#section-1-1" class="pilcrow">¶</a></p>
+is an issuer-side operational control. It bounds counted issuance
+operations at the token endpoint, not the authority any derived token
+carries or how often a token already issued is used. The refreshes of
+an async delegation family are not counted (<a href="#refresh-and-exchange" class="auto internal xref">Section 4.3</a>).<a href="#section-1-1" class="pilcrow">¶</a></p>
 <p id="section-1-2">The limit uses these extension seams of the OAuth binding and changes
 none of its rules:<a href="#section-1-2" class="pilcrow">¶</a></p>
 <ul class="normal">
@@ -1415,9 +1419,14 @@ dispatched Template instance's
 successor's (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>),
 exactly as at direct approval. An established <code>derivation_limit</code> is
 never inherited unchanged from a parent, a template, or a predecessor
-Mission; each Mission Record's ceiling comes only from its own
-Intent's <code>requested_derivation_limit</code>, clamped by the deployment's
-policy for that Mission.<a href="#section-3.2-3" class="pilcrow">¶</a></p>
+Mission, with one exception: a Child Delegation carryover replacement
+preserves the old child's <code>derivation_limit</code> and derivation count, so
+carryover cannot replenish a derivation budget
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>, Section "No
+State, Authority, Expiry, or Budget Reset"). Otherwise each Mission
+Record's ceiling comes only from its own Intent's
+<code>requested_derivation_limit</code>, clamped by the deployment's policy for
+that Mission.<a href="#section-3.2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="record-member">
@@ -1443,7 +1452,7 @@ and <a href="#counting" class="auto internal xref">Section 4</a> the running der
 </dl>
 <p id="section-3.3-3">Neither integrity anchor commits <code>derivation_limit</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Integrity
-Anchors"). <a href="#sec-audit" class="auto internal xref">Section 9.4</a> describes how an auditor checks it.<a href="#section-3.3-3" class="pilcrow">¶</a></p>
+Anchors"). <a href="#sec-audit" class="auto internal xref">Section 9.5</a> describes how an auditor checks it.<a href="#section-3.3-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1493,6 +1502,13 @@ Mission is one derivation, whether it down-scopes a token for the
 approved agent or issues a delegated token
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Delegation Within a
 Mission").<a href="#section-4.3-1" class="pilcrow">¶</a></p>
+<p id="section-4.3-2">The one exception is a delegation family under the Continuation
+profile's async delegation transport
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-continuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-continuation</a>]</span>, Section "Async
+Delegation Transport"): the exchange that creates the family is one
+derivation, and the family's successive refreshes are not counted
+again. That profile makes the Mission's expiry, not this limit, the
+family's continuity ceiling (<a href="#sec-async-family" class="auto internal xref">Section 9.2</a>).<a href="#section-4.3-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="cross-domain-counting">
@@ -1622,8 +1638,11 @@ render it for consent at the approval event, as context beside the
 derived Authority Set, in the rendering step of the OAuth binding's
 approval sequence (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
 "Mission Approval"). The rendering shows the established value, not
-only the requested one.<a href="#section-7-1" class="pilcrow">¶</a></p>
-<p id="section-7-2">The rendered limit is one Mission's local bound (<a href="#sec-composition" class="auto internal xref">Section 9.3</a>).
+only the requested one. Where the AS supports the Continuation
+profile's async delegation transport, the rendering <span class="bcp14">MUST</span> also state
+that the refreshes of an async delegation family are not counted
+against the limit (<a href="#refresh-and-exchange" class="auto internal xref">Section 4.3</a>).<a href="#section-7-1" class="pilcrow">¶</a></p>
+<p id="section-7-2">The rendered limit is one Mission's local bound (<a href="#sec-composition" class="auto internal xref">Section 9.4</a>).
 Where a deployment runs child delegation, that profile states what an
 approval interface discloses beside it
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>).<a href="#section-7-2" class="pilcrow">¶</a></p>
@@ -1671,77 +1690,94 @@ apply. This section covers what the derivation limit adds.<a href="#section-9-1"
         <h3 id="name-issuance-not-authority">
 <a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-issuance-not-authority" class="section-name selfRef">Issuance, Not Authority</a>
         </h3>
-<p id="section-9.1-1">The derivation limit bounds how many issuance operations the issuer
-performs. It does not narrow the Authority Set, shorten a token's
-lifetime, or bound the requests a Resource Server honors under a token
-already issued: a derived token remains usable until its <code>exp</code>. A
-deployment that needs to bound use, rather than issuance, adopts a
-runtime control such as metering
+<p id="section-9.1-1">The derivation limit bounds how many counted issuance operations the
+issuer performs; the refreshes of an async delegation family are not
+counted (<a href="#sec-async-family" class="auto internal xref">Section 9.2</a>). It does not narrow the Authority Set,
+shorten a token's lifetime, or bound the requests a Resource Server
+honors under a token already issued: a derived token remains usable
+until its <code>exp</code>. A deployment that needs to bound use, rather than
+issuance, adopts a runtime control such as metering
 (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-9.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="sec-fan-out">
+<div id="sec-async-family">
 <section id="section-9.2">
-        <h3 id="name-delegation-fan-out">
-<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-delegation-fan-out" class="section-name selfRef">Delegation Fan-Out</a>
+        <h3 id="name-async-delegation-families">
+<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-async-delegation-families" class="section-name selfRef">Async Delegation Families</a>
         </h3>
-<p id="section-9.2-1">In-Mission delegation bounds the length of a delegation chain with
+<p id="section-9.2-1">Because the refreshes of an async delegation family are not counted
+(<a href="#refresh-and-exchange" class="auto internal xref">Section 4.3</a>), the limit does not bound how many tokens
+the issuer mints under such a family. The Continuation profile bounds
+the family instead: its delegated authorization state is a subset of
+the Mission's Authority Set, its absolute lifetime equals the
+Mission's <code>expires_at</code>, and it is invalidated when the Mission reaches
+a terminal state
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-continuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-continuation</a>]</span>, Section "Async
+Delegation Transport").<a href="#section-9.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="sec-fan-out">
+<section id="section-9.3">
+        <h3 id="name-delegation-fan-out">
+<a href="#section-9.3" class="section-number selfRef">9.3. </a><a href="#name-delegation-fan-out" class="section-name selfRef">Delegation Fan-Out</a>
+        </h3>
+<p id="section-9.3-1">In-Mission delegation bounds the length of a delegation chain with
 <code>max_depth</code> and its breadth with <code>allowed_delegates</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Delegation
 Constraints"). The derivation limit caps total derivations, including
 each Token Exchange that issues a delegated token
 (<a href="#refresh-and-exchange" class="auto internal xref">Section 4.3</a>), however the resulting credentials are
-distributed.<a href="#section-9.2-1" class="pilcrow">¶</a></p>
+distributed.<a href="#section-9.3-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="sec-composition">
-<section id="section-9.3">
+<section id="section-9.4">
         <h3 id="name-composition-across-missions">
-<a href="#section-9.3" class="section-number selfRef">9.3. </a><a href="#name-composition-across-missions" class="section-name selfRef">Composition Across Missions</a>
+<a href="#section-9.4" class="section-number selfRef">9.4. </a><a href="#name-composition-across-missions" class="section-name selfRef">Composition Across Missions</a>
         </h3>
-<p id="section-9.3-1"><code>derivation_limit</code> is a per-Mission bound the issuer AS enforces for
+<p id="section-9.4-1"><code>derivation_limit</code> is a per-Mission bound the issuer AS enforces for
 that Mission alone; a Child Mission's own <code>derivation_limit</code> is
 independent of its parent's, and the parent's cap does not bound the
 child subtree by default. The derivations summed across an entire
 child subtree can therefore exceed what a single approval appears to
-bound at consent time.<a href="#section-9.3-1" class="pilcrow">¶</a></p>
-<p id="section-9.3-2">For example, a child-delegation deployment
+bound at consent time.<a href="#section-9.4-1" class="pilcrow">¶</a></p>
+<p id="section-9.4-2">For example, a child-delegation deployment
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>) allowing
 <code>max_children</code> 3 per Mission with <code>max_child_depth</code> 2 admits up to 12
 descendant Missions (3 in the first generation, up to 9 in the
 second), each with its own independent <code>derivation_limit</code>; at 10
 each, the subtree admits up to 120 derivations while no single bound
-the Approver saw exceeds 10.<a href="#section-9.3-2" class="pilcrow">¶</a></p>
-<p id="section-9.3-3">Cross-domain projection composes separately: local issuance at a
+the Approver saw exceeds 10.<a href="#section-9.4-2" class="pilcrow">¶</a></p>
+<p id="section-9.4-3">Cross-domain projection composes separately: local issuance at a
 Resource AS is not counted against the origin issuer's cap
 (<a href="#cross-domain-counting" class="auto internal xref">Section 4.4</a>). The OAuth binding's composition guidance
 applies to the derivation limit as to its other bounds
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Composition and the
-Effective Ceiling").<a href="#section-9.3-3" class="pilcrow">¶</a></p>
+Effective Ceiling").<a href="#section-9.4-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="sec-audit">
-<section id="section-9.4">
+<section id="section-9.5">
         <h3 id="name-audit-recomputation">
-<a href="#section-9.4" class="section-number selfRef">9.4. </a><a href="#name-audit-recomputation" class="section-name selfRef">Audit Recomputation</a>
+<a href="#section-9.5" class="section-number selfRef">9.5. </a><a href="#name-audit-recomputation" class="section-name selfRef">Audit Recomputation</a>
         </h3>
-<p id="section-9.4-1">An auditor recomputes the expected <code>derivation_limit</code> from the
+<p id="section-9.5-1">An auditor recomputes the expected <code>derivation_limit</code> from the
 recorded <code>requested_derivation_limit</code> (or its absence) and the
 Mission's <code>policy_version</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
 Section "Mission Authority") against the deployment's retained,
 versioned policy; a mismatch is a policy-application defect to
 investigate, not a Mission-record integrity failure, since neither
-integrity anchor commits <code>derivation_limit</code>.<a href="#section-9.4-1" class="pilcrow">¶</a></p>
+integrity anchor commits <code>derivation_limit</code>.<a href="#section-9.5-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="sec-concurrency">
-<section id="section-9.5">
+<section id="section-9.6">
         <h3 id="name-concurrent-derivation">
-<a href="#section-9.5" class="section-number selfRef">9.5. </a><a href="#name-concurrent-derivation" class="section-name selfRef">Concurrent Derivation</a>
+<a href="#section-9.6" class="section-number selfRef">9.6. </a><a href="#name-concurrent-derivation" class="section-name selfRef">Concurrent Derivation</a>
         </h3>
-<p id="section-9.5-1">A count that is read and then incremented in separate steps lets
+<p id="section-9.6-1">A count that is read and then incremented in separate steps lets
 parallel refreshes or exchanges exceed the limit. <a href="#concurrency" class="auto internal xref">Section 4.2</a>
-forbids that outcome, not a particular locking design.<a href="#section-9.5-1" class="pilcrow">¶</a></p>
+forbids that outcome, not a particular locking design.<a href="#section-9.6-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1848,6 +1884,10 @@ document requests no further registration.<a href="#section-11-4" class="pilcrow
 <dt id="I-D.draft-mcguinness-oauth-mission-child-delegation">[I-D.draft-mcguinness-oauth-mission-child-delegation]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Child Delegation for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-continuation">[I-D.draft-mcguinness-oauth-mission-continuation]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Continuation: Authorization Continuity for Mission-Bound Authorization"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-cross-domain">[I-D.draft-mcguinness-oauth-mission-cross-domain]</dt>
         <dd>

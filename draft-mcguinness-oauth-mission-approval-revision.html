@@ -1575,12 +1575,14 @@ revision beyond what was actually reviewed.<a href="#section-5.2-3" class="pilcr
 <p id="section-5.2-4">A revision changes the semantic Intent, and its <code>intent_hash</code> with
 it. Intent Submission Evidence bound to the proposed Mission's
 <code>intent_hash</code> <span class="bcp14">MUST NOT</span> be treated as evidence for the revision
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): evidence a policy requires
-is presented anew on the revision submission's envelope, bound to the
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-submission-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-submission-evidence</a>]</span>, Section
+"Evidence Binds One Exact Intent"): evidence a policy requires is
+presented anew on the revision submission's envelope, bound to the
 revised Intent, unless the evidence type's specification authorizes
-defined transformations and verifies their lineage. The issuance
-profile's required-evidence resolution applies to the revision
-submission as to any submission.<a href="#section-5.2-4" class="pilcrow">¶</a></p>
+defined transformations and verifies their lineage. Required-evidence
+resolution (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-submission-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-submission-evidence</a>]</span>,
+Section "Required Evidence Is Resolved Before Derivation") applies to
+the revision submission as to any submission.<a href="#section-5.2-4" class="pilcrow">¶</a></p>
 <p id="section-5.2-5">The client continues polling the existing <code>deferral_code</code>; the revision
 does not start a new approval. A PAR <code>request_uri</code> returned on the
 revision submission is an artifact of PAR. It <span class="bcp14">MUST NOT</span> be used to
@@ -2044,6 +2046,10 @@ registry:<a href="#section-11-6" class="pilcrow">¶</a></p>
 <dt id="I-D.draft-mcguinness-oauth-mission-approval">[I-D.draft-mcguinness-oauth-mission-approval]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Deferred Approval for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-submission-evidence">[I-D.draft-mcguinness-oauth-mission-submission-evidence]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Intent Submission Evidence for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-submission-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-submission-evidence.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC2119">[RFC2119]</dt>
         <dd>

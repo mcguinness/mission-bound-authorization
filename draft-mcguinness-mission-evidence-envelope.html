@@ -1860,7 +1860,9 @@ them distinct because the AS's own evidence hook does
 (<a href="#intent-admission-assertion" class="auto internal xref">Section 5.1</a>): this is the first type this document
 series registers under the Mission Intent Submission envelope's
 evidence dispatch, which shipped with an empty type registry and
-refuses every presented entry until a profile registers one. Emitted,
+refuses every presented entry until a profile registers one
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-submission-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-submission-evidence</a>]</span>, Section
+"Evidence Entries"). Emitted,
 the AS records its own admission attestation as a <strong>Mission Intent
 Admission</strong> payload type of the Mission Evidence Envelope
 (<a href="#intent-admission-payload-type" class="auto internal xref">Section 5.4</a>): the first payload type this
@@ -2049,7 +2051,9 @@ at submission-processing step 3
             <p id="section-5.2-2.9.1">Verify <code>presenter.client_id</code>, and <code>cnf</code> where present, equal the
 presenter the containing exchange established; the assertion is
 never an alternative client-authentication mechanism and never
-selects the presenter (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-5.2-2.9.1" class="pilcrow">¶</a></p>
+selects the presenter
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-submission-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-submission-evidence</a>]</span>,
+Section "The Exchange Establishes the Presenter").<a href="#section-5.2-2.9.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-5.2-2.10">
             <p id="section-5.2-2.10.1">Verify <code>status</code> is exactly <code>active</code>. On success, <strong>commit</strong> the
@@ -2059,11 +2063,14 @@ this step or any of steps 2-9, <strong>release</strong> the reservation.<a href=
         </ol>
 <p id="section-5.2-3">This type defines no evidence-lineage exception: a shaping or approval
 revision that changes <code>intent_hash</code> requires a fresh assertion with a
-fresh <code>jti</code>, under the general rule of
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-5.2-3" class="pilcrow">¶</a></p>
+fresh <code>jti</code>, under the general rule
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-submission-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-submission-evidence</a>]</span>, Section
+"Evidence Binds One Exact Intent").<a href="#section-5.2-3" class="pilcrow">¶</a></p>
 <p id="section-5.2-4"><strong>Composition with creation-fingerprint idempotent recovery.</strong> On a
 surface that also carries a Mission-creation idempotency fingerprint
-(expansion, child creation, <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>),
+(expansion, child creation;
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-submission-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-submission-evidence</a>]</span>, Section
+"Evidence on Idempotent Creation Surfaces"),
 this <code>jti</code> reservation is a distinct, submission-plane replay control,
 not a substitute for that fingerprint's own recovery path. Recovery of
 an already-completed creation operation under the fingerprint's own
@@ -2753,6 +2760,10 @@ under this registry's policy until it is published.<a href="#section-9.2-7" clas
 <dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-submission-evidence">[I-D.draft-mcguinness-oauth-mission-submission-evidence]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Intent Submission Evidence for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-submission-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-submission-evidence.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC2119">[RFC2119]</dt>
         <dd>

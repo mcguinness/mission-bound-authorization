@@ -1685,7 +1685,8 @@ actor (<a href="#child-vs-act" class="auto internal xref">Section 2.2</a>).<a hr
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) whose <code>intent</code> is the
 proposed Child Mission Intent; its <span class="bcp14">OPTIONAL</span> <code>evidence</code> array
 carries Intent Submission Evidence under that profile's dispatch,
-refusal, and never-authority rules.<a href="#section-5-4.14.1" class="pilcrow">¶</a></p>
+refusal, and never-authority rules and those of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-submission-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-submission-evidence</a>]</span>.<a href="#section-5-4.14.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-5-4.15">
@@ -3162,9 +3163,10 @@ child's horizon. Any other policy shortening remains applicable.<a href="#sectio
 or make the child ineligible.<a href="#section-10.4-5" class="pilcrow">¶</a></p>
 <p id="section-10.4-6">This is a carryover-specific exception to starting a new child with a fresh
 derivation counter (<a href="#derivation-budget" class="auto internal xref">Section 7.2</a>;
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-derivation-limits" class="cite xref">I-D.draft-mcguinness-oauth-mission-derivation-limits</a>]</span>, Section
-"Counting Derivations"): the replacement continues the old
-child's remaining budget, despite receiving a new record identifier.
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-derivation-limits" class="cite xref">I-D.draft-mcguinness-oauth-mission-derivation-limits</a>]</span>, Sections
+"Effective Limit" and "Counting Derivations"): the replacement
+continues the old child's remaining budget, despite receiving a new
+record identifier.
 Metering and exclusivity require defined, atomic transfer or shared-state
 binding; changing the key to <code>replacement_id</code> is not a transfer. Fan-out is
 recounted against new justifying entries in the same serialization domain,
@@ -3875,6 +3877,10 @@ token-exchange grant the rest of the Mission family already uses.<a href="#secti
 <dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-submission-evidence">[I-D.draft-mcguinness-oauth-mission-submission-evidence]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Intent Submission Evidence for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-submission-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-submission-evidence.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC2119">[RFC2119]</dt>
         <dd>

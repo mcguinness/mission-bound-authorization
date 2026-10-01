@@ -1610,16 +1610,19 @@ place.<a href="#section-4-2.6.1" class="pilcrow">¶</a></p>
 request: a <code>mission_intent</code> top-level member, registered for the
 GNAP Grant Request Parameters registry (<a href="#iana" class="auto internal xref">Section 16</a>). This binding
 defines no new endpoint; the grant endpoint is the intake.<a href="#section-5-1" class="pilcrow">¶</a></p>
-<p id="section-5-2">The <code>mission_intent</code> value is a Mission Intent Submission envelope
-as the issuance profile defines it, <code>intent</code> plus <span class="bcp14">OPTIONAL</span>
-        <code>evidence</code>, under that profile's syntactic and Intent Submission
-Evidence rules (the envelope and the Intent are both closed at the
-top level, the authorization server <span class="bcp14">MUST</span> bound size, array lengths,
-evidence entry count, and evidence verification cost, presented
-evidence is dispatched by type and refused when unsupported or
-failing, and the submission is untrusted client input, never
-authority). The grant request's signature attributes the submission
-to the client instance's key; attribution confers no authority.<a href="#section-5-2" class="pilcrow">¶</a></p>
+<p id="section-5-2">The <code>mission_intent</code> value is a Mission Intent Submission envelope as
+the issuance profile defines it, <code>intent</code> plus <span class="bcp14">OPTIONAL</span> <code>evidence</code>,
+under that profile's syntactic and Intent Submission Evidence rules and
+those of <span>[<a href="#I-D.draft-mcguinness-oauth-mission-submission-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-submission-evidence</a>]</span> (the
+envelope and the Intent are both closed at the top level, the
+authorization server <span class="bcp14">MUST</span> bound size, array lengths, evidence entry
+count, and evidence verification cost
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-submission-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-submission-evidence</a>]</span>, Section
+"Bounded Verification"), presented evidence is dispatched by type and
+refused when unsupported or failing, and the submission is untrusted
+client input, never authority). The grant request's signature attributes
+the submission to the client instance's key; attribution confers no
+authority.<a href="#section-5-2" class="pilcrow">¶</a></p>
 <p id="section-5-3">The grant request's access rights are this binding's authority
 proposal, replacing the issuance profile's PAR-only carriage rule:
 <a href="#authority-adapter" class="auto internal xref">Section 6</a> projects them into the issuance profile's
@@ -2825,6 +2828,10 @@ claim is registered by the issuance profile.<a href="#section-16-8" class="pilcr
 <dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-submission-evidence">[I-D.draft-mcguinness-oauth-mission-submission-evidence]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Intent Submission Evidence for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-submission-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-submission-evidence.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC2119">[RFC2119]</dt>
         <dd>

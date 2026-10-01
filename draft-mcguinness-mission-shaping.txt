@@ -1025,7 +1025,8 @@ Table of Contents
    submitted Intent: evidence obtained for an earlier candidate does not
    admit a re-shaped Intent, so a shaping pass that changes the Intent
    needs evidence for the Intent it actually submits
-   ([I-D.draft-mcguinness-oauth-mission]).  The Authorization Server
+   ([I-D.draft-mcguinness-oauth-mission-submission-evidence],
+   Section "Evidence Binds One Exact Intent").  The Authorization Server
    [RFC6749] acts as the Mission Issuer: it validates, narrows, renders
    the consent disclosure, records the approval event, and derives an
    Authority Set ([I-D.draft-mcguinness-oauth-mission]).
@@ -1429,6 +1430,12 @@ Table of Contents
               OAuth 2.0", 2026, <https://mcguinness.github.io/mission-
               bound-authorization/draft-mcguinness-oauth-mission-
               progressive.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-submission-evidence]
+              McGuinness, K., "Mission Intent Submission Evidence for
+              OAuth 2.0", 2026, <https://mcguinness.github.io/mission-
+              bound-authorization/draft-mcguinness-oauth-mission-
+              submission-evidence.html>.
 
    [I-D.draft-mcguinness-oauth-mission-template]
               McGuinness, K., "Mission Template for OAuth 2.0", 2026,
