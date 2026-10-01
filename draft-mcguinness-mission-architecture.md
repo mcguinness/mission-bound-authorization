@@ -501,12 +501,16 @@ DRAFTS.md in the repository is the full catalog.
 
 Where this document uses words like "must" or "should," they carry
 their ordinary English meaning and describe what a referenced profile
-establishes, not a requirement this document places. Mission-model
-terms are used as the OAuth binding defines them
-({{I-D.draft-mcguinness-oauth-mission}}), the family's first-authored
-realization; the substrate contract
-({{I-D.draft-mcguinness-mission-substrate}}) carries the
-binding-neutral kernel forms. Policy Enforcement
+establishes, not a requirement this document places. Binding-neutral
+Mission terms (the Mission Reference and Controller, the approved
+context, the approval event, the governance gate, bounded reliance,
+and the named substrate capabilities) are the substrate contract's
+({{I-D.draft-mcguinness-mission-substrate}}). Terms of the OAuth
+realization (Mission Intent, Authority Set, integrity anchors, and
+Mission Issuer) are the OAuth binding's
+({{I-D.draft-mcguinness-oauth-mission}}); a passage that uses them
+describes that realization or a binding that adopts it. No binding is
+the default reading of a passage that does not name one. Policy Enforcement
 Point (PEP), Policy Decision Point (PDP), consequential action, the
 high-consequence classes, and the Enforcement Scope Statement are the
 runtime profile's ({{I-D.draft-mcguinness-mission-runtime}});
