@@ -502,7 +502,7 @@ Content-Type: application/x-www-form-urlencoded
 
 grant_type=authorization_code&code=SplxlOBeZQQYbYS6WxSbIA&
 client_id=s6BhdRkqt3&
-completion_mode=deferred%20revisable
+completion_mode=deferred%20mission_revisable
 ~~~
 
 The Mission Issuer routes the proposed Mission to `alice` for review and
