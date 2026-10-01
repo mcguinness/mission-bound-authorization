@@ -3280,11 +3280,12 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       meta.mission_max_stale_seconds = MISSION_MAX_STALE_SECONDS;
       // Each capability member below is advertised only where the deployment
       // enables it (adapters/capabilities.ts); the default enables all of them.
-      // mission_attenuation_supported and service_catalog_endpoint are never
-      // advertised (#897). The token endpoint parses no mission_attenuation_root,
-      // and no HTTP route serves the catalog, which is in-process
-      // (kernel/catalog.ts). Each member is restored only alongside its working
-      // protocol surface and an integration test that exercises that surface.
+      // Not capability members: mission_attenuation_supported and
+      // service_catalog_endpoint are never advertised (#897). The token
+      // endpoint parses no mission_attenuation_root, and no HTTP route serves
+      // the catalog, which is in-process (kernel/catalog.ts). Each member is
+      // restored only alongside its working protocol surface and an
+      // integration test that exercises that surface.
       // @spec child-delegation#discovery: this AS accepts the child-creation
       // request and enforces the child-delegation controls of that profile.
       if (enabled("child-delegation")) meta.mission_child_delegation_supported = true;
