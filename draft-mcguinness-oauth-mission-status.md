@@ -1432,7 +1432,7 @@ through standard {{RFC8414}} discovery.
 : OPTIONAL. A JSON array of strings naming the authentication methods
   the Mission Status endpoint ({{mission-status}}) accepts. Its value
   space is a closed set defined by this document, not the OAuth Token
-  Endpoint Authentication Methods registry: `mtls_client_auth`
+  Endpoint Authentication Methods registry: `tls_client_auth`
   (mutual-TLS client authentication {{RFC8705}}), `private_key_jwt`
   (private-key JWT client authentication {{RFC7523}}), and `access_token`
   (a `mission_status`-scoped, sender-constrained access token, whose
@@ -1524,14 +1524,15 @@ Cache-Control: max-age=3600
   "mission_status_endpoint":
     "https://as.example.com/as/mission/status",
   "mission_status_endpoint_auth_methods_supported":
-    ["mtls_client_auth", "private_key_jwt", "access_token"],
+    ["tls_client_auth", "private_key_jwt", "access_token"],
   "mission_status_endpoint_auth_signing_alg_values_supported": ["ES256"],
   "mission_status_signing_alg_values_supported": ["ES256"],
   "mission_lifecycle_endpoint":
     "https://as.example.com/as/mission/lifecycle",
   "mission_lifecycle_endpoint_auth_methods_supported":
-    ["mtls_client_auth", "private_key_jwt", "access_token"],
-  "mission_lifecycle_endpoint_auth_signing_alg_values_supported": ["ES256"],
+    ["tls_client_auth", "private_key_jwt", "access_token"],
+  "mission_lifecycle_endpoint_auth_signing_alg_values_supported":
+    ["ES256"],
   "mission_max_stale_seconds": 60
 }
 ~~~
