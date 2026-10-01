@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-01T06:08:06Z
-Source repository commit: 77016d790c49363230d1434f9380f9640701189f
+Generated: 2026-10-01T06:19:29Z
+Source repository commit: 5abbec8d883e14c30b80337d13e6cf010778fc69
 Member count: 7
 
 Reading order:
@@ -7088,15 +7088,16 @@ Table of Contents
    3.  Compute the provisional intent_hash over the intent object
        (Section 8.1).
 
-   4.  Resolve the evidence types policy requires, and refuse a
-       submission missing a required type
-       ([I-D.draft-mcguinness-oauth-mission-submission-evidence]).
+   4.  Apply any submission checks that configured admission policy or
+       adopted profiles require before evidence verification, including
+       when no evidence member is present.  For example, the Submission
+       Evidence companion resolves required evidence here and refuses a
+       missing required type
+       ([I-D.draft-mcguinness-oauth-mission-submission-evidence],
+       Section "Required Evidence Is Resolved Before Derivation").
 
-   5.  Verify every evidence entry under its type's rules, including
-       that intent-bound evidence is bound to this AS (Section 4.3), and
-       verify that intent-bound evidence names exactly the provisional
-       intent_hash and is bound to the established presenter
-       ([I-D.draft-mcguinness-oauth-mission-submission-evidence]).
+   5.  Apply the evidence dispatch and refusal rules, verifying every
+       presented entry under its type's rules (Section 4.3).
 
    6.  Apply admission policy and derive the Authority Set independently
        (Section 5).
@@ -9963,6 +9964,15 @@ Table of Contents
 
    *  gating of issuance on Mission state (Section 9).
 
+   An AS can conform as a Mission Issuer without supporting any Intent
+   Submission Evidence type.  Such an AS refuses every presented entry
+   as an unsupported type under the dispatch and refusal rules
+   (Section 4.3), with invalid_mission_intent_evidence.  It does not
+   need to implement the evidence framework of
+   [I-D.draft-mcguinness-oauth-mission-submission-evidence] for this
+   configuration.  The companion defines conformance for ASs supporting
+   an evidence type, whether its evidence is optional or required.
+
    A *Mission-aware Resource Server* implements Resource Server
    enforcement (Section 11), from the token's own claims or from its
    active introspection response under the introspected consumption mode
@@ -12398,6 +12408,13 @@ Appendix G.  Document History
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  Clarified that a Mission Issuer can conform without supporting any
+      Intent Submission Evidence types.  The submission-processing
+      sequence keeps the baseline dispatch and refusal rules and the
+      ordering of admission checks before derivation; the evidence
+      companion owns the AS, exact-Intent, and presenter-binding checks.
+      No wire behavior changed.
 
    *  Moved local approved-set verification to the Mission Approved-Set
       Verification companion
