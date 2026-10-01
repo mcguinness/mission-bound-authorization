@@ -164,7 +164,7 @@ export class ContinuationStore {
      * INITIAL handle rooted at Mission approval has no DPoP key yet (a real
      * deployment supplies the root auth event's cnf; the demo omits it). This is
      * a type widening, not a behaviour change: every chained-hop caller still
-     * passes a string and gets an identical row, and the four-signal check at
+     * passes a string and gets an identical row, and the current-actor check at
      * /token validates the PRESENTED key, never this stored value (`resolve`
      * already returns `cnfJkt` as optional).
      */

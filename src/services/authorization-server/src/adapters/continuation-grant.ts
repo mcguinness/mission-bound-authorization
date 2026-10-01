@@ -5,10 +5,10 @@
  * The token-exchange grant at /token: a client presents an Identity Continuation
  * Assertion (ICA) as the RFC 8693 `subject_token` and receives a Mission-rooted
  * continuation ID-JAG as the issued token. This is the end-to-end intra-domain
- * continuation hop. It layers the FOUR-SIGNAL actor agreement over the ICA
- * validator: the authenticated presenter (client auth), the `actor_token`, the
- * ICA `act`, and the DPoP proof key MUST all name the SAME actor and be bound to
- * the SAME confirmed key before a continuation is minted.
+ * continuation hop. It layers the current-actor check over the ICA validator:
+ * the ICA `act` MUST equal the authenticated client's canonical actor identity,
+ * and the DPoP proof key MUST be the ICA's confirmed key, before a continuation
+ * is minted. The request carries no `actor_token` (ICA -02 5.5.1).
  *
  * The ID-JAG is minted through `issueCrossDomainGrant` (the single PR-B emitter),
  * which signs with a direct `SignJWT` and runs `gateDerivation` EXACTLY ONCE — it
@@ -117,8 +117,8 @@ export function defaultSubjectResolver(issuer: string): SubjectResolver {
 
 /** Set the RFC 6749 error body directly (status BEFORE body; no-store). Used for
  *  error codes oidc-provider does not model (`invalid_continuation`,
- *  `invalid_target`, `invalid_dpop_proof`) and for the four-signal `invalid_grant`
- *  returns whose distinct `error_description` the invalid_grant renderer would
+ *  `invalid_target`, `invalid_dpop_proof`) and for the `invalid_grant` returns
+ *  whose distinct `error_description` the invalid_grant renderer would
  *  otherwise overwrite. */
 function txError(ctx: KoaContextWithOIDC, status: number, error: string, description: string): void {
   ctx.status = status;
@@ -235,6 +235,12 @@ export async function handleTokenExchangeGrant(
   if (typeof resource !== "string" || !resource) {
     throw new errors.InvalidRequest("resource required");
   }
+  // @spec id-continuation-assertion — the actor is the authenticated client, so
+  // the request carries no actor_token or actor_token_type, and either one is
+  // refused (ICA -02 5.5.1, 5.5.3 rule 1).
+  if (params.actor_token !== undefined || params.actor_token_type !== undefined) {
+    throw new errors.InvalidRequest("actor_token and actor_token_type are not permitted on a continuation exchange");
+  }
 
   // Wiring guard: the grant is registered unconditionally, so a request can
   // reach here even when the continuation options were not composed.
@@ -255,25 +261,23 @@ export async function handleTokenExchangeGrant(
     throw new errors.InvalidRequest("token-exchange continuation grant is not configured");
   }
 
-  // Signal #1 (client auth): the authenticated presenter. The actor identity is
-  // (AS issuer, client_id) — this IS the contract the Chain Authority MUST mint
-  // the ICA `act` and the `actor_token` (iss,sub) against; all three are compared
-  // raw and case-sensitive below.
+  // Client auth: the authenticated presenter. Its canonical actor identity is
+  // (AS issuer, client_id), the contract the Chain Authority MUST mint the ICA
+  // `act` against; compared raw and case-sensitive below (ICA -02 5.5.2).
   const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
   const currentActor = { iss: opts.issuer, sub: client.clientId };
 
-  // Signal #4 (DPoP): derive the presenter jkt exactly as mintDeferredToken does.
+  // DPoP: derive the presenter jkt exactly as mintDeferredToken does.
   const proofJws = ctx.get("DPoP");
   if (!proofJws) {
     txError(ctx, 400, "invalid_dpop_proof", "DPoP proof JWT required");
     return;
   }
   let jkt: string;
-  let dpopJwk: JWK;
   let proofJti: unknown;
   try {
     const header = decodeProtectedHeader(proofJws);
-    dpopJwk = header.jwk as JWK;
+    const dpopJwk = header.jwk as JWK;
     jkt = await calculateJwkThumbprint(dpopJwk);
     const { payload: proof } = await jwtVerify(proofJws, dpopJwk, { typ: "dpop+jwt" });
     if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
@@ -329,42 +333,12 @@ export async function handleTokenExchangeGrant(
     return;
   }
 
-  // Step 7: Signal #2 (actor_token) — REQUIRED for a chained continuation. It is
-  // bound to the confirmed presenter key: it MUST be signed by that key and carry
-  // cnf.jkt === jkt. (iss,sub) is extracted for the agreement check.
-  const actorTokenRaw = params.actor_token;
-  if (typeof actorTokenRaw !== "string" || !actorTokenRaw) {
-    throw new errors.InvalidRequest("actor_token required for a chained continuation");
-  }
-  let actorIss: unknown;
-  let actorSub: unknown;
-  let actorCnfJkt: unknown;
-  try {
-    const { payload } = await jwtVerify(actorTokenRaw, dpopJwk, { algorithms: ["ES256"] });
-    actorIss = payload.iss;
-    actorSub = payload.sub;
-    actorCnfJkt = (payload.cnf as { jkt?: unknown } | undefined)?.jkt;
-  } catch {
-    txError(ctx, 400, "invalid_grant", "actor_token verification failed");
-    return;
-  }
-
-  // Step 8: FOUR-SIGNAL ACTOR AGREEMENT. All of {client-auth actor, actor_token
-  // (iss,sub), ICA act (iss,sub)} MUST agree (raw ===, case-sensitive) and be
-  // bound to the confirmed key: actor_token cnf.jkt === ICA cnf.jkt === presenter
-  // jkt. Each mismatch returns invalid_grant with a DISTINCT description (set on
-  // ctx directly so it survives the invalid_grant renderer).
-  if (actorCnfJkt !== jkt) {
-    txError(ctx, 400, "invalid_grant", "actor_token is not sender-constrained to the presenter key");
-    return;
-  }
+  // Step 8: CURRENT-ACTOR AGREEMENT. The ICA act (iss,sub) MUST equal the
+  // authenticated client's canonical actor identity (raw ===, case-sensitive),
+  // and the ICA cnf.jkt MUST be the presenter key.
   if (ica.cnf.jkt !== jkt) {
     // Defence in depth (the validator already enforced this).
     txError(ctx, 400, "invalid_grant", "continuation assertion cnf.jkt does not match the presenter key");
-    return;
-  }
-  if (actorIss !== currentActor.iss || actorSub !== currentActor.sub) {
-    txError(ctx, 400, "invalid_grant", "actor_token actor does not match the authenticated client");
     return;
   }
   if (ica.act.iss !== currentActor.iss || ica.act.sub !== currentActor.sub) {
@@ -390,7 +364,7 @@ export async function handleTokenExchangeGrant(
     cnfJkt: jkt,
     priorHandle: ica.handle,
   });
-  // Collapse the current actor over the ICA hop lineage. Because the four-signal
+  // Collapse the current actor over the ICA hop lineage. Because the step-8
   // check forces currentActor === ICA act and the ICA `act` is single-level, this
   // ALWAYS collapses to a depth-1 lineage (a single actor's multi-hop
   // continuation keeps one entry) — it never extends here by construction.

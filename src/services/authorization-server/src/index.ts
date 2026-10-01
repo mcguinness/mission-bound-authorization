@@ -475,9 +475,9 @@ export {
  * approval here.
  *
  * The initial handle binds the Mission's actor: the agent CLIENT
- * (iss = AS issuer, sub = client_id), matching the /token four-signal contract's
- * `currentActor`. No cnf is bound (no DPoP key exists at approval); the four-signal
- * check validates the PRESENTED key at /token, never this stored handle's cnf.
+ * (iss = AS issuer, sub = client_id), matching the /token current-actor check's
+ * `currentActor`. No cnf is bound (no DPoP key exists at approval); that check
+ * validates the PRESENTED key at /token, never this stored handle's cnf.
  */
 function rootMissionContinuation(
   store: ContinuationStore,

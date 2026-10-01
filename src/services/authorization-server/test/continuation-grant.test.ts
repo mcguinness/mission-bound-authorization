@@ -3,15 +3,13 @@
  * exchange -> continuation ID-JAG)
  *
  * The end-to-end intra-domain continuation hop on the real /token endpoint: an
- * ICA subject token in, a Mission-rooted continuation ID-JAG out, with the full
- * FOUR-SIGNAL actor agreement and the RFC 8693 error taxonomy.
+ * ICA subject token in, a Mission-rooted continuation ID-JAG out, with the
+ * current-actor check and the RFC 8693 error taxonomy.
  *
- * Signals, all of which MUST name the SAME actor (raw ===, case-sensitive) and
- * be bound to the SAME confirmed DPoP key:
- *   1. client auth  — the private_key_jwt presenter (iss = AS, sub = client_id).
- *   2. actor_token  — signed by the DPoP key, cnf.jkt = the presenter jkt.
- *   3. ICA `act`    — minted by the Chain Authority against (AS, client_id).
- *   4. DPoP proof   — the presenter key.
+ * The ICA `act` (minted by the Chain Authority against (AS, client_id)) MUST
+ * equal the private_key_jwt presenter's canonical actor identity (raw ===,
+ * case-sensitive), and the DPoP proof key MUST be the ICA's cnf.jkt. The
+ * request carries no actor_token or actor_token_type (ICA -02 5.5.1).
  *
  * The ID-JAG is signed with the dedicated ES256 as-continuation key (published on
  * jwks_uri and trusted by the RAS) because issueCrossDomainGrant hardcodes an
@@ -54,7 +52,7 @@ const CA = "https://chain-authority.example"; // the injected Chain Authority
 const RESOURCE = CANONICAL_RESOURCE; // in DERIVATION_POLICY's ceiling
 const RAS_AUD = "https://ras.ledgercloud.test"; // the target Resource AS (audience)
 const MISSION_EXP = "2027-01-01T00:00:00Z";
-const ACTOR_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:jwt";
+const JWT_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:jwt";
 const RESOURCE_TO_AS = (r: string) => (r === RESOURCE ? RAS_AUD : ISSUER);
 
 // @spec cross-domain#origin-principal-mapping, #dual-axis (#539): every RAS
@@ -75,7 +73,7 @@ let as: BuiltAs;
 let asServer: Server;
 let clientKey: CryptoKey; // ap-agent private_key_jwt key (kid ap-agent-auth)
 let caKeys: Keys; // Chain Authority ICA signing key
-let agentKeys: Keys; // the agent's DPoP + actor-token key
+let agentKeys: Keys; // the agent's DPoP key
 let agentJkt: string;
 let remoteJwks: ReturnType<typeof createRemoteJWKSet>;
 
@@ -186,7 +184,7 @@ async function mintICA(handle: string, opts: IcaOpts = {}): Promise<string> {
     .sign(caKeys.privateKey);
 }
 
-/** actor_token (Signal #2): signed by the DPoP key, cnf.jkt = the presenter jkt. */
+/** An actor_token as a pre--02 client sent it: signed by the DPoP key, cnf.jkt = the presenter jkt. */
 async function mintActorToken(over: Record<string, unknown> = {}): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   return new SignJWT({ iss: ISSUER, sub: "ap-agent", cnf: { jkt: agentJkt }, ...over })
@@ -220,6 +218,7 @@ async function dpopProof(htu: string, htm: string, extra: Record<string, unknown
 interface ExchangeFields {
   subjectToken: string;
   actorToken?: string;
+  actorTokenType?: string;
   audience?: string;
   resource?: string;
   requestedTokenType?: string;
@@ -236,9 +235,9 @@ async function tokenExchange(f: ExchangeFields): Promise<Response> {
     subject_token_type: f.subjectTokenType ?? IDENTITY_CONTINUATION_TOKEN_TYPE,
     audience: f.audience ?? RAS_AUD,
     resource: f.resource ?? RESOURCE,
-    actor_token_type: ACTOR_TOKEN_TYPE,
   };
   if (f.actorToken !== undefined) params.actor_token = f.actorToken;
+  if (f.actorTokenType !== undefined) params.actor_token_type = f.actorTokenType;
   const send = async (extra: Record<string, unknown> = {}): Promise<Response> =>
     fetch(htu, {
       method: "POST",
@@ -280,7 +279,7 @@ afterAll(() => {
 describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion)", () => {
   it("a Mission ending inside the grant lifetime gets a continuation ID-JAG that expires no later than it (@spec mission#mission-bound-tokens)", async () => {
     const { missionId, handle } = newLineage("apev-exp-clamp", {}, new Date(Date.now() + 60_000).toISOString());
-    const res = await tokenExchange({ subjectToken: await mintICA(handle), actorToken: await mintActorToken() });
+    const res = await tokenExchange({ subjectToken: await mintICA(handle) });
     const body = (await res.json()) as { access_token?: string };
     expect(res.status, JSON.stringify(body)).toBe(200);
     const missionExp = Math.floor(Date.parse(as.kernel.get(missionId)?.expires_at as string) / 1000);
@@ -296,7 +295,7 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
       amr: ["pwd", "otp"],
     });
 
-    const res = await tokenExchange({ subjectToken: await mintICA(handle), actorToken: await mintActorToken() });
+    const res = await tokenExchange({ subjectToken: await mintICA(handle) });
     const body = (await res.json()) as {
       access_token?: string;
       issued_token_type?: string;
@@ -347,7 +346,7 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
 
     // A second, DIFFERENT ICA (fresh jti) over the same lineage yields the SAME
     // deterministic sub for the same (audience, subject).
-    const res2 = await tokenExchange({ subjectToken: await mintICA(handle), actorToken: await mintActorToken() });
+    const res2 = await tokenExchange({ subjectToken: await mintICA(handle) });
     const body2 = (await res2.json()) as { access_token?: string; error?: string };
     expect(res2.status, JSON.stringify(body2)).toBe(200);
     const { payload: p2 } = await jwtVerify(body2.access_token as string, remoteJwks, {
@@ -359,7 +358,7 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
 
   it("end-to-end: the continuation ID-JAG redeems at the RAS (trusted as-continuation key) into a local token", async () => {
     const { missionId, handle } = newLineage("apev-ras");
-    const res = await tokenExchange({ subjectToken: await mintICA(handle), actorToken: await mintActorToken() });
+    const res = await tokenExchange({ subjectToken: await mintICA(handle) });
     const body = (await res.json()) as { access_token?: string; error?: string };
     expect(res.status, JSON.stringify(body)).toBe(200);
     const idJag = body.access_token as string;
@@ -451,7 +450,6 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     const now = Math.floor(Date.now() / 1000);
     const res = await tokenExchange({
       subjectToken: await mintICA(handle, { iatSec: now, expSec: now + 301 }),
-      actorToken: await mintActorToken(),
     });
     const body = (await res.json()) as { error?: string; error_description?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
@@ -467,7 +465,7 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     // resolvable (step 5 passes) and the refusal comes from the Mission gate
     // inside issueCrossDomainGrant (step 9), i.e. AFTER validation.
     as.kernel.transition(missionId, "suspend");
-    const refused = await tokenExchange({ subjectToken: ica, actorToken: await mintActorToken() });
+    const refused = await tokenExchange({ subjectToken: ica });
     const refusedBody = (await refused.json()) as { error?: string; error_description?: string };
     expect(refused.status, JSON.stringify(refusedBody)).toBe(400);
     expect(refusedBody.error).toBe("invalid_continuation");
@@ -477,13 +475,13 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     // single-use-unspent. (Recording at validation, the prior behavior, burned
     // it here and made this retry fail /replay/ forever.)
     as.kernel.transition(missionId, "resume");
-    const ok = await tokenExchange({ subjectToken: ica, actorToken: await mintActorToken() });
+    const ok = await tokenExchange({ subjectToken: ica });
     const okBody = (await ok.json()) as { access_token?: string; error?: string };
     expect(ok.status, JSON.stringify(okBody)).toBe(200);
     expect(typeof okBody.access_token).toBe("string");
 
     // And it is consumed exactly once: the successful issuance recorded it.
-    const replayed = await tokenExchange({ subjectToken: ica, actorToken: await mintActorToken() });
+    const replayed = await tokenExchange({ subjectToken: ica });
     const replayedBody = (await replayed.json()) as { error?: string; error_description?: string };
     expect(replayed.status, JSON.stringify(replayedBody)).toBe(400);
     expect(replayedBody.error_description).toMatch(/replay/);
@@ -492,33 +490,53 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
   it("(b) a replayed ICA jti -> rejected (single-use, consumed at issuance commit)", async () => {
     const { handle } = newLineage("apev-b");
     const ica = await mintICA(handle);
-    const first = await tokenExchange({ subjectToken: ica, actorToken: await mintActorToken() });
+    const first = await tokenExchange({ subjectToken: ica });
     expect(first.status, await first.clone().text()).toBe(200);
 
-    const second = await tokenExchange({ subjectToken: ica, actorToken: await mintActorToken() });
+    const second = await tokenExchange({ subjectToken: ica });
     const body = (await second.json()) as { error?: string; error_description?: string };
     expect(second.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_request");
     expect(body.error_description).toMatch(/replay/);
   });
 
-  it("(c) actor disagreement (actor_token actor != the ICA/authenticated actor) -> invalid_grant", async () => {
-    const { handle } = newLineage("apev-c");
+  it("(c) a request carrying actor_token -> invalid_request (ICA -02 5.5.1: the actor is the authenticated client)", async () => {
+    const { missionId, handle } = newLineage("apev-c");
     const res = await tokenExchange({
-      subjectToken: await mintICA(handle), // act.sub = "ap-agent"
-      actorToken: await mintActorToken({ sub: "ap-agent-imposter" }),
+      subjectToken: await mintICA(handle),
+      actorToken: await mintActorToken(),
+      actorTokenType: JWT_TOKEN_TYPE,
     });
     const body = (await res.json()) as { error?: string; error_description?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
-    expect(body.error).toBe("invalid_grant");
-    expect(body.error_description).toMatch(/actor_token actor does not match/);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toMatch(/actor_token/);
+    // Refused before any side effect: no hop recorded for the Mission.
+    expect(as.continuationStore.handlesForMission(missionId)).toHaveLength(2);
+  });
+
+  it("(c1) actor_token_type alone -> invalid_request", async () => {
+    const { handle } = newLineage("apev-c1");
+    const res = await tokenExchange({ subjectToken: await mintICA(handle), actorTokenType: JWT_TOKEN_TYPE });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toMatch(/actor_token_type/);
+  });
+
+  it("(c2) actor_token alone -> invalid_request", async () => {
+    const { handle } = newLineage("apev-c2");
+    const res = await tokenExchange({ subjectToken: await mintICA(handle), actorToken: await mintActorToken() });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toMatch(/actor_token/);
   });
 
   it("(d) DPoP jkt != ICA cnf.jkt -> invalid_request (presenter-key mismatch)", async () => {
     const { handle } = newLineage("apev-d");
     const res = await tokenExchange({
       subjectToken: await mintICA(handle, { cnfJkt: "some-other-jkt-thumbprint-value" }),
-      actorToken: await mintActorToken(),
     });
     const body = (await res.json()) as { error?: string; error_description?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
@@ -530,7 +548,6 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     const { handle } = newLineage("apev-e");
     const res = await tokenExchange({
       subjectToken: await mintICA(handle, { handle: "ich_unknownhandle0123456789ABCDEFGH" }),
-      actorToken: await mintActorToken(),
     });
     const body = (await res.json()) as { error?: string; error_description?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
@@ -542,7 +559,6 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     const { handle } = newLineage("apev-f");
     const res = await tokenExchange({
       subjectToken: await mintICA(handle),
-      actorToken: await mintActorToken(),
       audience: "https://wrong-audience.test",
     });
     const body = (await res.json()) as { error?: string; error_description?: string };
@@ -555,7 +571,7 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     const ica = await mintICA(handle);
     // Revoke BEFORE presentation: the fan-out marks the anchor + handle terminal.
     as.kernel.transition(missionId, "revoke");
-    const res = await tokenExchange({ subjectToken: ica, actorToken: await mintActorToken() });
+    const res = await tokenExchange({ subjectToken: ica });
     const body = (await res.json()) as { error?: string; error_description?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_continuation");
@@ -595,7 +611,7 @@ describe("continuation lifecycle invariants (@spec id-continuation-assertion)", 
     expect(resolved?.authEnvelope.authTime).toBeLessThanOrEqual(approxNow + 5);
 
     // The auto-rooted handle drives a full /token continuation hop end to end.
-    const res = await tokenExchange({ subjectToken: await mintICA(handle), actorToken: await mintActorToken() });
+    const res = await tokenExchange({ subjectToken: await mintICA(handle) });
     const body = (await res.json()) as { access_token?: string; error?: string };
     expect(res.status, JSON.stringify(body)).toBe(200);
     const { payload } = await jwtVerify(body.access_token as string, remoteJwks, {
@@ -614,7 +630,7 @@ describe("continuation lifecycle invariants (@spec id-continuation-assertion)", 
     // The lifecycle transition; the onLifecycleCommit fan-out marks the anchor +
     // handle terminal (the same wiring PR-C tested at the store level).
     as.kernel.transition(missionId, "revoke");
-    const res = await tokenExchange({ subjectToken: ica, actorToken: await mintActorToken() });
+    const res = await tokenExchange({ subjectToken: ica });
     const body = (await res.json()) as { error?: string; error_description?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_continuation");
@@ -625,7 +641,7 @@ describe("continuation lifecycle invariants (@spec id-continuation-assertion)", 
     const { missionId, handle } = approveLineage("apev-life-keepexp");
 
     // Issue a continuation ID-JAG while the Mission is active.
-    const res1 = await tokenExchange({ subjectToken: await mintICA(handle), actorToken: await mintActorToken() });
+    const res1 = await tokenExchange({ subjectToken: await mintICA(handle) });
     const body1 = (await res1.json()) as { access_token?: string; error?: string };
     expect(res1.status, JSON.stringify(body1)).toBe(200);
     const idJag = body1.access_token as string;
@@ -664,7 +680,7 @@ describe("continuation lifecycle invariants (@spec id-continuation-assertion)", 
 
     // (2) A NEW continuation over the same lineage IS refused after revoke —
     //     revocation is live; it only blocks fresh issuance.
-    const res2 = await tokenExchange({ subjectToken: await mintICA(handle), actorToken: await mintActorToken() });
+    const res2 = await tokenExchange({ subjectToken: await mintICA(handle) });
     const body2 = (await res2.json()) as { error?: string; error_description?: string };
     expect(res2.status, JSON.stringify(body2)).toBe(400);
     expect(body2.error).toBe("invalid_continuation");
