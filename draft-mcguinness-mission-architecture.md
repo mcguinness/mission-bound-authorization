@@ -1916,29 +1916,14 @@ its own conformance rule:
   active-state gated, subset-constrained, and refresh-gated: in the
   contract's vocabulary, a credential covered by the binding's
   Lifecycle-Gated Authorization, Monotonic Derivation, and
-  Credential-Bound claims, which the OAuth binding's conformance rule requires
-  of the OAuth binding.
+  Credential-Bound claims.
 
 Only the third earns the term: a `mission` claim alone is a reference,
 not Mission-bound authorization. The family reserves "Mission-bound"
-for that class, and {{binding-properties}}'s `credential-mission-bound`
-equivalence is the definition. A binding that claims substrate
-conformance evidences the definition through the capability claims of
-its own Mission Substrate Statement, not by protocol lineage. The
-OAuth binding claims no substrate conformance and publishes no
-Statement: it is instead assessed through its own informative Mapping
-Assessment ({{I-D.draft-mcguinness-oauth-mission}}), and it
-normatively discharges the definition on its own terms, through its
-Conformance gates alone, independent of the substrate contract.
-
-The definition itself is the Mission Binding Properties vector's
-`credential-mission-bound` property ({{binding-properties}}), whose
-six conditions state in full the active-state, subset, and
-derivation-link requirement summarized above and map each condition
-to the Mission Substrate Statement capability, or OAuth binding
-surface, that discharges it. No single capability claim evidences the
-property alone; a binding earns it only where every condition is met
-together.
+for that class. Its definition is the `credential-mission-bound`
+equivalence of the binding properties ({{binding-properties}}): six
+conditions, each mapped to what discharges it, earned only where all
+hold together.
 
 ## The Mission-Bound Credential
 
@@ -2512,10 +2497,13 @@ back silently to a weaker binding.
 artifact, and is the family's authoritative definition of what earns
 the term "Mission-bound" (see also {{token-classes}}'s Mission-bound
 token class, which this equivalence backs). A binding that claims
-substrate conformance evidences the definition through its own
-Mission Substrate Statement; the OAuth binding, which claims no
-substrate conformance and publishes no Statement, discharges the
-definition directly through its own Conformance gates instead. For
+substrate conformance evidences the definition through the capability
+claims of its own Mission Substrate Statement, not by protocol
+lineage. The OAuth binding claims no substrate conformance and
+publishes no Statement: it is assessed through its own informative
+Mapping Assessment ({{I-D.draft-mcguinness-oauth-mission}}) and
+discharges the definition directly through its own Conformance gates,
+independent of the substrate contract. For
 the covered path the credential establishes all of these conditions:
 
 1. a trusted issuer authorized to issue for the Mission;
