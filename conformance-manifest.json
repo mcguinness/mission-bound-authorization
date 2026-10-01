@@ -6101,7 +6101,7 @@
    "id": "status.discharge.event-replay",
    "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-idempotency",
-   "text": "It issues a new signed envelope that echoes the new `nonce` and carries the stored operation result: the same `outcome` and selectors, and the original `prior_version` and `current_version` the first commit produced.",
+   "text": "It issues a new signed envelope that echoes the new `nonce` and carries the stored operation result: the same `outcome` and resolved target, and the original `prior_version` and `current_version` the first commit produced.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -6862,6 +6862,30 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#902 review (P2). The adapted Status verification procedure (typ, alg, signature, iss, aud, nonce, echoed target and event, lifetime); a verifier test lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.replay-echoes-current-form",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-idempotency",
+   "text": "The echoed target form and `event_id` are the current request's",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a selector-form fresh-nonce retry of a digest-form original receives the stored outcome and versions with the selector echoed, never the digests"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#902 review (P2). A fresh-nonce replay keeps the stored outcome, resolved target and versions but echoes the current request's form; the cross-form case lands with the #898 implementation PR (the existing event-replay test covers the same-form case)."
   },
   {
    "id": "status.discharge.receipt-typ-exclusive",

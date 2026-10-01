@@ -792,9 +792,11 @@ signed response verbatim. Two cases follow:
   fingerprint** (defined below). The AS performs no state-changing
   work: no re-latch, no version increment. It issues a new signed
   envelope that echoes the new `nonce` and carries the stored
-  operation result: the same `outcome` and selectors, and the
+  operation result: the same `outcome` and resolved target, and the
   original `prior_version` and `current_version` the first commit
-  produced.
+  produced. The echoed target form and `event_id` are the current
+  request's ({{discharge-result}}), so a selector-form retry of a
+  digest-form original never receives digests.
 
 **Event assertion fingerprint.** A semantic assertion object, never
 raw form bytes: the JSON object with exactly the decoded members
