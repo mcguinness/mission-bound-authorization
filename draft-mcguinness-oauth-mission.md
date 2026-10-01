@@ -5686,6 +5686,16 @@ Cross-Domain:
 
 -01
 
+- Stated the client no-downgrade requirement in Authorization Server
+  Metadata, where discovery establishes Mission support; Downgrade by
+  Omission keeps the threat analysis and now holds the
+  metadata-integrity note. Added the existing `invalid_request`
+  refusal of a proposed entry outside `target_resources` to the error
+  mapping table. Presented derivation as one procedure whose two
+  named modes differ in where candidate entries come from, and made
+  "Mission Record" and "runtime layer" consistent. No requirement or
+  wire behavior changed.
+
 - Clarified that a Mission Issuer can conform without supporting any
   Intent Submission Evidence types. The submission-processing
   sequence keeps the baseline dispatch and refusal rules and the
