@@ -1292,6 +1292,12 @@ rule can provide. Where the comparison relation cannot decide (an
 unrecognized member, an incomparable value), the posture is
 conservative refusal, as each consuming rule of this document states.
 
+An entry equal to its reference entry, byte-identical under the
+canonical form of {{canonicalization}}, is a subset of it for every
+type. This is the one case the subset rule decides without the type's
+own relation, and it is how an AS that has not declared `narrowing`
+for a type establishes a subset ({{other-types}}).
+
 ## Authorization Details Types {#other-types}
 
 The Authority Set MAY include any AS-supported {{RFC9396}}
@@ -1335,8 +1341,14 @@ narrowing and needs `narrowing`, not `projection`. Without
 than its original approved audience, or, except as `scope` under a
 declared `projection`, in any form other than exactly as approved,
 since it cannot prove that a transformed copy is still a subset of
-what was approved. A delegated token can then include the entry only
-exactly as approved.
+what was approved. A type that declares `delegation` without
+`narrowing` is delegable only unchanged: the AS MUST NOT include an
+entry of such a type in a delegated token unless it is equal
+({{subset}}) to an entry of the presented delegating token, it keeps
+that entry's approved audience, and the type's delegation policy
+permits the delegate ({{delegation-constraints}}). The reference is
+the presented token, not the Mission Authority Set, so equality never
+restores an entry, or any part of one, that the presented token omits.
 
 The AS declares the capabilities through these carriers, in order of
 preference:
