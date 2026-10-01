@@ -138,6 +138,23 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-hardt-oauth-aauth-protocol:
+    title: "AAuth Protocol"
+    target: https://dickhardt.github.io/AAuth/draft-hardt-oauth-aauth-protocol.html
+    refcontent: "Editor's copy, commit fc5e972c"
+    author:
+      -
+        ins: D. Hardt
+        name: Dick Hardt
+    date: 2026
+  I-D.draft-hardt-aauth-r3:
+    title: "AAuth Rich Resource Requests (R3)"
+    target: https://dickhardt.github.io/AAuth/draft-hardt-aauth-r3.html
+    author:
+      -
+        ins: D. Hardt
+        name: Dick Hardt
+    date: 2026
   I-D.draft-mcguinness-mission-aauth:
     title: "Mission Context Binding for AAuth"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html
@@ -405,9 +422,11 @@ and every mechanism it names is defined by the profile it points to.
 A Mission is a durable governance object created by an explicit
 approval event: the approved task, with a lifecycle. In the
 authority-bearing bindings, authority for the task is derived for the
-Mission, bound to it, and gated on its state. In AAuth, the Mission
-Context instead governs resource decisions at the PS without becoming
-their authority language. The Mission is not a new way to express authority: Rich
+Mission, bound to it, and gated on its state. In AAuth
+({{I-D.draft-hardt-oauth-aauth-protocol}}), the Mission Context
+instead governs resource decisions at the Person Server (PS) without
+becoming their authority language. The Mission is not a new way to
+express authority: Rich
 Authorization Requests {{RFC9396}} and kindred mechanisms express
 authority, and the Mission is the approved task that authority
 serves.
@@ -575,7 +594,8 @@ AAuth realizes the separation differently. Its exact-byte `s256`
 commits the private approved mission blob, and `{approver, s256}` is
 the stable reference. The PS applies contextual governance using that
 blob and the ordered mission log; scopes, resource tokens, Resource and
-Access Server policy, and optionally R3 carry deterministic resource
+Access Server policy, and optionally AAuth Rich Resource Requests
+(R3, {{I-D.draft-hardt-aauth-r3}}) carry deterministic resource
 authorization. AAuth does not add the OAuth Authority Set or its two
 anchors, and its native lifecycle remains exactly `active` or
 `terminated`.
