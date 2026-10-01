@@ -456,8 +456,7 @@ Peer standing among the bindings is a deployment-topology claim, not
 a data-model-independence claim: each attaches to its own protocol as
 an equally adoptable unit, and OAuth is the family's first-authored
 binding with the most deployed infrastructure, a deployment fact and
-not a maturity ranking (no production Mission deployment is known
-today on any binding). Adopting Missions on OAuth requires the
+not a maturity ranking. Adopting Missions on OAuth requires the
 changes the OAuth binding defines. The two axes diverge for the
 standalone binding: the Mission Authority Server
 ({{I-D.draft-mcguinness-mission-authority-server}}) is a normative
@@ -678,8 +677,8 @@ decision time, an effect the Approver never saw rendered in that
 form.
 
 Attribution shares the grain limit: proving which concurrent task
-item produced a permitted action needs a verified cross-link no
-family carrier supplies today ({{binding-properties}}).
+item produced a permitted action needs a verified cross-link that no
+family carrier supplies ({{binding-properties}}).
 
 The levers share one strategy: they convert semantic risk into
 structural signals. A policy decision point is never asked to judge
@@ -1788,7 +1787,7 @@ each in a Mission Substrate section of its own; the runtime profile
 is the exemplar of that consumption declaration
 ({{I-D.draft-mcguinness-mission-runtime}}), and the remaining
 consumers align progressively. Where a companion consumes a concrete
-representation, it is today the OAuth binding's, the realization the
+representation, it is the OAuth binding's, the realization the
 family was first authored against; vocabulary ownership migrates to
 the substrate contract by touch
 ({{I-D.draft-mcguinness-mission-substrate}}).
@@ -2005,7 +2004,7 @@ freshness section ({{I-D.draft-mcguinness-mission-runtime}}).
 
 ## The Binding Checklist {#binding-checklist}
 
-For a new binding this checklist is now normatively stated by Mission
+For a new binding this checklist is normatively stated by Mission
 Substrate Requirements ({{I-D.draft-mcguinness-mission-substrate}});
 this section remains the informative summary, and the existing
 bindings remain authoritative for themselves.
@@ -2967,7 +2966,7 @@ under one Mission still substitute. The composition becomes
 definable only when a verified cross-link exists, the action permit
 or its authenticated request context binding the same
 tamper-resistant work-item identifier the harness recorded; no
-family carrier supplies that today, so a deployment claims the two
+family carrier supplies that, so a deployment claims the two
 properties separately and nothing more.
 
 The mechanism mapping is conservative: a propagated Mission-Reference is
