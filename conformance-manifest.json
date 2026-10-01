@@ -1321,6 +1321,36 @@
    "notes": "The advertised ceiling and the enforced ceiling are one number: the metadata document serves `mission_max_stale_seconds` from config/enforcement-scope.json and `signedStatus` caps every response, requested or default, at it."
   },
   {
+   "id": "status.read.mission-status-scope",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-authentication",
+   "text": "An authenticated caller MUST additionally carry an explicit read authorization: a `mission_status` scope on the presented access token, or a deployment-defined equivalent grant bound to the authenticated client.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.revocation-propagation"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an authenticated Mission Status caller without the mission_status read authorization (or a deployment-defined equivalent grant) is refused with the endpoint's not-found response, indistinguishable from an unknown Mission; a caller carrying it is served",
+    "local": "this deployment's direct-client equivalent grant is the mission_status scope registered on the authenticated service principal; the shipped dev principal carries it"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/status-read-authorization.test.ts",
+     "name": "the Mission Status read authorization (@spec status#mission-status-authentication) > refuses an authenticated caller without mission_status with the indistinguishable not-found body, and serves one that holds it",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "GET /missions/:id/status requires mayReadStatus (the status capability enabled and MISSION_STATUS_SCOPE on the authenticated service principal), the same predicate that decides a forwarded discharge's response shape (status.discharge.receipt-aud-nonce). The test shows a principal holding the lifecycle and discharge grants but not mission_status gets exactly the not-found body an unknown Mission gets (nonce echoed), while a principal holding only mission_status, and the shipped dev principal, get the signed Status response. Capability and surface follow the neighbouring Mission Status operation row status.caching.freshness-cap: the model has no dedicated Status-operation capability or surface."
+  },
+  {
    "id": "runtime.operational.ride-through-declared",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "ride-through",
