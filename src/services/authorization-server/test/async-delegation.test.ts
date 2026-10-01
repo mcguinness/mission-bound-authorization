@@ -1028,6 +1028,24 @@ describe("async-delegation terminal paths (@spec async-delegation)", () => {
     expect(atExp).toBeGreaterThan(Math.floor(Date.now() / 1000)); // still in the future
   });
 
+  it("absolute-lifetime clamp: a family refresh's access token and rotated refresh token never exceed the Mission expires_at (@spec mission#mission-bound-tokens)", async () => {
+    // The family refresh is oidc-provider's native refresh_token grant: its
+    // access token took the resource server's flat 300 s before ttl.AccessToken
+    // clamped it (#894 item 1).
+    const expiresAt = new Date(Date.now() + 60_000).toISOString(); // 60s < the 300s AT default
+    const { missionId, baseAccessToken } = await issueBaseMission(expiresAt);
+    const { refresh_token } = (await (await asyncDelegate(baseAccessToken)).json()) as { refresh_token: string };
+    const res = await refreshFamily(refresh_token);
+    const body = (await res.json()) as { access_token: string; refresh_token: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    const missionExp = Math.floor(Date.parse(as.kernel.get(missionId)?.expires_at as string) / 1000);
+    const at = decodeJwt(body.access_token) as { iat: number; exp: number };
+    expect(at.exp).toBeLessThanOrEqual(missionExp);
+    expect(at.exp - at.iat).toBeLessThan(300);
+    const rotated = (await as.provider.RefreshToken.find(body.refresh_token)) as { exp: number } | undefined;
+    expect(rotated?.exp).toBeLessThanOrEqual(missionExp);
+  });
+
   it(
     "absolute-lifetime: the refresh token cannot outlive the Mission (ttl.RefreshToken clamp)",
     async () => {
