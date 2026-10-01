@@ -57,12 +57,15 @@ import {
   assertDischargeAuthoritiesResolvable,
   conditionCanonicalBytes,
   conditionDigest,
+  DISCHARGE_RECEIPT_TYP,
+  type DischargeAuthorityMapping,
   type DischargeAuthorityPolicy,
   dischargeAssertionFingerprint,
   DischargeConflictError,
   DischargeNotFoundError,
   type DischargeRequest,
   type DischargeResult,
+  type DischargeTargetForm,
   entryDigest,
   mappingPermits,
   resolveConditionMapping,
@@ -72,9 +75,11 @@ import {
 import { DischargeMappingPinStore } from "./discharge-pin-store.js";
 import { DischargeSelectorStore } from "./discharge-selector-store.js";
 import { justifyingIndex } from "./child-delegation.js";
+import type { CarryoverEntryPair, CarryoverMap } from "./carryover.js";
 import {
   DEFAULT_DISCHARGE_EVENT_TTL_S,
   DischargeEventStore,
+  type DischargeEventAudit,
   type DischargeEventKey,
 } from "./lifecycle-idempotency.js";
 import {
@@ -304,6 +309,19 @@ export interface StatusObservationOptions {
 export interface ObservationWatermark {
   version: number;
   commit: number;
+}
+
+/**
+ * @spec discharge#discharge-receipt — a Discharge Receipt complete except for
+ * its signature, fixed at the point the forwarded operation committed: the
+ * `iat`/`exp` and the payload are reproduced verbatim if the response has to be
+ * recovered after a crash, exactly as a {@link StatusObservation} is.
+ */
+export interface DischargeReceiptObservation {
+  audience: string;
+  iat: number;
+  exp: number;
+  payload: Record<string, unknown>;
 }
 
 /**
@@ -898,15 +916,35 @@ export class MissionKernel {
 
   /** Insert a full record (shared by approve, expansion, template dispatch, and
    *  child creation): the single Mission-record creation funnel. */
-  insertRecord(record: MissionRecord, precondition?: () => void): void {
+  insertRecord(
+    record: MissionRecord,
+    precondition?: () => void,
+    options: {
+      /**
+       * @spec discharge#discharge-authority, discharge#discharge-carryover — a
+       * carryover replacement INHERITS the old child's pinned mapping for every
+       * carried condition: one whose replacement entry has a recorded old
+       * counterpart (`pairs`, the Carryover Evidence pairing) carrying the same
+       * condition. Such a condition does not first enter this record, so it is
+       * not resolved again; an absent old pin stays absent (fail closed).
+       */
+      inheritPinsFrom?: { missionId: string; pairs: readonly CarryoverEntryPair[] };
+    } = {},
+  ): void {
     // @spec control-plane#isolation — one issuer owns a kernel store.
     if (record.issuer !== this.opts.issuer) throw new Error("record issuer does not own this kernel");
+    const inheritedPin = this.inheritedPinResolver(record, options.inheritPinsFrom);
     // @spec discharge#discharge-authority — the LAST point at which a
     // `terminal_when` condition can enter an immutable Mission-record entry: the
-    // AS resolves and validates every selector here, whatever built the set
-    // (derivation, a child's requested subset, a template's double
-    // intersection), and refuses the creation when one maps to nothing.
-    assertDischargeAuthoritiesResolvable(record.authority_set, this.opts.dischargeAuthority);
+    // AS resolves and validates every `discharge_authority` here, whatever built
+    // the set (derivation, a child's requested subset, a template's double
+    // intersection), and refuses the creation when one maps to nothing. A
+    // carried condition is the one exception: it enters nothing new.
+    assertDischargeAuthoritiesResolvable(
+      record.authority_set,
+      this.opts.dischargeAuthority,
+      (entry, condition) => inheritedPin(entry, condition) !== undefined,
+    );
     // @spec mission#approval-event (step 3), mission#authority-sources — the
     // single record-creation funnel re-asserts the source relationship for
     // EVERY creating body (direct approval, Expansion, template dispatch,
@@ -1025,6 +1063,15 @@ export class MissionKernel {
         if (!conditions) continue;
         const eDigest = entryDigest(record.issuer, entry);
         for (const condition of conditions) {
+          const inherited = inheritedPin(entry, condition);
+          if (inherited !== undefined) {
+            // A carried condition: the old child's pin, or (none recorded) no
+            // pin at all, which every discharge of it then refuses closed.
+            if (inherited) {
+              this.dischargePins.pinInCallerTx(record.id, eDigest, conditionDigest(condition), inherited);
+            }
+            continue;
+          }
           const mapping = resolveConditionMapping(this.opts.dischargeAuthority, condition);
           // Unreachable: assertDischargeAuthoritiesResolvable above refused any
           // condition that maps to nothing. Guarded anyway so a future
@@ -1044,6 +1091,46 @@ export class MissionKernel {
       const inserted = this.get(record.id);
       if (inserted) this.emitCommit(inserted);
     });
+  }
+
+  /**
+   * @spec discharge#discharge-authority — for a carryover replacement, the pin a
+   * carried condition inherits. Returns `undefined` for a condition that is NOT
+   * carried (it is resolved live, as any condition entering a record is),
+   * `null` for a carried condition whose old counterparts hold no pin, or
+   * disagree about it (fail closed: the replacement gets no pin for it), and
+   * the old child's mapping otherwise.
+   */
+  private inheritedPinResolver(
+    record: MissionRecord,
+    from: { missionId: string; pairs: readonly CarryoverEntryPair[] } | undefined,
+  ): (entry: AuthorityEntry, condition: TerminalWhenCondition) => DischargeAuthorityMapping | null | undefined {
+    if (!from) return () => undefined;
+    const oldRecord = this.get(from.missionId);
+    if (!oldRecord) return () => undefined;
+    const oldByDigest = new Map(oldRecord.authority_set.map((e) => [entryDigest(oldRecord.issuer, e), e]));
+    return (entry, condition) => {
+      const newDigest = entryDigest(record.issuer, entry);
+      const cDigest = conditionDigestOrUndefined(condition);
+      if (cDigest === undefined) return undefined;
+      const counterparts = from.pairs
+        .filter((p) => p.replacement_entry_digest === newDigest)
+        .map((p) => p.entry_digest)
+        .filter((old) => {
+          const oldEntry = oldByDigest.get(old);
+          return oldEntry
+            ? (terminalWhenOf(oldEntry)?.some((c) => conditionDigestOrUndefined(c) === cDigest) ?? false)
+            : false;
+        });
+      if (counterparts.length === 0) return undefined;
+      const pins = counterparts.map((old) => this.dischargePins.find(from.missionId, old, cDigest));
+      const first = pins[0];
+      if (!first) return null;
+      const same = pins.every(
+        (p) => p !== undefined && JSON.stringify(p) === JSON.stringify(first),
+      );
+      return same ? first : null;
+    };
   }
 
   nowDate(): Date {
@@ -1782,33 +1869,16 @@ export class MissionKernel {
         "event_type does not match the condition condition_digest names",
       );
     }
-    // --- target authorization (@spec discharge#discharge-authority) ---
-    // Against the mapping PINNED when this condition entered the record
-    // (identifier, version, and resolved content), never the live policy: an
-    // edit to the policy after approval must not retroactively change who may
-    // discharge an already-approved entry.
-    const mapping = this.dischargePins.find(record.id, target.entry_digest, target.condition_digest);
-    if (!mapping) {
-      throw new DischargeNotFoundError(
-        "unpinned_mapping",
-        "no discharge-authority mapping was pinned for this condition at record creation",
-      );
-    }
-    if (!mappingPermits(mapping, input.authority, input.event_type)) {
-      throw new DischargeNotFoundError(
-        "unauthorized_target",
-        `${input.authority} is not a discharge authority for '${input.event_type}' on this condition`,
-      );
-    }
     // @spec discharge#discharge-result — the echo is the CURRENT request's
     // target form and event_id, whichever form the stored occurrence used.
     const selectors = { ...targetFormOf(input), event_id: input.event_id };
     // --- event-level dedup (@spec discharge#discharge-idempotency) ---
-    // Scoped by the five-part tuple and qualified by the assertion fingerprint.
-    // Evaluated BEFORE the terminal check: an at-least-once sender's retry under
-    // a fresh nonce must recover the ORIGINAL outcome and versions even after
-    // the Mission has since gone terminal. `nonce` is the endpoint's own retry
-    // key and is deliberately outside the fingerprint, so it never reaches here.
+    // Scoped by the five-part tuple of the TARGETED record and qualified by the
+    // assertion fingerprint. Looked up BEFORE the terminal check and before any
+    // carryover resolution: an at-least-once sender's retry under a fresh nonce
+    // must recover the ORIGINAL outcome, versions and resolved target even after
+    // the Mission has since gone terminal or been carried again. `nonce` is the
+    // endpoint's own retry key and is deliberately outside the fingerprint.
     const eventKey: DischargeEventKey = {
       authority: input.authority,
       missionId: record.id,
@@ -1826,8 +1896,19 @@ export class MissionKernel {
       ...(input.evidence_digest !== undefined ? { evidence_digest: input.evidence_digest } : {}),
       ...(input.observed_at !== undefined ? { observed_at: input.observed_at } : {}),
     });
+    const forwardedFrom = { issuer: record.issuer, id: record.id };
     const recorded = this.dischargeEvents.find(eventKey);
     if (recorded) {
+      // @spec discharge#discharge-carryover ("Replay") — the target recorded at
+      // first processing, never a newly resolved one, decides both the
+      // authorization and the record the result describes.
+      const resolved = recorded.resolved;
+      this.authorizeDischargeTarget(
+        resolved?.missionId ?? record.id,
+        resolved?.entryDigest ?? target.entry_digest,
+        target.condition_digest,
+        input,
+      );
       if (recorded.fingerprint !== fingerprint) {
         throw new DischargeConflictError(
           `event_id ${input.event_id} was already asserted against this target with a different assertion`,
@@ -1836,15 +1917,20 @@ export class MissionKernel {
       // No state-changing work: no re-latch, no version increment. The caller
       // signs a FRESH envelope echoing the new nonce and carrying this stored
       // outcome with the versions the original commit produced.
-      return {
-        record,
-        result: {
-          ...selectors,
-          outcome: recorded.outcome,
-          prior_version: recorded.priorVersion,
-          current_version: recorded.currentVersion,
-        },
+      const stored = {
+        ...selectors,
+        outcome: recorded.outcome,
+        prior_version: recorded.priorVersion,
+        current_version: recorded.currentVersion,
       };
+      if (resolved && resolved.missionId !== record.id) {
+        const described = this.get(resolved.missionId);
+        if (!described) {
+          throw new DischargeNotFoundError("unknown_mission", `unknown mission: ${resolved.missionId}`);
+        }
+        return { record: described, result: { ...stored, forwarded_from: forwardedFrom } };
+      }
+      return { record, result: stored };
     }
     const audit = {
       receivedAt: this.now().toISOString(),
@@ -1852,13 +1938,115 @@ export class MissionKernel {
       ...(input.evidence_digest !== undefined ? { evidenceDigest: input.evidence_digest } : {}),
       ...(input.observed_at !== undefined ? { observedAt: input.observed_at } : {}),
     };
+    const event = { eventKey, fingerprint, audit, selectors, input };
+
+    // --- forwarding after carryover (@spec discharge#discharge-carryover) ---
+    if (this.carriedRowOf(record)) {
+      // The targeted entry's OWN latch in the old child first: an entry the old
+      // child had already discharged answers already_discharged, unforwarded,
+      // since the replacement's effective set excludes it.
+      if (record.discharged?.some((d) => d.entry_digest === target.entry_digest)) {
+        this.authorizeDischargeTarget(record.id, target.entry_digest, target.condition_digest, input);
+        return this.applyDischarge(record, target, event, undefined, { latchFirst: true });
+      }
+      const resolved = this.resolveCarriedTarget(record, target.entry_digest, target.condition_digest);
+      if (!resolved) {
+        // No recorded counterpart: the entry holds no authority in the
+        // replacement, and the targeted (terminal) old child answers
+        // terminal_noop once the caller is authorized for the target it named.
+        this.authorizeDischargeTarget(record.id, target.entry_digest, target.condition_digest, input);
+        return this.applyDischarge(record, target, event);
+      }
+      // Authorized against the REPLACEMENT's pinned mapping, never the old one.
+      this.authorizeDischargeTarget(
+        resolved.record.id,
+        resolved.entryDigest,
+        target.condition_digest,
+        input,
+      );
+      return this.applyDischarge(
+        resolved.record,
+        { entry_digest: resolved.entryDigest, condition_digest: target.condition_digest },
+        event,
+        forwardedFrom,
+      );
+    }
+
+    // --- target authorization (@spec discharge#discharge-authority) ---
+    this.authorizeDischargeTarget(record.id, target.entry_digest, target.condition_digest, input);
+    return this.applyDischarge(record, target, event);
+  }
+
+  /**
+   * @spec discharge#discharge-authority, discharge#discharge-anti-oracle — target
+   * authorization against the mapping PINNED when this condition entered the
+   * record (identifier, version, and resolved content), never the live policy:
+   * an edit to the policy after approval must not retroactively change who may
+   * discharge an already-approved entry. A missing pin fails closed. Both
+   * refusals join the `not_found` collapse.
+   */
+  private authorizeDischargeTarget(
+    missionId: string,
+    entryDigestValue: string,
+    conditionDigestValue: string,
+    input: { authority: string; event_type: string },
+  ): void {
+    const mapping = this.dischargePins.find(missionId, entryDigestValue, conditionDigestValue);
+    if (!mapping) {
+      throw new DischargeNotFoundError(
+        "unpinned_mapping",
+        "no discharge-authority mapping was pinned for this condition at record creation",
+      );
+    }
+    if (!mappingPermits(mapping, input.authority, input.event_type)) {
+      throw new DischargeNotFoundError(
+        "unauthorized_target",
+        `${input.authority} is not a discharge authority for '${input.event_type}' on this condition`,
+      );
+    }
+  }
+
+  /**
+   * @spec discharge#discharge-commit, discharge#discharge-carryover ("Commit") —
+   * the outcome on the record a discharge APPLIES to: the targeted record, or a
+   * carryover replacement it was forwarded to (`forwardedFrom` set). Terminal:
+   * `terminal_noop`; already latched: `already_discharged`; otherwise one latch
+   * under the ordinary commit. Every outcome is recorded under the TARGETED
+   * record's event tuple, with the resolved target when forwarded, so a retry
+   * recovers this result and never resolves anew.
+   */
+  private applyDischarge(
+    record: MissionRecord,
+    target: { entry_digest: string; condition_digest: string },
+    event: {
+      eventKey: DischargeEventKey;
+      fingerprint: string;
+      audit: DischargeEventAudit;
+      selectors: DischargeTargetForm & { event_id: string };
+      input: { event_type: string; event_id: string };
+    },
+    forwardedFrom?: { issuer: string; id: string },
+    /**
+     * @spec discharge#discharge-carryover — a carried (so terminal) old child's
+     * own latch is checked BEFORE its terminal state: an entry it had already
+     * discharged answers `already_discharged`, not `terminal_noop`.
+     */
+    order: { latchFirst?: boolean } = {},
+  ): { record: MissionRecord; result: DischargeResult } {
+    const { eventKey, fingerprint, audit, selectors, input } = event;
+    const resolved = forwardedFrom
+      ? { missionId: record.id, entryDigest: target.entry_digest }
+      : undefined;
+    const forwarded = forwardedFrom ? { forwarded_from: forwardedFrom } : {};
+    const isLatched = record.discharged?.some((d) => d.entry_digest === target.entry_digest) ?? false;
     // --- terminal states: acknowledged, never a transition ---
-    if (TERMINAL_STATES.has(record.state)) {
+    if (TERMINAL_STATES.has(record.state) && !(order.latchFirst && isLatched)) {
       const result: DischargeResult = {
         ...selectors,
         outcome: "terminal_noop",
         prior_version: record.version,
         current_version: record.version,
+        ...forwarded,
       };
       // Recorded like `already_discharged` below (@spec
       // discharge#discharge-idempotency): a fresh-nonce replay of THIS occurrence
@@ -1866,7 +2054,7 @@ export class MissionKernel {
       // tuple re-asserted with a DIFFERENT fingerprint must be `conflict` —
       // neither holds if the terminal acknowledgement bypasses the event
       // store.
-      this.dischargeEvents.recordStandalone(eventKey, fingerprint, result, audit);
+      this.dischargeEvents.recordStandalone(eventKey, fingerprint, result, audit, resolved);
       return { record, result };
     }
     // --- the monotonic latch: `active` OR `suspended` (a suspended Mission
@@ -1874,17 +2062,18 @@ export class MissionKernel {
     // condition against an already-latched entry, a sibling condition or the
     // same condition under a different event_id, is acknowledged
     // already_discharged and never re-latches or re-increments.
-    if (record.discharged?.some((d) => d.entry_digest === target.entry_digest)) {
+    if (isLatched) {
       const result: DischargeResult = {
         ...selectors,
         outcome: "already_discharged",
         prior_version: record.version,
         current_version: record.version,
+        ...forwarded,
       };
       // Recorded even though it commits no latch: a later replay of THIS
       // occurrence must report the versions this delivery saw, not whatever the
       // Mission's version has since become through unrelated transitions.
-      this.dischargeEvents.recordStandalone(eventKey, fingerprint, result, audit);
+      this.dischargeEvents.recordStandalone(eventKey, fingerprint, result, audit, resolved);
       return { record, result };
     }
     let result!: DischargeResult;
@@ -1904,13 +2093,86 @@ export class MissionKernel {
           outcome: "discharged",
           prior_version: record.version,
           current_version: committed.version,
+          ...forwarded,
         };
         // In the SAME transaction as the latch and the version increment
-        // (@spec discharge#discharge-operation, "Atomicity").
-        this.dischargeEvents.recordInCallerTx(eventKey, fingerprint, result, audit);
+        // (@spec discharge#discharge-commit, "Atomicity").
+        this.dischargeEvents.recordInCallerTx(eventKey, fingerprint, result, audit, resolved);
       },
     );
     return { record: fresh, result };
+  }
+
+  /**
+   * @spec discharge#discharge-carryover, child-delegation#carryover-evidence —
+   * the carried row Carryover Evidence records for this old child: its
+   * replacement and the per-entry pairing. `undefined` when the record was not
+   * carried (no committed `carried_to`, or no retained map naming it), and on a
+   * deployment that never ran carryover (no carryover tables exist).
+   */
+  private carriedRowOf(
+    record: MissionRecord,
+  ): { replacementId: string; pairs: CarryoverEntryPair[] } | undefined {
+    if (!record.carried_to) return undefined;
+    const tables = this.db
+      .prepare(
+        "SELECT COUNT(*) AS n FROM sqlite_master WHERE type = 'table' AND name IN ('carryover_replacements', 'carryover_results')",
+      )
+      .get() as { n: number };
+    if (tables.n !== 2) return undefined;
+    const row = this.db
+      .prepare(
+        `SELECT r.map_json AS map_json FROM carryover_replacements p
+         JOIN carryover_results r ON r.plan_id = p.plan_id
+         WHERE p.issuer = ? AND p.replacement_id = ? AND p.old_child_id = ?`,
+      )
+      .get(record.issuer, record.carried_to, record.id) as { map_json: string } | undefined;
+    if (!row) return undefined;
+    const map = JSON.parse(row.map_json) as CarryoverMap;
+    for (const r of map) {
+      if (r.outcome !== "carried") continue;
+      if (r.old_child.issuer !== record.issuer || r.old_child.mission_id !== record.id) continue;
+      if (r.replacement_id !== record.carried_to) return undefined;
+      return { replacementId: r.replacement_id, pairs: r.entry_pairs ?? [] };
+    }
+    return undefined;
+  }
+
+  /**
+   * @spec discharge#discharge-carryover ("Resolution") — follow a carried old
+   * child's entry to the record that holds its authority now, through each
+   * recorded pairing in turn (A to B to C), and ONLY through them: never by
+   * matching resource and condition. `undefined` when some hop records no
+   * counterpart for the entry, or the counterpart no longer carries the fired
+   * condition: the entry holds no authority past that hop.
+   */
+  private resolveCarriedTarget(
+    record: MissionRecord,
+    entryDigestValue: string,
+    conditionDigestValue: string,
+  ): { record: MissionRecord; entryDigest: string } | undefined {
+    let current = record;
+    let digest = entryDigestValue;
+    // Bounded: every hop is a fresh replacement record, so a cycle is impossible;
+    // the bound only turns a corrupted map into a refusal rather than a hang.
+    for (let hop = 0; hop < 64; hop++) {
+      const carried = this.carriedRowOf(current);
+      if (!carried) {
+        if (current === record) return undefined;
+        const entry = current.authority_set.find((e) => entryDigest(current.issuer, e) === digest);
+        const carries = entry
+          ? terminalWhenOf(entry)?.some((c) => conditionDigestOrUndefined(c) === conditionDigestValue)
+          : false;
+        return carries ? { record: current, entryDigest: digest } : undefined;
+      }
+      const pair = carried.pairs.find((p) => p.entry_digest === digest);
+      if (!pair) return undefined;
+      const next = this.get(carried.replacementId);
+      if (!next) return undefined;
+      current = this.applyExpiry(next);
+      digest = pair.replacement_entry_digest;
+    }
+    return undefined;
   }
 
   /**
@@ -2137,28 +2399,40 @@ export class MissionKernel {
    * both overlays are evaluated state, never a new hash.
    */
   effectiveAuthoritySet(record: MissionRecord): AuthorityEntry[] {
+    if (!record.containment && !record.discharged?.length) return record.authority_set;
+    return this.effectiveEntriesWithOrigin(record).map((e) => e.entry);
+  }
+
+  /**
+   * The effective set with each entry's ORIGIN: the approved record entry it
+   * was computed from. The same composition as {@link effectiveAuthoritySet}
+   * (that method maps this one), so the two can never disagree. A contained
+   * entry's effective bytes differ from its record entry's, which is why the
+   * origin is kept rather than recomputed: Carryover Evidence pairs the OLD
+   * RECORD entry's `entry_digest` (@spec child-delegation#carryover-evidence).
+   */
+  effectiveEntriesWithOrigin(record: MissionRecord): Array<{ origin: AuthorityEntry; entry: AuthorityEntry }> {
     const containment = record.containment;
     const discharged = record.discharged;
-    if (!containment && !discharged?.length) return record.authority_set;
     const dischargedDigests = new Set((discharged ?? []).map((d) => d.entry_digest));
-    const out: AuthorityEntry[] = [];
+    const out: Array<{ origin: AuthorityEntry; entry: AuthorityEntry }> = [];
     for (const entry of record.authority_set) {
       if (dischargedDigests.size > 0 && dischargedDigests.has(entryDigest(record.issuer, entry))) {
         continue; // discharged -> no longer derivable, and omitted from every report
       }
       if (!containment) {
-        out.push(entry);
+        out.push({ origin: entry, entry });
         continue;
       }
       const contained = containment.contained.find((c) => c.resource === entry.resource);
       if (!contained) {
-        out.push(entry);
+        out.push({ origin: entry, entry });
         continue;
       }
       if (!contained.actions) continue; // whole resource contained -> entry dropped
       const actions = entry.actions.filter((a) => !(contained.actions as string[]).includes(a));
       if (actions.length === 0) continue; // every action contained -> entry dropped
-      out.push({ ...entry, actions });
+      out.push({ origin: entry, entry: { ...entry, actions } });
     }
     return out;
   }
@@ -2739,6 +3013,56 @@ export class MissionKernel {
       }
     }
     return jws;
+  }
+
+  /**
+   * @spec discharge#discharge-receipt — the receipt a caller NOT authorized for
+   * the Mission Status operation on the replacement receives for a forwarded
+   * discharge. `aud` is the authenticated requester and `nonce` the request's
+   * own; `exp` is the Status response lifetime. The `discharge_receipt` names
+   * only what the request targeted (the old child's `mission_id`, the echoed
+   * target form and `event_id`) and `outcome: forwarded`: no `mission` member,
+   * no versions, and never the replacement.
+   */
+  dischargeReceiptObservation(opts: {
+    requester: string;
+    nonce: string;
+    targetedMissionId: string;
+    result: DischargeResult;
+  }): DischargeReceiptObservation {
+    const nowS = Math.floor(this.now().getTime() / 1000);
+    const lifetime = Math.min(DEFAULT_STATUS_FRESHNESS_SECONDS, Number(MISSION_MAX_STALE_SECONDS));
+    const {
+      forwarded_from: _forwardedFrom,
+      outcome: _outcome,
+      prior_version: _prior,
+      current_version: _current,
+      ...echo
+    } = opts.result;
+    return {
+      audience: opts.requester,
+      iat: nowS,
+      exp: nowS + lifetime,
+      payload: {
+        nonce: opts.nonce,
+        discharge_receipt: { mission_id: opts.targetedMissionId, ...echo, outcome: "forwarded" },
+      },
+    };
+  }
+
+  /**
+   * @spec discharge#discharge-receipt — sign a receipt with the Status signing
+   * key and algorithm, `typ` {@link DISCHARGE_RECEIPT_TYP} and the Status `kid`,
+   * without re-dating it.
+   */
+  async signDischargeReceipt(receipt: DischargeReceiptObservation): Promise<string> {
+    return new SignJWT(receipt.payload)
+      .setProtectedHeader({ alg: "ES256", kid: this.opts.statusKid, typ: DISCHARGE_RECEIPT_TYP })
+      .setIssuer(this.opts.issuer)
+      .setAudience(receipt.audience)
+      .setIssuedAt(receipt.iat)
+      .setExpirationTime(receipt.exp)
+      .sign(this.opts.statusKey);
   }
 
   private setState(record: MissionRecord, to: MissionState, projectedFrom?: MissionState): MissionRecord {

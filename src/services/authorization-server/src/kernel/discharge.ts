@@ -39,6 +39,16 @@ export const DISCHARGE_EVENT_ID_RE = /^[A-Za-z0-9\-_:.]{1,128}$/;
  */
 export const DISCHARGE_AUTHORITY_RE = /^[A-Za-z0-9\-_:.]{1,64}$/;
 
+/**
+ * @spec discharge#discharge-receipt — the Discharge Receipt's JWS `typ`. A
+ * consumer validates it EXACTLY and never accepts a receipt as a Mission
+ * Status Response, or the reverse.
+ */
+export const DISCHARGE_RECEIPT_TYP = "mission-discharge-receipt+jwt";
+
+/** @spec discharge#iana-receipt — the Discharge Receipt's HTTP media type. */
+export const DISCHARGE_RECEIPT_MEDIA_TYPE = "application/mission-discharge-receipt+jwt";
+
 /** @spec discharge#discharge-operation — `evidence_ref` is a URI, max 512 chars. */
 export const EVIDENCE_REF_MAX_CHARS = 512;
 
@@ -174,6 +184,13 @@ export type DischargeResult = DischargeTargetForm & {
   outcome: DischargeOutcome;
   prior_version: number;
   current_version: number;
+  /**
+   * @spec discharge#discharge-result, discharge#discharge-carryover — present
+   * only when the discharge was forwarded after carryover: the qualified
+   * reference to the old child the request targeted. The envelope's `mission`
+   * and the versions then describe the replacement that changed.
+   */
+  forwarded_from?: { issuer: string; id: string };
 };
 
 /** The request's own target form, exactly as sent, for the result echo. */
@@ -300,6 +317,12 @@ export function mappingPermits(
 export function assertDischargeAuthoritiesResolvable(
   entries: readonly AuthorityEntry[],
   policy: DischargeAuthorityPolicy | undefined,
+  /**
+   * @spec discharge#discharge-authority — a condition that does NOT first enter
+   * this record (a carryover replacement's carried condition, whose pin is
+   * inherited): its shape is still checked, its resolution is not repeated.
+   */
+  carried?: (entry: AuthorityEntry, condition: TerminalWhenCondition) => boolean,
 ): void {
   for (const entry of entries) {
     const conditions = entry.constraints?.terminal_when;
@@ -335,6 +358,7 @@ export function assertDischargeAuthoritiesResolvable(
           `malformed discharge_authority value: ${JSON.stringify(condition.discharge_authority)}`,
         );
       }
+      if (carried?.(entry, condition)) continue;
       if (resolveConditionMapping(policy, condition) === undefined) {
         // The refusal is the point: an unchecked mapping choice for a newly
         // added condition could force a premature discharge, which is a

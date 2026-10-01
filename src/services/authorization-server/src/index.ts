@@ -63,6 +63,7 @@ export {
   GateError,
   LifecycleConflictError,
   ObservationWatermarkError,
+  type DischargeReceiptObservation,
   type ObservationWatermark,
   type StatusObservation,
   type StatusObservationOptions,
@@ -120,6 +121,7 @@ export {
   MISSION_DISCHARGE_SCOPE,
   MISSION_LIFECYCLE_SCOPE,
   MISSION_STATUS_RESPONSE_MEDIA_TYPE,
+  MISSION_STATUS_SCOPE,
   type ServiceTokenPrincipal,
 } from "./adapters/provider.js";
 export {
@@ -153,6 +155,8 @@ export {
   conditionDigest,
   conditionsNoBroader,
   DISCHARGE_EVENT_ID_RE,
+  DISCHARGE_RECEIPT_MEDIA_TYPE,
+  DISCHARGE_RECEIPT_TYP,
   DISCHARGE_AUTHORITY_RE,
   type DischargeAssertion,
   type DischargeAuthorityMapping,
@@ -333,6 +337,8 @@ export {
   type CarryoverCommittedResult,
   type CarryoverConfig,
   type CarryoverEntry,
+  type CarryoverEntryPair,
+  carryoverEntryPairs,
   type CarryoverEvidence,
   type CarryoverExclusionPolicy,
   type CarryoverExternalState,
