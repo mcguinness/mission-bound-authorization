@@ -342,8 +342,10 @@ the store.
   effective set (`rarThroughEffectiveSet`, L212), and `at.save()` (L216) runs
   `extraTokenClaims`. That gate is `gateDerivation` for a Mission approval
   grant, and `gateActive` for a family grant or an index hit whose
-  `grant_id` has moved. A `GateError` becomes `invalid_grant`, with
-  `mission_error` added by the `grant.error` listener (`MissionGrantError`).
+  `grant_id` has moved. A `GateError` becomes `invalid_grant`
+  (`MissionGrantError`). Where a value applies (`mission_revoked`,
+  `mission_expired`, `derivations_exhausted`), the `grant.error` listener adds
+  `mission_error`; a suspended Mission gets none.
 - **Rotation rule.** `rotateRefreshToken` always rotates a family grant.
   Otherwise it inlines oidc-provider's default (`lib/helpers/defaults.js`
   L528-547): rotate a public client's token that is not sender-constrained,
@@ -353,9 +355,8 @@ the store.
   expiry first, in its own transaction. One `withTransaction(kernel.db, ...)`
   then commits `kernel.transition` (state, version, event row and, for a
   terminal state, the tombstone) with the nonce-keyed outcome. After that
-  commit, outside it, the
-  handler awaits `provider.Grant.find(record.grant_id)` and `destroy()` for a
-  state other than `active` or `suspended`. Family grants are revoked by the
+  commit, outside it, the handler awaits `provider.Grant.find(record.grant_id)`
+  and `destroy()` for a state other than `active` or `suspended`. Family grants are revoked by the
   durable subscriber `delegation-family-grant-revoke` (`index.ts`).
 - **Boundary.** The lifecycle commit is one kernel transaction. The
   approval-grant destruction is a separate provider write with no retry row.
@@ -437,8 +438,9 @@ the store.
 - **Unsupported or residual.**
   - At the code exchange the projection runs after the code is consumed
     (`authorization_code.js` L89, then L127). A refusal there spends the
-    code. The single-use deferred, child, dispatch and expansion mints share
-    this (`issuance-only-deployment.md` §5).
+    code. `issuance-only-deployment.md` §5 states the same for the
+    single-use deferred, child, dispatch and expansion mints; not re-verified
+    here.
   - No test asserts `derivation_count` after a projection refusal on the code
     or refresh path. The Token Exchange tests above assert it on their path.
   - The JWT-customizer backstop has no test.
@@ -704,8 +706,8 @@ These are honest workarounds and ordering facts, not protocol requirements.
 - **Inside `AccessToken#save()`.** `models/formats/opaque.js` L39 calls
   `extraTokenClaims`. `models/formats/jwt.js` L140-143 calls the JWT
   customizer, and signing follows (L151-155). `models/base_model.js` L62-69
-  emits `issued` for
-  a format that stores no payload, which is the JWT access token.
+  emits `issued` for a format that stores no payload, which is the JWT access
+  token.
 - **Grant ordering.** Code exchange: consume (L89), `at.save()` (L127),
   refresh token (L129), ID token (L133). Refresh: `rotateRefreshToken`
   (L133-135), consume (L137), rotated save (L168), `rar` hook (L212),
