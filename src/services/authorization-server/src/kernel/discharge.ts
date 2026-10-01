@@ -34,10 +34,10 @@ import type { AuthorityEntry, TerminalWhenCondition } from "./types.js";
 export const DISCHARGE_EVENT_ID_RE = /^[A-Za-z0-9\-_:.]{1,128}$/;
 
 /**
- * @spec discharge#terminal-when — `discharge_policy`:
+ * @spec discharge#terminal-when — `discharge_authority`:
  * `1*64( ALPHA / DIGIT / "-" / "_" / ":" / "." )`, opaque.
  */
-export const DISCHARGE_POLICY_RE = /^[A-Za-z0-9\-_:.]{1,64}$/;
+export const DISCHARGE_AUTHORITY_RE = /^[A-Za-z0-9\-_:.]{1,64}$/;
 
 /** @spec discharge#discharge-operation — `evidence_ref` is a URI, max 512 chars. */
 export const EVIDENCE_REF_MAX_CHARS = 512;
@@ -77,7 +77,7 @@ export function conditionDigest(condition: TerminalWhenCondition): string {
   if (bytes === undefined) {
     throw new IntentError(
       "invalid_authorization_details",
-      "terminal_when condition is not a { event_type, discharge_policy? } object",
+      "terminal_when condition is not a { event_type, discharge_authority? } object",
     );
   }
   return `${DIGEST_PREFIX}${createHash("sha256").update(bytes, "utf8").digest("base64url")}`;
@@ -207,7 +207,7 @@ export class DischargeConflictError extends Error {}
  * @spec discharge#discharge-authority — one AS-side discharge-authority mapping:
  * WHICH authenticated principal may assert WHICH event types. Never a raw
  * principal structure a requesting client can select: a condition names a
- * mapping by opaque selector, and the AS resolves it.
+ * mapping by its opaque `discharge_authority` name, and the AS resolves it.
  */
 export interface DischargeAuthorityMapping {
   mapping_id: string;
@@ -223,12 +223,12 @@ export interface DischargeAuthorityMapping {
 
 /**
  * @spec discharge#discharge-authority — the issuer-held discharge-authority
- * policy: `policies` resolves a condition's `discharge_policy` selector,
+ * policy: `policies` resolves a condition's `discharge_authority` value,
  * `baseline` is the mapping keyed by `event_type` for a condition carrying no
- * selector. FAIL CLOSED by construction: an absent policy resolves nothing, so
- * every discharge joins the `not_found` collapse until a deployment configures
- * one, and a selector that maps to nothing refuses the derivation that would
- * introduce the condition.
+ * `discharge_authority`. FAIL CLOSED by construction: an absent policy resolves
+ * nothing, so every discharge joins the `not_found` collapse until a deployment
+ * configures one, and a value that maps to nothing refuses the derivation that
+ * would introduce the condition.
  */
 export interface DischargeAuthorityPolicy {
   policies?: Readonly<Record<string, DischargeAuthorityMapping>>;
@@ -237,14 +237,14 @@ export interface DischargeAuthorityPolicy {
 
 /**
  * @spec discharge#discharge-authority — resolve the mapping for one condition:
- * the `discharge_policy` selector when the condition carries one, else the
+ * the `discharge_authority` value when the condition carries one, else the
  * baseline mapping keyed by `event_type`. `undefined` means "maps to nothing".
  */
 export function resolveConditionMapping(
   policy: DischargeAuthorityPolicy | undefined,
   condition: TerminalWhenCondition,
 ): DischargeAuthorityMapping | undefined {
-  if (condition.discharge_policy !== undefined) return policy?.policies?.[condition.discharge_policy];
+  if (condition.discharge_authority !== undefined) return policy?.policies?.[condition.discharge_authority];
   return policy?.baseline?.[condition.event_type];
 }
 
@@ -266,7 +266,7 @@ export function mappingPermits(
 
 /**
  * @spec discharge#discharge-authority — resolve and validate every
- * `discharge_policy` selector carried by these entries, refusing when one maps
+ * `discharge_authority` value carried by these entries, refusing when one maps
  * to nothing. Called at every point where a condition FIRST enters an immutable
  * Mission-record entry: the derivation (`MissionKernel.derive`, so Mission
  * creation, expansion, and template dispatch refuse early and typed) and
@@ -279,7 +279,7 @@ export function mappingPermits(
  * (@spec discharge#terminal-when): a value carrying two identical conditions is
  * refused, since identity is byte equality of the canonical form.
  */
-export function assertDischargePoliciesResolvable(
+export function assertDischargeAuthoritiesResolvable(
   entries: readonly AuthorityEntry[],
   policy: DischargeAuthorityPolicy | undefined,
 ): void {
@@ -298,7 +298,7 @@ export function assertDischargePoliciesResolvable(
       if (bytes === undefined) {
         throw new IntentError(
           "invalid_authorization_details",
-          "terminal_when condition is not a { event_type, discharge_policy? } object",
+          "terminal_when condition is not a { event_type, discharge_authority? } object",
         );
       }
       if (seen.has(bytes)) {
@@ -309,12 +309,12 @@ export function assertDischargePoliciesResolvable(
       }
       seen.add(bytes);
       if (
-        condition.discharge_policy !== undefined &&
-        !DISCHARGE_POLICY_RE.test(condition.discharge_policy)
+        condition.discharge_authority !== undefined &&
+        !DISCHARGE_AUTHORITY_RE.test(condition.discharge_authority)
       ) {
         throw new IntentError(
           "invalid_authorization_details",
-          `malformed discharge_policy selector: ${JSON.stringify(condition.discharge_policy)}`,
+          `malformed discharge_authority value: ${JSON.stringify(condition.discharge_authority)}`,
         );
       }
       if (resolveConditionMapping(policy, condition) === undefined) {
@@ -323,8 +323,8 @@ export function assertDischargePoliciesResolvable(
         // denial of service on the task (@spec discharge#completion-security).
         throw new IntentError(
           "invalid_authorization_details",
-          condition.discharge_policy !== undefined
-            ? `discharge_policy '${condition.discharge_policy}' maps to no discharge-authority mapping`
+          condition.discharge_authority !== undefined
+            ? `discharge_authority '${condition.discharge_authority}' maps to no discharge-authority mapping`
             : `no baseline discharge-authority mapping for event_type '${condition.event_type}'`,
         );
       }
@@ -355,7 +355,7 @@ export function unionConditions(
       if (bytes === undefined) {
         throw new IntentError(
           "invalid_authorization_details",
-          "terminal_when condition is not a { event_type, discharge_policy? } object",
+          "terminal_when condition is not a { event_type, discharge_authority? } object",
         );
       }
       if (seen.has(bytes)) {
@@ -375,8 +375,8 @@ export function unionConditions(
 function cloneCondition(condition: TerminalWhenCondition): TerminalWhenCondition {
   return {
     event_type: condition.event_type,
-    ...(condition.discharge_policy !== undefined
-      ? { discharge_policy: condition.discharge_policy }
+    ...(condition.discharge_authority !== undefined
+      ? { discharge_authority: condition.discharge_authority }
       : {}),
   };
 }

@@ -149,11 +149,11 @@ export {
   SourceUnavailableError,
 } from "./kernel/derive.js";
 export {
-  assertDischargePoliciesResolvable,
+  assertDischargeAuthoritiesResolvable,
   conditionDigest,
   conditionsNoBroader,
   DISCHARGE_EVENT_ID_RE,
-  DISCHARGE_POLICY_RE,
+  DISCHARGE_AUTHORITY_RE,
   type DischargeAssertion,
   type DischargeAuthorityMapping,
   type DischargeAuthorityPolicy,
@@ -706,7 +706,7 @@ export async function buildAuthorizationServer(opts: {
   /**
    * @spec discharge#discharge-authority — the issuer-held discharge-authority
    * policy handed to the kernel: which principals may assert which
-   * `event_type`, resolved through a condition's `discharge_policy` selector or
+   * `event_type`, resolved through a condition's `discharge_authority` value or
    * the baseline mapping. Absent (the default) FAILS CLOSED: no condition can
    * enter a record and no discharge is ever authorized.
    */

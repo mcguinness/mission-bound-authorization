@@ -6959,7 +6959,7 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/discharge.test.ts",
-     "name": "terminal_when: derivation, subset rule, and selector resolution > fails closed when a discharge_policy selector maps to nothing, at approval and at child creation",
+     "name": "terminal_when: derivation, subset rule, and selector resolution > fails closed when a discharge_authority value maps to nothing, at approval and at child creation",
      "level": "unit",
      "surface": "derivation"
     }

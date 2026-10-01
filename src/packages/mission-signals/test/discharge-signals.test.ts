@@ -86,7 +86,9 @@ const proposal = (): AuthorityEntry[] => [
     type: "mission_resource_access",
     resource: RESOURCE,
     actions: ["payments:payment.execute"],
-    constraints: { terminal_when: [{ event_type: CLOSE_EVENT, discharge_policy: CLOSE_POLICY }] },
+    constraints: {
+      terminal_when: [{ event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY }],
+    },
   },
 ];
 

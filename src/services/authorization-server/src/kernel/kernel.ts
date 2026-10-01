@@ -53,7 +53,7 @@ import {
   resolveEffectiveExpiry,
 } from "./derive.js";
 import {
-  assertDischargePoliciesResolvable,
+  assertDischargeAuthoritiesResolvable,
   conditionDigest,
   type DischargeAuthorityPolicy,
   dischargeAssertionFingerprint,
@@ -332,7 +332,7 @@ export interface KernelOptions {
   containmentPolicy?: ContainmentPolicy;
   /**
    * @spec discharge#discharge-authority — the ISSUER-HELD discharge-authority
-   * policy (the map from a `discharge_policy` selector, or a bare `event_type`,
+   * policy (the map from a `discharge_authority` value, or a bare `event_type`,
    * to the principals that may assert it). OPTIONAL and FAIL CLOSED: absent, no
    * condition's selector resolves, so a `terminal_when` condition cannot enter a
    * record at all and every `discharge` delivery joins the `not_found` collapse.
@@ -589,12 +589,12 @@ export class MissionKernel {
 
   derive(intent: MissionIntent, proposal?: readonly AuthorityEntry[]): AuthorityEntry[] {
     const derived = deriveAuthoritySet(intent, this.opts.policy, proposal);
-    // @spec discharge#discharge-authority — resolve every `discharge_policy`
+    // @spec discharge#discharge-authority — resolve every `discharge_authority`
     // selector the derived entries carry, refusing the derivation when one maps
     // to nothing. Early and typed here (an IntentError the submission carriers
     // already map); `insertRecord` re-checks as the single record funnel, which
     // also covers child creation (a requested subset, never a fresh derivation).
-    assertDischargePoliciesResolvable(derived, this.opts.dischargeAuthority);
+    assertDischargeAuthoritiesResolvable(derived, this.opts.dischargeAuthority);
     return derived;
   }
 
@@ -893,7 +893,7 @@ export class MissionKernel {
     // AS resolves and validates every selector here, whatever built the set
     // (derivation, a child's requested subset, a template's double
     // intersection), and refuses the creation when one maps to nothing.
-    assertDischargePoliciesResolvable(record.authority_set, this.opts.dischargeAuthority);
+    assertDischargeAuthoritiesResolvable(record.authority_set, this.opts.dischargeAuthority);
     // @spec mission#approval-event (step 3), mission#authority-sources — the
     // single record-creation funnel re-asserts the source relationship for
     // EVERY creating body (direct approval, Expansion, template dispatch,
@@ -1013,7 +1013,7 @@ export class MissionKernel {
         const eDigest = entryDigest(record.issuer, entry);
         for (const condition of conditions) {
           const mapping = resolveConditionMapping(this.opts.dischargeAuthority, condition);
-          // Unreachable: assertDischargePoliciesResolvable above refused any
+          // Unreachable: assertDischargeAuthoritiesResolvable above refused any
           // condition that maps to nothing. Guarded anyway so a future
           // reordering fails the creation, never creates an unpinned record.
           if (!mapping) {

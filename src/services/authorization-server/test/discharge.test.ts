@@ -11,7 +11,7 @@
  *
  *  - `terminal_when` derivation (union, dedup, reproducible order), the subset
  *    rule (a child cannot drop a parent condition), and the fail-closed
- *    `discharge_policy` selector resolution at every point a condition can
+ *    `discharge_authority` value resolution at every point a condition can
  *    first enter an immutable record entry;
  *  - the monotonic equivalence-class latch: duplicate entries discharge as ONE
  *    transition with ONE version increment; `already_discharged` for a sibling
@@ -109,7 +109,7 @@ const proposal = (): AuthorityEntry[] => [
     type: "mission_resource_access",
     resource: RES,
     actions: ["payments:journal.write"],
-    constraints: { terminal_when: [{ event_type: CLOSE_EVENT, discharge_policy: CLOSE_POLICY }] },
+    constraints: { terminal_when: [{ event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY }] },
   },
 ];
 
@@ -196,7 +196,7 @@ describe("terminal_when: derivation, subset rule, and selector resolution", () =
         actions: ["payments:journal.write"],
         constraints: {
           terminal_when: [
-            { event_type: CLOSE_EVENT, discharge_policy: CLOSE_POLICY },
+            { event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY },
             { event_type: AUDIT_EVENT },
           ],
         },
@@ -206,7 +206,7 @@ describe("terminal_when: derivation, subset rule, and selector resolution", () =
     // Union: the ceiling's condition survives a proposal that also names it,
     // deduplicated by canonical bytes; the proposal's extra condition is added.
     expect(conditions).toEqual([
-      { event_type: CLOSE_EVENT, discharge_policy: CLOSE_POLICY },
+      { event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY },
       { event_type: AUDIT_EVENT },
     ]);
     // Sorted by canonical bytes, so a re-derivation reproduces the same array.
@@ -215,11 +215,11 @@ describe("terminal_when: derivation, subset rule, and selector resolution", () =
         type: "mission_resource_access",
         resource: RES,
         actions: ["payments:journal.write"],
-        constraints: { terminal_when: [{ event_type: AUDIT_EVENT }, { event_type: CLOSE_EVENT, discharge_policy: CLOSE_POLICY }] },
+        constraints: { terminal_when: [{ event_type: AUDIT_EVENT }, { event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY }] },
       },
     ])[0]?.constraints?.terminal_when).toEqual(conditions);
     expect(kernel.derive(intent(), proposal())[1]?.constraints?.terminal_when).toEqual([
-      { event_type: CLOSE_EVENT, discharge_policy: CLOSE_POLICY },
+      { event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY },
     ]);
   });
 
@@ -233,8 +233,8 @@ describe("terminal_when: derivation, subset rule, and selector resolution", () =
           actions: ["payments:journal.write"],
           constraints: {
             terminal_when: [
-              { event_type: CLOSE_EVENT, discharge_policy: CLOSE_POLICY },
-              { event_type: CLOSE_EVENT, discharge_policy: CLOSE_POLICY },
+              { event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY },
+              { event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY },
             ],
           },
         },
@@ -257,17 +257,17 @@ describe("terminal_when: derivation, subset rule, and selector resolution", () =
       ...dropped,
       constraints: {
         terminal_when: [
-          { event_type: CLOSE_EVENT, discharge_policy: CLOSE_POLICY },
+          { event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY },
           { event_type: AUDIT_EVENT },
         ],
       },
     };
     expect(isSubsetEntry(dropped, parentEntry)).toBe(false);
-    expect(isSubsetEntry(altered, parentEntry)).toBe(false); // discharge_policy removed
+    expect(isSubsetEntry(altered, parentEntry)).toBe(false); // discharge_authority removed
     expect(isSubsetEntry(added, parentEntry)).toBe(true);
   });
 
-  it("fails closed when a discharge_policy selector maps to nothing, at approval and at child creation", () => {
+  it("fails closed when a discharge_authority value maps to nothing, at approval and at child creation", () => {
     // No policy configured at all: the condition cannot enter a record.
     const { kernel: unconfigured } = newKernel({});
     expect(() => approve(unconfigured)).toThrow(/maps to no discharge-authority mapping/);
@@ -298,8 +298,8 @@ describe("terminal_when: derivation, subset rule, and selector resolution", () =
             actions: ["payments:journal.write"],
             constraints: {
               terminal_when: [
-                { event_type: CLOSE_EVENT, discharge_policy: CLOSE_POLICY },
-                { event_type: "unapproved-fallback", discharge_policy: "not-registered" },
+                { event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY },
+                { event_type: "unapproved-fallback", discharge_authority: "not-registered" },
               ],
             },
           },
@@ -354,7 +354,7 @@ describe("the discharge latch: outcomes, versions, and visibility", () => {
         actions: ["payments:journal.write"],
         constraints: {
           terminal_when: [
-            { event_type: CLOSE_EVENT, discharge_policy: CLOSE_POLICY },
+            { event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY },
             { event_type: AUDIT_EVENT },
           ],
         },
@@ -466,7 +466,7 @@ describe("the discharge latch: outcomes, versions, and visibility", () => {
           type: "mission_resource_access",
           resource: RES,
           actions: ["payments:journal.write"],
-          constraints: { terminal_when: [{ event_type: CLOSE_EVENT, discharge_policy: CLOSE_POLICY }] },
+          constraints: { terminal_when: [{ event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY }] },
         },
       ],
       childActor: { sub: "sub-agent", sub_profile: "ai_agent" },
@@ -499,7 +499,7 @@ describe("the discharge latch: outcomes, versions, and visibility", () => {
             type: "mission_resource_access",
             resource: RES,
             actions: ["payments:journal.write"],
-            constraints: { terminal_when: [{ event_type: CLOSE_EVENT, discharge_policy: CLOSE_POLICY }] },
+            constraints: { terminal_when: [{ event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY }] },
           },
         ],
         childActor: { sub: "sub-agent", sub_profile: "ai_agent" },
@@ -611,7 +611,7 @@ const endpointProposal = (): AuthorityEntry[] => [
     type: "mission_resource_access",
     resource: CANONICAL_RESOURCE,
     actions: ["payments:remittance.send"],
-    constraints: { terminal_when: [{ event_type: CLOSE_EVENT, discharge_policy: CLOSE_POLICY }] },
+    constraints: { terminal_when: [{ event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY }] },
   },
 ];
 
