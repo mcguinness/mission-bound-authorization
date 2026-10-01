@@ -1,8 +1,8 @@
 /**
  * @spec draft-mcguinness-oauth-mission-status (#completion, #terminal-when,
- * #discharge, #discharge-operation, #discharge-authority,
- * #discharge-anti-oracle, #discharge-idempotency, #discharge-result,
- * #visibility, #idempotency)
+ * #discharge, #discharge-commit, #condition-selectors, #discharge-operation,
+ * #discharge-authority, #discharge-anti-oracle, #discharge-idempotency,
+ * #discharge-result, #visibility, #idempotency)
  *
  * Entry DISCHARGE: the fifth lifecycle-endpoint operation (issue #287
  * residual). It changes no Mission state; it latches one entry's
@@ -11,7 +11,7 @@
  *
  *  - `terminal_when` derivation (union, dedup, reproducible order), the subset
  *    rule (a child cannot drop a parent condition), and the fail-closed
- *    `discharge_policy` selector resolution at every point a condition can
+ *    `discharge_authority` value resolution at every point a condition can
  *    first enter an immutable record entry;
  *  - the monotonic equivalence-class latch: duplicate entries discharge as ONE
  *    transition with ONE version increment; `already_discharged` for a sibling
@@ -34,6 +34,7 @@
 
 import { type Server } from "node:http";
 import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN } from "@mission/demo-data";
+import { openStore } from "@mission/store";
 import { decodeJwt } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
@@ -47,6 +48,7 @@ import {
   type DischargeAuthorityPolicy,
   DischargeConflictError,
   DischargeNotFoundError,
+  DischargeSelectorStore,
   entryDigest,
   GateError,
   isSubsetEntry,
@@ -109,7 +111,7 @@ const proposal = (): AuthorityEntry[] => [
     type: "mission_resource_access",
     resource: RES,
     actions: ["payments:journal.write"],
-    constraints: { terminal_when: [{ event_type: CLOSE_EVENT, discharge_policy: CLOSE_POLICY }] },
+    constraints: { terminal_when: [{ event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY }] },
   },
 ];
 
@@ -157,6 +159,10 @@ function approve(kernel: MissionKernel, entries: AuthorityEntry[] = proposal()):
   });
 }
 
+/** The issuer's own view of a record: each approved entry, its own origin. */
+const recordView = (record: MissionRecord) =>
+  record.authority_set.map((entry) => ({ entry, origins: [entry] }));
+
 /** The write entry (the one carrying terminal_when) and its selectors. */
 function selectorsFor(record: MissionRecord, action = "payments:journal.write") {
   const entry = record.authority_set.find((e) => e.actions.includes(action));
@@ -196,7 +202,7 @@ describe("terminal_when: derivation, subset rule, and selector resolution", () =
         actions: ["payments:journal.write"],
         constraints: {
           terminal_when: [
-            { event_type: CLOSE_EVENT, discharge_policy: CLOSE_POLICY },
+            { event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY },
             { event_type: AUDIT_EVENT },
           ],
         },
@@ -206,7 +212,7 @@ describe("terminal_when: derivation, subset rule, and selector resolution", () =
     // Union: the ceiling's condition survives a proposal that also names it,
     // deduplicated by canonical bytes; the proposal's extra condition is added.
     expect(conditions).toEqual([
-      { event_type: CLOSE_EVENT, discharge_policy: CLOSE_POLICY },
+      { event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY },
       { event_type: AUDIT_EVENT },
     ]);
     // Sorted by canonical bytes, so a re-derivation reproduces the same array.
@@ -215,11 +221,11 @@ describe("terminal_when: derivation, subset rule, and selector resolution", () =
         type: "mission_resource_access",
         resource: RES,
         actions: ["payments:journal.write"],
-        constraints: { terminal_when: [{ event_type: AUDIT_EVENT }, { event_type: CLOSE_EVENT, discharge_policy: CLOSE_POLICY }] },
+        constraints: { terminal_when: [{ event_type: AUDIT_EVENT }, { event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY }] },
       },
     ])[0]?.constraints?.terminal_when).toEqual(conditions);
     expect(kernel.derive(intent(), proposal())[1]?.constraints?.terminal_when).toEqual([
-      { event_type: CLOSE_EVENT, discharge_policy: CLOSE_POLICY },
+      { event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY },
     ]);
   });
 
@@ -233,8 +239,8 @@ describe("terminal_when: derivation, subset rule, and selector resolution", () =
           actions: ["payments:journal.write"],
           constraints: {
             terminal_when: [
-              { event_type: CLOSE_EVENT, discharge_policy: CLOSE_POLICY },
-              { event_type: CLOSE_EVENT, discharge_policy: CLOSE_POLICY },
+              { event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY },
+              { event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY },
             ],
           },
         },
@@ -257,17 +263,17 @@ describe("terminal_when: derivation, subset rule, and selector resolution", () =
       ...dropped,
       constraints: {
         terminal_when: [
-          { event_type: CLOSE_EVENT, discharge_policy: CLOSE_POLICY },
+          { event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY },
           { event_type: AUDIT_EVENT },
         ],
       },
     };
     expect(isSubsetEntry(dropped, parentEntry)).toBe(false);
-    expect(isSubsetEntry(altered, parentEntry)).toBe(false); // discharge_policy removed
+    expect(isSubsetEntry(altered, parentEntry)).toBe(false); // discharge_authority removed
     expect(isSubsetEntry(added, parentEntry)).toBe(true);
   });
 
-  it("fails closed when a discharge_policy selector maps to nothing, at approval and at child creation", () => {
+  it("fails closed when a discharge_authority value maps to nothing, at approval and at child creation", () => {
     // No policy configured at all: the condition cannot enter a record.
     const { kernel: unconfigured } = newKernel({});
     expect(() => approve(unconfigured)).toThrow(/maps to no discharge-authority mapping/);
@@ -298,8 +304,8 @@ describe("terminal_when: derivation, subset rule, and selector resolution", () =
             actions: ["payments:journal.write"],
             constraints: {
               terminal_when: [
-                { event_type: CLOSE_EVENT, discharge_policy: CLOSE_POLICY },
-                { event_type: "unapproved-fallback", discharge_policy: "not-registered" },
+                { event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY },
+                { event_type: "unapproved-fallback", discharge_authority: "not-registered" },
               ],
             },
           },
@@ -354,7 +360,7 @@ describe("the discharge latch: outcomes, versions, and visibility", () => {
         actions: ["payments:journal.write"],
         constraints: {
           terminal_when: [
-            { event_type: CLOSE_EVENT, discharge_policy: CLOSE_POLICY },
+            { event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY },
             { event_type: AUDIT_EVENT },
           ],
         },
@@ -466,7 +472,7 @@ describe("the discharge latch: outcomes, versions, and visibility", () => {
           type: "mission_resource_access",
           resource: RES,
           actions: ["payments:journal.write"],
-          constraints: { terminal_when: [{ event_type: CLOSE_EVENT, discharge_policy: CLOSE_POLICY }] },
+          constraints: { terminal_when: [{ event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY }] },
         },
       ],
       childActor: { sub: "sub-agent", sub_profile: "ai_agent" },
@@ -499,12 +505,232 @@ describe("the discharge latch: outcomes, versions, and visibility", () => {
             type: "mission_resource_access",
             resource: RES,
             actions: ["payments:journal.write"],
-            constraints: { terminal_when: [{ event_type: CLOSE_EVENT, discharge_policy: CLOSE_POLICY }] },
+            constraints: { terminal_when: [{ event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY }] },
           },
         ],
         childActor: { sub: "sub-agent", sub_profile: "ai_agent" },
       }),
     ).toThrow(ChildDelegationError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Propagation by recorded justification, downward only (#898 fix 2).
+// ---------------------------------------------------------------------------
+
+/** A ceiling admitting two child generations, so recursion is observable. */
+const DEEP_CEILING: AuthorityEntry[] = [
+  {
+    type: "mission_resource_access",
+    resource: RES,
+    actions: ["payments:invoice.read", "payments:journal.write"],
+    delegation: {
+      max_depth: 1,
+      children: {
+        max_children: 5,
+        max_child_depth: 2,
+        allowed_child_actors: [{ sub: "sub-agent" }, { sub: "sub-agent-2" }],
+      },
+    },
+  },
+];
+
+function deepKernel(): MissionKernel {
+  const policy = { policy_version: "discharge-deep-v1", ceiling: DEEP_CEILING };
+  return new MissionKernel({
+    issuer: ISS,
+    policy: policy as never,
+    authoritySourceCatalog: testAuthoritySourceCatalog(policy.ceiling, ["ap-agent"], ["bob"]),
+    statusKey: {} as never,
+    statusKid: "as-status",
+    now: () => NOW,
+    actorProfiles: aiAgents("sub-agent", "sub-agent-2"),
+    dischargeAuthority: DISCHARGE_AUTHORITY,
+  });
+}
+
+const CLOSE_CONDITION = { event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY };
+
+/** One entry on RES for `actions`, completing on the close condition. */
+const closing = (actions: string[]): AuthorityEntry => ({
+  type: "mission_resource_access",
+  resource: RES,
+  actions,
+  constraints: { terminal_when: [{ ...CLOSE_CONDITION }] },
+});
+
+/** Discharge the record entry carrying `action` on `record`, as the close authority. */
+function dischargeEntry(kernel: MissionKernel, record: MissionRecord, action: string, eventId: string) {
+  const s = selectorsFor(record, action);
+  return kernel.discharge(record.id, {
+    authority: "svc:close-management",
+    entry_digest: s.entry_digest,
+    condition_digest: s.condition_digest,
+    event_type: s.event_type,
+    event_id: eventId,
+  });
+}
+
+describe("discharge propagation by recorded justification, downward only (#898 fix 2)", () => {
+  it("reaches a child entry only through its recorded justification, never a parent entry with an identical condition", () => {
+    const kernel = deepKernel();
+    // E1 and E2 carry byte-identical conditions on the SAME resource.
+    const parent = approve(kernel, [closing(["payments:invoice.read"]), closing(["payments:journal.write"])]);
+    const [e1, e2] = parent.authority_set as [AuthorityEntry, AuthorityEntry];
+    expect(conditionDigest(e1.constraints?.terminal_when?.[0] as never)).toBe(
+      conditionDigest(e2.constraints?.terminal_when?.[0] as never),
+    );
+    // The child entry is a subset of E2 only, so E2 is its recorded justification.
+    const child = createChildMission(kernel, {
+      parentId: parent.id,
+      intent: intent("Post journal entries"),
+      proposedAuthority: [closing(["payments:journal.write"])],
+      childActor: { sub: "sub-agent", sub_profile: "ai_agent" },
+    }).child;
+    const childEntry = child.authority_set[0] as AuthorityEntry;
+    expect(isSubsetEntry(childEntry, e1)).toBe(false);
+    expect(isSubsetEntry(childEntry, e2)).toBe(true);
+    // A grandchild justified by the child's entry: recursion follows justification.
+    const grandchild = createChildMission(kernel, {
+      parentId: child.id,
+      intent: intent("Post one journal entry"),
+      proposedAuthority: [closing(["payments:journal.write"])],
+      childActor: { sub: "sub-agent-2", sub_profile: "ai_agent" },
+    }).child;
+
+    // Discharging E1 fires the identical condition on the same resource, but
+    // E1 justifies nothing in the child: neither descendant is reached.
+    expect(dischargeEntry(kernel, parent, "payments:invoice.read", "close-e1").result.outcome).toBe(
+      "discharged",
+    );
+    expect((kernel.get(child.id) as MissionRecord).discharged).toBeUndefined();
+    expect((kernel.get(grandchild.id) as MissionRecord).discharged).toBeUndefined();
+    expect(kernel.effectiveAuthoritySet(kernel.get(child.id) as MissionRecord)).toHaveLength(1);
+    expect(kernel.gateDerivation(child.id).id).toBe(child.id);
+    expect(kernel.gateDerivation(grandchild.id).id).toBe(grandchild.id);
+
+    // Discharging E2, the recorded justification, reaches the child entry and,
+    // recursively, the grandchild entry the discharge has already reached.
+    dischargeEntry(kernel, parent, "payments:journal.write", "close-e2");
+    const childAfter = kernel.get(child.id) as MissionRecord;
+    expect(childAfter.discharged?.map((d) => d.entry_digest)).toEqual([entryDigest(ISS, childEntry)]);
+    expect(kernel.effectiveAuthoritySet(childAfter)).toEqual([]);
+    const grandAfter = kernel.get(grandchild.id) as MissionRecord;
+    expect(grandAfter.discharged).toHaveLength(1);
+    expect(kernel.effectiveAuthoritySet(grandAfter)).toEqual([]);
+    // Observed at the derivation gate the token endpoint calls.
+    expect(() => kernel.gateDerivation(child.id)).toThrow(GateError);
+    expect(() => kernel.gateDerivation(grandchild.id)).toThrow(GateError);
+  });
+
+  it("never discharges a parent's or a sibling's entry because a child entry was discharged", () => {
+    const kernel = deepKernel();
+    const parent = approve(kernel, [closing(["payments:journal.write"])]);
+    const spawn = (goal: string) =>
+      createChildMission(kernel, {
+        parentId: parent.id,
+        intent: intent(goal),
+        proposedAuthority: [closing(["payments:journal.write"])],
+        childActor: { sub: "sub-agent", sub_profile: "ai_agent" },
+      }).child;
+    const first = spawn("Post the first ten journal entries");
+    const sibling = spawn("Post the next ten journal entries");
+    const parentVersion = (kernel.get(parent.id) as MissionRecord).version;
+    const siblingVersion = (kernel.get(sibling.id) as MissionRecord).version;
+
+    // The child completes ITS share of the work...
+    expect(dischargeEntry(kernel, first, "payments:journal.write", "child-done").result.outcome).toBe(
+      "discharged",
+    );
+    expect(kernel.effectiveAuthoritySet(kernel.get(first.id) as MissionRecord)).toEqual([]);
+    // ...which completes neither the parent's entry nor the sibling's.
+    const parentAfter = kernel.get(parent.id) as MissionRecord;
+    const siblingAfter = kernel.get(sibling.id) as MissionRecord;
+    expect(parentAfter.discharged).toBeUndefined();
+    expect(parentAfter.version).toBe(parentVersion);
+    expect(kernel.effectiveAuthoritySet(parentAfter)).toHaveLength(1);
+    expect(siblingAfter.discharged).toBeUndefined();
+    expect(siblingAfter.version).toBe(siblingVersion);
+    expect(kernel.effectiveAuthoritySet(siblingAfter)).toHaveLength(1);
+    // Both still derive at the gate the token endpoint calls; the child does not.
+    expect(kernel.gateDerivation(parent.id).id).toBe(parent.id);
+    expect(kernel.gateDerivation(sibling.id).id).toBe(sibling.id);
+    expect(() => kernel.gateDerivation(first.id)).toThrow(GateError);
+  });
+});
+
+describe("condition selector mapping for a projected entry (#898 fix 1)", () => {
+  /** A + B carry the same condition; A is [read, write], B is [read]. */
+  const siblings = (kernel: MissionKernel): MissionRecord =>
+    approve(kernel, [closing(["payments:invoice.read", "payments:journal.write"]), closing(["payments:invoice.read"])]);
+
+  it("maps a contained projection to the record entry it came from, never to a discharged sibling with the same bytes", () => {
+    const { kernel } = makeKernel();
+    const record = siblings(kernel);
+    const [a, b] = record.authority_set as [AuthorityEntry, AuthorityEntry];
+    // B completes; then A's write action is contained, so A's remaining
+    // projection has exactly B's original bytes.
+    kernel.discharge(record.id, {
+      authority: "svc:close-management",
+      entry_digest: entryDigest(ISS, b),
+      condition_digest: conditionDigest(CLOSE_CONDITION),
+      event_type: CLOSE_EVENT,
+      event_id: "close-b",
+    });
+    expect(kernel.dischargedEntryDigests(kernel.get(record.id) as MissionRecord)).toEqual([entryDigest(ISS, b)]);
+    kernel.contain(record.id, {
+      event: { type: "anomaly.detected", source: "svc:soc", observed_at: NOW.toISOString(), event_id: "contain-a-write" },
+      remove: [{ resource: RES, actions: ["payments:journal.write"] }],
+    });
+    const fresh = kernel.get(record.id) as MissionRecord;
+    // The token carried the whole approved set; its projection is A's live part.
+    const projected = kernel.projectCredentialWithOrigin(fresh, fresh.authority_set);
+    expect(projected).toHaveLength(1);
+    expect(entryDigest(ISS, (projected[0] as { entry: AuthorityEntry }).entry)).toBe(entryDigest(ISS, b));
+    const selectors = kernel.dischargeSelectorsFor(fresh, projected);
+    expect(selectors.map((s) => [s.entry, s.condition])).toEqual([[0, 0]]);
+    const selector = (selectors[0] as { selector: string }).selector;
+    // The selector names A, the entry the projection was derived from...
+    expect(kernel.dischargeSelectors.resolve(selector)).toEqual({
+      mission_id: record.id,
+      entry_digest: entryDigest(ISS, a),
+      condition_digest: conditionDigest(CLOSE_CONDITION),
+    });
+    // ...so submitting it discharges A, which is still live.
+    const { result } = kernel.discharge(record.id, {
+      authority: "svc:close-management",
+      condition_selector: selector,
+      event_type: CLOSE_EVENT,
+      event_id: "close-a",
+    });
+    expect(result.outcome).toBe("discharged");
+    expect(kernel.effectiveAuthoritySet(kernel.get(record.id) as MissionRecord)).toEqual([]);
+  });
+
+  it("gives a projected entry folded from two different record entries no selector", () => {
+    const { kernel } = makeKernel();
+    const record = siblings(kernel);
+    // A narrowed credential [read]: its intersection with A and with B is the
+    // same fragment, so its origin is ambiguous.
+    const projected = kernel.projectCredentialWithOrigin(record, [closing(["payments:invoice.read"])]);
+    expect(projected).toHaveLength(1);
+    expect((projected[0] as { origins: unknown[] }).origins).toHaveLength(2);
+    expect(kernel.dischargeSelectorsFor(record, projected)).toEqual([]);
+    // A credential carrying A's actions projects two distinct fragments, each
+    // from one entry: [read, write] from A and [read] from B.
+    const wide = kernel.projectCredentialWithOrigin(record, [
+      closing(["payments:invoice.read", "payments:journal.write"]),
+    ]);
+    const targets = kernel
+      .dischargeSelectorsFor(record, wide)
+      .map((s) => [s.entry, kernel.dischargeSelectors.resolve(s.selector)?.entry_digest]);
+    expect(targets).toEqual(
+      record.authority_set.map((e, i) => [i, entryDigest(ISS, e)]),
+    );
+    expect(wide.map((p) => p.entry.actions)).toEqual([
+      ["payments:invoice.read", "payments:journal.write"],
+      ["payments:invoice.read"],
+    ]);
   });
 });
 
@@ -583,6 +809,8 @@ const PORT = 14545;
 const ISSUER = `http://localhost:${PORT}`;
 /** A caller holding `mission_lifecycle` and NOTHING else. */
 const LIFECYCLE_ONLY_TOKEN = "dev-lifecycle-only-token";
+/** A caller holding `mission_discharge` that no condition's mapping admits. */
+const UNMAPPED_SOURCE_TOKEN = "dev-unmapped-source-token";
 const ENDPOINT_AUTHORITY: DischargeAuthorityPolicy = {
   policies: {
     [CLOSE_POLICY]: {
@@ -611,7 +839,7 @@ const endpointProposal = (): AuthorityEntry[] => [
     type: "mission_resource_access",
     resource: CANONICAL_RESOURCE,
     actions: ["payments:remittance.send"],
-    constraints: { terminal_when: [{ event_type: CLOSE_EVENT, discharge_policy: CLOSE_POLICY }] },
+    constraints: { terminal_when: [{ event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY }] },
   },
 ];
 
@@ -688,6 +916,11 @@ describe("the discharge operation on the lifecycle endpoint", () => {
         [LIFECYCLE_ONLY_TOKEN]: {
           principal_id: "svc:lifecycle-only",
           scopes: [MISSION_LIFECYCLE_SCOPE],
+        },
+        // Holds the discharge grant, but no condition's mapping admits it.
+        [UNMAPPED_SOURCE_TOKEN]: {
+          principal_id: "svc:unmapped-source",
+          scopes: [MISSION_DISCHARGE_SCOPE],
         },
       },
     });
@@ -1150,6 +1383,250 @@ describe("the discharge operation on the lifecycle endpoint", () => {
     });
     expect(divergent.status).toBe(409);
     expect(await divergent.json()).toMatchObject({ error: "conflict" });
+  });
+
+  // -------------------------------------------------------------------------
+  // Condition selectors (#898 fix 1), on the same endpoint.
+  // -------------------------------------------------------------------------
+
+  describe("condition selectors (#898 fix 1)", () => {
+    /** The issuer's selector for the completing entry of `record`. */
+    const selectorOf = (record: MissionRecord, action = "payments:remittance.send"): string => {
+      const s = selectorsFor(record, action);
+      return as.kernel.dischargeSelectors.selectorFor({
+        mission_id: record.id,
+        entry_digest: s.entry_digest,
+        condition_digest: s.condition_digest,
+      });
+    };
+
+    /** A selector-form discharge body for the completing entry of `record`. */
+    const selectorBody = (
+      record: MissionRecord,
+      over: Record<string, unknown> = {},
+    ): Record<string, unknown> => {
+      const { entry_digest: _e, condition_digest: _c, ...rest } = dischargeBody(record);
+      return { ...rest, condition_selector: selectorOf(record), ...over };
+    };
+
+    it("issues one selector per target, resolving to exactly that target, and discharges it", async () => {
+      // Two entries carrying byte-identical conditions, plus a byte-identical
+      // duplicate of the second: three record entries, two targets.
+      const completing = (actions: string[]): AuthorityEntry => ({
+        type: "mission_resource_access",
+        resource: CANONICAL_RESOURCE,
+        actions,
+        constraints: { terminal_when: [{ event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY }] },
+      });
+      const record = approveOnAs([
+        completing(["payments:invoice.read"]),
+        completing(["payments:remittance.send"]),
+        completing(["payments:remittance.send"]),
+      ]);
+      const issued = as.kernel.dischargeSelectorsFor(record, recordView(record));
+      expect(issued.map((s) => [s.entry, s.condition])).toEqual([
+        [0, 0],
+        [1, 0],
+        [2, 0],
+      ]);
+      const [read, send, duplicate] = issued.map((s) => s.selector);
+      // Identical condition content on DIFFERENT targets: different selectors.
+      expect(read).not.toBe(send);
+      // The byte-identical duplicate is the same target: the same selector.
+      expect(duplicate).toBe(send);
+      // Asking again never mints a second selector for a target.
+      expect(as.kernel.dischargeSelectorsFor(record, recordView(record)).map((s) => s.selector)).toEqual(
+        [read, send, duplicate],
+      );
+      // Each selector resolves to exactly its own target.
+      const sendSel = selectorsFor(record, "payments:remittance.send");
+      expect(as.kernel.dischargeSelectors.resolve(send as string)).toEqual({
+        mission_id: record.id,
+        entry_digest: sendSel.entry_digest,
+        condition_digest: sendSel.condition_digest,
+      });
+      expect(as.kernel.dischargeSelectors.resolve(read as string)?.entry_digest).toBe(
+        entryDigest(record.issuer, record.authority_set[0] as AuthorityEntry),
+      );
+      // Discharging by the send selector latches the send target (and its
+      // byte-identical duplicate, one equivalence class), never the read entry.
+      const res = await lifecycle(record.id, selectorBody(record, { condition_selector: send }));
+      expect(res.status).toBe(200);
+      expect(await dischargeResultOf(res)).toMatchObject({ outcome: "discharged", current_version: 2 });
+      const after = as.kernel.get(record.id) as MissionRecord;
+      expect(after.discharged?.map((d) => d.entry_digest)).toEqual([sendSel.entry_digest]);
+      expect(as.kernel.effectiveAuthoritySet(after).map((e) => e.actions)).toEqual([
+        ["payments:invoice.read"],
+      ]);
+    });
+
+    it("never derives a selector from the entry's content", () => {
+      // Two Missions with byte-identical entries share entry and condition
+      // digests; only the issuer-held random selector differs.
+      const one = approveOnAs();
+      const two = approveOnAs();
+      const s1 = selectorsFor(one, "payments:remittance.send");
+      const s2 = selectorsFor(two, "payments:remittance.send");
+      expect(s1.entry_digest).toBe(s2.entry_digest);
+      expect(s1.condition_digest).toBe(s2.condition_digest);
+      const sel1 = selectorOf(one);
+      const sel2 = selectorOf(two);
+      expect(sel1).not.toBe(sel2);
+      for (const sel of [sel1, sel2]) {
+        expect(sel).toMatch(/^dcs_[A-Za-z0-9_-]{24}$/);
+        // Nothing of either digest appears in it.
+        expect(sel).not.toContain(s1.entry_digest.slice("sha-256:".length, 16));
+        expect(sel).not.toContain(s1.condition_digest.slice("sha-256:".length, 16));
+      }
+      // A fresh issuer store minting for the SAME target yields a different
+      // value: the selector is not a function of the target at all.
+      const fresh = new DischargeSelectorStore(openStore(""));
+      expect(
+        fresh.selectorFor({ mission_id: one.id, entry_digest: s1.entry_digest, condition_digest: s1.condition_digest }),
+      ).not.toBe(sel1);
+    });
+
+    it("keeps a selector resolvable after its target discharged, through a fresh-nonce event replay", async () => {
+      const record = approveOnAs();
+      const selector = selectorOf(record);
+      // The target discharges by the DIGEST form.
+      const original = dischargeBody(record);
+      expect(await dischargeResultOf(await lifecycle(record.id, original))).toMatchObject({
+        outcome: "discharged",
+      });
+      // The selector still resolves to the same target...
+      expect(as.kernel.dischargeSelectors.resolve(selector)).toMatchObject({ mission_id: record.id });
+      // ...so an at-least-once sender retrying the same occurrence by selector,
+      // under a fresh nonce, recovers the stored result rather than not_found.
+      const { entry_digest: _e, condition_digest: _c, ...rest } = original;
+      const retry = await lifecycle(record.id, { ...rest, nonce: freshNonce(), condition_selector: selector });
+      expect(retry.status).toBe(200);
+      expect(await dischargeResultOf(retry)).toMatchObject({ outcome: "discharged", prior_version: 1, current_version: 2 });
+    });
+
+    it("refuses a request carrying both target forms, or neither, as invalid_request", async () => {
+      const record = approveOnAs();
+      const both = await lifecycle(record.id, { ...dischargeBody(record), condition_selector: selectorOf(record) });
+      expect(both.status).toBe(400);
+      expect(await both.json()).toMatchObject({ error: "invalid_request" });
+      const { entry_digest: _e, condition_digest: _c, ...neitherBody } = dischargeBody(record);
+      const neither = await lifecycle(record.id, neitherBody);
+      expect(neither.status).toBe(400);
+      expect(await neither.json()).toMatchObject({ error: "invalid_request" });
+      // A selector beside only HALF the digest pair still carries both forms.
+      const half = await lifecycle(record.id, {
+        ...neitherBody,
+        nonce: freshNonce(),
+        condition_selector: selectorOf(record),
+        entry_digest: selectorsFor(record, "payments:remittance.send").entry_digest,
+      });
+      expect(half.status).toBe(400);
+      // A malformed selector is a request-shape failure too.
+      const malformed = await lifecycle(record.id, selectorBody(record, { condition_selector: "bad selector!" }));
+      expect(malformed.status).toBe(400);
+      expect(as.kernel.get(record.id)?.discharged).toBeUndefined();
+    });
+
+    it("collapses an unresolvable selector, and one resolving outside the mission_id, into the identical not_found", async () => {
+      const record = approveOnAs();
+      const other = approveOnAs();
+      const responses: Array<Record<string, unknown>> = [];
+      // A well-formed selector that resolves to nothing.
+      const unknown = await lifecycle(record.id, selectorBody(record, { condition_selector: "dcs_unknownSelector000000" }));
+      expect(unknown.status).toBe(404);
+      responses.push((await unknown.json()) as Record<string, unknown>);
+      // A real selector of ANOTHER Mission, presented against this one.
+      const elsewhere = await lifecycle(record.id, selectorBody(record, { condition_selector: selectorOf(other) }));
+      expect(elsewhere.status).toBe(404);
+      responses.push((await elsewhere.json()) as Record<string, unknown>);
+      // A RESOLVING selector presented by a caller its target's mapping does
+      // not admit: knowing a selector authorizes nothing.
+      const unauthorized = await lifecycle(record.id, selectorBody(record), UNMAPPED_SOURCE_TOKEN);
+      expect(unauthorized.status).toBe(404);
+      responses.push((await unauthorized.json()) as Record<string, unknown>);
+      // A digest-form unknown entry, for comparison.
+      const digest = await lifecycle(record.id, dischargeBody(record, { entry_digest: `sha-256:${"D".repeat(43)}` }));
+      expect(digest.status).toBe(404);
+      responses.push((await digest.json()) as Record<string, unknown>);
+      for (const body of responses) {
+        const { nonce, ...rest } = body;
+        expect(nonce).toBeTypeOf("string");
+        expect(rest).toEqual({
+          error: "not_found",
+          error_description: "Mission reference is not found or not visible.",
+        });
+      }
+      expect(as.kernel.get(record.id)?.discharged).toBeUndefined();
+      expect(as.kernel.get(other.id)?.discharged).toBeUndefined();
+    });
+
+    it("shares one deduplication identity between the digest form and the selector form", async () => {
+      const record = approveOnAs();
+      const selector = selectorOf(record);
+      // Selector form FIRST this time.
+      const bySelector = selectorBody(record, { event_id: "close-shared-identity" });
+      expect(await dischargeResultOf(await lifecycle(record.id, bySelector))).toMatchObject({
+        outcome: "discharged",
+        prior_version: 1,
+        current_version: 2,
+      });
+      // The same occurrence in the DIGEST form is a replay, not a new assertion
+      // (no already_discharged) and not a conflict.
+      const byDigest = dischargeBody(record, { event_id: "close-shared-identity" });
+      const replay = await lifecycle(record.id, byDigest);
+      expect(replay.status).toBe(200);
+      expect(await dischargeResultOf(replay)).toMatchObject({
+        outcome: "discharged",
+        prior_version: 1,
+        current_version: 2,
+      });
+      expect(as.kernel.get(record.id)?.version).toBe(2);
+      // And it is the SAME tuple: a divergent assertion in the other form conflicts.
+      const divergent = await lifecycle(record.id, {
+        ...byDigest,
+        nonce: freshNonce(),
+        evidence_ref: "https://close.example/divergent",
+      });
+      expect(divergent.status).toBe(409);
+      expect(selector).toMatch(/^dcs_/);
+    });
+
+    it("never adds a digest to the result of a selector-form request", async () => {
+      const record = approveOnAs();
+      const body = selectorBody(record);
+      const res = await lifecycle(record.id, body);
+      expect(res.status).toBe(200);
+      expect(await dischargeResultOf(res)).toEqual({
+        condition_selector: body.condition_selector,
+        event_id: body.event_id,
+        outcome: "discharged",
+        prior_version: 1,
+        current_version: 2,
+      });
+    });
+
+    it("echoes the current request's form on a fresh-nonce replay of a digest-form original", async () => {
+      const record = approveOnAs();
+      const original = dischargeBody(record, { event_id: "close-cross-form" });
+      expect(await dischargeResultOf(await lifecycle(record.id, original))).toMatchObject({
+        entry_digest: original.entry_digest,
+        outcome: "discharged",
+      });
+      const { entry_digest: _e, condition_digest: _c, ...rest } = original;
+      const retryNonce = freshNonce();
+      const retry = await lifecycle(record.id, { ...rest, nonce: retryNonce, condition_selector: selectorOf(record) });
+      expect(retry.status).toBe(200);
+      const payload = decodeJwt(await retry.text()) as Record<string, unknown>;
+      expect(payload.nonce).toBe(retryNonce);
+      // The stored outcome and versions, with the SELECTOR echoed and no digest.
+      expect(payload.discharge_result).toEqual({
+        condition_selector: selectorOf(record),
+        event_id: "close-cross-form",
+        outcome: "discharged",
+        prior_version: 1,
+        current_version: 2,
+      });
+    });
   });
 });
 

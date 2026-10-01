@@ -75,7 +75,7 @@ export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
           minItems: 1,
           items: {
             type: "object",
-            properties: { event_type: { type: "string" }, discharge_policy: { type: "string" } },
+            properties: { event_type: { type: "string" }, discharge_authority: { type: "string" } },
             required: ["event_type"],
             additionalProperties: false,
           },
@@ -223,8 +223,8 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
       }
     }
     // @spec discharge#terminal-when — one or more completion conditions, each a
-    // CLOSED { event_type, discharge_policy? } object (identity is the canonical
-    // form of exactly these members). The selector's own charset and its
+    // CLOSED { event_type, discharge_authority? } object (identity is the canonical
+    // form of exactly these members). The `discharge_authority` charset and its
     // resolution against the issuer-held mapping are checked at derivation and
     // record creation (@spec discharge#discharge-authority), not here: this is the
     // wire-shape gate the published schema describes.
@@ -240,11 +240,11 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
         if (typeof cc.event_type !== "string") {
           return "constraints.terminal_when entries need a string event_type";
         }
-        if (cc.discharge_policy !== undefined && typeof cc.discharge_policy !== "string") {
-          return "constraints.terminal_when discharge_policy must be a string";
+        if (cc.discharge_authority !== undefined && typeof cc.discharge_authority !== "string") {
+          return "constraints.terminal_when discharge_authority must be a string";
         }
         for (const k of Object.keys(cc)) {
-          if (k !== "event_type" && k !== "discharge_policy") {
+          if (k !== "event_type" && k !== "discharge_authority") {
             return `constraints.terminal_when entries carry no member '${k}'`;
           }
         }

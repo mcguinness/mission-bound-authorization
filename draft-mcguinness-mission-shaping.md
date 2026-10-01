@@ -952,10 +952,10 @@ Deferred denial:
   ({{I-D.draft-mcguinness-oauth-mission-approval}}).
 
 Required revision:
-: Under approval revision, `rejected_scope` and
-  `rejected_authorization_details` identify the refused dimensions in
-  machine-readable form. They are the input the shaper uses to plan
-  the narrowed revision
+: Under approval revision, `mission_rejected_scope` and
+  `mission_rejected_authorization_details` identify the refused
+  dimensions in machine-readable form. They are the input the shaper
+  uses to plan the narrowed revision
   ({{I-D.draft-mcguinness-oauth-mission-approval-revision}}).
 
 Re-shaping is shaping. A re-proposal passes through the full

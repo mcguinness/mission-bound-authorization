@@ -207,6 +207,7 @@ import {
 } from "./transaction-authorization.js";
 export type { TxnArs } from "./transaction-authorization.js";
 import { successorMissionClaim } from "../kernel/expansion.js";
+import { ID_JAG_TOKEN_TYPE } from "../kernel/cross-domain.js";
 import {
   authorizationDetailsTypesMetadata,
   validateMissionResourceAccessSchema,
@@ -216,29 +217,35 @@ import { UnknownProtectedEventError } from "../kernel/containment.js";
 import {
   DIGEST_PREFIX,
   DISCHARGE_EVENT_ID_RE,
+  DISCHARGE_RECEIPT_MEDIA_TYPE,
   DischargeConflictError,
   DischargeNotFoundError,
+  type DischargeTargetForm,
   EVIDENCE_REF_MAX_CHARS,
 } from "../kernel/discharge.js";
+import { CONDITION_SELECTOR_RE } from "../kernel/discharge-selector-store.js";
 import {
   LIFECYCLE_ENDPOINT_KEY,
   type LifecycleNonceKey,
+  type LifecycleResponseMaterial,
   LifecycleResponseStore,
   type RetainedLifecycleResponse,
 } from "../kernel/lifecycle-idempotency.js";
 import {
   type EffectiveAuthoritySource,
   isSubsetSet,
+  type OriginProjection,
   projectRarThroughMission,
-  projectThroughEffective,
   SourceUnavailableError,
 } from "../kernel/derive.js";
 import type { IssuerEvidenceStore } from "../kernel/issuer-evidence.js";
 import { IntentError } from "../kernel/intent.js";
 import {
+  type DischargeReceiptObservation,
   GateError,
   LifecycleConflictError,
   type MissionKernel,
+  STATUS_SIGNING_ALG,
   type StatusObservation,
 } from "../kernel/kernel.js";
 import {
@@ -309,6 +316,16 @@ export const MISSION_LIFECYCLE_SCOPE = "mission_lifecycle";
 export const MISSION_DISCHARGE_SCOPE = "mission_discharge";
 
 /**
+ * @spec status#mission-status-authentication — the explicit read authorization
+ * the Mission Status operation requires of an authenticated caller. A caller
+ * without it is refused with the not-found response. The same grant decides
+ * whether a discharge forwarded after carryover is answered with the
+ * replacement's Status envelope or with a Discharge Receipt
+ * (@spec discharge#discharge-carryover, "Response").
+ */
+export const MISSION_STATUS_SCOPE = "mission_status";
+
+/**
  * A registered service-token caller of the AS's operational surfaces: the
  * principal identity the AS records and checks discharge authority against, and
  * the scopes the token carries. This is the minimal stand-in for the profile's
@@ -323,14 +340,14 @@ export interface ServiceTokenPrincipal {
 }
 
 /**
- * The shipped dev token carries BOTH grants, so every existing operational
- * caller keeps working; a deployment (or a test proving non-implication)
+ * The shipped dev token carries every grant (lifecycle, discharge, status
+ * read), so every existing operational caller keeps working; a deployment (or a test proving non-implication)
  * registers additional tokens, which are merged OVER this default.
  */
 export const DEFAULT_SERVICE_TOKEN_PRINCIPALS: Readonly<Record<string, ServiceTokenPrincipal>> = {
   [DEV_SERVICE_TOKEN]: {
     principal_id: "svc:console",
-    scopes: [MISSION_LIFECYCLE_SCOPE, MISSION_DISCHARGE_SCOPE],
+    scopes: [MISSION_LIFECYCLE_SCOPE, MISSION_DISCHARGE_SCOPE, MISSION_STATUS_SCOPE],
   },
 };
 
@@ -441,10 +458,15 @@ export interface AdapterOptions {
    * a no-op, so no existing refresh/token path changes.
    */
   familyStore?: DelegationFamilyStore;
-  /** Trusted Chain Authority issuers of ICAs (iss + jwks). */
-  chainAuthorityIssuers?: ContinuationIssuer[];
+  /** Trusted Continuation Assertion Issuers of ICAs (iss + jwks + the RAS audiences each attests for). */
+  continuationAssertionIssuers?: ContinuationIssuer[];
   /** Shared (iss, jti) ICA replay cache (from newReplayCache()). */
   continuationReplay?: ContinuationReplay;
+  /**
+   * @spec id-continuation-assertion — the finite per-chain hop-count limit (ICA
+   * -02 6.3). Defaults to DEFAULT_CONTINUATION_HOP_LIMIT.
+   */
+  continuationHopLimit?: number;
   /** Resource -> authoritative AS map (reused from the demo cross-domain wiring). */
   resourceToAs?: (resource: string) => string;
   /** Deterministic audience-local subject resolver. */
@@ -1647,6 +1669,11 @@ export function buildProvider(opts: AdapterOptions): Provider {
         // `scope` is honored or refused, never stripped unseen.
         "scope",
       ]),
+      // @spec id-continuation-assertion — the ICA continuation exchange takes
+      // zero or more `resource` (ICA -02 5.5.3 rule 1), so it is the one
+      // repeatable parameter of this grant. Every other exchange refuses a
+      // repeated `resource` itself (handleTokenExchangeGrant), as before.
+      new Set(["resource"]),
     );
   }
 
@@ -2266,6 +2293,35 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
   const requireServiceToken = (ctx: KoaCtx): boolean => authenticateService(ctx) !== undefined;
 
   /**
+   * @spec status#mission-status-authentication — the Mission Status operation's
+   * authorization check, in ONE place: the deployment serves the operation and
+   * the authenticated caller carries the `mission_status` grant. The Status
+   * route and the forwarded-discharge response choice both call this, so they
+   * can never disagree about who may inspect a Mission.
+   */
+  const mayReadStatus = (principal: ServiceTokenPrincipal): boolean =>
+    enabled("status") && principal.scopes.includes(MISSION_STATUS_SCOPE);
+
+  /**
+   * @spec discharge#condition-selectors — add `discharge_selectors` to an ACTIVE
+   * introspection `mission` projection, for exactly the `authorization_details`
+   * this response returns to this caller, and only where this deployment
+   * exposes the `discharge` operation. Absent when there is nothing to
+   * disclose, so a projection without a completing entry is unchanged. The
+   * issuer-only rule and the record-target mapping live in the kernel
+   * ({@link MissionKernel.dischargeSelectorsFor}).
+   */
+  const withDischargeSelectors = (
+    record: MissionRecord,
+    mission: Record<string, unknown>,
+    returned: ReadonlyArray<OriginProjection<AuthorityEntry>>,
+  ): Record<string, unknown> => {
+    if (!enabled("discharge")) return mission;
+    const selectors = kernel.dischargeSelectorsFor(record, returned);
+    return selectors.length > 0 ? { ...mission, discharge_selectors: selectors } : mission;
+  };
+
+  /**
    * @spec discharge#discharge-idempotency — the lifecycle endpoint's `nonce`
    * replay store, constructed once per provider on the kernel's own database.
    */
@@ -2397,6 +2453,9 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       if (!principal) return;
       const statusNonce = str(ctx.query.nonce);
       try {
+        // A caller without the read grant gets the same not-found body as an
+        // unknown reference (@spec status#mission-status-anti-oracle).
+        if (!mayReadStatus(principal)) throw new Error("status read not authorized");
         const jws = await kernel.signedStatus(statusMatch[1] as string, {
           ...optional("audience", str(ctx.query.audience)),
           ...optional("nonce", statusNonce),
@@ -2592,7 +2651,8 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         sendInvalidRequest(`operation ${String(body.operation)} is not enabled on this deployment`);
         return;
       }
-      // @spec discharge#discharge-operation — the fifth operation: it changes no
+      // @spec discharge#discharge-operation, discharge#discharge-commit ("States")
+      // — the fifth operation: it changes no
       // Mission state, so it is handled entirely outside the state machine
       // below, under its own DISTINCT authority.
       if (body.operation === "discharge") {
@@ -2602,23 +2662,21 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           missionId,
           body,
           ...(nonce !== undefined ? { nonce } : {}),
+          mayReadStatus,
           // @spec control-plane#serialization — the discharge latch, the nonce
-          // claim and the OBSERVATION the response reports commit together;
-          // only the signature happens after.
-          claimObservation: (observation) => {
+          // claim and the OBSERVATION (or receipt) the response reports commit
+          // together; only the signature happens after.
+          claimResponse: (material, contentType, validUntilMs) => {
             if (!nonceKey) return;
             lifecycleResponses.claimInCallerTx(nonceKey, {
               requestDigest: digest,
               status: 200,
-              contentType: MISSION_STATUS_RESPONSE_MEDIA_TYPE,
-              material: {
-                kind: "status-observation",
-                observation: observation as unknown as Record<string, unknown>,
-              },
-              responseValidUntil: observation.exp * 1000,
+              contentType,
+              material,
+              responseValidUntil: validUntilMs,
             });
           },
-          sendJws: (jws) => send(200, MISSION_STATUS_RESPONSE_MEDIA_TYPE, jws),
+          sendSigned: (contentType, jws) => send(200, contentType, jws),
           sendJson,
           sendNotFound,
           sendInvalidRequest,
@@ -2990,10 +3048,13 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // `aud`/resource-indicator value need not be byte-equal to a RAR
         // `resource`).
         const credentialAuthority = Array.isArray(rt.rar) ? (rt.rar as AuthorityEntry[]) : [];
-        const effective = kernel.effectiveAuthoritySet(record);
-        const narrowed = projectThroughEffective(credentialAuthority, effective);
+        // The same projection as projectThroughEffective, keeping each
+        // fragment's record-entry origin for discharge_selectors.
+        const narrowed = kernel.projectCredentialWithOrigin(record, credentialAuthority);
         const resourceSet = resourcesForAudiences(visibleAudiences, principal.audience_resources);
-        const authorization_details = narrowed.filter((e) => resourceSet.has(e.resource));
+        const returned = narrowed.filter((e) => resourceSet.has(e.entry.resource));
+        const authorization_details = returned.map((e) => e.entry);
+        const disclosedMission = withDischargeSelectors(record, mission, returned);
         ctx.body = {
           active: true,
           iss: opts.issuer,
@@ -3004,7 +3065,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           ...(rt.jti ? { jti: rt.jti } : {}),
           ...(rt.jkt ? { cnf: { jkt: rt.jkt } } : {}),
           authorization_details,
-          mission,
+          mission: disclosedMission,
         };
         return;
       }
@@ -3161,10 +3222,11 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // audience-to-resource mapping. Never the Mission's full effective
         // set: a narrowed/attenuated token must never introspect as though
         // it held authority it was never issued.
-        const effective = kernel.effectiveAuthoritySet(record);
-        const narrowed = projectThroughEffective(credentialAuthority, effective);
+        const narrowed = kernel.projectCredentialWithOrigin(record, credentialAuthority);
         const resourceSet = resourcesForAudiences(visible, principal.audience_resources);
-        const authorization_details = narrowed.filter((e) => resourceSet.has(e.resource));
+        const returned = narrowed.filter((e) => resourceSet.has(e.entry.resource));
+        const authorization_details = returned.map((e) => e.entry);
+        const disclosedMission = withDischargeSelectors(record, mission, returned);
 
         const cnf = payload.cnf as { jkt?: string } | undefined;
         ctx.body = {
@@ -3180,7 +3242,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           ...(cnf ? { cnf } : {}),
           token_type: cnf?.jkt ? "DPoP" : "Bearer",
           authorization_details,
-          mission,
+          mission: disclosedMission,
         };
       } catch {
         ctx.body = inactive;
@@ -3356,14 +3418,27 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // @spec child-delegation#discovery: this AS accepts the child-creation
       // request and enforces the child-delegation controls of that profile.
       if (enabled("child-delegation")) meta.mission_child_delegation_supported = true;
-      // @spec id-continuation-assertion#discovery: this AS runs the RFC 8693
+      // @spec id-continuation-assertion#metadata-idp: this AS runs the RFC 8693
       // token-exchange continuation grant (ICA subject token -> continuation
       // ID-JAG), signed by the dedicated as-continuation key on the jwks_uri.
-      if (enabled("continuation")) meta.identity_continuation_supported = true;
+      // The continuation ID-JAG is still the id-jag token type, so the AS also
+      // lists it as a requested token type it issues (ICA -02 7.1).
+      if (enabled("continuation")) {
+        meta.identity_continuation_supported = true;
+        meta.identity_chaining_requested_token_types_supported = [ID_JAG_TOKEN_TYPE];
+      }
       // @spec async-delegation#discovery: this AS runs the async-delegation
       // continuation transport (RFC 8693 token exchange with request_refresh_token
       // -> a per-delegation grant with a rotated, sender-constrained refresh token).
       if (enabled("async-delegation")) meta.delegated_refresh_token_profile_supported = true;
+      // @spec status#as-metadata, discharge#discharge-receipt — the response-signing
+      // algorithms of the Mission Status Response shape, wherever it (or the
+      // Discharge Receipt, signed the same way) can be served: the Status
+      // operation, and the Lifecycle endpoint's `discharge` operation, which
+      // answers with either even where the Status route itself is disabled.
+      if (enabled("status") || enabled("discharge")) {
+        meta.mission_status_signing_alg_values_supported = [STATUS_SIGNING_ALG];
+      }
       meta.introspection_endpoint = `${opts.issuer}/introspect`;
       // @spec mission#caller-authorization-and-minimization (cleanup, issue
       // #541) — advertise the introspection endpoint's actual authentication
@@ -4044,12 +4119,17 @@ const RFC3339_RE = /^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[Zz]|[+-
 
 /**
  * @spec discharge#discharge-operation, discharge#discharge-anti-oracle,
- * discharge#discharge-result — the `discharge` operation on the Mission Lifecycle
- * endpoint. Request-shape failures are `invalid_request`; the six selector,
- * membership, and target-authorization refusals are ONE `not_found`; a divergent
+ * discharge#discharge-result, discharge#discharge-carryover,
+ * discharge#discharge-receipt — the `discharge` operation on the Mission Lifecycle
+ * endpoint. Request-shape failures are `invalid_request` (including a request
+ * naming its target in both forms, or neither); the selector, membership, and
+ * target-authorization refusals are ONE `not_found`; a divergent
  * re-assertion of the same event tuple is `conflict`; success is the endpoint's
  * signed Mission Status Response envelope carrying `discharge_result` as a
- * sibling of `mission`.
+ * sibling of `mission`. A discharge FORWARDED after carryover
+ * (@spec discharge#discharge-carryover) answers with the replacement's envelope
+ * (`forwarded_from` in the result) when the caller may read Mission Status, and
+ * with a signed Discharge Receipt (@spec discharge#discharge-receipt) otherwise.
  */
 /**
  * @spec control-plane#serialization, control-plane#fresh-observation — finalize
@@ -4070,6 +4150,9 @@ async function finalizeRetainedResponse(
   const material = stored.material;
   if (!material) return undefined;
   if (material.kind === "json") return JSON.stringify(material.body);
+  if (material.kind === "discharge-receipt") {
+    return kernel.signDischargeReceipt(material.receipt as unknown as DischargeReceiptObservation);
+  }
   return kernel.signObservation(material.observation as unknown as StatusObservation);
 }
 
@@ -4080,12 +4163,18 @@ async function handleDischarge(input: {
   body: Record<string, unknown>;
   nonce?: string;
   /**
-   * @spec control-plane#serialization — invoked INSIDE the latch transaction
-   * with the observation the response will report, so the committed outcome
-   * and its replayable material are durable before anything is signed.
+   * @spec status#mission-status-authentication — the Mission Status operation's
+   * own authorization check, deciding a forwarded discharge's response shape.
    */
-  claimObservation?: (observation: StatusObservation) => void;
-  sendJws: (jws: string) => void;
+  mayReadStatus: (principal: ServiceTokenPrincipal) => boolean;
+  /**
+   * @spec control-plane#serialization — invoked INSIDE the latch transaction
+   * with the material the response will be signed from (a Status observation
+   * or a Discharge Receipt), so the committed outcome and its replayable
+   * material are durable before anything is signed.
+   */
+  claimResponse?: (material: LifecycleResponseMaterial, contentType: string, validUntilMs: number) => void;
+  sendSigned: (contentType: string, jws: string) => void;
   sendJson: (status: number, json: Record<string, unknown>) => void;
   sendNotFound: () => void;
   sendInvalidRequest: (description: string, echoNonce?: boolean) => void;
@@ -4107,15 +4196,37 @@ async function handleDischarge(input: {
   }
   const entryDigestValue = body.entry_digest;
   const conditionDigestValue = body.condition_digest;
+  const selectorValue = body.condition_selector;
   const eventType = body.event_type;
   const eventId = body.event_id;
-  if (!isFamilyDigest(entryDigestValue)) {
-    input.sendInvalidRequest("entry_digest must be a sha-256: prefixed digest");
+  // @spec discharge#discharge-operation — the target is named in EXACTLY ONE of
+  // two forms: a condition selector, or the digest pair. Both, or neither, is
+  // refused `invalid_request`.
+  const hasSelector = selectorValue !== undefined;
+  const hasDigests = entryDigestValue !== undefined || conditionDigestValue !== undefined;
+  if (hasSelector === hasDigests) {
+    input.sendInvalidRequest(
+      "discharge names its target by condition_selector or by entry_digest and condition_digest, exactly one",
+    );
     return;
   }
-  if (!isFamilyDigest(conditionDigestValue)) {
-    input.sendInvalidRequest("condition_digest must be a sha-256: prefixed digest");
-    return;
+  let target: DischargeTargetForm;
+  if (hasSelector) {
+    if (typeof selectorValue !== "string" || !CONDITION_SELECTOR_RE.test(selectorValue)) {
+      input.sendInvalidRequest("condition_selector must be 1*128 ALPHA / DIGIT / '-' / '_'");
+      return;
+    }
+    target = { condition_selector: selectorValue };
+  } else {
+    if (!isFamilyDigest(entryDigestValue)) {
+      input.sendInvalidRequest("entry_digest must be a sha-256: prefixed digest");
+      return;
+    }
+    if (!isFamilyDigest(conditionDigestValue)) {
+      input.sendInvalidRequest("condition_digest must be a sha-256: prefixed digest");
+      return;
+    }
+    target = { entry_digest: entryDigestValue, condition_digest: conditionDigestValue };
   }
   if (typeof eventType !== "string" || eventType.length === 0) {
     input.sendInvalidRequest("event_type must be a non-empty string");
@@ -4165,44 +4276,79 @@ async function handleDischarge(input: {
   // an unknown Mission still reaches the kernel's DischargeNotFoundError and the
   // one indistinguishable not-found body; it sits outside the `try` so a storage
   // failure here is never disguised as not-found. `kernel.discharge` keeps its
-  // own expiry clock for other callers.
-  if (kernel.get(missionId)) {
-    kernel.materializeExpiry(missionId);
+  // own expiry clock for other callers. The walk follows committed `carried_to`
+  // correlations too, so a replacement a forwarded discharge may reach keeps
+  // the expiry it discovers when the forwarded request is refused. (The walk
+  // only materializes expiry; forwarding resolves through Carryover Evidence.)
+  const walked = new Set<string>();
+  for (let cur = kernel.get(missionId); cur && !walked.has(cur.id); ) {
+    walked.add(cur.id);
+    kernel.materializeExpiry(cur.id);
+    cur = cur.carried_to ? kernel.get(cur.carried_to) : undefined;
   }
   try {
     // @spec control-plane#serialization, control-plane#fresh-observation — the
     // latch, the observation it is reported at and the nonce claim commit as
     // one unit; the signature is the only work left outside, and it adds no
     // recency of its own.
-    const observation = withTransaction(kernel.db, () => {
-      const { result } = kernel.discharge(missionId, {
+    const signable = withTransaction(kernel.db, () => {
+      const { record: described, result } = kernel.discharge(missionId, {
         // The AUTHENTICATED discharge authority, never a request-supplied value.
         authority: principal.principal_id,
-        entry_digest: entryDigestValue,
-        condition_digest: conditionDigestValue,
+        ...target,
         event_type: eventType,
         event_id: eventId,
         ...(typeof evidenceRef === "string" ? { evidence_ref: evidenceRef } : {}),
         ...(typeof evidenceDigest === "string" ? { evidence_digest: evidenceDigest } : {}),
         ...(typeof observedAt === "string" ? { observed_at: observedAt } : {}),
       });
-      const captured = kernel.observeInCallerTx(missionId, {
+      // @spec discharge#discharge-carryover ("Response") — a forwarded discharge
+      // answers a caller NOT authorized for the Mission Status operation with a
+      // Discharge Receipt naming only what it targeted.
+      if (result.forwarded_from && !input.mayReadStatus(principal)) {
+        const receipt = kernel.dischargeReceiptObservation({
+          requester: principal.principal_id,
+          nonce,
+          targetedMissionId: missionId,
+          result,
+        });
+        input.claimResponse?.(
+          { kind: "discharge-receipt", receipt: receipt as unknown as Record<string, unknown> },
+          DISCHARGE_RECEIPT_MEDIA_TYPE,
+          receipt.exp * 1000,
+        );
+        return { kind: "receipt" as const, receipt };
+      }
+      // Otherwise the signed Status envelope of the record the result DESCRIBES:
+      // the targeted Mission, or the replacement a forwarded discharge changed
+      // (its `discharge_result` then carries `forwarded_from`).
+      const captured = kernel.observeInCallerTx(described.id, {
         requester: principal.principal_id,
         nonce,
         dischargeResult: result,
       });
-      input.claimObservation?.(captured);
-      return captured;
+      input.claimResponse?.(
+        {
+          kind: "status-observation",
+          observation: captured as unknown as Record<string, unknown>,
+        },
+        MISSION_STATUS_RESPONSE_MEDIA_TYPE,
+        captured.exp * 1000,
+      );
+      return { kind: "status" as const, observation: captured };
     });
     // @spec discharge#discharge-result — the endpoint's existing signed envelope,
     // state-only (the request carries no `audience`), echoing this request's own
-    // nonce: the durable acknowledgement an at-least-once sender stops retrying
-    // against.
-    const jws = await kernel.signObservation(observation);
-    input.sendJws(jws);
+    // nonce, or the receipt: the durable acknowledgement an at-least-once
+    // sender stops retrying against.
+    if (signable.kind === "receipt") {
+      input.sendSigned(DISCHARGE_RECEIPT_MEDIA_TYPE, await kernel.signDischargeReceipt(signable.receipt));
+    } else {
+      input.sendSigned(MISSION_STATUS_RESPONSE_MEDIA_TYPE, await kernel.signObservation(signable.observation));
+    }
   } catch (e) {
     if (e instanceof DischargeNotFoundError) {
-      // All six refusal classes, indistinguishable on the wire; the reason is
+      // Every refusal class, indistinguishable on the wire; the reason is
       // recorded issuer-side only (e.reason).
       input.sendNotFound();
       return;

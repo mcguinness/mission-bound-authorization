@@ -46,13 +46,6 @@ informative:
   RFC9700:
   I-D.draft-zhu-oauth-async-delegation:
   I-D.draft-mcguinness-oauth-id-continuation-assertion:
-    title: "Identity Continuation Assertion for OAuth 2.0 Token Exchange"
-    target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-id-continuation-assertion/
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   I-D.draft-mcguinness-oauth-mission-cross-domain:
     title: "Mission Cross-Domain Projection for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html
@@ -350,17 +343,34 @@ below partition the space this profile addresses.
 
 The Identity Continuation Assertion
 ({{I-D.draft-mcguinness-oauth-id-continuation-assertion}}) is the
-intra-domain, connected, cross-workload transport. A Chain Authority mints
-a short-lived, sender-constrained assertion naming an accepted hop; the
-acting workload presents it as an {{RFC8693}} token-exchange subject token
-and redeems a continuation ID-JAG at the token endpoint. Under this
+multi-hop, cross-workload transport among Resource Authorization Servers
+that trust a common IdP Authorization Server (IdP). A Continuation
+Assertion Issuer attests that a Resource Authorization Server accepted
+an earlier ID-JAG and that its authorization remains active; the acting
+workload presents that assertion to the IdP as an {{RFC8693}} subject
+token and redeems the onward ID-JAG it receives at the next Resource
+Authorization Server. Under this
 profile the assertion's `identity_continuation_handle` MUST resolve to a
 Mission rooting anchor; the issued ID-JAG's authorization detail MUST be a
 subset of that Mission's Authority Set, state-gated, and lifetime-clamped
 per {{authorization-continuity}}; and the ID-JAG MUST be bound
-({{RFC9449}}) to the acting identity's key. The assertion carries no
-subject, so continuation preserves the Mission's subject rather than
-projecting it; the actor is rebound per hop.
+({{RFC9449}}) to the acting identity's key.
+
+The IdP authorizes each continuation under the chain authorization
+recorded at the root exchange and current policy, and that draft leaves
+whether a requested action serves the authorized work to deployment
+policy
+({{Section 5.5.3 of I-D.draft-mcguinness-oauth-id-continuation-assertion}},
+{{Appendix A.5 of I-D.draft-mcguinness-oauth-id-continuation-assertion}});
+under this profile the Mission answers it. A chain's lifecycle anchor
+({{Section 6.1 of I-D.draft-mcguinness-oauth-id-continuation-assertion}})
+is its rooting anchor: the Mission's grant, which can carry unattended
+work past logout, or a session bound to it. A Mission's terminal state
+withdraws permission to continue and ends the chain
+({{Section 6.2 of I-D.draft-mcguinness-oauth-id-continuation-assertion}}).
+The assertion carries no user subject: the IdP resolves the subject for
+each target from the hop, so continuation preserves the Mission's
+subject rather than projecting it; the actor is rebound per hop.
 
 ## Async Delegation Transport {#transport-async}
 
@@ -512,7 +522,9 @@ continuation immediately but does not shorten a credential already issued;
 deployments requiring tighter bounds choose shorter transport lifetimes.
 
 Replay is a transport concern the Mission binding does not relax: the
-Identity Continuation Assertion is single-use by `jti`, and an async
+Identity Continuation Assertion is single-use, keyed on `(iss, jti)`
+({{Section 5.5.7 of I-D.draft-mcguinness-oauth-id-continuation-assertion}}),
+and an async
 delegation family rotates on each refresh with reuse detection over the
 family. A continuation MUST NOT widen authority; the subset check of
 {{authorization-continuity}} is enforced at every issuance, so a
@@ -525,7 +537,10 @@ confused-deputy hop to the audiences the Mission already reaches.
 Continuation preserves the Mission's subject rather than minting a new
 one, and the transports resolve audience-local subjects where they resolve
 a subject at all, so a continued Mission does not become a cross-audience
-correlation handle. The Identity Continuation Assertion carries no subject.
+correlation handle. The Identity Continuation Assertion carries no user
+subject, and its handles are hop-specific, but the IdP and a hop's
+participants can still correlate a chain
+({{Section 10 of I-D.draft-mcguinness-oauth-id-continuation-assertion}}).
 Continuation handles are opaque and carry no authorization detail, so their
 exposure discloses neither the subject nor the granted authority.
 
