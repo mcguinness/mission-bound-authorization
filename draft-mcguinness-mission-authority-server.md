@@ -46,6 +46,7 @@ normative:
     date: 2026
   RFC9068:
   RFC9325:
+  RFC9728:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
@@ -142,7 +143,6 @@ informative:
   RFC8414:
   RFC8693:
   RFC9635:
-  RFC9728:
   I-D.draft-mcguinness-mission-harness:
     title: "Mission-Aware Agent Harnesses"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html
