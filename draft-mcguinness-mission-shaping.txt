@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                         30 September 2026
-Expires: 3 April 2027
+Intended status: Informational                            1 October 2026
+Expires: 4 April 2027
 
 
                          Mission Intent Shaping
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 3 April 2027.
+   This Internet-Draft will expire on 4 April 2027.
 
 Copyright Notice
 
@@ -428,8 +428,9 @@ Table of Contents
    *  an expires_at; and
 
    *  any other named top-level member a companion profile defines, for
-      example a requested_derivation_limit or a consumption bound
-      ([I-D.draft-mcguinness-mission-metering]).
+      example a requested_derivation_limit
+      ([I-D.draft-mcguinness-oauth-mission-derivation-limits]) or a
+      consumption bound ([I-D.draft-mcguinness-mission-metering]).
 
    The Intent carries no authority members.  Where the task calls for
    concrete candidate authority, the shaper additionally produces an
@@ -564,82 +565,82 @@ Table of Contents
    Issuer only narrows; Shaping Evidence records the same facts for
    audit only and is never an input authority derives from.
 
-   +==========================+=======================================+================+
-   |Field                     |Guidance                               |Avoid           |
-   +==========================+=======================================+================+
-   |goal                      |Concise user-readable summary in the   |SHOULD NOT quote|
-   |                          |form the Approver sees at consent;     |verbatim prompt |
-   |                          |preserve the user's framing so the     |text that       |
-   |                          |disclosure matches their understanding.|contains        |
-   |                          |                                       |instructions or |
-   |                          |                                       |commands        |
-   |                          |                                       |(Section 18.3). |
-   +--------------------------+---------------------------------------+----------------+
-   |target_resources          |Enumerate, as absolute URIs, the       |SHOULD NOT widen|
-   |                          |resources, datasets, tools, or domains |beyond what the |
-   |                          |the prompt referenced; record any      |prompt          |
-   |                          |human-readable label as an audit       |referenced; "for|
-   |                          |annotation in Shaping Evidence, not as |convenience"    |
-   |                          |the target_resources value.            |enlarges        |
-   |                          |                                       |approved        |
-   |                          |                                       |authority.      |
-   +--------------------------+---------------------------------------+----------------+
-   |task_bounds               |Free-text bounds the user expressed    |SHOULD NOT      |
-   |                          |plus deployment-policy bounds always   |silently drop a |
-   |                          |applied, so the Approver sees the full |user-expressed  |
-   |                          |bound set.  Where a bound is machine-  |bound; record it|
-   |                          |enforceable, the shaper also emits it  |in task_bounds  |
-   |                          |as a structured constraint on the      |or in Shaping   |
-   |                          |authority proposal; the Mission Issuer |Evidence, or    |
-   |                          |never parses the prose                 |clarify or      |
-   |                          |([I-D.draft-mcguinness-oauth-mission]).|refuse instead. |
-   +--------------------------+---------------------------------------+----------------+
-   |success_criteria          |Free-text observable outcomes that     |SHOULD NOT      |
-   |                          |indicate the task is complete, phrased |encode authority|
-   |                          |for the Approver.  Disclosure and audit|here;           |
-   |                          |material only.                         |success_criteria|
-   |                          |                                       |carries no      |
-   |                          |                                       |machine         |
-   |                          |                                       |semantics in the|
-   |                          |                                       |issuance        |
-   |                          |                                       |profile.        |
-   +--------------------------+---------------------------------------+----------------+
-   |expires_at                |The smallest ceiling that lets the task|Don't request   |
-   |                          |complete; if the prompt names no bound,|the maximum the |
-   |                          |apply a conservative deployment        |Mission Issuer  |
-   |                          |default.                               |allows; the     |
-   |                          |                                       |Issuer MAY      |
-   |                          |                                       |narrow further. |
-   +--------------------------+---------------------------------------+----------------+
-   |purpose                   |If the client has registered purposes, |SHOULD NOT      |
-   |                          |select the closest registered URI.     |invent a new    |
-   |                          |                                       |purpose URI.    |
-   +--------------------------+---------------------------------------+----------------+
-   |requested_derivation_limit|Where the task implies a natural       |Don't propose a |
-   |                          |issuance count (a one-shot read, a     |large round     |
-   |                          |fixed number of scheduled runs),       |number "to be   |
-   |                          |propose that count; omit it to defer   |safe"; an       |
-   |                          |entirely to the deployment's own       |omitted value is|
-   |                          |ceiling.                               |not more        |
-   |                          |                                       |permissive than |
-   |                          |                                       |a proposed one, |
-   |                          |                                       |so guessing high|
-   |                          |                                       |only misleads   |
-   |                          |                                       |the Approver    |
-   |                          |                                       |about what was  |
-   |                          |                                       |actually        |
-   |                          |                                       |requested.      |
-   +--------------------------+---------------------------------------+----------------+
-   |any other named member    |A companion profile MAY define further |SHOULD NOT emit |
-   |                          |named top-level Mission Intent members |a key the       |
-   |                          |(for example, a metering consumption   |specific        |
-   |                          |bound); emit the ones the deployment's |deployment does |
-   |                          |adopted companions recognize.          |not recognize;  |
-   |                          |                                       |an unrecognized |
-   |                          |                                       |key risks       |
-   |                          |                                       |rejection of the|
-   |                          |                                       |Intent.         |
-   +--------------------------+---------------------------------------+----------------+
+   +==========================+=========================================================+================+
+   |Field                     |Guidance                                                 |Avoid           |
+   +==========================+=========================================================+================+
+   |goal                      |Concise user-readable summary in the form the Approver   |SHOULD NOT quote|
+   |                          |sees at consent; preserve the user's framing so the      |verbatim prompt |
+   |                          |disclosure matches their understanding.                  |text that       |
+   |                          |                                                         |contains        |
+   |                          |                                                         |instructions or |
+   |                          |                                                         |commands        |
+   |                          |                                                         |(Section 18.3). |
+   +--------------------------+---------------------------------------------------------+----------------+
+   |target_resources          |Enumerate, as absolute URIs, the resources, datasets,    |SHOULD NOT widen|
+   |                          |tools, or domains the prompt referenced; record any      |beyond what the |
+   |                          |human-readable label as an audit annotation in Shaping   |prompt          |
+   |                          |Evidence, not as the target_resources value.             |referenced; "for|
+   |                          |                                                         |convenience"    |
+   |                          |                                                         |enlarges        |
+   |                          |                                                         |approved        |
+   |                          |                                                         |authority.      |
+   +--------------------------+---------------------------------------------------------+----------------+
+   |task_bounds               |Free-text bounds the user expressed plus deployment-     |SHOULD NOT      |
+   |                          |policy bounds always applied, so the Approver sees the   |silently drop a |
+   |                          |full bound set.  Where a bound is machine-enforceable,   |user-expressed  |
+   |                          |the shaper also emits it as a structured constraint on   |bound; record it|
+   |                          |the authority proposal; the Mission Issuer never parses  |in task_bounds  |
+   |                          |the prose ([I-D.draft-mcguinness-oauth-mission]).        |or in Shaping   |
+   |                          |                                                         |Evidence, or    |
+   |                          |                                                         |clarify or      |
+   |                          |                                                         |refuse instead. |
+   +--------------------------+---------------------------------------------------------+----------------+
+   |success_criteria          |Free-text observable outcomes that indicate the task is  |SHOULD NOT      |
+   |                          |complete, phrased for the Approver.  Disclosure and audit|encode authority|
+   |                          |material only.                                           |here;           |
+   |                          |                                                         |success_criteria|
+   |                          |                                                         |carries no      |
+   |                          |                                                         |machine         |
+   |                          |                                                         |semantics in the|
+   |                          |                                                         |issuance        |
+   |                          |                                                         |profile.        |
+   +--------------------------+---------------------------------------------------------+----------------+
+   |expires_at                |The smallest ceiling that lets the task complete; if the |Don't request   |
+   |                          |prompt names no bound, apply a conservative deployment   |the maximum the |
+   |                          |default.                                                 |Mission Issuer  |
+   |                          |                                                         |allows; the     |
+   |                          |                                                         |Issuer MAY      |
+   |                          |                                                         |narrow further. |
+   +--------------------------+---------------------------------------------------------+----------------+
+   |purpose                   |If the client has registered purposes, select the closest|SHOULD NOT      |
+   |                          |registered URI.                                          |invent a new    |
+   |                          |                                                         |purpose URI.    |
+   +--------------------------+---------------------------------------------------------+----------------+
+   |requested_derivation_limit|Propose it only where the Mission Issuer implements the  |Don't propose a |
+   |                          |derivation limits profile                                |large round     |
+   |                          |([I-D.draft-mcguinness-oauth-mission-derivation-limits]);|number "to be   |
+   |                          |a Mission Issuer without that profile refuses the member |safe"; an       |
+   |                          |as an unknown Intent member.  Where the task implies a   |omitted value is|
+   |                          |natural issuance count (a one-shot read, a fixed number  |not more        |
+   |                          |of scheduled runs), propose that count; omit it to defer |permissive than |
+   |                          |entirely to the deployment's own ceiling.                |a proposed one, |
+   |                          |                                                         |so guessing high|
+   |                          |                                                         |only misleads   |
+   |                          |                                                         |the Approver    |
+   |                          |                                                         |about what was  |
+   |                          |                                                         |actually        |
+   |                          |                                                         |requested.      |
+   +--------------------------+---------------------------------------------------------+----------------+
+   |any other named member    |A companion profile MAY define further named top-level   |SHOULD NOT emit |
+   |                          |Mission Intent members (for example, a metering          |a key the       |
+   |                          |consumption bound); emit the ones the deployment's       |specific        |
+   |                          |adopted companions recognize.                            |deployment does |
+   |                          |                                                         |not recognize;  |
+   |                          |                                                         |an unrecognized |
+   |                          |                                                         |key risks       |
+   |                          |                                                         |rejection of the|
+   |                          |                                                         |Intent.         |
+   +--------------------------+---------------------------------------------------------+----------------+
 
                                   Table 1
 
@@ -1416,6 +1417,12 @@ Table of Contents
               2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-consent-
               evidence.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-derivation-limits]
+              McGuinness, K., "Mission Derivation Limits for OAuth 2.0",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-derivation-
+              limits.html>.
 
    [I-D.draft-mcguinness-oauth-mission-progressive]
               McGuinness, K., "Mission Progressive Authorization for

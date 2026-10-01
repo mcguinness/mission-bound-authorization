@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                         30 September 2026
-Expires: 3 April 2027
+Intended status: Informational                            1 October 2026
+Expires: 4 April 2027
 
 
                          Mission Security Model
@@ -63,7 +63,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 3 April 2027.
+   This Internet-Draft will expire on 4 April 2027.
 
 Copyright Notice
 
@@ -993,6 +993,7 @@ Table of Contents
       derivation_limit that a child does not inherit from its parent,
       and issuer adjudication at each child generation
       ([I-D.draft-mcguinness-oauth-mission-cross-domain],
+      [I-D.draft-mcguinness-oauth-mission-derivation-limits],
       [I-D.draft-mcguinness-oauth-mission-child-delegation]).  Residual:
       the composed bound across all active dimensions, depth times
       domains times child generations, plus the aggregate derivations a
@@ -1489,6 +1490,12 @@ Table of Contents
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-cross-
               domain.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-derivation-limits]
+              McGuinness, K., "Mission Derivation Limits for OAuth 2.0",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-derivation-
+              limits.html>.
 
    [I-D.draft-mcguinness-oauth-mission-discharge]
               McGuinness, K., "Mission Completion and Entry Discharge

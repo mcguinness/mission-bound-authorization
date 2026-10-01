@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       30 September 2026
-Expires: 3 April 2027
+Intended status: Standards Track                          1 October 2026
+Expires: 4 April 2027
 
 
                   Mission Issuance Grant for OAuth 2.0
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 3 April 2027.
+   This Internet-Draft will expire on 4 April 2027.
 
 Copyright Notice
 
@@ -314,9 +314,10 @@ Table of Contents
 
    4.  *Derivation event.* Each grant minted is a derivation event.
        Where the Mission's established derivation_limit
-       ([I-D.draft-mcguinness-oauth-mission]) is set, the MAS MUST count
-       grants against it atomically and refuse beyond it, which gives
-       that ceiling a binding locus under the standalone binding.
+       ([I-D.draft-mcguinness-oauth-mission-derivation-limits]) is set,
+       the MAS MUST count grants against it atomically and refuse beyond
+       it, which gives that ceiling a binding locus under the standalone
+       binding.
 
    5.  *Evidence.* Each minting is recorded with the Mission record: the
        jti, audience, requested and granted entries, and time.
@@ -965,6 +966,12 @@ Table of Contents
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-derivation-limits]
+              McGuinness, K., "Mission Derivation Limits for OAuth 2.0",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-derivation-
+              limits.html>.
 
    [I-D.draft-mcguinness-oauth-mission-status]
               McGuinness, K., "Mission Status and Lifecycle for OAuth

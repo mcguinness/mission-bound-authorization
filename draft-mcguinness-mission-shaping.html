@@ -1060,11 +1060,11 @@ svg {
 <thead><tr>
 <td class="left">Internet-Draft</td>
 <td class="center">Mission Shaping</td>
-<td class="right">September 2026</td>
+<td class="right">October 2026</td>
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 3 April 2027</td>
+<td class="center">Expires 4 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1077,12 +1077,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-shaping-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-09-30" class="published">30 September 2026</time>
+<time datetime="2026-10-01" class="published">1 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-03">3 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-04">4 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1142,7 +1142,7 @@ by the shaper.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 3 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 4 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1709,8 +1709,9 @@ its <code>mission_intent</code> Submission envelope
 </li>
         <li class="normal" id="section-7-2.7">
           <p id="section-7-2.7.1">any other named top-level member a companion profile defines, for
-example a <code>requested_derivation_limit</code> or a consumption bound
-(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-7-2.7.1" class="pilcrow">¶</a></p>
+example a <code>requested_derivation_limit</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-derivation-limits" class="cite xref">I-D.draft-mcguinness-oauth-mission-derivation-limits</a>]</span>) or a consumption
+bound (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-7-2.7.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-7-3">The Intent carries no authority members. Where the task calls for
@@ -1911,7 +1912,7 @@ and is never an input authority derives from.<a href="#section-7.3-1" class="pil
               <td class="text-left" rowspan="1" colspan="1">
                 <code>requested_derivation_limit</code>
 </td>
-              <td class="text-left" rowspan="1" colspan="1">Where the task implies a natural issuance count (a one-shot read, a fixed number of scheduled runs), propose that count; omit it to defer entirely to the deployment's own ceiling.</td>
+              <td class="text-left" rowspan="1" colspan="1">Propose it only where the Mission Issuer implements the derivation limits profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-derivation-limits" class="cite xref">I-D.draft-mcguinness-oauth-mission-derivation-limits</a>]</span>); a Mission Issuer without that profile refuses the member as an unknown Intent member. Where the task implies a natural issuance count (a one-shot read, a fixed number of scheduled runs), propose that count; omit it to defer entirely to the deployment's own ceiling.</td>
               <td class="text-left" rowspan="1" colspan="1">Don't propose a large round number "to be safe"; an omitted value is not more permissive than a proposed one, so guessing high only misleads the Approver about what was actually requested.</td>
             </tr>
             <tr>
@@ -2911,6 +2912,10 @@ and would carry its own registrations there.<a href="#section-20-1" class="pilcr
 <dt id="I-D.draft-mcguinness-oauth-mission-consent-evidence">[I-D.draft-mcguinness-oauth-mission-consent-evidence]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consent Evidence for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-derivation-limits">[I-D.draft-mcguinness-oauth-mission-derivation-limits]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Derivation Limits for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-derivation-limits.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-derivation-limits.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-progressive">[I-D.draft-mcguinness-oauth-mission-progressive]</dt>
         <dd>

@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       30 September 2026
-Expires: 3 April 2027
+Intended status: Standards Track                          1 October 2026
+Expires: 4 April 2027
 
 
              Mission Cross-Domain Projection for OAuth 2.0
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 3 April 2027.
+   This Internet-Draft will expire on 4 April 2027.
 
 Copyright Notice
 
@@ -414,7 +414,9 @@ Table of Contents
    Issuing a cross-domain grant is a derivation event and is gated like
    any other derivation ([I-D.draft-mcguinness-oauth-mission],
    Section "Mission Lifecycle and Gating").  It counts once against the
-   Mission's derivation budget, however many local tokens the partner
+   Mission's derivation budget
+   ([I-D.draft-mcguinness-oauth-mission-derivation-limits], Section 
+   "Cross-Domain Issuance"), however many local tokens the partner
    domain later mints: the issuer cannot observe those tokens and does
    not count them, and the Resource AS bounds its own minting by the
    grant and by local policy (Section 9).
@@ -422,9 +424,10 @@ Table of Contents
    Because each grant lives at most 300 seconds, steady-state partner
    work re-issues grants on a lease cadence and consumes at least 12
    derivations per hour per audience; a deployment sizes the Mission's
-   derivation_limit ([I-D.draft-mcguinness-oauth-mission]) as a function
-   of that cadence times the projected audiences times the Mission's
-   duration.
+   derivation_limit
+   ([I-D.draft-mcguinness-oauth-mission-derivation-limits]) as a
+   function of that cadence times the projected audiences times the
+   Mission's duration.
 
    A Mission-bound cross-domain grant:
 
@@ -1468,6 +1471,12 @@ Table of Contents
               for OAuth 2.0", 2026, <https://mcguinness.github.io/
               mission-bound-authorization/draft-mcguinness-oauth-
               mission-cross-org-delegation.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-derivation-limits]
+              McGuinness, K., "Mission Derivation Limits for OAuth 2.0",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-derivation-
+              limits.html>.
 
    [I-D.draft-mcguinness-oauth-mission-resource-access]
               McGuinness, K., "Mission Resource Access Profile for OAuth

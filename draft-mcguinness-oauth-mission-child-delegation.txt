@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                       30 September 2026
-Expires: 3 April 2027
+Intended status: Standards Track                          1 October 2026
+Expires: 4 April 2027
 
 
                  Mission Child Delegation for OAuth 2.0
@@ -55,7 +55,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 3 April 2027.
+   This Internet-Draft will expire on 4 April 2027.
 
 Copyright Notice
 
@@ -1102,15 +1102,16 @@ Table of Contents
 7.2.  Derivation Budget Is Not Inherited
 
    A Child Mission's effective derivation_limit
-   ([I-D.draft-mcguinness-oauth-mission]) is established from its own
-   Mission Intent's requested_derivation_limit, clamped by the
-   deployment's own policy ceiling for the Child Mission, at child
-   creation, and is independent of the parent's: the attenuation rules
-   above bound a child's authority, expiry, and delegation policy
-   against the parent, but not its derivation count. derivation_limit is
-   a per-Mission local issuance counter.  A Mission Issuer and a
-   deployment MUST NOT treat it, at any single Mission, as an aggregate,
-   concurrency, spend, or subtree bound.
+   ([I-D.draft-mcguinness-oauth-mission-derivation-limits],
+   Section "Effective Limit") is established from its own Mission
+   Intent's requested_derivation_limit, clamped by the deployment's own
+   policy ceiling for the Child Mission, at child creation, and is
+   independent of the parent's: the attenuation rules above bound a
+   child's authority, expiry, and delegation policy against the parent,
+   but not its derivation count. derivation_limit is a per-Mission local
+   issuance counter.  A Mission Issuer and a deployment MUST NOT treat
+   it, at any single Mission, as an aggregate, concurrency, spend, or
+   subtree bound.
 
    A Parent Mission's own derivation_limit caps derivation at the parent
    alone; it does not bound how many derivations the child subtree
@@ -1568,14 +1569,16 @@ Table of Contents
    budget or make the child ineligible.
 
    This is a carryover-specific exception to starting a new child with a
-   fresh derivation counter (Section 7.2): the replacement continues the
-   old child's remaining budget, despite receiving a new record
-   identifier.  Metering and exclusivity require defined, atomic
-   transfer or shared-state binding; changing the key to replacement_id
-   is not a transfer.  Fan-out is recounted against new justifying
-   entries in the same serialization domain, including concurrently non-
-   terminal occupants and all carried generations.  Repeated expansion/
-   carryover cannot replenish any of these budgets.
+   fresh derivation counter (Section 7.2;
+   [I-D.draft-mcguinness-oauth-mission-derivation-limits],
+   Section "Counting Derivations"): the replacement continues the old
+   child's remaining budget, despite receiving a new record identifier.
+   Metering and exclusivity require defined, atomic transfer or shared-
+   state binding; changing the key to replacement_id is not a transfer.
+   Fan-out is recounted against new justifying entries in the same
+   serialization domain, including concurrently non-terminal occupants
+   and all carried generations.  Repeated expansion/carryover cannot
+   replenish any of these budgets.
 
 10.5.  Fresh Records and Direct Approval
 
@@ -2071,6 +2074,12 @@ Table of Contents
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-derivation-limits]
+              McGuinness, K., "Mission Derivation Limits for OAuth 2.0",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-derivation-
+              limits.html>.
 
    [I-D.draft-mcguinness-oauth-mission-discharge]
               McGuinness, K., "Mission Completion and Entry Discharge

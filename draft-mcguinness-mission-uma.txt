@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                          30 September 2026
-Expires: 3 April 2027
+Intended status: Experimental                             1 October 2026
+Expires: 4 April 2027
 
 
                 Mission-Bound Authorization for UMA 2.0
@@ -63,7 +63,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 3 April 2027.
+   This Internet-Draft will expire on 4 April 2027.
 
 Copyright Notice
 
@@ -549,8 +549,9 @@ Table of Contents
    with issuance.  Each RPT issuance and each upgrade counts as one
    derivation under the Mission; where the Mission's effective
    derivation_limit is established, the authorization server MUST refuse
-   the derivation that would exceed it, per the issuance profile's
-   count-and-gate rule ([I-D.draft-mcguinness-oauth-mission]).  An RPT
+   the derivation that would exceed it, per the derivation limits
+   profile's count-and-gate rule
+   ([I-D.draft-mcguinness-oauth-mission-derivation-limits]).  An RPT
    issued under a Mission MUST NOT expire later than the Mission's
    expires_at, and the exp of each permission within it is likewise
    capped, so no credential outlives the Mission.
@@ -1201,6 +1202,12 @@ Table of Contents
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-derivation-limits]
+              McGuinness, K., "Mission Derivation Limits for OAuth 2.0",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-derivation-
+              limits.html>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
