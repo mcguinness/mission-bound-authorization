@@ -224,14 +224,14 @@ export interface MissionContainment {
 }
 
 /**
- * @spec discharge#discharge-operation, discharge#determining — one committed entry
+ * @spec discharge#discharge-commit, discharge#determining — one committed entry
  * DISCHARGE latch: the issuer-held record that a `terminal_when` condition of
  * the named entry fired, so the entry no longer derives
  * (@spec discharge#discharge). Keyed by `entry_digest`, the Authority Set entry
  * commitment over the IMMUTABLE Mission-record entry, which makes the latch an
  * EQUIVALENCE-CLASS latch: every recorded entry resolving to that digest is
  * discharged by this one row, in one transition with one version increment
- * (@spec discharge#discharge-operation, "Duplicate entries"). MONOTONIC: a latch
+ * (@spec discharge#discharge-commit, "Duplicate entries"). MONOTONIC: a latch
  * is never removed and never re-latched, so a later delivery is acknowledged
  * `already_discharged` (@spec discharge#discharge-result). `condition_digest` /
  * `event_type` / `event_id` record WHICH condition fired and the asserted
