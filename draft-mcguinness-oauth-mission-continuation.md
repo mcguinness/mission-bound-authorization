@@ -536,7 +536,10 @@ confused-deputy hop to the audiences the Mission already reaches.
 Continuation preserves the Mission's subject rather than minting a new
 one, and the transports resolve audience-local subjects where they resolve
 a subject at all, so a continued Mission does not become a cross-audience
-correlation handle. The Identity Continuation Assertion carries no subject.
+correlation handle. The Identity Continuation Assertion carries no user
+subject, and its handles are hop-specific, but the IdP and a hop's
+participants can still correlate a chain
+({{Section 10 of I-D.draft-mcguinness-oauth-id-continuation-assertion}}).
 Continuation handles are opaque and carry no authorization detail, so their
 exposure discloses neither the subject nor the granted authority.
 
