@@ -455,8 +455,8 @@ and several bindings; this document is the single structural view.
 Peer standing among the bindings is a deployment-topology claim, not
 a data-model-independence claim: each attaches to its own protocol as
 an equally adoptable unit, and OAuth is the family's first-authored
-binding with the most deployed infrastructure, a deployment fact and
-not a maturity ranking. Adopting Missions on OAuth requires the
+binding, built on widely deployed OAuth infrastructure, a deployment
+fact and not a maturity ranking. Adopting Missions on OAuth requires the
 changes the OAuth binding defines. The two axes diverge for the
 standalone binding: the Mission Authority Server
 ({{I-D.draft-mcguinness-mission-authority-server}}) is a normative
