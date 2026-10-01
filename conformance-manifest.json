@@ -3933,7 +3933,7 @@
    "assertion": "no-side-effect",
    "observation": {
     "normative": "a failed or refused derivation leaves the derivation count unchanged",
-    "local": "asserted on the expansion nothing_to_expand refusal path, and now also at the cap boundary itself on a rotating refresh refused derivations_exhausted by the non-consuming pre-check (#914): the count stays at the cap across two refused attempts. Moving the row to tested is left to an owner ruling"
+    "local": "Covered: refusals before admission are never counted, at the expansion nothing_to_expand refusal and at the cap boundary on a rotating refresh refused derivations_exhausted by the non-consuming pre-check (#914); and a failure AFTER admission on the async-delegation creating exchange, which counts inside the transaction that commits the family, rolls the count back. NOT covered, because the reference does not meet the clause there (#914 ruling 1; #250): the provider access-token hook (code exchange, refresh, deferred, child redemption, dispatch and the expansion successor mint) commits the count before signing with no rollback, reservation or acceptance callback, so a failure after the count stays counted (documented by derivation-counting.test.ts > residual: the provider access-token hook counts before signing ...); and the ID-JAG continuation reserves before minting, so a refusal after admission (invalid_target when nothing left in the effective set is served by the audience) stays counted under an unreleased jti-keyed reservation until an authoritative non-acceptance returns it (continuation-grant.test.ts > residual: an exchange refused invalid_target after admission ...). Partial until those paths stop counting a failed derivation"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -3947,6 +3947,12 @@
     {
      "file": "src/services/authorization-server/test/refresh-precheck.test.ts",
      "name": "refresh pre-check: a refused refresh consumes nothing (@spec mission#issuance-gating, #914) > approval grant with an exhausted derivation cap: refused derivations_exhausted without counting or consuming, so the same token is refused by the gate again, never as reuse",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/derivation-counting.test.ts",
+     "name": "a derivation that fails after admission (@spec mission#issuance-gating, #914 ruling 1) > async-delegation creating exchange: a failure after the cap check, inside the commit, rolls the count back",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
