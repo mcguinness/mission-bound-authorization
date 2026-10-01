@@ -480,7 +480,7 @@ published it, then `pnpm install --frozen-lockfile` from `src/`.
 
 | Draft | Revision | Role |
 |---|---|---|
-| `draft-mcguinness-oauth-mission.md` (the OAuth binding) | `4777b582` | Normative: Mission intake, derivation, approval, record, issuance, scope projection, introspection, lifecycle |
+| `draft-mcguinness-oauth-mission.md` (the OAuth binding) | `ee6a2e24` (the sections this deployment relies on are unchanged since `4777b582`; the later commits are editorial, in `mission-record` and `standing-consent-bases`) | Normative: Mission intake, derivation, approval, record, issuance, scope projection, introspection, lifecycle |
 | `draft-mcguinness-oauth-mission-resource-access.md` | `7fc9ef45` | Normative: the `mission_resource_access` type and its scope-projection conditions |
 | `draft-mcguinness-mission-architecture.md` | `e2dda50a` | Informative: the entry ramp, assurance claims and the Deployment Profile shape |
 
