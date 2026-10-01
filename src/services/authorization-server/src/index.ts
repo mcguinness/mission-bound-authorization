@@ -63,6 +63,7 @@ export {
   GateError,
   LifecycleConflictError,
   ObservationWatermarkError,
+  STATUS_SIGNING_ALG,
   type DischargeReceiptObservation,
   type ObservationWatermark,
   type StatusObservation,

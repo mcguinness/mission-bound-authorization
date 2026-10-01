@@ -244,6 +244,7 @@ import {
   GateError,
   LifecycleConflictError,
   type MissionKernel,
+  STATUS_SIGNING_ALG,
   type StatusObservation,
 } from "../kernel/kernel.js";
 import {
@@ -3250,6 +3251,14 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // -> a per-delegation grant with a rotated, sender-constrained refresh token).
       if (enabled("async-delegation")) meta.delegated_refresh_token_profile_supported = true;
       if (enabled("service-catalog")) meta.service_catalog_endpoint = `${opts.issuer}/service-catalog`;
+      // @spec status#as-metadata, discharge#discharge-receipt — the response-signing
+      // algorithms of the Mission Status Response shape, wherever it (or the
+      // Discharge Receipt, signed the same way) can be served: the Status
+      // operation, and the Lifecycle endpoint's `discharge` operation, which
+      // answers with either even where the Status route itself is disabled.
+      if (enabled("status") || enabled("discharge")) {
+        meta.mission_status_signing_alg_values_supported = [STATUS_SIGNING_ALG];
+      }
       meta.introspection_endpoint = `${opts.issuer}/introspect`;
       // @spec mission#caller-authorization-and-minimization (cleanup, issue
       // #541) — advertise the introspection endpoint's actual authentication

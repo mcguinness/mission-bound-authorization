@@ -26,6 +26,7 @@ import {
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
+  ALL_PROVIDER_CAPABILITIES,
   type AuthorityEntry,
   type BuiltAs,
   buildAuthorizationServer,
@@ -38,6 +39,7 @@ import {
   entryDigest,
   MISSION_DISCHARGE_SCOPE,
   type MissionRecord,
+  type ProviderCapability,
   validateMissionIntent,
 } from "../src/index.js";
 import { aiAgents } from "./actor-profiles.helper.js";
@@ -231,6 +233,20 @@ const lifecycle = (missionId: string, payload: unknown, token = DEV_SERVICE_TOKE
     headers: { "content-type": "application/json", "x-service-token": token },
     body: JSON.stringify(payload),
   });
+
+/**
+ * @spec status#as-metadata — the response-signing algorithms an AS advertises
+ * for the Mission Status Response shape (and the Discharge Receipt), read from
+ * its discovery document; empty when the member is absent.
+ */
+async function advertisedAlgs(issuer: string): Promise<string[]> {
+  const meta = (await (await fetch(`${issuer}/.well-known/openid-configuration`)).json()) as Record<
+    string,
+    unknown
+  >;
+  const algs = meta.mission_status_signing_alg_values_supported;
+  return Array.isArray(algs) ? (algs as string[]) : [];
+}
 
 const latched = (id: string): string[] =>
   ((as.kernel.get(id) as MissionRecord).discharged ?? []).map((d) => d.entry_digest);
@@ -640,11 +656,14 @@ describe("the Discharge Receipt (@spec discharge#discharge-receipt, #898 fix 3)"
     expect(latched(replacement.id)).toEqual([digestOf(replacement, "payments:invoice.list")]);
     const committedVersion = (as.kernel.get(replacement.id) as MissionRecord).version;
 
-    // It verifies under the consumer's eight checks, against the AS's jwks_uri.
+    // It verifies under the consumer's eight checks, against the AS's jwks_uri
+    // and the signing algorithms the AS advertises in discovery.
+    const algs = await advertisedAlgs(ISSUER);
+    expect(algs).toContain(header.alg);
     await expect(
       verifyDischargeReceipt(bytes, {
         keys,
-        algs: ["ES256"],
+        algs,
         issuer: ISSUER,
         audience: SOURCE,
         nonce: req.nonce,
@@ -793,7 +812,7 @@ describe("discharge response consumers (@spec discharge#discharge-receipt, #disc
     const jws = await (await lifecycle(child.id, req)).text();
     const base = {
       keys,
-      algs: ["ES256"],
+      algs: await advertisedAlgs(ISSUER),
       issuer: ISSUER,
       audience: "svc:console",
       nonce: req.nonce,
@@ -863,3 +882,34 @@ describe("discharge response consumers (@spec discharge#discharge-receipt, #disc
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Discovery of the signing algorithms (@spec status#as-metadata).
+// ---------------------------------------------------------------------------
+
+describe("Mission Status signing algorithms in discovery (@spec status#as-metadata, discharge#discharge-receipt)", () => {
+  it("advertises them wherever a Status response or a Discharge Receipt can be served, the Status route disabled included", async () => {
+    // This deployment serves both.
+    expect(await advertisedAlgs(ISSUER)).toEqual(["ES256"]);
+    const deployment = async (port: number, capabilities: ReadonlySet<ProviderCapability>) => {
+      const issuer = `http://localhost:${port}`;
+      const built = await buildAuthorizationServer({ issuer, allowHeadlessAdjudication: true, capabilities });
+      const listening = built.provider.listen(port);
+      try {
+        return await advertisedAlgs(issuer);
+      } finally {
+        listening.close();
+      }
+    };
+    const without = (...off: ProviderCapability[]) =>
+      new Set(ALL_PROVIDER_CAPABILITIES.filter((c) => !off.includes(c)));
+    // Discharge served with the Status route OFF: receipts and envelopes are
+    // still signed, so the algorithms are still advertised.
+    expect(await deployment(PORT + 1, without("status"))).toEqual(["ES256"]);
+    // Status served with discharge off.
+    expect(await deployment(PORT + 2, without("discharge"))).toEqual(["ES256"]);
+    // Neither: nothing signs that shape, and the member is absent.
+    expect(await deployment(PORT + 3, without("status", "discharge"))).toEqual([]);
+  });
+});
+

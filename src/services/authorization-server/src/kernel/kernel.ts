@@ -140,6 +140,14 @@ import {
   type TerminalWhenCondition,
 } from "./types.js";
 
+/**
+ * @spec status#as-metadata, discharge#discharge-receipt — the JWS algorithm
+ * this AS signs the Mission Status Response shape and the Discharge Receipt
+ * with (its Status key). Published as `mission_status_signing_alg_values_supported`
+ * wherever either can be served, so a consumer checks `alg` against discovery.
+ */
+export const STATUS_SIGNING_ALG = "ES256";
+
 /** Retry budget for random Status List index allocation on UNIQUE collision. */
 const STATUS_INDEX_MAX_ATTEMPTS = 16;
 
@@ -3036,7 +3044,7 @@ export class MissionKernel {
    */
   async signObservation(observation: StatusObservation): Promise<string> {
     const jws = await new SignJWT(observation.payload)
-      .setProtectedHeader({ alg: "ES256", kid: this.opts.statusKid, typ: "mission-status-response+jwt" })
+      .setProtectedHeader({ alg: STATUS_SIGNING_ALG, kid: this.opts.statusKid, typ: "mission-status-response+jwt" })
       .setIssuer(this.opts.issuer)
       .setAudience(observation.audience)
       .setIssuedAt(observation.iat)
@@ -3095,7 +3103,7 @@ export class MissionKernel {
    */
   async signDischargeReceipt(receipt: DischargeReceiptObservation): Promise<string> {
     return new SignJWT(receipt.payload)
-      .setProtectedHeader({ alg: "ES256", kid: this.opts.statusKid, typ: DISCHARGE_RECEIPT_TYP })
+      .setProtectedHeader({ alg: STATUS_SIGNING_ALG, kid: this.opts.statusKid, typ: DISCHARGE_RECEIPT_TYP })
       .setIssuer(this.opts.issuer)
       .setAudience(receipt.audience)
       .setIssuedAt(receipt.iat)

@@ -7031,7 +7031,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "Verified with a TEST-SIDE consumer (test/discharge-consumer.helper.ts, verifyStatusResponse with forwarded: true): a real forwarded envelope from the AS verifies against its jwks_uri when forwarded_from names the requested Mission and mission.issuer equals its issuer, and a consumer without the rule rejects it at step 8; forged envelopes naming another Mission, or a mismatched issuer, are refused. Partial: no production consumer of Status responses exists in src/, so the rule is exercised only by the test verifier."
+   "notes": "Verified with a TEST-SIDE consumer (test/discharge-consumer.helper.ts, verifyStatusResponse with forwarded: true): a real forwarded envelope from the AS verifies against its jwks_uri and its discovered mission_status_signing_alg_values_supported when forwarded_from names the requested Mission and mission.issuer equals its issuer, and a consumer without the rule rejects it at step 8; forged envelopes naming another Mission, or a mismatched issuer, are refused. Partial: no production consumer of Status responses exists in src/, so the rule is exercised only by the test verifier."
   },
   {
    "id": "status.discharge.receipt-consumer-verification",
@@ -7068,7 +7068,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "Verified with a TEST-SIDE consumer (test/discharge-consumer.helper.ts, verifyDischargeReceipt): the AS's real receipt passes all eight checks against its jwks_uri, and twelve single-fault receipts are each refused at the check they break (typ; alg none and an unadvertised alg; signature; iss; aud; nonce; echoed mission_id, selector and event_id; iat and exp beyond 30 s of skew). Partial: no production consumer exists in src/, and the AS publishes no mission_status_signing_alg_values_supported metadata, so the verifier takes the advertised algorithms as an input (ES256)."
+   "notes": "Verified with a TEST-SIDE consumer (test/discharge-consumer.helper.ts, verifyDischargeReceipt): the AS's real receipt passes all eight checks against its jwks_uri, with the alg allowlist read from the AS's discovery document (mission_status_signing_alg_values_supported, which the AS publishes wherever a Status response or a Discharge Receipt can be served, the Status route disabled included), and twelve single-fault receipts are each refused at the check they break (typ; alg none and an unadvertised alg; signature; iss; aud; nonce; echoed mission_id, selector and event_id; iat and exp beyond 30 s of skew). Partial: no production consumer of receipts exists in src/, so the procedure is exercised only by the test verifier."
   },
   {
    "id": "status.discharge.replay-echoes-current-form",
