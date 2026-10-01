@@ -599,8 +599,47 @@ The approval-to-permit path in sequence:
 ~~~
 
 Under the standalone binding the same life runs with ordinary tokens
-and the Mission Join in place of step 3's claim carriage
-({{deployment}}). Under the AAuth binding, the Person Server instead
+and the Mission Join in place of step 3's claim carriage. In
+sequence, the standalone mode runs submit, poll, approve, join,
+permit:
+
+~~~
+ Client               MAS                Approver     PEP/PDP
+   |                    |                  |            |
+   | 1 submit Intent    |                  |            |
+   |------------------->|                  |            |
+   | 2 202 pending      |                  |            |
+   |<-------------------|                  |            |
+   |                    | 3 disclose       |            |
+   |                    |----------------->|            |
+   |                    | 4 approve        |            |
+   |                    |<-----------------|            |
+   |                    | Mission active   |            |
+   | 5 poll             |                  |            |
+   |------------------->|                  |            |
+   | 6 approved,        |                  |            |
+   |   mission_id       |                  |            |
+   |<-------------------|                  |            |
+   | 7 action, token,   |                  |            |
+   |   Mission ref      |                  |            |
+   |--------------------------------------------------->|
+   |                    | 8 signed status: |            |
+   |                    |   active         |            |
+   |                    |<------------------------------|
+   |                    |------------------------------>|
+   |                    |                  | 9 join;    |
+   |                    |                  |   evaluate |
+   | 10 permit          |                  |            |
+   |<---------------------------------------------------|
+~~~
+
+The token in step 7 is an ordinary OAuth token from the unchanged AS;
+steps 8 through 10 are the Mission Join and the runtime decision (the
+MAS's Mission Join section), and the MAS's staged walkthrough of the
+same flow is its end-to-end appendix
+({{I-D.draft-mcguinness-mission-authority-server}}).
+
+Under the AAuth binding, the Person Server instead
 governs the native Mission Context through propose, clarify, approve,
 and the mission log; it does not emulate the AS's Authority Set,
 integrity anchors, PDP permits, Child Missions, or portable evidence
@@ -2816,45 +2855,6 @@ Mission state and the issuance gate ({{validity-model}}). A deployment
 can adopt the family this way first, per task, and add state
 surfaces only where missions grow long enough to need suspend,
 complete, or kill-now.
-
-In sequence, the standalone mode runs submit, poll, approve, join,
-permit:
-
-~~~
- Client               MAS                Approver     PEP/PDP
-   |                    |                  |            |
-   | 1 submit Intent    |                  |            |
-   |------------------->|                  |            |
-   | 2 202 pending      |                  |            |
-   |<-------------------|                  |            |
-   |                    | 3 disclose       |            |
-   |                    |----------------->|            |
-   |                    | 4 approve        |            |
-   |                    |<-----------------|            |
-   |                    | Mission active   |            |
-   | 5 poll             |                  |            |
-   |------------------->|                  |            |
-   | 6 approved,        |                  |            |
-   |   mission_id       |                  |            |
-   |<-------------------|                  |            |
-   | 7 action, token,   |                  |            |
-   |   Mission ref      |                  |            |
-   |--------------------------------------------------->|
-   |                    | 8 signed status: |            |
-   |                    |   active         |            |
-   |                    |<------------------------------|
-   |                    |------------------------------>|
-   |                    |                  | 9 join;    |
-   |                    |                  |   evaluate |
-   | 10 permit          |                  |            |
-   |<---------------------------------------------------|
-~~~
-
-The token in step 7 is an ordinary OAuth token from the unchanged AS;
-steps 8 through 10 are the Mission Join and the runtime decision (the
-MAS's Mission Join section), and the MAS's staged walkthrough of the
-same flow is its end-to-end appendix
-({{I-D.draft-mcguinness-mission-authority-server}}).
 
 The quarantine pattern removes a leg of the injection-to-exfiltration
 chain instead of gating it: no single Mission ever holds untrusted
