@@ -3016,9 +3016,9 @@ A Resource Server:
    it prevents in {{downgrade-by-omission}}, and the metadata that
    advertises the requirement in {{protected-resource-metadata}}.
 
-A Resource Server can also impose stronger actor-chain requirements
-on a token that carries an `act` chain (for example, requiring and
-recording the chain); log the `mission` claim's `id` and the token
+A Resource Server can also require that a token carry an `act` chain
+and record it, while authorizing only the token's current actor
+({{Section 4.1 of RFC8693}}); log the `mission` claim's `id` and the token
 `jti` with each served request, so its access logs join to Mission
 evidence; or, where the AS offers it, introspect the token
 ({{introspection}}) to observe Mission state per request.
@@ -3030,8 +3030,9 @@ without processing the `act` chain. A Mission-unaware {{RFC9068}}
 Resource Server reads `client_id` as the immediate client, which is
 accurate for that single token, but it cannot see the delegation
 lineage in the `act` chain or look up the originally-approved agent
-in the Mission Record, so it cannot apply actor-chain policy or join
-a delegate's action to the Mission's approval in its audit records.
+in the Mission Record, so it cannot recognize the current actor as a
+delegate, record the delegation lineage, or join a delegate's action
+to the Mission's approval in its audit records.
 
 A resource that requires Mission-bound tokens can advertise that
 through the `mission_bound_authorization_required` protected resource
