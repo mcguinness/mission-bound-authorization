@@ -5798,10 +5798,14 @@ Cross-Domain:
   narrowing under the subset rule. Made the per-capability
   transformation rule the single home: audience projection to a
   Resource AS needs `narrowing`, and without it a delegated token
-  includes an entry only exactly as approved. Defined delegation
-  depth as issuer-side accounting over an `act` chain the AS
-  authored, with no Resource Server decision based on a prior
-  actor's identity.
+  includes an entry only exactly as approved; a type that declares
+  `delegation` without `narrowing` is delegable only as an entry
+  equal to one in the presented delegating token, under a new
+  equality case of the subset rule. Delegation depth comes from
+  accounting the AS maintains for its own issuance, not from `act`
+  nesting, a depth the AS cannot establish narrows every entry out,
+  and a Resource Server authorizes only the current actor while it
+  may record the chain. These add requirements.
 
 - Stated that approval cannot establish comprehension, with
   non-normative rendering practices for large Authority Sets
