@@ -1493,6 +1493,10 @@ PS, and termination. It does not adopt the OAuth Authority Set, the
 OAuth integrity anchors, or universal subset derivation. AAuth resource authority
 is decided afresh in the vocabulary and policy of each Resource or
 Access Server, with contextual PS governance when the PS is on path.
+Read as shared capabilities rather than universal wire semantics, all
+the bindings carry durability, attribution, and termination; narrowing
+and containment require a structured-authority capability, so they are
+not baseline AAuth Mission Context properties.
 
 **Authority serves an approved task**:
 : No Mission-bound authority exists except by derivation for a
@@ -1543,7 +1547,7 @@ Access Server, with contextual PS governance when the PS is on path.
 **Attribution is carried, never inferred**:
 : Each role in the actor chain travels in its own construct, and the
   evidence layer records them together; no role is derived from
-  another ({{actor-chain}}). This invariant scopes the actor chain.
+  another ({{actor-chain}}).
   The credential-to-Mission association is itself a carried fact only
   where a binding carries the `mission` claim; under the standalone
   binding the PDP's join establishes it by inference, bounded by that
@@ -1562,53 +1566,46 @@ Access Server, with contextual PS governance when the PS is on path.
   the `s256` commitment over exact mission-blob bytes, not the OAuth
   integrity anchors.
 
-Read against "approved" in the first invariant, the OAuth binding fully
-defines one authorization basis, `direct`, a human's own approval. It
-provides the extension point, an authorization-basis `type` string,
-that companion profiles use to define others: `template`, a dispatch
-drawing on a ceiling the human consented to once, and
-`policy_drawdown`, a child instance a policy adjudicates within a
-bound the parent's human already consented to. This is never an
-eighth invariant: every value of the basis, defined by the OAuth
-binding or by a companion, fixes the same accountable human as
-`consent_principal`; they differ only in what activated this instance
-and what root that activation traces to (the OAuth binding).
+Three readings of the invariants recur. Each follows from the seven
+and adds no eighth:
 
-Read as shared capabilities rather than universal wire semantics, the
-bindings carry durability, attribution, and termination. Narrowing and
-containment require a structured-authority capability and are not
-baseline AAuth Mission Context properties.
+Authorization bases:
+: "Approved" in the first invariant has more than one basis. The OAuth
+  binding fully defines one, `direct`, a human's own approval, and
+  provides the extension point, an authorization-basis `type` string,
+  that companion profiles use to define others: `template`, a
+  dispatch drawing on a ceiling the human consented to once, and
+  `policy_drawdown`, a child instance a policy adjudicates within a
+  bound the parent's human already consented to. Every basis fixes
+  the same accountable human as `consent_principal`; the bases differ
+  only in what activated this instance and what root that activation
+  traces to (the OAuth binding).
 
-Read on the artifact plane, the same invariants forbid authority from
-riding a work product: crossing into a Mission, it is input the
-receiving Mission re-evaluates under its own Authority Set, never a
-source of authority itself. This is a reading of the invariants
-above, not an eighth invariant, carried through non-transitive
-Mission-to-Mission handoff by the Mission Work Products companion
-({{I-D.draft-mcguinness-oauth-mission-work-products}}). The OAuth
-binding states the rule normatively in its "Authority Does Not
-Propagate With Information" section
-({{I-D.draft-mcguinness-oauth-mission}}); that section, not this
-summary, is the normative text this passage tracks.
+Work products:
+: Authority never rides a work product. Crossing into a Mission, a
+  work product is input the receiving Mission re-evaluates under its
+  own Authority Set, never a source of authority itself. The Mission
+  Work Products companion carries this through non-transitive
+  Mission-to-Mission handoff
+  ({{I-D.draft-mcguinness-oauth-mission-work-products}}), and the
+  OAuth binding states the rule in its "Authority Does Not Propagate
+  With Information" section ({{I-D.draft-mcguinness-oauth-mission}}).
 
-Read under composition, the invariants bound one Mission's own
-Authority Set, not the aggregate surface a delegation tree, a
-cross-domain hop, or a chain of child generations reaches together:
-delegation depth resets at each cross-domain hop and child
-generation, and each Child Mission enforces its own derivation cap
-independently of its parent's, so the authorized surface a body of
-work can reach can exceed what any single approval appears to bound.
-This is again a reading of the
-invariants above, not an eighth invariant; disclosing the composed
-bound at the consent surface is the cross-domain and child-delegation
-profiles' role, and bounding aggregate consumption is the metering
-profile's ({{I-D.draft-mcguinness-oauth-mission-cross-domain}},
-{{I-D.draft-mcguinness-oauth-mission-child-delegation}},
-{{I-D.draft-mcguinness-mission-metering}}). The OAuth binding states
-the same composition property in its "Composition and the Effective
-Ceiling" section ({{I-D.draft-mcguinness-oauth-mission}}); that
-section, not this summary, is the normative text this passage
-tracks.
+Composition:
+: The invariants bound one Mission's own Authority Set, not the
+  aggregate surface a delegation tree, a cross-domain hop, or a chain
+  of child generations reaches together. Delegation depth resets at
+  each cross-domain hop and child generation, and each Child Mission
+  enforces its own derivation cap independently of its parent's, so
+  the authorized surface a body of work can reach can exceed what any
+  single approval appears to bound. Disclosing the composed bound at
+  the consent surface is the cross-domain and child-delegation
+  profiles' role, and bounding aggregate consumption is the metering
+  profile's ({{I-D.draft-mcguinness-oauth-mission-cross-domain}},
+  {{I-D.draft-mcguinness-oauth-mission-child-delegation}},
+  {{I-D.draft-mcguinness-mission-metering}}). The OAuth binding
+  states the same property in its "Composition and the Effective
+  Ceiling" section ({{I-D.draft-mcguinness-oauth-mission}}).
 
 # Meaning and Derivation {#meaning-and-derivation}
 
