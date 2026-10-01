@@ -1782,6 +1782,11 @@ Authorization work for feedback that shaped these extensions.
 
 \[\[ To be removed from the final specification ]]
 
+- A refresh against a suspended Mission is checked, and refused, before
+  its refresh token is consumed, so a `resume` restores refresh with the
+  same token; issuance-time validation still governs a concurrent
+  suspension (#914).
+
 - Added conditional carryover correlation on an old child's cascaded
   observation; no state or authority is inferred from the pointer (#576).
 - Operational Considerations added (#310): recovery sizing for the
