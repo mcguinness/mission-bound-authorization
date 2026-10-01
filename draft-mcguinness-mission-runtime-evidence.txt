@@ -365,7 +365,9 @@ Table of Contents
          only when it has direct Mission-record access, holds
          introspection's authority_hash disclosure privilege, or the
          request carried it under the Local Approved-Set Verification
-         profile.
+         profile
+         ([I-D.draft-mcguinness-oauth-mission-approved-set-verification],
+         Section "Local Approved-Set Verification").
 
       policy_version:  OPTIONAL.  From the request's Mission reference,
          when known.
@@ -2522,6 +2524,12 @@ Table of Contents
               McGuinness, K., "Mission-Aware Agent Harnesses", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-harness.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-approved-set-verification]
+              McGuinness, K., "Mission Approved-Set Verification for
+              OAuth 2.0", 2026, <https://mcguinness.github.io/mission-
+              bound-authorization/draft-mcguinness-oauth-mission-
+              approved-set-verification.html>.
 
    [I-D.draft-mcguinness-oauth-mission-containment]
               McGuinness, K., "Mission Containment for OAuth 2.0", 2026,

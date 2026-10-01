@@ -574,13 +574,14 @@ Table of Contents
       anchor, in the integrity-anchor encoded form
       ([I-D.draft-mcguinness-oauth-mission]).  Not carried on the
       issuance profile's baseline mission claim or default introspection
-      projection; a PEP includes it only where it holds it under that
-      profile's Local Approved-Set Verification profile or
-      introspection's disclosure privilege
-      ([I-D.draft-mcguinness-oauth-mission]).  The mandatory identity
-      check of Section 6 does not depend on it; a PDP that receives it
-      and independently verifies it MAY use it as a further audit
-      correlator, never as a substitute for that check.
+      projection; a PEP includes it only where it holds it under the
+      Local Approved-Set Verification profile
+      ([I-D.draft-mcguinness-oauth-mission-approved-set-verification],
+      Section "Local Approved-Set Verification") or introspection's
+      disclosure privilege ([I-D.draft-mcguinness-oauth-mission]).  The
+      mandatory identity check of Section 6 does not depend on it; a PDP
+      that receives it and independently verifies it MAY use it as a
+      further audit correlator, never as a substitute for that check.
 
    policy_version:  REQUIRED when known.  A string.  The policy_version
       recorded at the approval event.  It is a Mission-record field
@@ -2995,6 +2996,12 @@ Table of Contents
               2.0 Profile", 2026, <https://mcguinness.github.io/mission-
               bound-authorization/draft-mcguinness-mission-runtime-
               oauth.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-approved-set-verification]
+              McGuinness, K., "Mission Approved-Set Verification for
+              OAuth 2.0", 2026, <https://mcguinness.github.io/mission-
+              bound-authorization/draft-mcguinness-oauth-mission-
+              approved-set-verification.html>.
 
    [I-D.draft-mcguinness-oauth-mission-containment]
               McGuinness, K., "Mission Containment for OAuth 2.0", 2026,

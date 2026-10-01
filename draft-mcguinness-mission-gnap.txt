@@ -779,10 +779,13 @@ Table of Contents
    minting a further credential downstream, or verifying Mission
    lifetime from retained state, MUST require it applies here unchanged.
    authority_hash is likewise not part of this binding's baseline
-   object; it becomes available only on the same disclosure terms the
-   issuance profile defines for its own baseline claim (introspection's
-   disclosure privilege, or its Local Approved-Set Verification
-   profile).  The object is delivered on three carriage surfaces:
+   object; it becomes available only on the same disclosure terms that
+   apply to the issuance profile's own baseline claim: introspection's
+   disclosure privilege ([I-D.draft-mcguinness-oauth-mission]), or the
+   Local Approved-Set Verification profile
+   ([I-D.draft-mcguinness-oauth-mission-approved-set-verification],
+   Section "Local Approved-Set Verification").  The object is delivered
+   on three carriage surfaces:
 
    *  *Token-carried*: a deployment issuing structured tokens (for
       example the jwt-signed format of [RFC9767]) carries the issuance
@@ -1430,6 +1433,12 @@ Table of Contents
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-approved-set-verification]
+              McGuinness, K., "Mission Approved-Set Verification for
+              OAuth 2.0", 2026, <https://mcguinness.github.io/mission-
+              bound-authorization/draft-mcguinness-oauth-mission-
+              approved-set-verification.html>.
 
    [I-D.draft-mcguinness-oauth-mission-containment]
               McGuinness, K., "Mission Containment for OAuth 2.0", 2026,

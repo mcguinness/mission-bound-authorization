@@ -3060,7 +3060,12 @@ and the audit horizon participates in the governance record.<a href="#section-9-
 enforcement proofs (<a href="#derivation-boundary" class="auto internal xref">Section 10</a>): a narrowed-token
 Resource Server enforces the authority it receives rather than
 reconstructing authority from a hash of a full set it does not hold
-(<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>).<a href="#section-9.1-2" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>). A Resource Server
+or policy decision point that needs an independent check retrieves
+the complete approved set, recomputes its anchor, and checks the
+carried authority as a subset of it under Mission Approved-Set
+Verification
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approved-set-verification" class="cite xref">I-D.draft-mcguinness-oauth-mission-approved-set-verification</a>]</span>).<a href="#section-9.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="token-classes">
@@ -5636,6 +5641,12 @@ bound profiled by <code>aauth-mission-expiry</code>.<a href="#section-16-3" clas
         <tbody>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">
+              <code>oauth-mission-approved-set-verification</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">Local Approved-Set Verification: an independent check that a token's carried authority is a subset of the Mission's complete approved Authority Set, retrieved over an issuer-authenticated, disclosure-gated surface, with a second tier that pins an independently held <code>authority_hash</code>.</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">
               <code>mission-mandate</code>
 </td>
             <td class="text-left" rowspan="1" colspan="1">A signed, portable statement of a Mission's committed facts; evidence, not a credential.</td>
@@ -5893,6 +5904,10 @@ minimization and retention duties applying there.<a href="#section-18-3" class="
 <dt id="I-D.draft-mcguinness-oauth-mission-approval">[I-D.draft-mcguinness-oauth-mission-approval]</dt>
       <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Deferred Approval for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html" class="reader-edition-ext-link" target="_blank" rel="noopener">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-approved-set-verification">[I-D.draft-mcguinness-oauth-mission-approved-set-verification]</dt>
+      <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Approved-Set Verification for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approved-set-verification.html" class="reader-edition-ext-link" target="_blank" rel="noopener">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approved-set-verification.html</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-attenuation">[I-D.draft-mcguinness-oauth-mission-attenuation]</dt>
       <dd>
