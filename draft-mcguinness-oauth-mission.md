@@ -2316,7 +2316,7 @@ exactly as recorded ({{test-vectors}}). A companion that cites an
 entry by digest (a decision record naming the entry it evaluated,
 containment or completion state keyed to an entry) computes it this
 way. Entries whose canonical commitment envelopes are identical
-produce the same digest, and within one Mission record every recorded
+produce the same digest, and within one Mission Record every recorded
 entry resolving to the same digest forms one selector equivalence
 class; the class is defined by the canonical bytes, not by
 pre-canonical source text the record does not preserve.
@@ -2457,7 +2457,7 @@ holds these states. A companion profile MAY register an additional
 state for a lifecycle it introduces (for example, a paused or
 superseded state); only `active` permits issuance.
 
-Wherever a Mission state is reported, including the Mission record
+Wherever a Mission state is reported, including the Mission Record
 and the introspection `mission` member, a consumer MUST treat only
 the exact value `active` as permitting derivation or continued
 reliance, and MUST treat every other value, including one it does
@@ -4392,7 +4392,7 @@ entries the consuming Resource Server needs, as
 
 ## Intent Retention and Anchor Disclosure {#intent-retention-and-anchor-disclosure}
 
-The Mission record's Intent members (`goal`, `task_bounds`) are
+The Mission Record's Intent members (`goal`, `task_bounds`) are
 personal-data sinks: they carry whatever task description the user
 supplied, and their retention and erasure follow {{record-access}}. The
 integrity anchors are unsalted commitments: a party holding a candidate
@@ -4421,7 +4421,7 @@ required evidence is absent or invalid; the refusal is the resource's
 answer, and Mission authority does not override it.
 
 Mission approval and Mission authority are not the data subject's
-consent: a Mission record can retain a verified consent reference or
+consent: a Mission Record can retain a verified consent reference or
 facts as `submission_evidence` ({{mission-record}}), and those facts are
 provenance and policy input only, which the resource domain validates
 independently under its current disclosure policy.
@@ -4438,7 +4438,7 @@ authority, or recorded-evidence member:
   Set entries that reach tokens ({{mission-bound-tokens}});
 - `submission_evidence` facts, including a consent reference.
 
-Whatever the member, it persists on the Mission record for its audit
+Whatever the member, it persists on the Mission Record for its audit
 horizon ({{mission-record}}), concentrates at the AS with the record
 ({{record-access}}), and, if committed, is confirmable through the
 unsalted anchors by any party holding a candidate value
@@ -4449,7 +4449,7 @@ minimization, not anonymity, and personal-data obligations follow it.
 
 ## Mission Record and Evidence Access {#record-access}
 
-The Mission record concentrates the task, its authority, and its
+The Mission Record concentrates the task, its authority, and its
 principals at the AS, and every evidence artifact joins on the Mission
 Identifier, so the join is a correlation surface equal to the identifier
 itself. Tokens carry references and authority, not the record: nothing
@@ -4468,7 +4468,7 @@ the audit transparency profile ({{I-D.draft-mcguinness-mission-audit}}),
 its erasure record and data-subject-request basis are the
 transparency-side mechanism: it records an erasure but neither performs
 one nor overrides retention law, and it leaves the operational Mission
-record and its audit-horizon retention floor untouched.
+Record and its audit-horizon retention floor untouched.
 
 # Internationalization Considerations {#i18n}
 
