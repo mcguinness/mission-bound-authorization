@@ -248,6 +248,24 @@ describe("credentials never outlive the Mission (@spec mission#mission-bound-tok
     20_000,
   );
 
+  it(
+    "a refresh after expires_at is refused invalid_grant by the expired refresh token itself, before the state gate (no mission_error)",
+    async () => {
+      const expiresAt = inSeconds(3);
+      const first = await exchange(await authorize(expiresAt));
+      expect(first.status, JSON.stringify(first.body)).toBe(200);
+      const { id } = missionOf(first.body.access_token as string);
+      await sleep(Date.parse(expiresAt) - Date.now() + 300);
+      const res = await refresh(first.body.refresh_token as string);
+      expect(res.status, JSON.stringify(res.body)).toBe(400);
+      expect(res.body.error).toBe("invalid_grant");
+      expect(res.body.mission_error).toBeUndefined();
+      // The gate never ran, so the lazy expiry commit did not land either.
+      expect(as.kernel.get(id)?.state).toBe("active");
+    },
+    15_000,
+  );
+
   it("control: a Mission far from expiry gets the full 300 s access token, the 14-day refresh token and the 60 s code", async () => {
     const code = await authorize(inSeconds(60 * 24 * 3600));
     const stored = (await as.provider.AuthorizationCode.find(code)) as { iat: number; exp: number };

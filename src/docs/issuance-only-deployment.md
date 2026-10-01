@@ -150,12 +150,23 @@ target that processes the `act` chain and the `mission` claim.
 
 **Lifetimes.**
 
+- **No credential outlives the Mission.** Every credential issued under a
+  Mission-bound grant has its configured lifetime or the Mission's remaining
+  whole seconds, whichever is shorter (`clampToMission` and the `ttl`
+  configuration in `buildProvider`). A Mission with under one second left is
+  refused `invalid_grant` `mission_expired`, never given a token:
+  `credentials never outlive the Mission (@spec mission#mission-bound-tokens) > code exchange: the access token, refresh token and authorization code all expire no later than a Mission ending inside their lifetimes`,
+  `> a credential minted with under one second of Mission left is refused, never given a 0 s or overrunning lifetime`.
 - **Access tokens:** 300 seconds (`config/topology.json`
-  `ttls.accessTokenSeconds`). A deferred token is clamped to its approval
-  expiry; child and dispatch tokens are clamped to the Mission's `expires_at`.
-- **Refresh tokens:** oidc-provider's 14-day default (`ttl.RefreshToken` in
-  `buildProvider`). A delegation-family refresh token is clamped to the
-  Mission's `expires_at`.
+  `ttls.accessTokenSeconds`), clamped as above. A deferred token is also
+  clamped to its approval expiry.
+- **Refresh tokens:** oidc-provider's 14-day default, clamped as above. A
+  refresh presented after `expires_at` is refused because the refresh token
+  itself has expired, so the refusal is `invalid_grant` with no
+  `mission_error`:
+  `credentials never outlive the Mission (@spec mission#mission-bound-tokens) > a refresh after expires_at is refused invalid_grant by the expired refresh token itself, before the state gate (no mission_error)`.
+- **Authorization codes and ID Tokens:** oidc-provider's 60 seconds and 1
+  hour, clamped as above.
 - **Refresh gating:** refresh is gated on Mission state.
 
 **Clocks and keys.**

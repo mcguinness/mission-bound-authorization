@@ -4621,14 +4621,104 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "no derived credential's exp exceeds the Mission's expires_at",
-    "local": "driven on the async-delegation initial-access path; the requirement spans every credential the issuer derives (refresh, exchange, deferral, child, expansion), so the remaining paths are outstanding"
+    "local": "every credential the issuer derives under a Mission, driven per path against a Mission (or Child, successor or dispatched instance) ending inside the credential's configured lifetime: the code exchange's access token, refresh token, authorization code and ID Token; non-rotating and rotating refresh (access token and rotated refresh token); the async-delegation initial access token, family refresh token, family refresh access token and rotated family refresh token; the AROP deferred access token; the child-bound assertion and child access token; the dispatched instance access token; the expansion successor access token; the ID-JAG continuation grant; and the transaction token. A Mission past expires_at, or with under one second left, is refused rather than minted. Not driven here, because this AS does not derive them from its own Mission: the cross-org audience-local token (bounded by the presented chain's leaf exp, whose nesting the chain verifier enforces; the cross-org companion governs that transitive bound), attenuation roots (clamped to expires_at in kernel/attenuation.ts but not reachable from an AS endpoint) and holder-signed attenuation children"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
+    {
+     "file": "src/services/authorization-server/test/exp-clamp.test.ts",
+     "name": "credentials never outlive the Mission (@spec mission#mission-bound-tokens) > code exchange: the access token, refresh token and authorization code all expire no later than a Mission ending inside their lifetimes",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/exp-clamp.test.ts",
+     "name": "credentials never outlive the Mission (@spec mission#mission-bound-tokens) > an ID Token issued on the code exchange expires no later than the Mission",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/exp-clamp.test.ts",
+     "name": "credentials never outlive the Mission (@spec mission#mission-bound-tokens) > a non-rotating refresh: the new access token expires no later than the Mission and the refresh token is kept",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/exp-clamp.test.ts",
+     "name": "credentials never outlive the Mission (@spec mission#mission-bound-tokens) > a rotating refresh: the rotated refresh token and the new access token expire no later than the Mission",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/exp-clamp.test.ts",
+     "name": "credentials never outlive the Mission (@spec mission#mission-bound-tokens) > a refresh after expires_at is refused invalid_grant by the expired refresh token itself, before the state gate (no mission_error)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
     {
      "file": "src/services/authorization-server/test/async-delegation.test.ts",
      "name": "async-delegation terminal paths (@spec async-delegation) > absolute-lifetime clamp: the initial access token exp never exceeds the Mission expires_at",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "async-delegation terminal paths (@spec async-delegation) > absolute-lifetime clamp: a family refresh's access token and rotated refresh token never exceed the Mission expires_at (@spec mission#mission-bound-tokens)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "async-delegation terminal paths (@spec async-delegation) > absolute-lifetime: the refresh token cannot outlive the Mission (ttl.RefreshToken clamp)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dtr-endpoint.test.ts",
+     "name": "the deferred grant and the Mission's expires_at (@spec mission#mission-bound-tokens) > an approval expiry later than the Mission's expires_at does not let the deferred access token outlive the Mission",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "PR4b: child redeems the child-bound grant AS ITSELF at /token (@spec #child-client-identity) > a child ending inside the token lifetimes gets a child-bound assertion and an access token that expire no later than it (@spec mission#mission-bound-tokens)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > a dispatched instance ending inside the token lifetime gets an access token that expires no later than it (@spec mission#mission-bound-tokens)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > a successor ending inside the token lifetime gets an access token that expires no later than it (@spec mission#mission-bound-tokens)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > a Mission ending inside the grant lifetime gets a continuation ID-JAG that expires no later than it (@spec mission#mission-bound-tokens)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "two-phase expiry and idempotency (@spec txn-authorization#two-phase-expiry) > a Mission ending before every other term bounds the transaction token's exp (@spec mission#mission-bound-tokens)",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/exp-clamp.test.ts",
+     "name": "credentials never outlive the Mission (@spec mission#mission-bound-tokens) > a refresh or access token saved for a Mission already past expires_at is refused as the state gate refuses, and the expiry commits",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/exp-clamp.test.ts",
+     "name": "credentials never outlive the Mission (@spec mission#mission-bound-tokens) > a credential minted with under one second of Mission left is refused, never given a 0 s or overrunning lifetime",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
