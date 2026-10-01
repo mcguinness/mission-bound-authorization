@@ -2010,12 +2010,14 @@ with reliance bounded by credential lifetime alone
 modes with such a gate: AAuth's PS-asserted and federated paths have it,
 while its direct modes do not.
 
-TTL-only is the right choice at action grain, where an artifact lives
-seconds to minutes, and for short missions. At action grain, a
-revocation landing inside an artifact's window has no observation point
-that could reach the artifact before its own expiry does. The family's
-own short-lived artifacts (the permit, the cross-domain grant, the Join
-Assertion) sit at this end.
+TTL-only is appropriate where the artifact's lifetime meets the
+tolerated exposure bound and no required state check would shorten that
+exposure. That is the case at action grain, where an artifact lives
+seconds to minutes and a revocation landing inside its window has no
+observation point that could reach the artifact before its own expiry
+does, and for short missions. The family's own short-lived artifacts
+(the permit, the cross-domain grant, the Join Assertion) sit at this
+end.
 
 A lifetime cannot suspend, complete, or kill at once. That task-grain
 residue is what the Mission's state carries and what the
