@@ -47,8 +47,8 @@
     "content_sha256": "790b2bdac7819c4a3af571d0b79ce31bbc0b2531b9666f0cd2855ab1f7be5065"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
-    "content_sha256": "9a72d4bdb8417a640377213ea7c31ad652689a7834fc1585f39a4099bdfa29a9"
+    "revision": "bc6c7065cbd8bc6d5b58e0d1a5ec3cdda8618249",
+    "content_sha256": "27376cc31c219675ac17bcdfb2852ca10cdd2b87120fb2fe090f92ee6ffa2a39"
    },
    "draft-mcguinness-oauth-mission-template.md": {
     "revision": "4e62524f4be6e2376195919d2440effb4e001a9d",
@@ -7473,6 +7473,76 @@
     }
    ],
    "notes": "`kernel.signedStatus` is the implementing surface: the test verifies the signed Status JWS under the issuer's key and asserts `carried_to` on the carried child's `cascaded` projection and its absence for an excluded child. The same assertion covers `introspectionProjection`."
+  },
+  {
+   "id": "status.lifecycle.refresh-suspension-precheck",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "After validating a refresh request and before consuming or rotating its refresh token, the AS SHOULD check whether the Mission, or an ancestor whose state gates its derivation",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "before consuming or rotating a refresh token, the AS checks whether the Mission, or an ancestor whose state gates its derivation, is suspended",
+    "local": "The reference AS runs this check in rotateRefreshToken (preCheckRefreshMissionState, #929), after client authentication and the token's own checks and before consume(). The tests witness a suspended Mission for a rotating approval grant and a delegation family. A suspended ancestor (a Child Mission's parent) is checked by the same gateDerivable/gateActive lineage walk but has no test yet, so coverage is partial."
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/refresh-precheck.test.ts",
+     "name": "refresh pre-check: a refused refresh consumes nothing (@spec mission#issuance-gating, #914) > rotating approval grant: a refresh refused while suspended saves no refresh token, the same token refreshes after resume, and its replay is still reuse",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/refresh-precheck.test.ts",
+     "name": "refresh pre-check: a refused refresh consumes nothing (@spec mission#issuance-gating, #914) > delegation-family grant: a family refresh refused while suspended saves no refresh token, the same token refreshes after resume, and its replay is still reuse",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ]
+  },
+  {
+   "id": "status.lifecycle.refresh-suspension-no-consume",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "When this check detects suspension, the AS SHOULD refuse the request without consuming the refresh token or invalidating its otherwise-valid grant solely because of that suspension",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a refresh refused because the check detected suspension consumes no refresh token and leaves the grant valid, so the same token refreshes after resume",
+    "local": "Witnessed for a rotating approval grant and a delegation family: zero refresh tokens saved on the refused attempt, the same token succeeds after resume, and replay of the pre-rotation token is still reuse. A suspension landing after the check is refused by the issuance-time gate after rotation; that window is #250's, outside this SHOULD."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/refresh-precheck.test.ts",
+     "name": "refresh pre-check: a refused refresh consumes nothing (@spec mission#issuance-gating, #914) > rotating approval grant: a refresh refused while suspended saves no refresh token, the same token refreshes after resume, and its replay is still reuse",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/refresh-precheck.test.ts",
+     "name": "refresh pre-check: a refused refresh consumes nothing (@spec mission#issuance-gating, #914) > delegation-family grant: a family refresh refused while suspended saves no refresh token, the same token refreshes after resume, and its replay is still reuse",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ]
   },
   {
    "id": "signals.discharge.authority-changed-rematerialize",
