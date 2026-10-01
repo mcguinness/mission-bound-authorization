@@ -317,15 +317,21 @@ export async function handleTokenExchangeGrant(
     throw e;
   }
 
-  // Step 5: resolve the handle -> Mission. Unknown/terminal (incl. a Mission that
-  // reached a terminal lifecycle state, via the onLifecycleCommit fan-out) ->
-  // invalid_continuation. This description pins the STORE path (distinct from the
-  // gate path in step 9).
-  const resolved = store.resolve(ica.handle);
-  if (!resolved) {
-    txError(ctx, 400, "invalid_continuation", "unknown or terminal continuation handle");
+  // Step 5: resolve the handle -> Mission (@spec id-continuation-assertion, ICA
+  // -02 5.5.6). An unknown handle is invalid_request; invalid_continuation is
+  // reserved for an issued hop that is permanently unusable: a terminal handle
+  // or anchor (incl. a Mission that reached a terminal lifecycle state, via the
+  // onLifecycleCommit fan-out). This description pins the STORE path (distinct
+  // from the gate path in step 9).
+  const found = store.lookup(ica.handle);
+  if (found.status === "unknown") {
+    throw new errors.InvalidRequest("unknown continuation handle");
+  }
+  if (found.status === "terminal") {
+    txError(ctx, 400, "invalid_continuation", "terminal continuation handle");
     return;
   }
+  const resolved = found.continuation;
 
   // Step 6: invalid_target — the resource MUST be served by the named audience.
   if (resourceToAs(resource) !== audience) {

@@ -74,6 +74,29 @@ describe("ContinuationStore.resolve", () => {
   });
 });
 
+describe("ContinuationStore.lookup (@spec id-continuation-assertion)", () => {
+  it("separates an unknown handle from a terminal one, and returns the continuation when active", () => {
+    const store = new ContinuationStore();
+    const anchorId = store.rootGrantAnchor({ missionId: "msn_1", authEnvelope: ENV });
+    const handle = store.mint({ anchorId, missionId: "msn_1", actor: ACTOR, cnfJkt: "jkt-1" });
+    expect(store.lookup("ich_nope")).toEqual({ status: "unknown" });
+    const active = store.lookup(handle);
+    expect(active.status).toBe("active");
+    expect(active.status === "active" ? active.continuation : undefined).toEqual(store.resolve(handle));
+    store.onLifecycleCommit(commit("msn_1", "revoked"));
+    expect(store.lookup(handle)).toEqual({ status: "terminal" });
+  });
+
+  it("reports a live handle under a terminal anchor as terminal", () => {
+    const store = new ContinuationStore();
+    const anchorId = store.rootSessionAnchor({ missionId: "msn_1", sessionId: "sess-1", authEnvelope: {} });
+    const handle = store.mint({ anchorId, missionId: "msn_1", actor: ACTOR });
+    // Only the anchor ends; the handle row itself stays active.
+    store.db.prepare("UPDATE continuation_anchors SET state = 'terminal' WHERE anchor_id = ?").run(anchorId);
+    expect(store.lookup(handle)).toEqual({ status: "terminal" });
+  });
+});
+
 describe("ContinuationStore.onLifecycleCommit", () => {
   it("a terminal Mission commit stops all its handles resolving", () => {
     const store = new ContinuationStore();

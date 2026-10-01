@@ -19,7 +19,7 @@
  * (`onLifecycleCommit`) marks all of its anchors and handles terminal; a
  * session ending (`terminateSession`) marks only its session-anchored anchors
  * and their handles terminal (grant anchors survive). A terminal handle OR
- * anchor makes `resolve` return undefined.
+ * anchor makes `lookup` report `terminal` and `resolve` return undefined.
  *
  * Structure mirrors `DeferralStore` (SQLite via `openStore`), but holds no
  * kernel reference: every operation is self-contained local state and
@@ -83,6 +83,16 @@ export interface ResolvedContinuation {
   authEnvelope: AuthEnvelope;
   cnfJkt?: string;
 }
+
+/**
+ * @spec id-continuation-assertion — what a presented handle identifies. The
+ * continuation exchange refuses an unknown handle and a terminal one with
+ * different codes (ICA -02 5.5.6), so the store keeps the two apart.
+ */
+export type HandleLookup =
+  | { status: "unknown" }
+  | { status: "terminal" }
+  | { status: "active"; continuation: ResolvedContinuation };
 
 interface AnchorRow {
   anchor_id: string;
@@ -196,25 +206,38 @@ export class ContinuationStore {
    * or when the handle or its anchor is terminal. Never consumes the handle.
    */
   resolve(handle: string): ResolvedContinuation | undefined {
+    const found = this.lookup(handle);
+    return found.status === "active" ? found.continuation : undefined;
+  }
+
+  /**
+   * Classify a presented handle: `unknown` when this store never minted it,
+   * `terminal` when the handle or its anchor is terminal (an issued hop that is
+   * permanently unusable), else `active` with the resolved continuation. A
+   * handle whose anchor row is missing is `terminal` (fail closed). Never
+   * consumes the handle.
+   */
+  lookup(handle: string): HandleLookup {
     const h = this.db
       .prepare(
         "SELECT handle, anchor_id, mission_id, actor_iss, actor_sub, cnf_jkt, state FROM continuation_handles WHERE handle = ?",
       )
       .get(handle) as HandleRow | undefined;
-    if (!h || h.state === "terminal") return undefined;
+    if (!h) return { status: "unknown" };
+    if (h.state === "terminal") return { status: "terminal" };
     const a = this.db
       .prepare(
         "SELECT anchor_id, anchor_type, mission_id, session_id, auth_time, acr, amr, state FROM continuation_anchors WHERE anchor_id = ?",
       )
       .get(h.anchor_id) as AnchorRow | undefined;
-    if (!a || a.state === "terminal") return undefined;
+    if (!a || a.state === "terminal") return { status: "terminal" };
 
     const authEnvelope: AuthEnvelope = {
       ...(a.auth_time != null ? { authTime: a.auth_time } : {}),
       ...(a.acr != null ? { acr: a.acr } : {}),
       ...(a.amr != null ? { amr: JSON.parse(a.amr) as string[] } : {}),
     };
-    return {
+    const continuation: ResolvedContinuation = {
       missionId: h.mission_id,
       anchor: {
         anchorId: a.anchor_id,
@@ -230,6 +253,7 @@ export class ContinuationStore {
       authEnvelope,
       ...(h.cnf_jkt != null ? { cnfJkt: h.cnf_jkt } : {}),
     };
+    return { status: "active", continuation };
   }
 
   /**

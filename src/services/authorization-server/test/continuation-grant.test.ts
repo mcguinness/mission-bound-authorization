@@ -559,15 +559,27 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     expect(body.error_description).toMatch(/presenter key/);
   });
 
-  it("(e) an unknown continuation handle -> invalid_continuation", async () => {
+  it("(e) an unknown continuation handle -> invalid_request, never invalid_continuation (ICA -02 5.5.6)", async () => {
     const { handle } = newLineage("apev-e");
     const res = await tokenExchange({
       subjectToken: await mintICA(handle, { handle: "ich_unknownhandle0123456789ABCDEFGH" }),
     });
     const body = (await res.json()) as { error?: string; error_description?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toMatch(/unknown continuation handle/);
+  });
+
+  it("(e1) a terminal handle on a live Mission (its session ended) -> invalid_continuation", async () => {
+    const { missionId } = newLineage("apev-e1");
+    const anchorId = as.continuationStore.rootSessionAnchor({ missionId, sessionId: "sess-e1", authEnvelope: {} });
+    const handle = as.continuationStore.mint({ anchorId, missionId, actor: { iss: ISSUER, sub: "ap-agent" } });
+    as.continuationStore.terminateSession("sess-e1");
+    const res = await tokenExchange({ subjectToken: await mintICA(handle) });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_continuation");
-    expect(body.error_description).toMatch(/unknown or terminal/);
+    expect(body.error_description).toMatch(/terminal continuation handle/);
   });
 
   it("(f) resourceToAs(resource) != audience -> invalid_target", async () => {
@@ -591,7 +603,7 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_continuation");
     // The STORE path (proves the fan-out wiring), distinct from the gate path.
-    expect(body.error_description).toMatch(/unknown or terminal/);
+    expect(body.error_description).toMatch(/terminal continuation handle/);
   });
 });
 
@@ -649,7 +661,7 @@ describe("continuation lifecycle invariants (@spec id-continuation-assertion)", 
     const body = (await res.json()) as { error?: string; error_description?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_continuation");
-    expect(body.error_description).toMatch(/unknown or terminal/);
+    expect(body.error_description).toMatch(/terminal continuation handle/);
   });
 
   it("already-issued keeps its exp: an ID-JAG minted BEFORE revoke still verifies + redeems with its ORIGINAL exp; only NEW continuations are refused after", async () => {
