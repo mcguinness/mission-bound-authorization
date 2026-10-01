@@ -80,7 +80,11 @@ let agentJkt: string;
 let remoteJwks: ReturnType<typeof createRemoteJWKSet>;
 
 /** A continuation lineage: an active Mission + a grant anchor + an initial handle. */
-function newLineage(eventId: string, envelope: { authTime?: number; acr?: string; amr?: string[] } = {}): {
+function newLineage(
+  eventId: string,
+  envelope: { authTime?: number; acr?: string; amr?: string[] } = {},
+  expiresAt: string = MISSION_EXP,
+): {
   missionId: string;
   handle: string;
 } {
@@ -88,7 +92,7 @@ function newLineage(eventId: string, envelope: { authTime?: number; acr?: string
     JSON.stringify({
       goal: "Continue a Mission across an intra-domain hop",
       target_resources: [RESOURCE],
-      expires_at: MISSION_EXP,
+      expires_at: expiresAt,
     }),
   );
   const mission = as.kernel.approve({
@@ -274,6 +278,17 @@ afterAll(() => {
 });
 
 describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion)", () => {
+  it("a Mission ending inside the grant lifetime gets a continuation ID-JAG that expires no later than it (@spec mission#mission-bound-tokens)", async () => {
+    const { missionId, handle } = newLineage("apev-exp-clamp", {}, new Date(Date.now() + 60_000).toISOString());
+    const res = await tokenExchange({ subjectToken: await mintICA(handle), actorToken: await mintActorToken() });
+    const body = (await res.json()) as { access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    const missionExp = Math.floor(Date.parse(as.kernel.get(missionId)?.expires_at as string) / 1000);
+    const grant = decodeJwt(body.access_token as string) as { iat: number; exp: number };
+    expect(grant.exp).toBeLessThanOrEqual(missionExp);
+    expect(grant.exp - grant.iat).toBeLessThan(300);
+  });
+
   it("happy path: mints a Mission-rooted ID-JAG with a fresh handle, deterministic sub, collapsed act, and carried envelope", async () => {
     const { missionId, handle } = newLineage("apev-happy", {
       authTime: 1_700_000_000,
