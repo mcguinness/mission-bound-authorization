@@ -82,6 +82,7 @@ function newLineage(
   eventId: string,
   envelope: { authTime?: number; acr?: string; amr?: string[] } = {},
   expiresAt: string = MISSION_EXP,
+  intentExtra: Record<string, unknown> = {},
 ): {
   missionId: string;
   handle: string;
@@ -91,6 +92,7 @@ function newLineage(
       goal: "Continue a Mission across an intra-domain hop",
       target_resources: [RESOURCE],
       expires_at: expiresAt,
+      ...intentExtra,
     }),
   );
   const mission = as.kernel.approve({
@@ -468,8 +470,11 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     const refused = await tokenExchange({ subjectToken: ica });
     const refusedBody = (await refused.json()) as { error?: string; error_description?: string };
     expect(refused.status, JSON.stringify(refusedBody)).toBe(400);
-    expect(refusedBody.error).toBe("invalid_continuation");
+    // A suspended Mission is reversible, so the chain has not ended: never
+    // invalid_continuation (ICA -02 5.5.6; owner ruling 2026-10-01).
+    expect(refusedBody.error).toBe("unauthorized_client");
     expect(refusedBody.error_description).toMatch(/gate refused issuance/);
+    expect(refusedBody).not.toHaveProperty("mission_error");
 
     // Nothing was issued, so nothing was consumed: the assertion is still
     // single-use-unspent. (Recording at validation, the prior behavior, burned
@@ -485,6 +490,64 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     const replayedBody = (await replayed.json()) as { error?: string; error_description?: string };
     expect(replayed.status, JSON.stringify(replayedBody)).toBe(400);
     expect(replayedBody.error_description).toMatch(/replay/);
+  });
+
+  it("(b1) a Mission past its expiry at the gate -> invalid_continuation with mission_error (ICA -02 5.5.6)", async () => {
+    const { missionId, handle } = newLineage("apev-b1");
+    // The expiry clock has run out but the gate has not yet materialized it, so
+    // the handle still resolves and the refusal comes from the Mission gate.
+    as.kernel.db.prepare("UPDATE missions SET expires_at = ? WHERE id = ?").run("2020-01-01T00:00:00Z", missionId);
+    const res = await tokenExchange({ subjectToken: await mintICA(handle) });
+    const body = (await res.json()) as { error?: string; error_description?: string; mission_error?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_continuation");
+    expect(body.error_description).toMatch(/gate refused issuance/);
+    expect(body.mission_error).toBe("mission_expired");
+  });
+
+  it("(b2) a Mission whose authority is fully contained -> invalid_target (ICA -02 5.5.6)", async () => {
+    const { missionId, handle } = newLineage("apev-b2");
+    as.kernel.contain(missionId, {
+      event: {
+        type: "tainted_read",
+        source: "https://siem.example/detections",
+        observed_at: new Date().toISOString(),
+        event_id: "evt-apev-b2",
+      },
+      remove: [{ resource: RESOURCE, actions: ["payments:invoice.read"] }],
+    });
+    const res = await tokenExchange({ subjectToken: await mintICA(handle) });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_target");
+    expect(body.error_description).toMatch(/authority_contained/);
+  });
+
+  it("(b3) an exhausted derivation cap -> invalid_grant with mission_error (a limit, ICA -02 5.5.6)", async () => {
+    const { handle } = newLineage("apev-b3", {}, MISSION_EXP, { requested_derivation_limit: 1 });
+    const first = await tokenExchange({ subjectToken: await mintICA(handle) });
+    expect(first.status, await first.clone().text()).toBe(200);
+    const res = await tokenExchange({ subjectToken: await mintICA(handle) });
+    const body = (await res.json()) as { error?: string; error_description?: string; mission_error?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    expect(body.error_description).toMatch(/derivation_cap_exhausted/);
+    expect(body.mission_error).toBe("derivations_exhausted");
+  });
+
+  it("(b4) a revoked Mission whose hop the store has not yet ended -> invalid_continuation at the gate, not unauthorized_client", async () => {
+    const { missionId, handle } = newLineage("apev-b4");
+    as.kernel.transition(missionId, "revoke");
+    // Undo the store fan-out so the hop still resolves and the gate, reading
+    // the terminal Mission, is what refuses (a store that lags the lifecycle).
+    as.continuationStore.db.prepare("UPDATE continuation_anchors SET state = 'active' WHERE mission_id = ?").run(missionId);
+    as.continuationStore.db.prepare("UPDATE continuation_handles SET state = 'active' WHERE mission_id = ?").run(missionId);
+    const res = await tokenExchange({ subjectToken: await mintICA(handle) });
+    const body = (await res.json()) as { error?: string; error_description?: string; mission_error?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_continuation");
+    expect(body.error_description).toMatch(/gate refused issuance/);
+    expect(body.mission_error).toBe("mission_revoked");
   });
 
   it("(b) a replayed ICA jti -> rejected (single-use, consumed at issuance commit)", async () => {

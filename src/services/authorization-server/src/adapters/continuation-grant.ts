@@ -56,10 +56,18 @@ import { CarryoverRetrievalError } from "../kernel/carryover.js";
 import { ChildDelegationError, createChildMission } from "../kernel/child-delegation.js";
 import { IntentError } from "../kernel/intent.js";
 import { GateError } from "../kernel/kernel.js";
-import type { AuthorityEntry, MissionIntent, MissionIntentSubmission, MissionRecord } from "../kernel/types.js";
+import {
+  type AuthorityEntry,
+  type MissionIntent,
+  type MissionIntentSubmission,
+  type MissionRecord,
+  type MissionState,
+  TERMINAL_STATES,
+} from "../kernel/types.js";
 import { mintChildGrant } from "./child-grant.js";
 import {
   childErrorCode,
+  gateErrorToMissionError,
   intentErrorToOidc,
   InvalidAuthorizationDetails,
   newResourceServer,
@@ -124,6 +132,41 @@ function txError(ctx: KoaContextWithOIDC, status: number, error: string, descrip
   ctx.status = status;
   ctx.body = { error, error_description: description };
   ctx.set("cache-control", "no-store");
+}
+
+/**
+ * @spec id-continuation-assertion — refuse a Mission gate failure at the ICA
+ * continuation exchange with the ICA -02 5.5.6 codes (owner ruling 2026-10-01;
+ * core scoping in #921). A terminal Mission ended the chain:
+ * `invalid_continuation`. A suspended one, or one under a non-active ancestor,
+ * may still continue later: `unauthorized_client`, never `invalid_continuation`.
+ * Contained or exhausted authority leaves the audience unpermitted:
+ * `invalid_target`. The derivation cap is a limit: `invalid_grant`. Every other
+ * exchange keeps core's `invalid_grant` (mission#issuance-gating). The Mission's
+ * state is read after the throw, since the gate's expiry clock may have just
+ * committed `expired`; `mission_error` rides as the diagnostic where core
+ * defines one.
+ */
+function refuseContinuationGate(ctx: KoaContextWithOIDC, opts: AdapterOptions, missionId: string, e: GateError): void {
+  const state = opts.kernel.get(missionId)?.state;
+  let error: string;
+  switch (e.reason) {
+    case "mission_expired":
+      error = "invalid_continuation";
+      break;
+    case "mission_not_active":
+      error = state !== undefined && TERMINAL_STATES.has(state as MissionState) ? "invalid_continuation" : "unauthorized_client";
+      break;
+    case "authority_contained":
+    case "authority_exhausted":
+      error = "invalid_target";
+      break;
+    default:
+      error = "invalid_grant";
+  }
+  txError(ctx, 400, error, `continuation Mission gate refused issuance (${e.reason})`);
+  const missionError = gateErrorToMissionError(e.reason, state);
+  if (missionError) (ctx.body as Record<string, unknown>).mission_error = missionError;
 }
 
 /**
@@ -401,10 +444,10 @@ export async function handleTokenExchangeGrant(
       authEnvelope,
     }));
   } catch (e) {
-    // A non-active / expired / cap-exhausted Mission (gate path -> distinct
-    // description from the store path in step 5).
+    // A non-active / expired / contained / cap-exhausted Mission (gate path ->
+    // distinct description from the store path in step 5).
     if (e instanceof GateError) {
-      txError(ctx, 400, "invalid_continuation", "continuation Mission gate refused issuance");
+      refuseContinuationGate(ctx, opts, resolved.missionId, e);
       return;
     }
     // issueCrossDomainGrant throws a bare Error when no authority-set entry maps
