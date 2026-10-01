@@ -965,9 +965,9 @@ one, or carried through unchanged where it defines none
 
 `goal` and `task_bounds` then serve as rendering and bounding context
 over the proposed authority. Each proposed entry that carries a
-`resource` member MUST have it among the Intent's `target_resources`;
-the AS refuses a request violating this with the `invalid_request`
-error code.
+`resource` member MUST have it among the Intent's `target_resources`,
+compared as {{authorization-derivation}} states; the AS refuses a
+request violating this with the `invalid_request` error code.
 
 The carriage rules of {{submission-via-par}} apply to the proposal.
 The AS records the submitted array on the Mission exactly as
@@ -1127,9 +1127,17 @@ entries depend on whether an authority proposal was submitted:
   Template profile ({{I-D.draft-mcguinness-oauth-mission-template}}),
   not this mode.
 
-In both modes the AS bounds every derived entry by the Mission
-Intent: each derived entry that carries a `resource` member MUST
-have it among the Intent's `target_resources` values.
+In both modes the AS bounds every Authority Set entry by the Mission
+Intent: each entry that carries a `resource` member MUST have it
+among the Intent's `target_resources` values, by exact string
+equality. This membership check applies to the Authority Set, and to
+a proposal at submission ({{authority-proposal}}). A later token
+issuance is bounded by the subset rule against the Authority Set
+({{subset}}), not by the target list again: a type whose subset
+relation admits a narrower `resource` (for
+`mission_resource_access`, a descendant of a `prefix` entry) can
+yield a token entry that `target_resources` does not name, and a
+candidate outside every Authority Set entry fails that rule.
 
 The Mission records the policy version in force as `policy_version`
 ({{mission-record}}), an opaque audit correlator; the policy itself
