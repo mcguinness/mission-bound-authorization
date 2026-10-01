@@ -2086,14 +2086,14 @@ architecture, not only its binding. Three patterns cover the bindings:
 
 The differences that decide a design:
 
-| Property | OAuth AS | MAS | AAuth PS | UMA AS (sketch) |
-|---|---|---|---|---|
-| Credential carries the Mission | yes (`mission` claim) | no | native reference where supported | yes (claim or introspection) |
-| Issuance gated on state | yes | no (the issuance grant restores it per consuming AS) | PS-asserted and federated only | yes |
-| Runtime PDP required for a kill switch | no (issuance gate exists; runtime tightens) | yes (runtime is the only cutoff) | required for direct modes; PS-path issuance has a bounded cutoff | no (per-use introspection cuts off) |
-| Join ambiguity possible | no | yes (bounded by join assurance) | no when the native reference is preserved; it can be ignored in direct modes | no |
-| Revocation latency source | token lifetime, status, or runtime | runtime and status only | auth-token lifetime on PS paths; no Mission cutoff on direct paths | next introspection |
-| Offline Mission verification | partial (claims verify; state does not) | limited (join assertion) | reference integrity only; blob is private | JWT RPTs partial; opaque RPTs none |
+| Property | OAuth AS | MAS | AAuth PS | UMA AS (sketch) | GNAP AS (sketch) |
+|---|---|---|---|---|---|
+| Credential carries the Mission | yes (`mission` claim) | no | native reference where supported | yes (claim or introspection) | yes (protected `mission` claim or introspection assertion) |
+| Issuance gated on state | yes | no (the issuance grant restores it per consuming AS) | PS-asserted and federated only | yes | yes (issuance, grant modification, and rotation) |
+| Runtime PDP required for a kill switch | no (issuance gate exists; runtime tightens) | yes (runtime is the only cutoff) | none from the binding for direct modes, unless a deployment adds its own gateway ({{worked-composition}}); PS-path issuance has a bounded cutoff | no (per-use introspection cuts off) | no (issuance gate exists; per-use introspection cuts off where deployed) |
+| Join ambiguity possible | no | yes (bounded by join assurance) | no when the native reference is preserved; it can be ignored in direct modes | no | no (native binding; no cross-authority join) |
+| Revocation latency source | token lifetime, status, or runtime | runtime and status only | auth-token lifetime on PS paths; no Mission cutoff on direct paths | next introspection | token lifetime, or the declared introspection cache bound |
+| Offline Mission verification | partial (claims verify; state does not) | limited (join assertion) | reference integrity only; blob is private | JWT RPTs partial; opaque RPTs none | partial with a structured token or signed Mission Status |
 
 The table is the one-page answer to a question the object-level
 framing invites: a MAS deployment does not provide AS-native
