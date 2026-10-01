@@ -802,14 +802,15 @@ re-render exactly that.
 
 The lifecycle control gates new derivation from the envelope; a
 credential already materialized under it keeps running to its own bound
-unless an action-time gate reaches it first
-({{kill-switch-composition}}). The two halves compose but do not
-substitute: an envelope real at approval time can still admit, at
-decision time, an effect the Approver never saw rendered in that form.
+unless an action-time gate reaches it first ({{validity-model}},
+{{kill-switch-composition}}). Approval-time commitment and decision-time
+checks compose but do not substitute: an envelope real at approval time
+can still admit, at decision time, an effect the Approver never saw
+rendered in that form.
 
-Attribution shares the grain limit: proving which concurrent task
-item produced a permitted action needs a verified cross-link that no
-family carrier supplies ({{binding-properties}}).
+Attribution has the same limit at task-item grain: proving which
+concurrent task item produced a permitted action needs a verified
+cross-link that no family carrier supplies ({{binding-properties}}).
 
 ## Survivable Incorrectness {#survivable-incorrectness}
 
@@ -1321,20 +1322,19 @@ document ({{I-D.draft-mcguinness-aauth-mission-expiry}}).
 
 ## Enforce Each Action
 
-The question: is this specific action, with these parameters,
-permitted under this Mission now? The boundary: the last controllable
-point between agent and resource. Owners: the runtime profile, the
-decision contract with parameter binding, custody, and fail-closed
-behavior ({{I-D.draft-mcguinness-mission-runtime}}); its AuthZEN
-profile, the concrete decision API
-({{I-D.draft-mcguinness-mission-authzen}}); the runtime evidence
-companion, the Decision Evidence, Execution Evidence, and Refusal
-Record objects ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
-The runtime decision composes conjunctively with the structural plane
-above: Effective Authority Set membership, every applicable
-cumulative-consumption or stateful operational gate, and a required
-action-bound approval are each independently necessary, and none
-grants, widens, or restores another
+The question: is this specific action, with these parameters, permitted
+under this Mission now? The boundary: the last controllable point
+between agent and resource. Owners: the runtime profile, the decision
+contract with parameter binding, custody, and fail-closed behavior
+({{I-D.draft-mcguinness-mission-runtime}}); its AuthZEN profile, the
+concrete decision API ({{I-D.draft-mcguinness-mission-authzen}}); the
+runtime evidence companion, the Decision Evidence, Execution Evidence,
+and Refusal Record objects
+({{I-D.draft-mcguinness-mission-runtime-evidence}}). The runtime
+decision composes conjunctively with the other gates: Effective
+Authority Set membership, every applicable cumulative-consumption or
+stateful operational gate, and a required action-bound approval are each
+independently necessary, and none grants, widens, or restores another
 ({{I-D.draft-mcguinness-mission-runtime}}, Section "The Runtime
 Decision").
 
@@ -1462,9 +1462,9 @@ every continued grant re-passes the Mission's `active` gate.
 Continuity is therefore never authority, the rule the harness applies
 to session continuity ({{I-D.draft-mcguinness-mission-harness}}).
 
-Continue differs from Delegate, which narrows authority to a
-sub-actor. It uses the Project verb's cross-domain grant as one
-transport rather than replacing it.
+Continue differs from Delegate, which narrows authority to a sub-actor.
+Continue uses the Project verb's cross-domain grant as one transport
+rather than replacing it.
 
 ## Prove
 
@@ -1644,8 +1644,7 @@ and another party's is trusted, verified, or separately approved, never
 a place where authority widens.
 
 Resource-owned meaning reaches the three consuming layers through five
-mechanisms, each normative in its own home and composing as one
-contract:
+mechanisms, each defined in its own home and composing as one contract:
 
 Common Constraints:
 : The registered constraint vocabulary every conforming party evaluates
@@ -1726,7 +1725,7 @@ not by the family universally. Under such a mechanism, meaning is not
 consulted at approval and assumed at enforcement; it is committed at
 approval and re-verified at use.
 
-The contract's failure mode is normative in each home: a consumer facing
+The contract's failure mode is stated in each home: a consumer facing
 an operation meaning it cannot resolve, a constraint it cannot evaluate,
 a drifted capability definition, or an unrecognized declaration refuses
 rather than guesses. Meaning, like state, fails closed.
@@ -1831,8 +1830,8 @@ that assumes the anchors, the gating, and the record.
 # The Mission Substrate {#substrate}
 
 The binding-neutral contract is Mission Substrate Requirements
-({{I-D.draft-mcguinness-mission-substrate}}), which states this
-checklist normatively for any further binding. Its contextual-governance
+({{I-D.draft-mcguinness-mission-substrate}}), which states the checklist
+below normatively for any further binding. Its contextual-governance
 kernel is what every binding provides: a mission-based protocol supplies
 a Mission Context when it maps these native capabilities explicitly:
 
@@ -1960,9 +1959,9 @@ makes the standalone binding possible.
 
 The issuance-grant companion
 ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) composes the
-two: the standalone Mission Issuer mints a Mission Issuance Grant that a
-consuming Authorization Server redeems for Mission-bound tokens,
-providing this primitive compositely.
+OAuth and standalone bindings: the standalone Mission Issuer mints a
+Mission Issuance Grant that a consuming Authorization Server redeems for
+Mission-bound tokens, providing this primitive compositely.
 
 ## The Validity Model {#validity-model}
 
@@ -2105,7 +2104,7 @@ enforcement acts at the action layer: each consequential action is
 re-checked against current state at the point of use. Issuance gating
 plus runtime enforcement is strictly stronger than either alone: a gap
 in PEP coverage is still bounded at the token layer, and an outstanding
-token is still stopped at the action layer.
+token is still stopped at the action layer on mediated paths.
 
 AAuth supplies the Mission Context capabilities in its own idiom but not
 a portable Authority Set or universal subset rule. The AAuth binding
@@ -2228,15 +2227,13 @@ The levels, cumulative:
   number, not a level: what the higher levels add is per-action
   enforcement, parameter binding, and evidence, not a faster clock.
 
-  Under a binding without credential-carried authority (the
-  standalone MAS), Baseline grants governance and audit. No kill
-  switch of any kind exists under such a binding until a freshness
-  surface (the half-step named under Proof obligations below) and
-  runtime enforcement (the next level) arrive, and a deployment
-  states that. The issuance join
-  ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) restores
-  gated issuance at each consuming Authorization Server, and Baseline
-  with it.
+  Under a binding without credential-carried authority (the standalone
+  MAS), Baseline grants governance and audit. No kill switch of any kind
+  exists under such a binding until a freshness surface and runtime
+  enforcement (the next level) arrive, and a deployment states that. The
+  issuance join ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}})
+  restores gated issuance at each consuming Authorization Server, and
+  Baseline with it.
 
   The nearest AAuth comparison, stated as capabilities rather than a
   level: native approval, exact-byte commitment, active or terminated
@@ -2367,7 +2364,10 @@ membership.
   PS-mediated paths ({{I-D.draft-mcguinness-mission-aauth}}).
 - **Recommended agent architecture** (Governed Agent): what a
   deployment running autonomous AI agents should build.
-- **High-assurance architecture** (High-Assurance Agent).
+- **High-assurance architecture** (High-Assurance Agent): the
+  recommended agent architecture plus mediated custody, no unmediated
+  path, action-bound approval, active freshness, and agent-isolated
+  approval rendering.
 
 ## Assurance Claims {#assurance-claims-axis}
 
@@ -2608,7 +2608,7 @@ needs the whole matrix:
 
 | Control | Stops | Home |
 |---|---|---|
-| Capability kill | one capability within one Mission: new derivation at once at commit; credentials already materialized under it run to their own bound unless a containment-aware action-time gate reaches them first ({{kill-switch-composition}}); the body of work still runs | the issuer-held containment overlay ({{I-D.draft-mcguinness-oauth-mission-containment}}) |
+| Capability kill | one capability within one Mission and the Child Missions it justifies: new derivation at once at commit; credentials already materialized under it run to their own bound unless a containment-aware action-time gate reaches them first ({{kill-switch-composition}}); the body of work still runs | the issuer-held containment overlay ({{I-D.draft-mcguinness-oauth-mission-containment}}) |
 | Mission kill | one body of work: new derivation at once, and residual credentials at the earliest of revocation, re-check, or their own expiry ({{validity-model}}) | the OAuth binding's revocation; cascades to Child Missions ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) |
 | Agent kill | all work by one agent, across its Missions | the deployment's agent IAM ({{three-objects}}) |
 | Agent Deployment kill | every instance running a compromised version | the deployment's change governance ({{three-objects}}) |
@@ -2618,12 +2618,12 @@ needs the whole matrix:
 
 Mission termination participates in incident response; it does not
 replace it. Revoking the Mission stops issuance at once where the
-binding gates it, and stops mediated actions within the staleness
-bound plus the permit window and the class's execution bound
-({{validity-model}}). Revoking the Mission terminates no process and
-closes no network path. The converse holds too: killing a workload
-leaves the Mission `active` and its authority derivable to a
-replacement instance unless the Mission is also revoked.
+binding gates it, and stops mediated actions within the staleness bound
+plus the permit window and the class's execution bound
+({{validity-model}}, {{assurance-claims-axis}}). Revoking the Mission
+terminates no process and closes no network path. The converse holds
+too: killing a workload leaves the Mission `active` and its authority
+derivable to a replacement instance unless the Mission is also revoked.
 
 Capability kill provides, per action class and consumer, one of two
 containment properties or neither, never by the deployment's
@@ -2882,13 +2882,13 @@ MAS mapping contract, the Resource Server coverage split, the
 transparency-service topology and schedule, and the progressive
 profile's bounds and ceiling-review cadence.
 
-The profile is one artifact, not a second one: each fact's owning
-profile governs its meaning and normative force, and this document
-fixes no serialization. A machine-readable manifest schema, with
-stable claim identifiers and validation rules, is deferred family
-work; until it exists, the shapes in {{deployment-profile-examples}}
-are illustrative and the per-profile statements are the checkable
-form.
+The profile composes existing statements into one artifact rather than
+restating them: each fact's owning profile governs its meaning and
+normative force, and this document fixes no serialization. A
+machine-readable manifest schema, with stable claim identifiers and
+validation rules, is deferred family work; until it exists, the shapes
+in {{deployment-profile-examples}} are illustrative and the per-profile
+statements are the checkable form.
 
 Its distinguishing field is `residual_risks`: the profile is not
 credible unless it states, in the same object as its guarantees, what
