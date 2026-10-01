@@ -944,12 +944,17 @@ single-use, phase and parameter bindings are unchanged.
 
     `mission_status_issued_at`:
     : REQUIRED for `cached` and `event_driven`, OPTIONAL for `fresh`. An
-      RFC 3339 timestamp. When the relied-on Mission state was issued.
+      RFC 3339 timestamp. When the relied-on Mission state was issued:
+      for a signed Mission Status Response, its `iat`
+      ({{I-D.draft-mcguinness-oauth-mission-status}}). `freshness_at`
+      is never earlier than this value.
 
     `mission_status_expires_at`:
     : REQUIRED for `cached` and `event_driven`, OPTIONAL for `fresh`. An
-      RFC 3339 timestamp. When the relied-on Mission state (or its
-      lease) expires.
+      RFC 3339 timestamp. When reliance on the observed Mission state
+      ends: for a signed Mission Status Response, its
+      `mission.fresh_until`, never its `exp`, or an earlier end
+      deployment policy sets; for a lease, the lease's end.
 
     `assertion`:
     : OPTIONAL. A string. The signed Mission Status Response
@@ -1621,7 +1626,8 @@ This profile defines the following AuthZEN response `context` members:
       present. The approval's `approved_until` applies where the
       permit satisfies `approval_required` ({{context-approval}}).
       The state valid-through is defined by source: a signed Mission
-      Status Response's expiry, or a lease's end, both carried in a
+      Status Response's `mission.fresh_until` (not its `exp`), or a
+      lease's end, both carried in a
       supplied
       `context.mission_state_observation.mission_status_expires_at`;
       or, for a polled observation reporting neither, `freshness_at`
