@@ -7,8 +7,8 @@
     "content_sha256": "ec57264fec92ea2dd3c42ba1067c70d72195f251bc5c416ccad856cb1beac3a1"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "7a1fdb45e1fbc49e0cf28682b5b435a2770c86ac",
-    "content_sha256": "15c6ff6667c95ed2de0ef8b688f935c00ed5a262e6cf1be0ed8d4a6e791d43f5"
+    "revision": "9f6385019424e22a10b9b09e7d32ba167d7cc743",
+    "content_sha256": "65d2ca723d57c52271cc278da2932077bc4d3af3ebf32423f8244e7b95d8de70"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "48b7abcdacfb66289c29c5312e5d6c6e683b5141",
@@ -51,12 +51,12 @@
     "content_sha256": "790b2bdac7819c4a3af571d0b79ce31bbc0b2531b9666f0cd2855ab1f7be5065"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "45fda8d107e7fe5c0ed61864358ad28c775ed688",
-    "content_sha256": "29d67521b432c0c03837c5478efdf146fa7b07ed410f8bf213252d4fca15783a"
+    "revision": "582a6e16beed189e7e579b0e079a1ce695d94ff7",
+    "content_sha256": "32d89ebbb29946e878f5d78fe8ff9c1cb57d3d3954460a6daea6097e0b68066e"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "06f8639a242cc6b2ef5a70b27eff6fb353e5154a",
-    "content_sha256": "f0729bfa452a6e9496be64970b6b4946d81feb877f28958450117864376251f9"
+    "revision": "7a1e80432e75d0221064b5e1b78743bb1c120d58",
+    "content_sha256": "bae2f5c34036c303d1a4f1b9fc037d2aebe1b5d7518308eb02e2bc74a6d919eb"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
@@ -71,8 +71,8 @@
     "content_sha256": "f32cf81e773c9098464a50e451f559b3a5ad31485a315cc611df8e60fcafa2a7"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
-    "revision": "dc10915ac71b4d50c0867cf7d959ec45bda2eff0",
-    "content_sha256": "777f04c60e95e1d4fb102c1786c9d21339e58e877f2b74c4d7f818e698df846f"
+    "revision": "0d75d8a324bbf4737d65ad92a107dc74ef508e9c",
+    "content_sha256": "fd9175feb9dfeaa7555cf331bee63d7c75ca7b34832759a5b24b747d057c73e9"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
     "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
@@ -22465,6 +22465,135 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "template.members.allowed-dispatchers-shape",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "the-mission-template",
+   "text": "A non-empty array of strings, each the client identifier",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a template's allowed_dispatchers is a non-empty array of client_id strings"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference implementation stores dispatchers as client_id strings, matching the entry type, but does not refuse an empty list at template creation, and no test asserts the shape."
+  },
+  {
+   "id": "template.members.allowed-recipients-shape",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "the-mission-template",
+   "text": "with two members, each a non-empty array",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a template's allowed_recipients is an object whose subjects ({iss, sub} objects) and agents (client_id strings) members are both non-empty arrays"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Implementation gap: the reference implementation's recipients is a flat client_id array (the agents half only) with no subjects member; it refuses an empty recipients list at template creation."
+  },
+  {
+   "id": "template.dispatch.dispatcher-membership",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "the-mission-template",
+   "text": "A Dispatch request whose authenticated client is not in this set is refused",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Dispatch whose authenticated client's client_id is not an entry of allowed_dispatchers is refused, and no Mission is derived"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > dispatcher_not_allowed: ap-agent is not on the template's dispatchers list",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "dispatch gates (@spec mission-template#dispatch-refusals) > refuses a dispatcher or recipient not on the template's lists",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ]
+  },
+  {
+   "id": "template.dispatch.recipient-subject-membership",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "the-mission-template",
+   "text": "whose established Subject does not equal an entry of `subjects` in both `iss` and `sub`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Dispatch whose Mission-Issuer-established Subject does not equal a subjects entry in both iss and sub is refused, and no Mission is derived"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Implementation gap: the reference implementation does not check the established Subject against the template; it applies a per-source subject-discipline gate instead, and its recipients carry no subjects."
+  },
+  {
+   "id": "template.dispatch.recipient-agent-membership",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "the-mission-template",
+   "text": "or whose Agent (the instance's `client_id`) is not an entry of `agents`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Dispatch whose instance client_id (the Agent) is not an entry of agents is refused, and no Mission is derived"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "dispatch gates (@spec mission-template#dispatch-refusals) > refuses a dispatcher or recipient not on the template's lists",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Covered at unit level only: the kernel refuses an unlisted recipient (which becomes the instance client_id) with recipient_not_allowed; no endpoint test dispatches to an unlisted Agent."
   },
   {
    "id": "progressive.drawdown-policy.body-commitment-should",

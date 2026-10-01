@@ -22,7 +22,7 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 import { roleFor, maturityDisplay, CORE_SLUG, BINDING_SLUGS, validateCandidateGate, loadConformanceCounts, validateNoStatusSections } from "./generate-drafts-index.mjs";
-import { HAND_TYPED_COUNT, UNSTABLE_SELF_CLAIM, parseFrontMatterTitle, parseFamilyRefTitles } from "./check-family-manifest.mjs";
+import { HAND_TYPED_COUNT, UNSTABLE_SELF_CLAIM, parseFrontMatterTitle, parseFamilyRefTitles, validateWireNames, GRANDFATHERED_WIRE_NAMES, MISSION_COMPONENT } from "./check-family-manifest.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
@@ -770,4 +770,93 @@ test("candidate-gate: the real repository's candidate-gate.json is currently gat
 test("loadConformanceCounts: the real repository's ledger parses and is non-empty", () => {
   const counts = loadConformanceCounts(REPO_ROOT);
   assert.ok(counts.size > 0);
+});
+
+// ---------------------------------------------------------------------
+// Check (ab): wire names in registries outside the family carry `mission`
+// (CONTRIBUTING, Wire Names Convention). String fixtures: one draft per
+// case, an IANA Considerations section, and an empty grandfather list
+// unless the case is about grandfathering.
+// ---------------------------------------------------------------------
+
+const wireDraft = (iana, slug = "draft-fixture") => ({ slug, text: `# Intro\n\nBody.\n\n# IANA Considerations {#iana}\n\n${iana}\n--- back\n` });
+const NONE = new Set();
+
+test("wire names: an unprefixed name declared in a shared registry fails", () => {
+  const d = wireDraft('This document registers the following in the "OAuth Parameters" registry:\n\n- Name: `widget_id`\n- Parameter Usage Location: token request\n');
+  const f = validateWireNames([d], NONE);
+  assert.equal(f.length, 1);
+  assert.match(f[0], /`widget_id`.*"OAuth Parameters"/);
+});
+
+test("wire names: a mission-carrying name in a shared registry passes", () => {
+  const d = wireDraft('This document registers the following in the "OAuth Parameters" registry:\n\n- Name: `mission_widget_id`\n\n## OAuth Extensions Error Registration\n\n- Name: `invalid_mission_widget`\n');
+  assert.deepEqual(validateWireNames([d], NONE), []);
+});
+
+test("wire names: a registry some family draft creates is family-owned, from any draft", () => {
+  const creator = wireDraft('IANA is requested to create the "Mission Widget Kinds" registry.\n\n| Value | Semantics |\n|---|---|\n| `plain` | A plain widget. |\n', "draft-creator");
+  const user = wireDraft('This document registers the following in the "Mission Widget Kinds" registry:\n\n- Value: `fancy`\n', "draft-user");
+  assert.deepEqual(validateWireNames([creator, user], NONE), []);
+});
+
+test("wire names: a grandfathered name passes, and a stale grandfather entry is a finding", () => {
+  const d = wireDraft('This document registers the following in the "OAuth Parameters" registry:\n\n- `legacy_param` (token request)\n');
+  assert.deepEqual(validateWireNames([d], new Set(["draft-fixture|OAuth Parameters|legacy_param"])), []);
+  const stale = validateWireNames([d], new Set(["draft-fixture|OAuth Parameters|legacy_param", "draft-fixture|OAuth Parameters|renamed_away"]));
+  assert.equal(stale.length, 1);
+  assert.match(stale[0], /renamed_away.*remove the entry/);
+});
+
+test("wire names (regression): `mission` must be a distinct component, so `permission` fails", () => {
+  const d = wireDraft('This document registers the following in the "OAuth Parameters" registry:\n\n- Name: `permission`\n- Name: `mission_widget`\n- Name: `invalid_mission_widget`\n\n## OAuth URI Registration\n\n- URN: `urn:ietf:params:oauth:grant-type:mission-dispatch`\n');
+  const f = validateWireNames([d], NONE);
+  assert.equal(f.length, 1);
+  assert.match(f[0], /`permission`/);
+  assert.ok(MISSION_COMPONENT.test("Mission-Reference") && MISSION_COMPONENT.test("https://example.com/mission/x") && !MISSION_COMPONENT.test("missions_x"));
+});
+
+test("wire names (regression): a grandfathered exemption covers its registry only, not the same name registered elsewhere", () => {
+  const d = wireDraft('This document registers the following in the "OAuth Parameters" registry:\n\n- `legacy_param` (token request)\n\n## JSON Web Token Claims Registration\n\n- Claim Name: `legacy_param`\n');
+  const f = validateWireNames([d], new Set(["draft-fixture|OAuth Parameters|legacy_param"]));
+  assert.equal(f.length, 1);
+  assert.match(f[0], /`legacy_param`.*"JSON Web Token Claims"/);
+});
+
+test("wire names (regression): an entry heading nested under a family registry heading keeps that registry", () => {
+  const d = wireDraft('## Mission Widget Kinds Registry\n\nIANA is requested to create the "Mission Widget Kinds" registry.\n\n### The plain kind\n\n- Value: `plain`\n');
+  assert.deepEqual(validateWireNames([d], NONE), []);
+});
+
+test("wire names (regression): registry-creation text inside a fenced example does not exempt real declarations", () => {
+  const d = wireDraft('~~~\nIANA is requested to create the "Widget Kinds" registry.\n~~~\n\nThis document registers the following in the "Widget Kinds" registry:\n\n- Value: `plain`\n');
+  const f = validateWireNames([d], NONE);
+  assert.equal(f.length, 1);
+  assert.match(f[0], /`plain`.*"Widget Kinds"/);
+});
+
+test("wire names: a URN in prose counts only where the sentence registers it", () => {
+  const mentioned = wireDraft('Child creation uses `urn:ietf:params:oauth:grant-type:token-exchange` and no new grant type; the "OAuth URI" registry is unchanged.\n');
+  assert.deepEqual(validateWireNames([mentioned], NONE), []);
+  const registered = wireDraft('This document registers `urn:ietf:params:oauth:token-type:widget-chain` in the "OAuth URI" registry.\n');
+  const f = validateWireNames([registered], NONE);
+  assert.equal(f.length, 1);
+  assert.match(f[0], /widget-chain.*"OAuth URI"/);
+});
+
+test("wire names: a definition-list URN registration is read", () => {
+  const d = wireDraft('This document requests registration of the following value in the "OAuth URI" registry:\n\nURN:\n: `urn:ietf:params:oauth:grant-type:widget-dispatch`\n');
+  assert.equal(validateWireNames([d], NONE).length, 1);
+});
+
+test("wire names: names inside fenced examples and outside IANA Considerations are not declarations", () => {
+  const d = { slug: "draft-fixture", text: '# Protocol\n\n- `widget_id`: a member.\n\n# IANA Considerations\n\nIn the "OAuth Parameters" registry:\n\n~~~\n- Name: `example_only`\n~~~\n\n--- back\n' };
+  assert.deepEqual(validateWireNames([d], NONE), []);
+});
+
+test("wire names: the real repository is clean, and every grandfathered entry is still declared", () => {
+  const files = fs.readdirSync(REPO_ROOT).filter((f) => /^draft-.*\.md$/.test(f));
+  const drafts = files.map((f) => ({ slug: f.replace(/\.md$/, ""), text: fs.readFileSync(path.join(REPO_ROOT, f), "utf8") }));
+  assert.deepEqual(validateWireNames(drafts), []);
+  assert.equal(validateWireNames(drafts, NONE).length, GRANDFATHERED_WIRE_NAMES.size);
 });
