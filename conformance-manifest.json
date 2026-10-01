@@ -11,20 +11,20 @@
     "content_sha256": "108923e1ff06cfdcf0d3fc290da25012666bfda513f39e2944dd13dc02910871"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
-    "content_sha256": "f16c60c9caec06a12e96567550e6162c34416675d51405f3869c91f142a898ab"
+    "revision": "48b7abcdacfb66289c29c5312e5d6c6e683b5141",
+    "content_sha256": "052d86ffd6770cd0efa75663567fd2ba3cdbccdd3b4a05f92300cfeaa21c0f56"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
-    "content_sha256": "b123215f6d69999f53eb6326b05af196ab6713259325f8e005150a844bcbc009"
+    "revision": "48b7abcdacfb66289c29c5312e5d6c6e683b5141",
+    "content_sha256": "110170d05aa8c19a1d69dc74acbb99ab20915d78f241216deb5dba92c5624415"
    },
    "draft-mcguinness-mission-runtime.md": {
     "revision": "79344a58d878545e3daa6d5b880f6fe5dedb51b2",
     "content_sha256": "3d83bff5bc2fff67a0b741b51bbb56e3d1584597d97c45bbb06417b4fe52727b"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
-    "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
-    "content_sha256": "5a16d0d9926228070c76d33188f4d0348e9f93aea8a4104c676c783abc4d9ee0"
+    "revision": "48b7abcdacfb66289c29c5312e5d6c6e683b5141",
+    "content_sha256": "bc38949bab486178be786972579b8ee9217016aa76f457e98112d2f8388f4edf"
    },
    "draft-mcguinness-mission-substrate.md": {
     "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
@@ -43,8 +43,8 @@
     "content_sha256": "bd53c614b8389e6f5f91fba0e9caf61e9e22e0d5d75d8e7571511ab61185df2b"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
-    "revision": "769a1f360065b4e34f0dc4648bba1f828a4d65b9",
-    "content_sha256": "471256c71df5762166e72d9ff0ddd017b06faecf02654d9cd52d5f26f20c09dc"
+    "revision": "457ccd452157cbfba11598ac75b4308c299b6b18",
+    "content_sha256": "790b2bdac7819c4a3af571d0b79ce31bbc0b2531b9666f0cd2855ab1f7be5065"
    },
    "draft-mcguinness-oauth-mission-status.md": {
     "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
@@ -59,8 +59,8 @@
     "content_sha256": "2ecac7a1642121e76f782cb12941b64fc1ed0782ae6df8a6e82721d5bc280b1f"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "4e62524f4be6e2376195919d2440effb4e001a9d",
-    "content_sha256": "aeb56c9c465365193aa6a5e67fad7b0986567937e6b15fb269062341ce745f23"
+    "revision": "dd16dd544da103729cc5380bb11e860796a95643",
+    "content_sha256": "b2a9898722e589fe9493ba48cb1b9381a59ca3b44df8a3599f232307ca3be466"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7fc9ef45b5fb69f06bd3e90c1a93b6ac71808c10",
@@ -95,12 +95,20 @@
     "content_sha256": "7bc59ddd33c1c48b9e6b915d9bad75d099ca7f1e95235343b5c06499b59929c5"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "4e62524f4be6e2376195919d2440effb4e001a9d",
-    "content_sha256": "f49674be52df04b3e94b6a2026fa529141331ea655012830c2cd3dce61c40819"
+    "revision": "781c088698621e47f6a44fd4ebb0a584cb7a8e59",
+    "content_sha256": "352dee1a22c64ae629e6421941812b05714b10bda692ceb2fdfc50ff78609e55"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "ae8e99208ff97d35379cdeca4dccddd9e99861f1",
     "content_sha256": "9bbf98746769f7bf782bd3c350af0dcf10675775f7d5d1beb7106051e006e776"
+   },
+   "draft-mcguinness-oauth-mission-approved-set-verification.md": {
+    "revision": "48b7abcdacfb66289c29c5312e5d6c6e683b5141",
+    "content_sha256": "7098f04b5cc6e3a633f0eb3003a112af720ba414d9f45f45ce9dbbcc166f9200"
+   },
+   "draft-mcguinness-oauth-mission-submission-evidence.md": {
+    "revision": "dd16dd544da103729cc5380bb11e860796a95643",
+    "content_sha256": "78fa453b80921a5898aa47c2453be8c86cf81d74a5a5a87e95ed0c2a4a06637e"
    }
   }
  },
@@ -203,7 +211,7 @@
    "template.dispatch",
    "progressive.ceiling-drawdown",
    "cross-domain.projection",
-   "core.local-approved-set-verification",
+   "approved-set-verification.verification",
    "authzen.runtime-evidence",
    "authzen.obligations",
    "authzen.arap",
@@ -213,7 +221,8 @@
    "core.instance-context",
    "runtime.instance-context",
    "mas.instance-bound-join",
-   "derivation-limits.limit"
+   "derivation-limits.limit",
+   "submission-evidence.verification"
   ]
  },
  "profiles": [
@@ -5585,19 +5594,17 @@
    ]
   },
   {
-   "id": "core.local-approved-set-verification.tier1-retrieval-recompute-subset-fail-closed",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "lasv-retrieval",
-   "text": "MUST fail closed: a retrieval failure, an unauthenticated response, a commitment mismatch, or a subset-test failure refuses the request under {{rs-enforcement}}, never falls back to trusting the token signature alone as if this profile were not claimed.",
+   "id": "approved-set-verification.retrieval.tier1-retrieval-recompute-subset-fail-closed",
+   "spec": "draft-mcguinness-oauth-mission-approved-set-verification.md",
+   "anchor": "retrieval",
+   "text": "MUST fail closed: a retrieval failure, an unauthenticated response, a commitment mismatch, or a subset-test failure refuses the request under {{I-D.draft-mcguinness-oauth-mission}}, Section \"Resource Server Enforcement\", never falls back to trusting the token signature alone as if this profile were not claimed.",
    "role": "verifier",
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.local-approved-set-verification"
+    "capability": "approved-set-verification.verification"
    },
-   "profiles": [
-    "issuance"
-   ],
+   "profiles": [],
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
@@ -5634,19 +5641,17 @@
    "notes": "review #725 P1-3: reference implementation is verifyLocalApprovedSet() (packages/mission-core/src/local-approved-set-verification.ts). No party in this repo currently CALLS it in production (no Resource Server or PDP here claims this OPTIONAL capability), so coverage is the unit-level function contract, not an integration wiring; that is the honest ceiling for a capability this repo does not itself deploy."
   },
   {
-   "id": "core.local-approved-set-verification.tier2-independent-pinning",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "lasv-retrieval",
+   "id": "approved-set-verification.pinning.tier2-independent-pinning",
+   "spec": "draft-mcguinness-oauth-mission-approved-set-verification.md",
+   "anchor": "independent-pinning",
    "text": "the verifying party additionally holds an expected `authority_hash` obtained from a source independent of the Tier 1 retrieval channel, never re-derived from the same call being verified, and MUST reject unless the retrieved (and recomputed-matching) value also equals that independently held one.",
    "role": "verifier",
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.local-approved-set-verification"
+    "capability": "approved-set-verification.verification"
    },
-   "profiles": [
-    "issuance"
-   ],
+   "profiles": [],
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
@@ -5670,19 +5675,17 @@
    ]
   },
   {
-   "id": "core.local-approved-set-verification.retrieval-transport-and-disclosure-gate",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "lasv-retrieval",
+   "id": "approved-set-verification.surface.retrieval-transport-and-disclosure-gate",
+   "spec": "draft-mcguinness-oauth-mission-approved-set-verification.md",
+   "anchor": "retrieval-surface",
    "text": "The retrieval surface MUST refuse a caller that does not hold the disclosure privilege",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.local-approved-set-verification"
+    "capability": "approved-set-verification.verification"
    },
-   "profiles": [
-    "issuance"
-   ],
+   "profiles": [],
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
@@ -5694,18 +5697,17 @@
    "notes": "review #725 P1-3: disputed as untestable in this repo by the spec's own design, not merely unimplemented. The document explicitly does not mandate a retrieval endpoint or transport (deployment-provisioned), so there is no concrete surface here to gate-check against; a conformance row can only restate the requirement, which this row does, pending a deployment that actually provisions such a surface."
   },
   {
-   "id": "core.local-approved-set-verification.status-not-compatible-retrieval-surface",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "lasv-retrieval",
+   "id": "approved-set-verification.surface.status-not-compatible-retrieval-surface",
+   "spec": "draft-mcguinness-oauth-mission-approved-set-verification.md",
+   "anchor": "retrieval-surface",
    "text": "Recomputing `authority_hash` over a Status response therefore fails by construction for any multi-audience Mission, and fails after any containment or discharge even for a single-audience one.",
    "role": "verifier",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "approved-set-verification.verification"
    },
-   "profiles": [
-    "issuance"
-   ],
+   "profiles": [],
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
@@ -6191,7 +6193,7 @@
    "id": "status.discharge.event-replay",
    "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-idempotency",
-   "text": "It issues a new signed envelope that echoes the new `nonce` and carries the stored operation result: the same `outcome` and selectors, and the original `prior_version` and `current_version` the first commit produced.",
+   "text": "It issues a new signed envelope that echoes the new `nonce` and carries the stored operation result: the same `outcome` and resolved target, and the original `prior_version` and `current_version` the first commit produced.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -6408,7 +6410,7 @@
    "surface": "lifecycle-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the signed discharge_result's outcome member is discharged, already_discharged, or terminal_noop matching the actual transition, alongside entry_digest, condition_digest, event_id, prior_version, and current_version"
+    "normative": "the signed discharge_result's outcome member is discharged, already_discharged, or terminal_noop matching the actual transition, alongside the request's target form as sent, event_id, prior_version, and current_version"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -6498,10 +6500,178 @@
    "notes": "Propagation is entry-wise and SYNCHRONOUS in this implementation (`propagateDischargeToChildren`, matching a child entry on the resource plus the fired `condition_digest`, which the subset rule guarantees the child carries, and keyed by the child's own entry commitment with recursion to grandchildren), so the asynchronous materialization gap the clause contemplates does not exist here and there is nothing to race: immediately after the parent commit the already-justified child's effective set is empty and its derivation is refused. The refusal is observed at the kernel derivation gate the token endpoint calls (`gateDerivation`) and at `createChildMission`, not through a full OAuth exchange."
   },
   {
-   "id": "status.discharge.policy-resolution-on-condition-entry",
+   "id": "status.discharge.propagation-by-justification",
    "spec": "draft-mcguinness-oauth-mission-discharge.md",
-   "anchor": "discharge-authority",
-   "text": "The AS MUST resolve and validate the selector whenever a condition first enters an immutable Mission-record entry",
+   "anchor": "discharge-commit",
+   "text": "The Mission Issuer MUST propagate a committed discharge to a Child Mission's entry exactly when that entry carries the fired condition and its recorded justification is the discharged entry, or, recursively, an entry the discharge has already reached.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a discharge reaches a Child Mission's entry only through that entry's recorded justification (the parent entry it was derived from), recursively, and only when the entry carries the fired condition; a child entry justified by a different parent entry carrying an identical condition is not discharged"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 2. The implementation matches a child entry on the resource plus the fired condition_digest (see status.discharge.child-propagation); keying on the justification mapping, with the acceptance case of two parent entries carrying identical conditions, lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.propagation-downward-only",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-commit",
+   "text": "the Mission Issuer MUST NOT discharge a parent's or a sibling's entry because a child entry was discharged.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "discharging a Child Mission's entry leaves its parent's and its siblings' entries undischarged"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 2. No test yet asserts that discharging a child entry leaves its parent's and siblings' entries untouched; it lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.selector-one-per-target",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "condition-selectors",
+   "text": "The Mission Issuer MUST issue at most one selector per target, and a selector MUST resolve to exactly one target.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each (mission_id, entry_digest, condition_digest) target has at most one selector, and every selector resolves to exactly one target"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 1. Implementation (the selector table) lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.selector-non-reconstruction",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "condition-selectors",
+   "text": "A selector MUST NOT let its holder reconstruct the record entry or any part of it",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "introspection",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "a selector is not derived from the entry's content without a secret, so it cannot be tested against guesses of the record entry"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 1. Implementation lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.selector-retention",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "condition-selectors",
+   "text": "The Mission Issuer MUST keep a selector resolvable while its target can still be discharged, directly or by forwarding after carryover",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a selector resolves for as long as its target can still be discharged"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 1. Implementation lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.selector-disclosure-scope",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "condition-selectors",
+   "text": "The AS MUST NOT include a selector for an entry it does not return to that caller in the same response.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "introspection",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "discharge_selectors names only entries the same introspection response returns to that caller"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 1. Implementation lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.selector-issuer-only",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "condition-selectors",
+   "text": "An AS MUST NOT include `discharge_selectors` unless it is the Mission `issuer`",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "introspection",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "a non-issuer AS never reports discharge_selectors"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 1. Implementation lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.target-form-exactly-one",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-operation",
+   "text": "The AS MUST refuse a request that carries both target forms, or neither, with `invalid_request`.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -6514,7 +6684,365 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "discharge_policy is resolved and validated whenever a condition enters an immutable Mission-record entry, including a condition a derived entry adds after activation (child creation, expansion, or another derivation), refusing the Intent or derivation when the selector maps to nothing"
+    "normative": "a discharge request carrying both condition_selector and the digest pair, or neither, is refused invalid_request"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 1. Implementation lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.selector-collapse",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-anti-oracle",
+   "text": "A `condition_selector` that does not resolve, or that resolves to a target outside the request's `mission_id`, joins the same collapse",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "an unresolvable selector, or one resolving outside the named Mission, produces the same not_found body as the other collapsed cases"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 1. Implementation lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.selector-form-shared-identity",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-idempotency",
+   "text": "the AS MUST use the resolved `entry_digest` and `condition_digest` in the event tuple and in the assertion fingerprint",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a selector-form request and a digest-form request for the same target and occurrence are one event: a repeat in the other form is a replay, not a new assertion or a conflict"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 1. Implementation lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.result-no-added-digests",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-result",
+   "text": "The AS MUST NOT add to the result a digest that a selector-form request did not carry.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "the signed result of a selector-form request echoes the selector and never the record entry's digests"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 1. Implementation lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.forward-to-replacement",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-carryover",
+   "text": "When Carryover Evidence records the targeted Mission as carried, the AS MUST apply the discharge to the replacement's corresponding entry.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a discharge targeting a carried-over old child discharges the replacement's corresponding entry, including across a chain of carryovers"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 3. Implementation (pairing and forwarding) lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.forward-by-pairing-only",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-carryover",
+   "text": "the AS MUST NOT resolve it any other way, such as by matching resource and condition",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "forwarding resolves the replacement entry only through the recorded per-entry pairing, so a replacement entry whose bytes changed under inherited constraints is still reached, and no other entry is"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 3. Implementation lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.forward-authorization",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-carryover",
+   "text": "The AS MUST authorize the caller against the replacement's pinned mapping for the fired condition",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a forwarded discharge is authorized against the replacement's pinned mapping; a caller it does not admit gets the not_found collapse"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 3. Implementation lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.forward-replay",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-carryover",
+   "text": "The AS MUST record the resolved target in the operation's result record at first processing.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a retry of a forwarded discharge, including one after a further carryover, recovers the original result and never resolves a new target"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 3. Implementation lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.forward-latch-first",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-carryover",
+   "text": "The AS MUST check the targeted entry's own latch in the old child before forwarding",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a delayed assertion against an entry the old child had already discharged before carryover answers already_discharged and forwards nothing"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 spec review. An entry the old child had already discharged answers already_discharged without forwarding; implementation lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.receipt-aud-nonce",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-receipt",
+   "text": "The AS MUST set `aud` to the authenticated requester's identifier and `nonce` to the request's own `nonce`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Discharge Receipt's aud is the authenticated requester and its nonce the request's own; a byte-identical retransmission replays the stored receipt bytes and a fresh-nonce event replay returns a new receipt"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 spec review. Implementation lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.forwarded-result-verification",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-carryover",
+   "text": "it MUST verify that `discharge_result.forwarded_from` names the requested Mission and that `mission.issuer` equals its `issuer`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a consumer of a forwarded Status response replaces the mission.id-equals-requested check with forwarded_from naming the requested Mission and a matching issuer, then reads mission as the replacement"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#902 review (P2). Consumer-side rule; a verifier test lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.receipt-consumer-verification",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-receipt",
+   "text": "A consumer MUST verify, before relying on a Discharge Receipt, for example before it stops retrying:",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer relies on a Discharge Receipt only after verifying typ, an advertised alg, the signature, iss, aud, nonce, the echoed mission_id, target form and event_id, and iat/exp"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#902 review (P2). The adapted Status verification procedure (typ, alg, signature, iss, aud, nonce, echoed target and event, lifetime); a verifier test lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.replay-echoes-current-form",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-idempotency",
+   "text": "The echoed target form and `event_id` are the current request's",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a selector-form fresh-nonce retry of a digest-form original receives the stored outcome and versions with the selector echoed, never the digests"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#902 review (P2). A fresh-nonce replay keeps the stored outcome, resolved target and versions but echoes the current request's form; the cross-form case lands with the #898 implementation PR (the existing event-replay test covers the same-form case)."
+  },
+  {
+   "id": "status.discharge.receipt-typ-exclusive",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-receipt",
+   "text": "A consumer MUST validate `typ` exactly and MUST NOT accept a Discharge Receipt as a Mission Status Response, or a Mission Status Response as a Discharge Receipt",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Discharge Receipt (typ mission-discharge-receipt+jwt) is never accepted as a Mission Status Response, nor the reverse"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 3. Consumer-side rule; a verifier test lands with the #898 implementation PR."
+  },
+  {
+   "id": "child-delegation.carryover.entry-pairing",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-evidence",
+   "text": "for each carried entry, the old record entry's `entry_digest` paired with the replacement record entry's `entry_digest`, with at most one counterpart per old entry",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Carryover Evidence for a carried child records, per carried entry, the old record entry_digest and its replacement's, at most one counterpart each"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 3. Carryover Evidence's map gains the per-entry pairing that discharge forwarding resolves through; implementation lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.policy-resolution-on-condition-entry",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-authority",
+   "text": "The AS MUST resolve and validate the `discharge_authority` value whenever a condition first enters an immutable Mission-record entry",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "discharge_authority is resolved and validated whenever a condition enters an immutable Mission-record entry, including a condition a derived entry adds after activation (child creation, expansion, or another derivation), refusing the Intent or derivation when the selector maps to nothing"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -24072,6 +24600,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Specification-only instance-context composition. Optional capability; not claimed by the reference deployment. Positive and negative implementation coverage remains to be added."
+  },
+  {
+   "id": "submission-evidence.intent-binding.intended-as",
+   "spec": "draft-mcguinness-oauth-mission-submission-evidence.md",
+   "anchor": "intent-binding",
+   "text": "The AS MUST refuse an intent-bound entry that does not verifiably identify this AS, with `invalid_mission_intent_evidence`.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "submission-evidence.verification"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "An intent-bound entry with an absent or invalid intended-AS binding, or a binding to another AS, is refused with invalid_mission_intent_evidence before derivation; the owning evidence type defines the binding and its verification."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#901 review: make the AS-binding check explicit in the optional Submission Evidence companion. No supported evidence type currently exercises this check; verification must include absent, wrong-AS, invalid, and valid bindings when a concrete type is implemented."
   }
  ]
 }

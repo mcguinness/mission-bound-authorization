@@ -1692,8 +1692,13 @@ The Mission Issuer MUST retain authenticated Carryover Evidence containing
 the `manifest_hash`, predecessor and successor references, and the complete
 final map of old child identities to carried or excluded outcomes.
 
-For a carried row the map includes `replacement_id` and its child-specific
-`approval_event_id`; for an excluded row it includes `reason` and observed
+For a carried row the map includes `replacement_id`, its child-specific
+`approval_event_id`, and, for each carried entry, the old record entry's
+`entry_digest` paired with the replacement record entry's `entry_digest`,
+with at most one counterpart per old entry. The discharge companion forwards
+a delayed discharge through these pairings
+({{I-D.draft-mcguinness-oauth-mission-discharge}}, Section "Discharge After
+Carryover"). For an excluded row the map includes `reason` and observed
 terminal state or committed cascade. Unrendered descendants are listed
 explicitly. The map, not `related_to`, is the normative record of replacement.
 

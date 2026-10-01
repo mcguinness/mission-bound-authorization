@@ -4061,6 +4061,17 @@ async function handleDischarge(input: {
       return;
     }
   }
+  // @spec control-plane#serialization — the expiry clock OUTSIDE the operation's
+  // transaction (#844), as the lifecycle and `contain` handlers keep it: a
+  // refused discharge (any not-found class, or a conflict) must never roll back
+  // the `expired` transition discovering it committed. Guarded on existence so
+  // an unknown Mission still reaches the kernel's DischargeNotFoundError and the
+  // one indistinguishable not-found body; it sits outside the `try` so a storage
+  // failure here is never disguised as not-found. `kernel.discharge` keeps its
+  // own expiry clock for other callers.
+  if (kernel.get(missionId)) {
+    kernel.materializeExpiry(missionId);
+  }
   try {
     // @spec control-plane#serialization, control-plane#fresh-observation — the
     // latch, the observation it is reported at and the nonce claim commit as
