@@ -458,8 +458,8 @@ Substrate Statement. What peer standing implies, and how the bindings
 differ, is stated once with the binding architectures
 ({{binding-architectures}}).
 
-This document is Informational. It defines no protocol, requirement,
-conformance class, or wire format. It does define descriptive
+This document is Informational. It defines no protocol, mechanism,
+requirement, conformance class, or wire format. It does define descriptive
 vocabulary that other documents cite: the token classes
 ({{token-classes}}), the assurance levels and claims
 ({{assurance-levels}}), and the binding properties
