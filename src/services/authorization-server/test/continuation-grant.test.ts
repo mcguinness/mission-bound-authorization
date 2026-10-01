@@ -85,6 +85,9 @@ let agentJkt: string;
 let svcKeys: Keys; // a second client, svc-b: its private_key_jwt key
 let svcDpopKeys: Keys; // svc-b's DPoP key
 let svcJkt: string;
+let svcXKeys: Keys; // a third client, svc-x, whose asserted profile no delegation policy names
+let svcXDpopKeys: Keys;
+let svcXJkt: string;
 let remoteJwks: ReturnType<typeof createRemoteJWKSet>;
 
 /** A continuation lineage: an active Mission + a grant anchor + an initial handle. */
@@ -327,23 +330,29 @@ beforeAll(async () => {
   svcKeys = await generateKeyPair("ES256", { extractable: true });
   svcDpopKeys = await generateKeyPair("ES256", { extractable: true });
   svcJkt = await calculateJwkThumbprint(await exportJWK(svcDpopKeys.publicKey));
+  svcXKeys = await generateKeyPair("ES256", { extractable: true });
+  svcXDpopKeys = await generateKeyPair("ES256", { extractable: true });
+  svcXJkt = await calculateJwkThumbprint(await exportJWK(svcXDpopKeys.publicKey));
+  const exchangeClient = async (clientId: string, keys: Keys) => ({
+    client_id: clientId,
+    grant_types: [TOKEN_EXCHANGE_GRANT_TYPE],
+    response_types: [],
+    redirect_uris: [],
+    token_endpoint_auth_method: "private_key_jwt",
+    token_endpoint_auth_signing_alg: "ES256",
+    jwks: { keys: [{ ...(await exportJWK(keys.publicKey)), kid: `${clientId}-auth`, alg: "ES256" }] },
+  });
 
   as = await buildAuthorizationServer({
     issuer: ISSUER,
     allowHeadlessAdjudication: true,
-    // A second token-exchange client, so a hop can be continued by an actor
+    // Further token-exchange clients, so a hop can be continued by an actor
     // other than the one that obtained it.
-    testClients: [
-      {
-        client_id: "svc-b",
-        grant_types: [TOKEN_EXCHANGE_GRANT_TYPE],
-        response_types: [],
-        redirect_uris: [],
-        token_endpoint_auth_method: "private_key_jwt",
-        token_endpoint_auth_signing_alg: "ES256",
-        jwks: { keys: [{ ...(await exportJWK(svcKeys.publicKey)), kid: "svc-b-auth", alg: "ES256" }] },
-      },
-    ],
+    testClients: [await exchangeClient("svc-b", svcKeys), await exchangeClient("svc-x", svcXKeys)],
+    // The AS-asserted actor profiles the delegation policies match: the
+    // ceiling's payments entries are delegable to ai_agent actors through
+    // depth 2 (config/policy.json), and svc-x is a class none names.
+    actorProfiles: { "ap-agent": "ai_agent", "svc-b": "ai_agent", "svc-x": "service" },
     continuationAssertionIssuers: [
       // Trusted for the root hops (this AS) and the child hops (RAS_AUD).
       { iss: CAI, jwks: { keys: [caiPub] }, attestsFor: [ISSUER, RAS_AUD] },
@@ -959,6 +968,17 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
   });
 });
 
+type Who = "A" | "B" | "X";
+
+/** Present a continuation of `handle` as A (ap-agent), B (svc-b) or X (svc-x). */
+async function exchangeAs(handle: string, who: Who, f: Omit<ExchangeFields, "subjectToken"> = {}): Promise<Response> {
+  if (who === "A") return tokenExchange({ ...f, subjectToken: await mintICA(handle) });
+  const clientId = who === "B" ? "svc-b" : "svc-x";
+  const [keys, dpopKeys, jkt] = who === "B" ? [svcKeys, svcDpopKeys, svcJkt] : [svcXKeys, svcXDpopKeys, svcXJkt];
+  const ica = await mintICA(handle, { act: { iss: ISSUER, sub: clientId }, cnfJkt: jkt });
+  return tokenExchange({ ...f, subjectToken: ica }, { issuer: ISSUER, clientKey: keys.privateKey, clientId, dpopKeys });
+}
+
 /**
  * @spec id-continuation-assertion — the onward act lineage (ICA -02 5.5.5):
  * derived from the presented hop's ancestry, never from the assertion.
@@ -969,12 +989,7 @@ describe("continuation onward act lineage (@spec id-continuation-assertion)", ()
 
   /** Continue `handle` as A (ap-agent) or B (svc-b); returns the onward act and the new hop. */
   async function continueAs(handle: string, who: "A" | "B"): Promise<{ act: unknown; hop: string }> {
-    const asB = who === "B";
-    const target: Target = asB
-      ? { issuer: ISSUER, clientKey: svcKeys.privateKey, clientId: "svc-b", dpopKeys: svcDpopKeys }
-      : { issuer: ISSUER, clientKey };
-    const ica = await mintICA(handle, asB ? { act: B, cnfJkt: svcJkt } : {});
-    const res = await tokenExchange({ subjectToken: ica }, target);
+    const res = await exchangeAs(handle, who);
     const body = (await res.json()) as { access_token?: string };
     expect(res.status, JSON.stringify(body)).toBe(200);
     const claims = decodeJwt(body.access_token as string);
@@ -997,6 +1012,90 @@ describe("continuation onward act lineage (@spec id-continuation-assertion)", ()
     const { handle: root } = newLineage("apev-l2");
     expect((await continueAs(root, "B")).act).toEqual({ ...B, act: A });
     expect((await continueAs(root, "A")).act).toEqual(A);
+  });
+});
+
+/**
+ * @spec mission#delegation-constraints — per-entry delegation constraints on
+ * a continuation to another actor. The Mission delegation depth counts from
+ * the approved agent (ap-agent, the root actor): the merged lineage length
+ * minus one. Distinct from the ICA actor-lineage depth bound (ICA -02 6.3),
+ * which this deployment leaves unset.
+ */
+describe("continuation delegation constraints (@spec mission#delegation-constraints)", () => {
+  type Detail = { resource: string; delegation?: { max_depth: number } };
+  const granted = async (res: Response): Promise<{ details: Detail[]; hop: string }> => {
+    const body = (await res.json()) as { access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    const claims = decodeJwt(body.access_token as string);
+    return {
+      details: claims.authorization_details as Detail[],
+      hop: claims.identity_continuation_handle as string,
+    };
+  };
+  const refused = async (res: Response, error: string): Promise<string | undefined> => {
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe(error);
+    return body.error_description;
+  };
+  const sideEffects = (missionId: string) => ({
+    hops: as.continuationStore.handlesForMission(missionId).length,
+    derivations: as.kernel.get(missionId)?.derivation_count,
+  });
+
+  it("max_depth 2: A->B and A->B->A issue; A->B->A->B (Mission delegation depth 3) is invalid_target, with no hop and no derivation", async () => {
+    const { missionId, handle: root } = newLineage("apev-d1");
+    // The approved entry inherits the ceiling's delegation policy.
+    expect(as.kernel.get(missionId)?.authority_set[0]?.delegation?.max_depth).toBe(2);
+    const h1 = await granted(await exchangeAs(root, "A")); // {A}: depth 0
+    const h2 = await granted(await exchangeAs(h1.hop, "B")); // {B, act: A}: depth 1
+    const h3 = await granted(await exchangeAs(h2.hop, "A")); // {A, act: {B, act: A}}: depth 2
+    expect(h3.details.map((d) => d.resource)).toEqual([RESOURCE]);
+    const before = sideEffects(missionId);
+    const reason = await refused(await exchangeAs(h3.hop, "B"), "invalid_target");
+    expect(reason).toMatch(/Mission delegation depth 3/);
+    expect(sideEffects(missionId)).toEqual(before);
+  });
+
+  it("A->B narrows out a non-delegable entry and keeps the delegable one, its delegation policy intact", async () => {
+    const { handle: root } = newLineage("apev-d2", {}, MISSION_EXP, {}, [READ_C]);
+    const { details } = await granted(await exchangeAs(root, "B"));
+    expect(details.map((d) => d.resource)).toEqual([RESOURCE]);
+    expect(details[0]?.delegation?.max_depth).toBe(2);
+  });
+
+  it("a same-actor continuation (Mission delegation depth 0) is not narrowed", async () => {
+    const { handle: root } = newLineage("apev-d3", {}, MISSION_EXP, {}, [READ_C]);
+    const h1 = await granted(await exchangeAs(root, "A"));
+    const h2 = await granted(await exchangeAs(h1.hop, "A"));
+    for (const { details } of [h1, h2]) {
+      expect(details.map((d) => d.resource).sort()).toEqual([RESOURCE, RESOURCE_C].sort());
+    }
+  });
+
+  it("a delegate allowed_delegates does not name narrows the entry out: invalid_target, with no hop and no derivation", async () => {
+    const { missionId, handle: root } = newLineage("apev-d4");
+    const before = sideEffects(missionId);
+    const reason = await refused(await exchangeAs(root, "X"), "invalid_target");
+    expect(reason).toMatch(/Mission delegation depth 1/);
+    expect(sideEffects(missionId)).toEqual(before);
+  });
+
+  it("a narrowed-out entry cannot be requested: by authorization_details (invalid_authorization_details) or by resource (invalid_target), with no hop and no derivation", async () => {
+    const { missionId, handle: root } = newLineage("apev-d5", {}, MISSION_EXP, {}, [READ_C]);
+    // The approved entry, as derived (it takes the ceiling's vendors constraint).
+    const requestC = JSON.stringify([{ ...READ_C, constraints: { vendors: ["acme"] } }]);
+    const before = sideEffects(missionId);
+    await refused(
+      await exchangeAs(root, "B", { extra: { authorization_details: requestC } }),
+      "invalid_authorization_details",
+    );
+    await refused(await exchangeAs(root, "B", { resource: RESOURCE_C }), "invalid_target");
+    expect(sideEffects(missionId)).toEqual(before);
+    // The same requests at depth 0 issue.
+    await granted(await exchangeAs(root, "A", { extra: { authorization_details: requestC } }));
+    await granted(await exchangeAs(root, "A", { resource: RESOURCE_C }));
   });
 });
 

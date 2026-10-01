@@ -19,6 +19,7 @@ import {
 } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
+  DelegationNarrowedToEmptyError,
   issueCrossDomainGrant,
   MissionKernel,
   RequestedAuthorityExceededError,
@@ -207,6 +208,29 @@ describe("issueCrossDomainGrant — continuation ID-JAG (extended path)", () => 
         },
       }),
     ).rejects.toBeInstanceOf(RequestedAuthorityExceededError);
+    expect(calls).toBe(0);
+  });
+
+  it("delegationGate: the grant carries only the entries it keeps, and an empty result is refused before beforeSign (@spec mission#delegation-constraints)", async () => {
+    const record = approve(24);
+    const { grant } = await issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
+      ...legacyInput(record.id),
+      delegationGate: (entries) => entries.map((e) => ({ ...e, actions: e.actions.slice(0, 1) })),
+    });
+    expect(decodeJwt(grant).authorization_details).toEqual([
+      { type: "mission_resource_access", resource: RESOURCE, actions: ["ledger:journal.write"] },
+    ]);
+
+    let calls = 0;
+    await expect(
+      issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
+        ...legacyInput(approve(25).id),
+        delegationGate: () => [],
+        beforeSign: () => {
+          calls += 1;
+        },
+      }),
+    ).rejects.toBeInstanceOf(DelegationNarrowedToEmptyError);
     expect(calls).toBe(0);
   });
 

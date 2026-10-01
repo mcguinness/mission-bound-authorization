@@ -32,6 +32,12 @@ export const MAX_GRANT_LIFETIME_S = 300;
  */
 export class RequestedAuthorityExceededError extends Error {}
 
+/**
+ * @spec mission#delegation-constraints — the delegation gate left no
+ * audience-scoped entry for the delegate ("Empty result": invalid_target).
+ */
+export class DelegationNarrowedToEmptyError extends Error {}
+
 export function audienceScopedAuthority(
   authoritySet: AuthorityEntry[],
   resourceToAs: (resource: string) => string,
@@ -86,6 +92,14 @@ export interface IssueGrantInput {
    * {@link RequestedAuthorityExceededError}.
    */
   requestedAuthority?: AuthorityEntry[];
+  /**
+   * @spec mission#delegation-constraints — per-entry delegation narrowing for
+   * a delegated grant: given the audience-scoped Effective Authority Set, the
+   * entries this delegate may carry at its delegation depth. The grant
+   * carries only those (and any requestedAuthority must fit them); an empty
+   * result refuses with {@link DelegationNarrowedToEmptyError}.
+   */
+  delegationGate?: (entries: AuthorityEntry[]) => AuthorityEntry[];
   /**
    * @spec id-continuation-assertion — runs once the derivation gate, the count
    * and the audience projection have admitted the grant, and before it is
@@ -155,12 +169,16 @@ async function mintCrossDomainGrant(
     input.targetAs,
   );
   if (scoped.length === 0) throw new Error("no audience-scoped authority for the target Resource AS");
-  let granted = scoped;
+  const carried = input.delegationGate ? input.delegationGate(scoped) : scoped;
+  if (carried.length === 0) {
+    throw new DelegationNarrowedToEmptyError("delegation constraints leave no audience-scoped authority for this delegate");
+  }
+  let granted = carried;
   if (input.requestedAuthority !== undefined) {
-    if (!isSubsetSetIgnoringCapabilitySources(input.requestedAuthority, scoped)) {
+    if (!isSubsetSetIgnoringCapabilitySources(input.requestedAuthority, carried)) {
       throw new RequestedAuthorityExceededError("requested authorization_details exceed the Mission authority for the target");
     }
-    granted = projectThroughEffective(input.requestedAuthority, scoped);
+    granted = projectThroughEffective(input.requestedAuthority, carried);
   }
   input.beforeSign?.();
 

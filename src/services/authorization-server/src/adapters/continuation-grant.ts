@@ -18,7 +18,7 @@
 
 import { createHash } from "node:crypto";
 import { handleCrossOrgChainExchange } from "./cross-org-grant.js";
-import { type ActObject, extendChainCollapsing } from "@mission/actor-chain";
+import { type ActObject, extendChainCollapsing, flattenActChain } from "@mission/actor-chain";
 import {
   calculateJwkThumbprint,
   createLocalJWKSet,
@@ -41,9 +41,12 @@ import { DEFAULT_CONTINUATION_HOP_LIMIT, newContinuationHandle } from "../kernel
 import {
   audienceScopedAuthority,
   ID_JAG_TOKEN_TYPE,
+  DelegationNarrowedToEmptyError,
   issueCrossDomainGrant,
   RequestedAuthorityExceededError,
 } from "../kernel/cross-domain.js";
+import type { DelegateCandidate } from "../kernel/delegate-matcher.js";
+import { gateDelegableAuthority } from "../kernel/delegation.js";
 import {
   SUPPORTED_AUTHORIZATION_DETAILS_TYPES,
   validateMissionResourceAccessSchema,
@@ -521,22 +524,65 @@ export async function handleTokenExchangeGrant(
     txError(ctx, 400, "invalid_target", "no audience-scoped authority for the target Resource AS");
     return;
   }
+  // @spec id-continuation-assertion — the onward act is the presented hop's
+  // lineage with the current actor on top (ICA -02 5.5.5): each hop's
+  // recorded actor from the root (the Mission's client, recorded at approval)
+  // to the presented hop, consecutive equal (iss, sub) merged into one entry,
+  // nested per RFC 8693 with the current actor outermost. It comes from the
+  // hop records alone, never from the assertion, whose act names only the
+  // current actor.
+  let onwardAct: ActObject | undefined;
+  for (const actor of [...store.lineage(ica.handle), currentActor]) {
+    onwardAct = extendChainCollapsing(actor, onwardAct);
+  }
+  // @spec mission#delegation-constraints — per-entry delegation constraints
+  // on the delegated grant. The Mission delegation depth counts from the
+  // approved agent, the Mission's client, which is the innermost entry of
+  // the merged lineage: {A} is depth 0, {B, act: A} depth 1, and each
+  // further merged entry adds 1. At depth 0 the grant goes to the approved
+  // agent itself and nothing narrows. Otherwise an audience-scoped entry is
+  // carried only if its delegation policy permits this delegate at that
+  // depth (gateDelegableAuthority; no `delegation` member is non-delegable),
+  // and an empty result is invalid_target. This is distinct from the ICA
+  // actor-lineage depth bound (ICA -02 6.3), a tenant policy this deployment
+  // does not set. The delegate is the authenticated client, its `sub_profile`
+  // the one the AS asserts for it (kernel.actorProfile), as on the child and
+  // carryover paths.
+  const missionDelegationDepth = flattenActChain(onwardAct).length - 1;
+  const delegate: DelegateCandidate = {
+    sub: client.clientId,
+    assertedProfile: opts.kernel.actorProfile(client.clientId),
+  };
+  const delegationGate = (entries: AuthorityEntry[]): AuthorityEntry[] =>
+    missionDelegationDepth === 0 ? entries : gateDelegableAuthority(entries, delegate, missionDelegationDepth);
+  const delegable = delegationGate(audienceScoped);
+  if (effective.length > 0 && delegable.length === 0) {
+    txError(
+      ctx,
+      400,
+      "invalid_target",
+      `no audience-scoped authority this delegate may carry at Mission delegation depth ${missionDelegationDepth}`,
+    );
+    return;
+  }
   // @spec id-continuation-assertion — each requested resource MUST also be
   // one the Mission authorizes: a resource the audience serves but no
   // audience-scoped effective entry names is "not permitted by the chain
   // authorization" (ICA -02 5.5.6: invalid_target), as a token-endpoint
   // `resource` outside the Authority Set is at core issuance
   // (mission#error-mapping). Membership is the exact `resource` equality the
-  // kernel's audience-scoped projections use.
-  if (effective.length > 0 && resources.some((r) => !audienceScoped.some((e) => e.resource === r))) {
+  // kernel's audience-scoped projections use, over the entries this delegate
+  // may carry.
+  if (effective.length > 0 && resources.some((r) => !delegable.some((e) => e.resource === r))) {
     txError(ctx, 400, "invalid_target", "requested resource is not authorized by the Mission");
     return;
   }
   // @spec id-continuation-assertion — a requested authorization_details is
   // evaluated by type, and the requested set MUST fit the Mission's Effective
-  // Authority Set for this audience; else invalid_authorization_details (ICA
-  // -02 5.5.3 rule 7, 5.5.6). The issued ID-JAG then carries the requested
-  // subset, projected; absent, the whole audience-scoped set.
+  // Authority Set for this audience, as this delegate may carry it; else
+  // invalid_authorization_details (ICA -02 5.5.3 rule 7, 5.5.6). The issued
+  // ID-JAG then carries the requested subset, projected; absent, every entry
+  // the delegate may carry.
   if (requestedDetails !== undefined) {
     for (const detail of requestedDetails) {
       if (typeof detail.type !== "string" || !SUPPORTED_AUTHORIZATION_DETAILS_TYPES.has(detail.type)) {
@@ -555,7 +601,7 @@ export async function handleTokenExchangeGrant(
       effective.length > 0 &&
       !isSubsetSetIgnoringCapabilitySources(
         requestedDetails as unknown as AuthorityEntry[],
-        audienceScoped,
+        delegable,
       )
     ) {
       txError(ctx, 400, "invalid_authorization_details", "requested authorization_details exceed the Mission authority for the target");
@@ -577,17 +623,6 @@ export async function handleTokenExchangeGrant(
   // below, once the Mission gate has admitted the grant: a refused request
   // leaves no orphan hop (@spec id-continuation-assertion, ICA -02 5.5.4).
   const freshHandle = newContinuationHandle();
-  // @spec id-continuation-assertion — the onward act is the presented hop's
-  // lineage with the current actor on top (ICA -02 5.5.5): each hop's
-  // recorded actor from the root (the Mission's client, recorded at approval)
-  // to the presented hop, consecutive equal (iss, sub) merged into one entry,
-  // nested per RFC 8693 with the current actor outermost. It comes from the
-  // hop records alone, never from the assertion, whose act names only the
-  // current actor.
-  let onwardAct: ActObject | undefined;
-  for (const actor of [...store.lineage(ica.handle), currentActor]) {
-    onwardAct = extendChainCollapsing(actor, onwardAct);
-  }
   // Root auth envelope, carried unchanged (store shape -> ID-JAG shape).
   const env = resolved.authEnvelope;
   const authEnvelope = {
@@ -611,6 +646,9 @@ export async function handleTokenExchangeGrant(
       ...(requestedDetails !== undefined
         ? { requestedAuthority: requestedDetails as unknown as AuthorityEntry[] }
         : {}),
+      // The same delegation gate, applied again once the gate admits, so a
+      // state change since the rule-7 check cannot widen the grant.
+      delegationGate,
       // Everything validation and the gate admitted: reserve the ICA, then
       // record the child hop (bound to the SAME anchor/Mission, linked to the
       // prior). @spec id-continuation-assertion — the (iss, jti) reservation
@@ -647,6 +685,10 @@ export async function handleTokenExchangeGrant(
     // the rule-7 check).
     if (e instanceof RequestedAuthorityExceededError) {
       txError(ctx, 400, "invalid_authorization_details", e.message);
+      return;
+    }
+    if (e instanceof DelegationNarrowedToEmptyError) {
+      txError(ctx, 400, "invalid_target", e.message);
       return;
     }
     // A non-active / expired / contained / cap-exhausted Mission (gate path ->
