@@ -85,7 +85,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-mission-uma:
-    title: "Mission-Bound Authorization: UMA 2.0 Binding"
+    title: "Mission-Bound Authorization for UMA 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-uma.html
     author:
       -
@@ -93,7 +93,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-mission-harness:
-    title: "Mission Harness"
+    title: "Mission-Aware Agent Harnesses"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html
     author:
       -
@@ -101,7 +101,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-mission-runtime:
-    title: "Mission Runtime Enforcement"
+    title: "Mission-Bound Runtime Enforcement"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
     author:
       -
@@ -109,7 +109,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-mission-authzen:
-    title: "Mission AuthZEN Binding"
+    title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
     author:
       -
