@@ -496,8 +496,12 @@ MAS's mission submission endpoint, published as
 served over TLS 1.2 or later (TLS 1.3 RECOMMENDED), following the
 recommendations of {{RFC9325}}. The endpoint MUST authenticate the
 client using the authentication mechanisms of the Mission Status
-endpoint ({{I-D.draft-mcguinness-oauth-mission-status}}): mTLS,
-DPoP-bound bearer, or private-key JWT. How clients register with a
+endpoint ({{I-D.draft-mcguinness-oauth-mission-status}}): mTLS client
+authentication, a DPoP- or mTLS-bound access token, or private-key JWT,
+with a token's audience and a client assertion's `aud` naming this
+endpoint. It advertises the methods it accepts in
+`mission_submission_endpoint_auth_methods_supported` ({{discovery}}).
+How clients register with a
 MAS is deployment-defined; the identifier the MAS authenticates is
 recorded as the Mission's `client_id`.
 
@@ -1677,7 +1681,9 @@ token binding instead of operating a mapping table. A MAS that
 supports the upgrade publishes its join-assertion endpoint as
 `mission_join_assertion_endpoint` ({{discovery}}). The endpoint MUST
 meet the TLS and caller-authentication requirements of the mission
-submission endpoint ({{mission-submission}}).
+submission endpoint ({{mission-submission}}), with a client assertion's
+`aud` naming this endpoint, and accepts the methods and algorithms
+advertised for the submission endpoint.
 
 ## Assertion Request {#join-assertion-request}
 
