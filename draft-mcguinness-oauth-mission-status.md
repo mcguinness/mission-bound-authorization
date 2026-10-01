@@ -1771,6 +1771,10 @@ Authorization work for feedback that shaped these extensions.
 
 \[\[ To be removed from the final specification ]]
 
+- The mutual-TLS method value is `tls_client_auth`, the registered
+  {{RFC8705}} spelling, and an absent endpoint auth-methods member is
+  never read from token-endpoint metadata. The Mission Authority Server
+  publishes the same per-endpoint members.
 - Added conditional carryover correlation on an old child's cascaded
   observation; no state or authority is inferred from the pointer (#576).
 - Operational Considerations added (#310): recovery sizing for the
