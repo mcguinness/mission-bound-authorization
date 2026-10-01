@@ -2388,43 +2388,30 @@ what was never recorded present.
 
 ## The Reference Architecture {#reference-architecture}
 
-The family is a menu, but a reader should meet it as a meal. Four
-stacks, each containing the previous, are the shapes deployments
-actually take, and the second is the reference:
+The four levels are also the four reference stacks deployments
+actually take, each containing the previous. The stacks are expressed
+in the OAuth realization; a peer binding realizes the levels per its
+own document, and peer standing does not imply identical rungs or
+capabilities. The family manifest records each stack's exact
+membership.
 
-**Protocol core**:
-: the OAuth issuance binding alone, the realization these stacks are
-  expressed in (chosen for OAuth 2.0's deployed infrastructure): the
-  standardizable primitive (approved, anchored, state-gated
-  Missions), Mission-substrate conformance ({{requirements}}), no
-  per-action control (Baseline Issuance, {{assurance-levels}}). The
-  stacks are this OAuth realization throughout; a peer binding
-  realizes the levels per its own document, and peer standing does
-  not imply identical rungs or capabilities.
-
-**Reference security architecture**:
-: core plus runtime enforcement, its AuthZEN profile, runtime
-  evidence (the decision and execution objects AuthZEN consumes),
-  and a freshness source, Status being the reference choice; the
-  substrate contract arrives with them as runtime and AuthZEN's
-  normative kernel, by adoption closure, and the family manifest
-  records the stack's exact membership (the Runtime-Enforced level,
-  {{assurance-levels}}). This is the architecture this document
-  means when it says a Mission is enforced, and the one an
-  evaluation should picture by default. It presumes an
-  authority-bearing binding; under AAuth the analogous per-action
-  control is the Person Server's contextual gate on PS-mediated
-  paths ({{I-D.draft-mcguinness-mission-aauth}}).
-
-**Recommended agent architecture**:
-: the reference architecture plus Consent Evidence and the harness
-  (the Governed Agent level): what a deployment running autonomous
-  AI agents should build.
-
-**High-assurance architecture**:
-: the recommended architecture plus mediated custody, no unmediated
-  path, action-bound approval, active freshness, and agent-isolated
-  approval rendering (the High-Assurance Agent level).
+- **Protocol core** (Baseline Issuance): the OAuth binding alone, the
+  standardizable primitive of approved, anchored, state-gated
+  Missions, with Mission-substrate conformance ({{requirements}}).
+- **Reference security architecture** (Runtime-Enforced): the
+  protocol core plus runtime enforcement, its AuthZEN profile,
+  runtime evidence (the decision and execution objects AuthZEN
+  consumes), and a freshness source, Status being the reference
+  choice; the substrate contract arrives with them as runtime and
+  AuthZEN's normative kernel, by adoption closure. This is the
+  architecture this document means when it says a Mission is
+  enforced, and the one an evaluation should picture by default. It
+  presumes an authority-bearing binding; under AAuth the analogous
+  per-action control is the Person Server's contextual gate on
+  PS-mediated paths ({{I-D.draft-mcguinness-mission-aauth}}).
+- **Recommended agent architecture** (Governed Agent): what a
+  deployment running autonomous AI agents should build.
+- **High-assurance architecture** (High-Assurance Agent).
 
 
 ## Assurance Claims {#assurance-claims-axis}
