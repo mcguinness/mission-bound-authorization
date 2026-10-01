@@ -1614,9 +1614,10 @@ or make the child ineligible.
 
 This is a carryover-specific exception to starting a new child with a fresh
 derivation counter ({{derivation-budget}};
-{{I-D.draft-mcguinness-oauth-mission-derivation-limits}}, Section
-"Counting Derivations"): the replacement continues the old
-child's remaining budget, despite receiving a new record identifier.
+{{I-D.draft-mcguinness-oauth-mission-derivation-limits}}, Sections
+"Effective Limit" and "Counting Derivations"): the replacement
+continues the old child's remaining budget, despite receiving a new
+record identifier.
 Metering and exclusivity require defined, atomic transfer or shared-state
 binding; changing the key to `replacement_id` is not a transfer. Fan-out is
 recounted against new justifying entries in the same serialization domain,
