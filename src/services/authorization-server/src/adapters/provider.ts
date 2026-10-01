@@ -700,6 +700,76 @@ export function buildProvider(opts: AdapterOptions): Provider {
   }
 
   /**
+   * @spec mission#issuance-gating — the Mission a token minted under
+   * `grantId` is gated against, and how, resolved ONCE for both the save-time
+   * gate (`extraTokenClaims`) and the refresh pre-check (`rotateRefreshToken`):
+   *
+   * - `counted: true` — the Mission's own approval grant (`kernel.findByGrant`):
+   *   each derivation counts against its `derivation_limit`;
+   * - `counted: false` — a delegation-family grant, or a durable-index hit whose
+   *   Mission's `grant_id` has moved on: live state only, never counted (a
+   *   family's single count was spent at the exchange that created it,
+   *   @spec async-delegation).
+   *
+   * Undefined for a grant that was never Mission-bound, or a family whose
+   * Mission no longer resolves. An index hit with no Mission refuses
+   * (`missionForBoundGrant`).
+   */
+  function missionGateTarget(grantId: string): { record: MissionRecord; counted: boolean } | undefined {
+    const record = kernel.findByGrant(grantId);
+    if (record) return { record, counted: true };
+    const fam = opts.familyStore?.resolve(grantId);
+    const famRecord = fam ? kernel.get(fam.missionId) : missionForBoundGrant(grantId);
+    return famRecord ? { record: famRecord, counted: false } : undefined;
+  }
+
+  /**
+   * @spec mission#issuance-gating — the Mission gate for `target`, throwing
+   * the kernel's {@link GateError}. `issue` is the authoritative save-time gate
+   * (`gateDerivation`, which counts, or `gateActive`); `precheck` runs the
+   * same checks with nothing counted (`checkDerivation`, or the same
+   * `gateActive`). Both map through {@link missionGateRefusal}, so the wire
+   * refusal is identical.
+   */
+  function missionGate(target: { record: MissionRecord; counted: boolean }, mode: "issue" | "precheck"): MissionRecord {
+    if (!target.counted) return kernel.gateActive(target.record.id);
+    return mode === "issue" ? kernel.gateDerivation(target.record.id) : kernel.checkDerivation(target.record.id);
+  }
+
+  /** A {@link GateError} as the token endpoint's `invalid_grant` (with `mission_error` where a value applies). */
+  function missionGateRefusal(e: unknown, missionId: string): unknown {
+    return e instanceof GateError
+      ? new MissionGrantError(e.message, gateErrorToMissionError(e.reason, kernel.get(missionId)?.state))
+      : e;
+  }
+
+  /**
+   * @spec mission#issuance-gating, status#legal-transitions (#914) — the
+   * NON-CONSUMING refresh pre-check. oidc-provider consumes the presented
+   * refresh token (lib/actions/grants/refresh_token.js 9.10.0 L137) and saves
+   * the rotated one (L168) before `at.save()` (L216) runs the Mission gate, so a
+   * refresh refused there has already spent the lineage: after a `resume`, the
+   * client's token is reuse and revokes the grant. This runs the same gate,
+   * without counting, inside `rotateRefreshToken`, before consumption.
+   *
+   * Non-consuming, not read-only: an expiry it discovers commits, as the gate's
+   * does. And it is a PARTIAL fix: a suspension, or another derivation, landing
+   * between this check and the save-time gate is still refused there, after
+   * rotation, so only refusals detected HERE consume nothing. That window is
+   * #250's cross-step atomic domain.
+   */
+  function preCheckRefreshMissionState(grantId: string | undefined): void {
+    if (!grantId) return;
+    const target = missionGateTarget(grantId);
+    if (!target) return;
+    try {
+      missionGate(target, "precheck");
+    } catch (e) {
+      throw missionGateRefusal(e, target.record.id);
+    }
+  }
+
+  /**
    * @spec mission#mission-bound-tokens — the Mission whose `expires_at` bounds
    * a credential saved under `grantId`, resolved the way issuance resolves it:
    * the Mission's own grant, then the delegation-family store, then the durable
@@ -1226,8 +1296,11 @@ export function buildProvider(opts: AdapterOptions): Provider {
     extraTokenClaims(_ctx, token) {
       const grantId = (token as { grantId?: string }).grantId;
       if (!grantId) return {};
-      const record = kernel.findByGrant(grantId);
-      if (!record) {
+      // The same resolution and gate the refresh pre-check runs
+      // (missionGateTarget, missionGate), here in its authoritative mode.
+      const target = missionGateTarget(grantId);
+      if (!target) return {};
+      if (!target.counted) {
         // @spec async-delegation — per-delegation family fallback. The grant is NOT
         // a Mission approval grant (findByGrant missed), so it may be a
         // per-delegation family grant. resolve() returns undefined for an unknown OR
@@ -1246,16 +1319,14 @@ export function buildProvider(opts: AdapterOptions): Provider {
         // GATED here (a family row invalidated on a terminal Mission, or a
         // Mission whose own `grant_id` column has moved on), and an index hit
         // with no Mission at all refuses (missionForBoundGrant throws).
-        const fam = opts.familyStore?.resolve(grantId);
-        const famRecord = fam ? kernel.get(fam.missionId) : missionForBoundGrant(grantId);
-        if (!famRecord) return {};
+        const famRecord = target.record;
         projectMissionBoundScope(_ctx, token as Parameters<typeof projectMissionBoundScope>[1]);
         try {
           // gateActive, never gateDerivation: the SINGLE count of a family (or
           // of the Mission's original issuance) was spent once at issuance
           // (handleAsyncDelegationExchange step 4), so re-gating here checks
           // live state without recounting.
-          kernel.gateActive(famRecord.id);
+          missionGate(target, "issue");
           // @spec child-delegation#parent-member + expansion#predecessor-member —
           // the family fallback mirrors the gateDerivation dispatch below: a
           // family rooted at a Child or Successor Mission's own access token
@@ -1269,15 +1340,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
               : kernel.missionClaim(famRecord);
           return { mission: claim };
         } catch (e) {
-          if (e instanceof GateError) {
-            throw new MissionGrantError(
-              e.message,
-              gateErrorToMissionError(e.reason, kernel.get(famRecord.id)?.state),
-            );
-          }
-          throw e;
+          throw missionGateRefusal(e, famRecord.id);
         }
       }
+      const record = target.record;
       projectMissionBoundScope(_ctx, token as Parameters<typeof projectMissionBoundScope>[1]);
       try {
         // @spec control-plane#serialization — THE UNCOUPLED COUNTER. This hook
@@ -1289,7 +1355,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
         // prevents cap overshoot; coupling the count to THIS artifact needs the
         // provider's issuance state recorded transactionally before delivery,
         // which this slice does not build.
-        const gated = kernel.gateDerivation(record.id);
+        const gated = missionGate(target, "issue");
         // @spec child-delegation#parent-member + expansion#predecessor-member — a
         // Child Mission projects the `parent` lineage member; a successor Mission
         // projects the `predecessor` lineage member (its predecessor's mission_id),
@@ -1307,10 +1373,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
             : kernel.missionClaim(gated);
         return { mission: claim };
       } catch (e) {
-        if (e instanceof GateError) {
-          throw new MissionGrantError(e.message, gateErrorToMissionError(e.reason, kernel.get(record.id)?.state));
-        }
-        throw e;
+        throw missionGateRefusal(e, record.id);
       }
     },
     // @spec async-delegation — MANDATORY family rotation. A per-delegation family
@@ -1342,6 +1405,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
       probeAuthoritySource(rt?.grantId);
       // @spec mission#scope-projection — refusal before consumption.
       preCheckRefreshProjection(ctx);
+      // @spec mission#issuance-gating (#914) — the Mission state, lineage,
+      // effective-set and cap refusals, before consumption too. Partial: see
+      // preCheckRefreshMissionState.
+      preCheckRefreshMissionState(rt?.grantId);
       if (rt?.grantId && opts.familyStore?.resolve(rt.grantId)) return true;
       // Default: lib/helpers/defaults.js rotateRefreshToken (oidc-provider 9.10.0,
       // L528-546) — cap rotation at 1 year, rotate non-sender-constrained public
