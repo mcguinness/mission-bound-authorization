@@ -32,8 +32,11 @@ Four causes:
    protocol, object, or requirement (L398, L463). Yet it holds the
    family's only definition of the binding-property identifiers (L2819:
    "the family's authoritative definition"), the Baseline verification
-   tests, and a Deployment Profile shape. About 37% of the body is
-   deployment guidance rather than architecture.
+   tests, and a Deployment Profile shape. About 18% of the body (Mission
+   Deployment Patterns and the Deployment Profile, 4,057 words) is
+   deployment guidance or positioning rather than architecture. The
+   assurance levels are this document's own contribution and are not
+   counted in that figure.
 
 Fixing the structure removes most of the repetition without cutting
 substance. Each move below either gives a concept one home or relocates
@@ -58,51 +61,48 @@ Recommendations keep every anchor and the three externally cited names.
 
 ## A. Defects: fix whatever the structure decisions
 
-1. **"AuthZEN binding" appears 7 times** (L853, L1082, L1787, L1788,
-   L2621, L2637, L2911), against #845's rule that "binding" names only
-   the substrate bindings. The companion is the AuthZEN Profile, so
-   these become "AuthZEN profile".
-2. **"the four issuer bindings"** (L1117) versus "the five bindings"
+1. **"the four issuer bindings"** (L1117) versus "the five bindings"
    (L890).
-3. **"eight primitives"** (L1772), but the table has six rows
+2. **"eight primitives"** (L1772), but the table has six rows
    (L1785-1790). The other two are the Mission-Bound Credential and
    Approval Fidelity subsections. Either say so, or add both as table
    rows.
-4. **"Mission-bound" is defined circularly.** Token Classes defers to
+3. **"Mission-bound" is defined circularly.** Token Classes defers to
    Binding Properties (L1821-1823, L1833-1840), and Binding Properties
    points back to Token Classes (L2820). L1849 "condition 2 of
    `credential-mission-bound` above" refers to text about 1,000 lines
    below (L2829). "The OAuth binding publishes no Statement" is said
    twice (L1827-1831, L2823-2825).
-5. **"an Action-Enforced deployment"** (L2398): no such level exists.
+4. **"an Action-Enforced deployment"** (L2398): no such level exists.
    The level is Runtime-Enforced.
-6. **Terms used but never defined or pointed to:**
-   - consequential action (8 uses; L506 only names its owner);
-   - high-consequence classes (8 uses, first at L919);
+5. **Terms used but never defined or pointed to.** "Consequential
+   action" is fine, since L506 points to its owner. These are not:
+   - high-consequence classes (8 uses, first at L919; the subset of
+     consequential actions);
    - Effective Authority Set (L962);
    - Enforcement Scope Statement (4 uses, first at L2669);
    - `decide_anew` (L2459);
    - "half-step" (used at L2554, defined at L2570).
 
    Add each to Conventions as "used as {{X}} defines it".
-7. **AAuth's base protocol is never cited.** "AAuth", "PS", "R3", and
+6. **AAuth's base protocol is never cited.** "AAuth", "PS", "R3", and
    "mission blob" appear from L408 with no expansion. Add the base
    reference (check its current name and revision live), and expand
    each term on first use.
-8. **Uppercase keywords** in a document whose Conventions disclaim them:
+7. **Uppercase keywords** in a document whose Conventions disclaim them:
    L539 "MAY propose", L1960 "MAY provide", L2877-2879 "SHOULD be ...
    OPTIONAL". The last two describe dependency rules. Lowercase them, or
    attribute them to the dependency.
-9. **Temporal prose:**
+8. **Temporal prose:**
    - L1979: "this checklist is now normatively stated";
    - L1766: "it is today the OAuth binding's";
    - L657 and L2939: "no family carrier supplies today";
    - L440: "no production Mission deployment is known today".
-10. **Object-count collision.** "Four objects" (L529: Intent, Mission,
-    Authority, Action) sits beside "Three Objects, Three Lifecycles"
-    (L1624), which opens by apologizing for the collision. Retitle L1624
-    (for example, "Agent Identity, Agent Deployment, and Mission") and
-    keep its anchor.
+9. **Object-count collision.** "Four objects" (L529: Intent, Mission,
+   Authority, Action) sits beside "Three Objects, Three Lifecycles"
+   (L1624), which opens by apologizing for the collision. Retitle L1624
+   (for example, "Agent Identity, Agent Deployment, and Mission") and
+   keep its anchor.
 
 ## B. Repetition: one home each
 
@@ -169,7 +169,7 @@ Proposed order:
 
 1. **Introduction:** what a Mission is, why it exists, and what this
    document is. L436-461 moves to C3.
-2. **Conventions and Terminology:** add the A6 terms, AAuth, and PS.
+2. **Conventions and Terminology:** add the A5 terms, AAuth, and PS.
    Say once that, unless a passage names another binding, it describes
    the OAuth binding. That retires most of the 21 parentheticals.
 3. **A Mission's Life:** the worked example comes first. Put the OAuth
@@ -183,7 +183,9 @@ Proposed order:
    ontology contract.
 5. **Non-Goals.**
 6. **Roles and Components:** includes the actor chain and the three
-   lifecycles. Swarm Execution moves to the Delegate verb.
+   lifecycles. Swarm Execution moves beside the Delegate verb as its
+   contrast case (multiplication, not delegation). It does not go under
+   Delegate, because its whole point is that it is not delegation.
 7. **The Mission Verbs:** with the C1 overlay table. The Continue
    paragraph (231 words) becomes question, boundary, owner, and a
    three-item list of the continuities.
@@ -347,20 +349,32 @@ paragraphs lose their second model. Main carve-out sites:
 - **D8. Comparison to a Conventional Stack.** Keep it as an appendix
   here (table form), or move it into core's "Why a New Object" through
   an issue.
+- **D9. How far does the "binding is reserved" rule (#845) reach?** This
+  draft says "AuthZEN binding" 7 times (L853, L1082, L1787, L1788,
+  L2621, L2637, L2911). The usage is family-wide:
+  - The AuthZEN draft calls itself "the OpenID AuthZEN binding" (its
+    L197 and L234), and `family-manifest.json` L547 generates the same
+    words into DRAFTS.md.
+  - Runtime uses the phrase 5 times and runtime-evidence 14 times.
+  - A companion is titled "Mission Capability Binding".
+
+  Either AuthZEN and capability binding are accepted exceptions, or the
+  cleanup is a family round that includes the manifest summary. It is
+  not an architecture-only fix.
 
 ## F. Application plan
 
 Three PRs, in order, each provable:
 
 1. **Defects and one-home deduplication (A, B).** No reordering.
-   - Proof: the BCP 14 sequence is unchanged apart from the A8
+   - Proof: the BCP 14 sequence is unchanged apart from the A7
      lowercasing, and every anchor and the three cited names are kept.
    - Then a cold consistency read for pointers whose target no longer
      says what the citing sentence claims.
    - Rough deltas: Binding Checklist -165 words, crossover list -240,
      Token Classes and Credential about -300, disclaimers and
      meta-commentary about -350, AAuth consolidation net about -500.
-2. **Structure (C), with D1-D8 applied as ruled.** A scripted
+2. **Structure (C), with D1-D9 applied as ruled.** A scripted
    reassembly with `spec_units.py`, anchors unchanged. Regenerate the
    DRAFTS.md row summary.
 3. **Density (D).** Section owners work in parallel within a fixed word
