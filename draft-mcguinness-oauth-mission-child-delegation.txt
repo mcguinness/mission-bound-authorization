@@ -1644,11 +1644,16 @@ Table of Contents
    and the complete final map of old child identities to carried or
    excluded outcomes.
 
-   For a carried row the map includes replacement_id and its child-
-   specific approval_event_id; for an excluded row it includes reason
-   and observed terminal state or committed cascade.  Unrendered
-   descendants are listed explicitly.  The map, not related_to, is the
-   normative record of replacement.
+   For a carried row the map includes replacement_id, its child-specific
+   approval_event_id, and, for each carried entry, the old record
+   entry's entry_digest paired with the replacement record entry's
+   entry_digest, with at most one counterpart per old entry.  The
+   discharge companion forwards a delayed discharge through these
+   pairings ([I-D.draft-mcguinness-oauth-mission-discharge],
+   Section "Discharge After Carryover").  For an excluded row the map
+   includes reason and observed terminal state or committed cascade.
+   Unrendered descendants are listed explicitly.  The map, not
+   related_to, is the normative record of replacement.
 
    A replacement's ordinary Child Evidence object is extended with
    creation_mode set to carryover, carried_from (a qualified old-child

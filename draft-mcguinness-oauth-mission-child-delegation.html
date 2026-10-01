@@ -3235,8 +3235,13 @@ worker execution.<a href="#section-10.6-6" class="pilcrow">¶</a></p>
 <p id="section-10.7-1">The Mission Issuer <span class="bcp14">MUST</span> retain authenticated Carryover Evidence containing
 the <code>manifest_hash</code>, predecessor and successor references, and the complete
 final map of old child identities to carried or excluded outcomes.<a href="#section-10.7-1" class="pilcrow">¶</a></p>
-<p id="section-10.7-2">For a carried row the map includes <code>replacement_id</code> and its child-specific
-<code>approval_event_id</code>; for an excluded row it includes <code>reason</code> and observed
+<p id="section-10.7-2">For a carried row the map includes <code>replacement_id</code>, its child-specific
+<code>approval_event_id</code>, and, for each carried entry, the old record entry's
+<code>entry_digest</code> paired with the replacement record entry's <code>entry_digest</code>,
+with at most one counterpart per old entry. The discharge companion forwards
+a delayed discharge through these pairings
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-discharge" class="cite xref">I-D.draft-mcguinness-oauth-mission-discharge</a>]</span>, Section "Discharge After
+Carryover"). For an excluded row the map includes <code>reason</code> and observed
 terminal state or committed cascade. Unrendered descendants are listed
 explicitly. The map, not <code>related_to</code>, is the normative record of replacement.<a href="#section-10.7-2" class="pilcrow">¶</a></p>
 <p id="section-10.7-3">A replacement's ordinary Child Evidence object is extended with

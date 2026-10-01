@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-01T06:19:29Z
-Source repository commit: 5abbec8d883e14c30b80337d13e6cf010778fc69
+Generated: 2026-10-01T08:03:07Z
+Source repository commit: f34528f2faf6dd38d95a27ffedec8d687636ad32
 Member count: 7
 
 Reading order:
@@ -7125,8 +7125,9 @@ Table of Contents
    was submitted (Section 4.2), the AS derives the *Authority Set*: one
    or more [RFC9396] authorization_details entries of an AS-supported
    type (Section 5.2).  Derivation is mechanical.  It happens once, at
-   the approval event, over the derivation policy then in force, in one
-   of two modes:
+   the approval event, over the derivation policy then in force, as one
+   procedure whose candidate entries depend on whether an authority
+   proposal was submitted:
 
    *  *Narrowing mode* (preferred where the client can author
       authorization_details): the client submitted an authority proposal
@@ -8322,7 +8323,7 @@ Table of Contents
    decision record naming the entry it evaluated, containment or
    completion state keyed to an entry) computes it this way.  Entries
    whose canonical commitment envelopes are identical produce the same
-   digest, and within one Mission record every recorded entry resolving
+   digest, and within one Mission Record every recorded entry resolving
    to the same digest forms one selector equivalence class; the class is
    defined by the canonical bytes, not by pre-canonical source text the
    record does not preserve.
@@ -8478,7 +8479,7 @@ Table of Contents
    lifecycle it introduces (for example, a paused or superseded state);
    only active permits issuance.
 
-   Wherever a Mission state is reported, including the Mission record
+   Wherever a Mission state is reported, including the Mission Record
    and the introspection mission member, a consumer MUST treat only the
    exact value active as permitting derivation or continued reliance,
    and MUST treat every other value, including one it does not
@@ -8811,7 +8812,7 @@ Table of Contents
    type's entries (for mission_resource_access,
    [I-D.draft-mcguinness-oauth-mission-resource-access]).
 
-   A runtime profile's enforcement-scope declarations
+   The runtime profile's enforcement-scope declarations
    ([I-D.draft-mcguinness-mission-runtime]) can reference the same
    mapping for the paths it covers; this rule does not depend on that
    profile.
@@ -9172,6 +9173,9 @@ Table of Contents
    |PAR or authorization: malformed or unsupported actual RAR |invalid_authorization_details (Section 5 of     |RAR-defined      |
    |object (an entry of a submitted authorization_details     |[RFC9396])                                      |detail           |
    |proposal)                                                 |                                                |                 |
+   +----------------------------------------------------------+------------------------------------------------+-----------------+
+   |PAR: a proposed entry, valid for its type, whose resource |invalid_request (Section 5.2 of [RFC6749])      |safe             |
+   |is not among the Intent's target_resources (Section 4.2)  |                                                |error_description|
    +----------------------------------------------------------+------------------------------------------------+-----------------+
    |Request from a client registered as Mission-governed:     |invalid_request (Section 4.1.2.1 of [RFC6749],  |safe             |
    |authorization_details without mission_intent (Section 4.2)|Section 5.2 of [RFC6749])                       |error_description|
@@ -9864,9 +9868,11 @@ Table of Contents
 
    A deployment can instead arrange Mission-bound authorization,
    including its supported types and schemas, out of band.  A client
-   holding a Mission Intent does not downgrade the task to an ungoverned
-   request (Section 19.1.2); where the deployment's AS cannot change,
-   the standalone Mission Authority Server
+   holding a Mission Intent MUST NOT submit the same authority as bare
+   scope or authorization_details to an AS whose Mission support is
+   neither advertised nor otherwise established; it surfaces the
+   inability instead (Section 19.1.2).  Where the deployment's AS cannot
+   change, the standalone Mission Authority Server
    ([I-D.draft-mcguinness-mission-authority-server]) is the governed
    alternative.
 
@@ -9908,11 +9914,6 @@ Table of Contents
    discovered out of band or by attempt: a Token Exchange, a cross-
    domain grant issuance, or an introspection request fails if the
    issuer does not support it.
-
-   This member and the mission_bound_authorization_required member of
-   Section 17 are discovery data whose integrity rests on the metadata
-   retrieval protections of [RFC8414] and [RFC9728]; the security
-   considerations of those documents apply.
 
 17.  Protected Resource Metadata
 
@@ -10149,14 +10150,19 @@ Table of Contents
    keep such a resource's tokens and such a client's requests inside a
    Mission.
 
-   A client holding a Mission Intent MUST NOT submit the same authority
-   as bare scope or authorization_details to an AS whose Mission support
-   is neither advertised nor otherwise established (Section 16); it
-   surfaces the inability instead.
+   On the client side, a client holding a Mission Intent does not fall
+   back to an ordinary request where Mission support is not established
+   (Section 16).
 
    On the enforcement side, a Resource Server for such a resource
    rejects a token lacking the mission claim and can advertise that
    requirement (Section 11, Section 17).
+
+   The mission_bound_authorization_supported (Section 16) and
+   mission_bound_authorization_required (Section 17) members are
+   discovery data whose integrity rests on the metadata retrieval
+   protections of [RFC8414] and [RFC9728]; the security considerations
+   of those documents apply.
 
 19.2.  Agent-Specific Threats
 
@@ -10189,11 +10195,11 @@ Table of Contents
    Mission permits and write to a sink the Mission permits, and the flat
    subset and constraint model cannot express "may read secrets, may
    write documents, but not write secrets into documents."  Constraining
-   exfiltration by a compromised agent is the runtime enforcement
-   layer's role (Section 19.3.1), and even there it is bounded, not
-   closed ([I-D.draft-mcguinness-mission-runtime]).  Preventing misuse
-   of data within the authorized scope needs a separate taint or
-   information-flow layer, which this document does not define.
+   exfiltration by a compromised agent is the runtime layer's role
+   (Section 19.3.1), and even there it is bounded, not closed
+   ([I-D.draft-mcguinness-mission-runtime]).  Preventing misuse of data
+   within the authorized scope needs a separate taint or information-
+   flow layer, which this document does not define.
 
 19.2.2.  Authority Does Not Propagate With Information
 
@@ -10272,12 +10278,12 @@ Table of Contents
    active (Section 13.2), so a Resource Server that introspects per
    request stops honoring the token at its next request.
 
-   A runtime enforcement layer ([I-D.draft-mcguinness-mission-runtime]),
-   outside the scope of this document, evaluates each consequential
-   action against the Mission, with parameter binding, and records
-   evidence for the actions it covers.  A deployment adds one for an
-   action class that needs any of the following, which issuance-time
-   bounds alone do not provide:
+   A runtime layer ([I-D.draft-mcguinness-mission-runtime]), outside the
+   scope of this document, evaluates each consequential action against
+   the Mission, with parameter binding, and records evidence for the
+   actions it covers.  A deployment adds one for an action class that
+   needs any of the following, which issuance-time bounds alone do not
+   provide:
 
    *  per-action evaluation or evidence;
 
@@ -10538,7 +10544,7 @@ Table of Contents
 
 20.3.  Intent Retention and Anchor Disclosure
 
-   The Mission record's Intent members (goal, task_bounds) are personal-
+   The Mission Record's Intent members (goal, task_bounds) are personal-
    data sinks: they carry whatever task description the user supplied,
    and their retention and erasure follow Section 20.5.  The integrity
    anchors are unsalted commitments: a party holding a candidate Intent
@@ -10567,7 +10573,7 @@ Table of Contents
    the resource's answer, and Mission authority does not override it.
 
    Mission approval and Mission authority are not the data subject's
-   consent: a Mission record can retain a verified consent reference or
+   consent: a Mission Record can retain a verified consent reference or
    facts as submission_evidence (Section 7), and those facts are
    provenance and policy input only, which the resource domain validates
    independently under its current disclosure policy.
@@ -10587,7 +10593,7 @@ Table of Contents
 
    *  submission_evidence facts, including a consent reference.
 
-   Whatever the member, it persists on the Mission record for its audit
+   Whatever the member, it persists on the Mission Record for its audit
    horizon (Section 7), concentrates at the AS with the record
    (Section 20.5), and, if committed, is confirmable through the
    unsalted anchors by any party holding a candidate value
@@ -10598,7 +10604,7 @@ Table of Contents
 
 20.5.  Mission Record and Evidence Access
 
-   The Mission record concentrates the task, its authority, and its
+   The Mission Record concentrates the task, its authority, and its
    principals at the AS, and every evidence artifact joins on the
    Mission Identifier, so the join is a correlation surface equal to the
    identifier itself.  Tokens carry references and authority, not the
@@ -10618,7 +10624,7 @@ Table of Contents
    its erasure record and data-subject-request basis are the
    transparency-side mechanism: it records an erasure but neither
    performs one nor overrides retention law, and it leaves the
-   operational Mission record and its audit-horizon retention floor
+   operational Mission Record and its audit-horizon retention floor
    untouched.
 
 21.  Internationalization Considerations
@@ -12408,6 +12414,16 @@ Appendix G.  Document History
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  Stated the client no-downgrade requirement in Authorization Server
+      Metadata, where discovery establishes Mission support; Downgrade
+      by Omission keeps the threat analysis and now holds the metadata-
+      integrity note.  Added the existing invalid_request refusal of a
+      proposed entry outside target_resources to the error mapping
+      table.  Presented derivation as one procedure whose two named
+      modes differ in where candidate entries come from, and made
+      "Mission Record" and "runtime layer" consistent.  No requirement
+      or wire behavior changed.
 
    *  Clarified that a Mission Issuer can conform without supporting any
       Intent Submission Evidence types.  The submission-processing
