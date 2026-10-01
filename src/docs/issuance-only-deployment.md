@@ -195,6 +195,10 @@ target that processes the `act` chain and the `mission` claim.
 
 ## 3. Behavior by path
 
+The rows describe the reference AS. Rows that need a capability §8 turns off
+at the launcher (OIDC values, the delegated and async-delegation exchanges)
+describe the full assembly. At the launcher those requests get §8's refusal.
+
 | Path | Outcome | Evidence |
 |---|---|---|
 | AS toward an `authorization_details` audience (tests use the payments audience) | Token carries the entries and the `mission` claim, no `scope`; response has no `scope` member unless OIDC values were granted | `projectMissionBoundScope`/`decideMissionScope` (`provider.ts`); `scope projection at the token endpoint (@spec mission#scope-projection) > omits scope on a Mission-bound token to an authorization_details audience` |
@@ -213,7 +217,7 @@ target that processes the `act` chain and the `mission` claim.
 | Explicit OIDC-only refresh (`scope=openid`) | At the plain RS: `invalid_scope`, token kept. At an `authorization_details` audience: 200, response `scope` `openid`, no JWT `scope` | `refresh preserved on a projection refusal (@spec mission#scope-projection) > a refresh naming only OIDC values explicitly asks for no resource value: refused invalid_scope at a scope-only target without consuming the token, which then inherits its full granted scope`, `> a refresh naming only OIDC values at an authorization_details target is granted exactly them, with no scope on the token` |
 | Inherited grant after a mapping change | Narrowed and reported while a value remains; `invalid_scope` before rotation when none would | `refresh preserved on a projection refusal (@spec mission#scope-projection) > a refresh omitting scope whose inherited grant the current mapping no longer grants, leaving no scope value to report, is refused invalid_scope before rotation; the restored mapping lets the same token succeed`, `> a refresh omitting scope narrows an inherited grant the response can still report: a mode change keeps the OIDC values, an unsafe value drops out, and nothing widens` |
 | Delegated routing (`act`-bearing tokens) | Minted only when every audience is `mission_aware: true`, else `invalid_target` before any side effect | `delegated routing on the cross-org exchange (@spec mission#rs-enforcement) > refuses invalid_target, recording no derivation evidence, when the act-bearing token's audience is not classified Mission-aware, even with a safe scope projection`, `> mints the act-bearing token for an audience classified Mission-aware`; `delegated routing of transaction tokens (@spec mission#rs-enforcement) > refuses invalid_target, opening no approval, an act-bearing transaction token for a Challenge-Issuing Resource not classified Mission-aware, and admits it once the resource is`; JWT-customizer backstop (`formats.customizers.jwt`): no test yet |
-| Delegate calling the plain RS | Not supported: a delegated (`act`-bearing) token is refused for it, and the refusal never creates a Child Mission. Child Missions are a separately enabled capability, not enabled here (the plain RS ceiling entry has no `delegation.children`, `kernel/child-delegation.ts`) | Refusal: the delegated-routing row above; Child Mission path: not enabled, no test |
+| Delegate calling the plain RS | Not supported: a delegated (`act`-bearing) token is refused for it, and the refusal never creates a Child Mission. Child Missions are a separately enabled capability, off at the launcher (§8). In the full assembly the plain RS ceiling entry has no `delegation.children` either (`kernel/child-delegation.ts`) | Refusal: the delegated-routing row above; Child Mission path: §8's child rows |
 | Token expiry | `plain-rs` refuses a token once `exp <= now - clockToleranceSeconds` (default tolerance 0), with no operation performed; the DPoP `iat` window is ±60 s inclusive | `plain-rs RFC 9068 / RFC 9449 validation > refuses a wrong typ, a wrong audience or issuer, and an expired token`; `plain-rs access-token time boundaries (injected clock) > with clock tolerance 0, a token whose exp is 1 s before now is refused and one whose exp is 1 s after now is accepted`; `plain-rs access-token time boundaries (injected clock) > with clock tolerance 5 s, a token 3 s past exp is accepted and one 6 s past exp is refused`; `plain-rs access-token time boundaries (injected clock) > a DPoP proof whose iat is exactly 60 s either side of now is accepted, and 61 s is refused` |
 | Introspection failure (introspection configuration) | No operation performed, and never a 500. A non-200 status, a network failure, a response slower than the timeout (default 2000 ms), a body that is not JSON, or JSON that is not an object gives 503 `temporarily_unavailable`; an object whose `active` is not the boolean `true` gives 401 `invalid_token` | `plain-rs introspection failure contract (#873) > a 500 from the introspection endpoint refuses 503 temporarily_unavailable before the operation`; `plain-rs introspection failure contract (#873) > an unreachable introspection endpoint (connection refused) refuses 503 temporarily_unavailable before the operation`; `plain-rs introspection failure contract (#873) > a body that is not JSON refuses 503 temporarily_unavailable before the operation`; `plain-rs introspection failure contract (#873) > a JSON null body refuses 503 temporarily_unavailable, never 500`; `plain-rs introspection failure contract (#873) > a JSON array, number or string body refuses 503 temporarily_unavailable`; `plain-rs introspection failure contract (#873) > an object with no active member refuses 401 invalid_token before the operation`; `` plain-rs introspection failure contract (#873) > an object whose active is the string "true" refuses 401 invalid_token before the operation ``; `plain-rs introspection failure contract (#873) > a response slower than the introspection timeout refuses 503 temporarily_unavailable within about the timeout` |
 | No introspection caching | Every request makes its own call; a positive result never admits a later request | `plain-rs introspection failure contract (#873) > introspects every request: two requests make two calls, and a positive first result does not admit the second once the endpoint says active false` |
@@ -298,12 +302,11 @@ deployment's values: the reference AS and `plain-rs`.
     "high-consequence classes excluded; no parameter binding",
     "revocation up to 300 seconds at a Resource Server that does not introspect",
     "scope-only constraints not projectable are refused",
-    "delegated (act-bearing) tokens are refused for plain-rs, with no automatic Child Mission fallback; Child Missions are not enabled",
+    "delegated (act-bearing) tokens are refused for plain-rs, with no automatic Child Mission fallback; Child Missions are off",
     "no cancellation of admitted work: a check completed before revocation does not stop an admitted request",
     "no token-only authorization_details-consuming Resource Server is part of this deployment: payments is the runtime composition, and mcp-saas accepts RAS-issued tokens",
     "evidence is the AS's issuance records only: the Mission Record, its lifecycle events, and the per-token issuance index",
     "plain-rs logs nothing Mission-linked",
-    "a projection refusal on a single-use path (deferred redemption, child jwt-bearer, dispatch, expansion poll) lands after that path's own consumption",
     "a restart is not revocation: consumers holding the old key keep accepting pre-restart tokens until exp, and plain-rs rejects post-restart tokens until its JWKS cache refreshes (up to 10 minutes)",
     "an introspection call that exceeds its timeout (default 2000 ms) or fails refuses service with 503; the plain RS never falls back to the JWT alone",
     "provider token acceptance and derivation counting are not coupled atomically (#250)",
@@ -312,7 +315,7 @@ deployment's values: the reference AS and `plain-rs`.
     "Intent-only requests depend on an oidc-provider workaround (a marked, AS-written authorization_details)",
     "the decision-time scope check projects the derived set without capability_sources, so a catalog-sourced scope_only entry can pass at the decision and refuse at the token endpoint",
     "a repeated decision on one interaction binds a second grant to the committed record",
-    "scope refusals on the ICA continuation, child creation and expansion initiation, explicit scope on the child, dispatch and expansion-poll mints, and the JWT-customizer backstop have no test yet"
+    "the JWT-customizer backstop has no test yet"
   ]
 }
 ~~~
@@ -368,9 +371,10 @@ with `pnpm install --frozen-lockfile`.
 → `demo/src/issuance-only-serve.ts` → `startIssuanceOnly` in
 `demo/src/issuance-only.ts`) starts two servers:
 
-- **The reference AS**, at `http://localhost:4400`. This is the full
-  `buildAuthorizationServer` assembly, the same as `src/server.ts`. It is the
-  issuer, and its JWKS is at `/jwks`.
+- **The reference AS**, at `http://localhost:4400`. This is the
+  `buildAuthorizationServer` assembly restricted to the capability set of §8
+  (`ISSUANCE_ONLY_CAPABILITIES`). `src/server.ts` runs the same assembly with
+  every capability on. It is the issuer, and its JWKS is at `/jwks`.
 - **`plain-rs`**, at `http://localhost:4410`, audience
   `http://localhost:4410/api`.
 
@@ -438,35 +442,84 @@ CI runs the same two walkthroughs in process:
 
 ## 8. Enabled capabilities
 
-**On:** issuance (PAR, the authorization code with PKCE, DPoP-bound JWT access
-tokens), scope projection, refresh, and, in the second configuration,
-per-request introspection at the plain RS.
+The launcher passes `ISSUANCE_ONLY_CAPABILITIES` (`demo/src/issuance-only.ts`)
+as `buildAuthorizationServer`'s `capabilities` option
+(`services/authorization-server/src/adapters/capabilities.ts`). The issuance
+profile is always on. Of the optional capabilities, only the lifecycle
+endpoint's `revoke` is enabled. Every other one is off, and a request for it
+gets the standard refusal its path already uses. With no `capabilities` set,
+the assembly is the full reference provider, as before.
 
-**Not enabled or not claimed.** The launcher runs the full reference AS
-assembly, so most of these are present in the provider but neither exercised
-nor claimed. Only the ones marked "off" are absent from this deployment.
+How a capability is turned off:
 
-| Capability | Status in this deployment |
-|---|---|
-| In-Mission delegation (`act` from an `actor_token`) | Not implemented in the provider. The async-delegation exchange refuses any `actor_token` (`invalid_request`) |
-| Cross-organization delegation chains (`act`-bearing) | Off: the launcher passes no `crossOrg` configuration, so the chain exchange refuses |
-| Async-delegation Token Exchange (`request_refresh_token`) | Present and reachable for `ap-agent`; unused and unclaimed |
-| Child Missions | Present (child creation and jwt-bearer redemption are registered). Unreachable for the plain RS, because its ceiling entry has no `delegation.children`. Unclaimed |
-| Cross-domain projection (ID-JAG continuation to the RAS) | Present (continuation store and resource-to-AS map are wired by default); unused and unclaimed. No RAS runs |
-| Runtime profiles (PEP, PDP, enforcement scope) | Off: no PDP, PEP or `mcp-payments` is started |
-| Transaction authorization | Off: the launcher passes no `transactionAuthorization`, so `/transaction` replies 501 |
-| Templates and dispatch | Present (the demo template is seeded, and `ap-agent` may use the dispatch grant); unused and unclaimed |
-| Expansion and deferred grants (AROP DTR) | Present; unused and unclaimed |
-| Containment and protected events | Present (trusted sources are seeded); unused and unclaimed |
-| Entry discharge | Off: no `dischargeAuthority` is configured, so no completion condition can enter a record |
-| Status endpoint and Status List | Present; not part of this deployment's revocation contract. plain-rs uses introspection, not Status |
-| Mission Signals | Off: no lifecycle subscriber is injected |
-| Dev ordinary-token route | Off: `devOrdinaryIssuance` is not set |
-| OIDC (`openid`, id_token) | Present (the client may request `openid`); unused by the walkthrough |
+- A custom grant that is off is not registered, so `/token` answers
+  `unsupported_grant_type`. It is also removed from every client's
+  `grant_types`, and the child client is not registered.
+- An exchange profile that is off while the exchange grant is registered for
+  another profile answers `invalid_request`.
+- A lifecycle operation that is off answers `invalid_request` before any
+  Mission lookup.
+- An endpoint that is off answers 501 `temporarily_unavailable`, its
+  unconfigured response.
+- A route that is off is not served (404).
+- A metadata member that is off is not advertised.
 
-A reader adopting this deployment depends only on the "On" set. A present but
-unclaimed capability is neither tested here nor covered by the Deployment
-Profile.
+Each row with a test names it in
+`demo/test/issuance-only-capabilities.test.ts`, under `the issuance-only
+launcher refuses every excluded path (#873)` unless the row says otherwise.
+
+| Capability | Status | Refusal | Test |
+|---|---|---|---|
+| PAR, authorization code with PKCE, DPoP-bound JWT access tokens | On | | `the issuance-only walkthrough (#873)`, both tests |
+| Refresh, scope projection | On | | the same |
+| Introspection (`/introspect`) | On | plain-rs calls it only with `--introspection` | `the issuance-only walkthrough (#873) > JWT plus introspection: the same path, and after revocation the next call is refused invalid_token` |
+| Lifecycle `revoke` | On | | the same two walkthrough tests, step 6 |
+| Lifecycle `suspend`, `resume`, `complete` | Off | 400 `invalid_request`; the Mission stays `active` | `the lifecycle suspend, resume and complete operations are refused invalid_request and the Mission stays active` |
+| Async-delegation exchange (`request_refresh_token`) | Off | 400 `unsupported_grant_type` | `async-delegation token exchange (request_refresh_token) is refused unsupported_grant_type` |
+| In-Mission delegation (`act` from an `actor_token`) | Off | Not implemented in the provider; it rides the async exchange, which is off | the same |
+| Child Missions: creation exchange | Off | 400 `unsupported_grant_type` | `child creation token exchange (requested_token_type jwt) is refused unsupported_grant_type` |
+| Child Missions: jwt-bearer redemption | Off | 400 `unsupported_grant_type`; the child client is not registered (401 `invalid_client`) | `the child jwt-bearer grant is refused unsupported_grant_type, and the child client is not registered` |
+| Cross-domain projection (ICA to an ID-JAG) | Off | 400 `unsupported_grant_type` | `cross-domain continuation (ICA subject token to an ID-JAG) is refused unsupported_grant_type` |
+| Cross-organization delegation chains | Off | 400 `unsupported_grant_type` | `the cross-organization chain exchange is refused unsupported_grant_type` |
+| Expansion exchange | Off | 400 `unsupported_grant_type` | `the expansion exchange (requested_token_type access_token) is refused unsupported_grant_type` |
+| AROP deferred grant (DTR) | Off | 400 `unsupported_grant_type` | `the AROP deferred grant is refused unsupported_grant_type` |
+| Templates: dispatch grant and the admin routes | Off | 400 `unsupported_grant_type`; `/templates` and `/templates/{id}/lifecycle` answer 501 `temporarily_unavailable` | `template dispatch is refused unsupported_grant_type, and the template admin routes answer 501` |
+| Containment: lifecycle `contain` | Off | 400 `invalid_request`; the Mission stays `active` at version 1 | `the lifecycle contain operation is refused invalid_request and the Mission stays active` |
+| Containment: protected-event ingestion | Off | 501 `temporarily_unavailable` | `protected-event ingestion answers 501 temporarily_unavailable` |
+| Entry discharge (lifecycle `discharge`) | Off | 400 `invalid_request` | `the lifecycle discharge operation is refused invalid_request` |
+| Mission Status (`/missions/{id}/status`) | Off | 404, not served | `the Mission Status operation is not served (404)` |
+| Mission Status List (`/statuslist/{id}`) | Off | 404 `not_found` | `the Mission Status List is not served (404 not_found)` |
+| Transaction authorization (`/transaction`) | Off | 501 `temporarily_unavailable` | `transaction authorization answers 501 temporarily_unavailable`. The launcher also passes no `transactionAuthorization`, so the capability gate is shown on an assembly that wires it: `capability gates the launcher's wiring shadows, and the default assembly (#873) > an assembly that wires transaction authorization and dev issuance but leaves both capabilities off answers 501 and advertises neither` |
+| Dev ordinary-token route | Off | 501 `temporarily_unavailable` | `the dev ordinary-token route answers 501 temporarily_unavailable`, and the same wired-assembly test |
+| OIDC (`openid`, `profile`, `email`, `offline_access`; userinfo; RP-initiated logout) | Off | 400 `invalid_scope` at PAR, with or without a Mission Intent; `/me` and `/session/end` are not served (404). No grant can carry `openid`, so no ID Token is issued | `OIDC is off: openid is refused invalid_scope at PAR, and userinfo and RP-initiated logout are not served` |
+| RFC 7009 token revocation (`/token/revocation`) | Off | 404, not served. Mission revocation is the lifecycle `revoke` | `RFC 7009 token revocation is not served (404)` |
+| `mission_attenuation_supported` | Off | Not advertised. The provider parses no `mission_attenuation_root`, even with the member on | `the metadata advertises only the enabled surface` |
+| `service_catalog_endpoint` | Off | Not advertised. No HTTP route serves `/service-catalog` in any assembly | the same |
+| Runtime profiles (PEP, PDP, enforcement scope) | Off | Not started: no PDP, PEP or `mcp-payments` runs | |
+| Mission Signals | Off | No lifecycle subscriber is injected | |
+
+The metadata test also checks that `grant_types_supported` is `implicit`,
+`authorization_code` and `refresh_token`. oidc-provider always lists
+`implicit`, its token endpoint refuses it, and no client registers a response
+type that uses it. The test checks too that the discovery document has none
+of the off members (`mission_child_delegation_supported`,
+`identity_continuation_supported`, `delegated_refresh_token_profile_supported`,
+`transaction_authorization_endpoint`, `userinfo_endpoint`,
+`end_session_endpoint`, `revocation_endpoint`).
+
+**Exchange profiles behind one gate.** At the launcher every token-exchange
+row is refused by the same gate, because the exchange grant is not
+registered. Each profile also has its own gate inside the exchange handler,
+for an assembly that registers the grant for some other profile. One such
+gate is tested:
+`capability gates the launcher's wiring shadows, and the default assembly (#873) > with the exchange grant registered for one profile, a disabled profile's exchange is refused invalid_request`.
+The child-creation, continuation, cross-org and expansion branch gates have
+no test of their own yet.
+
+**The default stays the full provider.**
+`capability gates the launcher's wiring shadows, and the default assembly (#873) > the default assembly (no capability set) is the full provider: every grant registered and every member advertised`.
+
+A reader adopting this deployment depends only on the "On" rows.
 
 ## 9. Pinned adoption closure
 

@@ -18,6 +18,7 @@ import {
   buildAuthorizationServer,
   type BuiltAs,
   MISSION_APPROVAL_SCOPE,
+  type ProviderCapability,
   type ServiceTokenPrincipal,
 } from "@mission/authorization-server";
 import { DEV_SERVICE_TOKEN, INTROSPECTION_PRINCIPALS, TOPOLOGY } from "@mission/demo-data";
@@ -38,6 +39,18 @@ import {
  */
 export const CREDENTIALS_PATH =
   process.env.ISSUANCE_ONLY_CREDENTIALS ?? join(tmpdir(), "mission-issuance-only.credentials.json");
+
+/**
+ * The capabilities this deployment enables beyond the issuance profile, which
+ * is always on (PAR, the authorization code with PKCE, DPoP-bound JWT access
+ * tokens, refresh, scope projection, the approval interaction, introspection).
+ * Only the lifecycle endpoint's `revoke` is added, because the walkthrough
+ * revokes. Every other capability is off and refuses with its standard error;
+ * `src/docs/issuance-only-deployment.md` § Enabled capabilities lists each.
+ */
+export const ISSUANCE_ONLY_CAPABILITIES: ReadonlySet<ProviderCapability> = new Set<ProviderCapability>([
+  "lifecycle-revoke",
+]);
 
 /** The plain RS audience: the shipped `scope_only` mapping entry's key. */
 export const PLAIN_RS_AUDIENCE = TOPOLOGY.resources.plainRs;
@@ -75,12 +88,13 @@ export interface IssuanceOnlyDeployment {
 }
 
 /**
- * Boot the AS and `plain-rs`. The AS is the full reference assembly
- * (`buildAuthorizationServer`), with one addition: the demo's trusted approval
- * input, a scoped service principal (`svc:approver-console`, approver `bob`)
- * behind `allowHeadlessAdjudication`, the same input the demo stack uses. It
- * is not end-user consent. In the introspection configuration plain-rs
- * authenticates to `{issuer}/introspect` as the shipped `rs-plain` principal.
+ * Boot the AS and `plain-rs`. The AS is the reference assembly
+ * (`buildAuthorizationServer`) restricted to {@link ISSUANCE_ONLY_CAPABILITIES},
+ * with one addition: the demo's trusted approval input, a scoped service
+ * principal (`svc:approver-console`, approver `bob`) behind
+ * `allowHeadlessAdjudication`, the same input the demo stack uses. It is not
+ * end-user consent. In the introspection configuration plain-rs authenticates
+ * to `{issuer}/introspect` as the shipped `rs-plain` principal.
  */
 export async function startIssuanceOnly(opts: IssuanceOnlyOptions): Promise<IssuanceOnlyDeployment> {
   const asPort = opts.asPort ?? TOPOLOGY.ports.as;
@@ -97,6 +111,7 @@ export async function startIssuanceOnly(opts: IssuanceOnlyOptions): Promise<Issu
     issuer: asUrl,
     allowHeadlessAdjudication: true,
     serviceTokenPrincipals: { [approverServiceToken]: approver },
+    capabilities: ISSUANCE_ONLY_CAPABILITIES,
   });
   const asServer = as.provider.listen(asPort);
   await new Promise<void>((r) => asServer.once("listening", () => r()));
