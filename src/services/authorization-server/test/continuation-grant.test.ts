@@ -80,6 +80,9 @@ let otherCaiKeys: Keys; // CAI_OTHER's ICA signing key
 let rasCaiKeys: Keys; // RAS_AUD's own ICA signing key (the accepting RAS as its own issuer)
 let agentKeys: Keys; // the agent's DPoP key
 let agentJkt: string;
+let svcKeys: Keys; // a second client, svc-b: its private_key_jwt key
+let svcDpopKeys: Keys; // svc-b's DPoP key
+let svcJkt: string;
 let remoteJwks: ReturnType<typeof createRemoteJWKSet>;
 
 /** A continuation lineage: an active Mission + a grant anchor + an initial handle. */
@@ -217,17 +220,23 @@ async function mintActorToken(over: Record<string, unknown> = {}): Promise<strin
     .sign(agentKeys.privateKey);
 }
 
-/** The AS a request goes to: its issuer and the ap-agent client key it registered. */
+/**
+ * The AS a request goes to: its issuer and the client key it registered (by
+ * default ap-agent's), and the presenter's DPoP key (by default the agent's).
+ */
 interface Target {
   issuer: string;
   clientKey: CryptoKey;
+  clientId?: string;
+  dpopKeys?: Keys;
 }
 
 async function clientAssertion(t: Target): Promise<string> {
+  const clientId = t.clientId ?? "ap-agent";
   return new SignJWT({})
-    .setProtectedHeader({ alg: "ES256", kid: "ap-agent-auth" })
-    .setIssuer("ap-agent")
-    .setSubject("ap-agent")
+    .setProtectedHeader({ alg: "ES256", kid: `${clientId}-auth` })
+    .setIssuer(clientId)
+    .setSubject(clientId)
     .setAudience(t.issuer)
     .setIssuedAt()
     .setExpirationTime("2m")
@@ -235,12 +244,17 @@ async function clientAssertion(t: Target): Promise<string> {
     .sign(t.clientKey);
 }
 
-async function dpopProof(htu: string, htm: string, extra: Record<string, unknown> = {}): Promise<string> {
+async function dpopProof(
+  htu: string,
+  htm: string,
+  extra: Record<string, unknown> = {},
+  keys: Keys = agentKeys,
+): Promise<string> {
   return new SignJWT({ htu, htm, ...extra })
-    .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: await exportJWK(agentKeys.publicKey) })
+    .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: await exportJWK(keys.publicKey) })
     .setIssuedAt()
     .setJti(crypto.randomUUID())
-    .sign(agentKeys.privateKey);
+    .sign(keys.privateKey);
 }
 
 interface ExchangeFields {
@@ -282,7 +296,7 @@ async function tokenExchange(f: ExchangeFields, t: Target = { issuer: ISSUER, cl
       method: "POST",
       headers: {
         "content-type": "application/x-www-form-urlencoded",
-        ...(f.noDpop ? {} : { dpop: await dpopProof(htu, "POST", extra) }),
+        ...(f.noDpop ? {} : { dpop: await dpopProof(htu, "POST", extra, t.dpopKeys) }),
       },
       body: body.toString(),
     });
@@ -302,10 +316,26 @@ beforeAll(async () => {
   const rasCaiPub = { ...(await exportJWK(rasCaiKeys.publicKey)), kid: "ras-cai-key", alg: "ES256" };
   agentKeys = await generateKeyPair("ES256", { extractable: true });
   agentJkt = await calculateJwkThumbprint(await exportJWK(agentKeys.publicKey));
+  svcKeys = await generateKeyPair("ES256", { extractable: true });
+  svcDpopKeys = await generateKeyPair("ES256", { extractable: true });
+  svcJkt = await calculateJwkThumbprint(await exportJWK(svcDpopKeys.publicKey));
 
   as = await buildAuthorizationServer({
     issuer: ISSUER,
     allowHeadlessAdjudication: true,
+    // A second token-exchange client, so a hop can be continued by an actor
+    // other than the one that obtained it.
+    testClients: [
+      {
+        client_id: "svc-b",
+        grant_types: [TOKEN_EXCHANGE_GRANT_TYPE],
+        response_types: [],
+        redirect_uris: [],
+        token_endpoint_auth_method: "private_key_jwt",
+        token_endpoint_auth_signing_alg: "ES256",
+        jwks: { keys: [{ ...(await exportJWK(svcKeys.publicKey)), kid: "svc-b-auth", alg: "ES256" }] },
+      },
+    ],
     chainAuthorityIssuers: [
       // Trusted for the root hops (this AS) and the child hops (RAS_AUD).
       { iss: CA, jwks: { keys: [caPub] }, attestsFor: [ISSUER, RAS_AUD] },
@@ -384,9 +414,9 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     // The child hop records the RAS audience its ID-JAG names (ICA -02 5.1.2).
     expect(as.continuationStore.resolve(freshHandle)?.audience).toBe(RAS_AUD);
 
-    // Collapsed act: a single actor's continuation keeps a depth-1 lineage (no
-    // nested `act`). NB: on this path the current-actor check forces the ICA
-    // actor to equal the current actor, so this ALWAYS collapses (never extends).
+    // Collapsed act: the root hop's actor is this same client, so the lineage
+    // merges to a single entry (no nested `act`). A second actor nests; see
+    // "continuation onward act lineage".
     expect(payload.act).toEqual({ iss: ISSUER, sub: "ap-agent" });
     expect(payload.act).not.toHaveProperty("act");
 
@@ -818,6 +848,47 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     expect(body.error).toBe("invalid_continuation");
     // The STORE path (proves the fan-out wiring), distinct from the gate path.
     expect(body.error_description).toMatch(/terminal continuation handle/);
+  });
+});
+
+/**
+ * @spec id-continuation-assertion — the onward act lineage (ICA -02 5.5.5):
+ * derived from the presented hop's ancestry, never from the assertion.
+ */
+describe("continuation onward act lineage (@spec id-continuation-assertion)", () => {
+  const A = { iss: ISSUER, sub: "ap-agent" };
+  const B = { iss: ISSUER, sub: "svc-b" };
+
+  /** Continue `handle` as A (ap-agent) or B (svc-b); returns the onward act and the new hop. */
+  async function continueAs(handle: string, who: "A" | "B"): Promise<{ act: unknown; hop: string }> {
+    const asB = who === "B";
+    const target: Target = asB
+      ? { issuer: ISSUER, clientKey: svcKeys.privateKey, clientId: "svc-b", dpopKeys: svcDpopKeys }
+      : { issuer: ISSUER, clientKey };
+    const ica = await mintICA(handle, asB ? { act: B, cnfJkt: svcJkt } : {});
+    const res = await tokenExchange({ subjectToken: ica }, target);
+    const body = (await res.json()) as { access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    const claims = decodeJwt(body.access_token as string);
+    return { act: claims.act, hop: claims.identity_continuation_handle as string };
+  }
+
+  it("places the current actor atop the hop's recorded lineage from the Mission's client, merging consecutive equal actors", async () => {
+    const { handle: root } = newLineage("apev-l1");
+    const h1 = await continueAs(root, "A");
+    expect(h1.act).toEqual(A); // the root's actor is A: one entry
+    const h2 = await continueAs(h1.hop, "B");
+    expect(h2.act).toEqual({ ...B, act: A });
+    const h3 = await continueAs(h2.hop, "B");
+    expect(h3.act).toEqual({ ...B, act: A }); // B atop B merges
+    const h4 = await continueAs(h3.hop, "A");
+    expect(h4.act).toEqual({ ...A, act: { ...B, act: A } });
+  });
+
+  it("siblings do not contribute: after B continues the root, A's next continuation from the root is still A alone", async () => {
+    const { handle: root } = newLineage("apev-l2");
+    expect((await continueAs(root, "B")).act).toEqual({ ...B, act: A });
+    expect((await continueAs(root, "A")).act).toEqual(A);
   });
 });
 

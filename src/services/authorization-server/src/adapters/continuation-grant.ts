@@ -506,14 +506,17 @@ export async function handleTokenExchangeGrant(
   // below, once the Mission gate has admitted the grant: a refused request
   // leaves no orphan hop (@spec id-continuation-assertion, ICA -02 5.5.4).
   const freshHandle = newContinuationHandle();
-  // Collapse the current actor over the ICA hop lineage. Because rule 5 forces
-  // currentActor === ICA act and the ICA `act` is single-level, this ALWAYS
-  // collapses to a depth-1 lineage (a single actor's multi-hop continuation
-  // keeps one entry) — it never extends here by construction.
-  const collapsedAct: ActObject = extendChainCollapsing(
-    { iss: currentActor.iss, sub: currentActor.sub },
-    { iss: ica.act.iss, sub: ica.act.sub },
-  );
+  // @spec id-continuation-assertion — the onward act is the presented hop's
+  // lineage with the current actor on top (ICA -02 5.5.5): each hop's
+  // recorded actor from the root (the Mission's client, recorded at approval)
+  // to the presented hop, consecutive equal (iss, sub) merged into one entry,
+  // nested per RFC 8693 with the current actor outermost. It comes from the
+  // hop records alone, never from the assertion, whose act names only the
+  // current actor.
+  let onwardAct: ActObject | undefined;
+  for (const actor of [...store.lineage(ica.handle), currentActor]) {
+    onwardAct = extendChainCollapsing(actor, onwardAct);
+  }
   // Root auth envelope, carried unchanged (store shape -> ID-JAG shape).
   const env = resolved.authEnvelope;
   const authEnvelope = {
@@ -532,7 +535,7 @@ export async function handleTokenExchangeGrant(
       resourceToAs,
       sub: localSub,
       identityContinuationHandle: freshHandle,
-      act: collapsedAct,
+      act: onwardAct as ActObject,
       authEnvelope,
       // Everything validation and the gate admitted: reserve the ICA, then
       // record the child hop (bound to the SAME anchor/Mission, linked to the

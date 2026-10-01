@@ -302,6 +302,41 @@ export class ContinuationStore {
   }
 
   /**
+   * @spec id-continuation-assertion — a hop's actor lineage, root first (ICA
+   * -02 5.5.5): the recorded actor of every hop from the root to `handle`,
+   * walked through each hop's immutable parent reference, so sibling branches
+   * never contribute. Fails closed (throws) on a missing ancestor, an ancestor
+   * under another anchor, a hop with no recorded actor, or a cycle.
+   */
+  lineage(handle: string): Array<{ iss: string; sub: string }> {
+    const read = this.db.prepare(
+      "SELECT anchor_id, actor_iss, actor_sub, prior_handle FROM continuation_handles WHERE handle = ?",
+    );
+    const leafFirst: Array<{ iss: string; sub: string }> = [];
+    const seen = new Set<string>();
+    let anchorId: string | undefined;
+    let next: string | null = handle;
+    while (next !== null) {
+      if (seen.has(next)) throw new Error("continuation hop ancestry is cyclic");
+      seen.add(next);
+      const row = read.get(next) as
+        | { anchor_id: string; actor_iss: string | null; actor_sub: string | null; prior_handle: string | null }
+        | undefined;
+      if (!row) throw new Error("continuation hop ancestry is broken");
+      if (anchorId !== undefined && row.anchor_id !== anchorId) {
+        throw new Error("continuation hop ancestry crosses anchors");
+      }
+      anchorId = row.anchor_id;
+      if (row.actor_iss === null || row.actor_sub === null) {
+        throw new Error("continuation hop has no recorded actor");
+      }
+      leafFirst.push({ iss: row.actor_iss, sub: row.actor_sub });
+      next = row.prior_handle;
+    }
+    return leafFirst.reverse();
+  }
+
+  /**
    * @spec id-continuation-assertion — the hop count of one chain (ICA -02 6.3):
    * every hop recorded under the anchor, across all branches, root included.
    */

@@ -113,6 +113,33 @@ describe("ContinuationStore hop audience (@spec id-continuation-assertion)", () 
   });
 });
 
+describe("ContinuationStore.lineage (@spec id-continuation-assertion)", () => {
+  const A = { iss: "https://as.test", sub: "agent-a" };
+  const B = { iss: "https://as.test", sub: "agent-b" };
+
+  it("walks a hop's ancestry to the root, root first, and excludes sibling branches", () => {
+    const store = new ContinuationStore();
+    const anchorId = store.rootGrantAnchor({ missionId: "msn_1", authEnvelope: {} });
+    const root = store.mint({ anchorId, missionId: "msn_1", actor: A, audience: RAS });
+    const h1 = store.mint({ anchorId, missionId: "msn_1", actor: B, priorHandle: root, audience: RAS });
+    store.mint({ anchorId, missionId: "msn_1", actor: B, priorHandle: root, audience: RAS }); // a sibling
+    const h2 = store.mint({ anchorId, missionId: "msn_1", actor: A, priorHandle: h1, audience: RAS });
+    expect(store.lineage(root)).toEqual([A]);
+    expect(store.lineage(h2)).toEqual([A, B, A]);
+  });
+
+  it("fails closed on a broken ancestry or one that crosses anchors", () => {
+    const store = new ContinuationStore();
+    const a1 = store.rootGrantAnchor({ missionId: "msn_1", authEnvelope: {} });
+    const a2 = store.rootGrantAnchor({ missionId: "msn_1", authEnvelope: {} });
+    const orphan = store.mint({ anchorId: a1, missionId: "msn_1", actor: A, priorHandle: "ich_gone", audience: RAS });
+    expect(() => store.lineage(orphan)).toThrow(/broken/);
+    const other = store.mint({ anchorId: a2, missionId: "msn_1", actor: A, audience: RAS });
+    const crossing = store.mint({ anchorId: a1, missionId: "msn_1", actor: A, priorHandle: other, audience: RAS });
+    expect(() => store.lineage(crossing)).toThrow(/crosses anchors/);
+  });
+});
+
 describe("ContinuationStore.hopCount (@spec id-continuation-assertion)", () => {
   it("counts every hop of one chain, root included, and only that chain", () => {
     const store = new ContinuationStore();
