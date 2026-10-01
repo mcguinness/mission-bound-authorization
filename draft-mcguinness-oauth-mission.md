@@ -3417,10 +3417,12 @@ expansion successor ({{I-D.draft-mcguinness-oauth-mission-expansion}}),
 begins its own delegation basis and chain, and no organizational,
 network, or deployment boundary by itself restarts or extends a
 chain. The chain is attribution, not authority: an `act` entry names
-who acted, for audit and as policy input to the eligibility matching
-of {{delegation-constraints}}; an asserted actor identity grants
-nothing; and the `authorization_details` subset relations
-({{subset}}), not the chain, show that authority narrowed.
+who acted, for audit; the input to the eligibility matching of
+{{delegation-constraints}} is the delegate the AS authenticates and
+asserts at the exchange, not an entry read from the chain; an
+asserted actor identity grants nothing; and the
+`authorization_details` subset relations ({{subset}}), not the chain,
+show that authority narrowed.
 
 ## Instance Context in Delegated Tokens {#delegated-instance-context}
 
@@ -3526,6 +3528,15 @@ being issued, computed after appending the new outermost actor, not
 the depth of the delegating token. A credential projected across a
 trust domain carries no `act` chain and enters the target domain at
 depth 0 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
+
+The count is issuer-side accounting over the AS's own issuance, not
+an access-control decision over prior actors. The AS counts only an
+`act` chain it authored, in a subject token it validates as its own
+issuance under this Mission. Each delegated exchange appends exactly
+one outermost actor and a self-exchange ({{self-exchange}}) appends
+none, so the count is complete, and no prior actor's identity enters
+it. Prior actors are not authorization inputs at a Resource Server
+({{Section 4.1 of RFC8693}}).
 
 **Per-entry enforcement.** When the AS issues a token to a delegate
 (the actor that becomes the outermost `act`) at delegation depth
