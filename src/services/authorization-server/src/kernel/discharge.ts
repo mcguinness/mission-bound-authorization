@@ -1,7 +1,8 @@
 /**
  * @spec discharge#completion, discharge#terminal-when, discharge#discharge,
- * discharge#discharge-operation, discharge#discharge-authority,
- * discharge#discharge-anti-oracle, discharge#discharge-result, discharge#visibility
+ * discharge#discharge-commit, discharge#discharge-operation,
+ * discharge#discharge-authority, discharge#discharge-anti-oracle,
+ * discharge#discharge-result, discharge#discharge-receipt, discharge#visibility
  *
  * Entry DISCHARGE: the selectors, digests, authority mapping, and refusal
  * classes of the Status profile's `discharge` operation. The kernel funnel

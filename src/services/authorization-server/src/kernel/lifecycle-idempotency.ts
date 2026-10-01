@@ -27,7 +27,7 @@
  *
  * Both tables live in the KERNEL's own database (the creation-idempotency
  * precedent), so the event row can share ONE SQLite transaction with the latch
- * and version increment it records (@spec discharge#discharge-operation,
+ * and version increment it records (@spec discharge#discharge-commit,
  * "Atomicity"); nested `withTransaction` calls become savepoints.
  */
 

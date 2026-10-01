@@ -1,8 +1,8 @@
 /**
  * @spec draft-mcguinness-oauth-mission-status (#completion, #terminal-when,
- * #discharge, #discharge-operation, #discharge-authority,
- * #discharge-anti-oracle, #discharge-idempotency, #discharge-result,
- * #visibility, #idempotency)
+ * #discharge, #discharge-commit, #condition-selectors, #discharge-operation,
+ * #discharge-authority, #discharge-anti-oracle, #discharge-idempotency,
+ * #discharge-result, #visibility, #idempotency)
  *
  * Entry DISCHARGE: the fifth lifecycle-endpoint operation (issue #287
  * residual). It changes no Mission state; it latches one entry's

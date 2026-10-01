@@ -2477,7 +2477,8 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         sendInvalidRequest(`operation ${String(body.operation)} is not enabled on this deployment`);
         return;
       }
-      // @spec discharge#discharge-operation — the fifth operation: it changes no
+      // @spec discharge#discharge-operation, discharge#discharge-commit ("States")
+      // — the fifth operation: it changes no
       // Mission state, so it is handled entirely outside the state machine
       // below, under its own DISTINCT authority.
       if (body.operation === "discharge") {
@@ -3927,7 +3928,8 @@ const RFC3339_RE = /^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[Zz]|[+-
 
 /**
  * @spec discharge#discharge-operation, discharge#discharge-anti-oracle,
- * discharge#discharge-result — the `discharge` operation on the Mission Lifecycle
+ * discharge#discharge-result, discharge#discharge-carryover,
+ * discharge#discharge-receipt — the `discharge` operation on the Mission Lifecycle
  * endpoint. Request-shape failures are `invalid_request` (including a request
  * naming its target in both forms, or neither); the selector, membership, and
  * target-authorization refusals are ONE `not_found`; a divergent

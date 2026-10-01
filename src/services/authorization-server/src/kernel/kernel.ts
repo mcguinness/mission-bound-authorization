@@ -463,7 +463,7 @@ export class MissionKernel {
   /**
    * @spec discharge#discharge-idempotency — the durable event-dedup store, on THIS
    * kernel's database so an event row commits in the same transaction as the
-   * latch it records (@spec discharge#discharge-operation, "Atomicity").
+   * latch it records (@spec discharge#discharge-commit, "Atomicity").
    */
   readonly dischargeEvents: DischargeEventStore;
   /**
@@ -1790,8 +1790,9 @@ export class MissionKernel {
   }
 
   /**
-   * @spec discharge#discharge-operation — the ENTRY DISCHARGE funnel: commit that a
-   * `terminal_when` completion condition of one Mission-record entry has fired.
+   * @spec discharge#discharge-operation, discharge#discharge-commit — the ENTRY
+   * DISCHARGE funnel: commit that a `terminal_when` completion condition of one
+   * Mission-record entry has fired.
    * It changes NO Mission-level state (a deployment that also tracks all-entry
    * completion invokes `complete` separately) and produces one monotonic latch
    * on the entry's equivalence class, one version increment, one result record,
@@ -2176,7 +2177,7 @@ export class MissionKernel {
   }
 
   /**
-   * @spec discharge#discharge-operation ("Atomicity"), discharge#determining — commit
+   * @spec discharge#discharge-commit ("Atomicity"), discharge#determining — commit
    * one or more entry latches on ONE record as a single unit: the latch rows,
    * the version increment, and the durable propagation work (the lifecycle
    * commit the Status List republisher and Mission Signals ride) share one
@@ -2227,12 +2228,12 @@ export class MissionKernel {
       if (!committed) throw new Error(`unknown mission: ${record.id}`);
       accompany?.(committed);
       // Inside the unit deliberately: the signal enqueue commits with the latch
-      // (@spec discharge#discharge-operation, "Atomicity"). Nothing after the
+      // (@spec discharge#discharge-commit, "Atomicity"). Nothing after the
       // fan-out can fail the transaction, so the hook cannot fire on a rollback.
       this.emitCommit(committed, committed.state, undefined, authorityChanged);
       return committed;
     });
-    // @spec discharge#discharge-operation ("Atomicity") — entry-wise propagation to
+    // @spec discharge#discharge-commit ("Atomicity", "Propagation") — entry-wise propagation to
     // an already-justified Child Mission. Materialization is not claimed atomic
     // with the commit above; running it synchronously here closes the gap
     // entirely, so no child derivation can fall between the two.
