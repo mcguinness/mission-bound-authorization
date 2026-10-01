@@ -420,6 +420,44 @@ event-driven deployment wires its event bus to the lifecycle call.
 
 ## Discharge Commit {#discharge-commit}
 
+Every committed discharge, whichever way it is determined, has these
+semantics:
+
+- **Entry-level OR latch.** The entry's `terminal_when` discharges on
+  any condition being met ({{terminal-when}}). The committed state is
+  one monotonic latch on the entry, or on its selector equivalence
+  class, one state-version increment, one audit record, and one
+  notification. Issuance gating for a discharged entry is unchanged
+  ({{discharge}}).
+- **Duplicate entries.** One `entry_digest` discharges every
+  recorded entry resolving to that digest as a single
+  equivalence-class transition, and therefore one version increment,
+  under the Authority Set entry commitment's selector
+  equivalence-class rule
+  ({{I-D.draft-mcguinness-oauth-mission}}).
+- **States.** Discharge applies while the Mission is `active` or
+  `suspended`: a suspended Mission still narrows monotonically. A
+  discharge determined after the Mission reaches `completed`,
+  `revoked`, `expired`, or another terminal state MUST NOT create a
+  transition or a version increment. Discharge never changes
+  Mission-level state; a deployment that also tracks all-entry
+  completion invokes the Status profile's `complete` operation
+  separately ({{I-D.draft-mcguinness-oauth-mission-status}}).
+- **Atomicity.** The entry latch (or its equivalence-class latch), the
+  version increment, the audit and result record, and the durable
+  propagation work (an outbox entry or a signal enqueue) commit as
+  one unit. Where the deployment emits lifecycle events
+  ({{I-D.draft-mcguinness-oauth-mission-signals}}), the signal enqueue
+  is part of that same unit. Downstream materialization from the
+  durable propagation work, including the child-delegation profile's
+  entry-wise propagation to an already-justified Child Mission
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), is
+  asynchronous and is not claimed atomic with this commit. Instead, a
+  Child Mission's derivation MUST consult, or otherwise be gated by,
+  the committed parent latch until that materialization completes, so
+  no Child Mission can derive the discharged parent authority in the
+  gap between the parent's commit and the child's materialized view.
+
 Once committed, a discharge is recorded as Authorization-Server-side
 state and MUST NOT revert: a later delivery presenting any valid
 condition against an already-discharged entry is acknowledged
@@ -504,59 +542,28 @@ authorization input.
   trusted ordering or freshness, and records its own commit time as
   `received_at` in audit.
 
-Semantics:
+Semantics, beyond those every committed discharge has
+({{discharge-commit}}):
 
-- **Entry-level OR latch.** The entry's `terminal_when` discharges on
-  any condition being met ({{terminal-when}}); the request names the
-  condition that fired. The committed state is one monotonic latch on
-  the entry, or on its selector equivalence class, one
-  state-version increment, one audit record, and one notification. A
-  later delivery presenting any valid condition against an
+- **Condition selection.** The request names the condition that
+  fired. A later delivery presenting any valid condition against an
   already-discharged entry, a sibling condition, or the same
   condition under a different `event_id`, is acknowledged
   `already_discharged` ({{discharge-result}}) and MUST NOT discharge
   the entry again or increment the version again; an exact event
   replay (the same tuple and the same fingerprint) is handled first by
-  the dedup rule of {{discharge-idempotency}}. The latch MUST NOT
-  revert, and issuance gating for a discharged entry is unchanged
-  ({{discharge}}).
-- **Duplicate entries.** One `entry_digest` discharges every
-  recorded entry resolving to that digest as a single
-  equivalence-class transition, and therefore one version increment,
-  under the Authority Set entry commitment's selector
-  equivalence-class rule
-  ({{I-D.draft-mcguinness-oauth-mission}}).
-- **States.** `discharge` applies while the Mission is `active` or
-  `suspended`: a suspended Mission still narrows monotonically. A
-  delivery reaching the endpoint after `completed`, `revoked`,
-  `expired`, or another terminal state returns an authenticated
-  `terminal_noop` acknowledgement ({{discharge-result}}) and MUST NOT
-  create a transition or a version increment. `discharge` never
-  changes Mission-level state; a deployment that also tracks
-  all-entry completion invokes the Status profile's `complete`
-  operation separately
-  ({{I-D.draft-mcguinness-oauth-mission-status}}). The AS reaches
-  this determination only after the selector and authorization
-  validation of {{discharge-anti-oracle}}, so a terminal Mission is
-  never a shortcut past those checks.
+  the dedup rule of {{discharge-idempotency}}.
+- **Terminal Missions.** A delivery reaching the endpoint after
+  `completed`, `revoked`, `expired`, or another terminal state returns
+  an authenticated `terminal_noop` acknowledgement
+  ({{discharge-result}}). The AS reaches this determination only after
+  the selector and authorization validation of
+  {{discharge-anti-oracle}}, so a terminal Mission is never a shortcut
+  past those checks.
 - **No `expected_version`.** A stale-version refusal would delay a
   safety-reducing operation; the digest selectors above and the
   idempotency rules of {{discharge-idempotency}} are the guards
   instead.
-- **Atomicity.** The entry latch (or its equivalence-class latch), the
-  version increment, the audit and result record, and the durable
-  propagation work (an outbox entry or a signal enqueue) commit as
-  one unit. Where the deployment emits lifecycle events
-  ({{I-D.draft-mcguinness-oauth-mission-signals}}), the signal enqueue
-  is part of that same unit. Downstream materialization from the
-  durable propagation work, including the child-delegation profile's
-  entry-wise propagation to an already-justified Child Mission
-  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), is
-  asynchronous and is not claimed atomic with this commit. Instead, a
-  Child Mission's derivation MUST consult, or otherwise be gated by,
-  the committed parent latch until that materialization completes, so
-  no Child Mission can derive the discharged parent authority in the
-  gap between the parent's commit and the child's materialized view.
 
 ### Discharge Authority {#discharge-authority}
 
@@ -902,9 +909,11 @@ An Authorization Server claiming the completion capability MUST:
 - treat an entry whose `terminal_when` has been discharged as
   discharged and refuse to derive it ({{discharge}});
 - commit a discharge only through the `discharge` operation, meeting
-  its authority, anti-oracle, idempotency, and atomicity requirements
+  its authority, anti-oracle, and idempotency requirements
   ({{discharge-operation}}), or through an equivalently audited
   deployment-internal adjudication ({{internal-adjudication}});
+- meet the commit semantics of {{discharge-commit}}, including
+  atomicity, whichever way a discharge is determined;
 - record a committed discharge as latched state that MUST NOT revert
   ({{discharge-commit}});
 - carry every parent completion condition into a derived entry when

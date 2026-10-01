@@ -5911,7 +5911,7 @@
   {
    "id": "status.discharge.duplicate-entry-equivalence",
    "spec": "draft-mcguinness-oauth-mission-discharge.md",
-   "anchor": "discharge-operation",
+   "anchor": "discharge-commit",
    "text": "One `entry_digest` discharges every recorded entry resolving to that digest as a single equivalence-class transition, and therefore one version increment",
    "role": "AS",
    "strength": "stated",
@@ -6208,8 +6208,8 @@
   {
    "id": "status.discharge.suspended-applies",
    "spec": "draft-mcguinness-oauth-mission-discharge.md",
-   "anchor": "discharge-operation",
-   "text": "`discharge` applies while the Mission is `active` or `suspended`: a suspended Mission still narrows monotonically.",
+   "anchor": "discharge-commit",
+   "text": "Discharge applies while the Mission is `active` or `suspended`: a suspended Mission still narrows monotonically.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -6288,7 +6288,7 @@
   {
    "id": "status.discharge.atomic-commit",
    "spec": "draft-mcguinness-oauth-mission-discharge.md",
-   "anchor": "discharge-operation",
+   "anchor": "discharge-commit",
    "text": "The entry latch (or its equivalence-class latch), the version increment, the audit and result record, and the durable propagation work (an outbox entry or a signal enqueue) commit as one unit.",
    "role": "AS",
    "strength": "stated",
@@ -6319,7 +6319,7 @@
   {
    "id": "status.discharge.child-propagation",
    "spec": "draft-mcguinness-oauth-mission-discharge.md",
-   "anchor": "discharge-operation",
+   "anchor": "discharge-commit",
    "text": "the child-delegation profile's entry-wise propagation to an already-justified Child Mission",
    "role": "AS",
    "strength": "stated",
