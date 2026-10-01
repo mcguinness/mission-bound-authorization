@@ -82,6 +82,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-approved-set-verification:
+    title: "Mission Approved-Set Verification for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approved-set-verification.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-resource-access:
     title: "Mission Resource Access Profile for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
@@ -1786,7 +1794,12 @@ The anchors in the envelope row are **commitment anchors**, not
 enforcement proofs ({{derivation-boundary}}): a narrowed-token
 Resource Server enforces the authority it receives rather than
 reconstructing authority from a hash of a full set it does not hold
-({{I-D.draft-mcguinness-mission-security-model}}).
+({{I-D.draft-mcguinness-mission-security-model}}). A Resource Server
+or policy decision point that needs an independent check retrieves
+the complete approved set, recomputes its anchor, and checks the
+carried authority as a subset of it under Mission Approved-Set
+Verification
+({{I-D.draft-mcguinness-oauth-mission-approved-set-verification}}).
 
 ## Token Classes {#token-classes}
 
@@ -3496,6 +3509,7 @@ bound profiled by `aauth-mission-expiry`.
 
 | Document | Role |
 |---|---|
+| `oauth-mission-approved-set-verification` | Local Approved-Set Verification: an independent check that a token's carried authority is a subset of the Mission's complete approved Authority Set, retrieved over an issuer-authenticated, disclosure-gated surface, with a second tier that pins an independently held `authority_hash`. |
 | `mission-mandate` | A signed, portable statement of a Mission's committed facts; evidence, not a credential. |
 | `mission-audit` | Registration of Mission evidence in a SCITT Transparency Service; receipts verifiable offline. |
 | `mission-evidence-envelope` | Experimental: a generic, binding-neutral evidence envelope and payload-type registry a future evidence kind may register into; seeds Intent Admission Evidence as its first payload type, migrating none of the family's existing evidence kinds. |

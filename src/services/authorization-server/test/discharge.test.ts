@@ -35,7 +35,7 @@
 import { type Server } from "node:http";
 import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN } from "@mission/demo-data";
 import { decodeJwt } from "jose";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   type AuthorityEntry,
   type BuiltAs,
@@ -1150,5 +1150,242 @@ describe("the discharge operation on the lifecycle endpoint", () => {
     });
     expect(divergent.status).toBe(409);
     expect(await divergent.json()).toMatchObject({ error: "conflict" });
+  });
+});
+
+/**
+ * @spec control-plane#serialization (#844) — THE EXPIRY CLOCK AND THE DISCHARGE
+ * OPERATION'S TRANSACTION.
+ *
+ * `handleDischarge` opens the operation's transaction and `kernel.discharge`
+ * applies the expiry clock inside it, before its selector and conflict
+ * refusals. A refused discharge against a Mission past its ceiling therefore
+ * discovered the expiry, wrote it, and unwound it with the refusal, leaving the
+ * Mission `active` with neither its transition nor its publication. The fix
+ * materializes expiry OUTSIDE the operation's transaction, guarded on
+ * existence so an unknown Mission still gets the one indistinguishable
+ * not-found body. Its own AS carries a lifecycle-commit subscriber that
+ * witnesses the publication.
+ */
+describe("discharge: a refused discharge keeps the expiry it discovered (#844)", () => {
+  const EXPIRY_PORT = PORT + 3;
+  const EXPIRY_ISSUER = `http://localhost:${EXPIRY_PORT}`;
+  let expiryAs: BuiltAs;
+  let expiryServer: Server;
+  const commits: LifecycleCommit[] = [];
+  let approvals = 0;
+
+  beforeAll(async () => {
+    expiryAs = await buildAuthorizationServer({
+      issuer: EXPIRY_ISSUER,
+      allowHeadlessAdjudication: true,
+      dischargeAuthority: ENDPOINT_AUTHORITY,
+      onLifecycleCommit: (commit) => commits.push(commit),
+    });
+    expiryServer = expiryAs.provider.listen(EXPIRY_PORT);
+  });
+  afterAll(() => {
+    expiryServer?.close();
+  });
+
+  const approve = (): MissionRecord => {
+    approvals += 1;
+    return expiryAs.kernel.approve({
+      intent: endpointIntent(),
+      proposedAuthority: endpointProposal(),
+      subject: { iss: EXPIRY_ISSUER, sub: "alice" },
+      approver: { iss: EXPIRY_ISSUER, sub: "bob" },
+      clientId: "ap-agent",
+      approvalEventId: `apev-dis-expiry-${approvals}`,
+    });
+  };
+
+  const post = (missionId: string, body: unknown): Promise<Response> =>
+    fetch(`${EXPIRY_ISSUER}/missions/${missionId}/lifecycle`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
+      body: JSON.stringify(body),
+    });
+
+  // Past the ceiling without touching the clock: the expiry clock reads the
+  // STORED `expires_at`, so moving it into the past is the same discovery a
+  // Mission that simply ran out of time presents.
+  const expireStored = (record: MissionRecord): void => {
+    expiryAs.kernel.db
+      .prepare("UPDATE missions SET expires_at = ? WHERE id = ?")
+      .run("2020-01-01T00:00:00Z", record.id);
+  };
+
+  const eventRows = (missionId: string): number =>
+    (
+      expiryAs.kernel.db
+        .prepare("SELECT COUNT(*) AS n FROM discharge_events WHERE mission_id = ?")
+        .get(missionId) as { n: number }
+    ).n;
+
+  const responseShape = async (res: Response) => {
+    const { nonce, ...rest } = (await res.json()) as Record<string, unknown>;
+    return {
+      status: res.status,
+      contentType: res.headers.get("content-type"),
+      cacheControl: res.headers.get("cache-control"),
+      nonce,
+      rest,
+    };
+  };
+
+  it("a selector refusal on an expired Mission leaves it expired at version + 1, published once, latching nothing", async () => {
+    const record = approve();
+    expireStored(record);
+    commits.length = 0;
+    const body = dischargeBody(record, { entry_digest: `sha-256:${"A".repeat(43)}` });
+
+    const res = await post(record.id, body);
+    expect(res.status).toBe(404);
+    expect(await res.json()).toMatchObject({ error: "not_found" });
+
+    const after = expiryAs.kernel.get(record.id);
+    expect(after?.state).toBe("expired");
+    expect(after?.version).toBe(record.version + 1);
+    expect(after?.discharged).toBeUndefined();
+    expect(eventRows(record.id)).toBe(0);
+    expect(commits.map((c) => c.state)).toEqual(["expired"]);
+
+    // The refusal claimed no success: a byte-identical retransmission is no 200.
+    expect((await post(record.id, body)).status).not.toBe(200);
+    // Refusing again under a fresh nonce materializes no second expiry.
+    expect((await post(record.id, { ...body, nonce: freshNonce() })).status).toBe(404);
+    expect(expiryAs.kernel.get(record.id)?.version).toBe(record.version + 1);
+    expect(commits).toHaveLength(1);
+  });
+
+  it("a fingerprint conflict on an expired Mission keeps the expiry despite the 409", async () => {
+    const record = approve();
+    const body = dischargeBody(record);
+    // A previously recorded event, so the divergent re-assertion below really
+    // reaches the conflict branch.
+    expect((await dischargeResultOf(await post(record.id, body))).outcome).toBe("discharged");
+    const discharged = expiryAs.kernel.get(record.id) as MissionRecord;
+    expireStored(record);
+    commits.length = 0;
+
+    const divergent = {
+      ...body,
+      nonce: freshNonce(),
+      evidence_ref: "https://evidence.test/divergent",
+    };
+    const res = await post(record.id, divergent);
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ error: "conflict" });
+
+    const after = expiryAs.kernel.get(record.id);
+    expect(after?.state).toBe("expired");
+    expect(after?.version).toBe(discharged.version + 1);
+    expect(commits.map((c) => c.state)).toEqual(["expired"]);
+
+    // A second conflicting request transitions nothing further.
+    expect((await post(record.id, { ...divergent, nonce: freshNonce() })).status).toBe(409);
+    expect(expiryAs.kernel.get(record.id)?.version).toBe(discharged.version + 1);
+    expect(commits).toHaveLength(1);
+  });
+
+  it("an unknown Mission and an expired known Mission with an unknown entry answer identically", async () => {
+    const record = approve();
+    expireStored(record);
+    const unknownNonce = freshNonce();
+    const knownNonce = freshNonce();
+
+    const unknown = await responseShape(
+      await post(
+        "msn_does_not_exist",
+        dischargeBody(record, { mission_id: "msn_does_not_exist", nonce: unknownNonce }),
+      ),
+    );
+    const known = await responseShape(
+      await post(
+        record.id,
+        dischargeBody(record, { entry_digest: `sha-256:${"C".repeat(43)}`, nonce: knownNonce }),
+      ),
+    );
+
+    expect(unknown.status).toBe(404);
+    expect(known.status).toBe(unknown.status);
+    expect(known.contentType).toBe(unknown.contentType);
+    expect(known.cacheControl).toBe(unknown.cacheControl);
+    expect(known.rest).toEqual(unknown.rest);
+    // Each nonce-bearing field follows the same rule: echoed by both, or neither.
+    expect(known.nonce === undefined).toBe(unknown.nonce === undefined);
+    if (unknown.nonce !== undefined) {
+      expect(unknown.nonce).toBe(unknownNonce);
+      expect(known.nonce).toBe(knownNonce);
+    }
+    // The guard touched only the known Mission: its expiry committed.
+    expect(expiryAs.kernel.get(record.id)?.state).toBe("expired");
+  });
+
+  it("valid selectors on an expired Mission: terminal_noop, the expiry committed once, exact replay unchanged", async () => {
+    const record = approve();
+    expireStored(record);
+    commits.length = 0;
+    const body = dischargeBody(record);
+
+    const res = await post(record.id, body);
+    expect(res.status).toBe(200);
+    const bytes = await res.text();
+    const result = (decodeJwt(bytes) as Record<string, unknown>).discharge_result as Record<
+      string,
+      unknown
+    >;
+    expect(result.outcome).toBe("terminal_noop");
+    expect(result.prior_version).toBe(record.version + 1);
+    expect(result.current_version).toBe(record.version + 1);
+
+    const after = expiryAs.kernel.get(record.id);
+    expect(after?.state).toBe("expired");
+    expect(after?.version).toBe(record.version + 1);
+    expect(commits.map((c) => c.state)).toEqual(["expired"]);
+
+    // A byte-identical retransmission replays the stored signed bytes verbatim.
+    expect(await (await post(record.id, body)).text()).toBe(bytes);
+    expect(commits).toHaveLength(1);
+  });
+
+  it("an injected failure inside the operation's transaction rolls the operation back and keeps the expiry", async () => {
+    const record = approve();
+    expireStored(record);
+    commits.length = 0;
+    const spy = vi.spyOn(expiryAs.kernel, "observeInCallerTx").mockImplementationOnce(() => {
+      throw new Error("injected observation failure");
+    });
+    try {
+      const res = await post(record.id, dischargeBody(record));
+      expect(res.status).toBeGreaterThanOrEqual(500);
+    } finally {
+      spy.mockRestore();
+    }
+
+    const after = expiryAs.kernel.get(record.id);
+    expect(after?.state).toBe("expired");
+    expect(after?.version).toBe(record.version + 1);
+    // The operation's own write (its terminal_noop event row) rolled back.
+    expect(eventRows(record.id)).toBe(0);
+    expect(commits.map((c) => c.state)).toEqual(["expired"]);
+  });
+
+  it("an expiry-store failure answers no success and is never disguised as not-found", async () => {
+    const record = approve();
+    expireStored(record);
+    const spy = vi.spyOn(expiryAs.kernel, "materializeExpiry").mockImplementationOnce(() => {
+      throw new Error("injected expiry-store failure");
+    });
+    let res: Response;
+    try {
+      res = await post(record.id, dischargeBody(record));
+    } finally {
+      spy.mockRestore();
+    }
+    expect(res.status).toBeGreaterThanOrEqual(500);
+    expect(await res.text()).not.toContain("not_found");
+    expect(eventRows(record.id)).toBe(0);
   });
 });

@@ -132,6 +132,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-approved-set-verification:
+    title: "Mission Approved-Set Verification for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approved-set-verification.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -358,9 +366,11 @@ The Mission reference is `id` and `issuer`. Neither `authority_hash` nor
 `intent_hash` is carried on the baseline `mission` claim or the default
 introspection projection, so a PDP has them for the runtime core's
 evidence only with direct Mission-record access, introspection's
-`authority_hash` disclosure privilege, or the issuance profile's Local
-Approved-Set Verification profile
-({{I-D.draft-mcguinness-oauth-mission}}). A deployment that needs
+`authority_hash` disclosure privilege
+({{I-D.draft-mcguinness-oauth-mission}}), or the Local Approved-Set
+Verification profile
+({{I-D.draft-mcguinness-oauth-mission-approved-set-verification}},
+Section "Local Approved-Set Verification"). A deployment that needs
 `authority_hash` as a commitment proof rather than an audit correlator
 obtains it from the Mission issuer under the last of these. The runtime
 core's permit binding and required decision evidence record the roles
