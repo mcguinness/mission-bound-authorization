@@ -3647,6 +3647,20 @@ This document makes no IANA request.
 
 \[\[ To be removed from the final specification ]]
 
+- Editorial corrections, with no change to any profile's
+  requirements. The capability-kill property is stated per action
+  class and consumer rather than per assurance level, matching the
+  composition section and the containment profile. The four Mission
+  Issuer bindings are named, and GNAP joins the Mission Issuer roles,
+  the control-point peer row, and the credential-carried pattern. The
+  worked composition names no level. The AAuth protocol and R3 are
+  cited, and AAuth terms are expanded on first use. Terms owned
+  elsewhere point to their owners. "Mission-bound" names one
+  definition. Keywords describing other documents' rules are
+  lowercased, and temporal phrasing is removed. The agent-identity
+  section is retitled, the binding-property summary covers the whole
+  vector, and the AuthZEN companion is called the AuthZEN profile.
+
 - The issuance-only deployment is named under Entry Ramps by Estate
   with its invariants, introspection cutoff, claims, and runtime
   triggers; the adoption-ladder table grants Baseline Issuance the
