@@ -39,8 +39,8 @@
     "content_sha256": "b15734aad3b7ff884b854d637dc17ed8c1bc0a5c74777eae6f4f9f445bd84f34"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
-    "revision": "1c401f6876829ab41cac2974ba109da1885ed914",
-    "content_sha256": "e3bdca5da22cc2436c1d91d2089df0cda6bbde64d89e42c1a8f01dd70f12541f"
+    "revision": "c8b265cec29a2ea3e1bf340928861702012c80ef",
+    "content_sha256": "f9b842d98224a63f8159a886f130d2cfac230bbf3df787cef613f87022a9795c"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
     "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
@@ -22941,8 +22941,8 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "at the ICA continuation exchange the AS refuses an expired or revoked Mission with invalid_continuation (mission_error carried), a suspended Mission with unauthorized_client (no mission_error value is defined), fully contained authority with invalid_target, and an exhausted derivation cap or the chain hop-count limit with invalid_grant",
-    "local": "the hop-count case also asserts no hop is recorded and no derivation counted; the exhausted (non-contained) empty-authority case is not separately exercised"
+    "normative": "at the ICA continuation exchange the AS refuses a terminal Mission (expired, or revoked whether or not the continuation store has already ended its handles) with invalid_continuation, a suspended Mission with unauthorized_client, fully contained authority with invalid_target, and an exhausted derivation cap or the chain hop-count limit with invalid_grant",
+    "local": "codes only: mission_error stays at the issuance profile's SHOULD and is not asserted by this row ((b1) and (b3) happen to carry it; the ordinary revocation path through a store-terminated handle, (g), returns invalid_continuation without it). The exhausted (non-contained) empty-authority case is not separately exercised."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -22956,6 +22956,12 @@
     {
      "file": "src/services/authorization-server/test/continuation-grant.test.ts",
      "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b1) a Mission past its expiry at the gate -> invalid_continuation with mission_error (ICA -02 5.5.6)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (g) revoking the Mission terminates its handles (onLifecycleCommit fan-out) -> invalid_continuation",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
