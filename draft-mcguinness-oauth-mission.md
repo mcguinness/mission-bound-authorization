@@ -1096,7 +1096,8 @@ was submitted ({{authority-proposal}}), the AS derives the
 **Authority Set**: one or more {{RFC9396}} `authorization_details`
 entries of an AS-supported type ({{other-types}}). Derivation is
 mechanical. It happens once, at the approval event, over the
-derivation policy then in force, in one of two modes:
+derivation policy then in force, as one procedure whose candidate
+entries depend on whether an authority proposal was submitted:
 
 - **Narrowing mode** (preferred where the client can author
   `authorization_details`): the client submitted an authority
