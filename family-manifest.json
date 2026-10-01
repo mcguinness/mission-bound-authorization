@@ -720,9 +720,7 @@
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-submission-evidence"
    ],
-   "adoption_requires": [
-    "draft-mcguinness-oauth-mission-submission-evidence"
-   ],
+   "adoption_requires": [],
    "references": [
     "draft-mcguinness-mission-audit",
     "draft-mcguinness-mission-mandate",
@@ -731,6 +729,14 @@
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-consent-evidence",
     "draft-mcguinness-oauth-mission-submission-evidence"
+   ],
+   "requires_when": [
+    {
+     "when": "the deployment produces or verifies Intent Admission Evidence",
+     "requires": [
+      "draft-mcguinness-oauth-mission-submission-evidence"
+     ]
+    }
    ]
   },
   {
