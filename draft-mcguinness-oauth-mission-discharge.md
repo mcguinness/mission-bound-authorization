@@ -920,8 +920,17 @@ instead.
   replacement ({{I-D.draft-mcguinness-oauth-mission-status}}, Section
   "Mission Status Operation"), the response is the replacement's signed
   Mission Status Response envelope, whose `discharge_result` carries
-  `forwarded_from` ({{discharge-result}}). Otherwise the response is a
-  Discharge Receipt ({{discharge-receipt}}). Neither places the
+  `forwarded_from` ({{discharge-result}}). A consumer verifies that
+  response under the Status profile's procedure
+  ({{I-D.draft-mcguinness-oauth-mission-status}}, Section "Response"), with
+  one change: in place of checking that `mission.id`
+  equals the requested `mission_id`, it MUST verify that
+  `discharge_result.forwarded_from` names the requested Mission and
+  that `mission.issuer` equals its `issuer`, and it then reads
+  `mission` as the replacement the result reports. A consumer that does
+  not implement this document rejects such a response at that check,
+  which fails closed. Otherwise the response is a Discharge Receipt
+  ({{discharge-receipt}}). Neither places the
   replacement's versions beside the old Mission's status.
 
 ### Discharge Receipt {#discharge-receipt}

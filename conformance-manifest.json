@@ -6816,6 +6816,30 @@
    "notes": "#898 spec review. Implementation lands with the #898 implementation PR."
   },
   {
+   "id": "status.discharge.forwarded-result-verification",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-carryover",
+   "text": "it MUST verify that `discharge_result.forwarded_from` names the requested Mission and that `mission.issuer` equals its `issuer`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a consumer of a forwarded Status response replaces the mission.id-equals-requested check with forwarded_from naming the requested Mission and a matching issuer, then reads mission as the replacement"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#902 review (P2). Consumer-side rule; a verifier test lands with the #898 implementation PR."
+  },
+  {
    "id": "status.discharge.receipt-typ-exclusive",
    "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-receipt",
