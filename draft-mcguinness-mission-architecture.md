@@ -473,7 +473,8 @@ Mission Substrate Statement declares what it supplies.
 
 Read as one system, the family defines a **delegated-authority
 layer** with OAuth 2.0, the standalone Mission Authority Server, and
-(as an experimental sketch) UMA 2.0 as authority-bearing bindings.
+(as experimental sketches) UMA 2.0 and GNAP as authority-bearing
+bindings.
 AAuth composes at the shared Mission Context layer: approval, stable
 reference, lifecycle gating where the PS is on path, and governance
 history ({{the-mission}}).
@@ -1469,6 +1470,11 @@ Mission Issuer:
     Mission Intent rides UMA claims pushing, the resource owner's
     decision fills UMA's authorization assessment, and RPT issuance
     is gated on state ({{I-D.draft-mcguinness-mission-uma}}).
+  - GNAP authorization server (experimental sketch): the Mission
+    Intent rides the grant request as a registered member, the
+    interaction or a standing basis is the approval event, and access
+    token issuance and rotation are gated on state
+    ({{I-D.draft-mcguinness-mission-gnap}}).
 
   The OAuth and standalone authority-bearing bindings also serve
   audience-scoped policy views, the authority-distribution artifact the
@@ -1538,18 +1544,18 @@ authority carriage and enforcement remain binding-dependent:
           \             |
            \      approval event
             \           |
-  +-------------------------------------------------------------+
-  |                    Mission Control Point                    |
-  | +------------+ +------------+ +------------+ +------------+ |
-  | | OAuth AS:  | | Standalone | | AAuth PS:  | | UMA 2.0 AS | |
-  | | Mission-   | | MAS: no    | | Mission    | | (sketch):  | |
-  | | bound      | | tokens;    | | Context;   | | pushed     | |
-  | | tokens     | | the PDP    | | PS paths   | | Intent;    | |
-  | | gated on   | | joins to   | | gated      | | RPTs gated | |
-  | | state      | | Mission    | |            | | on state   | |
-  | +------------+ +------------+ +------------+ +------------+ |
-  +-------|--------------|--------------|--------------|--------+
-          v              v              v              v
+  +---------------------------------------------------------------+
+  |                     Mission Control Point                     |
+  | +-----------+-----------+-----------+-----------+-----------+ |
+  | | OAuth AS: | Standalone| AAuth PS: | UMA 2.0 AS| GNAP AS   | |
+  | | Mission-  | MAS: no   | Mission   | (sketch): | (sketch): | |
+  | | bound     | tokens;   | Context;  | pushed    | Intent in | |
+  | | tokens    | the PDP   | PS paths  | Intent;   | request;  | |
+  | | gated on  | joins to  | gated     | RPTs gated| tokens    | |
+  | | state     | Mission   |           | on state  | gated     | |
+  | +-----------+-----------+-----------+-----------+-----------+ |
+  +-------|-----------|-----------|-----------|-----------|-------+
+          v           v           v           v           v
           durable approved context and lifecycle;
        Authority Set and anchors where the binding defines them
                      |
@@ -2122,8 +2128,8 @@ cutoff behavior, and failure modes, and a deployment names its
 architecture, not only its binding. Three patterns cover the bindings:
 
 - **credential-carried authority**: the credential names the Mission,
-  carries derived authority, and issuance is gated (the OAuth AS and
-  UMA AS);
+  carries derived authority, and issuance is gated (the OAuth AS,
+  UMA AS, and GNAP AS);
 - **PDP-joined**: credentials are ordinary and a join establishes
   the association at the decision point (the standalone MAS); and
 - **context-carried**: AAuth carries its native `{approver, s256}`
