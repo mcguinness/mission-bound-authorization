@@ -1,5 +1,5 @@
 /**
- * @spec draft-mcguinness-oauth-id-continuation-assertion-00 (RFC 8693 token
+ * @spec draft-mcguinness-oauth-id-continuation-assertion-02 (RFC 8693 token
  * exchange -> continuation ID-JAG)
  *
  * The token-exchange grant at /token: a client presents an Identity Continuation
@@ -18,7 +18,7 @@
 
 import { createHash } from "node:crypto";
 import { handleCrossOrgChainExchange } from "./cross-org-grant.js";
-import { type ActObject, extendChainCollapsing } from "@mission/actor-chain";
+import { type ActObject, extendChainCollapsing, flattenActChain } from "@mission/actor-chain";
 import {
   calculateJwkThumbprint,
   createLocalJWKSet,
@@ -30,13 +30,27 @@ import {
 import { errors, type KoaContextWithOIDC } from "oidc-provider";
 import type Provider from "oidc-provider";
 import {
+  checkContinuationFreshness,
   ContinuationAssertionError,
   IDENTITY_CONTINUATION_TOKEN_TYPE,
+  issuerAttestsFor,
   type ValidatedContinuation,
   validateContinuationAssertion,
 } from "../kernel/continuation-assertion.js";
 import { DEFAULT_CONTINUATION_HOP_LIMIT, newContinuationHandle } from "../kernel/continuation-store.js";
-import { audienceScopedAuthority, ID_JAG_TOKEN_TYPE, issueCrossDomainGrant } from "../kernel/cross-domain.js";
+import {
+  audienceScopedAuthority,
+  ID_JAG_TOKEN_TYPE,
+  DelegationNarrowedToEmptyError,
+  issueCrossDomainGrant,
+  RequestedAuthorityExceededError,
+} from "../kernel/cross-domain.js";
+import type { DelegateCandidate } from "../kernel/delegate-matcher.js";
+import { gateDelegableAuthority } from "../kernel/delegation.js";
+import {
+  SUPPORTED_AUTHORIZATION_DETAILS_TYPES,
+  validateMissionResourceAccessSchema,
+} from "../kernel/authorization-details-metadata.js";
 import {
   type EffectiveAuthoritySource,
   projectRarThroughMission,
@@ -281,8 +295,8 @@ export async function handleTokenExchangeGrant(
   // a request failing several gets the code of the earliest (5.5.6): request
   // parameters, then the assertion's well-formedness and issuer trust, then the
   // current actor and its key proof, then chain state (a permanently unusable
-  // hop before a limit), then replay, then authorization (target and scope
-  // last). No chain-state code reaches a caller that has not authenticated as
+  // hop before a limit), then freshness and replay, then authorization (target
+  // and scope last). No chain-state code reaches a caller that has not authenticated as
   // the current actor and proved the cnf key, and nothing before the
   // reservation in beforeSign has a side effect.
 
@@ -314,11 +328,31 @@ export async function handleTokenExchangeGrant(
   if (params.actor_token !== undefined || params.actor_token_type !== undefined) {
     throw new errors.InvalidRequest("actor_token and actor_token_type are not permitted on a continuation exchange");
   }
+  // @spec id-continuation-assertion — at most one authorization_details, a JSON
+  // array of objects (ICA -02 5.5.3 rule 1; a repeated parameter is refused
+  // by oidc-provider, since only `resource` may repeat on this grant). An
+  // empty array requests nothing, as oidc-provider's own RAR check treats it.
+  // The authorization rule evaluates it below.
+  let requestedDetails: Record<string, unknown>[] | undefined;
+  if (params.authorization_details !== undefined) {
+    let parsed: unknown = params.authorization_details;
+    if (typeof parsed === "string") {
+      try {
+        parsed = JSON.parse(parsed);
+      } catch {
+        throw new errors.InvalidRequest("authorization_details must be a JSON array");
+      }
+    }
+    if (!Array.isArray(parsed) || !parsed.every((d) => typeof d === "object" && d !== null && !Array.isArray(d))) {
+      throw new errors.InvalidRequest("authorization_details must be a JSON array of objects");
+    }
+    if (parsed.length > 0) requestedDetails = parsed as Record<string, unknown>[];
+  }
 
   // Wiring guard: the grant is registered unconditionally, so a request can
   // reach here even when the continuation options were not composed.
   const store = opts.continuationStore;
-  const issuers = opts.chainAuthorityIssuers;
+  const issuers = opts.continuationAssertionIssuers;
   const replay = opts.continuationReplay;
   const resourceToAs = opts.resourceToAs;
   const subjectResolver = opts.subjectResolver;
@@ -337,24 +371,36 @@ export async function handleTokenExchangeGrant(
 
   // Rules 2-3: validate the ICA's well-formedness (signature included) and its
   // issuer. `audience` is the AS issuer identifier (NOT /token). The presenter
-  // key and replay checks are left to rules 5 and 6 below, so the validator
-  // gets neither. Every typed validator error maps to invalid_request with its
-  // specific message preserved (invalid_request, unlike invalid_grant, is not
-  // re-rendered), so exp>300 / forbidden-claim reasons stay visible.
+  // key, freshness and replay checks are left to rules 5 and 6 below, so the
+  // validator applies none of them. Every typed validator error maps to
+  // invalid_request with its specific message preserved (invalid_request,
+  // unlike invalid_grant, is not re-rendered), so forbidden-claim reasons stay
+  // visible.
   let ica: ValidatedContinuation;
   try {
-    ica = await validateContinuationAssertion(subjectToken, { audience: opts.issuer, issuers });
+    ica = await validateContinuationAssertion(subjectToken, { audience: opts.issuer, issuers, freshness: false });
   } catch (e) {
     if (e instanceof ContinuationAssertionError) {
       throw new errors.InvalidRequest(e.message);
     }
     throw e;
   }
+  // @spec id-continuation-assertion — rule 3 for the referenced hop: the
+  // assertion's issuer MUST be the hop's accepting RAS or an issuer trusted to
+  // attest that RAS's hops (ICA -02 5.5.3 rule 3, 7.3), checked against the
+  // audience recorded for the hop and the current trust configuration, before
+  // any chain-state code. An unknown handle has no recorded RAS; rule 4
+  // refuses it below.
+  const hopAudience = store.hopAudience(ica.handle);
+  const icaIssuer = issuers.find((i) => i.iss === ica.iss);
+  if (hopAudience !== undefined && (!icaIssuer || !issuerAttestsFor(icaIssuer, hopAudience))) {
+    throw new errors.InvalidRequest("continuation assertion issuer is not trusted for this hop's RAS");
+  }
 
   // Rule 5: the current actor and its key proof. Client auth already ran: the
   // presenter's canonical actor identity is (AS issuer, client_id), the
-  // contract the Chain Authority MUST mint the ICA `act` against (ICA -02
-  // 5.5.2).
+  // contract the Continuation Assertion Issuer MUST mint the ICA `act` against
+  // (ICA -02 5.5.2).
   const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
   const currentActor = { iss: opts.issuer, sub: client.clientId };
 
@@ -438,8 +484,17 @@ export async function handleTokenExchangeGrant(
     return;
   }
 
-  // Rule 6: single use. A reserved (iss, jti) is invalid_request (ICA -02
-  // 5.5.6); the reservation itself is taken in beforeSign below.
+  // Rule 6: freshness, then single use. Chain state comes first, so an expired
+  // assertion over an ended chain is invalid_continuation (ICA -02 5.5.6). An
+  // assertion that is stale, early or too long-lived, or whose (iss, jti) is
+  // reserved, is invalid_request; the reservation itself is taken in
+  // beforeSign below.
+  try {
+    checkContinuationFreshness(ica, { nowS: Math.floor(opts.kernel.nowDate().getTime() / 1000) });
+  } catch (e) {
+    if (e instanceof ContinuationAssertionError) throw new errors.InvalidRequest(e.message);
+    throw e;
+  }
   if (replay.seen(ica.iss, ica.jti)) {
     throw new errors.InvalidRequest("continuation assertion replay");
   }
@@ -469,16 +524,89 @@ export async function handleTokenExchangeGrant(
     txError(ctx, 400, "invalid_target", "no audience-scoped authority for the target Resource AS");
     return;
   }
+  // @spec id-continuation-assertion — the onward act is the presented hop's
+  // lineage with the current actor on top (ICA -02 5.5.5): each hop's
+  // recorded actor from the root (the Mission's client, recorded at approval)
+  // to the presented hop, consecutive equal (iss, sub) merged into one entry,
+  // nested per RFC 8693 with the current actor outermost. It comes from the
+  // hop records alone, never from the assertion, whose act names only the
+  // current actor.
+  let onwardAct: ActObject | undefined;
+  for (const actor of [...store.lineage(ica.handle), currentActor]) {
+    onwardAct = extendChainCollapsing(actor, onwardAct);
+  }
+  // @spec mission#delegation-constraints — per-entry delegation constraints
+  // on the delegated grant. The Mission delegation depth counts from the
+  // approved agent, the Mission's client, which is the innermost entry of
+  // the merged lineage: {A} is depth 0, {B, act: A} depth 1, and each
+  // further merged entry adds 1. At depth 0 the grant goes to the approved
+  // agent itself and nothing narrows. Otherwise an audience-scoped entry is
+  // carried only if its delegation policy permits this delegate at that
+  // depth (gateDelegableAuthority; no `delegation` member is non-delegable),
+  // and an empty result is invalid_target. This is distinct from the ICA
+  // actor-lineage depth bound (ICA -02 6.3), a tenant policy this deployment
+  // does not set. The delegate is the authenticated client, its `sub_profile`
+  // the one the AS asserts for it (kernel.actorProfile), as on the child and
+  // carryover paths.
+  const missionDelegationDepth = flattenActChain(onwardAct).length - 1;
+  const delegate: DelegateCandidate = {
+    sub: client.clientId,
+    assertedProfile: opts.kernel.actorProfile(client.clientId),
+  };
+  const delegationGate = (entries: AuthorityEntry[]): AuthorityEntry[] =>
+    missionDelegationDepth === 0 ? entries : gateDelegableAuthority(entries, delegate, missionDelegationDepth);
+  const delegable = delegationGate(audienceScoped);
+  if (effective.length > 0 && delegable.length === 0) {
+    txError(
+      ctx,
+      400,
+      "invalid_target",
+      `no audience-scoped authority this delegate may carry at Mission delegation depth ${missionDelegationDepth}`,
+    );
+    return;
+  }
   // @spec id-continuation-assertion — each requested resource MUST also be
   // one the Mission authorizes: a resource the audience serves but no
   // audience-scoped effective entry names is "not permitted by the chain
   // authorization" (ICA -02 5.5.6: invalid_target), as a token-endpoint
   // `resource` outside the Authority Set is at core issuance
   // (mission#error-mapping). Membership is the exact `resource` equality the
-  // kernel's audience-scoped projections use.
-  if (effective.length > 0 && resources.some((r) => !audienceScoped.some((e) => e.resource === r))) {
+  // kernel's audience-scoped projections use, over the entries this delegate
+  // may carry.
+  if (effective.length > 0 && resources.some((r) => !delegable.some((e) => e.resource === r))) {
     txError(ctx, 400, "invalid_target", "requested resource is not authorized by the Mission");
     return;
+  }
+  // @spec id-continuation-assertion — a requested authorization_details is
+  // evaluated by type, and the requested set MUST fit the Mission's Effective
+  // Authority Set for this audience, as this delegate may carry it; else
+  // invalid_authorization_details (ICA -02 5.5.3 rule 7, 5.5.6). The issued
+  // ID-JAG then carries the requested subset, projected; absent, every entry
+  // the delegate may carry.
+  if (requestedDetails !== undefined) {
+    for (const detail of requestedDetails) {
+      if (typeof detail.type !== "string" || !SUPPORTED_AUTHORIZATION_DETAILS_TYPES.has(detail.type)) {
+        txError(ctx, 400, "invalid_authorization_details", `authorization details type ${String(detail.type)} is not implemented`);
+        return;
+      }
+      // The supported set has one member, mission_resource_access, so its
+      // schema check applies to every entry that reaches here.
+      const schemaError = validateMissionResourceAccessSchema(detail);
+      if (schemaError) {
+        txError(ctx, 400, "invalid_authorization_details", schemaError);
+        return;
+      }
+    }
+    if (
+      effective.length > 0 &&
+      !isSubsetSetIgnoringCapabilitySources(
+        requestedDetails as unknown as AuthorityEntry[],
+        delegable,
+      )
+    ) {
+      txError(ctx, 400, "invalid_authorization_details", "requested authorization_details exceed the Mission authority for the target");
+      return;
+    }
   }
   // @spec mission#scope-projection — this exchange issues an identity
   // grant, not a Mission-bound access token: a requested `scope` cannot be
@@ -495,14 +623,6 @@ export async function handleTokenExchangeGrant(
   // below, once the Mission gate has admitted the grant: a refused request
   // leaves no orphan hop (@spec id-continuation-assertion, ICA -02 5.5.4).
   const freshHandle = newContinuationHandle();
-  // Collapse the current actor over the ICA hop lineage. Because rule 5 forces
-  // currentActor === ICA act and the ICA `act` is single-level, this ALWAYS
-  // collapses to a depth-1 lineage (a single actor's multi-hop continuation
-  // keeps one entry) — it never extends here by construction.
-  const collapsedAct: ActObject = extendChainCollapsing(
-    { iss: currentActor.iss, sub: currentActor.sub },
-    { iss: ica.act.iss, sub: ica.act.sub },
-  );
   // Root auth envelope, carried unchanged (store shape -> ID-JAG shape).
   const env = resolved.authEnvelope;
   const authEnvelope = {
@@ -521,8 +641,14 @@ export async function handleTokenExchangeGrant(
       resourceToAs,
       sub: localSub,
       identityContinuationHandle: freshHandle,
-      act: collapsedAct,
+      act: onwardAct as ActObject,
       authEnvelope,
+      ...(requestedDetails !== undefined
+        ? { requestedAuthority: requestedDetails as unknown as AuthorityEntry[] }
+        : {}),
+      // The same delegation gate, applied again once the gate admits, so a
+      // state change since the rule-7 check cannot widen the grant.
+      delegationGate,
       // Everything validation and the gate admitted: reserve the ICA, then
       // record the child hop (bound to the SAME anchor/Mission, linked to the
       // prior). @spec id-continuation-assertion — the (iss, jti) reservation
@@ -546,12 +672,23 @@ export async function handleTokenExchangeGrant(
           actor: { iss: currentActor.iss, sub: currentActor.sub },
           cnfJkt: jkt,
           priorHandle: ica.handle,
+          audience,
         });
       },
     }));
   } catch (e) {
     if (e instanceof ContinuationRefusal) {
       txError(ctx, 400, e.code, e.message);
+      return;
+    }
+    // The requested authorization_details no longer fit (a state change since
+    // the rule-7 check).
+    if (e instanceof RequestedAuthorityExceededError) {
+      txError(ctx, 400, "invalid_authorization_details", e.message);
+      return;
+    }
+    if (e instanceof DelegationNarrowedToEmptyError) {
+      txError(ctx, 400, "invalid_target", e.message);
       return;
     }
     // A non-active / expired / contained / cap-exhausted Mission (gate path ->

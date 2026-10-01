@@ -1,5 +1,5 @@
 /**
- * @spec draft-mcguinness-oauth-id-continuation-assertion-00 — the continuation
+ * @spec draft-mcguinness-oauth-id-continuation-assertion-02 — the continuation
  * handle store.
  *
  * A continuation ANCHOR captures the root authentication envelope (auth_time,
@@ -9,11 +9,11 @@
  * session id, so it can be terminated when that session ends).
  *
  * A continuation HANDLE is a durable reference bound to an anchor and Mission.
- * A Chain Authority mints a handle for each intra-domain hop; the handle is
- * carried inside an ICA (see continuation-assertion.ts) and RESOLVED here to
- * recover the Mission, current actor, root auth envelope, and DPoP key. The
- * presented handle is NOT single-use: a hop record persists across
- * continuations, so `resolve` never consumes it.
+ * The AS mints a handle for each hop it creates; a Continuation Assertion
+ * Issuer carries it inside an ICA (see continuation-assertion.ts), and it is
+ * RESOLVED here to recover the Mission, current actor, root auth envelope,
+ * and DPoP key. The presented handle is NOT single-use: a hop record persists
+ * across continuations, so `resolve` never consumes it.
  *
  * Terminal propagation: a Mission reaching a terminal lifecycle state
  * (`onLifecycleCommit`) marks all of its anchors and handles terminal; a
@@ -52,6 +52,7 @@ CREATE TABLE continuation_handles (
   actor_sub TEXT,
   cnf_jkt TEXT,
   prior_handle TEXT,
+  audience TEXT NOT NULL,
   state TEXT NOT NULL,
   created_at INTEGER NOT NULL
 ) STRICT;
@@ -93,6 +94,8 @@ export interface ResolvedAnchor {
 export interface ResolvedContinuation {
   missionId: string;
   anchor: ResolvedAnchor;
+  /** The RAS audience recorded for this hop ({@link ContinuationStore.mint}). */
+  audience: string;
   /** `mint` always writes both; optional only because the columns are nullable. */
   actor: { iss?: string; sub?: string };
   authEnvelope: AuthEnvelope;
@@ -127,6 +130,7 @@ interface HandleRow {
   actor_iss: string | null;
   actor_sub: string | null;
   cnf_jkt: string | null;
+  audience: string;
   state: string;
 }
 
@@ -198,13 +202,21 @@ export class ContinuationStore {
      */
     cnfJkt?: string;
     priorHandle?: string;
+    /**
+     * @spec id-continuation-assertion — the RAS audience of this hop, "root or
+     * child" (ICA -02 5.1.2): a child hop's is the audience of the ID-JAG that
+     * names it. A root rooted at Mission approval has no root ID-JAG, so its
+     * audience is the AS issuer, where the Mission's grant is issued and
+     * redeemed. Issuer trust for the hop is checked against it (5.5.3 rule 3).
+     */
+    audience: string;
   }): string {
     const handle = input.handle ?? newContinuationHandle();
     this.db
       .prepare(
         `INSERT INTO continuation_handles
-         (handle, anchor_id, mission_id, actor_iss, actor_sub, cnf_jkt, prior_handle, state, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?)`,
+         (handle, anchor_id, mission_id, actor_iss, actor_sub, cnf_jkt, prior_handle, audience, state, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)`,
       )
       .run(
         handle,
@@ -214,9 +226,23 @@ export class ContinuationStore {
         input.actor.sub,
         input.cnfJkt ?? null,
         input.priorHandle ?? null,
+        input.audience,
         this.now().getTime(),
       );
     return handle;
+  }
+
+  /**
+   * @spec id-continuation-assertion — the RAS audience recorded for an issued
+   * hop, active or terminal; undefined for a handle this store never minted.
+   * Issuer trust for the hop's RAS is established before any chain-state code
+   * (ICA -02 5.5.6), so this read does not look at state.
+   */
+  hopAudience(handle: string): string | undefined {
+    const row = this.db.prepare("SELECT audience FROM continuation_handles WHERE handle = ?").get(handle) as
+      | { audience: string }
+      | undefined;
+    return row?.audience;
   }
 
   /**
@@ -238,7 +264,7 @@ export class ContinuationStore {
   lookup(handle: string): HandleLookup {
     const h = this.db
       .prepare(
-        "SELECT handle, anchor_id, mission_id, actor_iss, actor_sub, cnf_jkt, state FROM continuation_handles WHERE handle = ?",
+        "SELECT handle, anchor_id, mission_id, actor_iss, actor_sub, cnf_jkt, audience, state FROM continuation_handles WHERE handle = ?",
       )
       .get(handle) as HandleRow | undefined;
     if (!h) return { status: "unknown" };
@@ -264,6 +290,7 @@ export class ContinuationStore {
         ...(a.session_id != null ? { sessionId: a.session_id } : {}),
         state: a.state as ContinuationState,
       },
+      audience: h.audience,
       actor: {
         ...(h.actor_iss != null ? { iss: h.actor_iss } : {}),
         ...(h.actor_sub != null ? { sub: h.actor_sub } : {}),
@@ -272,6 +299,41 @@ export class ContinuationStore {
       ...(h.cnf_jkt != null ? { cnfJkt: h.cnf_jkt } : {}),
     };
     return { status: "active", continuation };
+  }
+
+  /**
+   * @spec id-continuation-assertion — a hop's actor lineage, root first (ICA
+   * -02 5.5.5): the recorded actor of every hop from the root to `handle`,
+   * walked through each hop's immutable parent reference, so sibling branches
+   * never contribute. Fails closed (throws) on a missing ancestor, an ancestor
+   * under another anchor, a hop with no recorded actor, or a cycle.
+   */
+  lineage(handle: string): Array<{ iss: string; sub: string }> {
+    const read = this.db.prepare(
+      "SELECT anchor_id, actor_iss, actor_sub, prior_handle FROM continuation_handles WHERE handle = ?",
+    );
+    const leafFirst: Array<{ iss: string; sub: string }> = [];
+    const seen = new Set<string>();
+    let anchorId: string | undefined;
+    let next: string | null = handle;
+    while (next !== null) {
+      if (seen.has(next)) throw new Error("continuation hop ancestry is cyclic");
+      seen.add(next);
+      const row = read.get(next) as
+        | { anchor_id: string; actor_iss: string | null; actor_sub: string | null; prior_handle: string | null }
+        | undefined;
+      if (!row) throw new Error("continuation hop ancestry is broken");
+      if (anchorId !== undefined && row.anchor_id !== anchorId) {
+        throw new Error("continuation hop ancestry crosses anchors");
+      }
+      anchorId = row.anchor_id;
+      if (row.actor_iss === null || row.actor_sub === null) {
+        throw new Error("continuation hop has no recorded actor");
+      }
+      leafFirst.push({ iss: row.actor_iss, sub: row.actor_sub });
+      next = row.prior_handle;
+    }
+    return leafFirst.reverse();
   }
 
   /**

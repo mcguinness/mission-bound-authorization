@@ -12,6 +12,8 @@
 import { randomBytes } from "node:crypto";
 import type { ActObject } from "@mission/actor-chain";
 import { SignJWT, type CryptoKey, type JWTPayload } from "jose";
+import { isSubsetSetIgnoringCapabilitySources } from "@mission/core";
+import { projectThroughEffective } from "./derive.js";
 import type { MissionKernel } from "./kernel.js";
 import type { AuthorityEntry, MissionRecord } from "./types.js";
 
@@ -23,6 +25,19 @@ export const MAX_GRANT_LIFETIME_S = 300;
  * @spec cross-domain#audience-scope: project only the authority-set entries
  * whose resource the target Resource AS is authoritative for.
  */
+/**
+ * @spec id-continuation-assertion — a requested authorization_details that the
+ * audience-scoped authority no longer covers when the gate admits the grant
+ * (ICA -02 5.5.6: invalid_authorization_details).
+ */
+export class RequestedAuthorityExceededError extends Error {}
+
+/**
+ * @spec mission#delegation-constraints — the delegation gate left no
+ * audience-scoped entry for the delegate ("Empty result": invalid_target).
+ */
+export class DelegationNarrowedToEmptyError extends Error {}
+
 export function audienceScopedAuthority(
   authoritySet: AuthorityEntry[],
   resourceToAs: (resource: string) => string,
@@ -68,6 +83,23 @@ export interface IssueGrantInput {
    * as top-level `auth_time`/`acr`/`amr`; absent sub-fields are omitted.
    */
   authEnvelope?: { auth_time?: number; acr?: string; amr?: string[] };
+  /**
+   * @spec id-continuation-assertion — a requested authorization_details subset.
+   * When present, the grant carries it projected through the audience-scoped
+   * Effective Authority Set instead of that whole set (ICA -02 5.5.3 rule 7:
+   * the issued ID-JAG carries the values "that express the granted
+   * authority"); a request the set does not cover refuses issuance with
+   * {@link RequestedAuthorityExceededError}.
+   */
+  requestedAuthority?: AuthorityEntry[];
+  /**
+   * @spec mission#delegation-constraints — per-entry delegation narrowing for
+   * a delegated grant: given the audience-scoped Effective Authority Set, the
+   * entries this delegate may carry at its delegation depth. The grant
+   * carries only those (and any requestedAuthority must fit them); an empty
+   * result refuses with {@link DelegationNarrowedToEmptyError}.
+   */
+  delegationGate?: (entries: AuthorityEntry[]) => AuthorityEntry[];
   /**
    * @spec id-continuation-assertion — runs once the derivation gate, the count
    * and the audience projection have admitted the grant, and before it is
@@ -137,6 +169,17 @@ async function mintCrossDomainGrant(
     input.targetAs,
   );
   if (scoped.length === 0) throw new Error("no audience-scoped authority for the target Resource AS");
+  const carried = input.delegationGate ? input.delegationGate(scoped) : scoped;
+  if (carried.length === 0) {
+    throw new DelegationNarrowedToEmptyError("delegation constraints leave no audience-scoped authority for this delegate");
+  }
+  let granted = carried;
+  if (input.requestedAuthority !== undefined) {
+    if (!isSubsetSetIgnoringCapabilitySources(input.requestedAuthority, carried)) {
+      throw new RequestedAuthorityExceededError("requested authorization_details exceed the Mission authority for the target");
+    }
+    granted = projectThroughEffective(input.requestedAuthority, carried);
+  }
   input.beforeSign?.();
 
   const nowS = Math.floor(kernel.nowDate().getTime() / 1000);
@@ -162,7 +205,7 @@ async function mintCrossDomainGrant(
       // resolution mechanism, not a new origin principal).
       subject: record.subject,
     },
-    authorization_details: scoped,
+    authorization_details: granted,
     cnf: { jkt: input.cnfJkt },
     sub: input.sub !== undefined ? input.sub : record.subject.sub,
     // @spec ID-JAG §3.1: the acting client at the requesting AS.

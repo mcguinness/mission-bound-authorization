@@ -458,8 +458,8 @@ export interface AdapterOptions {
    * a no-op, so no existing refresh/token path changes.
    */
   familyStore?: DelegationFamilyStore;
-  /** Trusted Chain Authority issuers of ICAs (iss + jwks). */
-  chainAuthorityIssuers?: ContinuationIssuer[];
+  /** Trusted Continuation Assertion Issuers of ICAs (iss + jwks + the RAS audiences each attests for). */
+  continuationAssertionIssuers?: ContinuationIssuer[];
   /** Shared (iss, jti) ICA replay cache (from newReplayCache()). */
   continuationReplay?: ContinuationReplay;
   /**
@@ -3418,7 +3418,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // @spec child-delegation#discovery: this AS accepts the child-creation
       // request and enforces the child-delegation controls of that profile.
       if (enabled("child-delegation")) meta.mission_child_delegation_supported = true;
-      // @spec id-continuation-assertion#discovery: this AS runs the RFC 8693
+      // @spec id-continuation-assertion#metadata-idp: this AS runs the RFC 8693
       // token-exchange continuation grant (ICA subject token -> continuation
       // ID-JAG), signed by the dedicated as-continuation key on the jwks_uri.
       // The continuation ID-JAG is still the id-jag token type, so the AS also

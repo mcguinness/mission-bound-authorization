@@ -1,5 +1,5 @@
 /**
- * @spec draft-mcguinness-oauth-id-continuation-assertion-00 (continuation ID-JAG)
+ * @spec draft-mcguinness-oauth-id-continuation-assertion-02 (continuation ID-JAG)
  *
  * The opt-in continuation extension to `issueCrossDomainGrant`: a single code
  * path that, when the caller passes the new optional fields, emits a fresh
@@ -19,8 +19,10 @@ import {
 } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
+  DelegationNarrowedToEmptyError,
   issueCrossDomainGrant,
   MissionKernel,
+  RequestedAuthorityExceededError,
   type MissionRecord,
   validateMissionIntent,
 } from "../src/index.js";
@@ -29,7 +31,7 @@ import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 const AS_ISS = "https://as.test";
 const RAS_ISS = "https://ras.ledgercloud.test";
 const RESOURCE = "https://saas.ledgercloud.test/mcp";
-const CA = "https://chain-authority.example";
+const CAI = "https://cai.example";
 const RESOURCE_TO_AS = (r: string) => (r === RESOURCE ? RAS_ISS : AS_ISS);
 
 // Ceiling includes exactly the resource the ID-JAG is audienced to.
@@ -93,9 +95,9 @@ describe("issueCrossDomainGrant — continuation ID-JAG (extended path)", () => 
     // A realistic collapsed lineage: the same actor takes a fresh hop over an
     // inbound chain where it is already the outermost hop, so the caller's
     // `extendChainCollapsing` keeps a depth-1 `act` (no duplicate entry).
-    const inbound: ActObject = { iss: CA, sub: "agent-7" };
-    const builtAct = extendChainCollapsing({ iss: CA, sub: "agent-7" }, inbound);
-    expect(builtAct).toEqual({ iss: CA, sub: "agent-7" }); // collapsed, depth 1
+    const inbound: ActObject = { iss: CAI, sub: "agent-7" };
+    const builtAct = extendChainCollapsing({ iss: CAI, sub: "agent-7" }, inbound);
+    expect(builtAct).toEqual({ iss: CAI, sub: "agent-7" }); // collapsed, depth 1
 
     const { grant } = await issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
       ...legacyInput(record.id),
@@ -184,6 +186,52 @@ describe("issueCrossDomainGrant — continuation ID-JAG (extended path)", () => 
       }),
     ).rejects.toThrow(/hook refused/);
     expect(calls).toBe(1);
+  });
+
+  it("requestedAuthority: the grant carries the requested subset; a request beyond the audience-scoped set is refused before beforeSign (@spec id-continuation-assertion)", async () => {
+    const record = approve(22);
+    const { grant } = await issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
+      ...legacyInput(record.id),
+      requestedAuthority: [{ type: "mission_resource_access", resource: RESOURCE, actions: ["ledger:journal.write"] }],
+    });
+    expect(decodeJwt(grant).authorization_details).toEqual([
+      { type: "mission_resource_access", resource: RESOURCE, actions: ["ledger:journal.write"] },
+    ]);
+
+    let calls = 0;
+    await expect(
+      issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
+        ...legacyInput(approve(23).id),
+        requestedAuthority: [{ type: "mission_resource_access", resource: RESOURCE, actions: ["ledger:journal.delete"] }],
+        beforeSign: () => {
+          calls += 1;
+        },
+      }),
+    ).rejects.toBeInstanceOf(RequestedAuthorityExceededError);
+    expect(calls).toBe(0);
+  });
+
+  it("delegationGate: the grant carries only the entries it keeps, and an empty result is refused before beforeSign (@spec mission#delegation-constraints)", async () => {
+    const record = approve(24);
+    const { grant } = await issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
+      ...legacyInput(record.id),
+      delegationGate: (entries) => entries.map((e) => ({ ...e, actions: e.actions.slice(0, 1) })),
+    });
+    expect(decodeJwt(grant).authorization_details).toEqual([
+      { type: "mission_resource_access", resource: RESOURCE, actions: ["ledger:journal.write"] },
+    ]);
+
+    let calls = 0;
+    await expect(
+      issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
+        ...legacyInput(approve(25).id),
+        delegationGate: () => [],
+        beforeSign: () => {
+          calls += 1;
+        },
+      }),
+    ).rejects.toBeInstanceOf(DelegationNarrowedToEmptyError);
+    expect(calls).toBe(0);
   });
 
   it("omits absent auth-envelope sub-fields (partial envelope)", async () => {

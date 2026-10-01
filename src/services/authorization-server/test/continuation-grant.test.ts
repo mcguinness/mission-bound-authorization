@@ -1,12 +1,12 @@
 /**
- * @spec draft-mcguinness-oauth-id-continuation-assertion-00 (RFC 8693 token
+ * @spec draft-mcguinness-oauth-id-continuation-assertion-02 (RFC 8693 token
  * exchange -> continuation ID-JAG)
  *
  * The end-to-end intra-domain continuation hop on the real /token endpoint: an
  * ICA subject token in, a Mission-rooted continuation ID-JAG out, with the
  * current-actor check and the RFC 8693 error taxonomy.
  *
- * The ICA `act` (minted by the Chain Authority against (AS, client_id)) MUST
+ * The ICA `act` (minted by the Continuation Assertion Issuer against (AS, client_id)) MUST
  * equal the private_key_jwt presenter's canonical actor identity (raw ===,
  * case-sensitive), and the DPoP proof key MUST be the ICA's cnf.jkt. The
  * request carries no actor_token or actor_token_type (ICA -02 5.5.1).
@@ -19,7 +19,7 @@
  * SignJWT — never provider.AccessToken).
  *
  * Setup drives the store directly (rootGrantAnchor + mint) and mints ICAs with a
- * dedicated Chain Authority key injected via chainAuthorityIssuers.
+ * dedicated Continuation Assertion Issuer key injected via continuationAssertionIssuers.
  */
 
 import { type Server } from "node:http";
@@ -48,7 +48,9 @@ import {
 
 const PORT = 14475;
 const ISSUER = `http://localhost:${PORT}`;
-const CA = "https://chain-authority.example"; // the injected Chain Authority
+const CAI = "https://cai.example"; // the injected Continuation Assertion Issuer
+const CAI_OTHER = "https://cai-other.example"; // trusted only for OTHER_RAS's hops
+const OTHER_RAS = "https://ras.other.test";
 const RESOURCE = CANONICAL_RESOURCE; // in DERIVATION_POLICY's ceiling
 const RAS_AUD = "https://ras.ledgercloud.test"; // the target Resource AS (audience)
 const RESOURCE_B = "https://api.ledgercloud.test/v1"; // a second resource the same RAS serves, never approved
@@ -75,9 +77,17 @@ type Keys = { privateKey: CryptoKey; publicKey: CryptoKey };
 let as: BuiltAs;
 let asServer: Server;
 let clientKey: CryptoKey; // ap-agent private_key_jwt key (kid ap-agent-auth)
-let caKeys: Keys; // Chain Authority ICA signing key
+let caiKeys: Keys; // the Continuation Assertion Issuer's ICA signing key
+let otherCaiKeys: Keys; // CAI_OTHER's ICA signing key
+let rasCaiKeys: Keys; // RAS_AUD's own ICA signing key (the accepting RAS as its own issuer)
 let agentKeys: Keys; // the agent's DPoP key
 let agentJkt: string;
+let svcKeys: Keys; // a second client, svc-b: its private_key_jwt key
+let svcDpopKeys: Keys; // svc-b's DPoP key
+let svcJkt: string;
+let svcXKeys: Keys; // a third client, svc-x, whose asserted profile no delegation policy names
+let svcXDpopKeys: Keys;
+let svcXJkt: string;
 let remoteJwks: ReturnType<typeof createRemoteJWKSet>;
 
 /** A continuation lineage: an active Mission + a grant anchor + an initial handle. */
@@ -124,6 +134,7 @@ function newLineage(
     missionId: mission.id,
     actor: { iss: ISSUER, sub: "ap-agent" },
     cnfJkt: agentJkt,
+    audience: ISSUER, // as approval-time rooting records it
   });
   return { missionId: mission.id, handle };
 }
@@ -167,17 +178,26 @@ function approveLineage(
   return { missionId: mission.id, handle: handles[0] as string };
 }
 
+/** The issuer that signs an ICA: its `iss`, header `kid` and private key. */
+interface Signer {
+  iss: string;
+  kid: string;
+  key: CryptoKey;
+  alg?: string;
+}
+
 interface IcaOpts {
   handle?: string;
+  signer?: Signer;
   cnfJkt?: string;
   act?: { iss: string; sub: string };
   iatSec?: number;
   expSec?: number;
-  aud?: string;
+  aud?: string | string[];
   over?: Record<string, unknown>;
 }
 
-/** Mint an ICA signed by the Chain Authority key (iss=CA, aud=AS issuer). */
+/** Mint an ICA signed by the Continuation Assertion Issuer key (iss=CAI, aud=AS issuer). */
 async function mintICA(handle: string, opts: IcaOpts = {}): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const base: Record<string, unknown> = {
@@ -186,14 +206,15 @@ async function mintICA(handle: string, opts: IcaOpts = {}): Promise<string> {
     act: opts.act ?? { iss: ISSUER, sub: "ap-agent" },
     ...opts.over,
   };
+  const signer = opts.signer ?? { iss: CAI, kid: "cai-key", key: caiKeys.privateKey };
   return new SignJWT(base)
-    .setProtectedHeader({ alg: "ES256", kid: "ca-key", typ: IDENTITY_CONTINUATION_JWT_TYP })
-    .setIssuer(CA)
+    .setProtectedHeader({ alg: signer.alg ?? "ES256", kid: signer.kid, typ: IDENTITY_CONTINUATION_JWT_TYP })
+    .setIssuer(signer.iss)
     .setAudience(opts.aud ?? ISSUER)
     .setIssuedAt(opts.iatSec ?? now)
     .setExpirationTime(opts.expSec ?? now + 120)
     .setJti(crypto.randomUUID())
-    .sign(caKeys.privateKey);
+    .sign(signer.key);
 }
 
 /** An actor_token as a pre--02 client sent it: signed by the DPoP key, cnf.jkt = the presenter jkt. */
@@ -207,17 +228,23 @@ async function mintActorToken(over: Record<string, unknown> = {}): Promise<strin
     .sign(agentKeys.privateKey);
 }
 
-/** The AS a request goes to: its issuer and the ap-agent client key it registered. */
+/**
+ * The AS a request goes to: its issuer and the client key it registered (by
+ * default ap-agent's), and the presenter's DPoP key (by default the agent's).
+ */
 interface Target {
   issuer: string;
   clientKey: CryptoKey;
+  clientId?: string;
+  dpopKeys?: Keys;
 }
 
 async function clientAssertion(t: Target): Promise<string> {
+  const clientId = t.clientId ?? "ap-agent";
   return new SignJWT({})
-    .setProtectedHeader({ alg: "ES256", kid: "ap-agent-auth" })
-    .setIssuer("ap-agent")
-    .setSubject("ap-agent")
+    .setProtectedHeader({ alg: "ES256", kid: `${clientId}-auth` })
+    .setIssuer(clientId)
+    .setSubject(clientId)
     .setAudience(t.issuer)
     .setIssuedAt()
     .setExpirationTime("2m")
@@ -225,12 +252,17 @@ async function clientAssertion(t: Target): Promise<string> {
     .sign(t.clientKey);
 }
 
-async function dpopProof(htu: string, htm: string, extra: Record<string, unknown> = {}): Promise<string> {
+async function dpopProof(
+  htu: string,
+  htm: string,
+  extra: Record<string, unknown> = {},
+  keys: Keys = agentKeys,
+): Promise<string> {
   return new SignJWT({ htu, htm, ...extra })
-    .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: await exportJWK(agentKeys.publicKey) })
+    .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: await exportJWK(keys.publicKey) })
     .setIssuedAt()
     .setJti(crypto.randomUUID())
-    .sign(agentKeys.privateKey);
+    .sign(keys.privateKey);
 }
 
 interface ExchangeFields {
@@ -243,6 +275,8 @@ interface ExchangeFields {
   requestedTokenType?: string;
   subjectTokenType?: string;
   extra?: Record<string, string>;
+  /** Parameters appended as-is, so one name can repeat. */
+  repeated?: Array<[string, string]>;
   /** Send no DPoP header. */
   noDpop?: boolean;
 }
@@ -268,11 +302,12 @@ async function tokenExchange(f: ExchangeFields, t: Target = { issuer: ISSUER, cl
       client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
     });
     for (const r of resources) body.append("resource", r);
+    for (const [name, value] of f.repeated ?? []) body.append(name, value);
     return fetch(htu, {
       method: "POST",
       headers: {
         "content-type": "application/x-www-form-urlencoded",
-        ...(f.noDpop ? {} : { dpop: await dpopProof(htu, "POST", extra) }),
+        ...(f.noDpop ? {} : { dpop: await dpopProof(htu, "POST", extra, t.dpopKeys) }),
       },
       body: body.toString(),
     });
@@ -284,15 +319,47 @@ async function tokenExchange(f: ExchangeFields, t: Target = { issuer: ISSUER, cl
 }
 
 beforeAll(async () => {
-  caKeys = await generateKeyPair("ES256", { extractable: true });
-  const caPub = { ...(await exportJWK(caKeys.publicKey)), kid: "ca-key", alg: "ES256", use: "sig" };
+  caiKeys = await generateKeyPair("ES256", { extractable: true });
+  const caiPub = { ...(await exportJWK(caiKeys.publicKey)), kid: "cai-key", alg: "ES256", use: "sig" };
+  otherCaiKeys = await generateKeyPair("ES256", { extractable: true });
+  const otherCaiPub = { ...(await exportJWK(otherCaiKeys.publicKey)), kid: "other-cai-key", alg: "ES256" };
+  rasCaiKeys = await generateKeyPair("ES256", { extractable: true });
+  const rasCaiPub = { ...(await exportJWK(rasCaiKeys.publicKey)), kid: "ras-cai-key", alg: "ES256" };
   agentKeys = await generateKeyPair("ES256", { extractable: true });
   agentJkt = await calculateJwkThumbprint(await exportJWK(agentKeys.publicKey));
+  svcKeys = await generateKeyPair("ES256", { extractable: true });
+  svcDpopKeys = await generateKeyPair("ES256", { extractable: true });
+  svcJkt = await calculateJwkThumbprint(await exportJWK(svcDpopKeys.publicKey));
+  svcXKeys = await generateKeyPair("ES256", { extractable: true });
+  svcXDpopKeys = await generateKeyPair("ES256", { extractable: true });
+  svcXJkt = await calculateJwkThumbprint(await exportJWK(svcXDpopKeys.publicKey));
+  const exchangeClient = async (clientId: string, keys: Keys) => ({
+    client_id: clientId,
+    grant_types: [TOKEN_EXCHANGE_GRANT_TYPE],
+    response_types: [],
+    redirect_uris: [],
+    token_endpoint_auth_method: "private_key_jwt",
+    token_endpoint_auth_signing_alg: "ES256",
+    jwks: { keys: [{ ...(await exportJWK(keys.publicKey)), kid: `${clientId}-auth`, alg: "ES256" }] },
+  });
 
   as = await buildAuthorizationServer({
     issuer: ISSUER,
     allowHeadlessAdjudication: true,
-    chainAuthorityIssuers: [{ iss: CA, jwks: { keys: [caPub] } }],
+    // Further token-exchange clients, so a hop can be continued by an actor
+    // other than the one that obtained it.
+    testClients: [await exchangeClient("svc-b", svcKeys), await exchangeClient("svc-x", svcXKeys)],
+    // The AS-asserted actor profiles the delegation policies match: the
+    // ceiling's payments entries are delegable to ai_agent actors through
+    // depth 2 (config/policy.json), and svc-x is a class none names.
+    actorProfiles: { "ap-agent": "ai_agent", "svc-b": "ai_agent", "svc-x": "service" },
+    continuationAssertionIssuers: [
+      // Trusted for the root hops (this AS) and the child hops (RAS_AUD).
+      { iss: CAI, jwks: { keys: [caiPub] }, attestsFor: [ISSUER, RAS_AUD] },
+      { iss: CAI_OTHER, jwks: { keys: [otherCaiPub] }, attestsFor: [OTHER_RAS] },
+      // The accepting RAS itself, trusted for its own hops only.
+      { iss: RAS_AUD, jwks: { keys: [rasCaiPub] }, attestsFor: [] },
+    ],
     resourceToAs: RESOURCE_TO_AS,
     // Deterministic subjectResolver is the default (a stable digest over ISSUER).
   });
@@ -361,10 +428,12 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     const freshHandle = payload.identity_continuation_handle as string;
     expect(freshHandle).not.toBe(handle);
     expect(as.continuationStore.resolve(freshHandle)?.missionId).toBe(missionId);
+    // The child hop records the RAS audience its ID-JAG names (ICA -02 5.1.2).
+    expect(as.continuationStore.resolve(freshHandle)?.audience).toBe(RAS_AUD);
 
-    // Collapsed act: a single actor's continuation keeps a depth-1 lineage (no
-    // nested `act`). NB: on this path the current-actor check forces the ICA
-    // actor to equal the current actor, so this ALWAYS collapses (never extends).
+    // Collapsed act: the root hop's actor is this same client, so the lineage
+    // merges to a single entry (no nested `act`). A second actor nests; see
+    // "continuation onward act lineage".
     expect(payload.act).toEqual({ iss: ISSUER, sub: "ap-agent" });
     expect(payload.act).not.toHaveProperty("act");
 
@@ -488,6 +557,25 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_request");
     expect(body.error_description).toMatch(/lifetime/);
+  });
+
+  it("(a1) an ICA whose aud is an array -> invalid_request, even when it holds only the AS issuer (ICA -02 3.2)", async () => {
+    const { handle } = newLineage("apev-a1");
+    const res = await tokenExchange({ subjectToken: await mintICA(handle, { aud: [ISSUER] }) });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toMatch(/aud MUST be a single string/);
+  });
+
+  it("(a2) an ICA whose iat is beyond the clock skew in the future -> invalid_request (ICA -02 5.5.3 rule 6)", async () => {
+    const { handle } = newLineage("apev-a2");
+    const now = Math.floor(Date.now() / 1000);
+    const res = await tokenExchange({ subjectToken: await mintICA(handle, { iatSec: now + 120, expSec: now + 240 }) });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toMatch(/iat is in the future/);
   });
 
   it("(b0) consumption is atomic with issuance (#617 review 1): a redemption refused at the Mission gate leaves the ICA UNCONSUMED; the SAME assertion redeems once the gate reopens", async () => {
@@ -661,7 +749,7 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     const { missionId, handle } = newLineage("apev-c3");
     for (const act of [
       { iss: ISSUER, sub: "ap-agent-imposter" }, // another sub at the same issuer
-      { iss: CA, sub: "ap-agent" }, // the same sub at another actor identity authority
+      { iss: CAI, sub: "ap-agent" }, // the same sub at another actor identity authority
     ]) {
       const res = await tokenExchange({ subjectToken: await mintICA(handle, { act }) });
       const body = (await res.json()) as { error?: string; error_description?: string };
@@ -697,7 +785,7 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
   it("(e1) a terminal handle on a live Mission (its session ended) -> invalid_continuation", async () => {
     const { missionId } = newLineage("apev-e1");
     const anchorId = as.continuationStore.rootSessionAnchor({ missionId, sessionId: "sess-e1", authEnvelope: {} });
-    const handle = as.continuationStore.mint({ anchorId, missionId, actor: { iss: ISSUER, sub: "ap-agent" } });
+    const handle = as.continuationStore.mint({ anchorId, missionId, actor: { iss: ISSUER, sub: "ap-agent" }, audience: ISSUER });
     as.continuationStore.terminateSession("sess-e1");
     const res = await tokenExchange({ subjectToken: await mintICA(handle) });
     const body = (await res.json()) as { error?: string; error_description?: string };
@@ -780,6 +868,92 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     }
   });
 
+  it("(h) a requested authorization_details within the Mission's authority for the audience is issued as requested (ICA -02 5.5.3 rule 7)", async () => {
+    const { handle } = newLineage("apev-h");
+    const requested = [
+      {
+        type: "mission_resource_access",
+        resource: RESOURCE,
+        actions: ["payments:invoice.read"],
+        constraints: { max_amount: { amount: "100.00", currency: "USD" }, vendors: ["acme"] },
+      },
+    ];
+    const res = await tokenExchange({
+      subjectToken: await mintICA(handle),
+      extra: { authorization_details: JSON.stringify(requested) },
+    });
+    const body = (await res.json()) as { access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    const details = decodeJwt(body.access_token as string).authorization_details as Array<Record<string, unknown>>;
+    expect(details).toHaveLength(1);
+    expect(details[0]?.constraints).toEqual(requested[0]?.constraints);
+  });
+
+  it("(h1) without authorization_details, or with an empty array, the grant carries the whole audience-scoped set", async () => {
+    const { handle } = newLineage("apev-h1");
+    for (const extra of [{}, { authorization_details: "[]" }]) {
+      const res = await tokenExchange({ subjectToken: await mintICA(handle), extra });
+      const body = (await res.json()) as { access_token?: string };
+      expect(res.status, JSON.stringify(body)).toBe(200);
+      const details = decodeJwt(body.access_token as string).authorization_details as Array<Record<string, unknown>>;
+      expect(details).toHaveLength(1);
+      expect((details[0]?.constraints as { max_amount: { amount: string } }).max_amount.amount).toBe("500.00");
+    }
+  });
+
+  it("(h2) authorization_details beyond the Mission's authority, or of an unimplemented type -> invalid_authorization_details, with no hop and no derivation", async () => {
+    const { missionId, handle } = newLineage("apev-h2");
+    const hops = as.continuationStore.handlesForMission(missionId).length;
+    for (const [requested, reason] of [
+      [[{ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.pay"] }], /exceed/],
+      [
+        [
+          {
+            type: "mission_resource_access",
+            resource: RESOURCE,
+            actions: ["payments:invoice.read"],
+            constraints: { max_amount: { amount: "900.00", currency: "USD" }, vendors: ["acme"] },
+          },
+        ],
+        /exceed/,
+      ],
+      [[{ type: "payment_initiation", instructedAmount: { amount: "1.00", currency: "EUR" } }], /not implemented/],
+      [[{ type: "mission_resource_access", resource: RESOURCE }], /actions/],
+    ] as const) {
+      const res = await tokenExchange({
+        subjectToken: await mintICA(handle),
+        extra: { authorization_details: JSON.stringify(requested) },
+      });
+      const body = (await res.json()) as { error?: string; error_description?: string };
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_authorization_details");
+      expect(body.error_description).toMatch(reason);
+    }
+    expect(as.continuationStore.handlesForMission(missionId)).toHaveLength(hops);
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(0);
+  });
+
+  it("(h3) malformed or repeated authorization_details -> invalid_request (ICA -02 5.5.3 rule 1)", async () => {
+    const { handle } = newLineage("apev-h3");
+    for (const value of ["not json", '{"type":"mission_resource_access"}', '["read"]']) {
+      const res = await tokenExchange({ subjectToken: await mintICA(handle), extra: { authorization_details: value } });
+      const body = (await res.json()) as { error?: string };
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_request");
+    }
+    const res = await tokenExchange({
+      subjectToken: await mintICA(handle),
+      repeated: [
+        ["authorization_details", "[]"],
+        ["authorization_details", "[]"],
+      ],
+    });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toMatch(/authorization_details/);
+  });
+
   it("(g) revoking the Mission terminates its handles (onLifecycleCommit fan-out) -> invalid_continuation", async () => {
     const { missionId, handle } = newLineage("apev-g");
     const ica = await mintICA(handle);
@@ -791,6 +965,237 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     expect(body.error).toBe("invalid_continuation");
     // The STORE path (proves the fan-out wiring), distinct from the gate path.
     expect(body.error_description).toMatch(/terminal continuation handle/);
+  });
+});
+
+type Who = "A" | "B" | "X";
+
+/** Present a continuation of `handle` as A (ap-agent), B (svc-b) or X (svc-x). */
+async function exchangeAs(handle: string, who: Who, f: Omit<ExchangeFields, "subjectToken"> = {}): Promise<Response> {
+  if (who === "A") return tokenExchange({ ...f, subjectToken: await mintICA(handle) });
+  const clientId = who === "B" ? "svc-b" : "svc-x";
+  const [keys, dpopKeys, jkt] = who === "B" ? [svcKeys, svcDpopKeys, svcJkt] : [svcXKeys, svcXDpopKeys, svcXJkt];
+  const ica = await mintICA(handle, { act: { iss: ISSUER, sub: clientId }, cnfJkt: jkt });
+  return tokenExchange({ ...f, subjectToken: ica }, { issuer: ISSUER, clientKey: keys.privateKey, clientId, dpopKeys });
+}
+
+/**
+ * @spec id-continuation-assertion — the onward act lineage (ICA -02 5.5.5):
+ * derived from the presented hop's ancestry, never from the assertion.
+ */
+describe("continuation onward act lineage (@spec id-continuation-assertion)", () => {
+  const A = { iss: ISSUER, sub: "ap-agent" };
+  const B = { iss: ISSUER, sub: "svc-b" };
+
+  /** Continue `handle` as A (ap-agent) or B (svc-b); returns the onward act and the new hop. */
+  async function continueAs(handle: string, who: "A" | "B"): Promise<{ act: unknown; hop: string }> {
+    const res = await exchangeAs(handle, who);
+    const body = (await res.json()) as { access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    const claims = decodeJwt(body.access_token as string);
+    return { act: claims.act, hop: claims.identity_continuation_handle as string };
+  }
+
+  it("places the current actor atop the hop's recorded lineage from the Mission's client, merging consecutive equal actors", async () => {
+    const { handle: root } = newLineage("apev-l1");
+    const h1 = await continueAs(root, "A");
+    expect(h1.act).toEqual(A); // the root's actor is A: one entry
+    const h2 = await continueAs(h1.hop, "B");
+    expect(h2.act).toEqual({ ...B, act: A });
+    const h3 = await continueAs(h2.hop, "B");
+    expect(h3.act).toEqual({ ...B, act: A }); // B atop B merges
+    const h4 = await continueAs(h3.hop, "A");
+    expect(h4.act).toEqual({ ...A, act: { ...B, act: A } });
+  });
+
+  it("siblings do not contribute: after B continues the root, A's next continuation from the root is still A alone", async () => {
+    const { handle: root } = newLineage("apev-l2");
+    expect((await continueAs(root, "B")).act).toEqual({ ...B, act: A });
+    expect((await continueAs(root, "A")).act).toEqual(A);
+  });
+});
+
+/**
+ * @spec mission#delegation-constraints — per-entry delegation constraints on
+ * a continuation to another actor. The Mission delegation depth counts from
+ * the approved agent (ap-agent, the root actor): the merged lineage length
+ * minus one. Distinct from the ICA actor-lineage depth bound (ICA -02 6.3),
+ * which this deployment leaves unset.
+ */
+describe("continuation delegation constraints (@spec mission#delegation-constraints)", () => {
+  type Detail = { resource: string; delegation?: { max_depth: number } };
+  const granted = async (res: Response): Promise<{ details: Detail[]; hop: string }> => {
+    const body = (await res.json()) as { access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    const claims = decodeJwt(body.access_token as string);
+    return {
+      details: claims.authorization_details as Detail[],
+      hop: claims.identity_continuation_handle as string,
+    };
+  };
+  const refused = async (res: Response, error: string): Promise<string | undefined> => {
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe(error);
+    return body.error_description;
+  };
+  const sideEffects = (missionId: string) => ({
+    hops: as.continuationStore.handlesForMission(missionId).length,
+    derivations: as.kernel.get(missionId)?.derivation_count,
+  });
+
+  it("max_depth 2: A->B and A->B->A issue; A->B->A->B (Mission delegation depth 3) is invalid_target, with no hop and no derivation", async () => {
+    const { missionId, handle: root } = newLineage("apev-d1");
+    // The approved entry inherits the ceiling's delegation policy.
+    expect(as.kernel.get(missionId)?.authority_set[0]?.delegation?.max_depth).toBe(2);
+    const h1 = await granted(await exchangeAs(root, "A")); // {A}: depth 0
+    const h2 = await granted(await exchangeAs(h1.hop, "B")); // {B, act: A}: depth 1
+    const h3 = await granted(await exchangeAs(h2.hop, "A")); // {A, act: {B, act: A}}: depth 2
+    expect(h3.details.map((d) => d.resource)).toEqual([RESOURCE]);
+    const before = sideEffects(missionId);
+    const reason = await refused(await exchangeAs(h3.hop, "B"), "invalid_target");
+    expect(reason).toMatch(/Mission delegation depth 3/);
+    expect(sideEffects(missionId)).toEqual(before);
+  });
+
+  it("A->B narrows out a non-delegable entry and keeps the delegable one, its delegation policy intact", async () => {
+    const { handle: root } = newLineage("apev-d2", {}, MISSION_EXP, {}, [READ_C]);
+    const { details } = await granted(await exchangeAs(root, "B"));
+    expect(details.map((d) => d.resource)).toEqual([RESOURCE]);
+    expect(details[0]?.delegation?.max_depth).toBe(2);
+  });
+
+  it("a same-actor continuation (Mission delegation depth 0) is not narrowed", async () => {
+    const { handle: root } = newLineage("apev-d3", {}, MISSION_EXP, {}, [READ_C]);
+    const h1 = await granted(await exchangeAs(root, "A"));
+    const h2 = await granted(await exchangeAs(h1.hop, "A"));
+    for (const { details } of [h1, h2]) {
+      expect(details.map((d) => d.resource).sort()).toEqual([RESOURCE, RESOURCE_C].sort());
+    }
+  });
+
+  it("a delegate allowed_delegates does not name narrows the entry out: invalid_target, with no hop and no derivation", async () => {
+    const { missionId, handle: root } = newLineage("apev-d4");
+    const before = sideEffects(missionId);
+    const reason = await refused(await exchangeAs(root, "X"), "invalid_target");
+    expect(reason).toMatch(/Mission delegation depth 1/);
+    expect(sideEffects(missionId)).toEqual(before);
+  });
+
+  it("a narrowed-out entry cannot be requested: by authorization_details (invalid_authorization_details) or by resource (invalid_target), with no hop and no derivation", async () => {
+    const { missionId, handle: root } = newLineage("apev-d5", {}, MISSION_EXP, {}, [READ_C]);
+    // The approved entry, as derived (it takes the ceiling's vendors constraint).
+    const requestC = JSON.stringify([{ ...READ_C, constraints: { vendors: ["acme"] } }]);
+    const before = sideEffects(missionId);
+    await refused(
+      await exchangeAs(root, "B", { extra: { authorization_details: requestC } }),
+      "invalid_authorization_details",
+    );
+    await refused(await exchangeAs(root, "B", { resource: RESOURCE_C }), "invalid_target");
+    expect(sideEffects(missionId)).toEqual(before);
+    // The same requests at depth 0 issue.
+    await granted(await exchangeAs(root, "A", { extra: { authorization_details: requestC } }));
+    await granted(await exchangeAs(root, "A", { resource: RESOURCE_C }));
+  });
+});
+
+/**
+ * @spec id-continuation-assertion — issuer trust is scoped per RAS (ICA -02
+ * 5.5.3 rule 3, 7.3): an assertion's issuer must be the referenced hop's
+ * accepting RAS, or an issuer trusted to attest that RAS's hops, read against
+ * the audience recorded for the hop.
+ */
+describe("continuation issuer trust per RAS (@spec id-continuation-assertion)", () => {
+  const otherCai = (): Signer => ({ iss: CAI_OTHER, kid: "other-cai-key", key: otherCaiKeys.privateKey });
+  const rasCai = (): Signer => ({ iss: RAS_AUD, kid: "ras-cai-key", key: rasCaiKeys.privateKey });
+
+  it("an issuer trusted only for another RAS cannot attest this hop: invalid_request, with no hop recorded and no derivation counted", async () => {
+    const { missionId, handle } = newLineage("apev-i1");
+    const hops = as.continuationStore.handlesForMission(missionId).length;
+    const res = await tokenExchange({ subjectToken: await mintICA(handle, { signer: otherCai() }) });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toMatch(/not trusted for this hop's RAS/);
+    expect(as.continuationStore.handlesForMission(missionId)).toHaveLength(hops);
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(0);
+  });
+
+  it("the same issuer attests a hop whose recorded RAS it is trusted for", async () => {
+    const { missionId, handle } = newLineage("apev-i2");
+    const anchorId = as.continuationStore.resolve(handle)?.anchor.anchorId as string;
+    const otherHop = as.continuationStore.mint({
+      anchorId,
+      missionId,
+      actor: { iss: ISSUER, sub: "ap-agent" },
+      priorHandle: handle,
+      audience: OTHER_RAS,
+    });
+    const res = await tokenExchange({ subjectToken: await mintICA(otherHop, { signer: otherCai() }) });
+    expect(res.status, await res.clone().text()).toBe(200);
+  });
+
+  it("the accepting RAS attests its own hop without being listed, and no other RAS's hop", async () => {
+    const { handle } = newLineage("apev-i3");
+    // A first continuation to RAS_AUD records a child hop whose audience is RAS_AUD.
+    const first = await tokenExchange({ subjectToken: await mintICA(handle) });
+    const firstBody = (await first.json()) as { access_token?: string };
+    expect(first.status, JSON.stringify(firstBody)).toBe(200);
+    const childHop = decodeJwt(firstBody.access_token as string).identity_continuation_handle as string;
+    const own = await tokenExchange({ subjectToken: await mintICA(childHop, { signer: rasCai() }) });
+    expect(own.status, await own.clone().text()).toBe(200);
+    // The root hop's RAS is this AS, so RAS_AUD cannot attest it.
+    const root = await tokenExchange({ subjectToken: await mintICA(handle, { signer: rasCai() }) });
+    const rootBody = (await root.json()) as { error?: string; error_description?: string };
+    expect(root.status, JSON.stringify(rootBody)).toBe(400);
+    expect(rootBody.error).toBe("invalid_request");
+    expect(rootBody.error_description).toMatch(/not trusted for this hop's RAS/);
+  });
+});
+
+/**
+ * @spec id-continuation-assertion — the default trust configuration: with no
+ * issuers injected, the AS trusts itself only under its continuation-purpose
+ * as-continuation key, not every key on its jwks_uri (ICA -02 7.3).
+ */
+describe("continuation default issuer trust (@spec id-continuation-assertion)", () => {
+  const PORT3 = 14478;
+  const ISSUER3 = `http://localhost:${PORT3}`;
+  let as3: BuiltAs;
+  let server3: Server;
+  let target3: Target;
+  let tokenKey: CryptoKey;
+
+  beforeAll(async () => {
+    const { alg } = TOPOLOGY.keys.asToken;
+    const tokenKeys = await generateKeyPair(alg, { extractable: true });
+    tokenKey = tokenKeys.privateKey;
+    as3 = await buildAuthorizationServer({
+      issuer: ISSUER3,
+      allowHeadlessAdjudication: true,
+      // A test-held AS token key, so the test can sign with a key on jwks_uri.
+      testTokenSigningJwk: await exportJWK(tokenKeys.privateKey),
+      resourceToAs: (r: string) => (r === RESOURCE ? RAS_AUD : ISSUER3),
+    });
+    server3 = as3.provider.listen(PORT3);
+    target3 = { issuer: ISSUER3, clientKey: (await importJWK(as3.agentClientJwk as never, "ES256")) as CryptoKey };
+  });
+
+  afterAll(() => {
+    server3?.close();
+  });
+
+  it("an ICA signed by the AS token key is refused: the default trusts only the as-continuation key", async () => {
+    const { handle } = approveLineage("apev-default-trust", as3);
+    const signer: Signer = { iss: ISSUER3, kid: TOPOLOGY.keys.asToken.kid, key: tokenKey, alg: TOPOLOGY.keys.asToken.alg };
+    const res = await tokenExchange(
+      { subjectToken: await mintICA(handle, { signer, aud: ISSUER3, act: { iss: ISSUER3, sub: "ap-agent" } }) },
+      target3,
+    );
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toMatch(/verification failed/);
   });
 });
 
@@ -810,6 +1215,16 @@ describe("continuation error precedence (@spec id-continuation-assertion)", () =
     expect(res.status, JSON.stringify(body)).toBe(400);
     return body.error;
   };
+
+  it("issuer trust for the hop's RAS precedes key proof and chain state: an issuer not trusted for a terminal hop's RAS is invalid_request", async () => {
+    const { missionId, handle } = newLineage("apev-p0");
+    as.kernel.transition(missionId, "revoke");
+    const foreign = await mintICA(handle, { signer: { iss: CAI_OTHER, kid: "other-cai-key", key: otherCaiKeys.privateKey } });
+    expect(await errorOf(await tokenExchange({ subjectToken: foreign }))).toBe("invalid_request");
+    expect(await errorOf(await tokenExchange({ subjectToken: foreign, noDpop: true }))).toBe("invalid_request");
+    // The trusted issuer reaches the chain-state code.
+    expect(await errorOf(await tokenExchange({ subjectToken: await mintICA(handle) }))).toBe("invalid_continuation");
+  });
 
   it("a malformed assertion precedes a missing DPoP proof and a requested scope: invalid_request", async () => {
     const { handle } = newLineage("apev-p1");
@@ -858,6 +1273,42 @@ describe("continuation error precedence (@spec id-continuation-assertion)", () =
     expect(await errorOf(unserved)).toBe("invalid_grant");
     const scoped = await tokenExchange({ subjectToken: await mintICA(handle), extra: { scope: "payments.read" } });
     expect(await errorOf(scoped)).toBe("invalid_grant");
+  });
+
+  it("chain state precedes freshness: an expired assertion over a terminal hop is invalid_continuation", async () => {
+    const { missionId, handle } = newLineage("apev-p8");
+    const now = Math.floor(Date.now() / 1000);
+    const expired = await mintICA(handle, { iatSec: now - 200, expSec: now - 100 });
+    // On a live chain the same assertion fails freshness.
+    expect(await errorOf(await tokenExchange({ subjectToken: expired }))).toBe("invalid_request");
+    as.kernel.transition(missionId, "revoke");
+    expect(await errorOf(await tokenExchange({ subjectToken: expired }))).toBe("invalid_continuation");
+  });
+
+  it("a limit precedes freshness: an assertion past the lifetime cap over a spent derivation cap is invalid_grant", async () => {
+    const { handle } = newLineage("apev-p9", {}, MISSION_EXP, { requested_derivation_limit: 1 });
+    const first = await tokenExchange({ subjectToken: await mintICA(handle) });
+    expect(first.status, await first.clone().text()).toBe(200);
+    const now = Math.floor(Date.now() / 1000);
+    const tooLong = await mintICA(handle, { iatSec: now, expSec: now + 301 });
+    expect(await errorOf(await tokenExchange({ subjectToken: tooLong }))).toBe("invalid_grant");
+  });
+
+  it("freshness precedes authorization: an expired assertion over a suspended Mission is invalid_request", async () => {
+    const { missionId, handle } = newLineage("apev-p10");
+    as.kernel.transition(missionId, "suspend");
+    const now = Math.floor(Date.now() / 1000);
+    const expired = await mintICA(handle, { iatSec: now - 200, expSec: now - 100 });
+    expect(await errorOf(await tokenExchange({ subjectToken: expired }))).toBe("invalid_request");
+  });
+
+  it("a limit precedes authorization_details: an excess authorization detail over a spent derivation cap is invalid_grant", async () => {
+    const { handle } = newLineage("apev-p11", {}, MISSION_EXP, { requested_derivation_limit: 1 });
+    const first = await tokenExchange({ subjectToken: await mintICA(handle) });
+    expect(first.status, await first.clone().text()).toBe(200);
+    const excess = JSON.stringify([{ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.pay"] }]);
+    const res = await tokenExchange({ subjectToken: await mintICA(handle), extra: { authorization_details: excess } });
+    expect(await errorOf(res)).toBe("invalid_grant");
   });
 
   it("replay precedes authorization: a consumed assertion over a suspended Mission is invalid_request", async () => {
@@ -910,6 +1361,8 @@ describe("continuation lifecycle invariants (@spec id-continuation-assertion)", 
     const resolved = as.continuationStore.resolve(handle);
     expect(resolved?.missionId).toBe(missionId);
     expect(resolved?.anchor.anchorType).toBe("grant");
+    // No root ID-JAG carries this hop: its recorded RAS audience is the AS.
+    expect(resolved?.audience).toBe(ISSUER);
     expect(resolved?.authEnvelope.acr).toBeUndefined();
     expect(resolved?.authEnvelope.authTime).toBeGreaterThanOrEqual(approxNow - 5);
     expect(resolved?.authEnvelope.authTime).toBeLessThanOrEqual(approxNow + 5);
@@ -1011,6 +1464,7 @@ describe("continuation lifecycle invariants (@spec id-continuation-assertion)", 
       missionId,
       actor: { iss: ISSUER, sub: "ap-agent" },
       cnfJkt: agentJkt,
+      audience: ISSUER,
     });
     expect(as.continuationStore.resolve(sessionHandle)?.anchor.anchorType).toBe("session");
 
@@ -1047,11 +1501,11 @@ describe("continuation hop-count limit (@spec id-continuation-assertion)", () =>
   let target2: Target;
 
   beforeAll(async () => {
-    const caPub = { ...(await exportJWK(caKeys.publicKey)), kid: "ca-key", alg: "ES256", use: "sig" };
+    const caiPub = { ...(await exportJWK(caiKeys.publicKey)), kid: "cai-key", alg: "ES256", use: "sig" };
     as2 = await buildAuthorizationServer({
       issuer: ISSUER2,
       allowHeadlessAdjudication: true,
-      chainAuthorityIssuers: [{ iss: CA, jwks: { keys: [caPub] } }],
+      continuationAssertionIssuers: [{ iss: CAI, jwks: { keys: [caiPub] }, attestsFor: [ISSUER2, RAS_AUD] }],
       resourceToAs: (r: string) => (r === RESOURCE ? RAS_AUD : ISSUER2),
       continuationHopLimit: 2,
     });
@@ -1080,7 +1534,7 @@ describe("continuation hop-count limit (@spec id-continuation-assertion)", () =>
 
     // The limit is per chain: a second anchor of the same Mission continues.
     const anchorId = as2.continuationStore.rootGrantAnchor({ missionId, authEnvelope: {} });
-    const other = as2.continuationStore.mint({ anchorId, missionId, actor: ACT2 });
+    const other = as2.continuationStore.mint({ anchorId, missionId, actor: ACT2, audience: ISSUER2 });
     const ok = await tokenExchange({ subjectToken: await mintICA(other, { aud: ISSUER2, act: ACT2 }) }, target2);
     expect(ok.status, await ok.clone().text()).toBe(200);
   });
