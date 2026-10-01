@@ -97,8 +97,10 @@ export const REFRESH_TOKEN_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:refres
 
 /**
  * The (iss, jti) replay cache shape (from `newReplayCache()`). `seen` is the
- * early CHECK; `recordOnce` is the atomic consume, called at issuance commit
- * (@spec issuance-grant#effective-set-projection, #617 review 1).
+ * early CHECK; `recordOnce` is the atomic first-writer reservation, taken once
+ * validation and the Mission gate succeed and before the grant is signed
+ * (@spec issuance-grant#effective-set-projection, #617 review 1;
+ * @spec id-continuation-assertion, ICA -02 5.5.7).
  */
 export type ContinuationReplay = {
   seen: (iss: string, jti: string) => boolean;
@@ -350,10 +352,10 @@ export async function handleTokenExchangeGrant(
 
   // Step 4: validate the ICA. `audience` is the AS issuer identifier (NOT /token).
   // The validator CHECKS the (iss, jti) is unseen and records nothing
-  // (continuation-assertion.ts step 9); consumption is atomic with issuance at
-  // step 11 below (@spec issuance-grant#effective-set-projection, #617 review
-  // 1), so a request that fails a LATER step leaves the ICA unconsumed and
-  // retryable. Every typed validator error maps to invalid_request with its
+  // (continuation-assertion.ts step 9); the reservation is taken in beforeSign
+  // below, once the Mission gate admits (@spec
+  // issuance-grant#effective-set-projection, #617 review 1), so a request that
+  // fails a LATER step leaves the ICA unconsumed and retryable. Every typed validator error maps to invalid_request with its
   // specific message preserved (invalid_request, unlike invalid_grant, is not
   // re-rendered), so exp>300 / forbidden-claim / replay / presenter-key reasons
   // stay visible.
@@ -458,10 +460,21 @@ export async function handleTokenExchangeGrant(
       identityContinuationHandle: freshHandle,
       act: collapsedAct,
       authEnvelope,
-      // The child hop, bound to the SAME anchor/Mission, linked to the prior.
+      // Everything validation and the gate admitted: reserve the ICA, then
+      // record the child hop (bound to the SAME anchor/Mission, linked to the
+      // prior). @spec id-continuation-assertion — the (iss, jti) reservation
+      // is the atomic first-writer decision "once validation succeeds and
+      // before it issues the grant", so a refused request creates none, and a
+      // concurrent or repeated presentation of a reserved assertion is
+      // invalid_request (ICA -02 5.5.6, 5.5.7). The Mission's counted
+      // derivation is spent if the reservation is lost here, which only a
+      // presentation racing past `seen` can reach.
       beforeSign: () => {
         if (hopLimitReached()) {
           throw new ContinuationRefusal("invalid_grant", "continuation hop-count limit reached");
+        }
+        if (!replay.recordOnce(ica.iss, ica.jti)) {
+          throw new ContinuationRefusal("invalid_request", "continuation assertion replay");
         }
         store.mint({
           handle: freshHandle,
@@ -491,19 +504,6 @@ export async function handleTokenExchangeGrant(
       return;
     }
     throw e;
-  }
-
-  // Step 11 (ordered BEFORE the response is written): CONSUME the ICA,
-  // atomically with the issuance that just succeeded (@spec
-  // issuance-grant#effective-set-projection, #617 review 1). recordOnce is the
-  // concurrency funnel: two simultaneous redemptions of one ICA both pass the
-  // step-4 check, both may reach here, and the loser is a replay. The ID-JAG it
-  // minted is discarded with the refusal (the Mission's derivation count is
-  // spent, the conservative direction: a client that sees invalid_grant never
-  // holds the credential).
-  if (!replay.recordOnce(ica.iss, ica.jti)) {
-    txError(ctx, 400, "invalid_grant", "continuation assertion replay");
-    return;
   }
 
   // Step 10: RFC 8693 §2.2.1 response (token_type N_A; the ID-JAG is not a bearer

@@ -220,8 +220,8 @@ export async function validateContinuationAssertion(
   //
   // @spec issuance-grant#effective-set-projection (#617 review 1) —
   // "consumption is atomic with issuance". Validation checks the `jti` is
-  // unseen; RECORDING belongs to the caller, atomically with successful
-  // issuance ({@link ReplayCache.recordOnce}, continuation-grant.ts step 11).
+  // unseen; RECORDING belongs to the caller, once the Mission gate admits and
+  // before the grant is signed (`recordOnce` in continuation-grant.ts).
   // Recording here (the prior behavior) consumed a single-use assertion on
   // EVERY later failure, including a transient authority-source outage and a
   // Mission gate refusal that a retry would pass, permanently burning a

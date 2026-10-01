@@ -72,7 +72,8 @@ export interface IssueGrantInput {
    * @spec id-continuation-assertion — runs once the derivation gate, the count
    * and the audience projection have admitted the grant, and before it is
    * signed. A throw aborts issuance: nothing is signed. The continuation
-   * exchange records its child hop here, so a refused request leaves none.
+   * exchange reserves its assertion and records its child hop here, so a
+   * refused request leaves neither.
    */
   beforeSign?: () => void;
   /**

@@ -584,6 +584,25 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     expect(body.error_description).toMatch(/replay/);
   });
 
+  it("(b6) concurrent presentations of one ICA: exactly one is issued, every other is invalid_request, and only one derivation and one hop are spent (ICA -02 5.5.7)", async () => {
+    const { missionId, handle } = newLineage("apev-b6");
+    const ica = await mintICA(handle);
+    const hopsBefore = as.continuationStore.handlesForMission(missionId).length;
+    const results = await Promise.all(
+      Array.from({ length: 5 }, async () => {
+        const res = await tokenExchange({ subjectToken: ica });
+        return { status: res.status, body: (await res.json()) as { error?: string } };
+      }),
+    );
+    expect(results.filter((r) => r.status === 200), JSON.stringify(results)).toHaveLength(1);
+    for (const r of results.filter((r) => r.status !== 200)) {
+      expect(r.status, JSON.stringify(r.body)).toBe(400);
+      expect(r.body.error).toBe("invalid_request");
+    }
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(1);
+    expect(as.continuationStore.handlesForMission(missionId)).toHaveLength(hopsBefore + 1);
+  });
+
   it("(c) a request carrying actor_token -> invalid_request (ICA -02 5.5.1: the actor is the authenticated client)", async () => {
     const { missionId, handle } = newLineage("apev-c");
     const res = await tokenExchange({
