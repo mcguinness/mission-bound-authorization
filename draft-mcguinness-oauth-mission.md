@@ -218,6 +218,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-approved-set-verification:
+    title: "Mission Approved-Set Verification for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approved-set-verification.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-consent-evidence:
     title: "Mission Consent Evidence for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html
@@ -368,10 +376,11 @@ The result is that a user approves a task once, and that approval,
 not a per-request scope grant, bounds and outlives every token the
 agent derives. The consented authority is committed once, as
 `authority_hash`, on the Mission Record; a party holding the full
-Authority Set can independently verify it, and a deployment that
-needs that verification from a token holding only a narrowed subset
-adopts the Local Approved-Set Verification capability
-({{local-approved-set-verification}}, {{consent-binding}}).
+Authority Set can independently verify it ({{consent-binding}}).
+Mission Approved-Set Verification
+({{I-D.draft-mcguinness-oauth-mission-approved-set-verification}})
+defines that independent check for a token that carries only a
+narrowed subset.
 
 This chain is the first of two enforcement layers, and a deployment
 can run it alone: a Resource Server need not be Mission-aware unless
@@ -410,8 +419,7 @@ requirements that realize them:
 {{conformance}} is the complete statement of roles and optional
 capabilities. The starting path is one client, one Authorization
 Server, direct approval, and a single resource audience. It needs no
-runtime profile, delegated token, cross-domain projection, or local
-approved-set verification.
+runtime profile, delegated token, or cross-domain projection.
 
 | Implementer | Responsibility on the starting path | Defining sections |
 | --- | --- | --- |
@@ -432,10 +440,9 @@ authority proposal, presented or required submission evidence
 {{I-D.draft-mcguinness-oauth-mission-submission-evidence}}), or
 opaque tokens (which require introspection). The optional
 capabilities (Delegation, Introspection as a state overlay for JWTs,
-Cross-Domain projection, and Local Approved-Set Verification) are
-adopted explicitly under {{conformance}}. Ordinary JWT consumption
-does not require retrieving the Mission Record or recomputing the
-complete approved Authority Set.
+and Cross-Domain projection) are adopted explicitly under
+{{conformance}}. Ordinary JWT consumption does not require retrieving
+the Mission Record or recomputing the complete approved Authority Set.
 
 ## Applicability {#applicability}
 
@@ -2826,9 +2833,7 @@ Authority Set, which such a Resource Server does not hold
 ({{rs-enforcement}}); `approval_basis.type` is provenance, not
 authority ({{mission-record}}). An authorized introspection caller
 can receive `authority_hash` and `approval_basis.type`
-({{caller-authorization-and-minimization}}), and a deployment needing
-local verification of the approved set adopts the Local Approved-Set
-Verification profile ({{local-approved-set-verification}}).
+({{caller-authorization-and-minimization}}).
 
 The `mission` claim is an open object ({{extensibility}}): additional
 members MAY appear alongside the members above. This document defines no
@@ -2927,10 +2932,8 @@ A Resource Server can also impose stronger actor-chain requirements
 on a token that carries an `act` chain (for example, requiring and
 recording the chain); log the `mission` claim's `id` and the token
 `jti` with each served request, so its access logs join to Mission
-evidence; adopt the Local Approved-Set Verification profile
-({{local-approved-set-verification}}); or, where the AS offers it,
-introspect the token ({{introspection}}) to observe Mission state per
-request.
+evidence; or, where the AS offers it, introspect the token
+({{introspection}}) to observe Mission state per request.
 
 A deployment MUST NOT route a delegated Mission-bound token to a
 Mission-unaware Resource Server, or to logging or audit
@@ -2967,10 +2970,11 @@ introspection's disclosure privilege,
 that carries its own copy), it is an audit correlator, not an
 enforcement input, and not a cryptographic proof that the carried
 entries are a subset of the approved set. That subset relationship is
-an assertion by the AS, authenticated by the token signature. A
-Resource Server that needs more than that assertion adopts the Local
-Approved-Set Verification profile
-({{local-approved-set-verification}}).
+an assertion by the AS, authenticated by the token signature. Mission
+Approved-Set Verification
+({{I-D.draft-mcguinness-oauth-mission-approved-set-verification}})
+defines an independent check for a Resource Server that needs more
+than that assertion.
 
 A Resource Server denial falls into one of four cases, each using the
 OAuth challenge for its own failure class ({{error-mapping}} gives
@@ -3598,122 +3602,6 @@ a further hop can be evaluated: a depth-3 delegate, or a
 non-`ai_agent` one, would narrow it out too. The `mission` claim is
 unchanged.
 
-# Local Approved-Set Verification {#local-approved-set-verification}
-
-This optional capability lets a verifying party check a token's carried
-authority against the Mission's complete approved Authority Set,
-rather than relying on the token signature and the AS's subset
-assertion alone ({{rs-enforcement}}). A deployment adopts it when a
-Resource Server, a policy decision point, or an auditor needs that
-independent check.
-
-For example, take the two-entry Authority Set of the test vectors
-({{test-vectors}}) and a single-audience token that carries one
-narrowed entry: `journal-entries.write`, with the approved
-`max_amount` of `500.00` USD tightened to `250.00`. A party outside
-this profile verifies the token signature and `cnf`, checks `aud`,
-and enforces the carried entry ({{rs-enforcement}}), but cannot
-recompute `authority_hash`: hashing the carried entry digests a
-one-entry array the anchor never committed, and the tightened entry
-is a semantic narrowing, not a byte-level member, of the approved
-set. Whether `250.00` sits within the approved ceiling is the subset
-test ({{subset}}), which needs the approved entry to compare against.
-
-A party claiming this profile holds or retrieves the full Authority
-Set, recomputes the commitment over it, matches the result against
-the Mission's independently obtained `authority_hash`, and verifies
-the carried entry as a subset of the approved `journal-entries.write`
-entry.
-
-An implementation claims this capability ({{conformance}}) through
-authenticated complete-set retrieval ({{lasv-retrieval}}), at one of
-the two tiers defined there. A typed selective-inclusion proof is a
-future composition point ({{lasv-proof-future}}), not an alternative
-a conforming implementation can claim.
-
-## Authenticated Complete-Set Retrieval {#lasv-retrieval}
-
-The verifying party retrieves the complete Authority Set, and the
-`authority_hash` it expects to match, over a channel authenticated to
-the Mission `issuer`, never from an unauthenticated or self-reported
-source, and:
-
-- MUST recompute the commitment over the retrieved set
-  ({{integrity-anchors}}) and reject on mismatch, rather than trust
-  the retrieval channel alone;
-- MUST verify each carried `authorization_details` entry is a subset
-  ({{subset}}) of an entry in the retrieved set; and
-- MUST fail closed: a retrieval failure, an unauthenticated response,
-  a commitment mismatch, or a subset-test failure refuses the request
-  under {{rs-enforcement}}, never falls back to trusting the token
-  signature alone as if this profile were not claimed.
-
-That much is **Tier 1**. Because the same `issuer` supplies both the
-retrieved set and the `authority_hash` it is checked against, Tier 1
-does not by itself establish that the retrieved set is the one the
-Approver consented to: an issuer that returns a substituted set with
-a digest recomputed to match passes it undetected. Tier 1 defends
-against a projection bug, a stale or corrupted materialization, or a
-compromised link between the record store and the retrieval endpoint,
-not against an issuer dishonest at retrieval time or a signing key
-compromised after approval ({{consent-binding}}).
-
-**Tier 2** adds that defense: the verifying party additionally holds
-an expected `authority_hash` obtained from a source independent of
-the Tier 1 retrieval channel, never re-derived from the same call
-being verified, and MUST reject unless the retrieved (and
-recomputed-matching) value also equals that independently held one.
-This independent pinning is what defends against post-approval
-substitution ({{consent-binding}}). A deployment claiming Tier 2
-declares:
-
-- a **retention point**: which party retains the expected
-  `authority_hash` and where, independent of the retrieval channel
-  (for example, a Resource Server's own durable copy of the value
-  disclosed to it under the `authority_hash` disclosure privilege
-  ({{caller-authorization-and-minimization}}) when it first received
-  the Mission's tokens);
-- a **trust basis**: how the retaining party authenticated that value
-  when it captured it, which is the same issuer-authenticated channel
-  any disclosure under this document requires, never an
-  unauthenticated or self-reported source; and
-- a **retention rule**: how long the retained value is held and
-  when, if ever, it is replaced, always from a source that meets the
-  independence rule above.
-
-A conforming implementation claims Tier 1 alone or Tier 1 with
-Tier 2 and states which ({{conformance}}): a "verified" result means
-different things under each.
-
-The approved Authority Set and its `authority_hash` are immutable for
-the Mission's life ({{mission-record}}). Once retrieved and verified
-under the tier(s) claimed, they can be retained for as long as the
-verifying party relies on the Mission; this profile imposes no
-re-retrieval requirement of its own. Re-retrieving the immutable set
-is not a freshness signal for the Mission's current state or its
-effective (containment-filtered) authority; a verifying party that
-needs those observes them from a state surface, such as
-introspection ({{introspection}}).
-
-This document does not mandate a specific retrieval endpoint or
-transport; a deployment provisions a discoverable one. The retrieval
-surface MUST refuse a caller that does not hold the disclosure
-privilege ({{caller-authorization-and-minimization}}) for every
-audience the Mission has issued to, because a complete-set response
-discloses every audience's entries, while introspection minimizes its
-response to one audience at a time.
-
-Mission Status ({{I-D.draft-mcguinness-oauth-mission-status}}) is not
-a compatible retrieval surface for this profile. Its authenticated,
-`mission_id`-keyed lookup returns only the requesting audience's own
-entries and, once containment has applied, the Mission's current
-effective set rather than its complete immutable approved set.
-Recomputing `authority_hash` over a Status response therefore fails
-by construction for any multi-audience Mission, and fails after any
-containment or discharge even for a single-audience one. A deployment
-claiming this profile provisions a retrieval surface distinct from
-Status, meeting the disclosure rule above.
-
 # Extensibility {#extensibility}
 
 This document is a base layer that other agent-authorization work is
@@ -3882,12 +3770,7 @@ and `grant_types_supported` containing
 for the companion's cross-domain grant issuance. Absent such a signal,
 a capability is discovered out of band or by attempt: a Token
 Exchange, a cross-domain grant issuance, or an introspection request
-fails if the issuer does not support it. Local Approved-Set
-Verification is a capability of a Resource Server or policy decision
-point, not of the Authorization Server, and has no OAuth metadata
-signal: its activation, tier, and retrieval surface are established
-out of band between the claiming party and the Mission Issuer
-({{lasv-retrieval}}).
+fails if the issuer does not support it.
 
 This member and the `mission_bound_authorization_required` member of
 {{protected-resource-metadata}} are discovery data whose integrity
@@ -3961,7 +3844,7 @@ A **Mission Client** implements the client surfaces:
   reference, not a credential.
 
 Beyond these mandatory roles, an implementation can additionally claim
-four OPTIONAL capabilities. Each is independent, and an implementation
+three OPTIONAL capabilities. Each is independent, and an implementation
 that supports none of them is still conformant:
 
 - **Delegation** ({{delegation}}): issuing and consuming derived tokens
@@ -3988,14 +3871,13 @@ that supports none of them is still conformant:
   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) specifies the
   interoperable mechanism that satisfies it, and implementations that
   interoperate across the hop implement that companion.
-- **Local Approved-Set Verification**
-  ({{local-approved-set-verification}}): a Mission-aware Resource
-  Server or policy decision point independently recomputing and
-  subset-checking a Mission's complete approved Authority Set. An
-  implementation claiming this capability states which tier it
-  supports, Tier 1 alone or Tier 1 with Tier 2, and fails closed as
-  {{lasv-retrieval}} requires. {{discovery}} describes how it is
-  activated.
+
+Mission Approved-Set Verification
+({{I-D.draft-mcguinness-oauth-mission-approved-set-verification}})
+defines an independent check, by a Resource Server or policy decision
+point, that a token's carried authority is a subset of the complete
+approved Authority Set; conformance to this document does not
+require it.
 
 A conforming implementation names the optional capabilities it supports
 (for example, "Mission Issuer with Delegation and Cross-Domain"); each
@@ -4052,29 +3934,23 @@ consent, and re-renders and re-consents if that set changes.
 
 `authority_hash` commits the full Authority Set, while a derived token
 can carry a narrowed subset, so a Resource Server cannot in general
-recompute it from the token alone. A Resource Server outside the Local
-Approved-Set Verification profile relies on the signed token as the AS's
+recompute it from the token alone. A Resource Server that does not
+verify against the complete set relies on the signed token as the AS's
 assertion that the carried authority was correctly projected from the
 approved set ({{rs-enforcement}}); `authority_hash` by itself supplies
 no subset proof.
 
 A deployment that needs assurance independent of the token signature
-adopts that profile ({{local-approved-set-verification}}), which defines
-the retrieval, its authorization gate, and the fail-closed rules
-({{lasv-retrieval}}), and the properties a future selective-inclusion
-proof would need ({{lasv-proof-future}}).
-
-What such verification provides depends on when the issuer is
-compromised. Tier 1 retrieval issued under the same trust root as the
-token adds nothing against an issuer malicious at approval time: that
-issuer can approve and commit arbitrary authority, and no containment
+verifies the carried authority against the complete approved set. What
+that verification provides depends on when the issuer is compromised.
+Retrieval of the complete set under the same trust root as the token
+adds nothing against an issuer malicious at approval time: that issuer
+can approve and commit arbitrary authority, and no containment
 mechanism changes that. The same checks do defend against projection
 implementation errors, against corruption of the record after an
 independently anchored approval commitment, and against post-approval
 signing-key compromise where the original commitment is pinned outside
-the issuer under Tier 2. The pinning makes that difference;
-{{lasv-retrieval}} lists the retention point, trust basis, and retention
-rule a deployment declares to obtain it.
+the issuer. The pinning makes that difference.
 
 `intent_hash` extends the same protection to the task itself: it commits
 the approved Mission Intent, so an auditor can detect any later
@@ -5278,37 +5154,6 @@ chain a consumer needs to process, a Mission-unaware Resource Server
 cannot opt into that processing, and routing a delegated token to one
 is therefore forbidden.
 
-## Selective-Inclusion Proofs {#lasv-proof-future}
-
-Rather than retrieving the complete set, a future profile could
-define a proof type under which the verifying party holds, per
-carried entry, a proof that the entry's unnarrowed approved parent
-entry is included in the Mission's committed Authority Set. The
-verifying party then applies the type-owned subset test ({{subset}})
-with that disclosed parent entry as the approved entry and the
-carried, possibly narrowed, entry as the candidate. The proof cannot
-be of the carried entry itself, since a narrowed entry was never
-itself an array member that `authority_hash` committed.
-
-A concrete proof type would need to:
-
-1. cover every carried entry, not only one;
-2. authenticate its own proof root as the Mission's approval-time
-   commitment, under a collision-resistant `typ` distinct from that
-   of `authority_hash` ({{integrity-anchors}});
-3. define the verifier's processing, so that a party lacking the
-   proof type's software cannot misread it as a plain digest;
-4. reject an unrecognized proof `typ` rather than skip verification;
-   and
-5. define no downgrade path back to bare digest equality.
-
-The second property is the open problem. The flat `authority_hash`
-digests a single array and authenticates nothing about a differently
-structured proof root (a Merkle root or an accumulator, for example),
-so a concrete proof type needs its own construction binding that root
-to the Mission, such as the Mission Issuer signing or committing to
-it alongside `authority_hash` at the approval event.
-
 # Role Mapping {#role-mapping}
 
 `approval_basis` separates three questions about a Mission's own
@@ -5783,7 +5628,7 @@ unresolvable reference, a failed anchor verification, and an unknown
 condition does not hold, the property is not supplied, and a consumer
 cannot rely on it.
 
-This document's four optional capabilities ({{conformance}}) are
+This document's three optional capabilities ({{conformance}}) are
 surfaces an implementation may or may not offer, each independent of
 the others. The capability table above states scoped guarantee
 claims: properties this document supplies and the conditions under
@@ -5819,20 +5664,24 @@ Cross-Domain:
   domain: that claim activates only when an Evidence, Mandate, or
   audit companion is active, and Cross-Domain is not among them.
 
-Local Approved-Set Verification:
-: Exercises Structured Authority and Monotonic Derivation. A
-  verifying Resource Server or policy decision point recomputes
-  `authority_hash` over the complete approved Authority Set and
-  checks the carried authority as a subset of that set
-  ({{local-approved-set-verification}}), instead of relying on the
-  AS's subset assertion alone. Both claims are supplied always; this
-  capability adds an independent check of them and creates no claim.
-
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Moved local approved-set verification to the Mission Approved-Set
+  Verification companion
+  ({{I-D.draft-mcguinness-oauth-mission-approved-set-verification}})
+  with its rules unchanged: authenticated complete-set retrieval at
+  Tier 1 and Tier 2, the retrieval surface and its disclosure gate,
+  the rule that Mission Status is not a compatible retrieval surface,
+  the capability's conformance entry and mapping-assessment entry, and
+  the selective-inclusion future-work note. This document keeps
+  `authority_hash`, the statement that a party holding the complete
+  Authority Set can verify it, and the Consent Binding threat
+  analysis, and names three optional capabilities; its references to
+  the companion are informative.
 
 - Moved the Intent Submission Evidence framework to the Mission Intent
   Submission Evidence companion
@@ -5923,8 +5772,8 @@ Local Approved-Set Verification:
   no normative requirements were added.
 
 - PR #725 review round: split Local Approved-Set Verification's
-  authenticated complete-set retrieval into two explicit tiers
-  ({{lasv-retrieval}}): Tier 1 (recompute and subset-check against a
+  authenticated complete-set retrieval into two explicit tiers:
+  Tier 1 (recompute and subset-check against a
   retrieved set, detecting projection errors under continuing trust
   in the issuer) and Tier 2 (additionally require the expected
   `authority_hash` to come from an independently retained,
@@ -5934,7 +5783,7 @@ Local Approved-Set Verification:
   audience's, and only the current effective (containment-filtered),
   entries, never the complete immutable approved set. Corrected the
   typed selective-inclusion proof from a claimable alternative to a
-  future composition point ({{lasv-proof-future}}), pending a
+  future composition point, pending a
   concrete proof type that authenticates its own root as the
   Mission's approval-time commitment, and fixed its description to
   prove the approved parent entry, never the carried narrowed entry
@@ -5954,8 +5803,7 @@ Local Approved-Set Verification:
   stay on the Mission record and become available through token
   introspection's member-scoped disclosure privilege, alongside
   `derivations_remaining` and `proposal_hash`. Added the Local
-  Approved-Set Verification profile
-  ({{local-approved-set-verification}}), an OPTIONAL profile defining
+  Approved-Set Verification profile, an OPTIONAL profile defining
   authenticated complete-set retrieval, commitment recomputation, and
   a subset check, or a typed selective-inclusion proof this document
   does not itself define, for a party that needs to verify a token's

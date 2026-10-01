@@ -11,20 +11,20 @@
     "content_sha256": "108923e1ff06cfdcf0d3fc290da25012666bfda513f39e2944dd13dc02910871"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
-    "content_sha256": "f16c60c9caec06a12e96567550e6162c34416675d51405f3869c91f142a898ab"
+    "revision": "48b7abcdacfb66289c29c5312e5d6c6e683b5141",
+    "content_sha256": "052d86ffd6770cd0efa75663567fd2ba3cdbccdd3b4a05f92300cfeaa21c0f56"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
-    "content_sha256": "b123215f6d69999f53eb6326b05af196ab6713259325f8e005150a844bcbc009"
+    "revision": "48b7abcdacfb66289c29c5312e5d6c6e683b5141",
+    "content_sha256": "110170d05aa8c19a1d69dc74acbb99ab20915d78f241216deb5dba92c5624415"
    },
    "draft-mcguinness-mission-runtime.md": {
     "revision": "79344a58d878545e3daa6d5b880f6fe5dedb51b2",
     "content_sha256": "3d83bff5bc2fff67a0b741b51bbb56e3d1584597d97c45bbb06417b4fe52727b"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
-    "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
-    "content_sha256": "5a16d0d9926228070c76d33188f4d0348e9f93aea8a4104c676c783abc4d9ee0"
+    "revision": "48b7abcdacfb66289c29c5312e5d6c6e683b5141",
+    "content_sha256": "bc38949bab486178be786972579b8ee9217016aa76f457e98112d2f8388f4edf"
    },
    "draft-mcguinness-mission-substrate.md": {
     "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
@@ -59,8 +59,8 @@
     "content_sha256": "2ecac7a1642121e76f782cb12941b64fc1ed0782ae6df8a6e82721d5bc280b1f"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "4e62524f4be6e2376195919d2440effb4e001a9d",
-    "content_sha256": "aeb56c9c465365193aa6a5e67fad7b0986567937e6b15fb269062341ce745f23"
+    "revision": "48b7abcdacfb66289c29c5312e5d6c6e683b5141",
+    "content_sha256": "b8828dd2f95e181d20fbfda6e4297d35258189459ddfaa93e94017134849e895"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7fc9ef45b5fb69f06bd3e90c1a93b6ac71808c10",
@@ -101,6 +101,10 @@
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "ae8e99208ff97d35379cdeca4dccddd9e99861f1",
     "content_sha256": "9bbf98746769f7bf782bd3c350af0dcf10675775f7d5d1beb7106051e006e776"
+   },
+   "draft-mcguinness-oauth-mission-approved-set-verification.md": {
+    "revision": "48b7abcdacfb66289c29c5312e5d6c6e683b5141",
+    "content_sha256": "7098f04b5cc6e3a633f0eb3003a112af720ba414d9f45f45ce9dbbcc166f9200"
    }
   }
  },
@@ -203,7 +207,7 @@
    "template.dispatch",
    "progressive.ceiling-drawdown",
    "cross-domain.projection",
-   "core.local-approved-set-verification",
+   "approved-set-verification.verification",
    "authzen.runtime-evidence",
    "authzen.obligations",
    "authzen.arap",
@@ -5495,19 +5499,17 @@
    ]
   },
   {
-   "id": "core.local-approved-set-verification.tier1-retrieval-recompute-subset-fail-closed",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "lasv-retrieval",
-   "text": "MUST fail closed: a retrieval failure, an unauthenticated response, a commitment mismatch, or a subset-test failure refuses the request under {{rs-enforcement}}, never falls back to trusting the token signature alone as if this profile were not claimed.",
+   "id": "approved-set-verification.retrieval.tier1-retrieval-recompute-subset-fail-closed",
+   "spec": "draft-mcguinness-oauth-mission-approved-set-verification.md",
+   "anchor": "retrieval",
+   "text": "MUST fail closed: a retrieval failure, an unauthenticated response, a commitment mismatch, or a subset-test failure refuses the request under {{I-D.draft-mcguinness-oauth-mission}}, Section \"Resource Server Enforcement\", never falls back to trusting the token signature alone as if this profile were not claimed.",
    "role": "verifier",
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.local-approved-set-verification"
+    "capability": "approved-set-verification.verification"
    },
-   "profiles": [
-    "issuance"
-   ],
+   "profiles": [],
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
@@ -5544,19 +5546,17 @@
    "notes": "review #725 P1-3: reference implementation is verifyLocalApprovedSet() (packages/mission-core/src/local-approved-set-verification.ts). No party in this repo currently CALLS it in production (no Resource Server or PDP here claims this OPTIONAL capability), so coverage is the unit-level function contract, not an integration wiring; that is the honest ceiling for a capability this repo does not itself deploy."
   },
   {
-   "id": "core.local-approved-set-verification.tier2-independent-pinning",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "lasv-retrieval",
+   "id": "approved-set-verification.pinning.tier2-independent-pinning",
+   "spec": "draft-mcguinness-oauth-mission-approved-set-verification.md",
+   "anchor": "independent-pinning",
    "text": "the verifying party additionally holds an expected `authority_hash` obtained from a source independent of the Tier 1 retrieval channel, never re-derived from the same call being verified, and MUST reject unless the retrieved (and recomputed-matching) value also equals that independently held one.",
    "role": "verifier",
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.local-approved-set-verification"
+    "capability": "approved-set-verification.verification"
    },
-   "profiles": [
-    "issuance"
-   ],
+   "profiles": [],
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
@@ -5580,19 +5580,17 @@
    ]
   },
   {
-   "id": "core.local-approved-set-verification.retrieval-transport-and-disclosure-gate",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "lasv-retrieval",
+   "id": "approved-set-verification.surface.retrieval-transport-and-disclosure-gate",
+   "spec": "draft-mcguinness-oauth-mission-approved-set-verification.md",
+   "anchor": "retrieval-surface",
    "text": "The retrieval surface MUST refuse a caller that does not hold the disclosure privilege",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.local-approved-set-verification"
+    "capability": "approved-set-verification.verification"
    },
-   "profiles": [
-    "issuance"
-   ],
+   "profiles": [],
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
@@ -5604,18 +5602,17 @@
    "notes": "review #725 P1-3: disputed as untestable in this repo by the spec's own design, not merely unimplemented. The document explicitly does not mandate a retrieval endpoint or transport (deployment-provisioned), so there is no concrete surface here to gate-check against; a conformance row can only restate the requirement, which this row does, pending a deployment that actually provisions such a surface."
   },
   {
-   "id": "core.local-approved-set-verification.status-not-compatible-retrieval-surface",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "lasv-retrieval",
+   "id": "approved-set-verification.surface.status-not-compatible-retrieval-surface",
+   "spec": "draft-mcguinness-oauth-mission-approved-set-verification.md",
+   "anchor": "retrieval-surface",
    "text": "Recomputing `authority_hash` over a Status response therefore fails by construction for any multi-audience Mission, and fails after any containment or discharge even for a single-audience one.",
    "role": "verifier",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "approved-set-verification.verification"
    },
-   "profiles": [
-    "issuance"
-   ],
+   "profiles": [],
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {

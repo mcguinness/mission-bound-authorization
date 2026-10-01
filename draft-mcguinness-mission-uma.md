@@ -69,6 +69,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-approved-set-verification:
+    title: "Mission Approved-Set Verification for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approved-set-verification.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-derivation-limits:
     title: "Mission Derivation Limits for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-derivation-limits.html
@@ -791,10 +799,13 @@ commitment with no liveness; the issuance profile's rule that a
 profile minting a further credential downstream, or verifying Mission
 lifetime from retained state, MUST require it applies here unchanged.
 `authority_hash` is likewise not part of this binding's baseline
-claim; it becomes available only on the same disclosure terms the
-issuance profile defines for its own baseline claim (introspection's
-disclosure privilege, or its Local Approved-Set Verification
-profile). The claim is delivered on one of two carriage surfaces:
+claim; it becomes available only on the same disclosure terms that
+apply to the issuance profile's own baseline claim: introspection's
+disclosure privilege ({{I-D.draft-mcguinness-oauth-mission}}), or the
+Local Approved-Set Verification profile
+({{I-D.draft-mcguinness-oauth-mission-approved-set-verification}},
+Section "Local Approved-Set Verification"). The claim is delivered on
+one of two carriage surfaces:
 
 - **Token-carried**: a deployment issuing JWT-format RPTs carries
   the claim in the token per the issuance profile.
