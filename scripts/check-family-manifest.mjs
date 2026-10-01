@@ -192,14 +192,22 @@ export const UNSTABLE_SELF_CLAIM = /\bthis (?:document|profile|specification|bin
 // establishes it. Existing definitions are grandfathered explicitly; a
 // grandfathered entry that is no longer declared is itself a finding, so
 // the list shrinks as names are migrated.
+// Keyed `slug|registry|name`, so an exemption covers one existing
+// registration and never the same name newly registered elsewhere.
 export const GRANDFATHERED_WIRE_NAMES = new Set([
   // OAuth Parameters, ruled grandfathered in the wire-name audit (#911, F1):
-  "draft-mcguinness-oauth-mission-child-delegation:parent",
-  "draft-mcguinness-oauth-mission-child-delegation:child_actor",
-  "draft-mcguinness-oauth-mission-expansion:predecessor",
-  "draft-mcguinness-oauth-mission-expansion:creation_request_id",
-  "draft-mcguinness-oauth-mission-template:dispatch_event_id",
+  "draft-mcguinness-oauth-mission-child-delegation|OAuth Parameters|parent",
+  "draft-mcguinness-oauth-mission-child-delegation|OAuth Parameters|child_actor",
+  "draft-mcguinness-oauth-mission-expansion|OAuth Parameters|predecessor",
+  "draft-mcguinness-oauth-mission-expansion|OAuth Parameters|creation_request_id",
+  "draft-mcguinness-oauth-mission-template|OAuth Parameters|dispatch_event_id",
 ]);
+
+// `mission` as a distinct name component: bounded by a non-alphanumeric
+// separator or the name's ends, so `mission_widget`,
+// `invalid_mission_widget`, `mission-dispatch`, `Mission-Reference`, and
+// `.../mission/...` carry it and `permission` does not.
+export const MISSION_COMPONENT = /(?:^|[^a-z0-9])mission(?:[^a-z0-9]|$)/i;
 
 const WIRE_REGISTRY_QUOTE = /"([^"]+)"\s*(?:sub-)?[Rr]egistry/g;
 const WIRE_REGISTRY_CREATE = /(?:create|establish)\w*\s+(?:a\s+|the\s+|an\s+)?(?:new\s+)?"([^"]+)"\s*(?:sub-)?[Rr]egistry/gi;
@@ -228,12 +236,15 @@ function ianaLines(text) {
 export function validateWireNames(drafts, grandfathered = GRANDFATHERED_WIRE_NAMES) {
   const familyRegistries = new Set();
   for (const d of drafts) {
-    const joined = ianaLines(d.text).map((x) => x.text).join(" ").replace(/\s+/g, " ");
+    // Only real IANA prose creates a registry; creation text inside a
+    // fenced example must not exempt later declarations.
+    const joined = ianaLines(d.text).filter((x) => !x.fence).map((x) => x.text).join(" ").replace(/\s+/g, " ");
     for (const m of joined.matchAll(WIRE_REGISTRY_CREATE)) familyRegistries.add(m[1].toLowerCase());
   }
   const declarations = [];
   for (const d of drafts) {
     let registry = null;
+    let registryLevel = null;
     let para = [];
     const flush = () => {
       const t = para.map((x) => x.text).join(" ").replace(/\s+/g, " ");
@@ -249,10 +260,21 @@ export function validateWireNames(drafts, grandfathered = GRANDFATHERED_WIRE_NAM
     for (let i = 0; i < lines.length; i++) {
       const { line, text, fence } = lines[i];
       if (fence) continue;
-      const heading = text.match(/^#{2,}\s+(.*?)\s*(?:\{#.*\})?$/);
+      const heading = text.match(/^(#{2,})\s+(.*?)\s*(?:\{#.*\})?$/);
       if (heading) {
         flush();
-        registry = heading[1].replace(/\s+(?:Registration|Registrations|Registry)$/, "");
+        const level = heading[1].length;
+        const title = heading[2];
+        // A registry heading sets the context; a sibling or shallower
+        // heading replaces it; an entry heading nested under a registry
+        // heading keeps the enclosing registry.
+        if (/\bRegist(?:ry|ration|rations)\b/i.test(title)) {
+          registry = title.replace(/\s+(?:Registration|Registrations|Registry)$/i, "");
+          registryLevel = level;
+        } else if (registryLevel === null || level <= registryLevel) {
+          registry = title;
+          registryLevel = level;
+        }
         continue;
       }
       // Definition-list form: "URN:" / ": `urn:...`".
@@ -288,15 +310,16 @@ export function validateWireNames(drafts, grandfathered = GRANDFATHERED_WIRE_NAM
     flush();
   }
   const findings = [];
-  const declaredKeys = new Set(declarations.map((x) => `${x.slug}:${x.name}`));
+  const keyOf = (x) => `${x.slug}|${x.registry ?? ""}|${x.name}`;
+  const declaredKeys = new Set(declarations.map(keyOf));
   for (const x of declarations) {
     if (x.registry && familyRegistries.has(x.registry.toLowerCase())) continue;
-    if (/mission/i.test(x.name)) continue;
-    if (grandfathered.has(`${x.slug}:${x.name}`)) continue;
-    findings.push(`${x.slug}.md:${x.line}: \`${x.name}\` is declared in ${x.registry ? `the "${x.registry}" registry` : "a registry"} outside the family without \`mission\` (CONTRIBUTING, Wire Names Convention); prefix it, or grandfather it in GRANDFATHERED_WIRE_NAMES with a ruling`);
+    if (MISSION_COMPONENT.test(x.name)) continue;
+    if (grandfathered.has(keyOf(x))) continue;
+    findings.push(`${x.slug}.md:${x.line}: \`${x.name}\` is declared in ${x.registry ? `the "${x.registry}" registry` : "a registry"} outside the family without a \`mission\` name component (CONTRIBUTING, Wire Names Convention); prefix it, or grandfather "${keyOf(x)}" in GRANDFATHERED_WIRE_NAMES with a ruling`);
   }
   for (const key of grandfathered) {
-    if (!declaredKeys.has(key)) findings.push(`GRANDFATHERED_WIRE_NAMES lists "${key}", which no draft declares any more; remove the entry`);
+    if (!declaredKeys.has(key)) findings.push(`GRANDFATHERED_WIRE_NAMES lists "${key}", which no draft declares in that registry any more; remove the entry`);
   }
   return findings;
 }
