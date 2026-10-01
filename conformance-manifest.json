@@ -6611,13 +6611,25 @@
      "surface": "introspection"
     },
     {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "discharge_selectors in the introspection projection (@spec discharge#condition-selectors, #898 fix 1) > names the record entry a contained projection came from, never a discharged sibling with the same bytes",
+     "level": "endpoint",
+     "surface": "introspection"
+    },
+    {
      "file": "src/services/authorization-server/test/discharge.test.ts",
-     "name": "condition selector mapping for a projected entry (#898 fix 1) > gives an ambiguous projected condition no selector, and a uniquely held one its record target",
+     "name": "condition selector mapping for a projected entry (#898 fix 1) > maps a contained projection to the record entry it came from, never to a discharged sibling with the same bytes",
+     "level": "unit",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "condition selector mapping for a projected entry (#898 fix 1) > gives a projected entry folded from two different record entries no selector",
      "level": "unit",
      "surface": "introspection"
     }
    ],
-   "notes": "The introspection adapter computes `discharge_selectors` over exactly the `authorization_details` that response returns (after the audience filter), only on an active projection and only where the discharge operation is enabled (MissionKernel.dischargeSelectorsFor). The endpoint tests show a payments caller gets selectors only for the payments entries it is returned (never the ledger entry the record also carries), with indices into its own array; a discharged entry leaves the projection with its selector; a narrowed credential's entry maps to its record target by the subset rule; a condition the projection added gets none; and an ambiguous subset match gets none (unit)."
+   "notes": "The introspection adapter computes `discharge_selectors` over exactly the `authorization_details` that response returns (after the audience filter), only on an active projection and only where the discharge operation is enabled. Each returned fragment carries the approved record entries it was derived from (MissionKernel.projectCredentialWithOrigin: effectiveEntriesWithOrigin through projectThroughEffectiveWithOrigin), and MissionKernel.dischargeSelectorsFor targets that origin only when it is unambiguous and carries the condition; projected bytes are never matched against the record. The endpoint tests show a payments caller gets selectors only for the payments entries it is returned (never the ledger entry the record also carries), with indices into its own array; a discharged entry leaves the projection with its selector; a narrowed credential's entry maps to the record entry it came from, and a condition the projection added gets none; and (the #912 review reproduction) after sibling B is discharged and A is contained down to B's exact bytes, the selector names A, not B, and submitting it discharges A. A fragment folded from two different record entries gets no selector (unit)."
   },
   {
    "id": "status.discharge.selector-issuer-only",

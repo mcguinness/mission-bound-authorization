@@ -147,7 +147,9 @@ export {
   type EffectiveAuthoritySource,
   isSubsetEntry,
   isSubsetSet,
+  type OriginProjection,
   projectThroughEffective,
+  projectThroughEffectiveWithOrigin,
   SourceUnavailableError,
 } from "./kernel/derive.js";
 export {

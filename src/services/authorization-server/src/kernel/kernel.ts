@@ -48,8 +48,9 @@ import {
 import type { DerivationPolicy, ExpiryCeilings } from "./derive.js";
 import {
   deriveAuthoritySet,
-  isSubsetEntry,
   isSubsetSet,
+  type OriginProjection,
+  projectThroughEffectiveWithOrigin,
   resolveDerivationLimit,
   resolveEffectiveExpiry,
 } from "./derive.js";
@@ -2312,52 +2313,37 @@ export class MissionKernel {
    * for an entry the caller is not returned, and nothing at all unless this AS
    * is the Mission's `issuer`.
    *
-   * MAPPING A PROJECTED ENTRY TO ITS RECORD TARGET. A selector names a target
-   * on the immutable record entry, but a projected entry can be narrower than
-   * it (a token projection, containment). The rule, in order:
-   *  1. EXACT: a record entry whose `entry_digest` equals the projected entry's
-   *     is the target entry (byte-identical duplicates share that digest and so
-   *     one target), provided it carries the condition.
-   *  2. Otherwise SUBSET: the record entries the projected entry is a subset of
-   *     that carry the condition, by `condition_digest`. Exactly one distinct
-   *     `entry_digest` among them is the target entry.
-   *  3. Otherwise (no candidate, or more than one: AMBIGUOUS) that condition
-   *     gets no selector. A condition with no counterpart in the record entry,
-   *     such as one a projection added, therefore has no target and no selector.
+   * MAPPING A PROJECTED ENTRY TO ITS RECORD TARGET: by ORIGIN, never by bytes.
+   * Each projected entry carries the approved record entries it was derived
+   * from through the effective set ({@link effectiveEntriesWithOrigin}) and the
+   * projection ({@link projectThroughEffectiveWithOrigin}); a discharged entry
+   * is never an origin, since the effective set excludes it. The target entry
+   * is that origin when it is UNAMBIGUOUS (one distinct `entry_digest`;
+   * byte-identical duplicates share one) and carries the condition, by
+   * `condition_digest`. Otherwise the condition gets no selector: more than one
+   * origin (fragments from different record entries folded together), no
+   * origin, or a condition the origin does not carry (one a projection added).
+   * Matching the projected bytes against the record is never used: a contained
+   * entry can project to another, already discharged, entry's exact bytes.
    */
   dischargeSelectorsFor(
     record: MissionRecord,
-    projected: readonly AuthorityEntry[],
+    projected: ReadonlyArray<OriginProjection<AuthorityEntry>>,
   ): Array<{ entry: number; condition: number; selector: string }> {
     // @spec discharge#condition-selectors — only the Mission issuer reports them.
     if (record.issuer !== this.opts.issuer) return [];
-    const recordEntries = record.authority_set.map((e) => ({
-      entry: e,
-      digest: entryDigest(record.issuer, e),
-    }));
     const carries = (e: AuthorityEntry, cDigest: string): boolean =>
       terminalWhenOf(e)?.some((c) => conditionDigestOrUndefined(c) === cDigest) ?? false;
     const out: Array<{ entry: number; condition: number; selector: string }> = [];
     projected.forEach((p, i) => {
-      const conditions = terminalWhenOf(p);
+      const conditions = terminalWhenOf(p.entry);
       if (!conditions) return;
-      const pDigest = entryDigest(record.issuer, p);
-      const exact = recordEntries.find((r) => r.digest === pDigest);
+      const originDigests = new Map(p.origins.map((o) => [entryDigest(record.issuer, o), o]));
+      if (originDigests.size !== 1) return; // no origin, or an ambiguous one
+      const [[targetDigest, origin]] = [...originDigests.entries()] as [[string, AuthorityEntry]];
       conditions.forEach((c, j) => {
         const cDigest = conditionDigestOrUndefined(c);
-        if (cDigest === undefined) return;
-        let targetDigest: string | undefined;
-        if (exact) {
-          if (carries(exact.entry, cDigest)) targetDigest = exact.digest;
-        } else {
-          const holders = new Set(
-            recordEntries
-              .filter((r) => isSubsetEntry(p, r.entry) && carries(r.entry, cDigest))
-              .map((r) => r.digest),
-          );
-          if (holders.size === 1) targetDigest = [...holders][0];
-        }
-        if (targetDigest === undefined) return;
+        if (cDigest === undefined || !carries(origin, cDigest)) return;
         out.push({
           entry: i,
           condition: j,
@@ -2370,6 +2356,22 @@ export class MissionKernel {
       });
     });
     return out;
+  }
+
+  /**
+   * @spec discharge#condition-selectors — the projection a token-bound
+   * surface returns, with each fragment's record-entry origins: the credential's
+   * own authority intersected with the Mission's current effective set, exactly
+   * as {@link projectThroughEffective} computes it for introspection.
+   */
+  projectCredentialWithOrigin(
+    record: MissionRecord,
+    credentialAuthority: readonly AuthorityEntry[],
+  ): Array<OriginProjection<AuthorityEntry>> {
+    return projectThroughEffectiveWithOrigin(
+      credentialAuthority,
+      this.effectiveEntriesWithOrigin(record),
+    );
   }
 
   /**

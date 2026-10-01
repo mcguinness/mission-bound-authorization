@@ -281,6 +281,7 @@ let flow3: FlowResult; // saas-only (rs-saas positive rows)
 let flow4: FlowResult; // payments; refresh-token rows
 let flow5: FlowResult; // payments; DEDICATED to P1-1/P1-2 (never mutated by other describes)
 let flow6: FlowResult; // payments + saas, every entry completing on the close (discharge_selectors)
+let flow7: FlowResult; // payments; sibling entries A [read, list] and B [read] completing on the close
 
 const PAYMENTS_PROPOSAL: AuthorityEntry[] = [
   {
@@ -305,6 +306,16 @@ const COMPLETING_PROPOSAL: AuthorityEntry[] = [
   })),
   ...SAAS_PROPOSAL.map((e) => ({ ...e, constraints: { terminal_when: [{ ...CLOSE_CONDITION }] } })),
 ];
+/** Sibling entries A [read, list] and B [read], carrying the same condition. */
+const SIBLINGS_PROPOSAL: AuthorityEntry[] = [
+  ["payments:invoice.read", "payments:invoice.list"],
+  ["payments:invoice.read"],
+].map((actions) => ({
+  type: "mission_resource_access",
+  resource: PAYMENTS,
+  actions,
+  constraints: { vendors: ["acme"], terminal_when: [{ ...CLOSE_CONDITION }] },
+}));
 
 beforeAll(async () => {
   // @spec mission#introspection (issue #541 P1-4) — generate the AT signing
@@ -378,6 +389,15 @@ beforeAll(async () => {
       expires_at: "2027-01-01T00:00:00Z",
     },
     proposal: COMPLETING_PROPOSAL,
+    resource: PAYMENTS,
+  });
+  flow7 = await runFlow({
+    intent: {
+      goal: "Read Acme invoices until the Q3 close",
+      target_resources: [PAYMENTS],
+      expires_at: "2027-01-01T00:00:00Z",
+    },
+    proposal: SIBLINGS_PROPOSAL,
     resource: PAYMENTS,
   });
   flow5 = await runFlow({
@@ -1023,12 +1043,62 @@ describe("discharge_selectors in the introspection projection (@spec discharge#c
     });
   });
 
+  it("names the record entry a contained projection came from, never a discharged sibling with the same bytes", async () => {
+    const record = as.kernel.get(flow7.missionId) as MissionRecord;
+    const [a, b] = record.authority_set as [AuthorityEntry, AuthorityEntry];
+    expect(a.actions).toEqual(["payments:invoice.read", "payments:invoice.list"]);
+    expect(b.actions).toEqual(["payments:invoice.read"]);
+    // B completes, then A's list action is contained: A's remaining projection
+    // has exactly B's bytes.
+    as.kernel.discharge(flow7.missionId, {
+      authority: "svc:console",
+      entry_digest: entryDigest(ISSUER, b),
+      condition_digest: conditionDigest(CLOSE_CONDITION),
+      event_type: CLOSE_EVENT,
+      event_id: "close-sibling-b",
+    });
+    as.kernel.contain(flow7.missionId, {
+      event: {
+        type: "credential-compromise",
+        source: "test-sensor",
+        observed_at: new Date().toISOString(),
+        event_id: "introspection-sibling-contain",
+      },
+      remove: [{ resource: PAYMENTS, actions: ["payments:invoice.list"] }],
+    });
+    const res = await introspect(flow7.at, { principal: RS_PAYMENTS });
+    expect(res.body.active).toBe(true);
+    const details = res.body.authorization_details as AuthorityEntry[];
+    expect(details.map((d) => d.actions)).toEqual([["payments:invoice.read"]]);
+    const selectors = selectorsOf(res.body);
+    expect(selectors.map((s) => [s.entry, s.condition])).toEqual([[0, 0]]);
+    const selector = (selectors[0] as Disclosed).selector;
+    // The selector targets A, the entry the projection was derived from.
+    expect(as.kernel.dischargeSelectors.resolve(selector)?.entry_digest).toBe(entryDigest(ISSUER, a));
+    // Submitting it discharges A, which is still live.
+    const discharged = await fetch(`${ISSUER}/missions/${flow7.missionId}/lifecycle`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
+      body: JSON.stringify({
+        operation: "discharge",
+        mission_id: flow7.missionId,
+        nonce: "nonce-introspection-sibling-a",
+        condition_selector: selector,
+        event_type: CLOSE_EVENT,
+        event_id: "close-sibling-a",
+      }),
+    });
+    expect(discharged.status).toBe(200);
+    const result = (decodeJwt(await discharged.text()) as Record<string, unknown>).discharge_result;
+    expect(result).toMatchObject({ outcome: "discharged" });
+    expect(as.kernel.effectiveAuthoritySet(as.kernel.get(flow7.missionId) as MissionRecord)).toEqual([]);
+  });
+
   it("reports discharge_selectors only as the Mission issuer", () => {
     const record = as.kernel.get(flow6.missionId) as MissionRecord;
-    expect(as.kernel.dischargeSelectorsFor(record, record.authority_set).length).toBeGreaterThan(0);
+    const view = record.authority_set.map((entry) => ({ entry, origins: [entry] }));
+    expect(as.kernel.dischargeSelectorsFor(record, view).length).toBeGreaterThan(0);
     // The same record held under any other issuer yields none.
-    expect(
-      as.kernel.dischargeSelectorsFor({ ...record, issuer: "https://other-as.example" }, record.authority_set),
-    ).toEqual([]);
+    expect(as.kernel.dischargeSelectorsFor({ ...record, issuer: "https://other-as.example" }, view)).toEqual([]);
   });
 });

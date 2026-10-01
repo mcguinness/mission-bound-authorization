@@ -159,6 +159,10 @@ function approve(kernel: MissionKernel, entries: AuthorityEntry[] = proposal()):
   });
 }
 
+/** The issuer's own view of a record: each approved entry, its own origin. */
+const recordView = (record: MissionRecord) =>
+  record.authority_set.map((entry) => ({ entry, origins: [entry] }));
+
 /** The write entry (the one carrying terminal_when) and its selectors. */
 function selectorsFor(record: MissionRecord, action = "payments:journal.write") {
   const entry = record.authority_set.find((e) => e.actions.includes(action));
@@ -656,39 +660,77 @@ describe("discharge propagation by recorded justification, downward only (#898 f
 });
 
 describe("condition selector mapping for a projected entry (#898 fix 1)", () => {
-  it("gives an ambiguous projected condition no selector, and a uniquely held one its record target", () => {
+  /** A + B carry the same condition; A is [read, write], B is [read]. */
+  const siblings = (kernel: MissionKernel): MissionRecord =>
+    approve(kernel, [closing(["payments:invoice.read", "payments:journal.write"]), closing(["payments:invoice.read"])]);
+
+  it("maps a contained projection to the record entry it came from, never to a discharged sibling with the same bytes", () => {
     const { kernel } = makeKernel();
-    const audit = { event_type: AUDIT_EVENT };
-    const both = ["payments:invoice.read", "payments:journal.write"];
-    // Two DIFFERENT record entries, each a superset of the projected entry
-    // below; both carry the close condition, only the second the audit one.
-    const record = approve(kernel, [
-      { type: "mission_resource_access", resource: RES, actions: both, constraints: { terminal_when: [{ ...CLOSE_CONDITION }] } },
-      {
-        type: "mission_resource_access",
-        resource: RES,
-        actions: both,
-        constraints: { terminal_when: [{ ...CLOSE_CONDITION }, { ...audit }] },
-      },
-    ]);
-    const [, holder] = record.authority_set as [AuthorityEntry, AuthorityEntry];
-    const projected: AuthorityEntry = {
-      type: "mission_resource_access",
-      resource: RES,
-      actions: ["payments:invoice.read"],
-      constraints: { terminal_when: holder.constraints?.terminal_when ?? [] },
-    };
-    const conditions = projected.constraints?.terminal_when ?? [];
-    const auditIndex = conditions.findIndex((c) => c.event_type === AUDIT_EVENT);
-    const selectors = kernel.dischargeSelectorsFor(record, [projected]);
-    // The close condition is held by both entries: ambiguous, no selector. The
-    // audit condition is held by exactly one: that entry is the target.
-    expect(selectors.map((s) => [s.entry, s.condition])).toEqual([[0, auditIndex]]);
-    expect(kernel.dischargeSelectors.resolve((selectors[0] as { selector: string }).selector)).toEqual({
-      mission_id: record.id,
-      entry_digest: entryDigest(ISS, holder),
-      condition_digest: conditionDigest(audit),
+    const record = siblings(kernel);
+    const [a, b] = record.authority_set as [AuthorityEntry, AuthorityEntry];
+    // B completes; then A's write action is contained, so A's remaining
+    // projection has exactly B's original bytes.
+    kernel.discharge(record.id, {
+      authority: "svc:close-management",
+      entry_digest: entryDigest(ISS, b),
+      condition_digest: conditionDigest(CLOSE_CONDITION),
+      event_type: CLOSE_EVENT,
+      event_id: "close-b",
     });
+    expect(kernel.dischargedEntryDigests(kernel.get(record.id) as MissionRecord)).toEqual([entryDigest(ISS, b)]);
+    kernel.contain(record.id, {
+      event: { type: "anomaly.detected", source: "svc:soc", observed_at: NOW.toISOString(), event_id: "contain-a-write" },
+      remove: [{ resource: RES, actions: ["payments:journal.write"] }],
+    });
+    const fresh = kernel.get(record.id) as MissionRecord;
+    // The token carried the whole approved set; its projection is A's live part.
+    const projected = kernel.projectCredentialWithOrigin(fresh, fresh.authority_set);
+    expect(projected).toHaveLength(1);
+    expect(entryDigest(ISS, (projected[0] as { entry: AuthorityEntry }).entry)).toBe(entryDigest(ISS, b));
+    const selectors = kernel.dischargeSelectorsFor(fresh, projected);
+    expect(selectors.map((s) => [s.entry, s.condition])).toEqual([[0, 0]]);
+    const selector = (selectors[0] as { selector: string }).selector;
+    // The selector names A, the entry the projection was derived from...
+    expect(kernel.dischargeSelectors.resolve(selector)).toEqual({
+      mission_id: record.id,
+      entry_digest: entryDigest(ISS, a),
+      condition_digest: conditionDigest(CLOSE_CONDITION),
+    });
+    // ...so submitting it discharges A, which is still live.
+    const { result } = kernel.discharge(record.id, {
+      authority: "svc:close-management",
+      condition_selector: selector,
+      event_type: CLOSE_EVENT,
+      event_id: "close-a",
+    });
+    expect(result.outcome).toBe("discharged");
+    expect(kernel.effectiveAuthoritySet(kernel.get(record.id) as MissionRecord)).toEqual([]);
+  });
+
+  it("gives a projected entry folded from two different record entries no selector", () => {
+    const { kernel } = makeKernel();
+    const record = siblings(kernel);
+    // A narrowed credential [read]: its intersection with A and with B is the
+    // same fragment, so its origin is ambiguous.
+    const projected = kernel.projectCredentialWithOrigin(record, [closing(["payments:invoice.read"])]);
+    expect(projected).toHaveLength(1);
+    expect((projected[0] as { origins: unknown[] }).origins).toHaveLength(2);
+    expect(kernel.dischargeSelectorsFor(record, projected)).toEqual([]);
+    // A credential carrying A's actions projects two distinct fragments, each
+    // from one entry: [read, write] from A and [read] from B.
+    const wide = kernel.projectCredentialWithOrigin(record, [
+      closing(["payments:invoice.read", "payments:journal.write"]),
+    ]);
+    const targets = kernel
+      .dischargeSelectorsFor(record, wide)
+      .map((s) => [s.entry, kernel.dischargeSelectors.resolve(s.selector)?.entry_digest]);
+    expect(targets).toEqual(
+      record.authority_set.map((e, i) => [i, entryDigest(ISS, e)]),
+    );
+    expect(wide.map((p) => p.entry.actions)).toEqual([
+      ["payments:invoice.read", "payments:journal.write"],
+      ["payments:invoice.read"],
+    ]);
   });
 });
 
@@ -1381,7 +1423,7 @@ describe("the discharge operation on the lifecycle endpoint", () => {
         completing(["payments:remittance.send"]),
         completing(["payments:remittance.send"]),
       ]);
-      const issued = as.kernel.dischargeSelectorsFor(record, record.authority_set);
+      const issued = as.kernel.dischargeSelectorsFor(record, recordView(record));
       expect(issued.map((s) => [s.entry, s.condition])).toEqual([
         [0, 0],
         [1, 0],
@@ -1393,7 +1435,7 @@ describe("the discharge operation on the lifecycle endpoint", () => {
       // The byte-identical duplicate is the same target: the same selector.
       expect(duplicate).toBe(send);
       // Asking again never mints a second selector for a target.
-      expect(as.kernel.dischargeSelectorsFor(record, record.authority_set).map((s) => s.selector)).toEqual(
+      expect(as.kernel.dischargeSelectorsFor(record, recordView(record)).map((s) => s.selector)).toEqual(
         [read, send, duplicate],
       );
       // Each selector resolves to exactly its own target.

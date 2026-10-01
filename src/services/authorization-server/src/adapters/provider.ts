@@ -233,8 +233,8 @@ import {
 import {
   type EffectiveAuthoritySource,
   isSubsetSet,
+  type OriginProjection,
   projectRarThroughMission,
-  projectThroughEffective,
   SourceUnavailableError,
 } from "../kernel/derive.js";
 import type { IssuerEvidenceStore } from "../kernel/issuer-evidence.js";
@@ -2140,7 +2140,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
   const withDischargeSelectors = (
     record: MissionRecord,
     mission: Record<string, unknown>,
-    returned: readonly AuthorityEntry[],
+    returned: ReadonlyArray<OriginProjection<AuthorityEntry>>,
   ): Record<string, unknown> => {
     if (!enabled("discharge")) return mission;
     const selectors = kernel.dischargeSelectorsFor(record, returned);
@@ -2874,11 +2874,13 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // `aud`/resource-indicator value need not be byte-equal to a RAR
         // `resource`).
         const credentialAuthority = Array.isArray(rt.rar) ? (rt.rar as AuthorityEntry[]) : [];
-        const effective = kernel.effectiveAuthoritySet(record);
-        const narrowed = projectThroughEffective(credentialAuthority, effective);
+        // The same projection as projectThroughEffective, keeping each
+        // fragment's record-entry origin for discharge_selectors.
+        const narrowed = kernel.projectCredentialWithOrigin(record, credentialAuthority);
         const resourceSet = resourcesForAudiences(visibleAudiences, principal.audience_resources);
-        const authorization_details = narrowed.filter((e) => resourceSet.has(e.resource));
-        const disclosedMission = withDischargeSelectors(record, mission, authorization_details);
+        const returned = narrowed.filter((e) => resourceSet.has(e.entry.resource));
+        const authorization_details = returned.map((e) => e.entry);
+        const disclosedMission = withDischargeSelectors(record, mission, returned);
         ctx.body = {
           active: true,
           iss: opts.issuer,
@@ -3046,11 +3048,11 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // audience-to-resource mapping. Never the Mission's full effective
         // set: a narrowed/attenuated token must never introspect as though
         // it held authority it was never issued.
-        const effective = kernel.effectiveAuthoritySet(record);
-        const narrowed = projectThroughEffective(credentialAuthority, effective);
+        const narrowed = kernel.projectCredentialWithOrigin(record, credentialAuthority);
         const resourceSet = resourcesForAudiences(visible, principal.audience_resources);
-        const authorization_details = narrowed.filter((e) => resourceSet.has(e.resource));
-        const disclosedMission = withDischargeSelectors(record, mission, authorization_details);
+        const returned = narrowed.filter((e) => resourceSet.has(e.entry.resource));
+        const authorization_details = returned.map((e) => e.entry);
+        const disclosedMission = withDischargeSelectors(record, mission, returned);
 
         const cnf = payload.cnf as { jkt?: string } | undefined;
         ctx.body = {
