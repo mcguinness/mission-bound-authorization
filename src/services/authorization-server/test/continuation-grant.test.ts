@@ -439,6 +439,8 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
       unknown
     >;
     expect(meta.identity_continuation_supported).toBe(true);
+    // ICA -02 7.1: an IdP that sets the flag also lists the id-jag type.
+    expect(meta.identity_chaining_requested_token_types_supported).toEqual([ID_JAG_TOKEN_TYPE]);
 
     // @spec txn-authorization#challenge-redemption — this AS is built WITHOUT
     // transaction authorization, so it does not advertise an endpoint that
