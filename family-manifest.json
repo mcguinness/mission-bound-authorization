@@ -2406,8 +2406,8 @@
    "verbs": [
     "govern"
    ],
-   "summary": "Bounds how many derivations the issuer performs under a Mission: an optional requested ceiling, an AS-established effective limit, atomic counting across code exchange, refresh, and Token Exchange, refusal at the cap, and remaining-count disclosure through introspection.",
-   "pull_when": "A deployment wants a hard cap on issuance operations under one Mission, independent of authority and lifetime.",
+   "summary": "Bounds how many derivations the issuer performs under a Mission: an optional requested ceiling, an AS-established effective limit, atomic counting across code exchange, refresh, and Token Exchange (the refreshes of an async delegation family are not counted), refusal at the cap, and remaining-count disclosure through introspection.",
+   "pull_when": "A deployment wants a cap on counted derivations under one Mission, independent of authority and lifetime; the refreshes of an async delegation family are not counted.",
    "normative_references": [
     "draft-mcguinness-oauth-mission"
    ],
@@ -2419,6 +2419,7 @@
     "draft-mcguinness-mission-metering",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-child-delegation",
+    "draft-mcguinness-oauth-mission-continuation",
     "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-template"
