@@ -155,6 +155,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-derivation-limits:
+    title: "Mission Derivation Limits for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-derivation-limits.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-runtime:
     title: "Mission-Bound Runtime Enforcement"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
@@ -482,15 +490,16 @@ risks.
 Issuing a cross-domain grant is a derivation event and is gated like
 any other derivation ({{I-D.draft-mcguinness-oauth-mission}}, Section
 "Mission Lifecycle and Gating"). It counts once against the Mission's
-derivation budget, however many local tokens the partner domain later
-mints: the issuer cannot observe those tokens and does not count
+derivation budget ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}},
+Section "Cross-Domain Issuance"), however many local tokens the partner
+domain later mints: the issuer cannot observe those tokens and does not count
 them, and the Resource AS bounds its own minting by the grant and by
 local policy ({{validation-at-resource-as}}).
 
 Because each grant lives at most 300 seconds, steady-state partner
 work re-issues grants on a lease cadence and consumes at least 12
 derivations per hour per audience; a deployment sizes the Mission's
-`derivation_limit` ({{I-D.draft-mcguinness-oauth-mission}}) as
+`derivation_limit` ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}) as
 a function of that cadence times the projected audiences times the
 Mission's duration.
 

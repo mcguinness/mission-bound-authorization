@@ -330,6 +330,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-derivation-limits:
+    title: "Mission Derivation Limits for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-derivation-limits.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-mandate:
     title: "Mission Mandate"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html
@@ -613,6 +621,7 @@ alone: it also commits the rendered intent context (`goal`,
 effective `expires_at`, and the rendered `derivation_limit` and any
 metering bound
 ({{I-D.draft-mcguinness-oauth-mission}},
+{{I-D.draft-mcguinness-oauth-mission-derivation-limits}},
 {{I-D.draft-mcguinness-mission-metering}}). Concrete request values,
 current consumption, and action sequencing are decision-time facts,
 evaluated later by runtime policy, metering, or action-bound
@@ -1693,7 +1702,8 @@ instance-grain attribution: the class, the Agent Deployment projected as
 and attribution stays per-instance through the instance substrate, which
 attributes a presentation to an instance only under a sender-constraint
 key unique to it ({{I-D.draft-mcguinness-oauth-client-instance-id}},
-Section 7.3). The OAuth binding's `derivation_limit` is not a fan-out or
+Section 7.3). The derivation limits profile's `derivation_limit`
+({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}) is not a fan-out or
 concurrency ceiling: it counts issuance events, not instances, and a
 single instance refreshing repeatedly consumes it exactly as one
 selector among N instances deriving once each would. What actually
@@ -3429,6 +3439,7 @@ bound profiled by `aauth-mission-expiry`.
 | `mission-control-plane` | Experimental: topology-neutral issuer consistency, durable transition publication, rollback resistance, and the shared consistency/availability boundary. |
 | `oauth-mission-expansion` | Widening through an approved successor Mission. |
 | `oauth-mission-containment` | Event-triggered, monotonic narrowing of a live Mission's effective authority, with restoration only through an approved successor. |
+| `oauth-mission-derivation-limits` | An issuer-enforced cap on the number of derivations under one Mission: the requested and effective limit, counting, refusal at issuance, and the remaining count in introspection. |
 | `oauth-mission-progressive` | Experimental: policy-adjudicated expansion within a pre-consented ceiling. |
 | `mission-discovery` | Experimental: the open-world encounter as a governed operation: identity pinning, ceiling and contextual adjudication with the lying-resource and tainted-session floors, Discovery Evidence. |
 | `oauth-mission-management` | Fleet enumeration and bulk lifecycle operations for operators and incident response; dry-run-first, per-Mission semantics. |

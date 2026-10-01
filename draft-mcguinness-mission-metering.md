@@ -111,6 +111,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-derivation-limits:
+    title: "Mission Derivation Limits for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-derivation-limits.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -161,10 +169,10 @@ is expected to evolve with implementation experience.
 
 A deployment that does not implement this document carries no
 consumption bounds on its Missions and is fully conformant to the
-issuance and runtime profiles. The issuance profile's
+issuance and runtime profiles. The derivation limits profile's
 `derivation_limit` is not a consumption bound: it is enforced by the
 issuing Authorization Server at each derivation and needs none of this
-document ({{I-D.draft-mcguinness-oauth-mission}}).
+document ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}).
 
 The consent-integrity rule of {{consent}} is the boundary that makes
 this safe to omit: a bound is rendered to an Approver only where it is

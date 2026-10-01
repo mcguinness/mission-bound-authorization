@@ -137,6 +137,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-derivation-limits:
+    title: "Mission Derivation Limits for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-derivation-limits.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -444,8 +452,9 @@ its `mission_intent` Submission envelope
 - an optional `purpose`;
 - an `expires_at`; and
 - any other named top-level member a companion profile defines, for
-  example a `requested_derivation_limit` or a consumption bound
-  ({{I-D.draft-mcguinness-mission-metering}}).
+  example a `requested_derivation_limit`
+  ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}) or a consumption
+  bound ({{I-D.draft-mcguinness-mission-metering}}).
 
 The Intent carries no authority members. Where the task calls for
 concrete candidate authority, the shaper additionally produces an
@@ -588,7 +597,7 @@ and is never an input authority derives from.
 | `success_criteria` | Free-text observable outcomes that indicate the task is complete, phrased for the Approver. Disclosure and audit material only. | SHOULD NOT encode authority here; `success_criteria` carries no machine semantics in the issuance profile. |
 | `expires_at` | The smallest ceiling that lets the task complete; if the prompt names no bound, apply a conservative deployment default. | Don't request the maximum the Mission Issuer allows; the Issuer MAY narrow further. |
 | `purpose` | If the client has registered purposes, select the closest registered URI. | SHOULD NOT invent a new `purpose` URI. |
-| `requested_derivation_limit` | Where the task implies a natural issuance count (a one-shot read, a fixed number of scheduled runs), propose that count; omit it to defer entirely to the deployment's own ceiling. | Don't propose a large round number "to be safe"; an omitted value is not more permissive than a proposed one, so guessing high only misleads the Approver about what was actually requested. |
+| `requested_derivation_limit` | Propose it only where the Mission Issuer implements the derivation limits profile ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}); a Mission Issuer without that profile refuses the member as an unknown Intent member. Where the task implies a natural issuance count (a one-shot read, a fixed number of scheduled runs), propose that count; omit it to defer entirely to the deployment's own ceiling. | Don't propose a large round number "to be safe"; an omitted value is not more permissive than a proposed one, so guessing high only misleads the Approver about what was actually requested. |
 | any other named member | A companion profile MAY define further named top-level Mission Intent members (for example, a metering consumption bound); emit the ones the deployment's adopted companions recognize. | SHOULD NOT emit a key the specific deployment does not recognize; an unrecognized key risks rejection of the Intent. |
 
 # Ambiguity Handling {#ambiguity}
