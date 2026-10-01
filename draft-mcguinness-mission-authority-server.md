@@ -2625,6 +2625,12 @@ document requests no IANA action for it.
 
 \[\[ To be removed from the final specification ]]
 
+- Authentication discovery mirrors the Status draft: per-endpoint
+  `*_auth_methods_supported` and `*_auth_signing_alg_values_supported`
+  members for the submission, status, and lifecycle endpoints replace
+  `mission_auth_methods_supported`, and the submission endpoint accepts
+  all three Status mechanisms, including mTLS-bound access tokens.
+
 - Specify the PEP/PDP responsibilities for required instance-bound joins
   and their refusal behavior. Join Assertions continue to carry no
   instance identifier and do not replace the instance association check;
