@@ -2459,7 +2459,7 @@
     "propose"
    ],
    "summary": "Defines how typed evidence presented with a Mission Intent is processed: the entry convention, required evidence resolved before derivation, binding to one exact Intent, agreement with the authenticated presenter, bounded verification cost, and where refusals are returned.",
-   "pull_when": "A deployment admits Mission Intents only with authenticated evidence about their origin, consent, or presenter.",
+   "pull_when": "A deployment supports any Intent Submission Evidence type, or an applicable profile or policy requires submission evidence.",
    "normative_references": [
     "draft-mcguinness-oauth-mission"
    ],
