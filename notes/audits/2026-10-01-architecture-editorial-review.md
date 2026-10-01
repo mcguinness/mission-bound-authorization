@@ -399,8 +399,16 @@ Carve-out sites to sort into "keep, qualified" and "pointer":
 
 ## E. Decisions for the author
 
-Recommended rulings. Reply "go" to take all nine, or name the ones to
-change. The details below give the options behind each.
+**Ruled 2026-10-01:** the author accepted D1-D9 as recommended, with two
+binding constraints:
+- The shared architecture stays binding-neutral. No passage may treat
+  OAuth as the document-wide default.
+- No overlay or table may map verbs or capabilities to "the first level
+  that requires it". Deployment levels are adoption bundles, never
+  mandatory capability ladders.
+
+The recommendations below are those rulings. The details below them
+give the options behind each.
 
 | # | Recommendation | Reason |
 | --- | --- | --- |
