@@ -560,7 +560,7 @@ it. A Mission is not another `authorization_details` type: it is the
 durable, approval-backed object an Authority Set is derived for and
 gated by (the OAuth binding's Why a New Object section).
 
-A client proposes a Mission Intent, and MAY propose concrete
+A client proposes a Mission Intent, and may propose concrete
 authority alongside it; the Mission Issuer derives an
 Authority Set; an approval event commits them and creates the
 Mission.
@@ -1986,7 +1986,7 @@ What a lifetime cannot do is
 suspend, complete, or kill now, which is the task-grain residue the
 Mission's state carries and which the **state-observable** capability
 reaches: an authenticated freshness source with a stated staleness
-bound, a named substrate capability a binding MAY provide beyond the
+bound, a named substrate capability a binding may provide beyond the
 kernel's bounded-reliance floor
 ({{I-D.draft-mcguinness-mission-substrate}}),
 and the one runtime enforcement requires
@@ -2905,9 +2905,9 @@ Sender constraint is deliberately not among them: issuance-time key
 targeting and presentation-time proof are `presenter-key-bound`, a
 separate property, so a path that needs possession requires the
 composition rather than reading it into the equivalence. That is
-also what the mechanisms support: the OAuth binding's tokens SHOULD be
-sender-constrained and the generic Issuance Grant's `cnf` is
-OPTIONAL, so native issuance, the Mission Issuance Grant, and a
+also what the mechanisms support: the OAuth binding recommends
+sender-constrained tokens and the generic Issuance Grant leaves `cnf`
+optional, so native issuance, the Mission Issuance Grant, and a
 conforming cross-domain exchange satisfy this one property, and
 supply `presenter-key-bound` exactly where their confirmation
 binding is actually in force. A Mission Join Assertion fails
