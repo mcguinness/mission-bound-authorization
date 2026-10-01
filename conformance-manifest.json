@@ -3941,7 +3941,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#885 ruling (2026-10-01). The implementation already coalesced (continuation-grant.ts spends gateDerivation once at family creation; later refreshes re-gate with gateActive), so the ruling moved the spec to the implementation, not the reverse."
+   "notes": "#885 ruling (2026-10-01). The implementation already coalesced (continuation-grant.ts spends gateDerivation once at family creation; later refreshes re-gate with gateActive), so the ruling moved the spec to the implementation, not the reverse. Level endpoint: both tests drive the family-creating exchange and the refreshes as token-endpoint requests over HTTP, then read the resulting derivation_count from kernel state (the same shape as derivation-limits.counting.failed-derivations-not-counted)."
   },
   {
    "id": "derivation-limits.rendering.async-family-disclosure",
