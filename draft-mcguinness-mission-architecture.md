@@ -3277,11 +3277,21 @@ event, governance gate, and bounded reliance,
 3. the observed residual after a transition does not exceed the
    published reliance bound.
 
+Expiry ceiling, where the binding imposes one (the OAuth binding's
+Mission-Bound Access Tokens section,
+{{I-D.draft-mcguinness-oauth-mission}}; the UMA and GNAP bindings,
+{{I-D.draft-mcguinness-mission-uma}},
+{{I-D.draft-mcguinness-mission-gnap}}; for AAuth, the expiry profile,
+{{I-D.draft-mcguinness-aauth-mission-expiry}}; and for the standalone
+MAS, the issuance grant's Lifetime rule,
+{{I-D.draft-mcguinness-oauth-mission-issuance-grant}}):
+
+1. no credential outlives the Mission's effective expiry.
+
 Credential-Bound, where claimed (the substrate contract's
 Credential-Bound capability):
 
-1. no credential outlives the Mission's effective expiry; and
-2. a credential from another Mission cannot be substituted (the
+1. a credential from another Mission cannot be substituted (the
    reference and its Controller namespace bind together).
 
 Lifecycle-Gated Authorization, where claimed and limited to the
