@@ -1054,15 +1054,12 @@ The AS processes a submission in this order:
    definitions ({{mission-intent}}).
 3. Compute the provisional `intent_hash` over the `intent` object
    ({{integrity-anchors}}).
-4. Resolve the evidence types policy requires, and refuse a
-   submission missing a required type
-   ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}).
-5. Verify every `evidence` entry under its type's rules, including
-   that intent-bound evidence is bound to this AS
-   ({{intent-submission-evidence}}), and verify that intent-bound
-   evidence names exactly the provisional `intent_hash` and is bound
-   to the established presenter
-   ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}).
+4. Apply any submission checks that configured admission policy or
+   adopted profiles require before evidence verification, including
+   when no `evidence` member is present.
+5. Apply the evidence dispatch and refusal rules, verifying every
+   presented entry under its type's rules
+   ({{intent-submission-evidence}}).
 6. Apply admission policy and derive the Authority Set independently
    ({{authorization-derivation}}).
 7. Render the Intent, the Authority Set, and the material verified
@@ -3943,6 +3940,15 @@ issuance surfaces:
 - the subset rule ({{subset}}); and
 - gating of issuance on Mission state ({{lifecycle}}).
 
+An AS can conform as a Mission Issuer without supporting any Intent
+Submission Evidence type. Such an AS applies this document's
+structural and refusal rules to every presented entry
+({{intent-submission-evidence}}), accepting no evidence entry. It
+does not need to implement the evidence framework of
+{{I-D.draft-mcguinness-oauth-mission-submission-evidence}} for this
+configuration. The companion defines conformance for ASs supporting
+an evidence type, whether its evidence is optional or required.
+
 A **Mission-aware Resource Server** implements Resource Server
 enforcement ({{rs-enforcement}}), from the token's own claims or from
 its active introspection response under the introspected consumption
@@ -5833,6 +5839,13 @@ Local Approved-Set Verification:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Clarified that a Mission Issuer can conform without supporting any
+  Intent Submission Evidence types. The submission-processing
+  sequence keeps the baseline dispatch and refusal rules and the
+  ordering of admission checks before derivation; the evidence
+  companion owns the AS, exact-Intent, and presenter-binding checks.
+  No wire behavior changed.
 
 - Moved the Intent Submission Evidence framework to the Mission Intent
   Submission Evidence companion
