@@ -503,8 +503,13 @@ terms are used as the OAuth binding defines them
 realization; the substrate contract
 ({{I-D.draft-mcguinness-mission-substrate}}) carries the
 binding-neutral kernel forms. Policy Enforcement
-Point (PEP), Policy Decision Point (PDP), and consequential action
-are the runtime profile's ({{I-D.draft-mcguinness-mission-runtime}});
+Point (PEP), Policy Decision Point (PDP), consequential action, the
+high-consequence classes, and the Enforcement Scope Statement are the
+runtime profile's ({{I-D.draft-mcguinness-mission-runtime}});
+Effective Authority Set is the status profile's
+({{I-D.draft-mcguinness-oauth-mission-status}}); the transition
+classification, including `decide_anew`, is the substrate contract's
+({{I-D.draft-mcguinness-mission-substrate}});
 Mission Authority Server (MAS) is defined by
 {{I-D.draft-mcguinness-mission-authority-server}}; the AAuth binding
 is defined by {{I-D.draft-mcguinness-mission-aauth}}.
@@ -2556,7 +2561,8 @@ The levels, cumulative:
   Under a binding without credential-carried authority (the standalone
   MAS), Baseline
   grants governance and audit; no kill switch of any kind exists
-  until a freshness surface (the half-step) and runtime enforcement
+  until a freshness surface (the half-step named under Proof
+  obligations below) and runtime enforcement
   (the next level) arrive, and a deployment states that; the
   issuance join
   ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) restores
