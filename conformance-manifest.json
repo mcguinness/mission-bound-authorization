@@ -6128,7 +6128,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "DischargeEventStore is consulted after target authorization and before the terminal check, so a retry under a fresh nonce recovers the original outcome and versions even once the Mission has gone terminal. The test asserts the response is a FRESH envelope by its echoed new nonce (not by byte inequality, which a frozen clock could make vacuous), carrying the original prior/current versions, with no second version increment."
+   "notes": "DischargeEventStore is looked up, keyed on the TARGETED tuple, before the terminal check and before any carryover resolution; the caller is then authorized against the pin of the target the row recorded (the forwarded replacement's, when the original was forwarded after carryover) before the stored result is returned, so a retry under a fresh nonce recovers the original outcome, versions and resolved target even once the Mission has gone terminal or been carried again. The test asserts the response is a FRESH envelope by its echoed new nonce (not by byte inequality, which a frozen clock could make vacuous), carrying the original prior/current versions, with no second version increment."
   },
   {
    "id": "status.discharge.event-fingerprint-conflict",
@@ -6342,6 +6342,12 @@
      "name": "the discharge operation on the lifecycle endpoint > discharges a suspended Mission, and acknowledges already_discharged after it",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > condition selectors (#898 fix 1) > never adds a digest to the result of a selector-form request",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
     }
    ],
    "notes": "The `discharge_result` object is a sibling of `mission` in the endpoint's existing signed envelope (kernel.signedStatus's `dischargeResult` option), asserted member-for-member for `discharged` and by outcome plus versions for `already_discharged` and `terminal_noop`, so all three vocabulary values are observed. The response is state-only (the request carries no audience) and echoes the request's own nonce."
@@ -6407,7 +6413,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "Propagation is entry-wise and SYNCHRONOUS in this implementation (`propagateDischargeToChildren`, matching a child entry on the resource plus the fired `condition_digest`, which the subset rule guarantees the child carries, and keyed by the child's own entry commitment with recursion to grandchildren), so the asynchronous materialization gap the clause contemplates does not exist here and there is nothing to race: immediately after the parent commit the already-justified child's effective set is empty and its derivation is refused. The refusal is observed at the kernel derivation gate the token endpoint calls (`gateDerivation`) and at `createChildMission`, not through a full OAuth exchange."
+   "notes": "Propagation is entry-wise and SYNCHRONOUS in this implementation (`propagateDischargeToChildren`, matching a child entry on its recorded justification, the first-in-order parent entry it is a subset of (`justifyingIndex`), plus the fired `condition_digest`, keyed by the child's own entry commitment with recursion to grandchildren; see status.discharge.propagation-by-justification), so the asynchronous materialization gap the clause contemplates does not exist here and there is nothing to race: immediately after the parent commit the already-justified child's effective set is empty and its derivation is refused. The refusal is observed at the kernel derivation gate the token endpoint calls (`gateDerivation`) and at `createChildMission`, not through a full OAuth exchange."
   },
   {
    "id": "status.discharge.propagation-by-justification",
@@ -6429,9 +6435,16 @@
     "normative": "a discharge reaches a Child Mission's entry only through that entry's recorded justification (the parent entry it was derived from), recursively, and only when the entry carries the fired condition; a child entry justified by a different parent entry carrying an identical condition is not discharged"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#898 fix 2. The implementation matches a child entry on the resource plus the fired condition_digest (see status.discharge.child-propagation); keying on the justification mapping, with the acceptance case of two parent entries carrying identical conditions, lands with the #898 implementation PR."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "discharge propagation by recorded justification, downward only (#898 fix 2) > reaches a child entry only through its recorded justification, never a parent entry with an identical condition",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "`propagateDischargeToChildren` keys on the child entry's recorded justification: `justifyingIndex` (child-delegation.ts), the deterministic first-in-order subset selection that fan-out accounting also counts against. Both Authority Sets are immutable, so recomputing that selection over the approved sets is the recorded mapping; no separate table is kept. A child entry is reached when its justifying parent entry's entry_digest is the discharged one and it carries the fired condition_digest; recursion rides latchDischarge, so a grandchild justified by an already-reached child entry follows. The test gives parent entries E1 and E2 byte-identical conditions on one resource, a child entry justified by E2 and a grandchild under it: discharging E1 reaches neither (both still pass gateDerivation), discharging E2 reaches both (gateDerivation refuses). Observed at the kernel derivation gate the token endpoint calls, not through a full OAuth exchange."
   },
   {
    "id": "status.discharge.propagation-downward-only",
@@ -6453,9 +6466,16 @@
     "normative": "discharging a Child Mission's entry leaves its parent's and its siblings' entries undischarged"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#898 fix 2. No test yet asserts that discharging a child entry leaves its parent's and siblings' entries untouched; it lands with the #898 implementation PR."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "discharge propagation by recorded justification, downward only (#898 fix 2) > never discharges a parent's or a sibling's entry because a child entry was discharged",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Propagation walks only findChildren of the record that latched, so nothing moves upward or sideways. The test discharges one child's entry directly and asserts the parent and a sibling (both justified by the same parent entry) keep their entries, their versions and their derivation at gateDerivation, while the discharged child is refused. Observed at the kernel derivation gate the token endpoint calls."
   },
   {
    "id": "status.discharge.selector-one-per-target",
@@ -6477,9 +6497,16 @@
     "normative": "each (mission_id, entry_digest, condition_digest) target has at most one selector, and every selector resolves to exactly one target"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#898 fix 1. Implementation (the selector table) lands with the #898 implementation PR."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > condition selectors (#898 fix 1) > issues one selector per target, resolving to exactly that target, and discharges it",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "DischargeSelectorStore (kernel/discharge-selector-store.ts): `selector` is the primary key and (mission_id, entry_digest, condition_digest) is UNIQUE, with lazy get-or-create, so a target never gains a second selector and a selector resolves to exactly one target. The test approves two entries carrying identical conditions plus a byte-identical duplicate: the two distinct targets get distinct selectors, the duplicate shares one, a second request mints nothing new, each selector resolves to its own triple, and a discharge over the lifecycle endpoint by the selector latches exactly that target's equivalence class."
   },
   {
    "id": "status.discharge.selector-non-reconstruction",
@@ -6501,9 +6528,16 @@
     "normative": "a selector is not derived from the entry's content without a secret, so it cannot be tested against guesses of the record entry"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#898 fix 1. Implementation lands with the #898 implementation PR."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > condition selectors (#898 fix 1) > never derives a selector from the entry's content",
+     "level": "unit",
+     "surface": "introspection"
+    }
+   ],
+   "notes": "A selector is `dcs_` plus 18 random bytes (base64url), never computed from the entry. The test shows two Missions with byte-identical entries (identical entry and condition digests) get different selectors, neither contains digest material, and a fresh store minting for the same target produces a different value, so a selector cannot be tested against guesses of the record entry."
   },
   {
    "id": "status.discharge.selector-retention",
@@ -6525,9 +6559,22 @@
     "normative": "a selector resolves for as long as its target can still be discharged"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#898 fix 1. Implementation lands with the #898 implementation PR."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > condition selectors (#898 fix 1) > keeps a selector resolvable after its target discharged, through a fresh-nonce event replay",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge-carryover.test.ts",
+     "name": "the Discharge Receipt (@spec discharge#discharge-receipt, #898 fix 3) > answers a caller without Status read rights with a signed receipt bound to its aud and nonce, and replays it",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "Selector rows are never deleted, so a selector stays resolvable for the record's lifetime, which covers direct discharge, forwarding after carryover, and the event-dedup horizon. The first test discharges by the digest form, then replays the same occurrence by the selector under a fresh nonce and recovers the stored result; the receipt test uses a selector issued for the old child BEFORE its carryover and is forwarded by it afterwards."
   },
   {
    "id": "status.discharge.selector-disclosure-scope",
@@ -6549,9 +6596,28 @@
     "normative": "discharge_selectors names only entries the same introspection response returns to that caller"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#898 fix 1. Implementation lands with the #898 implementation PR."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "discharge_selectors in the introspection projection (@spec discharge#condition-selectors, #898 fix 1) > discloses a selector beside each returned completing entry, and a source discharges with it holding only the projection",
+     "level": "endpoint",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "discharge_selectors in the introspection projection (@spec discharge#condition-selectors, #898 fix 1) > maps a narrowed projection to its record target and gives a projection-added condition no selector",
+     "level": "endpoint",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "condition selector mapping for a projected entry (#898 fix 1) > gives an ambiguous projected condition no selector, and a uniquely held one its record target",
+     "level": "unit",
+     "surface": "introspection"
+    }
+   ],
+   "notes": "The introspection adapter computes `discharge_selectors` over exactly the `authorization_details` that response returns (after the audience filter), only on an active projection and only where the discharge operation is enabled (MissionKernel.dischargeSelectorsFor). The endpoint tests show a payments caller gets selectors only for the payments entries it is returned (never the ledger entry the record also carries), with indices into its own array; a discharged entry leaves the projection with its selector; a narrowed credential's entry maps to its record target by the subset rule; a condition the projection added gets none; and an ambiguous subset match gets none (unit)."
   },
   {
    "id": "status.discharge.selector-issuer-only",
@@ -6573,9 +6639,16 @@
     "normative": "a non-issuer AS never reports discharge_selectors"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#898 fix 1. Implementation lands with the #898 implementation PR."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "discharge_selectors in the introspection projection (@spec discharge#condition-selectors, #898 fix 1) > reports discharge_selectors only as the Mission issuer",
+     "level": "unit",
+     "surface": "introspection"
+    }
+   ],
+   "notes": "MissionKernel.dischargeSelectorsFor returns nothing unless the record's issuer is this AS's issuer; the test calls it with a record held under another issuer and gets an empty list. Partial: the guard is exercised at the kernel, not over the introspection endpoint, because this AS can never hold a foreign-issuer record (insertRecord refuses one, and the adapter refuses a token whose mission.issuer differs from the record's), so no endpoint request reaches the non-issuer case."
   },
   {
    "id": "status.discharge.target-form-exactly-one",
@@ -6597,9 +6670,16 @@
     "normative": "a discharge request carrying both condition_selector and the digest pair, or neither, is refused invalid_request"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#898 fix 1. Implementation lands with the #898 implementation PR."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > condition selectors (#898 fix 1) > refuses a request carrying both target forms, or neither, as invalid_request",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "handleDischarge refuses a body carrying condition_selector beside either digest member, or carrying neither form, with invalid_request before any Mission lookup; a malformed selector is invalid_request too. Nothing latches."
   },
   {
    "id": "status.discharge.selector-collapse",
@@ -6621,9 +6701,16 @@
     "normative": "an unresolvable selector, or one resolving outside the named Mission, produces the same not_found body as the other collapsed cases"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#898 fix 1. Implementation lands with the #898 implementation PR."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > condition selectors (#898 fix 1) > collapses an unresolvable selector, and one resolving outside the mission_id, into the identical not_found",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "kernel.discharge resolves the selector first; one that resolves to nothing, or to a target whose mission_id is not the request's, raises DischargeNotFoundError (unknown_selector). The test shows both produce the same not_found body as an unknown digest-form entry, as does a RESOLVING selector presented by a discharge-scoped caller its target's pinned mapping does not admit (knowing a selector authorizes nothing), and nothing latches in either Mission."
   },
   {
    "id": "status.discharge.selector-form-shared-identity",
@@ -6645,9 +6732,16 @@
     "normative": "a selector-form request and a digest-form request for the same target and occurrence are one event: a repeat in the other form is a replay, not a new assertion or a conflict"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#898 fix 1. Implementation lands with the #898 implementation PR."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > condition selectors (#898 fix 1) > shares one deduplication identity between the digest form and the selector form",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "The event tuple and the assertion fingerprint use the resolved entry_digest and condition_digest; the selector stays outside both. The test discharges by selector, then repeats the occurrence in the digest form: a replay with the original versions and no second increment, and a divergent repeat in the other form is conflict, so both forms are one tuple."
   },
   {
    "id": "status.discharge.result-no-added-digests",
@@ -6669,9 +6763,16 @@
     "normative": "the signed result of a selector-form request echoes the selector and never the record entry's digests"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#898 fix 1. Implementation lands with the #898 implementation PR."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > condition selectors (#898 fix 1) > never adds a digest to the result of a selector-form request",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "discharge_result echoes targetFormOf(the request): a selector-form request's signed result is exactly {condition_selector, event_id, outcome, prior_version, current_version}, asserted member for member."
   },
   {
    "id": "status.discharge.forward-to-replacement",
@@ -6693,9 +6794,22 @@
     "normative": "a discharge targeting a carried-over old child discharges the replacement's corresponding entry, including across a chain of carryovers"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#898 fix 3. Implementation (pairing and forwarding) lands with the #898 implementation PR."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge-carryover.test.ts",
+     "name": "discharge forwarding after carryover (@spec discharge#discharge-carryover, #898 fix 3) > forwards a delayed assertion to the replacement's corresponding entry and answers with its Status envelope",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge-carryover.test.ts",
+     "name": "discharge forwarding after carryover (@spec discharge#discharge-carryover, #898 fix 3) > resolves a chain of two carryovers through both recorded pairings",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "Driven through the real deferred-expansion carryover and the lifecycle endpoint. A discharge targeting a carried old child latches the replacement's corresponding entry under the ordinary commit, before the response, and answers with the replacement's signed Status envelope whose discharge_result carries forwarded_from {issuer, id} naming the old child and the replacement's versions; the old child is untouched. A chain A to B to C formed before delivery resolves through both recorded pairings and latches C's entry, leaving B unchanged."
   },
   {
    "id": "status.discharge.forward-by-pairing-only",
@@ -6717,9 +6831,28 @@
     "normative": "forwarding resolves the replacement entry only through the recorded per-entry pairing, so a replacement entry whose bytes changed under inherited constraints is still reached, and no other entry is"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#898 fix 3. Implementation lands with the #898 implementation PR."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge-carryover.test.ts",
+     "name": "discharge forwarding after carryover (@spec discharge#discharge-carryover, #898 fix 3) > reaches a replacement entry whose bytes changed under inherited constraints, through the recorded pairing only",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge-carryover.test.ts",
+     "name": "discharge forwarding after carryover (@spec discharge#discharge-carryover, #898 fix 3) > forwards a delayed assertion to the replacement's corresponding entry and answers with its Status envelope",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge-carryover.test.ts",
+     "name": "discharge forwarding after carryover (@spec discharge#discharge-carryover, #898 fix 3) > answers terminal_noop for an entry with no recorded counterpart",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "resolveCarriedTarget follows only the carried row's entry_pairs. The tests give the replacement two entries carrying the identical condition on the same resource: only the paired one is latched, including when inherited requires_action_approval changes the replacement entry's bytes so the targeted digest names nothing in it; an entry contained away before the carryover has no counterpart and answers terminal_noop rather than reaching a same-resource entry."
   },
   {
    "id": "status.discharge.forward-authorization",
@@ -6741,9 +6874,16 @@
     "normative": "a forwarded discharge is authorized against the replacement's pinned mapping; a caller it does not admit gets the not_found collapse"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#898 fix 3. Implementation lands with the #898 implementation PR."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge-carryover.test.ts",
+     "name": "discharge forwarding after carryover (@spec discharge#discharge-carryover, #898 fix 3) > authorizes against the replacement's pinned mapping: a caller only the old child's mapping admits gets not_found",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "Forwarding authorizes against the replacement's pin for the fired condition. The test first shows the replacement inherited the old child's pin (mapping version 1) despite a live policy edit to version 2 before the carryover; it then simulates a re-resolved replacement mapping by writing a different pin directly through the pin store (the spec forbids re-resolution, so no AS path produces it): a source admitted only by the old child's pin gets the identical not_found body and nothing latches, while the principal the replacement's pin admits is forwarded."
   },
   {
    "id": "status.discharge.forward-replay",
@@ -6765,9 +6905,16 @@
     "normative": "a retry of a forwarded discharge, including one after a further carryover, recovers the original result and never resolves a new target"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#898 fix 3. Implementation lands with the #898 implementation PR."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge-carryover.test.ts",
+     "name": "discharge forwarding after carryover (@spec discharge#discharge-carryover, #898 fix 3) > recovers the original result on a retry after a further carryover, which inherits the discharge",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "The event row is keyed on the targeted tuple and records the resolved target (resolved_mission_id, resolved_entry_digest) at first processing. The test forwards A's discharge to B, carries B to C, then retries under a fresh nonce: the result names B with the original versions and forwarded_from, C is unchanged (it never received the latched entry, which B's effective set excluded: the no-reset rule), and a byte-identical retransmission replays the stored bytes."
   },
   {
    "id": "status.discharge.forward-latch-first",
@@ -6789,9 +6936,16 @@
     "normative": "a delayed assertion against an entry the old child had already discharged before carryover answers already_discharged and forwards nothing"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#898 spec review. An entry the old child had already discharged answers already_discharged without forwarding; implementation lands with the #898 implementation PR."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge-carryover.test.ts",
+     "name": "discharge forwarding after carryover (@spec discharge#discharge-carryover, #898 fix 3) > checks the old child's own latch first: an entry it had discharged answers already_discharged, unforwarded",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "For a carried old child, kernel.discharge checks the targeted entry's own latch before resolving any pairing (applyDischarge with latchFirst, so the old child's terminal state does not turn it into terminal_noop). The test latches the entry on the old child before the carryover, then sends a second assertion under another event_id: already_discharged with the old child's versions, no forwarded_from, and the replacement untouched."
   },
   {
    "id": "status.discharge.receipt-aud-nonce",
@@ -6813,9 +6967,16 @@
     "normative": "a Discharge Receipt's aud is the authenticated requester and its nonce the request's own; a byte-identical retransmission replays the stored receipt bytes and a fresh-nonce event replay returns a new receipt"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#898 spec review. Implementation lands with the #898 implementation PR."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge-carryover.test.ts",
+     "name": "the Discharge Receipt (@spec discharge#discharge-receipt, #898 fix 3) > answers a caller without Status read rights with a signed receipt bound to its aud and nonce, and replays it",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "A forwarded discharge from a caller without the mission_status grant (the same check the Status route applies) is answered with a Discharge Receipt: typ mission-discharge-receipt+jwt, the Status kid and ES256, Content-Type application/mission-discharge-receipt+jwt, payload exactly {iss, aud, nonce, iat, exp, discharge_receipt}, aud the authenticated requester, nonce the request's, exp at the Status lifetime, discharge_receipt {mission_id (the old child), echoed target form, event_id, outcome: forwarded}, and neither the replacement's identifier nor any version. A byte-identical retransmission replays the stored bytes; a fresh-nonce replay (in the other target form) returns a new receipt echoing the new nonce, with no second commit."
   },
   {
    "id": "status.discharge.forwarded-result-verification",
@@ -6837,9 +6998,16 @@
     "normative": "a consumer of a forwarded Status response replaces the mission.id-equals-requested check with forwarded_from naming the requested Mission and a matching issuer, then reads mission as the replacement"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#902 review (P2). Consumer-side rule; a verifier test lands with the #898 implementation PR."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge-carryover.test.ts",
+     "name": "discharge response consumers (@spec discharge#discharge-receipt, #discharge-carryover) > verifies a forwarded Status response by forwarded_from in place of the mission.id check",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Verified with a TEST-SIDE consumer (test/discharge-consumer.helper.ts, verifyStatusResponse with forwarded: true): a real forwarded envelope from the AS verifies against its jwks_uri when forwarded_from names the requested Mission and mission.issuer equals its issuer, and a consumer without the rule rejects it at step 8; forged envelopes naming another Mission, or a mismatched issuer, are refused. Partial: no production consumer of Status responses exists in src/, so the rule is exercised only by the test verifier."
   },
   {
    "id": "status.discharge.receipt-consumer-verification",
@@ -6861,9 +7029,22 @@
     "normative": "a consumer relies on a Discharge Receipt only after verifying typ, an advertised alg, the signature, iss, aud, nonce, the echoed mission_id, target form and event_id, and iat/exp"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#902 review (P2). The adapted Status verification procedure (typ, alg, signature, iss, aud, nonce, echoed target and event, lifetime); a verifier test lands with the #898 implementation PR."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge-carryover.test.ts",
+     "name": "discharge response consumers (@spec discharge#discharge-receipt, #discharge-carryover) > relies on a Discharge Receipt only after all eight checks, each of which refuses on its own",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge-carryover.test.ts",
+     "name": "the Discharge Receipt (@spec discharge#discharge-receipt, #898 fix 3) > answers a caller without Status read rights with a signed receipt bound to its aud and nonce, and replays it",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "Verified with a TEST-SIDE consumer (test/discharge-consumer.helper.ts, verifyDischargeReceipt): the AS's real receipt passes all eight checks against its jwks_uri, and twelve single-fault receipts are each refused at the check they break (typ; alg none and an unadvertised alg; signature; iss; aud; nonce; echoed mission_id, selector and event_id; iat and exp beyond 30 s of skew). Partial: no production consumer exists in src/, and the AS publishes no mission_status_signing_alg_values_supported metadata, so the verifier takes the advertised algorithms as an input (ES256)."
   },
   {
    "id": "status.discharge.replay-echoes-current-form",
@@ -6885,9 +7066,22 @@
     "normative": "a selector-form fresh-nonce retry of a digest-form original receives the stored outcome and versions with the selector echoed, never the digests"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#902 review (P2). A fresh-nonce replay keeps the stored outcome, resolved target and versions but echoes the current request's form; the cross-form case lands with the #898 implementation PR (the existing event-replay test covers the same-form case)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > condition selectors (#898 fix 1) > echoes the current request's form on a fresh-nonce replay of a digest-form original",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge-carryover.test.ts",
+     "name": "the Discharge Receipt (@spec discharge#discharge-receipt, #898 fix 3) > answers a caller without Status read rights with a signed receipt bound to its aud and nonce, and replays it",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "The replay branch rebuilds the result from the stored outcome and versions with the CURRENT request's target form and event_id. The test sends a digest-form original, then a selector-form retry under a fresh nonce, and gets the stored outcome and versions with the selector echoed and no digest; the receipt test shows the same for a forwarded result (a selector-form receipt, then a digest-form fresh-nonce receipt)."
   },
   {
    "id": "status.discharge.receipt-typ-exclusive",
@@ -6909,9 +7103,16 @@
     "normative": "a Discharge Receipt (typ mission-discharge-receipt+jwt) is never accepted as a Mission Status Response, nor the reverse"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#898 fix 3. Consumer-side rule; a verifier test lands with the #898 implementation PR."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge-carryover.test.ts",
+     "name": "discharge response consumers (@spec discharge#discharge-receipt, #discharge-carryover) > never accepts a Discharge Receipt as a Mission Status Response, nor the reverse",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Both test-side verifiers validate typ exactly before anything else: a receipt fed to the Status verifier and a Status response fed to the receipt verifier are each refused at the typ check, while each verifies as itself. Partial: consumer-side rule, exercised only by the test verifier (no production consumer in src/)."
   },
   {
    "id": "child-delegation.carryover.entry-pairing",
@@ -6931,9 +7132,16 @@
     "normative": "Carryover Evidence for a carried child records, per carried entry, the old record entry_digest and its replacement's, at most one counterpart each"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#898 fix 3. Carryover Evidence's map gains the per-entry pairing that discharge forwarding resolves through; implementation lands with the #898 implementation PR."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge-carryover.test.ts",
+     "name": "Carryover Evidence entry pairing (@spec child-delegation#carryover-evidence, #898 fix 3) > records, per carried entry, the old record entry_digest paired with the replacement's, one counterpart each",
+     "level": "cross-component",
+     "surface": "verification"
+    }
+   ],
+   "notes": "applyCarryoverInCallerTx computes entry_pairs during re-derivation (carryoverEntryPairs over effectiveEntriesWithOrigin and the index-aligned replacement set) and retains them on the carried row of the signed Carryover Evidence map. The test contains one action of a two-action entry before the carryover: the pairing still names the old RECORD entry's digest (not the narrowed effective entry's) beside the narrowed replacement entry's, the second entry pairs with its own, and no old entry has two counterparts."
   },
   {
    "id": "status.discharge.policy-resolution-on-condition-entry",
