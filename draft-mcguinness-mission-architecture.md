@@ -741,7 +741,8 @@ Grouped as planes rather than parts, the roles of {{components}} form
 this layer, with the evidence surface crossing all of them:
 
 ~~~
- control       Mission control point (OAuth AS | MAS | AAuth PS):
+ control       Mission control point (OAuth AS | MAS | AAuth PS |
+               UMA AS | GNAP AS):
                approved context, lifecycle and gating;
                anchors and authority distribution where defined
                     |                       ^
@@ -1194,9 +1195,9 @@ spine by the question each answers.
               (client or agent side, untrusted)
                         |
  approve      Mission control point: the OAuth AS, Mission
- and record   Authority Server, or AAuth Person Server
-              contextual-governance binding
-              (+ Consent Evidence, Deferred Approval)
+ and record   Authority Server, AAuth Person Server
+              contextual-governance binding, UMA AS, or
+              GNAP AS (+ Consent Evidence, Deferred Approval)
                         |
               the Mission: durable approved context and
               lifecycle; authority anchors where defined
