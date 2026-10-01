@@ -3228,7 +3228,7 @@ needs the whole matrix:
 
 | Control | Stops | Home |
 |---|---|---|
-| Capability kill | one capability's new derivation within one Mission, at once at commit; credentials already materialized under it run to their own bound ({{kill-switch-composition}}), and the body of work still runs | the issuer-held containment overlay ({{I-D.draft-mcguinness-oauth-mission-containment}}) |
+| Capability kill | one capability within one Mission: new derivation at once at commit; credentials already materialized under it run to their own bound unless a containment-aware action-time gate reaches them first ({{kill-switch-composition}}); the body of work still runs | the issuer-held containment overlay ({{I-D.draft-mcguinness-oauth-mission-containment}}) |
 | Mission kill | one body of work: new derivation at once, and residual credentials at the earliest of revocation, re-check, or their own expiry ({{validity-model}}) | the OAuth binding's revocation; cascades to Child Missions ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) |
 | Agent kill | all work by one agent, across its Missions | the deployment's agent IAM ({{three-objects}}) |
 | Agent Deployment kill | every instance running a compromised version | the deployment's change governance ({{three-objects}}) |
@@ -3244,22 +3244,29 @@ converse holds too: killing a workload leaves the Mission `active`
 and its authority derivable to a replacement instance unless the
 Mission is also revoked.
 
-Capability kill claims one of two properties, and which one tracks
-the deployment's assurance level
-({{I-D.draft-mcguinness-oauth-mission-containment}}): at Baseline
-Issuance, a new-derivation kill, gating derivations minted after the
-transition and propagating to Child Missions justified by the
-contained entry, while a cross-domain grant already redeemed or an
-offline attenuation root already minted before the transition keeps
-its own bounded lifetime, exactly as the credential-kill row's
-residual does; at Runtime-Enforced and above, an action-time kill
-that additionally reaches a token issued before the transition,
-bounded by the state source's staleness plus the permit and
-execution windows.
+Capability kill provides one of two containment properties, decided
+per action class and consumer, never by the deployment's assurance
+level ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section
+"Containment Properties"). The Baseline property is a new-derivation
+kill: where the binding gates derivation, derivations minted after
+the transition exclude the contained capability, and the exclusion
+propagates to Child Missions justified by the contained entry, while
+a cross-domain grant already redeemed or an offline attenuation root
+already minted before the transition keeps its own bounded lifetime,
+exactly as the credential-kill row's residual does. The
+Runtime-Enforced property is an action-time kill: a consumer that
+checks a containment-aware state source at action time also denies
+the contained capability on a token issued before the transition,
+bounded by that source's staleness plus the permit and execution
+windows. Which property a class gets follows its state source and
+enforcement scope: a Runtime-Enforced deployment provides only the
+Baseline property for a class its Enforcement Scope Statement leaves
+lifecycle-gated-only, and a standalone MAS path with no runtime gate
+gets neither ({{kill-switch-composition}}).
 
 A deployment's incident runbook names which of these controls exist,
-who may pull each, and which capability-kill property its own
-assurance level claims.
+who may pull each, and, per action class, which capability-kill
+property its consumers obtain.
 
 # Mission Requirements {#requirements}
 
