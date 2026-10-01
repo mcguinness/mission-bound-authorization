@@ -1,16 +1,7 @@
-// pnpm issuance-only [--introspection]: the issuance-only reference
-// deployment (src/docs/issuance-only-deployment.md § Run it). No OpenFGA,
-// PDP or PEP is needed. Ctrl-C stops both servers; the wrapper waits for the
-// child to close them and exits with its status.
-import { execFileSync } from "node:child_process";
+// pnpm issuance-only [--introspection]: the reference AS plus plain-rs in an
+// issuance-only configuration (src/docs/issuance-only-deployment.md § Run it).
+// The wrapper forwards SIGINT, SIGTERM and SIGHUP to the server process, which
+// closes both servers, and exits when it does.
+import { runDemoTs } from "./run-demo-ts.mjs";
 
-for (const sig of ["SIGINT", "SIGTERM"]) process.on(sig, () => {});
-try {
-  execFileSync(
-    "pnpm",
-    ["-C", "demo", "exec", "tsx", "src/issuance-only-serve.ts", ...process.argv.slice(2)],
-    { stdio: "inherit", env: process.env },
-  );
-} catch (e) {
-  process.exit(typeof e.status === "number" ? e.status : 0);
-}
+runDemoTs("src/issuance-only-serve.ts", process.argv.slice(2));

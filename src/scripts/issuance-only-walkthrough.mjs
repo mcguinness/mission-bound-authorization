@@ -1,8 +1,6 @@
 // pnpm issuance-only:walkthrough: drive the reports.read path against a
 // running `pnpm issuance-only` (src/docs/issuance-only-deployment.md § Run it).
-import { execFileSync } from "node:child_process";
+// Signals are forwarded and the walkthrough's exit status is the wrapper's.
+import { runDemoTs } from "./run-demo-ts.mjs";
 
-execFileSync("pnpm", ["-C", "demo", "exec", "tsx", "src/issuance-only-walkthrough.ts"], {
-  stdio: "inherit",
-  env: process.env,
-});
+runDemoTs("src/issuance-only-walkthrough.ts", process.argv.slice(2));

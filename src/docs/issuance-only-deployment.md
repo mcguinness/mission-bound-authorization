@@ -369,7 +369,7 @@ with `pnpm install --frozen-lockfile`.
 
 **What the launcher starts.** `pnpm issuance-only` (`scripts/issuance-only.mjs`
 → `demo/src/issuance-only-serve.ts` → `startIssuanceOnly` in
-`demo/src/issuance-only.ts`) starts two servers:
+`demo/src/issuance-only.ts`) starts two servers in one server process:
 
 - **The reference AS**, at `http://localhost:4400`. This is the
   `buildAuthorizationServer` assembly restricted to the capability set of §8
@@ -399,6 +399,21 @@ per boot (D25), the approver console's token, and the lifecycle console's
 token. In a real deployment three different parties hold these three
 credentials. Here the walkthrough plays all three, each step under its own
 credential.
+
+**Stopping.** The wrapper (`scripts/run-demo-ts.mjs`) runs the server process
+as its only child (`node --import tsx`), forwards SIGINT, SIGTERM and SIGHUP
+to it, and exits with its status. The server process closes both servers on
+the first of those signals and exits 0. A SIGTERM or SIGHUP sent to the
+wrapper's pid alone, or a Ctrl-C (SIGINT to the whole process group), frees
+both ports:
+
+- `the issuance-only commands under signals (#873) > SIGTERM to the launcher wrapper's pid alone stops both servers: exit 0 within 10 s and both ports free`
+- `> SIGHUP to the launcher wrapper's pid alone stops both servers the same way`
+- `> SIGINT to the launcher's whole process group (a terminal Ctrl-C, which reaches the server twice) stops both servers: exit 0 and both ports free`
+
+The walkthrough wrapper works the same way and exits with the walkthrough's
+status:
+`the issuance-only commands under signals (#873) > the walkthrough wrapper exits with the walkthrough's status: 1 when no deployment's credentials exist`.
 
 **Approval input, not end-user consent.** Step 2 is the demo's trusted
 approval input. It is the `svc:approver-console` service principal (approver

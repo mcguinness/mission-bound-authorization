@@ -20,8 +20,14 @@ console.log(`  plain-rs  ${credentials.rsUrl}  (audience ${credentials.audience}
 console.log(`  introspection: ${introspection ? `${credentials.asUrl}/introspect as rs-plain` : "off (JWT only)"}`);
 console.log(`  dev credentials: ${CREDENTIALS_PATH}`);
 console.log("  ready; run `pnpm issuance-only:walkthrough` in another shell. Ctrl-C to stop.");
-for (const sig of ["SIGINT", "SIGTERM"] as const) {
+// Close both servers once, on the first of SIGINT, SIGTERM or SIGHUP. A
+// terminal Ctrl-C reaches this process twice (from the terminal and forwarded
+// by the wrapper), so a repeat is ignored while the close runs.
+let closing = false;
+for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {
   process.on(sig, () => {
+    if (closing) return;
+    closing = true;
     void deployment.close().finally(() => process.exit(0));
   });
 }

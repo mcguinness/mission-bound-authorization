@@ -149,10 +149,14 @@ export async function startIssuanceOnly(opts: IssuanceOnlyOptions): Promise<Issu
       lifecycleServiceToken: DEV_SERVICE_TOKEN,
     },
     close: async () => {
-      await Promise.all([
-        new Promise<void>((r) => asServer.close(() => r())),
-        new Promise<void>((r) => rsServer.close(() => r())),
-      ]);
+      // Stop accepting, then drop open keep-alive connections so the close
+      // does not wait out a client's idle socket.
+      const stop = (server: Server) =>
+        new Promise<void>((r) => {
+          server.close(() => r());
+          server.closeAllConnections();
+        });
+      await Promise.all([stop(asServer), stop(rsServer)]);
     },
   };
 }
