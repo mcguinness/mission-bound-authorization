@@ -341,9 +341,10 @@ export async function handleTokenExchangeGrant(
     txError(ctx, 400, "invalid_grant", "continuation assertion cnf.jkt does not match the presenter key");
     return;
   }
+  // @spec id-continuation-assertion — an act that is not the authenticated
+  // client's canonical actor identity is invalid_request (ICA -02 5.5.6).
   if (ica.act.iss !== currentActor.iss || ica.act.sub !== currentActor.sub) {
-    txError(ctx, 400, "invalid_grant", "continuation assertion actor does not match the authenticated client");
-    return;
+    throw new errors.InvalidRequest("continuation assertion actor does not match the authenticated client");
   }
 
   // Step 9: mint the continuation ID-JAG. gateDerivation runs INSIDE

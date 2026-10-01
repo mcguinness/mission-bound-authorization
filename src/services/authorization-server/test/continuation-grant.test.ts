@@ -533,6 +533,21 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     expect(body.error_description).toMatch(/actor_token/);
   });
 
+  it("(c3) an ICA act that is not the authenticated client's canonical actor -> invalid_request (ICA -02 5.5.6)", async () => {
+    const { missionId, handle } = newLineage("apev-c3");
+    for (const act of [
+      { iss: ISSUER, sub: "ap-agent-imposter" }, // another sub at the same issuer
+      { iss: CA, sub: "ap-agent" }, // the same sub at another actor identity authority
+    ]) {
+      const res = await tokenExchange({ subjectToken: await mintICA(handle, { act }) });
+      const body = (await res.json()) as { error?: string; error_description?: string };
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_request");
+      expect(body.error_description).toMatch(/actor does not match the authenticated client/);
+    }
+    expect(as.continuationStore.handlesForMission(missionId)).toHaveLength(2);
+  });
+
   it("(d) DPoP jkt != ICA cnf.jkt -> invalid_request (presenter-key mismatch)", async () => {
     const { handle } = newLineage("apev-d");
     const res = await tokenExchange({
