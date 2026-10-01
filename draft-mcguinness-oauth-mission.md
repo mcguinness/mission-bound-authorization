@@ -3776,11 +3776,6 @@ a capability is discovered out of band or by attempt: a Token
 Exchange, a cross-domain grant issuance, or an introspection request
 fails if the issuer does not support it.
 
-This member and the `mission_bound_authorization_required` member of
-{{protected-resource-metadata}} are discovery data whose integrity
-rests on the metadata retrieval protections of {{RFC8414}} and
-{{RFC9728}}; the security considerations of those documents apply.
-
 # Protected Resource Metadata {#protected-resource-metadata}
 
 This document defines the following protected resource metadata
@@ -4017,6 +4012,13 @@ back to an ordinary request where Mission support is not established
 On the enforcement side, a Resource Server for such a resource
 rejects a token lacking the `mission` claim and can advertise that
 requirement ({{rs-enforcement}}, {{protected-resource-metadata}}).
+
+The `mission_bound_authorization_supported` ({{discovery}}) and
+`mission_bound_authorization_required`
+({{protected-resource-metadata}}) members are discovery data whose
+integrity rests on the metadata retrieval protections of {{RFC8414}}
+and {{RFC9728}}; the security considerations of those documents
+apply.
 
 ## Agent-Specific Threats {#sec-agent}
 
