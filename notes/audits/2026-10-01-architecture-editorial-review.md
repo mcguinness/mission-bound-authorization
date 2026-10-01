@@ -304,6 +304,21 @@ paragraphs lose their second model. Main carve-out sites:
 
 ## E. Decisions for the author
 
+Recommended rulings. Reply "go" to take all nine, or name the ones to
+change. The details below give the options behind each.
+
+| # | Recommendation | Reason |
+| --- | --- | --- |
+| D1 | Keep Binding Properties here; change the Introduction's scope sentence to say the document defines descriptive vocabulary (binding properties, token classes, assurance levels) but no protocol or requirement | No other document changes, and core and MAS already cite it here; a move to the substrate is a family round that buys nothing for readers |
+| D2 | Keep the Deployment Profile section in the body; move its two JSON shapes to an appendix | Shortens the body by about 300 words without touching the deferred schema |
+| D3 | Trim each Document Map role to 15 words or fewer and move the map to an appendix | DRAFTS.md is not part of the I-D, so the map stays; generating it from the manifest needs build tooling, so do that only if drift recurs |
+| D4 | Turn the Five Packages into a column of the C1 overlay table; drop the standalone list | Keeps the product architect's view without a third taxonomy section |
+| D5 | Move Requirements to an appendix | No draft cites an R-number, and the body already states the kernel and invariants |
+| D6 | Keep both name sets; explain the collision once, in the C1 frames table | Renaming the containment properties changes another draft for a problem one table row solves |
+| D7 | Move the Baseline verification tests to an appendix, "Verification Coverage by Level" | They have no other home, so they cannot be cut; an appendix gets them out of the level definition |
+| D8 | Keep the comparison here as an appendix, table form only | It is family-level positioning; moving it into core is an issue-first change for no reader gain |
+| D9 | Use "AuthZEN profile" in this draft (matches the companion's title) in PR 1; file one family issue for the other uses and the manifest summary; leave "Mission Capability Binding" as a title | Fixes this draft now without deciding the family cleanup inside an architecture PR |
+
 - **D1. Binding Properties (L2784-2975).** This is the only definition
   of the vector in the family: 20 identifier uses here, and 3 in core
   and MAS, both informative. It calls itself authoritative (L2819) and
