@@ -1950,7 +1950,10 @@ document defines:
   basis, fixed at the approval event and immutable thereafter, like
   `approver` and `subject`. This document defines the `direct` basis
   in full; a companion profile can define a standing-consent basis
-  ({{standing-consent-bases}}). For `direct`, the members are:
+  ({{standing-consent-bases}}). The members below apply to every
+  approval basis, with the presence each one states. Their
+  direct-approval values are described here; standing-consent
+  specializations are defined in {{standing-consent-bases}}.
 
   `type`:
   : REQUIRED. A string: `direct`, defined in full by this document,
