@@ -7,8 +7,8 @@
     "content_sha256": "ec57264fec92ea2dd3c42ba1067c70d72195f251bc5c416ccad856cb1beac3a1"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "7a1fdb45e1fbc49e0cf28682b5b435a2770c86ac",
-    "content_sha256": "15c6ff6667c95ed2de0ef8b688f935c00ed5a262e6cf1be0ed8d4a6e791d43f5"
+    "revision": "523029ab16214372eec886dbd0f0d629fea653c8",
+    "content_sha256": "1abbd5d898a3c66fa068fae059f12005a833455192d202c98c3e00a929d982e8"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "48b7abcdacfb66289c29c5312e5d6c6e683b5141",
@@ -38,6 +38,10 @@
     "revision": "647f05a51463054252ba99826f8328cf8974e26f",
     "content_sha256": "b15734aad3b7ff884b854d637dc17ed8c1bc0a5c74777eae6f4f9f445bd84f34"
    },
+   "draft-mcguinness-oauth-mission-continuation.md": {
+    "revision": "c8b265cec29a2ea3e1bf340928861702012c80ef",
+    "content_sha256": "f9b842d98224a63f8159a886f130d2cfac230bbf3df787cef613f87022a9795c"
+   },
    "draft-mcguinness-oauth-mission-signals.md": {
     "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
     "content_sha256": "bd53c614b8389e6f5f91fba0e9caf61e9e22e0d5d75d8e7571511ab61185df2b"
@@ -47,8 +51,8 @@
     "content_sha256": "790b2bdac7819c4a3af571d0b79ce31bbc0b2531b9666f0cd2855ab1f7be5065"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "45fda8d107e7fe5c0ed61864358ad28c775ed688",
-    "content_sha256": "29d67521b432c0c03837c5478efdf146fa7b07ed410f8bf213252d4fca15783a"
+    "revision": "582a6e16beed189e7e579b0e079a1ce695d94ff7",
+    "content_sha256": "32d89ebbb29946e878f5d78fe8ff9c1cb57d3d3954460a6daea6097e0b68066e"
    },
    "draft-mcguinness-oauth-mission-template.md": {
     "revision": "7a1e80432e75d0221064b5e1b78743bb1c120d58",
@@ -59,16 +63,16 @@
     "content_sha256": "2ecac7a1642121e76f782cb12941b64fc1ed0782ae6df8a6e82721d5bc280b1f"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "b54d2ed85398d6554849d2fbd938c404c8b630a6",
-    "content_sha256": "8d1af844897af9498b7122595138dabdae29599ef6eed495529d3d245226c327"
+    "revision": "7044eecabde35ef61e22859a9753f6c723dfcce6",
+    "content_sha256": "4bdb90e21646f0c93687d084ca30fec8e7f09118be87ec746f06567e931a5af9"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7fc9ef45b5fb69f06bd3e90c1a93b6ac71808c10",
     "content_sha256": "f32cf81e773c9098464a50e451f559b3a5ad31485a315cc611df8e60fcafa2a7"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
-    "revision": "dc10915ac71b4d50c0867cf7d959ec45bda2eff0",
-    "content_sha256": "777f04c60e95e1d4fb102c1786c9d21339e58e877f2b74c4d7f818e698df846f"
+    "revision": "0d75d8a324bbf4737d65ad92a107dc74ef508e9c",
+    "content_sha256": "fd9175feb9dfeaa7555cf331bee63d7c75ca7b34832759a5b24b747d057c73e9"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
     "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
@@ -222,6 +226,7 @@
    "runtime.instance-context",
    "mas.instance-bound-join",
    "derivation-limits.limit",
+   "continuation.ica-transport",
    "submission-evidence.verification"
   ]
  },
@@ -23049,6 +23054,72 @@
     }
    ],
    "notes": "#762 adds REQUIRED, runtime-validated, versioned RAS local policy after entitlement and before one-time grant consumption, on base and continuation paths. The configured ceiling supplies the deployment-policy term, preserving restrictions and surviving action bindings; unsupported or too-broad restrictions refuse rather than being discarded. The SaaS read/write pair demonstrates narrowed delegated details; the paired PDP test independently varies resource policy while Mission authority and entitlement remain fixed. Cross-Org already applied localCeiling; retargeting it to the shared primitive establishes one comparison invariant, not a newly demonstrated binding bug. #787 settles the ceiling's child-creation term: a ceiling-declared `child_creation_policy` binds under the lineage rule instead of being stripped, and the minted entry keeps the reference with its retained-action provenance (see cross-domain.resource-as.local-policy-bound). Per-token derivation evidence remains separately tracked as SHOULD/todo."
+  },
+  {
+   "id": "continuation.ica-transport.refusal-codes",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "a terminal Mission is `invalid_continuation`, a suspended Mission is `unauthorized_client`, no remaining authority for the audience is `invalid_target`, and a derivation or hop-count limit is `invalid_grant`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "at the ICA continuation exchange the AS refuses a terminal Mission (expired, or revoked whether or not the continuation store has already ended its handles) with invalid_continuation, a suspended Mission with unauthorized_client, fully contained authority with invalid_target, and an exhausted derivation cap or the chain hop-count limit with invalid_grant",
+    "local": "codes only: mission_error stays at the issuance profile's SHOULD and is not asserted by this row ((b1) and (b3) happen to carry it; the ordinary revocation path through a store-terminated handle, (g), returns invalid_continuation without it). The exhausted (non-contained) empty-authority case is not separately exercised."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b0) consumption is atomic with issuance (#617 review 1): a redemption refused at the Mission gate leaves the ICA UNCONSUMED; the SAME assertion redeems once the gate reopens",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b1) a Mission past its expiry at the gate -> invalid_continuation with mission_error (ICA -02 5.5.6)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (g) revoking the Mission terminates its handles (onLifecycleCommit fan-out) -> invalid_continuation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b4) a revoked Mission whose hop the store has not yet ended -> invalid_continuation at the gate, not unauthorized_client",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b2) a Mission whose authority is fully contained -> invalid_target (ICA -02 5.5.6)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b3) an exhausted derivation cap -> invalid_grant with mission_error (a limit, ICA -02 5.5.6)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation hop-count limit (@spec id-continuation-assertion) > refuses a continuation past the chain's limit with invalid_grant, recording no hop and counting no derivation; another chain of the same Mission is unaffected",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#921: the ICA -02 Section 5.5.6 codes apply at this exchange in place of the issuance profile's invalid_grant, which core Issuance Gating permits for a Token Exchange profile that assigns its own code."
   },
   {
    "id": "resource-access.type.prefix-query-fragment-refused",

@@ -442,7 +442,7 @@ endpoint uses:
 | `invalid_audience` | 400 | `audience` names no AS this MAS mints for. |
 | `mission_not_active` | 409 | The Mission is not `active` ({{minting}}). |
 | `invalid_authorization_details` | 400 | The requested subset is not a subset of the consented Authority Set, or exceeds the audience scope. |
-| `derivation_limit_exhausted` | 409 | The Mission's established `derivation_limit` is reached ({{minting}}). |
+| `derivations_exhausted` | 409 | The Mission's established `derivation_limit` is reached ({{minting}}): the condition the OAuth binding's `mission_error` value `derivations_exhausted` reports ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}). |
 
 `not_found` covers both an unknown Mission and a requester that is not
 the recorded client, so the split never becomes a membership oracle;
