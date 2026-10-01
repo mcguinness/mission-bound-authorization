@@ -629,14 +629,14 @@ and each Action that uses it, with lifecycle cutting through the
 last three. The Mission is the
 approved task, with a lifecycle. In the OAuth model, the Authority Set
 is the concrete authority (resources, actions, constraints) derived for
-it. A Mission is not another `authorization_details` type: it is the
-durable, approval-backed object an Authority Set is derived for and
-gated by (the OAuth binding's Why a New Object section).
+it.
 
-A client proposes a Mission Intent, and may propose concrete
-authority alongside it; the Mission Issuer derives an
-Authority Set; an approval event commits them and creates the
-Mission.
+In every binding, an explicit approval event creates the Mission and
+commits its approved context, or a verifiable commitment to it, and
+the Mission's Controller then owns its state. In the OAuth binding, a
+client proposes a Mission Intent, and may propose concrete authority
+alongside it; the Mission Issuer derives an Authority Set; and the
+approval event commits both.
 
 In the OAuth binding, the commitment is the integrity anchors:
 `intent_hash` over the
@@ -649,9 +649,9 @@ each digest from the record alone (the OAuth binding's Mission Approval,
 Integrity Anchors, and Canonicalization Rules sections). The record
 is immutable except for its state (the Mission Record section).
 
-The Mission lifecycle states are `active`, `revoked`, and `expired`, and
-only `active` permits issuance or a new positive governance
-decision. A non-active
+In the OAuth binding the lifecycle states are `active`, `revoked`, and
+`expired`, and only `active` permits issuance or a new positive
+governance decision. A non-active
 state stops new derivation at once; authority already issued ends at
 the earliest of delivered revocation, a runtime or state-aware
 re-check, or the credential's own expiry ({{validity-model}}).
@@ -697,6 +697,29 @@ not loose:
 
 The plane the layer governs is authority, never operations: how an
 agent runs stays with the harness and the orchestrator.
+
+Grouped as planes rather than parts, the roles of {{components}} form
+this layer, with the evidence surface crossing all of them:
+
+~~~
+ control       Mission control point (OAuth AS | MAS | AAuth PS):
+               approved context, lifecycle and gating;
+               anchors and authority distribution where defined
+                    |                       ^
+                    | state, authority      | evidence
+                    v                       |
+ enforcement   PEP and PDP: a permit per consequential
+               action, parameter binding, custody
+                    |                       ^
+                    | mediated actions      | outcomes
+                    v                       |
+ execution     harness, agent, orchestrator: sessions,
+               sub-agents, queues, unwinding
+
+ evidence      Consent Evidence, decision and execution
+ (crossing)    evidence, Mission Receipts, the Mandate,
+               audit transparency
+~~~
 
 ## The Capability Envelope {#capability-envelope}
 
@@ -1000,29 +1023,6 @@ authority carriage and enforcement remain binding-dependent:
              Resource Server
 ~~~
 
-Grouped as planes rather than parts, the same components form the
-delegated-authority layer of {{the-mission}}, with the evidence
-surface crossing all of them:
-
-~~~
- control       Mission control point (OAuth AS | MAS | AAuth PS):
-               approved context, lifecycle and gating;
-               anchors and authority distribution where defined
-                    |                       ^
-                    | state, authority      | evidence
-                    v                       |
- enforcement   PEP and PDP: a permit per consequential
-               action, parameter binding, custody
-                    |                       ^
-                    | mediated actions      | outcomes
-                    v                       |
- execution     harness, agent, orchestrator: sessions,
-               sub-agents, queues, unwinding
-
- evidence      Consent Evidence, decision and execution
- (crossing)    evidence, Mission Receipts, the Mandate,
-               audit transparency
-~~~
 
 ## The Actor Chain {#actor-chain}
 
