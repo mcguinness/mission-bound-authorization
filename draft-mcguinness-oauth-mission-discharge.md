@@ -963,6 +963,24 @@ A Discharge Receipt carries no `mission` member and no state versions.
 It never names the replacement. With the echoed `nonce`, it is the
 durable acknowledgement an at-least-once sender stops retrying against.
 
+A consumer MUST verify, before relying on a Discharge Receipt, for
+example before it stops retrying:
+
+1. the JWS header `typ` is `mission-discharge-receipt+jwt`;
+2. the JWS header `alg` is one the AS advertises in
+   `mission_status_signing_alg_values_supported`
+   ({{I-D.draft-mcguinness-oauth-mission-status}}, Section "Authorization
+   Server Metadata"), rejecting `none` and any algorithm not listed;
+3. the JWS signature against a current `jwks_uri` entry for the AS;
+4. `iss` equals the expected AS issuer URL;
+5. `aud` equals the consumer's own identifier, as the AS
+   authenticated it;
+6. `nonce` equals the request's `nonce`;
+7. `discharge_receipt.mission_id` equals the requested `mission_id`,
+   and its echoed target form and `event_id` equal the request's; and
+8. `iat` is not in the future and `exp` is not in the past, with up to
+   30 seconds clock-skew tolerance.
+
 ## Deployment-Internal Adjudication {#internal-adjudication}
 
 A deployment that determines completion by means other than the

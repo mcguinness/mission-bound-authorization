@@ -6840,6 +6840,30 @@
    "notes": "#902 review (P2). Consumer-side rule; a verifier test lands with the #898 implementation PR."
   },
   {
+   "id": "status.discharge.receipt-consumer-verification",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-receipt",
+   "text": "A consumer MUST verify, before relying on a Discharge Receipt, for example before it stops retrying:",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer relies on a Discharge Receipt only after verifying typ, an advertised alg, the signature, iss, aud, nonce, the echoed mission_id, target form and event_id, and iat/exp"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#902 review (P2). The adapted Status verification procedure (typ, alg, signature, iss, aud, nonce, echoed target and event, lifetime); a verifier test lands with the #898 implementation PR."
+  },
+  {
    "id": "status.discharge.receipt-typ-exclusive",
    "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-receipt",
