@@ -3163,9 +3163,10 @@ child's horizon. Any other policy shortening remains applicable.<a href="#sectio
 or make the child ineligible.<a href="#section-10.4-5" class="pilcrow">¶</a></p>
 <p id="section-10.4-6">This is a carryover-specific exception to starting a new child with a fresh
 derivation counter (<a href="#derivation-budget" class="auto internal xref">Section 7.2</a>;
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-derivation-limits" class="cite xref">I-D.draft-mcguinness-oauth-mission-derivation-limits</a>]</span>, Section
-"Counting Derivations"): the replacement continues the old
-child's remaining budget, despite receiving a new record identifier.
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-derivation-limits" class="cite xref">I-D.draft-mcguinness-oauth-mission-derivation-limits</a>]</span>, Sections
+"Effective Limit" and "Counting Derivations"): the replacement
+continues the old child's remaining budget, despite receiving a new
+record identifier.
 Metering and exclusivity require defined, atomic transfer or shared-state
 binding; changing the key to <code>replacement_id</code> is not a transfer. Fan-out is
 recounted against new justifying entries in the same serialization domain,

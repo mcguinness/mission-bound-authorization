@@ -1571,15 +1571,15 @@ Table of Contents
 
    This is a carryover-specific exception to starting a new child with a
    fresh derivation counter (Section 7.2;
-   [I-D.draft-mcguinness-oauth-mission-derivation-limits],
-   Section "Counting Derivations"): the replacement continues the old
-   child's remaining budget, despite receiving a new record identifier.
-   Metering and exclusivity require defined, atomic transfer or shared-
-   state binding; changing the key to replacement_id is not a transfer.
-   Fan-out is recounted against new justifying entries in the same
-   serialization domain, including concurrently non-terminal occupants
-   and all carried generations.  Repeated expansion/carryover cannot
-   replenish any of these budgets.
+   [I-D.draft-mcguinness-oauth-mission-derivation-limits], Sections
+   "Effective Limit" and "Counting Derivations"): the replacement
+   continues the old child's remaining budget, despite receiving a new
+   record identifier.  Metering and exclusivity require defined, atomic
+   transfer or shared-state binding; changing the key to replacement_id
+   is not a transfer.  Fan-out is recounted against new justifying
+   entries in the same serialization domain, including concurrently non-
+   terminal occupants and all carried generations.  Repeated expansion/
+   carryover cannot replenish any of these budgets.
 
 10.5.  Fresh Records and Direct Approval
 

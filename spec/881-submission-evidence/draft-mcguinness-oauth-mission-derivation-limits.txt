@@ -89,10 +89,11 @@ Table of Contents
    8.  Conformance
    9.  Security Considerations
      9.1.  Issuance, Not Authority
-     9.2.  Delegation Fan-Out
-     9.3.  Composition Across Missions
-     9.4.  Audit Recomputation
-     9.5.  Concurrent Derivation
+     9.2.  Async Delegation Families
+     9.3.  Delegation Fan-Out
+     9.4.  Composition Across Missions
+     9.5.  Audit Recomputation
+     9.6.  Concurrent Derivation
    10. Privacy Considerations
    11. IANA Considerations
    12. References
@@ -110,9 +111,11 @@ Table of Contents
    and its expiry.  It does not bound how many derivations the issuer
    performs.  This document adds that bound: a derivation limit on the
    number of derivations the issuer AS performs under a Mission.  The
-   limit is an issuer-side operational control.  It bounds issuance
-   operations at the token endpoint, not the authority any derived token
-   carries or how often a token already issued is used.
+   limit is an issuer-side operational control.  It bounds counted
+   issuance operations at the token endpoint, not the authority any
+   derived token carries or how often a token already issued is used.
+   The refreshes of an async delegation family are not counted
+   (Section 4.3).
 
    The limit uses these extension seams of the OAuth binding and changes
    none of its rules:
@@ -223,8 +226,13 @@ Table of Contents
    and an Expansion successor's
    ([I-D.draft-mcguinness-oauth-mission-expansion]), exactly as at
    direct approval.  An established derivation_limit is never inherited
-   unchanged from a parent, a template, or a predecessor Mission; each
-   Mission Record's ceiling comes only from its own Intent's
+   unchanged from a parent, a template, or a predecessor Mission, with
+   one exception: a Child Delegation carryover replacement preserves the
+   old child's derivation_limit and derivation count, so carryover
+   cannot replenish a derivation budget
+   ([I-D.draft-mcguinness-oauth-mission-child-delegation], Section "No
+   State, Authority, Expiry, or Budget Reset").  Otherwise each Mission
+   Record's ceiling comes only from its own Intent's
    requested_derivation_limit, clamped by the deployment's policy for
    that Mission.
 
@@ -244,7 +252,7 @@ Table of Contents
 
    Neither integrity anchor commits derivation_limit
    ([I-D.draft-mcguinness-oauth-mission], Section "Integrity Anchors").
-   Section 9.4 describes how an auditor checks it.
+   Section 9.5 describes how an auditor checks it.
 
 4.  Counting Derivations
 
@@ -278,6 +286,14 @@ Table of Contents
    approved agent or issues a delegated token
    ([I-D.draft-mcguinness-oauth-mission], Section "Delegation Within a
    Mission").
+
+   The one exception is a delegation family under the Continuation
+   profile's async delegation transport
+   ([I-D.draft-mcguinness-oauth-mission-continuation], Section "Async
+   Delegation Transport"): the exchange that creates the family is one
+   derivation, and the family's successive refreshes are not counted
+   again.  That profile makes the Mission's expiry, not this limit, the
+   family's continuity ceiling (Section 9.2).
 
 4.4.  Cross-Domain Issuance
 
@@ -385,9 +401,12 @@ Table of Contents
    derived Authority Set, in the rendering step of the OAuth binding's
    approval sequence ([I-D.draft-mcguinness-oauth-mission],
    Section "Mission Approval").  The rendering shows the established
-   value, not only the requested one.
+   value, not only the requested one.  Where the AS supports the
+   Continuation profile's async delegation transport, the rendering MUST
+   also state that the refreshes of an async delegation family are not
+   counted against the limit (Section 4.3).
 
-   The rendered limit is one Mission's local bound (Section 9.3).  Where
+   The rendered limit is one Mission's local bound (Section 9.4).  Where
    a deployment runs child delegation, that profile states what an
    approval interface discloses beside it
    ([I-D.draft-mcguinness-oauth-mission-child-delegation]).
@@ -419,15 +438,27 @@ Table of Contents
 
 9.1.  Issuance, Not Authority
 
-   The derivation limit bounds how many issuance operations the issuer
-   performs.  It does not narrow the Authority Set, shorten a token's
-   lifetime, or bound the requests a Resource Server honors under a
-   token already issued: a derived token remains usable until its exp.
-   A deployment that needs to bound use, rather than issuance, adopts a
-   runtime control such as metering
+   The derivation limit bounds how many counted issuance operations the
+   issuer performs; the refreshes of an async delegation family are not
+   counted (Section 9.2).  It does not narrow the Authority Set, shorten
+   a token's lifetime, or bound the requests a Resource Server honors
+   under a token already issued: a derived token remains usable until
+   its exp.  A deployment that needs to bound use, rather than issuance,
+   adopts a runtime control such as metering
    ([I-D.draft-mcguinness-mission-metering]).
 
-9.2.  Delegation Fan-Out
+9.2.  Async Delegation Families
+
+   Because the refreshes of an async delegation family are not counted
+   (Section 4.3), the limit does not bound how many tokens the issuer
+   mints under such a family.  The Continuation profile bounds the
+   family instead: its delegated authorization state is a subset of the
+   Mission's Authority Set, its absolute lifetime equals the Mission's
+   expires_at, and it is invalidated when the Mission reaches a terminal
+   state ([I-D.draft-mcguinness-oauth-mission-continuation],
+   Section "Async Delegation Transport").
+
+9.3.  Delegation Fan-Out
 
    In-Mission delegation bounds the length of a delegation chain with
    max_depth and its breadth with allowed_delegates
@@ -436,7 +467,7 @@ Table of Contents
    including each Token Exchange that issues a delegated token
    (Section 4.3), however the resulting credentials are distributed.
 
-9.3.  Composition Across Missions
+9.4.  Composition Across Missions
 
    derivation_limit is a per-Mission bound the issuer AS enforces for
    that Mission alone; a Child Mission's own derivation_limit is
@@ -460,7 +491,7 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission], Section "Composition and the
    Effective Ceiling").
 
-9.4.  Audit Recomputation
+9.5.  Audit Recomputation
 
    An auditor recomputes the expected derivation_limit from the recorded
    requested_derivation_limit (or its absence) and the Mission's
@@ -470,7 +501,7 @@ Table of Contents
    investigate, not a Mission-record integrity failure, since neither
    integrity anchor commits derivation_limit.
 
-9.5.  Concurrent Derivation
+9.6.  Concurrent Derivation
 
    A count that is read and then incremented in separate steps lets
    parallel refreshes or exchanges exceed the limit.  Section 4.2
@@ -555,6 +586,12 @@ Table of Contents
               2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-child-
               delegation.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-continuation]
+              McGuinness, K., "Mission Continuation: Authorization
+              Continuity for Mission-Bound Authorization", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-continuation.html>.
 
    [I-D.draft-mcguinness-oauth-mission-cross-domain]
               McGuinness, K., "Mission Cross-Domain Projection for OAuth
