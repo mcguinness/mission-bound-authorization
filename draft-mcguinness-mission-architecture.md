@@ -1807,8 +1807,10 @@ Verification
 
 "Mission-bound" is a specific claim. This document uses three token
 shapes descriptively, so a weak one is not read as the strong one;
-the names are defined by the OAuth binding's Terminology, and the
-properties the strong class requires are its conformance rule's:
+the three names are the OAuth binding's Terminology, and what the
+strong class requires is the `credential-mission-bound` equivalence
+({{binding-properties}}), which the OAuth binding discharges through
+its own conformance rule:
 
 - a **Mission-referenced token** carries a Mission identifier only;
 - a **Mission-derived token** carries authority derived from an
@@ -1849,7 +1851,7 @@ is `active`. Home: the OAuth binding's Mission-Bound Access Tokens and
 The Mission Claim sections. The claim's `id` and `issuer` are the
 Mission-identity condition; a token-carried Authority Set commitment
 is never required for it, per condition 2 of
-`credential-mission-bound` above.
+`credential-mission-bound` ({{binding-properties}}).
 
 This is the binding-dependent primitive, and it is exactly where the
 bindings split. The OAuth binding provides it. The standalone binding
