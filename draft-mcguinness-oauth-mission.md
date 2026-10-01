@@ -1288,15 +1288,10 @@ apparatus is type-agnostic toward every supported type:
 
 - an entry is committed by `authority_hash` and gated on Mission state
   the same way regardless of type;
-- narrowing and delegation use the subset semantics the type defines
-  ({{subset}}, {{delegation-constraints}}). A type whose subset and
-  delegation semantics the AS does not understand MUST NOT be
-  delegated, audience-projected to a Resource AS
-  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), or narrowed,
-  since the AS cannot prove that a transformed copy is still a subset
-  of what was approved. The AS MUST NOT issue such an entry to any
-  audience other than its original approved audience, or in any form
-  other than exactly as approved;
+- narrowing and delegation use the subset and delegation semantics
+  the type defines ({{subset}}, {{delegation-constraints}}), under
+  the transformation capabilities the AS declares for the type
+  (below);
 - evaluating the entry against a concrete request is the runtime
   layer's responsibility ({{runtime-boundary}}), not the AS's.
 
@@ -1314,6 +1309,16 @@ establishes none of the others:
 The AS MUST NOT narrow, delegate, or project to `scope` an entry of
 a type for which it has not declared the corresponding capability;
 on an undeclared capability the entry is carried as approved.
+Issuing an entry to an audience other than its original approved
+audience, including audience projection to a Resource AS
+({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), counts as
+narrowing and needs `narrowing`, not `projection`. Without
+`narrowing`, the AS MUST NOT issue an entry to any audience other
+than its original approved audience, or in any form other than
+exactly as approved except as `scope` under a declared `projection`,
+since it cannot prove that a transformed copy is still a subset of
+what was approved. A delegated token can then include the entry only
+unchanged, which the subset rule ({{subset}}) admits by identity.
 
 The AS declares the capabilities through these carriers, in order of
 preference:
