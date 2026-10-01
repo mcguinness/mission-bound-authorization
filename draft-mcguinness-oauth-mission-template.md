@@ -1078,6 +1078,9 @@ IANA action. Following the restraint of the sibling profiles:
 
 \[\[ To be removed from the final specification ]]
 
+- `allowed_dispatchers` lists `client_id` strings, and
+  `allowed_recipients` is an object of `subjects` (`iss` and `sub`)
+  and `agents` (`client_id`), each checked separately at Dispatch.
 - The dispatch bounds have stated encodings. `instance_lifetime` and
   `review_cadence` are positive integer seconds, the latter measured
   from the approval's `approved_at`; `max_active` is a positive
