@@ -6,7 +6,11 @@
  * that scope, and depends on no package of this workspace.
  *
  * An optional introspection mode adds a per-request RFC 7662 call and honors
- * only the response's `active` member.
+ * only the response's `active` member. Every request makes its own call (no
+ * result is cached); the call authenticates with client_secret_basic and is
+ * bounded by a timeout; an unreachable, slow, non-200 or non-object response
+ * refuses 503 `temporarily_unavailable`, and an object whose `active` is not
+ * the boolean `true` refuses 401 `invalid_token`, before any operation runs.
  */
 
 import { createHash } from "node:crypto";
@@ -41,7 +45,20 @@ export interface IntrospectionSettings {
   endpoint: string;
   clientId: string;
   clientSecret: string;
+  /**
+   * Upper bound on one introspection call, response body included, in
+   * milliseconds. Default {@link DEFAULT_INTROSPECTION_TIMEOUT_MS}.
+   */
+  timeoutMs?: number;
 }
+
+/**
+ * Two seconds: long enough for an issuer on the same network (or a loaded
+ * one) to answer, short enough that a stalled issuer fails the request fast
+ * instead of holding the connection open. A timeout refuses service
+ * (503 `temporarily_unavailable`); it never falls back to the JWT alone.
+ */
+export const DEFAULT_INTROSPECTION_TIMEOUT_MS = 2000;
 
 export interface PlainRsOptions {
   /** The expected `iss`. */
@@ -63,8 +80,21 @@ export interface PlainRsOptions {
   algorithms?: string[];
   /** Accepted DPoP proof age, in seconds, either side of now. Default 60. */
   dpopWindowSeconds?: number;
-  /** Clock, in seconds. */
+  /**
+   * Accepted clock skew for the access token's `exp`, `nbf` and `iat`, in
+   * seconds, as jose applies it: a token is refused once `exp <= now -
+   * tolerance`. Default 0.
+   */
+  clockToleranceSeconds?: number;
+  /** Clock, in seconds. Default: the system clock. */
   now?: () => number;
+}
+
+/** The request handler, with a count of operations it has performed. */
+export interface PlainRsHandler {
+  (req: IncomingMessage, res: ServerResponse): Promise<void>;
+  /** Operations that ran (a request refused before its operation never counts). */
+  readonly performed: number;
 }
 
 const DEFAULT_ALGS = ["RS256", "PS256", "ES256", "ES384", "EdDSA"];
@@ -86,14 +116,26 @@ class Refusal extends Error {
 const b64url = (buf: Buffer) => buf.toString("base64url");
 
 /** Build the request handler for a plain Resource Server. */
-export function plainResourceServer(opts: PlainRsOptions) {
+export function plainResourceServer(opts: PlainRsOptions): PlainRsHandler {
   if (!opts.jwks && !opts.jwksUri) throw new Error("plain-rs: jwks or jwksUri is required");
   const keys = opts.jwks ? createLocalJWKSet(opts.jwks) : createRemoteJWKSet(new URL(opts.jwksUri as string));
   const operations = opts.operations ?? OPERATIONS;
   const algorithms = opts.algorithms ?? DEFAULT_ALGS;
   const baseUrl = (opts.baseUrl ?? new URL(opts.audience).origin).replace(/\/$/, "");
   const windowS = opts.dpopWindowSeconds ?? 60;
+  const toleranceS = opts.clockToleranceSeconds ?? 0;
+  // Refused at startup: a NaN or negative tolerance would make jose's `exp`
+  // comparison never fail (fail open), and a bad timeout would refuse every
+  // call without saying why.
+  if (!Number.isFinite(toleranceS) || toleranceS < 0) {
+    throw new Error("plain-rs: clockToleranceSeconds must be a finite number >= 0");
+  }
+  const timeoutMs = opts.introspection?.timeoutMs ?? DEFAULT_INTROSPECTION_TIMEOUT_MS;
+  if (!Number.isInteger(timeoutMs) || timeoutMs <= 0) {
+    throw new Error("plain-rs: introspection.timeoutMs must be a positive integer");
+  }
   const now = opts.now ?? (() => Math.floor(Date.now() / 1000));
+  let performed = 0;
   /** RFC 9449 Section 11.1: proof `jti` values seen inside the window. */
   const seenProofs = new Map<string, number>();
   const reports: { id: string; title: string; created_by: string }[] = [];
@@ -116,6 +158,7 @@ export function plainResourceServer(opts: PlainRsOptions) {
         algorithms,
         requiredClaims: ["exp", "iat", "sub", "client_id", "jti"],
         currentDate: new Date(now() * 1000),
+        clockTolerance: toleranceS,
       });
       return payload;
     } catch {
@@ -170,12 +213,19 @@ export function plainResourceServer(opts: PlainRsOptions) {
     if (typeof proof.jti !== "string" || !freshJti(proof.jti)) throw fail("proof jti missing or replayed");
   }
 
-  /** RFC 7662: the only member honored is `active`. */
+  /**
+   * RFC 7662, one fresh call per request: the only member honored is
+   * `active`. Unavailable (network error, timeout, non-200) or malformed
+   * (not JSON, or JSON that is not an object) refuses 503; an object whose
+   * `active` is not the boolean `true` refuses 401. Nothing is cached.
+   */
   async function introspectActive(token: string, scheme: "Bearer" | "DPoP"): Promise<void> {
     const settings = opts.introspection;
     if (!settings) return;
     const enc = (v: string) => encodeURIComponent(v).replace(/%20/g, "+");
-    let body: { active?: unknown };
+    const unavailable = () =>
+      new Refusal(503, "temporarily_unavailable", "token introspection is unavailable", scheme);
+    let body: unknown;
     try {
       const res = await fetch(settings.endpoint, {
         method: "POST",
@@ -184,13 +234,15 @@ export function plainResourceServer(opts: PlainRsOptions) {
           authorization: `Basic ${Buffer.from(`${enc(settings.clientId)}:${enc(settings.clientSecret)}`).toString("base64")}`,
         },
         body: new URLSearchParams({ token, token_type_hint: "access_token" }).toString(),
+        signal: AbortSignal.timeout(timeoutMs),
       });
       if (res.status !== 200) throw new Error(String(res.status));
-      body = (await res.json()) as { active?: unknown };
+      body = JSON.parse(await res.text()) as unknown;
     } catch {
-      throw new Refusal(503, "temporarily_unavailable", "token introspection is unavailable", scheme);
+      throw unavailable();
     }
-    if (body.active !== true) {
+    if (body === null || typeof body !== "object" || Array.isArray(body)) throw unavailable();
+    if ((body as { active?: unknown }).active !== true) {
       throw new Refusal(401, "invalid_token", "the access token is not active", scheme);
     }
   }
@@ -240,7 +292,7 @@ export function plainResourceServer(opts: PlainRsOptions) {
     return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
   }
 
-  return async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const handle = async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const path = (req.url ?? "/").split("?")[0];
     const op = operations.find((o) => o.method === req.method && o.path === path);
     if (!op) {
@@ -259,6 +311,7 @@ export function plainResourceServer(opts: PlainRsOptions) {
       return;
     }
     if (op.scope === "reports.read") {
+      performed += 1;
       send(res, 200, { reports });
       return;
     }
@@ -275,8 +328,10 @@ export function plainResourceServer(opts: PlainRsOptions) {
       created_by: String(payload.sub),
     };
     reports.push(report);
+    performed += 1;
     send(res, 201, report);
   };
+  return Object.defineProperty(handle, "performed", { get: () => performed }) as PlainRsHandler;
 }
 
 /** Start the Resource Server on `port`. */

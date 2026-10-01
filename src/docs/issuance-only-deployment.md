@@ -103,20 +103,38 @@ constraints-free entry with those two actions and no delegation policy
 **Introspection (optional).** RFC 7662 at `{issuer}/introspect`, with HTTP
 Basic principals from `config/introspection.json`; the plain RS's is
 `rs-plain`, authorized for its audience. `plain-rs` in introspection mode calls
-it on every request and honors only `active` (`introspectActive`). Each
-request makes a fresh POST, and no result is cached. Outcomes by response:
+it on every request and honors only `active` (`introspectActive`). The call
+authenticates with client_secret_basic. Each request makes a fresh POST, and
+no result is cached. Each call is bounded by `introspection.timeoutMs`
+(default 2000 ms, `DEFAULT_INTROSPECTION_TIMEOUT_MS`;
+`PLAIN_RS_INTROSPECTION_TIMEOUT_MS` in the launcher), response body included.
+Outcomes by response, each refusing before the operation runs, and none a 500:
 
-- a non-200 status, a network failure, or invalid JSON: 503
-  `temporarily_unavailable`;
-- a JSON object whose `active` is missing or not `true` (including `{}`):
-  401 `invalid_token`;
-- a JSON `null` body: 500 `server_error`, because the `active` read throws.
+- **503 `temporarily_unavailable`** for:
+  - a non-200 status;
+  - a network failure;
+  - a response slower than the timeout;
+  - a body that is not JSON;
+  - JSON that is not an object (`null`, an array, a number, a string).
+- **401 `invalid_token`** for a JSON object whose `active` is not the boolean
+  `true` (missing, `false`, or `"true"`).
+- **The operation runs** only when `active` is `true`.
 
-Each of these refuses before the operation runs. A hanging endpoint is a
-separate case: no request timeout is configured, so the request stays pending
-rather than being refused. Only the `active: false` case has a
-test (`` plain-rs introspection mode > honors only `active`: an inactive token is refused even when its JWT is valid, and an introspected scope grants nothing ``);
-outage, invalid JSON, a `null` body, missing `active`, and a hanging endpoint have no test yet. A
+Tests:
+
+- `` plain-rs introspection mode > honors only `active`: an inactive token is refused even when its JWT is valid, and an introspected scope grants nothing ``
+- `plain-rs introspection failure contract (#873) > a 500 from the introspection endpoint refuses 503 temporarily_unavailable before the operation`
+- `plain-rs introspection failure contract (#873) > an unreachable introspection endpoint (connection refused) refuses 503 temporarily_unavailable before the operation`
+- `plain-rs introspection failure contract (#873) > a body that is not JSON refuses 503 temporarily_unavailable before the operation`
+- `plain-rs introspection failure contract (#873) > a JSON null body refuses 503 temporarily_unavailable, never 500`
+- `plain-rs introspection failure contract (#873) > a JSON array, number or string body refuses 503 temporarily_unavailable`
+- `plain-rs introspection failure contract (#873) > an object with no active member refuses 401 invalid_token before the operation`
+- `` plain-rs introspection failure contract (#873) > an object whose active is the string "true" refuses 401 invalid_token before the operation ``
+- `plain-rs introspection failure contract (#873) > a response slower than the introspection timeout refuses 503 temporarily_unavailable within about the timeout`
+- `plain-rs introspection failure contract (#873) > active true admits the operation`
+- `plain-rs introspection failure contract (#873) > introspects every request: two requests make two calls, and a positive first result does not admit the second once the endpoint says active false`
+
+A
 non-active Mission yields `active: false` with `mission.state`
 (`composite non-active: active:false WITH mission.state (@spec mission#composite-active) > revoked Mission + valid token: only { active, mission }, state revoked, NO top-level or mission authorization_details`).
 
@@ -155,9 +173,21 @@ target that processes the `act` chain and the `mission` claim.
 
   A restart is not a revocation mechanism.
 - **Clocks:** oidc-provider applies its default 15-second `clockTolerance`.
-  `plain-rs` applies none to `exp` and accepts DPoP proofs within ±60 seconds
-  of `iat` (`dpopWindowSeconds`). One synchronized clock is assumed across the
-  AS and the Resource Servers.
+  `plain-rs`'s access-token time tolerance is `clockToleranceSeconds` (default
+  0, `PLAIN_RS_CLOCK_TOLERANCE_SECONDS` in the launcher). It is passed to jose
+  with the injectable `now()` clock. A token is refused once
+  `exp <= now - tolerance`, so an issued token stays usable until its `exp`
+  plus the declared tolerance. A tolerance that is not a finite number >= 0, or
+  a timeout that is not a positive integer, stops `plain-rs` at construction
+  (`plain-rs configuration validation > refuses at construction a clock tolerance that is not a finite non-negative number, and an introspection timeout that is not a positive integer`).
+  `plain-rs` accepts DPoP proofs whose `iat` is
+  within ±60 seconds of now, inclusive (`dpopWindowSeconds`). With the shipped
+  values, the JWT-only configuration states a 300-second maximum access-token
+  lifetime and a 0-second accepted skew. One synchronized clock is assumed
+  across the AS and the Resource Servers. Tests:
+  - `` plain-rs access-token time boundaries (injected clock) > with clock tolerance 0, a token whose exp is 1 s before now is refused and one whose exp is 1 s after now is accepted ``
+  - `` plain-rs access-token time boundaries (injected clock) > with clock tolerance 5 s, a token 3 s past exp is accepted and one 6 s past exp is refused ``
+  - `` plain-rs access-token time boundaries (injected clock) > a DPoP proof whose iat is exactly 60 s either side of now is accepted, and 61 s is refused ``
 - **Stores:** the Mission kernel, grants, the token issuance index
   (`TokenIssuanceStore`) and the delegation-family store are in memory by
   default (`src/docs/control-plane-deployment.md`).
@@ -183,8 +213,9 @@ target that processes the `act` chain and the `mission` claim.
 | Inherited grant after a mapping change | Narrowed and reported while a value remains; `invalid_scope` before rotation when none would | `refresh preserved on a projection refusal (@spec mission#scope-projection) > a refresh omitting scope whose inherited grant the current mapping no longer grants, leaving no scope value to report, is refused invalid_scope before rotation; the restored mapping lets the same token succeed`, `> a refresh omitting scope narrows an inherited grant the response can still report: a mode change keeps the OIDC values, an unsafe value drops out, and nothing widens` |
 | Delegated routing (`act`-bearing tokens) | Minted only when every audience is `mission_aware: true`, else `invalid_target` before any side effect | `delegated routing on the cross-org exchange (@spec mission#rs-enforcement) > refuses invalid_target, recording no derivation evidence, when the act-bearing token's audience is not classified Mission-aware, even with a safe scope projection`, `> mints the act-bearing token for an audience classified Mission-aware`; `delegated routing of transaction tokens (@spec mission#rs-enforcement) > refuses invalid_target, opening no approval, an act-bearing transaction token for a Challenge-Issuing Resource not classified Mission-aware, and admits it once the resource is`; JWT-customizer backstop (`formats.customizers.jwt`): no test yet |
 | Delegate calling the plain RS | Not supported: a delegated (`act`-bearing) token is refused for it, and the refusal never creates a Child Mission. Child Missions are a separately enabled capability, not enabled here (the plain RS ceiling entry has no `delegation.children`, `kernel/child-delegation.ts`) | Refusal: the delegated-routing row above; Child Mission path: not enabled, no test |
-| Token expiry | `plain-rs` refuses an expired token; it applies no `exp` tolerance | `plain-rs RFC 9068 / RFC 9449 validation > refuses a wrong typ, a wrong audience or issuer, and an expired token`; the exact clock-tolerance boundary: no test yet |
-| Introspection failure (introspection configuration) | No operation performed. A non-200 status, a network failure, or invalid JSON gives 503 `temporarily_unavailable`; a missing or non-`true` `active` (including `{}`) gives 401 `invalid_token`; a JSON `null` body gives 500 `server_error`. A hanging endpoint is not refused: with no configured timeout, the request stays pending | `introspectActive`; `active: false`: the introspection-mode test above; outage, invalid JSON, `null` body, missing `active`, and a hanging endpoint: no test yet |
+| Token expiry | `plain-rs` refuses a token once `exp <= now - clockToleranceSeconds` (default tolerance 0), with no operation performed; the DPoP `iat` window is ±60 s inclusive | `plain-rs RFC 9068 / RFC 9449 validation > refuses a wrong typ, a wrong audience or issuer, and an expired token`; `plain-rs access-token time boundaries (injected clock) > with clock tolerance 0, a token whose exp is 1 s before now is refused and one whose exp is 1 s after now is accepted`; `plain-rs access-token time boundaries (injected clock) > with clock tolerance 5 s, a token 3 s past exp is accepted and one 6 s past exp is refused`; `plain-rs access-token time boundaries (injected clock) > a DPoP proof whose iat is exactly 60 s either side of now is accepted, and 61 s is refused` |
+| Introspection failure (introspection configuration) | No operation performed, and never a 500. A non-200 status, a network failure, a response slower than the timeout (default 2000 ms), a body that is not JSON, or JSON that is not an object gives 503 `temporarily_unavailable`; an object whose `active` is not the boolean `true` gives 401 `invalid_token` | `plain-rs introspection failure contract (#873) > a 500 from the introspection endpoint refuses 503 temporarily_unavailable before the operation`; `plain-rs introspection failure contract (#873) > an unreachable introspection endpoint (connection refused) refuses 503 temporarily_unavailable before the operation`; `plain-rs introspection failure contract (#873) > a body that is not JSON refuses 503 temporarily_unavailable before the operation`; `plain-rs introspection failure contract (#873) > a JSON null body refuses 503 temporarily_unavailable, never 500`; `plain-rs introspection failure contract (#873) > a JSON array, number or string body refuses 503 temporarily_unavailable`; `plain-rs introspection failure contract (#873) > an object with no active member refuses 401 invalid_token before the operation`; `` plain-rs introspection failure contract (#873) > an object whose active is the string "true" refuses 401 invalid_token before the operation ``; `plain-rs introspection failure contract (#873) > a response slower than the introspection timeout refuses 503 temporarily_unavailable within about the timeout` |
+| No introspection caching | Every request makes its own call; a positive result never admits a later request | `plain-rs introspection failure contract (#873) > introspects every request: two requests make two calls, and a positive first result does not admit the second once the endpoint says active false` |
 | Async-delegation with `actor_token` | `invalid_request` for any target before any side effect; an `act`-bearing subject token is refused too | `unsupported actor context on the async-delegation exchange (@spec continuation#transport-async) > refuses invalid_request any exchange presenting an actor_token, to a scope-only or a Mission-aware target, spending no derivation; the same exchange with no actor succeeds with the projected scope`, `> refuses invalid_request a subject_token that already carries act, rather than stripping it` |
 
 ## 4. Provider integration port
@@ -273,8 +304,7 @@ deployment's values: the reference AS and `plain-rs`.
     "plain-rs logs nothing Mission-linked",
     "a projection refusal on a single-use path (deferred redemption, child jwt-bearer, dispatch, expansion poll) lands after that path's own consumption",
     "a restart is not revocation: consumers holding the old key keep accepting pre-restart tokens until exp, and plain-rs rejects post-restart tokens until its JWKS cache refreshes (up to 10 minutes)",
-    "introspection has no configured timeout, so an unresponsive endpoint leaves requests pending rather than refused",
-    "a JSON null introspection body fails closed as 500 server_error, not as a defined refusal",
+    "an introspection call that exceeds its timeout (default 2000 ms) or fails refuses service with 503; the plain RS never falls back to the JWT alone",
     "provider token acceptance and derivation counting are not coupled atomically (#250)",
     "grants, the issuance index and the delegation-family store are in memory",
     "the scope-projection mapping's integrity is repository review; it is not fetched or signed",
@@ -307,11 +337,14 @@ existing tests only. "No test yet" marks a vector nothing witnesses.
 | Ungrantable requested value | `invalid_scope` | `core.scope-projection.ungrantable-requested-scope-refused` | `ungrantable requested scope (@spec mission#scope-projection, mission#error-mapping) > refuses invalid_scope at PAR a resource scope for an authorization_details target, and a value the scope-only target's mapping does not name`; `> refuses invalid_scope at the authorization decision a mapped value no carried entry makes safe, before any Mission exists`; `> refuses invalid_scope a Token Exchange naming a value no carried entry makes safe, or an OIDC value where no id_token is issued, and grants a safe requested value` |
 | Refresh after a projection-only refusal | Token and grant still valid | `core.scope-projection.refresh-preserved-on-projection-refusal` | `refresh preserved on a projection refusal (@spec mission#scope-projection) > a refused rotating refresh leaves the same refresh token valid: once the trusted mapping is repaired it succeeds once, and its reuse gets the ordinary replay treatment` |
 | Delegated token for a Resource Server that is not Mission-aware | `invalid_target`, no side effect, no automatic Child Mission | No ledger row covers the delegated-routing rule | `delegated routing on the cross-org exchange (@spec mission#rs-enforcement) > refuses invalid_target, recording no derivation evidence, when the act-bearing token's audience is not classified Mission-aware, even with a safe scope projection`; `delegated routing of transaction tokens (@spec mission#rs-enforcement) > refuses invalid_target, opening no approval, an act-bearing transaction token for a Challenge-Issuing Resource not classified Mission-aware, and admits it once the resource is` |
-| Token past `exp` at the plain RS | 401 `invalid_token` | No ledger row covers `plain-rs` | `plain-rs RFC 9068 / RFC 9449 validation > refuses a wrong typ, a wrong audience or issuer, and an expired token` |
-| Introspection outage (non-200, network failure) or invalid JSON | 503 `temporarily_unavailable`, no operation | No ledger row covers `plain-rs` | No test yet |
-| Introspection body `{}`, or `active` missing or not `true` | 401 `invalid_token`, no operation | No ledger row covers `plain-rs` | `active: false` only: the introspection-mode test in §2; `{}` and missing `active`: no test yet |
-| Introspection body JSON `null` | 500 `server_error` (a residual), no operation | No ledger row covers `plain-rs` | No test yet |
-| Introspection endpoint hangs | Request stays pending; no timeout is configured, so this is not a refusal outcome | No ledger row covers `plain-rs` | No test yet |
+| Token past `exp` at the plain RS | 401 `invalid_token`, no operation | No ledger row covers `plain-rs` | `plain-rs RFC 9068 / RFC 9449 validation > refuses a wrong typ, a wrong audience or issuer, and an expired token`; `plain-rs access-token time boundaries (injected clock) > with clock tolerance 0, a token whose exp is 1 s before now is refused and one whose exp is 1 s after now is accepted` |
+| Token within the declared clock tolerance past `exp` | Accepted inside the tolerance, refused beyond it | No ledger row covers `plain-rs` | `plain-rs access-token time boundaries (injected clock) > with clock tolerance 5 s, a token 3 s past exp is accepted and one 6 s past exp is refused` |
+| DPoP proof at the `iat` window edge | ±60 s accepted, ±61 s refused `invalid_dpop_proof` | No ledger row covers `plain-rs` | `plain-rs access-token time boundaries (injected clock) > a DPoP proof whose iat is exactly 60 s either side of now is accepted, and 61 s is refused` |
+| Introspection outage (non-200, connection refused) | 503 `temporarily_unavailable`, no operation | No ledger row covers `plain-rs` | `plain-rs introspection failure contract (#873) > a 500 from the introspection endpoint refuses 503 temporarily_unavailable before the operation`; `plain-rs introspection failure contract (#873) > an unreachable introspection endpoint (connection refused) refuses 503 temporarily_unavailable before the operation` |
+| Introspection body not JSON, or JSON that is not an object (`null`, array, number, string) | 503 `temporarily_unavailable`, no operation, never 500 | No ledger row covers `plain-rs` | `plain-rs introspection failure contract (#873) > a body that is not JSON refuses 503 temporarily_unavailable before the operation`; `plain-rs introspection failure contract (#873) > a JSON null body refuses 503 temporarily_unavailable, never 500`; `plain-rs introspection failure contract (#873) > a JSON array, number or string body refuses 503 temporarily_unavailable` |
+| Introspection body `{}`, or `active` not the boolean `true` | 401 `invalid_token`, no operation | No ledger row covers `plain-rs` | `plain-rs introspection failure contract (#873) > an object with no active member refuses 401 invalid_token before the operation`; `` plain-rs introspection failure contract (#873) > an object whose active is the string "true" refuses 401 invalid_token before the operation ``; `` plain-rs introspection mode > honors only `active`: an inactive token is refused even when its JWT is valid, and an introspected scope grants nothing `` |
+| Introspection endpoint slower than the timeout | 503 `temporarily_unavailable` within about the timeout, no operation | No ledger row covers `plain-rs` | `plain-rs introspection failure contract (#873) > a response slower than the introspection timeout refuses 503 temporarily_unavailable within about the timeout` |
+| A positive introspection result reused for a later request | Never: the next request introspects again and is refused when the endpoint says `active: false` | No ledger row covers `plain-rs` | `plain-rs introspection failure contract (#873) > introspects every request: two requests make two calls, and a positive first result does not admit the second once the endpoint says active false` |
 | Revocation cutting off an introspecting plain RS | Next call denied (401 `invalid_token`) | `core.introspection.composite-active`; `core.grant-binding.termination-gates-every-binding` is still todo and does not cite this test | `revocation with a scope-only Resource Server (@spec mission#scope-projection) > after the Mission is revoked, refresh refuses invalid_grant, introspection returns active false, and the plain RS in introspection mode denies the next call` |
 
 The reference cannot tell an audience that was never mapped from one removed
@@ -338,10 +371,6 @@ existing evidence. #873 still requires the following before it closes:
   work, crash and recovery behavior, public-surface test, and residual for
   each obligation.
 - **The executable acceptance pack's missing cases:**
-  - expiration and clock-tolerance boundaries;
-  - introspection outage, invalid JSON, a `null` body, missing `active`, and a
-    hanging endpoint (which needs a configured timeout before it can have a
-    refusal outcome);
   - revoke-during-issuance and failure after reservation or artifact
     acceptance (tied to #250);
   - restart and uncertain-recovery behavior for any persistence claim.
