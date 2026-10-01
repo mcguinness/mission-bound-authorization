@@ -1449,7 +1449,7 @@ through standard {{RFC8414}} discovery.
 : OPTIONAL. A JSON array of strings naming the authentication methods
   the Mission Status endpoint ({{mission-status}}) accepts. Its value
   space is a closed set defined by this document, not the OAuth Token
-  Endpoint Authentication Methods registry: `mtls_client_auth`
+  Endpoint Authentication Methods registry: `tls_client_auth`
   (mutual-TLS client authentication {{RFC8705}}), `private_key_jwt`
   (private-key JWT client authentication {{RFC7523}}), and `access_token`
   (a `mission_status`-scoped, sender-constrained access token, whose
@@ -1508,6 +1508,11 @@ through standard {{RFC8414}} discovery.
   ({{revocation-enforcement-classes}}). When absent, no bound is
   declared, and a consumer sizes reliance to token lifetime alone.
 
+When an endpoint's `*_auth_methods_supported` member is absent, the
+methods that endpoint accepts are known only by out-of-band
+configuration; `token_endpoint_auth_methods_supported` {{RFC8414}}
+describes the token endpoint alone and is never read in its place.
+
 DPoP and mTLS support for issued credentials are read from the
 standard `dpop_signing_alg_values_supported` {{RFC9449}} and
 `tls_client_certificate_bound_access_tokens` {{RFC8705}} metadata;
@@ -1541,14 +1546,15 @@ Cache-Control: max-age=3600
   "mission_status_endpoint":
     "https://as.example.com/as/mission/status",
   "mission_status_endpoint_auth_methods_supported":
-    ["mtls_client_auth", "private_key_jwt", "access_token"],
+    ["tls_client_auth", "private_key_jwt", "access_token"],
   "mission_status_endpoint_auth_signing_alg_values_supported": ["ES256"],
   "mission_status_signing_alg_values_supported": ["ES256"],
   "mission_lifecycle_endpoint":
     "https://as.example.com/as/mission/lifecycle",
   "mission_lifecycle_endpoint_auth_methods_supported":
-    ["mtls_client_auth", "private_key_jwt", "access_token"],
-  "mission_lifecycle_endpoint_auth_signing_alg_values_supported": ["ES256"],
+    ["tls_client_auth", "private_key_jwt", "access_token"],
+  "mission_lifecycle_endpoint_auth_signing_alg_values_supported":
+    ["ES256"],
   "mission_max_stale_seconds": 60
 }
 ~~~
@@ -1782,6 +1788,10 @@ Authorization work for feedback that shaped these extensions.
 
 \[\[ To be removed from the final specification ]]
 
+- The mutual-TLS method value is `tls_client_auth`, the registered
+  {{RFC8705}} spelling, and an absent endpoint auth-methods member is
+  never read from token-endpoint metadata. The Mission Authority Server
+  publishes the same per-endpoint members.
 - A refresh against a suspended Mission is checked, and refused, before
   its refresh token is consumed, so a `resume` restores refresh with the
   same token; issuance-time validation still governs a concurrent
