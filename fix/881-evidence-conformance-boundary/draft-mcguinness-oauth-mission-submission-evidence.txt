@@ -1,0 +1,409 @@
+
+
+
+
+Web Authorization Protocol                                 K. McGuinness
+Internet-Draft                                               Independent
+Intended status: Standards Track                          1 October 2026
+Expires: 4 April 2027
+
+
+            Mission Intent Submission Evidence for OAuth 2.0
+       draft-mcguinness-oauth-mission-submission-evidence-latest
+
+Abstract
+
+   Mission-Bound Authorization for OAuth 2.0 lets a client present
+   Intent Submission Evidence alongside a submitted Mission Intent.  The
+   authorization server refuses any entry it cannot verify and treats a
+   verified entry as policy input, never authority.  This document
+   defines the framework that evidence types and authorization servers
+   share: the entry convention an evidence type follows, resolution of
+   required evidence before derivation, binding of evidence to one exact
+   Mission Intent and to the presenter the containing exchange
+   establishes, a bound on verification cost, where the error is
+   returned, and the place of presented evidence in a Mission-creation
+   idempotency fingerprint.  It defines no evidence types.
+
+About This Document
+
+   This note is to be removed before publishing as an RFC.
+
+   The latest revision of this draft can be found at
+   https://mcguinness.github.io/mission-bound-authorization/draft-
+   mcguinness-oauth-mission-submission-evidence.html.  Status
+   information for this document may be found at
+   https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission-
+   submission-evidence/.
+
+   Source for this draft and an issue tracker can be found at
+   https://github.com/mcguinness/mission-bound-authorization.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 4 April 2027.
+
+Copyright Notice
+
+   Copyright (c) 2026 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Revised BSD License text as
+   described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Revised BSD License.
+
+Table of Contents
+
+   1.  Introduction
+   2.  Conventions and Terminology
+   3.  Evidence Entries
+   4.  Processing Rules
+     4.1.  Required Evidence Is Resolved Before Derivation
+     4.2.  Evidence Binds One Exact Intent
+     4.3.  The Exchange Establishes the Presenter
+     4.4.  Bounded Verification
+   5.  Error Responses
+   6.  Evidence on Idempotent Creation Surfaces
+   7.  Conformance
+   8.  Security Considerations
+     8.1.  Evidence Is Not Authority
+     8.2.  Downgrade by Omission
+     8.3.  Reuse Across Revisions
+     8.4.  Presenter Substitution
+     8.5.  Verification Cost
+   9.  Privacy Considerations
+   10. IANA Considerations
+   11. References
+     11.1.  Normative References
+     11.2.  Informative References
+   Appendix A.  Document History
+   Author's Address
+
+1.  Introduction
+
+   Mission-Bound Authorization for OAuth 2.0
+   [I-D.draft-mcguinness-oauth-mission] (the OAuth binding) carries
+   Intent Submission Evidence in the Submission envelope, refuses an
+   entry it cannot verify, and treats a verified entry as policy input.
+   This document adds the rest of the evidence framework: how an
+   evidence type is specified, when evidence is required, what verified
+   evidence binds, how much verification a submission can demand, and
+   where the error is returned.
+
+   The framework uses these seams of the OAuth binding and changes none
+   of its rules:
+
+   *  the Submission envelope's optional evidence member, with its size
+      and count bounds ([I-D.draft-mcguinness-oauth-mission],
+      Section "Submission via PAR");
+
+   *  the "reject, do not ignore" and "policy input, not authority"
+      rules ([I-D.draft-mcguinness-oauth-mission], Section "Intent
+      Submission Evidence");
+
+   *  the invalid_mission_intent_evidence error code, which the OAuth
+      binding registers ([I-D.draft-mcguinness-oauth-mission],
+      Section "OAuth Extensions Error Registration"); and
+
+   *  the Mission Record's submission_evidence member, which records the
+      verified facts ([I-D.draft-mcguinness-oauth-mission],
+      Section "Mission Record").
+
+   This document defines no evidence types.  A companion profile defines
+   each type under the convention of Section 3.
+
+2.  Conventions and Terminology
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in
+   BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+   This document uses the terms Mission, Mission Intent, Submission
+   envelope, Intent Submission Evidence, Mission Record, Mission Issuer
+   (the "AS"), approval event, Authority Set, and intent_hash from
+   [I-D.draft-mcguinness-oauth-mission].
+
+   Evidence type:  The collision-resistant name an entry's type member
+      carries.  The specification that owns the name is the evidence
+      type's specification (Section 3).
+
+3.  Evidence Entries
+
+   Each entry is a JSON object with a REQUIRED type member: a string
+   naming the evidence type as a collision-resistant name, under the
+   same guidance as anchor typ values
+   ([I-D.draft-mcguinness-oauth-mission], Section "Integrity Anchors").
+   The specification that owns a type defines the entry's remaining
+   members as a closed schema, the artifact format, the verification
+   procedure, and the verified output facts that verification yields.
+
+   This document defines no generic member other than type, and no
+   evidence types; an AS that supports no evidence type refuses every
+   presented entry under the OAuth binding's dispatch rule
+   ([I-D.draft-mcguinness-oauth-mission], Section "Intent Submission
+   Evidence").
+
+4.  Processing Rules
+
+   These rules apply alongside the OAuth binding's "reject, do not
+   ignore" and "policy input, not authority" rules
+   ([I-D.draft-mcguinness-oauth-mission], Section "Intent Submission
+   Evidence"), on every surface that carries the Submission envelope:
+   PAR, and each carriage a companion profile defines.  They apply to
+   every submission, including one that carries no evidence member.
+
+4.1.  Required Evidence Is Resolved Before Derivation
+
+   The AS determines the evidence types its applicable profile, client,
+   resource, or admission policy requires before derivation.  When a
+   required type is absent from the submission, the AS MUST refuse the
+   submission with the invalid_mission_intent_evidence error code.  This
+   is the submission-plane form of the downgrade rules of the OAuth
+   binding ([I-D.draft-mcguinness-oauth-mission], Section "Authority
+   Proposal").
+
+4.2.  Evidence Binds One Exact Intent
+
+   Before derivation, the AS verifies that intent-bound evidence is
+   bound to this AS, names exactly the provisional intent_hash computed
+   from the submitted Intent, and agrees with the presenter established
+   by the containing exchange (Section 4.3).
+
+   Evidence bound to an intent_hash applies only to that exact semantic
+   Intent.  When a shaping ([I-D.draft-mcguinness-mission-shaping]) or
+   approval revision
+   ([I-D.draft-mcguinness-oauth-mission-approval-revision]) changes
+   intent_hash, the AS MUST NOT treat evidence bound to the predecessor
+   Intent as evidence for the revised Intent, unless the evidence type's
+   specification explicitly authorizes that transformation and defines
+   how its lineage is verified.
+
+4.3.  The Exchange Establishes the Presenter
+
+   The AS establishes the presenter through the containing exchange:
+   client authentication and, where present, proof of possession.  An
+   entry that names an authorized presenter (a client_id, a cnf key
+   binding [RFC7800]) MUST match the established presenter, and a
+   mismatch fails that entry's verification.  Evidence is never an
+   alternative client-authentication mechanism and never selects the
+   presenter.
+
+4.4.  Bounded Verification
+
+   Beyond the size and count bounds of the OAuth binding
+   ([I-D.draft-mcguinness-oauth-mission], Section "Submission via PAR"),
+   the AS MUST bound the verification cost a submission can impose (for
+   example, the number of signature verifications it performs), refusing
+   a submission that exceeds the bound with the invalid_request error
+   code.
+
+5.  Error Responses
+
+   The AS returns the invalid_mission_intent_evidence error code where
+   the containing exchange returns its errors: in the PAR error response
+   (Section 2.3 of [RFC9126]) for a PAR submission, and in the token
+   error response (Section 5.2 of [RFC6749]) for a token-endpoint
+   carriage that a companion profile defines.
+
+6.  Evidence on Idempotent Creation Surfaces
+
+   On a surface that carries a Mission-creation idempotency fingerprint
+   (the expansion and child-creation token exchanges,
+   [I-D.draft-mcguinness-oauth-mission-expansion],
+   [I-D.draft-mcguinness-oauth-mission-child-delegation]), presented
+   evidence is a member of that fingerprint, which the owning profile
+   lists.  Recovery of a completed operation on those surfaces returns
+   the recorded outcome without re-verifying the presented evidence,
+   even when an artifact's freshness or status has since lapsed.  PAR-
+   based creation and surfaces that submit no Mission Intent carry no
+   such fingerprint and keep their own replay and idempotency
+   mechanisms.
+
+7.  Conformance
+
+   An AS conforming to this document implements the OAuth binding's
+   Intent Submission Evidence rules
+   ([I-D.draft-mcguinness-oauth-mission], Section "Intent Submission
+   Evidence") and MUST implement:
+
+   *  required-evidence resolution (Section 4.1);
+
+   *  Intent binding (Section 4.2);
+
+   *  presenter agreement (Section 4.3); and
+
+   *  the verification bound (Section 4.4).
+
+   It returns errors as Section 5 describes and, on a surface that
+   carries a Mission-creation idempotency fingerprint, treats presented
+   evidence as Section 6 describes.
+
+   A specification that defines an evidence type follows the entry
+   convention (Section 3).  An AS that supports an evidence type
+   conforms to this document.
+
+   Verified evidence is not copied into the Authority Set, and the facts
+   the Mission Record retains are not carried on the mission claim
+   ([I-D.draft-mcguinness-oauth-mission], Section "Mission Record").  A
+   Resource Server does not need to understand this document.
+
+8.  Security Considerations
+
+   The security considerations of the OAuth binding apply
+   ([I-D.draft-mcguinness-oauth-mission], Section "Security
+   Considerations").
+
+8.1.  Evidence Is Not Authority
+
+   A verified entry informs admission and derivation policy.  It never
+   enters the Authority Set and never stands in for the approval event
+   ([I-D.draft-mcguinness-oauth-mission], Section "Intent Submission
+   Evidence").  Evidence that passes verification can still steer a
+   policy decision, so that decision is only as strong as the
+   verification the evidence type's specification defines.
+
+8.2.  Downgrade by Omission
+
+   Stripping a required entry from a submission is a downgrade attempt.
+   Resolving required types before derivation (Section 4.1) turns the
+   omission into a refusal rather than an admission on weaker evidence.
+
+8.3.  Reuse Across Revisions
+
+   An admission or consent decision covers the Intent it was made for.
+   Carrying it to a revised Intent would apply it to a task it never
+   covered; Section 4.2 confines it to one intent_hash.
+
+8.4.  Presenter Substitution
+
+   An evidence artifact is not a credential.  Because the containing
+   exchange establishes the presenter (Section 4.3), a stolen artifact
+   neither authenticates its holder nor lets a different client present
+   it as the named presenter.
+
+8.5.  Verification Cost
+
+   An entry can demand signature verification, status retrieval, or
+   other work.  Without a bound, a small submission could impose a large
+   cost on the AS; Section 4.4 refuses such a submission.
+
+9.  Privacy Considerations
+
+   An evidence artifact can carry personal data, such as an originator
+   identity or a consent reference.  The OAuth binding keeps it off the
+   front channel through PAR and governs access to the facts the Mission
+   Record retains ([I-D.draft-mcguinness-oauth-mission],
+   Section "Mission Record and Evidence Access").  An evidence type's
+   specification controls that exposure through the verified output
+   facts it designates for recording.
+
+10.  IANA Considerations
+
+   This document has no IANA actions.  The
+   invalid_mission_intent_evidence error code it uses is registered by
+   the OAuth binding ([I-D.draft-mcguinness-oauth-mission],
+   Section "OAuth Extensions Error Registration").
+
+11.  References
+
+11.1.  Normative References
+
+   [I-D.draft-mcguinness-oauth-mission]
+              McGuinness, K., "Mission-Bound Authorization for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission.html>.
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/rfc/rfc2119>.
+
+   [RFC6749]  Hardt, D., Ed., "The OAuth 2.0 Authorization Framework",
+              RFC 6749, DOI 10.17487/RFC6749, October 2012,
+              <https://www.rfc-editor.org/rfc/rfc6749>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+
+   [RFC9126]  Lodderstedt, T., Campbell, B., Sakimura, N., Tonge, D.,
+              and F. Skokan, "OAuth 2.0 Pushed Authorization Requests",
+              RFC 9126, DOI 10.17487/RFC9126, September 2021,
+              <https://www.rfc-editor.org/rfc/rfc9126>.
+
+11.2.  Informative References
+
+   [I-D.draft-mcguinness-mission-shaping]
+              McGuinness, K., "Mission Intent Shaping", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-shaping.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-approval-revision]
+              McGuinness, K., "Mission Approval Revision for OAuth 2.0",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-approval-
+              revision.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-child-delegation]
+              McGuinness, K., "Mission Child Delegation for OAuth 2.0",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-child-
+              delegation.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-expansion]
+              McGuinness, K., "Mission Expansion for OAuth 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-expansion.html>.
+
+   [RFC7800]  Jones, M., Bradley, J., and H. Tschofenig, "Proof-of-
+              Possession Key Semantics for JSON Web Tokens (JWTs)",
+              RFC 7800, DOI 10.17487/RFC7800, April 2016,
+              <https://www.rfc-editor.org/rfc/rfc7800>.
+
+Appendix A.  Document History
+
+   [[ To be removed from the final specification ]]
+
+   -00
+
+   *  Clarified the boundary with the OAuth binding: the framework owns
+      the pre-derivation checks on intent-bound evidence, including its
+      AS, exact-Intent, and presenter binding.  The binding keeps its
+      evidence dispatch and refusal rules and permits an AS that
+      supports no evidence types.
+
+   *  Initial version.  Carries the Intent Submission Evidence framework
+      of Mission-Bound Authorization for OAuth 2.0 with its wire names
+      and rules unchanged: the entry convention, required-evidence
+      resolution, binding to one exact Intent, presenter agreement, the
+      verification bound, error placement, and the creation-fingerprint
+      note.  The OAuth binding keeps the evidence member and its bounds,
+      the reject and policy-input rules, the
+      invalid_mission_intent_evidence registration, and the
+      submission_evidence record member.
+
+Author's Address
+
+   Karl McGuinness
+   Independent
+   Email: public@karlmcguinness.com
