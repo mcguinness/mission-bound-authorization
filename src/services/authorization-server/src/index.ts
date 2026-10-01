@@ -224,7 +224,7 @@ export {
   issueCrossDomainGrant,
   audienceScopedAuthority,
   RequestedAuthorityExceededError,
-  DelegationNarrowedToEmptyError,
+  AuthorityNarrowedToEmptyError,
   ID_JAG_TYP,
   ID_JAG_TOKEN_TYPE,
 } from "./kernel/cross-domain.js";

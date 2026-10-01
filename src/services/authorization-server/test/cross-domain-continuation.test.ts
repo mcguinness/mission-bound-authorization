@@ -18,8 +18,10 @@ import {
   generateKeyPair,
 } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
+import { continuationAuthorityFilter } from "../src/adapters/continuation-grant.js";
+import { gateDelegableAuthority } from "../src/kernel/delegation.js";
 import {
-  DelegationNarrowedToEmptyError,
+  AuthorityNarrowedToEmptyError,
   issueCrossDomainGrant,
   MissionKernel,
   RequestedAuthorityExceededError,
@@ -31,14 +33,22 @@ import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 const AS_ISS = "https://as.test";
 const RAS_ISS = "https://ras.ledgercloud.test";
 const RESOURCE = "https://saas.ledgercloud.test/mcp";
+const RESOURCE_2 = "https://saas.ledgercloud.test/reports"; // a second resource the same RAS serves
 const CAI = "https://cai.example";
-const RESOURCE_TO_AS = (r: string) => (r === RESOURCE ? RAS_ISS : AS_ISS);
+const RESOURCE_TO_AS = (r: string) => (r === RESOURCE || r === RESOURCE_2 ? RAS_ISS : AS_ISS);
 
 // Ceiling includes exactly the resource the ID-JAG is audienced to.
 const POLICY = {
   policy_version: "cont-policy-1",
   ceiling: [
     { type: "mission_resource_access", resource: RESOURCE, actions: ["ledger:journal.write"] },
+    // Delegable to delegate-svc through depth 1 (the RESOURCE entry is not delegable).
+    {
+      type: "mission_resource_access",
+      resource: RESOURCE_2,
+      actions: ["ledger:report.read"],
+      delegation: { max_depth: 1, allowed_delegates: [{ sub: "delegate-svc" }] },
+    },
   ],
 } as const;
 
@@ -211,11 +221,11 @@ describe("issueCrossDomainGrant — continuation ID-JAG (extended path)", () => 
     expect(calls).toBe(0);
   });
 
-  it("delegationGate: the grant carries only the entries it keeps, and an empty result is refused before beforeSign (@spec mission#delegation-constraints)", async () => {
+  it("authorityFilter: the grant carries only the entries it keeps, and an empty result is refused before beforeSign (@spec mission#delegation-constraints)", async () => {
     const record = approve(24);
     const { grant } = await issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
       ...legacyInput(record.id),
-      delegationGate: (entries) => entries.map((e) => ({ ...e, actions: e.actions.slice(0, 1) })),
+      authorityFilter: (entries) => entries.map((e) => ({ ...e, actions: e.actions.slice(0, 1) })),
     });
     expect(decodeJwt(grant).authorization_details).toEqual([
       { type: "mission_resource_access", resource: RESOURCE, actions: ["ledger:journal.write"] },
@@ -225,12 +235,65 @@ describe("issueCrossDomainGrant — continuation ID-JAG (extended path)", () => 
     await expect(
       issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
         ...legacyInput(approve(25).id),
-        delegationGate: () => [],
+        authorityFilter: () => [],
         beforeSign: () => {
           calls += 1;
         },
       }),
-    ).rejects.toBeInstanceOf(DelegationNarrowedToEmptyError);
+    ).rejects.toBeInstanceOf(AuthorityNarrowedToEmptyError);
+    expect(calls).toBe(0);
+  });
+
+  it("continuationAuthorityFilter in-mint: the delegation gate, then the requested resources, and an empty composition is refused before beforeSign (@spec id-continuation-assertion)", async () => {
+    // A Mission holding RESOURCE (non-delegable) and RESOURCE_2 (delegable to delegate-svc).
+    const approveBoth = (n: number): MissionRecord =>
+      kernel.approve({
+        intent: validateMissionIntent(
+          JSON.stringify({
+            goal: "Post journal entries and read reports on LedgerCloud",
+            target_resources: [RESOURCE, RESOURCE_2],
+            expires_at: "2027-01-01T00:00:00Z",
+          }),
+        ),
+        proposedAuthority: [
+          { type: "mission_resource_access", resource: RESOURCE, actions: ["ledger:journal.write"] },
+          { type: "mission_resource_access", resource: RESOURCE_2, actions: ["ledger:report.read"] },
+        ],
+        subject: { iss: AS_ISS, sub: "alice" },
+        approver: { iss: AS_ISS, sub: "bob" },
+        clientId: "ap-agent",
+        approvalEventId: `apev-${n}`,
+      });
+    const depth0 = (entries: Parameters<typeof gateDelegableAuthority>[0]) => entries;
+    const depth1 = (entries: Parameters<typeof gateDelegableAuthority>[0]) =>
+      gateDelegableAuthority(entries, { sub: "delegate-svc" }, 1);
+    let next = 30;
+    const resourcesOf = async (filter: ReturnType<typeof continuationAuthorityFilter>) => {
+      const { grant } = await issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
+        ...legacyInput(approveBoth(next++).id),
+        authorityFilter: filter,
+      });
+      return (decodeJwt(grant).authorization_details as Array<{ resource: string }>).map((d) => d.resource).sort();
+    };
+
+    // Depth 0: resource narrowing alone.
+    expect(await resourcesOf(continuationAuthorityFilter(depth0, []))).toEqual([RESOURCE, RESOURCE_2].sort());
+    expect(await resourcesOf(continuationAuthorityFilter(depth0, [RESOURCE]))).toEqual([RESOURCE]);
+    // Depth 1: the gate keeps only RESOURCE_2; naming it keeps it.
+    expect(await resourcesOf(continuationAuthorityFilter(depth1, []))).toEqual([RESOURCE_2]);
+    expect(await resourcesOf(continuationAuthorityFilter(depth1, [RESOURCE_2]))).toEqual([RESOURCE_2]);
+
+    // Depth 1 naming the gated-out RESOURCE: nothing remains, refused before signing.
+    let calls = 0;
+    await expect(
+      issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
+        ...legacyInput(approveBoth(29).id),
+        authorityFilter: continuationAuthorityFilter(depth1, [RESOURCE]),
+        beforeSign: () => {
+          calls += 1;
+        },
+      }),
+    ).rejects.toBeInstanceOf(AuthorityNarrowedToEmptyError);
     expect(calls).toBe(0);
   });
 
