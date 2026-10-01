@@ -2786,7 +2786,7 @@ specification states when the mapping in step 3 is safe for that
 type's entries (for `mission_resource_access`,
 {{I-D.draft-mcguinness-oauth-mission-resource-access}}).
 
-A runtime profile's enforcement-scope declarations
+The runtime profile's enforcement-scope declarations
 ({{I-D.draft-mcguinness-mission-runtime}}) can reference the same
 mapping for the paths it covers; this rule does not depend on that
 profile.
@@ -4048,7 +4048,7 @@ approved Authority Set, an injected agent can read what the Mission
 permits and write to a sink the Mission permits, and the flat subset and
 constraint model cannot express "may read secrets, may write documents,
 but not write secrets into documents." Constraining exfiltration by a
-compromised agent is the runtime enforcement layer's role
+compromised agent is the runtime layer's role
 ({{runtime-boundary}}), and even there it is bounded, not closed
 ({{I-D.draft-mcguinness-mission-runtime}}). Preventing misuse of data
 within the authorized scope needs a separate taint or information-flow
@@ -4126,7 +4126,7 @@ composite result is `active: false` once the Mission is no longer
 `active` ({{composite-active}}), so a Resource Server that introspects
 per request stops honoring the token at its next request.
 
-A runtime enforcement layer ({{I-D.draft-mcguinness-mission-runtime}}),
+A runtime layer ({{I-D.draft-mcguinness-mission-runtime}}),
 outside the scope of this document, evaluates each consequential action
 against the Mission, with parameter binding, and records evidence for
 the actions it covers. A deployment adds one for an action class that
