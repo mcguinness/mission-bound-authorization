@@ -1609,6 +1609,11 @@ Composition:
 
 # Meaning and Derivation {#meaning-and-derivation}
 
+Three questions sit between a proposed task and enforced authority:
+who owns what an operation means ({{ontology-contract}}), who commits
+the authority derived from the task ({{derivation-boundary}}), and
+what the approval event fixes ({{approval-fidelity}}).
+
 ## The Ontology Contract {#ontology-contract}
 
 The capability envelope ({{capability-envelope}}) meets its hardest
