@@ -1067,6 +1067,17 @@ IANA action. Following the restraint of the sibling profiles:
 
 --- back
 
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- The dispatch bounds have stated encodings. `instance_lifetime` and
+  `review_cadence` are positive integer seconds, the latter measured
+  from the approval's `approved_at`; `max_active` is a positive
+  integer; `dispatch_rate` is a `limit` of committed instantiations per
+  trailing `window` of seconds, counting neither refused Dispatches nor
+  recovered retries; and `expires_at` is an RFC 3339 date-time.
+
 # Acknowledgments
 {:numbered="false"}
 
