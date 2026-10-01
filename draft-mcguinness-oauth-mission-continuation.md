@@ -1,9 +1,10 @@
 ---
 title: "Mission Continuation for OAuth 2.0"
-abbrev: "Mission Continuation"
+abbrev: "OAuth Mission Continuation"
 docname: draft-mcguinness-oauth-mission-continuation-latest
 category: exp
 submissiontype: IETF
+workgroup: Web Authorization Protocol
 consensus: true
 v: 3
 keyword:

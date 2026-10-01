@@ -5,6 +5,7 @@ category: exp
 
 docname: draft-mcguinness-oauth-mission-transaction-authorization-latest
 submissiontype: IETF
+workgroup: Web Authorization Protocol
 number:
 date:
 consensus: true
