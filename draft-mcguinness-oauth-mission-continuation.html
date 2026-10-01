@@ -1471,17 +1471,33 @@ below partition the space this profile addresses.<a href="#section-6-3" class="p
         </h3>
 <p id="section-6.1-1">The Identity Continuation Assertion
 (<span>[<a href="#I-D.draft-mcguinness-oauth-id-continuation-assertion" class="cite xref">I-D.draft-mcguinness-oauth-id-continuation-assertion</a>]</span>) is the
-intra-domain, connected, cross-workload transport. A Chain Authority mints
-a short-lived, sender-constrained assertion naming an accepted hop; the
-acting workload presents it as an <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> token-exchange subject token
-and redeems a continuation ID-JAG at the token endpoint. Under this
+multi-hop, cross-workload transport among Resource Authorization Servers
+that trust a common IdP Authorization Server (IdP). A Continuation
+Assertion Issuer attests that a Resource Authorization Server accepted
+an earlier ID-JAG and that its authorization remains active; the acting
+workload presents that assertion to the IdP as an <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> subject
+token and redeems the onward ID-JAG it receives at the next Resource
+Authorization Server. Under this
 profile the assertion's <code>identity_continuation_handle</code> <span class="bcp14">MUST</span> resolve to a
 Mission rooting anchor; the issued ID-JAG's authorization detail <span class="bcp14">MUST</span> be a
 subset of that Mission's Authority Set, state-gated, and lifetime-clamped
 per <a href="#authorization-continuity" class="auto internal xref">Section 4</a>; and the ID-JAG <span class="bcp14">MUST</span> be bound
-(<span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>) to the acting identity's key. The assertion carries no
-subject, so continuation preserves the Mission's subject rather than
-projecting it; the actor is rebound per hop.<a href="#section-6.1-1" class="pilcrow">¶</a></p>
+(<span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>) to the acting identity's key.<a href="#section-6.1-1" class="pilcrow">¶</a></p>
+<p id="section-6.1-2">The IdP authorizes each continuation under the chain authorization
+recorded at the root exchange and current policy, and that draft leaves
+whether a requested action serves the authorized work to deployment
+policy
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-id-continuation-assertion-02#section-5.5.3" class="relref">Section 5.5.3</a> of [<a href="#I-D.draft-mcguinness-oauth-id-continuation-assertion" class="cite xref">I-D.draft-mcguinness-oauth-id-continuation-assertion</a>]</span>,
+<span><a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-id-continuation-assertion-02#appendix-A.5" class="relref">Appendix A.5</a> of [<a href="#I-D.draft-mcguinness-oauth-id-continuation-assertion" class="cite xref">I-D.draft-mcguinness-oauth-id-continuation-assertion</a>]</span>);
+under this profile the Mission answers it. A chain's lifecycle anchor
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-id-continuation-assertion-02#section-6.1" class="relref">Section 6.1</a> of [<a href="#I-D.draft-mcguinness-oauth-id-continuation-assertion" class="cite xref">I-D.draft-mcguinness-oauth-id-continuation-assertion</a>]</span>)
+is its rooting anchor: the Mission's grant, which can carry unattended
+work past logout, or a session bound to it. A Mission's terminal state
+withdraws permission to continue and ends the chain
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-id-continuation-assertion-02#section-6.2" class="relref">Section 6.2</a> of [<a href="#I-D.draft-mcguinness-oauth-id-continuation-assertion" class="cite xref">I-D.draft-mcguinness-oauth-id-continuation-assertion</a>]</span>).
+The assertion carries no user subject: the IdP resolves the subject for
+each target from the hop, so continuation preserves the Mission's
+subject rather than projecting it; the actor is rebound per hop.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="transport-async">
@@ -1643,7 +1659,9 @@ interval, and never exceeds the Mission's expiry
 continuation immediately but does not shorten a credential already issued;
 deployments requiring tighter bounds choose shorter transport lifetimes.<a href="#section-9-2" class="pilcrow">¶</a></p>
 <p id="section-9-3">Replay is a transport concern the Mission binding does not relax: the
-Identity Continuation Assertion is single-use by <code>jti</code>, and an async
+Identity Continuation Assertion is single-use, keyed on <code>(iss, jti)</code>
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-id-continuation-assertion-02#section-5.5.7" class="relref">Section 5.5.7</a> of [<a href="#I-D.draft-mcguinness-oauth-id-continuation-assertion" class="cite xref">I-D.draft-mcguinness-oauth-id-continuation-assertion</a>]</span>),
+and an async
 delegation family rotates on each refresh with reuse detection over the
 family. A continuation <span class="bcp14">MUST NOT</span> widen authority; the subset check of
 <a href="#authorization-continuity" class="auto internal xref">Section 4</a> is enforced at every issuance, so a
@@ -1660,7 +1678,10 @@ confused-deputy hop to the audiences the Mission already reaches.<a href="#secti
 <p id="section-10-1">Continuation preserves the Mission's subject rather than minting a new
 one, and the transports resolve audience-local subjects where they resolve
 a subject at all, so a continued Mission does not become a cross-audience
-correlation handle. The Identity Continuation Assertion carries no subject.
+correlation handle. The Identity Continuation Assertion carries no user
+subject, and its handles are hop-specific, but the IdP and a hop's
+participants can still correlate a chain
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-id-continuation-assertion-02#section-10" class="relref">Section 10</a> of [<a href="#I-D.draft-mcguinness-oauth-id-continuation-assertion" class="cite xref">I-D.draft-mcguinness-oauth-id-continuation-assertion</a>]</span>).
 Continuation handles are opaque and carry no authorization detail, so their
 exposure discloses neither the subject nor the granted authority.<a href="#section-10-1" class="pilcrow">¶</a></p>
 </section>
@@ -1753,7 +1774,7 @@ constrains their use and introduces none of its own.<a href="#section-11-1" clas
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-id-continuation-assertion">[I-D.draft-mcguinness-oauth-id-continuation-assertion]</dt>
         <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Identity Continuation Assertion for OAuth 2.0 Token Exchange"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/draft-mcguinness-oauth-id-continuation-assertion/">https://datatracker.ietf.org/doc/draft-mcguinness-oauth-id-continuation-assertion/</a>&gt;</span>. </dd>
+<span class="refAuthor">McGuinness, K.</span> and <span class="refAuthor">A. Parecki</span>, <span class="refTitle">"Identity Continuation Assertion for OAuth 2.0 Token Exchange"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-id-continuation-assertion-02</span>, <time datetime="2026-09-08" class="refDate">8 September 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-id-continuation-assertion-02">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-id-continuation-assertion-02</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-child-delegation">[I-D.draft-mcguinness-oauth-mission-child-delegation]</dt>
         <dd>

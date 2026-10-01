@@ -353,8 +353,9 @@ Table of Contents
    one that carries a continuation ACROSS a trust boundary the origin
    does not control; Identity Continuation
    ([I-D.draft-mcguinness-oauth-id-continuation-assertion]) and async
-   delegation ([I-D.draft-zhu-oauth-async-delegation]) are the intra-
-   domain transports.
+   delegation ([I-D.draft-zhu-oauth-async-delegation]) are the
+   transports within that boundary: every Identity Continuation hop
+   reaches a Resource AS that trusts the same identity provider.
 
    What the profile adds over this document is the Mission binding
    common to every transport: a continuation handle grants nothing, each
@@ -1450,10 +1451,12 @@ Table of Contents
               oauth-id-assertion-framework-00>.
 
    [I-D.draft-mcguinness-oauth-id-continuation-assertion]
-              McGuinness, K., "Identity Continuation Assertion for OAuth
-              2.0 Token Exchange", 2026,
-              <https://datatracker.ietf.org/doc/draft-mcguinness-oauth-
-              id-continuation-assertion/>.
+              McGuinness, K. and A. Parecki, "Identity Continuation
+              Assertion for OAuth 2.0 Token Exchange", Work in Progress,
+              Internet-Draft, draft-mcguinness-oauth-id-continuation-
+              assertion-02, 8 September 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-id-continuation-assertion-02>.
 
    [I-D.draft-mcguinness-oauth-mission-containment]
               McGuinness, K., "Mission Containment for OAuth 2.0", 2026,
