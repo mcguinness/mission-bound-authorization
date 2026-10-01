@@ -1314,11 +1314,11 @@ audience, including audience projection to a Resource AS
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), counts as
 narrowing and needs `narrowing`, not `projection`. Without
 `narrowing`, the AS MUST NOT issue an entry to any audience other
-than its original approved audience, or in any form other than
-exactly as approved except as `scope` under a declared `projection`,
+than its original approved audience, or, except as `scope` under a
+declared `projection`, in any form other than exactly as approved,
 since it cannot prove that a transformed copy is still a subset of
 what was approved. A delegated token can then include the entry only
-unchanged, which the subset rule ({{subset}}) admits by identity.
+exactly as approved.
 
 The AS declares the capabilities through these carriers, in order of
 preference:
@@ -3532,11 +3532,13 @@ depth 0 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
 The count is issuer-side accounting over the AS's own issuance, not
 an access-control decision over prior actors. The AS counts only an
 `act` chain it authored, in a subject token it validates as its own
-issuance under this Mission. Each delegated exchange appends exactly
-one outermost actor and a self-exchange ({{self-exchange}}) appends
-none, so the count is complete, and no prior actor's identity enters
-it. Prior actors are not authorization inputs at a Resource Server
-({{Section 4.1 of RFC8693}}).
+issuance under this Mission. Each delegated exchange this document
+defines appends exactly one outermost actor and a self-exchange
+({{self-exchange}}) appends none, so the count over these exchanges
+is complete; a companion that issues Mission-bound tokens by another
+path defines how their chains count. No prior actor's identity enters
+the count, and a Resource Server likewise bases no authorization
+decision on a prior actor's identity ({{Section 4.1 of RFC8693}}).
 
 **Per-entry enforcement.** When the AS issues a token to a delegate
 (the actor that becomes the outermost `act`) at delegation depth
@@ -5715,9 +5717,10 @@ Cross-Domain:
   narrowing under the subset rule. Made the per-capability
   transformation rule the single home: audience projection to a
   Resource AS needs `narrowing`, and without it a delegated token
-  includes an entry only unchanged. Defined delegation depth as
-  issuer-side accounting over an `act` chain the AS authored, with
-  prior actors not authorization inputs at a Resource Server.
+  includes an entry only exactly as approved. Defined delegation
+  depth as issuer-side accounting over an `act` chain the AS
+  authored, with no Resource Server decision based on a prior
+  actor's identity.
 
 - Stated the client no-downgrade requirement in Authorization Server
   Metadata, where discovery establishes Mission support; Downgrade by
