@@ -475,9 +475,12 @@ task graph node to a Mission reference:
 
 `status_checked_at`:
 : REQUIRED when the harness has checked status. An RFC 3339 timestamp:
-  when the harness observed the status it relies on, never earlier
-  than that status's issuance (a Mission Status Response's `iat`,
-  {{I-D.draft-mcguinness-oauth-mission-status}}).
+  the harness's own clock reading when it observed the status it
+  relies on, recorded as read. With unsynchronized clocks it can
+  precede that status's issuance (a Mission Status Response's `iat`,
+  {{I-D.draft-mcguinness-oauth-mission-status}}), but by no more than
+  the deployment's published maximum clock skew
+  ({{I-D.draft-mcguinness-mission-authzen}}, Section "Clock skew").
 
 `status_expires_at`:
 : REQUIRED when the harness relies on a status lease. An RFC 3339
@@ -1730,8 +1733,9 @@ exists.
 
 \[\[ To be removed from the final specification ]]
 
-- `status_checked_at` is the harness's observation, never earlier than
-  the relied-on status's `iat`; `status_expires_at` is its reliance
+- `status_checked_at` is the harness's observation as its own clock
+  read it, preceding the relied-on status's `iat` by no more than the
+  published maximum clock skew; `status_expires_at` is its reliance
   end, never later than a Mission Status Response's
   `mission.fresh_until`.
 
