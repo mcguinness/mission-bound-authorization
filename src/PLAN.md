@@ -1440,7 +1440,7 @@ their repositories or working groups.
   ceiling-absent yields non-delegable), and made `deriveAttenuationRoot` derive
   `del_max_depth = min(max_depth)` across the delegable entries, keeping the
   explicit input as an optional override for the existing call sites. 255 tests green.
-- **S-16 (open).** Gap: draft-mcguinness-oauth-id-continuation-assertion-02 § 5.5.6
+- **S-16 (filed, mcguinness/draft-mcguinness-oauth-id-continuation-assertion#135).** Gap: draft-mcguinness-oauth-id-continuation-assertion-02 § 5.5.6
   has no refusal code for a temporarily non-continuable chain: `invalid_continuation`
   is permanent-only, and `unauthorized_client` is phrased per actor. The implementation
   returns `unauthorized_client` for a suspended Mission (owner ruling 2026-10-01, D191;
@@ -1452,6 +1452,17 @@ their repositories or working groups.
   Disposition: the ICA codes govern at the ICA exchange (D191); #942 lets a Token Exchange
   profile assign the code and has Mission Continuation state the mapping, fixed in
   spec by #942 (c3e9649c).
+- **S-18 (filed, mcguinness/draft-mcguinness-oauth-id-continuation-assertion#136).** Ambiguity: draft-mcguinness-oauth-id-continuation-assertion-02
+  § 5.5.6 does not say whether a valid DPoP proof signed by a key other than the
+  assertion's `cnf.jkt` is `invalid_dpop_proof` ("a DPoP failure") or `invalid_request`
+  (an unacceptable token). The implementation returns `invalid_request` for the key
+  mismatch and `invalid_dpop_proof` for a missing, malformed, or replayed proof.
+  Disposition: ask the ICA draft to name the case.
+- **S-19 (filed, mcguinness/draft-mcguinness-oauth-id-continuation-assertion#137).** Ambiguity: draft-mcguinness-oauth-id-continuation-assertion-02
+  § 5.5.3 puts chain state (rule 4) before freshness and replay (rule 6), so with
+  § 5.5.6's earliest-failure order an expired or replayed assertion for an ended chain
+  returns `invalid_continuation`. The implementation follows that order (#932).
+  Disposition: ask whether reporting chain state from a stale assertion is intended.
 
 ## 9. Runbook (target state)
 
