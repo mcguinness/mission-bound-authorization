@@ -65,6 +65,7 @@ import {
   DischargeConflictError,
   DischargeNotFoundError,
   type DischargeRequest,
+  DischargeTraversalError,
   type DischargeResult,
   type DischargeTargetForm,
   entryDigest,
@@ -1951,14 +1952,21 @@ export class MissionKernel {
         this.authorizeDischargeTarget(record.id, target.entry_digest, target.condition_digest, input);
         return this.applyDischarge(record, target, event, undefined, { latchFirst: true });
       }
-      const resolved = this.resolveCarriedTarget(record, target.entry_digest, target.condition_digest);
-      if (!resolved) {
+      const resolution = this.resolveCarriedTarget(record, target.entry_digest, target.condition_digest);
+      if (resolution.kind === "broken") {
+        // A traversal failure is a refusal, never an acknowledgement, and only
+        // a caller authorized for the target it named learns of it.
+        this.authorizeDischargeTarget(record.id, target.entry_digest, target.condition_digest, input);
+        throw new DischargeTraversalError(resolution.reason);
+      }
+      if (resolution.kind === "absent") {
         // No recorded counterpart: the entry holds no authority in the
         // replacement, and the targeted (terminal) old child answers
         // terminal_noop once the caller is authorized for the target it named.
         this.authorizeDischargeTarget(record.id, target.entry_digest, target.condition_digest, input);
         return this.applyDischarge(record, target, event);
       }
+      const resolved = resolution;
       // Authorized against the REPLACEMENT's pinned mapping, never the old one.
       this.authorizeDischargeTarget(
         resolved.record.id,
@@ -2144,37 +2152,64 @@ export class MissionKernel {
    * @spec discharge#discharge-carryover ("Resolution") — follow a carried old
    * child's entry to the record that holds its authority now, through each
    * recorded pairing in turn (A to B to C), and ONLY through them: never by
-   * matching resource and condition. `undefined` when some hop records no
-   * counterpart for the entry, or the counterpart no longer carries the fired
-   * condition: the entry holds no authority past that hop.
+   * matching resource and condition. There is no hop limit: every hop is a
+   * fresh replacement record, so a well-formed chain is finite, and a VISITED
+   * set detects the cycle only a corrupted map could form.
+   *
+   * Three answers, kept apart:
+   *  - `resolved`: the record and entry the discharge applies to;
+   *  - `absent`: a PROVEN absence of authority past some hop (the pairing
+   *    records no counterpart for the entry, or the replacement was purged
+   *    after reaching a terminal state and left its tombstone);
+   *  - `broken`: the traversal itself failed (a cycle, a replacement that is
+   *    neither present nor tombstoned, or a pairing naming an entry, or a fired
+   *    condition, the replacement does not hold). Never an acknowledgement.
    */
   private resolveCarriedTarget(
     record: MissionRecord,
     entryDigestValue: string,
     conditionDigestValue: string,
-  ): { record: MissionRecord; entryDigest: string } | undefined {
+  ):
+    | { kind: "resolved"; record: MissionRecord; entryDigest: string }
+    | { kind: "absent" }
+    | { kind: "broken"; reason: string } {
+    const visited = new Set<string>([record.id]);
     let current = record;
     let digest = entryDigestValue;
-    // Bounded: every hop is a fresh replacement record, so a cycle is impossible;
-    // the bound only turns a corrupted map into a refusal rather than a hang.
-    for (let hop = 0; hop < 64; hop++) {
+    for (;;) {
       const carried = this.carriedRowOf(current);
       if (!carried) {
-        if (current === record) return undefined;
-        const entry = current.authority_set.find((e) => entryDigest(current.issuer, e) === digest);
-        const carries = entry
-          ? terminalWhenOf(entry)?.some((c) => conditionDigestOrUndefined(c) === conditionDigestValue)
-          : false;
-        return carries ? { record: current, entryDigest: digest } : undefined;
+        if (current === record) return { kind: "absent" };
+        return { kind: "resolved", record: current, entryDigest: digest };
       }
       const pair = carried.pairs.find((p) => p.entry_digest === digest);
-      if (!pair) return undefined;
+      if (!pair) return { kind: "absent" };
+      if (visited.has(carried.replacementId)) {
+        return { kind: "broken", reason: `carryover chain revisits ${carried.replacementId}` };
+      }
+      visited.add(carried.replacementId);
       const next = this.get(carried.replacementId);
-      if (!next) return undefined;
+      if (!next) {
+        // A purged replacement reached a terminal state first (its tombstone
+        // proves it); anything else is a map naming a record that never was.
+        if (this.tombstones.exists(current.issuer, carried.replacementId)) return { kind: "absent" };
+        return { kind: "broken", reason: `carried replacement ${carried.replacementId} does not exist` };
+      }
+      const nextEntry = next.authority_set.find(
+        (e) => entryDigest(next.issuer, e) === pair.replacement_entry_digest,
+      );
+      if (
+        !nextEntry ||
+        !terminalWhenOf(nextEntry)?.some((c) => conditionDigestOrUndefined(c) === conditionDigestValue)
+      ) {
+        return {
+          kind: "broken",
+          reason: `pairing names an entry of ${next.id} that does not hold the fired condition`,
+        };
+      }
       current = this.applyExpiry(next);
       digest = pair.replacement_entry_digest;
     }
-    return undefined;
   }
 
   /**

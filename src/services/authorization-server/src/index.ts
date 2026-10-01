@@ -166,6 +166,7 @@ export {
   dischargeAssertionFingerprint,
   DischargeConflictError,
   DischargeNotFoundError,
+  DischargeTraversalError,
   type DischargeOutcome,
   type DischargeRefusalReason,
   type DischargeRequest,

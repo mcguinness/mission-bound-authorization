@@ -63,6 +63,8 @@ const CONDITION = { event_type: CLOSE_EVENT, discharge_authority: CLOSE_AUTHORIT
 /** A discharge source holding the discharge grant and NO Status read grant. */
 const SOURCE_TOKEN = "dev-close-source-token";
 const SOURCE = "svc:close-source";
+/** Holds the discharge grant, but no condition's mapping admits it. */
+const UNMAPPED_TOKEN = "dev-unmapped-source-token";
 
 /** The live, issuer-held policy (mutated in place by the pin-inheritance row). */
 const POLICY: DischargeAuthorityPolicy = {
@@ -97,6 +99,7 @@ beforeAll(async () => {
     actorProfiles: aiAgents("child-a", "child-b"),
     serviceTokenPrincipals: {
       [SOURCE_TOKEN]: { principal_id: SOURCE, scopes: [MISSION_DISCHARGE_SCOPE] },
+      [UNMAPPED_TOKEN]: { principal_id: "svc:unmapped-source", scopes: [MISSION_DISCHARGE_SCOPE] },
     },
   });
   server = as.provider.listen(PORT);
@@ -466,6 +469,93 @@ describe("discharge forwarding after carryover (@spec discharge#discharge-carryo
     expect((payload.mission as Record<string, unknown>).id).toBe(child.id);
     expect(payload.discharge_result).toMatchObject({ outcome: "terminal_noop" });
     expect(latched(replacement.id)).toEqual([]);
+  });
+
+  it("forwards through a chain longer than any fixed hop limit", async () => {
+    const a = approvePredecessor();
+    const childA = addChild(a.id);
+    // 65 expand-and-carry cycles before the assertion arrives.
+    let parentId = a.id;
+    let last = childA;
+    for (let i = 0; i < 65; i++) {
+      const batch = expandAndCarry(parentId);
+      last = replacementOf(batch, last);
+      parentId = batch.successor.id;
+    }
+    const res = await lifecycle(childA.id, body(childA, "payments:invoice.list"));
+    expect(res.status).toBe(200);
+    const payload = decodeJwt(await res.text()) as Record<string, unknown>;
+    expect((payload.mission as Record<string, unknown>).id).toBe(last.id);
+    expect(payload.discharge_result).toMatchObject({
+      outcome: "discharged",
+      forwarded_from: { issuer: ISSUER, id: childA.id },
+    });
+    expect(latched(last.id)).toEqual([digestOf(last, "payments:invoice.list")]);
+  }, 120_000);
+
+  it("refuses a carryover chain that revisits a record instead of acknowledging it, disclosing nothing to an unauthorized caller", async () => {
+    const pred = approvePredecessor();
+    const childA = addChild(pred.id);
+    const childB = replacementOf(expandAndCarry(pred.id), childA);
+    // Corrupt the retained map so B reads as carried back to A: A to B to A.
+    const db = as.kernel.db;
+    db.prepare("UPDATE missions SET carried_to = ? WHERE id = ?").run(childA.id, childB.id);
+    db.prepare(
+      `INSERT INTO carryover_results (plan_id, issuer, predecessor_id, successor_id, manifest_hash,
+         manifest_json, map_json, evidence_hash, evidence_jws, committed_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(
+      `cycle-plan-${childB.id}`,
+      ISSUER,
+      "msn_injected_pred",
+      "msn_injected_succ",
+      "sha-256:injected",
+      "{}",
+      JSON.stringify([
+        {
+          old_child: { issuer: ISSUER, mission_id: childB.id },
+          outcome: "carried",
+          replacement_id: childA.id,
+          approval_event_id: "cry_injected",
+          entry_pairs: [
+            {
+              entry_digest: digestOf(childB, "payments:invoice.list"),
+              replacement_entry_digest: digestOf(childA, "payments:invoice.list"),
+            },
+          ],
+        },
+      ]),
+      "sha-256:injected",
+      "injected.jws.value",
+      new Date().toISOString(),
+    );
+    db.prepare(
+      `INSERT INTO carryover_replacements (issuer, replacement_id, plan_id, old_child_id, approval_event_id, child_evidence_json)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run(ISSUER, childA.id, `cycle-plan-${childB.id}`, childB.id, "cry_injected", "{}");
+    const events = (): number =>
+      (db.prepare("SELECT COUNT(*) AS n FROM discharge_events WHERE mission_id = ?").get(childA.id) as { n: number }).n;
+
+    // A caller the target's mapping does not admit learns nothing: the collapse.
+    const unauthorized = await lifecycle(childA.id, body(childA, "payments:invoice.list"), UNMAPPED_TOKEN);
+    expect(unauthorized.status).toBe(404);
+    const { nonce: _n, ...rest } = (await unauthorized.json()) as Record<string, unknown>;
+    expect(rest).toEqual({ error: "not_found", error_description: "Mission reference is not found or not visible." });
+
+    // An authorized caller gets the server-error path: never a terminal_noop
+    // acknowledgement an at-least-once sender would stop retrying on.
+    const req = body(childA, "payments:invoice.list");
+    for (const attempt of [req, { ...req, nonce: freshNonce() }]) {
+      const res = await lifecycle(childA.id, attempt);
+      expect(res.status).toBeGreaterThanOrEqual(500);
+      const text = await res.text();
+      expect(text).not.toContain("terminal_noop");
+      expect(text).not.toContain("not_found");
+    }
+    // Nothing committed or recorded.
+    expect(latched(childA.id)).toEqual([]);
+    expect(latched(childB.id)).toEqual([]);
+    expect(events()).toBe(0);
   });
 
   it("reaches a replacement entry whose bytes changed under inherited constraints, through the recorded pairing only", async () => {

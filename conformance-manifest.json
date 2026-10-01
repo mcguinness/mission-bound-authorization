@@ -6819,9 +6819,21 @@
      "name": "discharge forwarding after carryover (@spec discharge#discharge-carryover, #898 fix 3) > resolves a chain of two carryovers through both recorded pairings",
      "level": "cross-component",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge-carryover.test.ts",
+     "name": "discharge forwarding after carryover (@spec discharge#discharge-carryover, #898 fix 3) > forwards through a chain longer than any fixed hop limit",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge-carryover.test.ts",
+     "name": "discharge forwarding after carryover (@spec discharge#discharge-carryover, #898 fix 3) > refuses a carryover chain that revisits a record instead of acknowledging it, disclosing nothing to an unauthorized caller",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "Driven through the real deferred-expansion carryover and the lifecycle endpoint. A discharge targeting a carried old child latches the replacement's corresponding entry under the ordinary commit, before the response, and answers with the replacement's signed Status envelope whose discharge_result carries forwarded_from {issuer, id} naming the old child and the replacement's versions; the old child is untouched. A chain A to B to C formed before delivery resolves through both recorded pairings and latches C's entry, leaving B unchanged."
+   "notes": "Driven through the real deferred-expansion carryover and the lifecycle endpoint. A discharge targeting a carried old child latches the replacement's corresponding entry under the ordinary commit, before the response, and answers with the replacement's signed Status envelope whose discharge_result carries forwarded_from {issuer, id} naming the old child and the replacement's versions; the old child is untouched. A chain A to B to C formed before delivery resolves through both recorded pairings and latches C's entry, leaving B unchanged. resolveCarriedTarget has no hop limit (a chain of 65 carryovers forwards to its last replacement) and keeps a visited set: a chain that revisits a record (injected into the retained map) is a traversal failure, answered on the server-error path to a caller authorized for the targeted entry and with the not_found collapse to anyone else, never as a terminal_noop acknowledgement, and nothing is committed or recorded."
   },
   {
    "id": "status.discharge.forward-by-pairing-only",

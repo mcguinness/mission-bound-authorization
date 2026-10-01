@@ -233,6 +233,18 @@ export class DischargeNotFoundError extends Error {
 }
 
 /**
+ * @spec discharge#discharge-carryover ("Resolution") — the recorded carryover
+ * chain could not be followed: a cycle, a carried row naming a replacement
+ * that neither exists nor left a tombstone, or a pairing naming an entry its
+ * replacement does not hold. This is a traversal FAILURE, never a proven
+ * absence of authority, so it is never acknowledged as `terminal_noop`: the
+ * endpoint answers with its server-error path, after the caller was
+ * authorized for the target it named (so it discloses nothing to anyone
+ * else), and commits nothing.
+ */
+export class DischargeTraversalError extends Error {}
+
+/**
  * @spec discharge#discharge-idempotency — the same (discharge authority,
  * mission_id, entry_digest, condition_digest, event_id) tuple asserted with a
  * DIFFERENT fingerprint: refused `conflict` (409).
