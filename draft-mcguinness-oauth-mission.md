@@ -5772,8 +5772,8 @@ Cross-Domain:
   no normative requirements were added.
 
 - PR #725 review round: split Local Approved-Set Verification's
-  authenticated complete-set retrieval into two explicit tiers
-  (lasv-retrieval): Tier 1 (recompute and subset-check against a
+  authenticated complete-set retrieval into two explicit tiers:
+  Tier 1 (recompute and subset-check against a
   retrieved set, detecting projection errors under continuing trust
   in the issuer) and Tier 2 (additionally require the expected
   `authority_hash` to come from an independently retained,
@@ -5783,7 +5783,7 @@ Cross-Domain:
   audience's, and only the current effective (containment-filtered),
   entries, never the complete immutable approved set. Corrected the
   typed selective-inclusion proof from a claimable alternative to a
-  future composition point (lasv-proof-future), pending a
+  future composition point, pending a
   concrete proof type that authenticates its own root as the
   Mission's approval-time commitment, and fixed its description to
   prove the approved parent entry, never the carried narrowed entry
@@ -5803,8 +5803,7 @@ Cross-Domain:
   stay on the Mission record and become available through token
   introspection's member-scoped disclosure privilege, alongside
   `derivations_remaining` and `proposal_hash`. Added the Local
-  Approved-Set Verification profile
-  (local-approved-set-verification), an OPTIONAL profile defining
+  Approved-Set Verification profile, an OPTIONAL profile defining
   authenticated complete-set retrieval, commitment recomputation, and
   a subset check, or a typed selective-inclusion proof this document
   does not itself define, for a party that needs to verify a token's

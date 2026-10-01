@@ -1796,8 +1796,9 @@ Resource Server enforces the authority it receives rather than
 reconstructing authority from a hash of a full set it does not hold
 ({{I-D.draft-mcguinness-mission-security-model}}). A Resource Server
 or policy decision point that needs an independent check retrieves
-the complete approved set and recomputes its anchor under Mission
-Approved-Set Verification
+the complete approved set, recomputes its anchor, and checks the
+carried authority as a subset of it under Mission Approved-Set
+Verification
 ({{I-D.draft-mcguinness-oauth-mission-approved-set-verification}}).
 
 ## Token Classes {#token-classes}

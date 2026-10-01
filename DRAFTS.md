@@ -834,7 +834,8 @@ failed subset test; a second tier also requires a match against an
 independently retained `authority_hash`. The retrieval surface
 refuses a caller without the `authority_hash` disclosure privilege
 for every audience the Mission has issued to, and Mission Status is
-not a compatible retrieval surface. The OAuth binding keeps `authority_hash` itself.
+not a compatible retrieval surface. `authority_hash` itself is defined
+by the OAuth binding.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-approved-set-verification.html)
 

@@ -46,6 +46,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-containment:
+    title: "Mission Containment for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-substrate:
     title: "Mission Substrate Requirements"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
@@ -105,9 +113,9 @@ Authority Set, Mission-bound token, and `authority_hash` from
 from {{RFC9396}}.
 
 Verifying party:
-: A Resource Server, policy decision point, or auditor that checks a
-  token's carried authority against the Mission's complete approved
-  Authority Set under this document.
+: A Resource Server or policy decision point that checks a token's
+  carried authority against the Mission's complete approved Authority
+  Set under this document.
 
 # Local Approved-Set Verification {#verification}
 
@@ -180,7 +188,8 @@ Section "Consent Binding").
 
 ## Independent Pinning {#independent-pinning}
 
-**Tier 2** adds that defense: the verifying party additionally holds
+**Tier 2** adds the defense Tier 1 lacks ({{retrieval}}): the
+verifying party additionally holds
 an expected `authority_hash` obtained from a source independent of
 the Tier 1 retrieval channel, never re-derived from the same call
 being verified, and MUST reject unless the retrieved (and
@@ -236,8 +245,10 @@ at a time.
 Mission Status ({{I-D.draft-mcguinness-oauth-mission-status}}) is not
 a compatible retrieval surface for this profile. Its authenticated,
 `mission_id`-keyed lookup returns only the requesting audience's own
-entries and, once containment has applied, the Mission's current
-effective set rather than its complete immutable approved set.
+entries and, once containment
+({{I-D.draft-mcguinness-oauth-mission-containment}}) has applied, the
+Mission's current effective set rather than its complete immutable
+approved set.
 Recomputing `authority_hash` over a Status response therefore fails
 by construction for any multi-audience Mission, and fails after any
 containment or discharge even for a single-audience one. A deployment
@@ -284,8 +295,8 @@ adds an independent check of them and creates no claim.
 The security considerations of the OAuth binding apply
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Security
 Considerations"). Its Consent Binding analysis states why a flat
-commitment needs the complete set and how the protection verification
-gives depends on when the issuer is compromised
+commitment needs the complete set and how the protection that
+verification gives depends on when the issuer is compromised
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Consent Binding").
 This section covers what verification adds.
 
