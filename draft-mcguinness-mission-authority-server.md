@@ -142,6 +142,7 @@ informative:
   RFC8414:
   RFC8693:
   RFC9635:
+  RFC9728:
   I-D.draft-mcguinness-mission-harness:
     title: "Mission-Aware Agent Harnesses"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html
@@ -1114,8 +1115,33 @@ from AS metadata {{RFC8414}}, resolved from this document instead:
 : REQUIRED. A string containing a URL. The mission submission endpoint
   ({{mission-submission}}).
 
+`mission_submission_endpoint_auth_methods_supported`:
+: REQUIRED. A JSON array of strings naming the authentication methods
+  the mission submission endpoint accepts, from the value space of
+  `mission_status_endpoint_auth_methods_supported`
+  ({{I-D.draft-mcguinness-oauth-mission-status}}). Here `access_token`
+  names a sender-constrained access token whose audience, required
+  scope, and sender constraint the MAS publishes in this endpoint's
+  Protected Resource Metadata {{RFC9728}}.
+
+`mission_submission_endpoint_auth_signing_alg_values_supported`:
+: REQUIRED when `mission_submission_endpoint_auth_methods_supported`
+  lists `private_key_jwt`. A JSON array of strings: the client-assertion
+  algorithms this endpoint accepts, with the semantics of
+  `mission_status_endpoint_auth_signing_alg_values_supported`
+  ({{I-D.draft-mcguinness-oauth-mission-status}}).
+
 `mission_status_endpoint`:
 : REQUIRED. A string containing a URL. Semantics per
+  {{I-D.draft-mcguinness-oauth-mission-status}}.
+
+`mission_status_endpoint_auth_methods_supported`:
+: REQUIRED. Semantics per
+  {{I-D.draft-mcguinness-oauth-mission-status}}.
+
+`mission_status_endpoint_auth_signing_alg_values_supported`:
+: REQUIRED when `mission_status_endpoint_auth_methods_supported` lists
+  `private_key_jwt`. Semantics per
   {{I-D.draft-mcguinness-oauth-mission-status}}.
 
 `mission_status_signing_alg_values_supported`:
@@ -1126,18 +1152,14 @@ from AS metadata {{RFC8414}}, resolved from this document instead:
 : REQUIRED. A string containing a URL. Semantics per
   {{I-D.draft-mcguinness-oauth-mission-status}}.
 
-`mission_auth_methods_supported`:
-: REQUIRED. A JSON array of strings. The caller authentication
-  mechanisms the MAS accepts at the submission, status, and lifecycle
-  endpoints, from the mechanism set of
-  {{I-D.draft-mcguinness-oauth-mission-status}}. A value naming a
-  client authentication method is an entry of the IANA "OAuth Token
-  Endpoint Authentication Methods" registry (`tls_client_auth` for
-  mTLS, `private_key_jwt`), following the discovery pattern of the
-  {{RFC8414}} `*_endpoint_auth_methods_supported` members. The
-  DPoP-bound access token mechanism is token presentation rather than
-  client authentication, so no registry entry names it; this document
-  uses `dpop_bound_token`.
+`mission_lifecycle_endpoint_auth_methods_supported`:
+: REQUIRED. Semantics per
+  {{I-D.draft-mcguinness-oauth-mission-status}}.
+
+`mission_lifecycle_endpoint_auth_signing_alg_values_supported`:
+: REQUIRED when `mission_lifecycle_endpoint_auth_methods_supported`
+  lists `private_key_jwt`. Semantics per
+  {{I-D.draft-mcguinness-oauth-mission-status}}.
 
 `mission_join_assertion_endpoint`:
 : OPTIONAL. A string containing a URL. The join-assertion endpoint
@@ -1169,13 +1191,23 @@ Example:
   "issuer": "https://mas.example.com",
   "mission_submission_endpoint":
     "https://mas.example.com/mas/mission/submit",
+  "mission_submission_endpoint_auth_methods_supported":
+    ["access_token", "private_key_jwt"],
+  "mission_submission_endpoint_auth_signing_alg_values_supported":
+    ["ES256"],
   "mission_status_endpoint":
     "https://mas.example.com/mas/mission/status",
+  "mission_status_endpoint_auth_methods_supported":
+    ["access_token", "private_key_jwt"],
+  "mission_status_endpoint_auth_signing_alg_values_supported":
+    ["ES256"],
   "mission_status_signing_alg_values_supported": ["ES256"],
   "mission_lifecycle_endpoint":
     "https://mas.example.com/mas/mission/lifecycle",
-  "mission_auth_methods_supported":
-    ["dpop_bound_token", "private_key_jwt"],
+  "mission_lifecycle_endpoint_auth_methods_supported":
+    ["access_token", "private_key_jwt"],
+  "mission_lifecycle_endpoint_auth_signing_alg_values_supported":
+    ["ES256"],
   "mission_join_assertion_endpoint":
     "https://mas.example.com/mas/mission/join-assertion",
   "mission_max_stale_seconds": 60,
@@ -2529,10 +2561,15 @@ for each, Change Controller IETF and Reference this document:
 
 - `issuer`
 - `mission_submission_endpoint`
+- `mission_submission_endpoint_auth_methods_supported`
+- `mission_submission_endpoint_auth_signing_alg_values_supported`
 - `mission_status_endpoint`
+- `mission_status_endpoint_auth_methods_supported`
+- `mission_status_endpoint_auth_signing_alg_values_supported`
 - `mission_status_signing_alg_values_supported`
 - `mission_lifecycle_endpoint`
-- `mission_auth_methods_supported`
+- `mission_lifecycle_endpoint_auth_methods_supported`
+- `mission_lifecycle_endpoint_auth_signing_alg_values_supported`
 - `mission_join_assertion_endpoint`
 - `mission_event_stream_endpoint`
 - `mission_max_stale_seconds`
