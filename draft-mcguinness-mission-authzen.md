@@ -945,9 +945,11 @@ single-use, phase and parameter bindings are unchanged.
     `mission_status_issued_at`:
     : REQUIRED for `cached` and `event_driven`, OPTIONAL for `fresh`. An
       RFC 3339 timestamp. When the relied-on Mission state was issued:
-      for a signed Mission Status Response, its `iat`
+      for a signed Mission Status Response, the RFC 3339 representation
+      of its `iat`, a NumericDate
       ({{I-D.draft-mcguinness-oauth-mission-status}}). `freshness_at`
-      is never earlier than this value.
+      can precede this value by no more than the published maximum
+      clock skew ({{clock-skew}}).
 
     `mission_status_expires_at`:
     : REQUIRED for `cached` and `event_driven`, OPTIONAL for `fresh`. An
@@ -2778,8 +2780,9 @@ registered by {{I-D.draft-mcguinness-oauth-mission}}.
 
 \[\[ To be removed from the final specification ]]
 
-- The state observation's `mission_status_issued_at` is a Mission
-  Status Response's `iat`, never later than `freshness_at`, and
+- The state observation's `mission_status_issued_at` is the RFC 3339
+  form of a Mission Status Response's `iat`, which `freshness_at`
+  precedes by no more than the published maximum clock skew, and
   `mission_status_expires_at` and the state valid-through are its
   `mission.fresh_until`, not its `exp`, or a lease's end.
 
