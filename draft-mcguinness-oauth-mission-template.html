@@ -1238,10 +1238,13 @@ it deterministically.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
-            <p id="section-toc.1-1.16.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+            <p id="section-toc.1-1.16.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-document-history" class="internal xref">Document History</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
-            <p id="section-toc.1-1.17.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+            <p id="section-toc.1-1.17.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18">
+            <p id="section-toc.1-1.18.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -1496,37 +1499,47 @@ cannot mint a Mission for a party the human did not consent to.<a href="#section
 <dt id="section-4-2.15">
 <code>instance_lifetime</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-4-2.16">
-          <p id="section-4-2.16.1"><span class="bcp14">REQUIRED</span>. A duration. The per-instance lifetime clamp: a dispatched
-Mission's <code>expires_at</code> is clamped to no more than this from its
-committed <code>created_at</code> (<a href="#dispatch" class="auto internal xref">Section 6</a>).<a href="#section-4-2.16.1" class="pilcrow">¶</a></p>
+          <p id="section-4-2.16.1"><span class="bcp14">REQUIRED</span>. A positive integer number of seconds. The per-instance
+lifetime clamp: a dispatched Mission's <code>expires_at</code> is clamped to no
+more than this from its committed <code>created_at</code> (<a href="#dispatch" class="auto internal xref">Section 6</a>).<a href="#section-4-2.16.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-4-2.17">
 <code>max_active</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-4-2.18">
-          <p id="section-4-2.18.1"><span class="bcp14">REQUIRED</span>. An integer. The maximum number of Missions dispatched from
-this template that may be <code>active</code> at once. A Dispatch that would
-exceed it is refused until an active instance terminates.<a href="#section-4-2.18.1" class="pilcrow">¶</a></p>
+          <p id="section-4-2.18.1"><span class="bcp14">REQUIRED</span>. A positive integer. The maximum number of Missions
+dispatched from this template that may be <code>active</code> at once. A
+Dispatch that would exceed it is refused until an active instance
+terminates.<a href="#section-4-2.18.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-4-2.19">
 <code>dispatch_rate</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-4-2.20">
-          <p id="section-4-2.20.1"><span class="bcp14">REQUIRED</span>. A rate bound on Dispatch from this template per unit time.<a href="#section-4-2.20.1" class="pilcrow">¶</a></p>
+          <p id="section-4-2.20.1"><span class="bcp14">REQUIRED</span>. An object with two members, each a positive integer:
+<code>limit</code>, a number of instantiations, and <code>window</code>, a number of
+seconds. A Dispatch is refused when its instantiation would bring the
+instantiations committed from this template within the trailing
+<code>window</code> seconds above <code>limit</code>, so a burst of up to <code>limit</code> within one
+window is within the bound. Only committed instantiations count: a
+refused Dispatch and a recovered retry (<a href="#dispatch" class="auto internal xref">Section 6</a>) count nothing.<a href="#section-4-2.20.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-4-2.21">
 <code>expires_at</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-4-2.22">
-          <p id="section-4-2.22.1"><span class="bcp14">REQUIRED</span>. The template's own expiry (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).
-After it, the template dispatches nothing.<a href="#section-4-2.22.1" class="pilcrow">¶</a></p>
+          <p id="section-4-2.22.1"><span class="bcp14">REQUIRED</span>. A string, an RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time. The template's
+own expiry (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). After it, the
+template dispatches nothing.<a href="#section-4-2.22.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-4-2.23">
 <code>review_cadence</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-4-2.24">
-          <p id="section-4-2.24.1"><span class="bcp14">REQUIRED</span>. The maximum age of the template's most recent human approval
-past which the Mission Issuer <span class="bcp14">MUST NOT</span> dispatch (<a href="#template-consent" class="auto internal xref">Section 5</a>).<a href="#section-4-2.24.1" class="pilcrow">¶</a></p>
+          <p id="section-4-2.24.1"><span class="bcp14">REQUIRED</span>. A positive integer number of seconds. The maximum age of
+the template's most recent human approval, measured from that
+approval's <code>approved_at</code> (<a href="#dispatch" class="auto internal xref">Section 6</a>), past which the Mission Issuer
+<span class="bcp14">MUST NOT</span> dispatch (<a href="#template-consent" class="auto internal xref">Section 5</a>).<a href="#section-4-2.24.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2445,6 +2458,10 @@ object by that value.<a href="#section-14-8.4.1" class="pilcrow">¶</a></p>
         <dd>
 <span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="RFC3339">[RFC3339]</dt>
+        <dd>
+<span class="refAuthor">Klyne, G.</span> and <span class="refAuthor">C. Newman</span>, <span class="refTitle">"Date and Time on the Internet: Timestamps"</span>, <span class="seriesInfo">RFC 3339</span>, <span class="seriesInfo">DOI 10.17487/RFC3339</span>, <time datetime="2002-07" class="refDate">July 2002</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc3339">https://www.rfc-editor.org/rfc/rfc3339</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="RFC6755">[RFC6755]</dt>
         <dd>
 <span class="refAuthor">Campbell, B.</span> and <span class="refAuthor">H. Tschofenig</span>, <span class="refTitle">"An IETF URN Sub-Namespace for OAuth"</span>, <span class="seriesInfo">RFC 6755</span>, <span class="seriesInfo">DOI 10.17487/RFC6755</span>, <time datetime="2012-10" class="refDate">October 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6755">https://www.rfc-editor.org/rfc/rfc6755</a>&gt;</span>. </dd>
@@ -2503,19 +2520,37 @@ object by that value.<a href="#section-14-8.4.1" class="pilcrow">¶</a></p>
 </div>
 </section>
 </div>
-<div id="acknowledgments">
+<div id="document-history">
 <section id="appendix-A">
+      <h2 id="name-document-history">
+<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
+      </h2>
+<p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="appendix-A-2.1">
+          <p id="appendix-A-2.1.1">The dispatch bounds have stated encodings. <code>instance_lifetime</code> and
+<code>review_cadence</code> are positive integer seconds, the latter measured
+from the approval's <code>approved_at</code>; <code>max_active</code> is a positive
+integer; <code>dispatch_rate</code> is a <code>limit</code> of committed instantiations per
+trailing <code>window</code> of seconds, counting neither refused Dispatches nor
+recovered retries; and <code>expires_at</code> is an RFC 3339 date-time.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-B">
       <h2 id="name-acknowledgments">
 <a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
       </h2>
-<p id="appendix-A-1">This document is part of the Mission-Bound Authorization for OAuth 2.0
+<p id="appendix-B-1">This document is part of the Mission-Bound Authorization for OAuth 2.0
 work and expresses, in family terms, a define-a-template-once,
 dispatch-per-run lifecycle: one considered human consent to a ceiling
-in place of a fresh approval at every machine-speed run.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+in place of a fresh approval at every machine-speed run.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authors-addresses">
-<section id="appendix-B">
+<section id="appendix-C">
       <h2 id="name-authors-address">
 <a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
       </h2>

@@ -96,6 +96,7 @@ Table of Contents
    15. References
      15.1.  Normative References
      15.2.  Informative References
+   Appendix A.  Document History
    Acknowledgments
    Author's Address
 
@@ -293,25 +294,33 @@ Table of Contents
       template cannot mint a Mission for a party the human did not
       consent to.
 
-   instance_lifetime:  REQUIRED.  A duration.  The per-instance lifetime
-      clamp: a dispatched Mission's expires_at is clamped to no more
-      than this from its committed created_at (Section 6).
+   instance_lifetime:  REQUIRED.  A positive integer number of seconds.
+      The per-instance lifetime clamp: a dispatched Mission's expires_at
+      is clamped to no more than this from its committed created_at
+      (Section 6).
 
-   max_active:  REQUIRED.  An integer.  The maximum number of Missions
-      dispatched from this template that may be active at once.  A
-      Dispatch that would exceed it is refused until an active instance
-      terminates.
+   max_active:  REQUIRED.  A positive integer.  The maximum number of
+      Missions dispatched from this template that may be active at once.
+      A Dispatch that would exceed it is refused until an active
+      instance terminates.
 
-   dispatch_rate:  REQUIRED.  A rate bound on Dispatch from this
-      template per unit time.
+   dispatch_rate:  REQUIRED.  An object with two members, each a
+      positive integer: limit, a number of instantiations, and window, a
+      number of seconds.  A Dispatch is refused when its instantiation
+      would bring the instantiations committed from this template within
+      the trailing window seconds above limit, so a burst of up to limit
+      within one window is within the bound.  Only committed
+      instantiations count: a refused Dispatch and a recovered retry
+      (Section 6) count nothing.
 
-   expires_at:  REQUIRED.  The template's own expiry
-      ([I-D.draft-mcguinness-oauth-mission]).  After it, the template
-      dispatches nothing.
+   expires_at:  REQUIRED.  A string, an RFC 3339 [RFC3339] date-time.
+      The template's own expiry ([I-D.draft-mcguinness-oauth-mission]).
+      After it, the template dispatches nothing.
 
-   review_cadence:  REQUIRED.  The maximum age of the template's most
-      recent human approval past which the Mission Issuer MUST NOT
-      dispatch (Section 5).
+   review_cadence:  REQUIRED.  A positive integer number of seconds.
+      The maximum age of the template's most recent human approval,
+      measured from that approval's approved_at (Section 6), past which
+      the Mission Issuer MUST NOT dispatch (Section 5).
 
    The concrete values of instance_lifetime, max_active, dispatch_rate,
    and review_cadence, and the action-class mapping the prohibited-class
@@ -1053,6 +1062,10 @@ Table of Contents
               DOI 10.17487/RFC2119, March 1997,
               <https://www.rfc-editor.org/rfc/rfc2119>.
 
+   [RFC3339]  Klyne, G. and C. Newman, "Date and Time on the Internet:
+              Timestamps", RFC 3339, DOI 10.17487/RFC3339, July 2002,
+              <https://www.rfc-editor.org/rfc/rfc3339>.
+
    [RFC6755]  Campbell, B. and H. Tschofenig, "An IETF URN Sub-Namespace
               for OAuth", RFC 6755, DOI 10.17487/RFC6755, October 2012,
               <https://www.rfc-editor.org/rfc/rfc6755>.
@@ -1111,6 +1124,17 @@ Table of Contents
               OAuth 2.0", 2026, <https://mcguinness.github.io/mission-
               bound-authorization/draft-mcguinness-oauth-mission-
               progressive.html>.
+
+Appendix A.  Document History
+
+   [[ To be removed from the final specification ]]
+
+   *  The dispatch bounds have stated encodings. instance_lifetime and
+      review_cadence are positive integer seconds, the latter measured
+      from the approval's approved_at; max_active is a positive integer;
+      dispatch_rate is a limit of committed instantiations per trailing
+      window of seconds, counting neither refused Dispatches nor
+      recovered retries; and expires_at is an RFC 3339 date-time.
 
 Acknowledgments
 
