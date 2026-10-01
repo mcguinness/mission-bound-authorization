@@ -452,32 +452,11 @@ delegation, and proof capabilities on top. The decomposition keeps
 each interface small but spreads the structure across many documents
 and several bindings; this document is the single structural view.
 
-Peer standing among the bindings is a deployment-topology claim, not
-a data-model-independence claim: each attaches to its own protocol as
-an equally adoptable unit, and OAuth is the family's first-authored
-binding, built on widely deployed OAuth infrastructure, a deployment
-fact and not a maturity ranking. Adopting Missions on OAuth requires the
-changes the OAuth binding defines. The two axes diverge for the
-standalone binding: the Mission Authority Server
-({{I-D.draft-mcguinness-mission-authority-server}}) is a normative
-standalone-controller protocol binding over the OAuth Mission data
-model: a peer deployment topology, but not an independent substrate
-model, since it normatively imports the OAuth Mission record and
-issuance profile. AAuth demonstrates model independence:
-it maps the shared kernel onto its own protocol's native Mission
-Context without importing the OAuth Authority Set
-({{I-D.draft-mcguinness-mission-aauth}}). Peer standing implies
-neither identical capabilities nor identical adoption cost: AAuth,
-natively contextual, adds no new wire members, and each binding's
-Mission Substrate Statement declares what it supplies.
-
-Read as one system, the family defines a **delegated-authority
-layer** with OAuth 2.0, the standalone Mission Authority Server, and
-(as experimental sketches) UMA 2.0 and GNAP as authority-bearing
-bindings.
-AAuth composes at the shared Mission Context layer: approval, stable
-reference, lifecycle gating where the PS is on path, and governance
-history ({{the-mission}}).
+The bindings are peers: each attaches to its own protocol as an
+equally adoptable unit and declares what it supplies in its Mission
+Substrate Statement. What peer standing implies, and how the bindings
+differ, is stated once with the binding architectures
+({{binding-architectures}}).
 
 This document is Informational. It defines no protocol, requirement,
 conformance class, or wire format. It does define descriptive
@@ -2008,6 +1987,31 @@ profile prices each position, source by source, in its state and
 freshness section ({{I-D.draft-mcguinness-mission-runtime}}).
 
 ## Binding Security Architectures {#binding-architectures}
+
+The authority-bearing bindings are OAuth 2.0, the standalone Mission
+Authority Server, and (as experimental sketches) UMA 2.0 and GNAP.
+AAuth composes at the shared Mission Context layer: approval, stable
+reference, lifecycle gating where the PS is on path, and governance
+history ({{the-mission}}).
+
+Peer standing among the bindings is a deployment-topology claim, not
+a data-model-independence claim: each attaches to its own protocol as
+an equally adoptable unit, and OAuth is the family's first-authored
+binding, built on widely deployed OAuth infrastructure, a deployment
+fact and not a maturity ranking. Adopting Missions on OAuth requires the
+changes the OAuth binding defines. The two axes diverge for the
+standalone binding: the Mission Authority Server
+({{I-D.draft-mcguinness-mission-authority-server}}) is a normative
+standalone-controller protocol binding over the OAuth Mission data
+model: a peer deployment topology, but not an independent substrate
+model, since it normatively imports the OAuth Mission record and
+issuance profile. AAuth demonstrates model independence:
+it maps the shared kernel onto its own protocol's native Mission
+Context without importing the OAuth Authority Set
+({{I-D.draft-mcguinness-mission-aauth}}). Peer standing implies
+neither identical capabilities nor identical adoption cost: AAuth,
+natively contextual, adds no new wire members, and each binding's
+Mission Substrate Statement declares what it supplies.
 
 The bindings share Mission Context capabilities but are not one security
 system: each has its own authority representation, trust assumptions,
