@@ -51,9 +51,10 @@ const ISSUER = `http://localhost:${PORT}`;
 const CA = "https://chain-authority.example"; // the injected Chain Authority
 const RESOURCE = CANONICAL_RESOURCE; // in DERIVATION_POLICY's ceiling
 const RAS_AUD = "https://ras.ledgercloud.test"; // the target Resource AS (audience)
+const RESOURCE_B = "https://api.ledgercloud.test/v1"; // a second resource the same RAS serves
 const MISSION_EXP = "2027-01-01T00:00:00Z";
 const JWT_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:jwt";
-const RESOURCE_TO_AS = (r: string) => (r === RESOURCE ? RAS_AUD : ISSUER);
+const RESOURCE_TO_AS = (r: string) => (r === RESOURCE || r === RESOURCE_B ? RAS_AUD : ISSUER);
 
 // @spec cross-domain#origin-principal-mapping, #dual-axis (#539): every RAS
 // redemption in this file is a CONTINUATION ID-JAG (identity_continuation_handle
@@ -232,9 +233,11 @@ interface ExchangeFields {
   actorToken?: string;
   actorTokenType?: string;
   audience?: string;
-  resource?: string;
+  /** One value, several (each sent as its own `resource`), or null to omit it. */
+  resource?: string | string[] | null;
   requestedTokenType?: string;
   subjectTokenType?: string;
+  extra?: Record<string, string>;
 }
 
 /** POST /token with the token-exchange grant + private_key_jwt + DPoP (nonce retry). */
@@ -246,20 +249,24 @@ async function tokenExchange(f: ExchangeFields, t: Target = { issuer: ISSUER, cl
     subject_token: f.subjectToken,
     subject_token_type: f.subjectTokenType ?? IDENTITY_CONTINUATION_TOKEN_TYPE,
     audience: f.audience ?? RAS_AUD,
-    resource: f.resource ?? RESOURCE,
+    ...f.extra,
   };
   if (f.actorToken !== undefined) params.actor_token = f.actorToken;
   if (f.actorTokenType !== undefined) params.actor_token_type = f.actorTokenType;
-  const send = async (extra: Record<string, unknown> = {}): Promise<Response> =>
-    fetch(htu, {
+  const resources = f.resource === null ? [] : [f.resource ?? RESOURCE].flat();
+  const send = async (extra: Record<string, unknown> = {}): Promise<Response> => {
+    const body = new URLSearchParams({
+      ...params,
+      client_assertion: await clientAssertion(t),
+      client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+    });
+    for (const r of resources) body.append("resource", r);
+    return fetch(htu, {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded", dpop: await dpopProof(htu, "POST", extra) },
-      body: new URLSearchParams({
-        ...params,
-        client_assertion: await clientAssertion(t),
-        client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-      }).toString(),
+      body: body.toString(),
     });
+  };
   let res = await send();
   const nonce = res.headers.get("dpop-nonce");
   if (res.status === 400 && nonce) res = await send({ nonce });
@@ -694,6 +701,55 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     const body = (await res.json()) as { error?: string; error_description?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_target");
+  });
+
+  it("(f1) no resource -> issued (zero or more resource, ICA -02 5.5.3 rule 1)", async () => {
+    const { handle } = newLineage("apev-f1");
+    const res = await tokenExchange({ subjectToken: await mintICA(handle), resource: null });
+    expect(res.status, await res.clone().text()).toBe(200);
+  });
+
+  it("(f2) several resources, each served by the audience -> issued", async () => {
+    const { handle } = newLineage("apev-f2");
+    const res = await tokenExchange({ subjectToken: await mintICA(handle), resource: [RESOURCE, RESOURCE_B] });
+    expect(res.status, await res.clone().text()).toBe(200);
+  });
+
+  it("(f3) one resource the audience does not serve -> invalid_target, in either order (an order-independent set)", async () => {
+    const { handle } = newLineage("apev-f3");
+    for (const resource of [
+      [RESOURCE, "https://elsewhere.test/api"],
+      ["https://elsewhere.test/api", RESOURCE],
+    ]) {
+      const res = await tokenExchange({ subjectToken: await mintICA(handle), resource });
+      const body = (await res.json()) as { error?: string };
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_target");
+    }
+  });
+
+  it("(f4) every other token exchange still refuses a repeated resource", async () => {
+    const { handle } = newLineage("apev-f4");
+    for (const extra of [
+      { request_refresh_token: "true" },
+      { subject_token_type: "urn:ietf:params:oauth:token-type:mission-delegation-chain" },
+    ]) {
+      const res = await tokenExchange({ subjectToken: await mintICA(handle), resource: [RESOURCE, RESOURCE_B], extra });
+      const body = (await res.json()) as { error?: string; error_description?: string };
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_request");
+      expect(body.error_description).toBe("'resource' parameter must not be provided twice");
+    }
+    for (const requestedTokenType of [JWT_TOKEN_TYPE, "urn:ietf:params:oauth:token-type:access_token"]) {
+      const res = await tokenExchange({
+        subjectToken: await mintICA(handle),
+        resource: [RESOURCE, RESOURCE_B],
+        requestedTokenType,
+      });
+      const body = (await res.json()) as { error?: string; error_description?: string };
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error_description).toBe("'resource' parameter must not be provided twice");
+    }
   });
 
   it("(g) revoking the Mission terminates its handles (onLifecycleCommit fan-out) -> invalid_continuation", async () => {

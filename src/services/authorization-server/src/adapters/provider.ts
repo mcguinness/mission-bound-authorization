@@ -1585,6 +1585,11 @@ export function buildProvider(opts: AdapterOptions): Provider {
         // `scope` is honored or refused, never stripped unseen.
         "scope",
       ]),
+      // @spec id-continuation-assertion — the ICA continuation exchange takes
+      // zero or more `resource` (ICA -02 5.5.3 rule 1), so it is the one
+      // repeatable parameter of this grant. Every other exchange refuses a
+      // repeated `resource` itself (handleTokenExchangeGrant), as before.
+      new Set(["resource"]),
     );
   }
 

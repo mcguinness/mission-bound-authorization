@@ -212,6 +212,14 @@ export async function handleTokenExchangeGrant(
     txError(ctx, 400, "invalid_request", `this token exchange (${capability}) is not enabled on this deployment`);
     return true;
   };
+  // `resource` is registered as repeatable for the ICA continuation exchange
+  // alone (provider.ts); every other exchange keeps oidc-provider's
+  // duplicate-parameter refusal, with its exact error.
+  const singleResource = (): void => {
+    if (Array.isArray(params.resource)) {
+      throw new errors.InvalidRequest("'resource' parameter must not be provided twice");
+    }
+  };
 
   // @spec async-delegation — dispatch. `request_refresh_token` selects the
   // async-delegation transport (a base mission access token in; a per-delegation
@@ -221,6 +229,7 @@ export async function handleTokenExchangeGrant(
   // is the discriminator on every subsequent hop.
   const requestRefresh = params.request_refresh_token;
   if (requestRefresh === "true" || requestRefresh === true) {
+    singleResource();
     if (profileDisabled("async-delegation")) return;
     await handleAsyncDelegationExchange(opts, provider, ctx);
     return;
@@ -239,6 +248,7 @@ export async function handleTokenExchangeGrant(
   // exchange also requests an access token, and the subject_token_type is the
   // discriminator RFC 8693 provides for exactly this.
   if (params.subject_token_type === "urn:ietf:params:oauth:token-type:mission-delegation-chain") {
+    singleResource();
     if (profileDisabled("cross-org")) return;
     await handleCrossOrgChainExchange(
       {
@@ -255,11 +265,13 @@ export async function handleTokenExchangeGrant(
     return;
   }
   if (params.requested_token_type === JWT_TOKEN_TYPE) {
+    singleResource();
     if (profileDisabled("child-delegation")) return;
     await handleChildCreationExchange(opts, provider, ctx);
     return;
   }
   if (params.requested_token_type === ACCESS_TOKEN_TOKEN_TYPE) {
+    singleResource();
     if (profileDisabled("expansion")) return;
     await handleExpansionExchange(opts, provider, ctx);
     return;
@@ -281,15 +293,18 @@ export async function handleTokenExchangeGrant(
   }
   const subjectToken = params.subject_token;
   const audience = params.audience;
-  const resource = params.resource;
   if (typeof subjectToken !== "string" || !subjectToken) {
     throw new errors.InvalidRequest("subject_token required");
   }
   if (typeof audience !== "string" || !audience) {
     throw new errors.InvalidRequest("audience required");
   }
-  if (typeof resource !== "string" || !resource) {
-    throw new errors.InvalidRequest("resource required");
+  // @spec id-continuation-assertion — zero or more `resource`, an
+  // order-independent set (ICA -02 5.5.3 rule 1).
+  const resources: unknown[] =
+    params.resource === undefined ? [] : Array.isArray(params.resource) ? params.resource : [params.resource];
+  if (!resources.every((r): r is string => typeof r === "string" && r !== "")) {
+    throw new errors.InvalidRequest("each resource must be a non-empty string");
   }
   // @spec id-continuation-assertion — the actor is the authenticated client, so
   // the request carries no actor_token or actor_token_type, and either one is
@@ -398,8 +413,9 @@ export async function handleTokenExchangeGrant(
     return;
   }
 
-  // Step 6: invalid_target — the resource MUST be served by the named audience.
-  if (resourceToAs(resource) !== audience) {
+  // Step 6: invalid_target — every requested resource MUST be served by the
+  // named audience.
+  if (resources.some((r) => resourceToAs(r) !== audience)) {
     txError(ctx, 400, "invalid_target", "resource is not served by the requested audience");
     return;
   }
