@@ -2999,8 +2999,10 @@ Schema-level claim identifiers and validation rules remain the
 Deployment Profile's own future work.
 
 Binding properties and the assurance claims above compose rather
-than repeat: a binding property says whose Mission a path's work and
-credentials are bound to; an assurance claim says what the
+than repeat: a binding property says what a path establishes, from
+the Mission a work item is attached to through the credential,
+presenter key, and instance to the authorized action; an assurance
+claim says what the
 deployment's enforcement proves. Credential-level and action-level
 binding likewise compose rather than substitute.
 
