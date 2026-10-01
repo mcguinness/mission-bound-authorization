@@ -509,6 +509,151 @@ describe("the discharge latch: outcomes, versions, and visibility", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Propagation by recorded justification, downward only (#898 fix 2).
+// ---------------------------------------------------------------------------
+
+/** A ceiling admitting two child generations, so recursion is observable. */
+const DEEP_CEILING: AuthorityEntry[] = [
+  {
+    type: "mission_resource_access",
+    resource: RES,
+    actions: ["payments:invoice.read", "payments:journal.write"],
+    delegation: {
+      max_depth: 1,
+      children: {
+        max_children: 5,
+        max_child_depth: 2,
+        allowed_child_actors: [{ sub: "sub-agent" }, { sub: "sub-agent-2" }],
+      },
+    },
+  },
+];
+
+function deepKernel(): MissionKernel {
+  const policy = { policy_version: "discharge-deep-v1", ceiling: DEEP_CEILING };
+  return new MissionKernel({
+    issuer: ISS,
+    policy: policy as never,
+    authoritySourceCatalog: testAuthoritySourceCatalog(policy.ceiling, ["ap-agent"], ["bob"]),
+    statusKey: {} as never,
+    statusKid: "as-status",
+    now: () => NOW,
+    actorProfiles: aiAgents("sub-agent", "sub-agent-2"),
+    dischargeAuthority: DISCHARGE_AUTHORITY,
+  });
+}
+
+const CLOSE_CONDITION = { event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY };
+
+/** One entry on RES for `actions`, completing on the close condition. */
+const closing = (actions: string[]): AuthorityEntry => ({
+  type: "mission_resource_access",
+  resource: RES,
+  actions,
+  constraints: { terminal_when: [{ ...CLOSE_CONDITION }] },
+});
+
+/** Discharge the record entry carrying `action` on `record`, as the close authority. */
+function dischargeEntry(kernel: MissionKernel, record: MissionRecord, action: string, eventId: string) {
+  const s = selectorsFor(record, action);
+  return kernel.discharge(record.id, {
+    authority: "svc:close-management",
+    entry_digest: s.entry_digest,
+    condition_digest: s.condition_digest,
+    event_type: s.event_type,
+    event_id: eventId,
+  });
+}
+
+describe("discharge propagation by recorded justification, downward only (#898 fix 2)", () => {
+  it("reaches a child entry only through its recorded justification, never a parent entry with an identical condition", () => {
+    const kernel = deepKernel();
+    // E1 and E2 carry byte-identical conditions on the SAME resource.
+    const parent = approve(kernel, [closing(["payments:invoice.read"]), closing(["payments:journal.write"])]);
+    const [e1, e2] = parent.authority_set as [AuthorityEntry, AuthorityEntry];
+    expect(conditionDigest(e1.constraints?.terminal_when?.[0] as never)).toBe(
+      conditionDigest(e2.constraints?.terminal_when?.[0] as never),
+    );
+    // The child entry is a subset of E2 only, so E2 is its recorded justification.
+    const child = createChildMission(kernel, {
+      parentId: parent.id,
+      intent: intent("Post journal entries"),
+      proposedAuthority: [closing(["payments:journal.write"])],
+      childActor: { sub: "sub-agent", sub_profile: "ai_agent" },
+    }).child;
+    const childEntry = child.authority_set[0] as AuthorityEntry;
+    expect(isSubsetEntry(childEntry, e1)).toBe(false);
+    expect(isSubsetEntry(childEntry, e2)).toBe(true);
+    // A grandchild justified by the child's entry: recursion follows justification.
+    const grandchild = createChildMission(kernel, {
+      parentId: child.id,
+      intent: intent("Post one journal entry"),
+      proposedAuthority: [closing(["payments:journal.write"])],
+      childActor: { sub: "sub-agent-2", sub_profile: "ai_agent" },
+    }).child;
+
+    // Discharging E1 fires the identical condition on the same resource, but
+    // E1 justifies nothing in the child: neither descendant is reached.
+    expect(dischargeEntry(kernel, parent, "payments:invoice.read", "close-e1").result.outcome).toBe(
+      "discharged",
+    );
+    expect((kernel.get(child.id) as MissionRecord).discharged).toBeUndefined();
+    expect((kernel.get(grandchild.id) as MissionRecord).discharged).toBeUndefined();
+    expect(kernel.effectiveAuthoritySet(kernel.get(child.id) as MissionRecord)).toHaveLength(1);
+    expect(kernel.gateDerivation(child.id).id).toBe(child.id);
+    expect(kernel.gateDerivation(grandchild.id).id).toBe(grandchild.id);
+
+    // Discharging E2, the recorded justification, reaches the child entry and,
+    // recursively, the grandchild entry the discharge has already reached.
+    dischargeEntry(kernel, parent, "payments:journal.write", "close-e2");
+    const childAfter = kernel.get(child.id) as MissionRecord;
+    expect(childAfter.discharged?.map((d) => d.entry_digest)).toEqual([entryDigest(ISS, childEntry)]);
+    expect(kernel.effectiveAuthoritySet(childAfter)).toEqual([]);
+    const grandAfter = kernel.get(grandchild.id) as MissionRecord;
+    expect(grandAfter.discharged).toHaveLength(1);
+    expect(kernel.effectiveAuthoritySet(grandAfter)).toEqual([]);
+    // Observed at the derivation gate the token endpoint calls.
+    expect(() => kernel.gateDerivation(child.id)).toThrow(GateError);
+    expect(() => kernel.gateDerivation(grandchild.id)).toThrow(GateError);
+  });
+
+  it("never discharges a parent's or a sibling's entry because a child entry was discharged", () => {
+    const kernel = deepKernel();
+    const parent = approve(kernel, [closing(["payments:journal.write"])]);
+    const spawn = (goal: string) =>
+      createChildMission(kernel, {
+        parentId: parent.id,
+        intent: intent(goal),
+        proposedAuthority: [closing(["payments:journal.write"])],
+        childActor: { sub: "sub-agent", sub_profile: "ai_agent" },
+      }).child;
+    const first = spawn("Post the first ten journal entries");
+    const sibling = spawn("Post the next ten journal entries");
+    const parentVersion = (kernel.get(parent.id) as MissionRecord).version;
+    const siblingVersion = (kernel.get(sibling.id) as MissionRecord).version;
+
+    // The child completes ITS share of the work...
+    expect(dischargeEntry(kernel, first, "payments:journal.write", "child-done").result.outcome).toBe(
+      "discharged",
+    );
+    expect(kernel.effectiveAuthoritySet(kernel.get(first.id) as MissionRecord)).toEqual([]);
+    // ...which completes neither the parent's entry nor the sibling's.
+    const parentAfter = kernel.get(parent.id) as MissionRecord;
+    const siblingAfter = kernel.get(sibling.id) as MissionRecord;
+    expect(parentAfter.discharged).toBeUndefined();
+    expect(parentAfter.version).toBe(parentVersion);
+    expect(kernel.effectiveAuthoritySet(parentAfter)).toHaveLength(1);
+    expect(siblingAfter.discharged).toBeUndefined();
+    expect(siblingAfter.version).toBe(siblingVersion);
+    expect(kernel.effectiveAuthoritySet(siblingAfter)).toHaveLength(1);
+    // Both still derive at the gate the token endpoint calls; the child does not.
+    expect(kernel.gateDerivation(parent.id).id).toBe(parent.id);
+    expect(kernel.gateDerivation(sibling.id).id).toBe(sibling.id);
+    expect(() => kernel.gateDerivation(first.id)).toThrow(GateError);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // The lifecycle endpoint, over real HTTP.
 // ---------------------------------------------------------------------------
 

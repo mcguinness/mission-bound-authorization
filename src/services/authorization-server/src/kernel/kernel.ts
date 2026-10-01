@@ -67,6 +67,7 @@ import {
   terminalWhenOf,
 } from "./discharge.js";
 import { DischargeMappingPinStore } from "./discharge-pin-store.js";
+import { justifyingIndex } from "./child-delegation.js";
 import {
   DEFAULT_DISCHARGE_EVENT_TTL_S,
   DischargeEventStore,
@@ -1945,36 +1946,41 @@ export class MissionKernel {
   }
 
   /**
-   * @spec discharge#discharge-operation ("Atomicity"), child-delegation#child-state
-   * — propagate a committed discharge entry-wise to the parent's existing
-   * children, so a Child Mission already justified by the discharged parent
-   * entry cannot keep deriving it while both Missions stay `active`.
+   * @spec discharge#discharge-commit ("Propagation", "Atomicity"),
+   * child-delegation#fanout-accounting, child-delegation#child-state — propagate
+   * a committed discharge entry-wise to the parent's existing children, so a
+   * Child Mission already justified by the discharged parent entry cannot keep
+   * deriving it while both Missions stay `active`.
    *
-   * The MATCHING RULE is exact rather than resource-keyed (the containment
-   * precedent's rule, which had no finer key available): a child entry is
-   * justified by the discharged parent entry when it shares the resource AND
-   * carries the very condition that fired, identified by `condition_digest`. The
-   * subset rule guarantees the child carries every parent condition unchanged
-   * (@spec discharge#subset-extension), so the condition is present exactly on the
-   * child entries the parent entry justified. A child's latch is keyed by the
-   * CHILD's own `entry_digest`: the child entry is narrower, so it is a
-   * different immutable entry with a different commitment.
+   * The MATCHING RULE is the child entry's recorded JUSTIFICATION: the parent
+   * entry it was derived from, which Child Delegation selects deterministically
+   * as the FIRST parent entry, in Authority Set order, that the child entry is
+   * a subset of ({@link justifyingIndex}, the same selection fan-out accounting
+   * counts against). Both Authority Sets are immutable, so recomputing that
+   * selection over the approved sets IS the recorded mapping. A child entry is
+   * reached exactly when its justifying parent entry's commitment is the
+   * discharged `entry_digest` (so byte-identical parent duplicates, which share
+   * the digest, reach it together) AND it carries the fired condition. A child
+   * entry justified by a DIFFERENT parent entry carrying an identical
+   * condition on the same resource is never reached: the resource is not a key.
+   * A child's latch is keyed by the CHILD's own `entry_digest`: the child entry
+   * is narrower, so it is a different immutable entry with a different
+   * commitment.
    *
-   * A terminal child cannot derive and is skipped (the {@link cascadeChildren}
-   * gate). Recursion rides {@link latchDischarge} itself, so a grandchild
-   * justified transitively picks up the same narrowing in generation order; the
-   * per-record latch is idempotent by `entry_digest`, so a replay at any level
-   * is safe. The parent's and the children's lifecycle states are never touched:
-   * discharge only ever narrows effective authority.
+   * DOWNWARD ONLY: this walks {@link findChildren} of the record that latched
+   * and nothing else, so a child's discharge never reaches its parent or its
+   * siblings. A terminal child cannot derive and is skipped (the {@link
+   * cascadeChildren} gate). Recursion rides {@link latchDischarge} itself, so a
+   * grandchild whose justification is an entry this discharge already reached
+   * picks up the same narrowing in generation order; the per-record latch is
+   * idempotent by `entry_digest`, so a replay at any level is safe. The
+   * parent's and the children's lifecycle states are never touched: discharge
+   * only ever narrows effective authority.
    */
   private propagateDischargeToChildren(
     parent: MissionRecord,
     latch: Omit<DischargedEntry, "discharged_at">,
   ): void {
-    const parentEntry = parent.authority_set.find(
-      (e) => entryDigest(parent.issuer, e) === latch.entry_digest,
-    );
-    if (!parentEntry) return;
     for (const child of this.findChildren(parent.id)) {
       const fresh = this.applyExpiry(child);
       if (TERMINAL_STATES.has(fresh.state)) continue;
@@ -1982,7 +1988,8 @@ export class MissionKernel {
       const seen = new Set<string>();
       const latches: Array<Omit<DischargedEntry, "discharged_at">> = [];
       for (const childEntry of fresh.authority_set) {
-        if (childEntry.resource !== parentEntry.resource) continue;
+        const justifying = parent.authority_set[justifyingIndex(childEntry, parent.authority_set)];
+        if (!justifying || entryDigest(parent.issuer, justifying) !== latch.entry_digest) continue;
         const conditions = terminalWhenOf(childEntry);
         if (!conditions?.some((c) => conditionDigest(c) === latch.condition_digest)) continue;
         const digest = entryDigest(fresh.issuer, childEntry);
