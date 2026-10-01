@@ -928,8 +928,8 @@ instead.
   Mission Status Response envelope, whose `discharge_result` carries
   `forwarded_from` ({{discharge-result}}). A consumer verifies that
   response under the Status profile's procedure
-  ({{I-D.draft-mcguinness-oauth-mission-status}}, Section "Response"), with
-  one change: in place of checking that `mission.id`
+  ({{I-D.draft-mcguinness-oauth-mission-status}}, Section "Response"),
+  with one change: in place of checking that `mission.id`
   equals the requested `mission_id`, it MUST verify that
   `discharge_result.forwarded_from` names the requested Mission and
   that `mission.issuer` equals its `issuer`, and it then reads
@@ -975,8 +975,9 @@ example before it stops retrying:
 1. the JWS header `typ` is `mission-discharge-receipt+jwt`;
 2. the JWS header `alg` is one the AS advertises in
    `mission_status_signing_alg_values_supported`
-   ({{I-D.draft-mcguinness-oauth-mission-status}}, Section "Authorization
-   Server Metadata"), rejecting `none` and any algorithm not listed;
+   ({{I-D.draft-mcguinness-oauth-mission-status}}, Section
+   "Authorization Server Metadata"), rejecting `none` and any
+   algorithm not listed;
 3. the JWS signature against a current `jwks_uri` entry for the AS;
 4. `iss` equals the expected AS issuer URL;
 5. `aud` equals the consumer's own identifier, as the AS
