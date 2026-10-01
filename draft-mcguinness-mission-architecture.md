@@ -2259,45 +2259,8 @@ The levels, cumulative:
   per-action enforcement: a half-step into the next level, not a
   level of its own.
 
-  The verification coverage below is profile-owned: each test
-  verifies a rule its home profile states normatively, grouped here
-  in reading order, never as a conformance class a level confers.
-  Coverage is scoped by the capabilities a binding's Mission
-  Substrate Statement claims, so a standalone MAS is never asked to
-  verify a credential behavior it does not claim; the family's
-  conformance manifest carries the profile-owned rows.
-
-  Kernel, every Baseline deployment:
-
-  1. approval creates an active Mission;
-  2. an authenticated terminal transition takes effect in the
-     Controller's own subsequent decisions; and
-  3. the observed residual after a transition does not exceed the
-     published reliance bound.
-
-  Credential-Bound, where claimed:
-
-  1. no credential outlives the Mission's effective expiry; and
-  2. a credential from another Mission cannot be substituted (the
-     reference and its Controller namespace bind together).
-
-  Lifecycle-Gated Authorization, where claimed and limited to the
-  operations named in the claim:
-
-  1. an active Mission yields a positive result for a claimed
-     operation within policy;
-  2. a terminal transition prevents every claimed operation; and
-  3. for every lifecycle-gated operation in the claimed scope,
-     unavailable, invalid, stale, or unknown state prevents a
-     positive result (the forward-compatibility rule: only `active`
-     permits reliance, and lost state never fails open).
-
-  For the OAuth binding, the same coverage includes:
-
-  1. refresh while the Mission is active succeeds within policy and
-     is refused after a terminal transition; and
-  2. a bare client-supplied Mission identifier creates no binding:
-     the grant, never the identifier, determines the Mission.
+  Illustrative verification scenarios for this level, each traced to
+  the rule its home document states, are in {{verification-guidance}}.
 
 **Runtime-Enforced**:
 : adds a PEP/PDP decision on every consequential action, a trusted
@@ -3489,6 +3452,54 @@ Registration posture is likewise deliberate per artifact class:
 OAuth-facing parameters and media types register with IANA, evidence
 media types defer registration until cross-domain interoperability
 demands it, and each profile states which posture it takes.
+
+# Illustrative Verification Guidance {#verification-guidance}
+
+These scenarios illustrate how a Baseline Issuance deployment can be
+checked. Each checks a rule its home document states normatively;
+this document owns none of them and confers no conformance class.
+Coverage is scoped by the capabilities a binding's Mission Substrate
+Statement claims, so a standalone MAS is never asked to verify a
+credential behavior it does not claim; the family's conformance
+manifest carries the profile-owned rows.
+
+Kernel, every Baseline deployment (the substrate contract's approval
+event, governance gate, and bounded reliance,
+{{I-D.draft-mcguinness-mission-substrate}}):
+
+1. approval creates an active Mission;
+2. an authenticated terminal transition takes effect in the
+   Controller's own subsequent decisions; and
+3. the observed residual after a transition does not exceed the
+   published reliance bound.
+
+Credential-Bound, where claimed (the substrate contract's
+Credential-Bound capability):
+
+1. no credential outlives the Mission's effective expiry; and
+2. a credential from another Mission cannot be substituted (the
+   reference and its Controller namespace bind together).
+
+Lifecycle-Gated Authorization, where claimed and limited to the
+operations named in the claim (the substrate contract's
+Lifecycle-Gated Authorization capability):
+
+1. an active Mission yields a positive result for a claimed
+   operation within policy;
+2. a terminal transition prevents every claimed operation; and
+3. for every lifecycle-gated operation in the claimed scope,
+   unavailable, invalid, stale, or unknown state prevents a
+   positive result (the forward-compatibility rule: only `active`
+   permits reliance, and lost state never fails open).
+
+For the OAuth binding, the same coverage includes (the OAuth
+binding's Mission Lifecycle and Gating and grant-binding rules,
+{{I-D.draft-mcguinness-oauth-mission}}):
+
+1. refresh while the Mission is active succeeds within policy and
+   is refused after a terminal transition; and
+2. a bare client-supplied Mission identifier creates no binding:
+   the grant, never the identifier, determines the Mission.
 
 # Mission Document Map {#document-map}
 
