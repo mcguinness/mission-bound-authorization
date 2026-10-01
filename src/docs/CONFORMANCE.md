@@ -1,5 +1,27 @@
 # Runtime-Enforced Conformance Self-Assessment
 
+> **Historical record.** This is the M14 self-assessment of the
+> single-process reference stack. It was first committed at `18ebbe06`
+> (2026-07-23) and last changed at `79d1826a` (2026-09-07). Its claims
+> are bound to that stack and those commits; they are not a current
+> statement of coverage or readiness.
+>
+> - The Architecture section it cites ("§ Runtime-Enforced Mission
+>   conformance") no longer exists. The Mission Assurance Levels are
+>   adoption bundles, not conformance classes.
+> - For current recovery and atomicity limits, see
+>   [control-plane-deployment.md](control-plane-deployment.md).
+>   Continuation and delegation-family projections are not rebuilt
+>   after a restart, and external delivery is at least once.
+> - For current coverage, see the DRAFTS.md index and the conformance
+>   ledger (`conformance-manifest.json`). Ledger statuses are not a
+>   measure of production readiness.
+> - For the current, commit-bound assessment of the Runtime-Enforced
+>   reference deployment, see
+>   [runtime-enforced-assessment.md](runtime-enforced-assessment.md).
+>
+> The sections below are kept as written.
+
 The M14 capstone: the written self-assessment goal 1 requires, plus goal 2's
 consolidated spec-feedback report. Every claim links to the tests that
 demonstrate it (all run headless against live OpenFGA; `pnpm test`, `pnpm
