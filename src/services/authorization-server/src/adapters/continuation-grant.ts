@@ -41,7 +41,7 @@ import { DEFAULT_CONTINUATION_HOP_LIMIT, newContinuationHandle } from "../kernel
 import {
   audienceScopedAuthority,
   ID_JAG_TOKEN_TYPE,
-  DelegationNarrowedToEmptyError,
+  AuthorityNarrowedToEmptyError,
   issueCrossDomainGrant,
   RequestedAuthorityExceededError,
 } from "../kernel/cross-domain.js";
@@ -193,6 +193,25 @@ function refuseContinuationGate(ctx: KoaContextWithOIDC, reason: GateError["reas
   txError(ctx, 400, error, `continuation Mission gate refused issuance (${reason})`);
   const missionError = gateErrorToMissionError(reason, state);
   if (missionError) (ctx.body as Record<string, unknown>).mission_error = missionError;
+}
+
+/**
+ * @spec id-continuation-assertion — the continuation grant's authority, from
+ * the audience-scoped Effective Authority Set: the entries this delegate may
+ * carry (`delegationGate`, mission#delegation-constraints), narrowed to the
+ * requested resources when any are named (ICA -02 5.5.3 rule 7: the issued
+ * ID-JAG carries the values "that express the granted authority"). With no
+ * `resource`, every entry the delegate may carry. The rule-7 pre-check and
+ * the post-gate filter in issueCrossDomainGrant apply this same function.
+ */
+export function continuationAuthorityFilter(
+  delegationGate: (entries: AuthorityEntry[]) => AuthorityEntry[],
+  resources: readonly string[],
+): (entries: AuthorityEntry[]) => AuthorityEntry[] {
+  return (entries) => {
+    const delegable = delegationGate(entries);
+    return resources.length === 0 ? delegable : delegable.filter((e) => resources.includes(e.resource));
+  };
 }
 
 /**
@@ -577,12 +596,17 @@ export async function handleTokenExchangeGrant(
     txError(ctx, 400, "invalid_target", "requested resource is not authorized by the Mission");
     return;
   }
+  // The grant's authority: the entries this delegate may carry, narrowed to
+  // the requested resources (continuationAuthorityFilter).
+  const grantAuthority = continuationAuthorityFilter(delegationGate, resources);
+  const grantable = grantAuthority(audienceScoped);
   // @spec id-continuation-assertion — a requested authorization_details is
-  // evaluated by type, and the requested set MUST fit the Mission's Effective
-  // Authority Set for this audience, as this delegate may carry it; else
+  // evaluated by type, and the requested set MUST fit the grant's authority:
+  // the Mission's Effective Authority Set for this audience, as this delegate
+  // may carry it, narrowed to any requested resources; else
   // invalid_authorization_details (ICA -02 5.5.3 rule 7, 5.5.6). The issued
-  // ID-JAG then carries the requested subset, projected; absent, every entry
-  // the delegate may carry.
+  // ID-JAG then carries the requested subset, projected; absent, the whole
+  // grant authority.
   if (requestedDetails !== undefined) {
     for (const detail of requestedDetails) {
       if (typeof detail.type !== "string" || !SUPPORTED_AUTHORIZATION_DETAILS_TYPES.has(detail.type)) {
@@ -601,7 +625,7 @@ export async function handleTokenExchangeGrant(
       effective.length > 0 &&
       !isSubsetSetIgnoringCapabilitySources(
         requestedDetails as unknown as AuthorityEntry[],
-        delegable,
+        grantable,
       )
     ) {
       txError(ctx, 400, "invalid_authorization_details", "requested authorization_details exceed the Mission authority for the target");
@@ -646,9 +670,10 @@ export async function handleTokenExchangeGrant(
       ...(requestedDetails !== undefined
         ? { requestedAuthority: requestedDetails as unknown as AuthorityEntry[] }
         : {}),
-      // The same delegation gate, applied again once the gate admits, so a
-      // state change since the rule-7 check cannot widen the grant.
-      delegationGate,
+      // The same filter (delegation gate, then the requested resources),
+      // applied again once the gate admits, so a state change since the
+      // rule-7 check cannot widen the grant.
+      authorityFilter: grantAuthority,
       // Everything validation and the gate admitted: reserve the ICA, then
       // record the child hop (bound to the SAME anchor/Mission, linked to the
       // prior). @spec id-continuation-assertion — the (iss, jti) reservation
@@ -687,7 +712,7 @@ export async function handleTokenExchangeGrant(
       txError(ctx, 400, "invalid_authorization_details", e.message);
       return;
     }
-    if (e instanceof DelegationNarrowedToEmptyError) {
+    if (e instanceof AuthorityNarrowedToEmptyError) {
       txError(ctx, 400, "invalid_target", e.message);
       return;
     }

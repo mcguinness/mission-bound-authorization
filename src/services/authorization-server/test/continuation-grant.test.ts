@@ -1016,6 +1016,52 @@ describe("continuation onward act lineage (@spec id-continuation-assertion)", ()
 });
 
 /**
+ * @spec id-continuation-assertion — the requested resources narrow the grant
+ * (ICA -02 5.5.3 rule 7): with one or more `resource`, the grant carries only
+ * the entries of those resources; with none, every entry for the audience.
+ */
+describe("continuation resource narrowing (@spec id-continuation-assertion)", () => {
+  const resourcesOf = async (res: Response): Promise<string[]> => {
+    const body = (await res.json()) as { access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    const details = decodeJwt(body.access_token as string).authorization_details as Array<{ resource: string }>;
+    return details.map((d) => d.resource).sort();
+  };
+
+  it("on a Mission holding A and C at one Resource AS: resource=A gets only A's entry, A and C get both, and no resource gets both", async () => {
+    const { handle } = newLineage("apev-n1", {}, MISSION_EXP, {}, [READ_C]);
+    expect(await resourcesOf(await exchangeAs(handle, "A", { resource: RESOURCE }))).toEqual([RESOURCE]);
+    expect(await resourcesOf(await exchangeAs(handle, "A", { resource: [RESOURCE, RESOURCE_C] }))).toEqual(
+      [RESOURCE, RESOURCE_C].sort(),
+    );
+    expect(await resourcesOf(await exchangeAs(handle, "A", { resource: null }))).toEqual([RESOURCE, RESOURCE_C].sort());
+  });
+
+  it("resource=A with authorization_details naming C -> invalid_authorization_details, with no hop and no derivation", async () => {
+    const { missionId, handle } = newLineage("apev-n2", {}, MISSION_EXP, {}, [READ_C]);
+    const requestC = JSON.stringify([{ ...READ_C, constraints: { vendors: ["acme"] } }]);
+    const hops = as.continuationStore.handlesForMission(missionId).length;
+    const res = await exchangeAs(handle, "A", { resource: RESOURCE, extra: { authorization_details: requestC } });
+    const body = (await res.json()) as { error?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_authorization_details");
+    expect(as.continuationStore.handlesForMission(missionId)).toHaveLength(hops);
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(0);
+    // Naming C as a resource too, the same detail is issued.
+    const both = await exchangeAs(handle, "A", {
+      resource: [RESOURCE, RESOURCE_C],
+      extra: { authorization_details: requestC },
+    });
+    expect(await resourcesOf(both)).toEqual([RESOURCE_C]);
+  });
+
+  it("composes with delegation: at Mission delegation depth 1, resource naming the surviving entry issues only that entry", async () => {
+    const { handle } = newLineage("apev-n3", {}, MISSION_EXP, {}, [READ_C]);
+    expect(await resourcesOf(await exchangeAs(handle, "B", { resource: RESOURCE }))).toEqual([RESOURCE]);
+  });
+});
+
+/**
  * @spec mission#delegation-constraints — per-entry delegation constraints on
  * a continuation to another actor. The Mission delegation depth counts from
  * the approved agent (ap-agent, the root actor): the merged lineage length
@@ -1060,15 +1106,17 @@ describe("continuation delegation constraints (@spec mission#delegation-constrai
 
   it("A->B narrows out a non-delegable entry and keeps the delegable one, its delegation policy intact", async () => {
     const { handle: root } = newLineage("apev-d2", {}, MISSION_EXP, {}, [READ_C]);
-    const { details } = await granted(await exchangeAs(root, "B"));
+    // No `resource`, so only the delegation gate narrows.
+    const { details } = await granted(await exchangeAs(root, "B", { resource: null }));
     expect(details.map((d) => d.resource)).toEqual([RESOURCE]);
     expect(details[0]?.delegation?.max_depth).toBe(2);
   });
 
   it("a same-actor continuation (Mission delegation depth 0) is not narrowed", async () => {
     const { handle: root } = newLineage("apev-d3", {}, MISSION_EXP, {}, [READ_C]);
-    const h1 = await granted(await exchangeAs(root, "A"));
-    const h2 = await granted(await exchangeAs(h1.hop, "A"));
+    // No `resource`, so nothing narrows the grant.
+    const h1 = await granted(await exchangeAs(root, "A", { resource: null }));
+    const h2 = await granted(await exchangeAs(h1.hop, "A", { resource: null }));
     for (const { details } of [h1, h2]) {
       expect(details.map((d) => d.resource).sort()).toEqual([RESOURCE, RESOURCE_C].sort());
     }
@@ -1088,13 +1136,13 @@ describe("continuation delegation constraints (@spec mission#delegation-constrai
     const requestC = JSON.stringify([{ ...READ_C, constraints: { vendors: ["acme"] } }]);
     const before = sideEffects(missionId);
     await refused(
-      await exchangeAs(root, "B", { extra: { authorization_details: requestC } }),
+      await exchangeAs(root, "B", { resource: null, extra: { authorization_details: requestC } }),
       "invalid_authorization_details",
     );
     await refused(await exchangeAs(root, "B", { resource: RESOURCE_C }), "invalid_target");
     expect(sideEffects(missionId)).toEqual(before);
     // The same requests at depth 0 issue.
-    await granted(await exchangeAs(root, "A", { extra: { authorization_details: requestC } }));
+    await granted(await exchangeAs(root, "A", { resource: null, extra: { authorization_details: requestC } }));
     await granted(await exchangeAs(root, "A", { resource: RESOURCE_C }));
   });
 });

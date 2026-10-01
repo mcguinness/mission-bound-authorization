@@ -33,10 +33,12 @@ export const MAX_GRANT_LIFETIME_S = 300;
 export class RequestedAuthorityExceededError extends Error {}
 
 /**
- * @spec mission#delegation-constraints — the delegation gate left no
- * audience-scoped entry for the delegate ("Empty result": invalid_target).
+ * @spec mission#delegation-constraints, id-continuation-assertion — the
+ * authority filter left no audience-scoped entry for the grant: delegation
+ * constraints narrowed every entry out for the delegate ("Empty result":
+ * invalid_target), or no entry of a requested resource survives.
  */
-export class DelegationNarrowedToEmptyError extends Error {}
+export class AuthorityNarrowedToEmptyError extends Error {}
 
 export function audienceScopedAuthority(
   authoritySet: AuthorityEntry[],
@@ -93,13 +95,15 @@ export interface IssueGrantInput {
    */
   requestedAuthority?: AuthorityEntry[];
   /**
-   * @spec mission#delegation-constraints — per-entry delegation narrowing for
-   * a delegated grant: given the audience-scoped Effective Authority Set, the
-   * entries this delegate may carry at its delegation depth. The grant
-   * carries only those (and any requestedAuthority must fit them); an empty
-   * result refuses with {@link DelegationNarrowedToEmptyError}.
+   * @spec mission#delegation-constraints, id-continuation-assertion — the
+   * narrowing a caller applies to the audience-scoped Effective Authority Set
+   * once the derivation gate admits: for the continuation grant, the entries
+   * this delegate may carry at its delegation depth, then those of the
+   * requested resources. The grant carries only the result (and any
+   * requestedAuthority must fit it); an empty result refuses with
+   * {@link AuthorityNarrowedToEmptyError}.
    */
-  delegationGate?: (entries: AuthorityEntry[]) => AuthorityEntry[];
+  authorityFilter?: (entries: AuthorityEntry[]) => AuthorityEntry[];
   /**
    * @spec id-continuation-assertion — runs once the derivation gate, the count
    * and the audience projection have admitted the grant, and before it is
@@ -169,9 +173,9 @@ async function mintCrossDomainGrant(
     input.targetAs,
   );
   if (scoped.length === 0) throw new Error("no audience-scoped authority for the target Resource AS");
-  const carried = input.delegationGate ? input.delegationGate(scoped) : scoped;
+  const carried = input.authorityFilter ? input.authorityFilter(scoped) : scoped;
   if (carried.length === 0) {
-    throw new DelegationNarrowedToEmptyError("delegation constraints leave no audience-scoped authority for this delegate");
+    throw new AuthorityNarrowedToEmptyError("no audience-scoped authority remains for this grant once narrowed");
   }
   let granted = carried;
   if (input.requestedAuthority !== undefined) {
