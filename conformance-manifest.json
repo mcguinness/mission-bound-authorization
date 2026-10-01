@@ -22484,9 +22484,15 @@
     "normative": "a template's allowed_dispatchers is a non-empty array of client_id strings"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "The reference implementation stores dispatchers as client_id strings, matching the entry type, but does not refuse an empty list at template creation, and no test asserts the shape."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "createTemplate (@spec mission-template) > refuses dispatchers that are not a non-empty array of client_id strings (@spec mission-template#the-mission-template)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    }
+   ]
   },
   {
    "id": "template.members.allowed-recipients-shape",
@@ -22506,9 +22512,15 @@
     "normative": "a template's allowed_recipients is an object whose subjects ({iss, sub} objects) and agents (client_id strings) members are both non-empty arrays"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Implementation gap: the reference implementation's recipients is a flat client_id array (the agents half only) with no subjects member; it refuses an empty recipients list at template creation."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "createTemplate (@spec mission-template) > refuses recipients that are not an object of non-empty subjects ({iss, sub}) and agents (@spec mission-template#the-mission-template)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    }
+   ]
   },
   {
    "id": "template.dispatch.dispatcher-membership",
@@ -22562,9 +22574,21 @@
     "normative": "a Dispatch whose Mission-Issuer-established Subject does not equal a subjects entry in both iss and sub is refused, and no Mission is derived"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Implementation gap: the reference implementation does not check the established Subject against the template; it applies a per-source subject-discipline gate instead, and its recipients carry no subjects."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > recipient_not_allowed: the established Subject (the template's approver) is not in recipients.subjects (@spec mission-template#the-mission-template)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "dispatch gates (@spec mission-template#dispatch-refusals) > refuses a Subject that matches a listed subject in only one of iss and sub (@spec mission-template#the-mission-template)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ]
   },
   {
    "id": "template.dispatch.recipient-agent-membership",
@@ -22593,7 +22617,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "Covered at unit level only: the kernel refuses an unlisted recipient (which becomes the instance client_id) with recipient_not_allowed; no endpoint test dispatches to an unlisted Agent."
+   "notes": "Covered at unit level only, and unreachable at the endpoint by construction: the mission-dispatch grant names no Agent, and the implementation dispatches to the template's first listed agent, so an endpoint request cannot select an unlisted Agent. The kernel refuses an unlisted recipient with recipient_not_allowed. The draft does not yet say how the instance's Agent is established at Dispatch."
   },
   {
    "id": "progressive.drawdown-policy.body-commitment-should",
