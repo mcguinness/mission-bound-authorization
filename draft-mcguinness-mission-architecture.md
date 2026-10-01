@@ -1527,20 +1527,21 @@ not baseline AAuth Mission Context properties.
   stripped reference yields a missionless request, bounded by the
   binding's downgrade rules ({{I-D.draft-mcguinness-mission-aauth}}).
 
-**Authority only narrows**: : Derived tokens, delegated child Missions,
-attenuated tokens, and cross-domain projections carry subsets; widening
-exists only as an approved successor: a fresh approval
-({{I-D.draft-mcguinness-oauth-mission-expansion}}), or policy drawdown
-within a ceiling a human pre-consented
-({{I-D.draft-mcguinness-oauth-mission-progressive}}). The relation is
-typed: it is defined where a structured-authority vocabulary defines it
-(on the OAuth binding, `mission_resource_access` and its Common
-Constraints, defined by the OAuth binding's Mission Resource Access
-Profile), and authority carried in a type with no defined subset
-relation is carried as approved, neither narrowed, delegated, nor
-projected; moving authority into expressive policy-language entries
-weakens this guarantee exactly there, a trade to make knowingly (
-{{I-D.draft-mcguinness-mission-security-model}}).
+**Authority only narrows**:
+: Derived tokens, delegated child Missions, attenuated tokens, and
+  cross-domain projections carry subsets; widening exists only as an
+  approved successor: a fresh approval
+  ({{I-D.draft-mcguinness-oauth-mission-expansion}}), or policy drawdown
+  within a ceiling a human pre-consented
+  ({{I-D.draft-mcguinness-oauth-mission-progressive}}). The relation is
+  typed: it is defined where a structured-authority vocabulary defines
+  it (on the OAuth binding, `mission_resource_access` and its Common
+  Constraints, defined by the OAuth binding's Mission Resource Access
+  Profile), and authority carried in a type with no defined subset
+  relation is carried as approved, neither narrowed, delegated, nor
+  projected; moving authority into expressive policy-language entries
+  weakens this guarantee exactly there, a trade to make knowingly
+  ({{I-D.draft-mcguinness-mission-security-model}}).
 
 **Revocation is possession-independent**:
 : A Mission ends by a state change at its issuer, not by finding and
@@ -2265,14 +2266,14 @@ The levels, cumulative:
   Illustrative verification scenarios for this level, each traced to
   the rule its home document states, are in {{verification-guidance}}.
 
-**Runtime-Enforced**: : adds a PEP/PDP decision on every consequential
-action, a trusted state source with a published staleness bound,
-parameter binding, and runtime evidence
-({{I-D.draft-mcguinness-mission-runtime}} and its AuthZEN profile).
-Grants per-action enforcement and revocation bounded, for gated classes,
-by the staleness bound plus the permit window plus the class's execution
-bound, and by token lifetime, where issuance is gated, for paths no
-runtime gate reaches.
+**Runtime-Enforced**:
+: adds a PEP/PDP decision on every consequential action, a trusted state
+  source with a published staleness bound, parameter binding, and
+  runtime evidence ({{I-D.draft-mcguinness-mission-runtime}} and its
+  AuthZEN profile). Grants per-action enforcement and revocation
+  bounded, for gated classes, by the staleness bound plus the permit
+  window plus the class's execution bound, and by token lifetime, where
+  issuance is gated, for paths no runtime gate reaches.
 
   This is the smallest deployment that turns a Mission from governed
   issuance into action-time defense, and every normative dependency
