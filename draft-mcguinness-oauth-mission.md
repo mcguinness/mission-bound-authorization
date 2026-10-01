@@ -3593,25 +3593,32 @@ they go, including across a cross-domain projection
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
 
 **Delegation depth.** The delegation depth of a token is the number
-of actors in its `act` chain (the nesting depth of the `act` claim),
-counted from the approved agent: the agent's own non-delegated token
-is depth 0, the first delegate is depth 1, and each further delegate
-adds 1. The depth checked against `max_depth` is that of the token
+of delegations between the approved agent and the token's current
+actor: the agent's own non-delegated token is depth 0, the first
+delegate is depth 1, and each further delegate adds 1. The depth
+checked against `max_depth` is that of the token
 being issued, computed after appending the new outermost actor, not
 the depth of the delegating token. A credential projected across a
 trust domain carries no `act` chain and enters the target domain at
 depth 0 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
 
-The count is issuer-side accounting over the AS's own issuance, not
-an access-control decision over prior actors. The AS counts only an
-`act` chain it authored, in a subject token it validates as its own
-issuance under this Mission. Each delegated exchange this document
-defines appends exactly one outermost actor and a self-exchange
-({{self-exchange}}) appends none, so the count over these exchanges
-is complete; a companion that issues Mission-bound tokens by another
-path defines how their chains count. No prior actor's identity enters
-the count, and a Resource Server likewise bases no authorization
-decision on a prior actor's identity ({{Section 4.1 of RFC8693}}).
+**Depth accounting.** The AS MUST establish delegation depth from
+accounting it maintains for the tokens it issues under the Mission
+and associates with the credential it validates (for example, recorded
+at issuance against the token), not from the nesting of a presented
+`act` claim. The `act` chain is attribution ({{delegation}}): it
+renders the accounted chain and is not the source of the count. Over
+the exchanges this document defines the accounting is complete: each
+delegated exchange adds exactly one delegate, a self-exchange
+({{self-exchange}}) adds none, and a cross-domain projection is the
+one defined reset. A profile that issues Mission-bound tokens by
+another path specifies how it preserves or reconstructs this
+accounting and any reset it defines. Where the AS cannot establish
+the depth of the token being issued, no entry's delegation policy can
+be evaluated at that depth, so every entry narrows out under the
+per-entry rule below and the exchange is refused as an empty result.
+A Resource Server bases no authorization decision on a prior actor
+({{Section 4.1 of RFC8693}}).
 
 **Per-entry enforcement.** When the AS issues a token to a delegate
 (the actor that becomes the outermost `act`) at delegation depth
