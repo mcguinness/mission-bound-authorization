@@ -2490,7 +2490,11 @@ the `invalid_grant` error code, a request to derive a token at the
 token endpoint, on refresh, or on Token Exchange ({{RFC8693}}). The
 AS MUST refuse, with the `invalid_grant` error code, a derivation
 request it answers after it has acknowledged a revocation of the
-Mission.
+Mission. Where a profile of a Token Exchange that the AS implements
+assigns its own error code to either refusal, such as a continuation
+profile's code for an ended chain, the AS uses that profile's code
+instead of `invalid_grant`; the refusal itself, and the
+`mission_error` member below, still apply.
 
 A derivation is one issuance operation the issuer AS performs for a
 single request: the initial authorization-code exchange, a refresh, a
@@ -3106,7 +3110,7 @@ elsewhere in this document that names one of these codes
 | Authorization or token request: an explicitly requested `scope` value the issuance cannot grant under a scope-projection mapping the AS trusts ({{scope-projection}}) | `invalid_scope` ({{Section 4.1.2.1 of RFC6749}}, {{Section 5.2 of RFC6749}}) | safe `error_description` |
 | Authorization request: `scope` includes `openid` and the Approver is not the Subject ({{approval-authentication}}) | `invalid_scope` ({{Section 4.1.2.1 of RFC6749}}) | safe `error_description` |
 | Authorization decision: the Approver declines, approval authentication fails the floor or a requested `acr_values`/`max_age`, or a well-formed request (including configured-mapping mode) is refused by AS policy | `access_denied` ({{Section 4.1.2.1 of RFC6749}}) | none unless a defined extension applies |
-| Token endpoint: the Mission is revoked, expired, or superseded | `invalid_grant` ({{Section 5.2 of RFC6749}}) | `mission_error` ({{iana}}) |
+| Token endpoint: the Mission is revoked, expired, or superseded | `invalid_grant` ({{Section 5.2 of RFC6749}}), or the code a Token Exchange profile assigns ({{issuance-gating}}) | `mission_error` ({{iana}}) |
 | Token endpoint: the requested RAR subset exceeds the Mission's granted authority | `invalid_authorization_details` ({{Section 6 of RFC9396}}) | safe detail |
 | Token exchange with no actor ({{self-exchange}}): the authenticated client is not the Mission's approved agent | `invalid_request` ({{Section 2.2.2 of RFC8693}}) | safe `error_description` |
 | Delegated token exchange ({{delegation-constraints}}): narrowing leaves no entries for the delegate | `invalid_target` ({{Section 2.2.2 of RFC8693}}) | safe `error_description` |
@@ -5685,6 +5689,12 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Let a profile of a Token Exchange that the AS implements assign its
+  own error code to the Issuance Gating refusals, such as a
+  continuation profile's code for an ended chain. The refusal and the
+  `mission_error` diagnostic are unchanged, and the code stays
+  `invalid_grant` everywhere else. This changes a requirement.
 
 - Stated the client no-downgrade requirement in Authorization Server
   Metadata, where discovery establishes Mission support; Downgrade by
