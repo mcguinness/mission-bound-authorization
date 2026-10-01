@@ -108,6 +108,9 @@ importers:
       '@mission/pdp':
         specifier: workspace:*
         version: link:../services/pdp
+      '@mission/plain-rs':
+        specifier: workspace:*
+        version: link:../services/plain-rs
       '@mission/ras':
         specifier: workspace:*
         version: link:../services/ras

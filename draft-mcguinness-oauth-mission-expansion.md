@@ -41,6 +41,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-submission-evidence:
+    title: "Mission Intent Submission Evidence for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-submission-evidence.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 informative:
   RFC8126:
@@ -435,7 +443,9 @@ token endpoint. The request carries:
   {{I-D.draft-mcguinness-oauth-mission}}: its `intent` is the
   successor's Mission Intent, and its OPTIONAL `evidence` array
   carries Intent Submission Evidence under that profile's dispatch,
-  refusal, and never-authority rules. The Intent describes the
+  refusal, and never-authority rules and those of
+  {{I-D.draft-mcguinness-oauth-mission-submission-evidence}}. The
+  Intent describes the
   broadened task: the `goal`, `target_resources`, `task_bounds`, and
   any other Mission Intent member the successor needs, including the
   authority the denied action required. The Mission Issuer derives the successor's

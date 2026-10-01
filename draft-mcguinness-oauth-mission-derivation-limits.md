@@ -49,6 +49,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-continuation:
+    title: "Mission Continuation: Authorization Continuity for Mission-Bound Authorization"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-cross-domain:
     title: "Mission Cross-Domain Projection for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html
@@ -106,9 +114,10 @@ derivation under a Mission on its lifecycle state, its Authority Set,
 and its expiry. It does not bound how many derivations the issuer
 performs. This document adds that bound: a derivation limit on the
 number of derivations the issuer AS performs under a Mission. The limit
-is an issuer-side operational control. It bounds issuance operations at
-the token endpoint, not the authority any derived token carries or how
-often a token already issued is used.
+is an issuer-side operational control. It bounds counted issuance
+operations at the token endpoint, not the authority any derived token
+carries or how often a token already issued is used. The refreshes of
+an async delegation family are not counted ({{refresh-and-exchange}}).
 
 The limit uses these extension seams of the OAuth binding and changes
 none of its rules:
@@ -217,9 +226,14 @@ dispatched Template instance's
 successor's ({{I-D.draft-mcguinness-oauth-mission-expansion}}),
 exactly as at direct approval. An established `derivation_limit` is
 never inherited unchanged from a parent, a template, or a predecessor
-Mission; each Mission Record's ceiling comes only from its own
-Intent's `requested_derivation_limit`, clamped by the deployment's
-policy for that Mission.
+Mission, with one exception: a Child Delegation carryover replacement
+preserves the old child's `derivation_limit` and derivation count, so
+carryover cannot replenish a derivation budget
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section "No
+State, Authority, Expiry, or Budget Reset"). Otherwise each Mission
+Record's ceiling comes only from its own Intent's
+`requested_derivation_limit`, clamped by the deployment's policy for
+that Mission.
 
 ## Mission Record Member {#record-member}
 
@@ -271,6 +285,14 @@ Mission is one derivation, whether it down-scopes a token for the
 approved agent or issues a delegated token
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Delegation Within a
 Mission").
+
+The one exception is a delegation family under the Continuation
+profile's async delegation transport
+({{I-D.draft-mcguinness-oauth-mission-continuation}}, Section "Async
+Delegation Transport"): the exchange that creates the family is one
+derivation, and the family's successive refreshes are not counted
+again. That profile makes the Mission's expiry, not this limit, the
+family's continuity ceiling ({{sec-async-family}}).
 
 ## Cross-Domain Issuance {#cross-domain-counting}
 
@@ -384,7 +406,10 @@ render it for consent at the approval event, as context beside the
 derived Authority Set, in the rendering step of the OAuth binding's
 approval sequence ({{I-D.draft-mcguinness-oauth-mission}}, Section
 "Mission Approval"). The rendering shows the established value, not
-only the requested one.
+only the requested one. Where the AS supports the Continuation
+profile's async delegation transport, the rendering MUST also state
+that the refreshes of an async delegation family are not counted
+against the limit ({{refresh-and-exchange}}).
 
 The rendered limit is one Mission's local bound ({{sec-composition}}).
 Where a deployment runs child delegation, that profile states what an
@@ -414,13 +439,26 @@ apply. This section covers what the derivation limit adds.
 
 ## Issuance, Not Authority {#sec-not-authority}
 
-The derivation limit bounds how many issuance operations the issuer
-performs. It does not narrow the Authority Set, shorten a token's
-lifetime, or bound the requests a Resource Server honors under a token
-already issued: a derived token remains usable until its `exp`. A
-deployment that needs to bound use, rather than issuance, adopts a
-runtime control such as metering
+The derivation limit bounds how many counted issuance operations the
+issuer performs; the refreshes of an async delegation family are not
+counted ({{sec-async-family}}). It does not narrow the Authority Set,
+shorten a token's lifetime, or bound the requests a Resource Server
+honors under a token already issued: a derived token remains usable
+until its `exp`. A deployment that needs to bound use, rather than
+issuance, adopts a runtime control such as metering
 ({{I-D.draft-mcguinness-mission-metering}}).
+
+## Async Delegation Families {#sec-async-family}
+
+Because the refreshes of an async delegation family are not counted
+({{refresh-and-exchange}}), the limit does not bound how many tokens
+the issuer mints under such a family. The Continuation profile bounds
+the family instead: its delegated authorization state is a subset of
+the Mission's Authority Set, its absolute lifetime equals the
+Mission's `expires_at`, and it is invalidated when the Mission reaches
+a terminal state
+({{I-D.draft-mcguinness-oauth-mission-continuation}}, Section "Async
+Delegation Transport").
 
 ## Delegation Fan-Out {#sec-fan-out}
 

@@ -277,6 +277,11 @@ import {
 } from "../kernel/template.js";
 import type { TemplateStore } from "../kernel/template-store.js";
 import { TokenIssuanceStore } from "../kernel/token-issuance-store.js";
+import {
+  capabilityEnabled,
+  type ProviderCapability,
+  TOKEN_EXCHANGE_CAPABILITIES,
+} from "./capabilities.js";
 
 /**
  * @spec mission-template#dispatch — the impl-local grant type a dispatcher
@@ -518,6 +523,12 @@ export interface AdapterOptions {
    * Mission-bound access token is refused (fail closed).
    */
   scopeProjection?: ScopeProjectionMapping;
+  /**
+   * The deployment's enabled capabilities (`adapters/capabilities.ts`).
+   * Absent: every capability is on, which is the full reference provider. A
+   * disabled capability refuses with its path's standard error.
+   */
+  capabilities?: ReadonlySet<ProviderCapability>;
 }
 
 /**
@@ -583,6 +594,27 @@ export function buildProvider(opts: AdapterOptions): Provider {
   // correct (fail-closed) individual revocation, never a silent "every access
   // token introspects active:false" footgun.
   opts.tokenIssuanceStore ??= new TokenIssuanceStore();
+
+  // Deployment capability controls (adapters/capabilities.ts). A custom grant
+  // whose capability is off is never registered, so its URN answers
+  // `unsupported_grant_type`. It is also removed from every client's
+  // `grant_types`, since a registered client naming an unregistered grant type
+  // fails as invalid_client_metadata at its first lookup.
+  const enabled = (c: ProviderCapability): boolean => capabilityEnabled(opts, c);
+  const grantEnabled = new Map<string, boolean>([
+    [DEFERRED_GRANT_TYPE, enabled("deferred")],
+    [CHILD_JWT_BEARER_GRANT_TYPE, enabled("child-delegation")],
+    [MISSION_DISPATCH_GRANT_TYPE, enabled("templates")],
+    [TOKEN_EXCHANGE_GRANT_TYPE, TOKEN_EXCHANGE_CAPABILITIES.some(enabled)],
+  ]);
+  const clients = opts.capabilities
+    ? opts.clients.map((c) => {
+        const grantTypes = (c as { grant_types?: unknown }).grant_types;
+        return Array.isArray(grantTypes)
+          ? { ...c, grant_types: grantTypes.filter((g) => grantEnabled.get(String(g)) !== false) }
+          : c;
+      })
+    : opts.clients;
 
   // Effective Authority Set projection (#589): a stored oidc grant copies its
   // rar at issuance, so a refresh (or a late code redemption) could echo
@@ -894,7 +926,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
   }
 
   const configuration: Configuration = {
-    clients: opts.clients as never,
+    clients: clients as never,
     jwks: opts.jwks as never,
     // @spec mission#scope-projection — the OIDC vocabulary only (the prior
     // list less the synthetic "payments"): a resource `scope` value is the
@@ -1011,7 +1043,11 @@ export function buildProvider(opts: AdapterOptions): Provider {
         },
       },
       dPoP: { enabled: true },
-      revocation: { enabled: true },
+      revocation: { enabled: enabled("token-revocation") },
+      // With OIDC off, no grant can carry `openid`; userinfo and RP-initiated
+      // logout are removed too, so their routes answer 404.
+      userinfo: { enabled: enabled("oidc") },
+      rpInitiatedLogout: { enabled: enabled("oidc") },
       resourceIndicators: {
         enabled: true,
         defaultResource: () => opts.issuer,
@@ -1033,11 +1069,22 @@ export function buildProvider(opts: AdapterOptions): Provider {
       // the Intent itself carries no authority members (an Intent with the
       // retired proposed_authority member fails the closed-top-level rule).
       async mission_intent(ctx, value) {
-        if (value === undefined) return;
         const oidc = (ctx as {
           oidc: { params: Record<string, unknown>; client?: { clientId: string } };
         }).oidc;
         const params = oidc.params;
+        // Deployment capability controls (adapters/capabilities.ts): with OIDC
+        // off, an OIDC scope value is refused on every authorization request,
+        // with or without a Mission Intent (oidc-provider runs each extraParams
+        // validator on PAR and the authorization endpoint whether or not the
+        // parameter is present).
+        if (!enabled("oidc")) {
+          const oidcValues = splitScope(params.scope).oidc;
+          if (oidcValues.length > 0) {
+            throw new errors.InvalidScope("OIDC is not enabled on this deployment", oidcValues.join(" "));
+          }
+        }
+        if (value === undefined) return;
         try {
           const submission = kernel.validateSubmission(String(value));
           const { intent } = submission;
@@ -1334,7 +1381,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
   // validated lazily on first Client.find, i.e. at request time). `deferral_code`
   // (poll) and `deferred_authorization` (initiation) are declared so the token
   // endpoint does not strip them from ctx.oidc.params.
-  if (opts.deferrals) {
+  if (opts.deferrals && grantEnabled.get(DEFERRED_GRANT_TYPE)) {
     const deferrals = opts.deferrals;
     provider.registerGrantType(
       DEFERRED_GRANT_TYPE,
@@ -1346,17 +1393,20 @@ export function buildProvider(opts: AdapterOptions): Provider {
 
   // @spec child-delegation#child-client-identity — the RFC 7523 JWT-bearer
   // authorization grant a Child Mission's actor redeems AS ITSELF. Registered
-  // UNCONDITIONALLY (not behind an option) so the URN is in configuration.grantTypes
+  // whenever child delegation is on (the default; not behind a wiring option) so
+  // the URN is in configuration.grantTypes
   // before the child client is validated (clients validate lazily at Client.find),
   // and so a child client that lists this grant type is not rejected as
   // invalid_client_metadata. `assertion` is declared in the params set or the
   // token endpoint strips it; client_assertion/_type are auth params and survive.
-  provider.registerGrantType(
-    CHILD_JWT_BEARER_GRANT_TYPE,
-    (ctx) => handleChildJwtBearerGrant(opts, provider, ctx),
-    // `scope` (@spec mission#scope-projection) narrows the projected scope.
-    new Set(["assertion", "scope"]),
-  );
+  if (grantEnabled.get(CHILD_JWT_BEARER_GRANT_TYPE)) {
+    provider.registerGrantType(
+      CHILD_JWT_BEARER_GRANT_TYPE,
+      (ctx) => handleChildJwtBearerGrant(opts, provider, ctx),
+      // `scope` (@spec mission#scope-projection) narrows the projected scope.
+      new Set(["assertion", "scope"]),
+    );
+  }
 
   // @spec child-delegation#child-creation — Child Mission CREATION is now an RFC
   // 8693 token exchange (grant_type=token-exchange, requested_token_type=jwt),
@@ -1370,67 +1420,73 @@ export function buildProvider(opts: AdapterOptions): Provider {
   // Mission Template at /token. Every param the handler reads MUST be
   // declared here or stripGrantIrrelevantParams removes it from
   // ctx.oidc.params (pinned empirically on the other custom grants).
-  provider.registerGrantType(
-    MISSION_DISPATCH_GRANT_TYPE,
-    (ctx) => handleMissionDispatchGrant(provider, opts, ctx),
-    // `authorization_details` carries the dispatcher's authority proposal
-    // (@spec mission#authority-proposal), the same standard carriage as PAR
-    // and the child/expansion exchanges; it MUST be declared here or
-    // stripGrantIrrelevantParams removes it.
-    // `scope` (@spec mission#scope-projection) narrows the projected scope.
-    new Set(["template_id", "mission_intent", "dispatch_event_id", "authorization_details", "scope"]),
-  );
+  if (grantEnabled.get(MISSION_DISPATCH_GRANT_TYPE)) {
+    provider.registerGrantType(
+      MISSION_DISPATCH_GRANT_TYPE,
+      (ctx) => handleMissionDispatchGrant(provider, opts, ctx),
+      // `authorization_details` carries the dispatcher's authority proposal
+      // (@spec mission#authority-proposal), the same standard carriage as PAR
+      // and the child/expansion exchanges; it MUST be declared here or
+      // stripGrantIrrelevantParams removes it.
+      // `scope` (@spec mission#scope-projection) narrows the projected scope.
+      new Set(["template_id", "mission_intent", "dispatch_event_id", "authorization_details", "scope"]),
+    );
+  }
 
   // @spec id-continuation-assertion — the RFC 8693 token-exchange grant: an ICA
   // subject token in, a Mission-rooted continuation ID-JAG out. Registered
-  // UNCONDITIONALLY (mirrors CHILD_JWT_BEARER_GRANT_TYPE) so a client listing the
-  // URN is not rejected as invalid_client_metadata; the handler validates the
+  // whenever any token-exchange profile is on (the default; mirrors
+  // CHILD_JWT_BEARER_GRANT_TYPE) so a client listing the URN is not rejected as
+  // invalid_client_metadata; the handler validates the
   // wiring lazily. Every param the handler reads MUST be in this set or the token
   // endpoint strips it. PINNED empirically by the integration test: `resource` IS
   // stripped for this custom grant unless declared here (the resourceIndicators
   // machinery does NOT retain it), so it is declared. `scope` is not read by the
   // handler and so is not declared. client_assertion/_type are auth params and
-  // survive independently.
-  provider.registerGrantType(
-    TOKEN_EXCHANGE_GRANT_TYPE,
-    (ctx) => handleTokenExchangeGrant(opts, provider, ctx),
-    new Set([
-      "subject_token",
-      "subject_token_type",
-      "actor_token",
-      "actor_token_type",
-      "audience",
-      "resource",
-      "requested_token_type",
-      "authorization_details",
-      // @spec async-delegation — the async-delegation discriminator. Declared here
-      // or the token endpoint strips it (the file documents `resource` was
-      // empirically stripped for this custom grant); a test asserts its survival.
-      "request_refresh_token",
-      // @spec expansion / child-delegation — the possession-fixed delegation
-      // exchanges read these; each MUST be declared here or stripGrantIrrelevantParams
-      // removes it. `mission_intent` (widened/child intent), `child_actor`
-      // (child-creation), `parent` (non-authoritative cross-check), `deferral_code`
-      // (expansion deferred poll).
-      "mission_intent",
-      "child_actor",
-      "parent",
-      // @spec expansion#creation-request-id — the non-authoritative
-      // `predecessor` cross-check (mirrors `parent`) and the REQUIRED
-      // `creation_request_id`; each MUST be declared here or
-      // stripGrantIrrelevantParams removes it.
-      "predecessor",
-      "creation_request_id",
-      "deferral_code",
-      // @spec child-delegation#carryover-commit — the carryover result
-      // retrieval mode of the child-creation completion surface (no new
-      // endpoint and no new metadata member).
-      "carryover_replacement",
-      // @spec mission#scope-projection — declared so an exchange's requested
-      // `scope` is honored or refused, never stripped unseen.
-      "scope",
-    ]),
-  );
+  // survive independently. Each profile's branch is gated again inside
+  // handleTokenExchangeGrant.
+  if (grantEnabled.get(TOKEN_EXCHANGE_GRANT_TYPE)) {
+    provider.registerGrantType(
+      TOKEN_EXCHANGE_GRANT_TYPE,
+      (ctx) => handleTokenExchangeGrant(opts, provider, ctx),
+      new Set([
+        "subject_token",
+        "subject_token_type",
+        "actor_token",
+        "actor_token_type",
+        "audience",
+        "resource",
+        "requested_token_type",
+        "authorization_details",
+        // @spec async-delegation — the async-delegation discriminator. Declared here
+        // or the token endpoint strips it (the file documents `resource` was
+        // empirically stripped for this custom grant); a test asserts its survival.
+        "request_refresh_token",
+        // @spec expansion / child-delegation — the possession-fixed delegation
+        // exchanges read these; each MUST be declared here or stripGrantIrrelevantParams
+        // removes it. `mission_intent` (widened/child intent), `child_actor`
+        // (child-creation), `parent` (non-authoritative cross-check), `deferral_code`
+        // (expansion deferred poll).
+        "mission_intent",
+        "child_actor",
+        "parent",
+        // @spec expansion#creation-request-id — the non-authoritative
+        // `predecessor` cross-check (mirrors `parent`) and the REQUIRED
+        // `creation_request_id`; each MUST be declared here or
+        // stripGrantIrrelevantParams removes it.
+        "predecessor",
+        "creation_request_id",
+        "deferral_code",
+        // @spec child-delegation#carryover-commit — the carryover result
+        // retrieval mode of the child-creation completion surface (no new
+        // endpoint and no new metadata member).
+        "carryover_replacement",
+        // @spec mission#scope-projection — declared so an exchange's requested
+        // `scope` is honored or refused, never stripped unseen.
+        "scope",
+      ]),
+    );
+  }
 
   // @spec issuance-grant#effective-set-projection (#617 review 1) — stamp
   // `Retry-After` on the transient refusal. oidc-provider's error handler
@@ -1946,8 +2002,19 @@ export function resourcesForAudiences(
   return out;
 }
 
+/** The capability that enables each lifecycle-endpoint operation. */
+const LIFECYCLE_OPERATION_CAPABILITY: Readonly<Record<string, ProviderCapability>> = {
+  revoke: "lifecycle-revoke",
+  suspend: "lifecycle-extended",
+  resume: "lifecycle-extended",
+  complete: "lifecycle-extended",
+  contain: "containment",
+  discharge: "discharge",
+};
+
 function makeRoutes(provider: Provider, opts: AdapterOptions) {
   const { kernel } = opts;
+  const enabled = (c: ProviderCapability): boolean => capabilityEnabled(opts, c);
   const jwksResolver = createLocalJWKSet(opts.publicJwks as never);
   // @spec txn-authorization#two-phase-expiry — the admitted pending workflows.
   const txnWorkflows = newTxnWorkflows();
@@ -2161,8 +2228,9 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     }
 
     // --- Signed Status (@spec status#mission-status-response) ---
+    // A deployment with Mission Status off serves no such route (404).
     const statusMatch = ctx.path.match(/^\/missions\/([^/]+)\/status$/);
-    if (statusMatch && ctx.method === "GET") {
+    if (statusMatch && ctx.method === "GET" && enabled("status")) {
       const principal = authenticateService(ctx);
       if (!principal) return;
       const statusNonce = str(ctx.query.nonce);
@@ -2198,7 +2266,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     // The per-mission status_list.uri and the token's `sub` both equal this URL.
     const statusListMatch = ctx.path.match(/^\/statuslist\/([^/]+)$/);
     if (statusListMatch && ctx.method === "GET") {
-      if (statusListMatch[1] !== STATUS_LIST_ID || !opts.statusListPublisher) {
+      if (statusListMatch[1] !== STATUS_LIST_ID || !opts.statusListPublisher || !enabled("status-list")) {
         ctx.status = 404;
         ctx.body = { error: "not_found" };
         return;
@@ -2353,6 +2421,14 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           ctx.body = recovered;
           return;
         }
+      }
+      // Deployment capability controls (adapters/capabilities.ts): an operation
+      // this deployment disabled is refused `invalid_request` before any Mission
+      // is looked up, so the refusal names the deployment, never the Mission.
+      const operationCapability = LIFECYCLE_OPERATION_CAPABILITY[String(body.operation)];
+      if (operationCapability && !enabled(operationCapability)) {
+        sendInvalidRequest(`operation ${String(body.operation)} is not enabled on this deployment`);
+        return;
       }
       // @spec discharge#discharge-operation — the fifth operation: it changes no
       // Mission state, so it is handled entirely outside the state machine
@@ -2532,7 +2608,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       const missionId = protectedEventMatch[1] as string;
       const sources = opts.protectedEventSources;
       const issuerEvidence = opts.issuerEvidence;
-      if (!sources || !issuerEvidence) {
+      if (!sources || !issuerEvidence || !enabled("containment")) {
         ctx.status = 501;
         ctx.body = { error: "temporarily_unavailable" };
         return;
@@ -2968,7 +3044,9 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
             return !!issuance && (await isGrantLive(opts, provider, issuance.grantId));
           },
           now: () => new Date(),
-          ...(opts.txnAuthorization ? { txn: opts.txnAuthorization } : {}),
+          ...(opts.txnAuthorization && enabled("transaction-authorization")
+            ? { txn: opts.txnAuthorization }
+            : {}),
           ...(opts.scopeProjection ? { scopeProjection: opts.scopeProjection } : {}),
         },
         ctx,
@@ -2991,7 +3069,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     // approval + consent-evidence surface.
     if (ctx.path === "/templates" && ctx.method === "POST") {
       if (!requireServiceToken(ctx)) return;
-      if (!opts.templateStore) {
+      if (!opts.templateStore || !enabled("templates")) {
         ctx.status = 501;
         ctx.body = { error: "temporarily_unavailable" };
         return;
@@ -3029,7 +3107,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     const templateLifecycleMatch = ctx.path.match(/^\/templates\/([^/]+)\/lifecycle$/);
     if (templateLifecycleMatch && ctx.method === "POST") {
       if (!requireServiceToken(ctx)) return;
-      if (!opts.templateStore) {
+      if (!opts.templateStore || !enabled("templates")) {
         ctx.status = 501;
         ctx.body = { error: "temporarily_unavailable" };
         return;
@@ -3060,7 +3138,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     // lives on the resource side, where the reference is joined.
     if (ctx.path === "/dev/ordinary-token" && ctx.method === "POST") {
       if (!requireServiceToken(ctx)) return;
-      const dev = opts.devOrdinaryIssuance;
+      const dev = enabled("dev-token") ? opts.devOrdinaryIssuance : undefined;
       if (!dev) {
         ctx.status = 501;
         ctx.body = { error: "temporarily_unavailable" };
@@ -3105,21 +3183,23 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // @spec status#as-metadata, status#status-operational — issuer ceiling
       // shared with the runtime's published, enforced per-class bounds.
       meta.mission_max_stale_seconds = MISSION_MAX_STALE_SECONDS;
+      // Each capability member below is advertised only where the deployment
+      // enables it (adapters/capabilities.ts); the default enables all of them.
       // @spec attenuation#request-discovery: this AS issues Mission-bound
       // attenuation roots and derives their authority from the Authority Set.
-      meta.mission_attenuation_supported = true;
+      if (enabled("attenuation")) meta.mission_attenuation_supported = true;
       // @spec child-delegation#discovery: this AS accepts the child-creation
       // request and enforces the child-delegation controls of that profile.
-      meta.mission_child_delegation_supported = true;
+      if (enabled("child-delegation")) meta.mission_child_delegation_supported = true;
       // @spec id-continuation-assertion#discovery: this AS runs the RFC 8693
       // token-exchange continuation grant (ICA subject token -> continuation
       // ID-JAG), signed by the dedicated as-continuation key on the jwks_uri.
-      meta.identity_continuation_supported = true;
+      if (enabled("continuation")) meta.identity_continuation_supported = true;
       // @spec async-delegation#discovery: this AS runs the async-delegation
       // continuation transport (RFC 8693 token exchange with request_refresh_token
       // -> a per-delegation grant with a rotated, sender-constrained refresh token).
-      meta.delegated_refresh_token_profile_supported = true;
-      meta.service_catalog_endpoint = `${opts.issuer}/service-catalog`;
+      if (enabled("async-delegation")) meta.delegated_refresh_token_profile_supported = true;
+      if (enabled("service-catalog")) meta.service_catalog_endpoint = `${opts.issuer}/service-catalog`;
       meta.introspection_endpoint = `${opts.issuer}/introspect`;
       // @spec mission#caller-authorization-and-minimization (cleanup, issue
       // #541) — advertise the introspection endpoint's actual authentication
@@ -3129,7 +3209,9 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // @spec txn-authorization#challenge-redemption — advertised only where the
       // endpoint is CONFIGURED. An AS without transaction authorization answers
       // 501 there, and advertising it would send clients to a dead endpoint.
-      if (opts.txnAuthorization) meta.transaction_authorization_endpoint = `${opts.issuer}/transaction`;
+      if (opts.txnAuthorization && enabled("transaction-authorization")) {
+        meta.transaction_authorization_endpoint = `${opts.issuer}/transaction`;
+      }
       // @spec mission#other-types, I-D.draft-zehavi-oauth-rar-metadata — the
       // metadata endpoint is the source of truth for "AS-supported types"; its
       // key set is authorization_details_types_supported (below, already
