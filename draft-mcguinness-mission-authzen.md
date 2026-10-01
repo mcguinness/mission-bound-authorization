@@ -179,6 +179,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-approved-set-verification:
+    title: "Mission Approved-Set Verification for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approved-set-verification.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -632,9 +640,11 @@ so a change in state never mints a new `policy_view_id`
   integrity-anchor encoded form ({{I-D.draft-mcguinness-oauth-mission}}).
   Not carried on the issuance profile's baseline `mission` claim or
   default introspection projection; a PEP includes it only where it
-  holds it under that profile's Local Approved-Set Verification
-  profile or introspection's disclosure privilege
-  ({{I-D.draft-mcguinness-oauth-mission}}). The mandatory identity
+  holds it under the Local Approved-Set Verification profile
+  ({{I-D.draft-mcguinness-oauth-mission-approved-set-verification}},
+  Section "Local Approved-Set Verification") or introspection's
+  disclosure privilege ({{I-D.draft-mcguinness-oauth-mission}}). The
+  mandatory identity
   check of {{pdp-request}} does not depend on it; a PDP that receives
   it and independently verifies it MAY use it as a further audit
   correlator, never as a substitute for that check.

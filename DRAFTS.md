@@ -821,6 +821,22 @@ time above); the Mandate makes a Mission's committed facts portable and
 independently verifiable; Audit Transparency makes all Mission evidence
 tamper-evident in an append-only log.
 
+#### Mission Approved-Set Verification for OAuth 2.0
+
+Lets a Resource Server, policy decision point, or auditor check that a
+token's carried authority is a subset of the Mission's complete
+approved Authority Set, instead of relying on the authorization
+server's subset assertion alone. The verifying party retrieves the
+complete set over a channel authenticated to the Mission issuer,
+recomputes `authority_hash`, and fails closed on any mismatch or
+failed subset test; a second tier also requires a match against an
+independently retained `authority_hash`. The retrieval surface
+refuses a caller without the `authority_hash` disclosure privilege
+for every audience the Mission has issued to, and Mission Status is
+not a compatible retrieval surface. The OAuth binding keeps `authority_hash` itself.
+
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-approved-set-verification.html)
+
 #### Mission Mandate
 
 A signed, portable, independently verifiable statement of a Mission's

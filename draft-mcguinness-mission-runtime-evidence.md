@@ -133,6 +133,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-approved-set-verification:
+    title: "Mission Approved-Set Verification for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approved-set-verification.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -362,7 +370,9 @@ canonicalization, and integrity envelope a deployment emits.
       so a PDP records either only when it has direct Mission-record
       access, holds introspection's `authority_hash` disclosure
       privilege, or the request carried it under the Local
-      Approved-Set Verification profile.
+      Approved-Set Verification profile
+      ({{I-D.draft-mcguinness-oauth-mission-approved-set-verification}},
+      Section "Local Approved-Set Verification").
 
     `policy_version`:
     : OPTIONAL. From the request's Mission reference, when known.
