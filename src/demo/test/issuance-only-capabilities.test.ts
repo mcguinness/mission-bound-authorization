@@ -484,6 +484,8 @@ describe("the issuance-only launcher refuses every excluded path (#873)", () => 
     }
     expect(meta.mission_bound_authorization_supported).toBe(true);
     expect(meta.introspection_endpoint).toBe(`${asUrl}/introspect`);
+    // The revocation-propagation bound the 300 s access-token lifetime is sized to.
+    expect(meta.mission_max_stale_seconds).toBe(300);
   });
 });
 

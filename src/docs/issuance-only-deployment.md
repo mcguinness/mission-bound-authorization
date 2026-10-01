@@ -463,7 +463,7 @@ as `buildAuthorizationServer`'s `capabilities` option
 profile is always on. Of the optional capabilities, only the lifecycle
 endpoint's `revoke` is enabled. Every other one is off, and a request for it
 gets the standard refusal its path already uses. With no `capabilities` set,
-the assembly is the full reference provider, as before.
+the assembly is the full reference provider.
 
 How a capability is turned off:
 
@@ -548,9 +548,67 @@ published it, then `pnpm install --frozen-lockfile` from `src/`.
 
 | Draft | Revision | Role |
 |---|---|---|
-| `draft-mcguinness-oauth-mission.md` (the OAuth binding) | `ee6a2e24` (the sections this deployment relies on are unchanged since `4777b582`; the later commits are editorial, in `mission-record` and `standing-consent-bases`) | Normative: Mission intake, derivation, approval, record, issuance, scope projection, introspection, lifecycle |
+| `draft-mcguinness-oauth-mission.md` (the OAuth binding) | `ee6a2e24` (the sections this deployment relies on are unchanged since `4777b582`; the later commits are editorial, in `mission-record` and `standing-consent-bases`) | Normative: Mission intake, derivation, approval, record, issuance, scope projection, introspection (`{#introspection}`), and the authenticated revocation means (§ Revocation, `{#revocation}`), which a deployment-defined surface satisfies |
 | `draft-mcguinness-oauth-mission-resource-access.md` | `7fc9ef45` | Normative: the `mission_resource_access` type and its scope-projection conditions |
 | `draft-mcguinness-mission-architecture.md` | `e2dda50a` | Informative: the entry ramp, assurance claims and the Deployment Profile shape |
+| `draft-mcguinness-oauth-mission-status.md` | `4fe0d0b0` (the only change since the `9311ba74` that `SPEC_VERSIONS.md` records is the retired Status section) | Informative: the semantics the lifecycle `revoke` follows, and the revocation-propagation sizing. Section by section below |
+| `draft-mcguinness-mission-control-plane.md` | `909a3ee7` | Informative: implementation discipline on the revoke path. The transition, its `nonce` claim and the response commit together (`{#serialization}`); a terminal Mission leaves a tombstone (`{#tombstones}`); lifecycle fan-out drains per request (`{#fanout}`). No claim here depends on it |
+| `draft-mcguinness-oauth-mission-issuance-grant.md` | `e2dda50a` | Not relied on. The code-exchange and refresh projections (`rarThroughEffectiveSet`) cite its `{#effective-set-projection}`, which governs a consuming AS. This AS is the Mission's issuer, and with containment and discharge off the effective set is the Authority Set |
+
+**The Mission Status companion, section by section.** The lifecycle endpoint
+here is the OAuth binding's deployment-defined revocation surface
+(`{#revocation}`). Its `revoke` follows these sections of the Status
+companion at `4fe0d0b0`:
+
+- § Mission Lifecycle Endpoint (`{#mission-lifecycle-endpoint}`), its
+  Operations subsection: the `revoke` operation and the REQUIRED `nonce`.
+  Walkthrough step 6.
+- § Legal Transitions (`{#legal-transitions}`): `revoke` from `active` to
+  `revoked`. Walkthrough step 6.
+- § Idempotency and Conflicts (`{#idempotency}`): deduplication by
+  principal, Mission and `nonce`; a byte-identical retransmit replays the
+  original response; the same `nonce` on a different request is refused
+  `invalid_request`; an illegal operation is 409 `conflict`.
+  `control-plane lifecycle response boundary > replays a successful request before any state-dependent check, after the state moved on`,
+  `> refuses a divergent retry without retaining it, leaving the committed success replayable`,
+  `> conflicts on the same retry when no claim was retained, which is what the claim fixes`.
+- The endpoint's Authorization subsection: a `mission_lifecycle` grant is
+  required (here the `svc:console` service principal holds it), and a caller
+  without it gets the not-found shape of § Error Responses
+  (`{#mission-status-errors}`). No test yet for a state operation; the
+  distinct discharge grant is
+  `the discharge operation on the lifecycle endpoint > mission_lifecycle does not imply mission_discharge`.
+- § Revocation Propagation (`{#revocation-enforcement-classes}`) and its
+  Recommended Access-Token TTL subsection: the AS advertises
+  `mission_max_stale_seconds` 300 (§ Authorization Server Metadata,
+  `{#as-metadata}`) and issues 300 s access tokens. The JWT-only
+  configuration's revocation bound is that lifetime; introspection is the
+  upgrade. The value 300 at the launcher:
+  `the issuance-only launcher refuses every excluded path (#873) > the metadata advertises only the enabled surface`;
+  the 300 s lifetime is walkthrough step 3.
+
+Of § Conformance's (`{#conformance}`) extensions, this deployment meets only
+Revocation propagation: the advertisement and the token sizing above. It does
+not claim Mission Lifecycle, because the reference endpoint's wire differs
+from the companion's:
+
+- it is `POST /missions/{id}/lifecycle` with a JSON body, not the
+  `mission_lifecycle_endpoint` URL with a form-urlencoded body carrying
+  `mission_id`;
+- the caller authenticates with an `x-service-token` header, not mTLS, a
+  sender-constrained access token or private-key JWT (the endpoint's
+  Authentication subsection);
+- a transition answers `{"id", "state", "version"}` JSON, not a signed
+  Mission Status Response;
+- `mission_lifecycle_endpoint` and its auth-methods member are not
+  advertised.
+
+Not used here: § Mission Status Operation (`{#mission-status}`), off (§8);
+the Status List companion (`draft-mcguinness-oauth-mission-status-list.md`),
+off (§8); `suspend`, `resume` and `complete`, off (§8); and § Token
+Introspection Mission Projection (`{#introspection-projection}`). The
+introspection response carries the OAuth binding's `mission` member
+(`{#introspection}`), with no `fresh_until`, and is not RFC 9701-signed.
 
 **RFCs used on this path:**
 
