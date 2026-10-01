@@ -875,7 +875,7 @@ spine by the question each answers.
  govern       Status (pull), Signals (push),
               Expansion (widen), Completion (retire)
                         |
- enforce      Runtime contract -> AuthZEN binding:
+ enforce      Runtime contract -> AuthZEN profile:
  each action  a PDP permit before every consequential action
                         |
  run and      Harness (continuity is not authority),
@@ -979,7 +979,7 @@ permitted under this Mission now? The boundary: the last controllable
 point between agent and resource. Owners: the runtime profile, the
 decision contract with parameter binding, custody, and fail-closed
 behavior ({{I-D.draft-mcguinness-mission-runtime}}); its AuthZEN
-binding, the concrete decision API
+profile, the concrete decision API
 ({{I-D.draft-mcguinness-mission-authzen}}); the runtime evidence
 companion, the Decision Evidence, Execution Evidence, and Refusal
 Record objects ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
@@ -1104,7 +1104,7 @@ actually take, and the second is the reference:
   not imply identical rungs or capabilities.
 
 **Reference security architecture**:
-: core plus runtime enforcement, its AuthZEN binding, runtime
+: core plus runtime enforcement, its AuthZEN profile, runtime
   evidence (the decision and execution objects AuthZEN consumes),
   and a freshness source, Status being the reference choice; the
   substrate contract arrives with them as runtime and AuthZEN's
@@ -1143,7 +1143,7 @@ one package:
    (OAuth, the MAS, UMA, and GNAP), the issuance grant, cross-domain
    projection, child delegation, offline attenuation.
 3. **Runtime Enforcement**: the runtime contract, the AuthZEN
-   binding, parameter binding, custody, metering.
+   profile, parameter binding, custody, metering.
 4. **Agent Execution Governance**: the harness, orchestration,
    shaping, discovery.
 5. **Evidence and Accountability**: consent evidence, the Mandate,
@@ -1816,8 +1816,8 @@ and the audit horizon participates in the governance record.
 |---|---|---|---|
 | Mission Identifier and Issuer | An opaque, non-reused identifier with at least 128 bits of entropy and no semantic content, plus the issuer URL; together they name exactly one Mission. The kernel requires stability, non-reassignment, and unguessability, not this syntax | The OAuth binding: Mission Record, Mission Identifier Format | Every companion: decisions, evidence, harness bindings, the state surfaces, the audit statement subject, the Mandate |
 | Lifecycle state space | The states of {{the-mission}}, open to companion-defined states, with the only-`active` rule, fail-safe unrecognized states, and a freshness source with a stated staleness bound | The OAuth binding (state space, only-`active`); the status and runtime profiles (freshness); Status and Signals (observation) | Runtime per-class re-check (fail closed on staleness), harness pause, suppress, and terminate, the orchestrator's unwind trigger, the Mandate (state as of minting) |
-| Authority Set representation | Authorization-details entries ({{RFC9396}}), each naming resource, actions, and constraints, under the subset rule (derived or delegated authority is never broader) and, for `mission_resource_access`, the Common Constraints vocabulary (registered names with fixed subset and intersection rules) | The OAuth binding: Mission Authority, Subset Rule; the Mission Resource Access Profile: Common Constraints | Runtime and the AuthZEN binding, the MAS, Expansion and Completion, Child Delegation and Offline Attenuation, Consent Evidence, the Mandate |
-| Integrity-anchor envelope | A committed object hashed over a `typ`-domain-separated, issuer-bound envelope with fixed canonicalization and an algorithm-prefixed encoding a verifier recognizes or rejects (unknown prefixes refuse; no downgrade); the `typ` space is the extension point | The OAuth binding: Integrity Anchors, Canonicalization Rules, Extensibility | Consent Evidence, Shaping, the runtime layer and AuthZEN binding (`mission-policy-view`), Orchestration, the Mandate, Audit Transparency |
+| Authority Set representation | Authorization-details entries ({{RFC9396}}), each naming resource, actions, and constraints, under the subset rule (derived or delegated authority is never broader) and, for `mission_resource_access`, the Common Constraints vocabulary (registered names with fixed subset and intersection rules) | The OAuth binding: Mission Authority, Subset Rule; the Mission Resource Access Profile: Common Constraints | Runtime and the AuthZEN profile, the MAS, Expansion and Completion, Child Delegation and Offline Attenuation, Consent Evidence, the Mandate |
+| Integrity-anchor envelope | A committed object hashed over a `typ`-domain-separated, issuer-bound envelope with fixed canonicalization and an algorithm-prefixed encoding a verifier recognizes or rejects (unknown prefixes refuse; no downgrade); the `typ` space is the extension point | The OAuth binding: Integrity Anchors, Canonicalization Rules, Extensibility | Consent Evidence, Shaping, the runtime layer and AuthZEN profile (`mission-policy-view`), Orchestration, the Mandate, Audit Transparency |
 | Issuer key material | Signing keys resolvable from `issuer`; across a rotation each key identifier stays resolvable while artifacts signed under it remain within the audit horizon | The OAuth binding: Signing and Key Rotation | Verifiers of Mission-bound credentials, Consent Evidence, the Mandate, the signed state surfaces, Audit Transparency |
 | Audit horizon | The deployment-declared retention window: at least the Mission's lifetime plus a declared post-terminal period | The OAuth binding: Mission Record | Consent and runtime evidence and Audit Transparency (retention), the MAS (record retention), the security model's retention analysis |
 {: title="Substrate primitives in their OAuth realization"}
@@ -2654,7 +2654,7 @@ The levels, cumulative:
 : adds a PEP/PDP decision on every consequential action, a trusted
   state source with a published staleness bound, parameter binding,
   and runtime evidence ({{I-D.draft-mcguinness-mission-runtime}} and
-  its AuthZEN binding). Grants per-action enforcement and revocation
+  its AuthZEN profile). Grants per-action enforcement and revocation
   bounded, for gated classes, by the staleness bound plus the permit
   window plus the class's execution bound, and by token lifetime for
   ungated paths.
@@ -2670,7 +2670,7 @@ The levels, cumulative:
   Proof obligations: PEP-placement completeness and the declared
   freshness source and bound. Documents: Baseline plus the substrate
   contract (the kernel runtime and AuthZEN consume normatively),
-  runtime, its AuthZEN binding, runtime evidence, and a concrete
+  runtime, its AuthZEN profile, runtime evidence, and a concrete
   freshness source, Status being the reference choice.
 
 **Governed Agent** (recommended for AI agents):
@@ -2944,7 +2944,7 @@ controls, in one of two proof forms:
   authenticated requesting and executing parties and enforced on
   that same channel, with request cache-key equality, its validity
   window, and the applicable use controls; the runtime permit of the
-  AuthZEN binding ({{I-D.draft-mcguinness-mission-authzen}})
+  AuthZEN profile ({{I-D.draft-mcguinness-mission-authzen}})
   discharges it under exactly those conditions.
 
 A parameter binding alone makes a response neither form, and an
