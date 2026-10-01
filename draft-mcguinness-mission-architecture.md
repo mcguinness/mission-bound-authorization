@@ -1645,7 +1645,7 @@ Set, the lifecycle state, and Child Mission lineage
 an actor chain as authorization provenance is the gap the Mission's
 lineage exists to close.
 
-## Three Objects, Three Lifecycles {#three-objects}
+## Agent Identity, Agent Deployment, and Mission {#three-objects}
 
 Separately from the authorization flow's four objects
 ({{the-mission}}), a deployment that runs agents under both an agent
