@@ -236,6 +236,10 @@ the store.
      L229-233). oidc-provider issues the authorization code on that later
      request.
 
+  The authorization code's lifetime is clamped to the Mission's `expires_at`
+  like every other credential; a resume reached with under one second of
+  Mission left, or after it, redirects `access_denied` and issues no code.
+
   The refresh token inherits the binding by construction: `createRefreshToken`
   copies the code's `grantId` (`lib/helpers/grant_common.js`).
 - **Resolution.** `kernel.findByGrant`, then the delegation-family store, then
@@ -303,24 +307,42 @@ the store.
   - `scope projection at the token endpoint (@spec mission#scope-projection) > a safe projection carries exactly the projected scope, and the plain RS allows the in-scope operation and refuses the other with 403 insufficient_scope` (`scope-projection.test.ts`)
   - `mission_error wire carriage: derivations_exhausted (@spec mission#error-mapping) > a Mission capped at requested_derivation_limit 1 refuses its second derivation with invalid_grant + mission_error=derivations_exhausted` (`tracer.test.ts`)
   - `async-delegation single count (@spec async-delegation) > regression: an ordinary code-flow refresh STILL increments derivation_count` (`async-delegation.test.ts`)
+  - `credentials never outlive the Mission (@spec mission#mission-bound-tokens) > code exchange: the access token, refresh token and authorization code all expire no later than a Mission ending inside their lifetimes` (`exp-clamp.test.ts`)
+  - `credentials never outlive the Mission (@spec mission#mission-bound-tokens) > a rotating refresh: the rotated refresh token and the new access token expire no later than the Mission` (`exp-clamp.test.ts`)
+  - `credentials never outlive the Mission (@spec mission#mission-bound-tokens) > a credential minted with under one second of Mission left is refused, never given a 0 s or overrunning lifetime` (`exp-clamp.test.ts`)
+  - `credentials never outlive the Mission (@spec mission#mission-bound-tokens) > an authorization resumed with under one second of Mission left redirects access_denied, never invalid_grant, and issues no code` (`exp-clamp.test.ts`)
+  - `async-delegation terminal paths (@spec async-delegation) > fractional-second boundary: a family refresh token lives exactly until expires_at, and a family refresh with 0.9 s left is refused mission_expired with no refresh token saved (@spec mission#mission-bound-tokens)` (`async-delegation.test.ts`)
 - **Tests (kernel-level):** `single-process control-plane fault boundaries > a derivation admitted from a stale snapshot cannot overshoot the cap` (`control-plane-faults.test.ts`).
 - **Unsupported or residual.**
   - The counter is not coupled to the token it pays for (§4.3; #250).
-  - **`exp` is not bounded by `expires_at` on this path.**
-    `getResourceServerInfo` returns
-    `resourceServerInfoFor(resource, accessTokenTTL ?? 300)` without reading
-    the Mission, and the `ttl` configuration overrides only `RefreshToken`.
-    oidc-provider's `AccessTokenTTL` (`lib/helpers/defaults.js` L347-350)
-    takes the resource server's value. An access token minted in a Mission's
-    last 300 seconds therefore outlives the Mission by up to 300 seconds,
-    which `{#mission-bound-tokens}` forbids. The deferred, child and dispatch
-    mints clamp their TTL; the code and refresh mints do not. Code reading;
-    no test yet.
-  - The approval grant's refresh token keeps oidc-provider's 14-day default.
-    Only a delegation-family refresh token is clamped to `expires_at`
-    (`ttl.RefreshToken`). A refresh after `expires_at` is refused by the gate
-    (`lifecycle (@spec status#legal-transitions) > expiry clock: past expires_at the mission is expired and non-deriving`, kernel-level),
-    but the refresh token's own lifetime exceeds the Mission's.
+  - **`exp` is bounded by `expires_at` on every mint.** The `ttl` configuration
+    in `buildProvider` sets `AccessToken`, `RefreshToken`, `AuthorizationCode`
+    and `IdToken` through one clamp, `clampToMission`: oidc-provider's
+    configured lifetime, or the Mission's remaining whole seconds, whichever is
+    shorter. A delegation-family refresh token has no configured cap, so it
+    lives exactly until `expires_at`. The Mission resolves from the token's
+    grant as issuance resolves it (`kernel.findByGrant`, the family store, the
+    bound-grant index), and a grant that was never Mission-bound keeps the
+    configured lifetime unchanged. oidc-provider evaluates a lifetime before
+    `extraTokenClaims` runs the gate (`lib/models/formats/opaque.js` L28 before
+    L39), and saves a rotated refresh token before the access token is gated
+    (L168 before L216), so the hook meets an expired Mission first. It never
+    returns 0, a negative lifetime, or a 1 s floor: past `expires_at` it runs
+    `gateActive`, which commits the expiry and refuses as the gate does, and
+    with under one second left it refuses too. A token-endpoint mint refuses
+    `invalid_grant` `mission_expired`; the authorization code, minted at the
+    authorization endpoint's resume, refuses `access_denied`
+    (`{#error-mapping}`, an authorization decision refused by AS policy),
+    because RFC 6749 Section 4.1.2.1 defines no `invalid_grant` there. The
+    deferred, child, dispatch, async-delegation and expansion mints keep their
+    own clamps, whose 1 s floors the access-token clamp overrides; the hook
+    also bounds the deferred token, which its own clamp bounded only by
+    `approved_until`, and the family refresh's access token, which took a flat
+    300 s.
+  - **A refresh after `expires_at` is refused by the refresh token's own
+    expiry,** before the gate: `invalid_grant` with no `mission_error`, and no
+    lazy expiry commit. This holds for the approval grant and a delegation
+    family alike.
   - **Revoke versus issue.** Between the gate and the signature, `save()`
     awaits the customizer and `JWT.sign`. A lifecycle request can commit and
     acknowledge a revocation in that window, and the gated token is still
@@ -346,6 +368,10 @@ the store.
   (`MissionGrantError`). Where a value applies (`mission_revoked`,
   `mission_expired`, `derivations_exhausted`), the `grant.error` listener adds
   `mission_error`; a suspended Mission gets none.
+  Both saves evaluate the token's lifetime (`clampToMission`) before any gate,
+  so the rotated refresh token, a family token included, is never saved past
+  the Mission's `expires_at`. The presented token is still consumed first
+  (L137).
 - **Rotation rule.** `rotateRefreshToken` always rotates a family grant.
   Otherwise it inlines oidc-provider's default (`lib/helpers/defaults.js`
   L528-547): rotate a public client's token that is not sender-constrained,
@@ -612,7 +638,6 @@ none of that work.
 
 These gaps are not named in #250's items, and their owner is not verified:
 
-- the `exp` bound (§3.5);
 - the approval commit ordering against code issuance (§3.4);
 - the state gate after rotation (§3.6);
 - external Subjects (§3.2).
@@ -625,14 +650,12 @@ These gaps are not named in #250's items, and their owner is not verified:
    code (`{#approval-event}` step 7). §3.4.
 2. An authoritative issuance commit that couples the derivation count to the
    access token (#250). §4.2, §4.3.
-3. An access-token `exp` no later than `expires_at` on the code and refresh
-   paths (`{#mission-bound-tokens}`). §3.5.
-4. Refusing a derivation answered after an acknowledged revocation when its
+3. Refusing a derivation answered after an acknowledged revocation when its
    gate ran before the revocation commit (`{#issuance-gating}`). §3.5.
-5. External Subjects (`{#approval-event}` step 2), refused
+4. External Subjects (`{#approval-event}` step 2), refused
    `approval_forbidden`. §3.2.
-6. An operation identity and artifact replay for provider mints. §4.4.
-7. Durable provider state. Grants, codes, refresh tokens, the issuance index
+5. An operation identity and artifact replay for provider mints. §4.4.
+6. Durable provider state. Grants, codes, refresh tokens, the issuance index
    and the grant index do not survive a restart, so every refresh after a
    restart is refused. A file-backed kernel alone establishes no durability
    for them. §4.5.
@@ -653,8 +676,8 @@ These gaps are not named in #250's items, and their owner is not verified:
 - The achieved authentication context is not retained (§3.1).
 - The approval-grant destruction is not durable, and an earlier grant from a
   repeated decision is not destroyed; the gate refuses both (§3.6).
-- The approval grant's refresh token lifetime is not bounded by
-  `expires_at` (§3.5).
+- A refresh presented after `expires_at` is refused by the refresh token's
+  own expiry, with no `mission_error` (§3.5).
 - The JWT-only `plain-rs` accepts a token until `exp` plus its clock
   tolerance (§3.6).
 
@@ -666,8 +689,8 @@ These gaps are not named in #250's items, and their owner is not verified:
 - Binding: record and code atomicity; an abandoned redirect; a crash between
   the record commit and the binding; the grant count after a repeated
   decision; a lineage resolving to more than one Mission (§3.4).
-- Issuance: the `exp` bound; revoke versus issue; any failure after the
-  counter `UPDATE` (§3.5, §4.3).
+- Issuance: revoke versus issue; any failure after the counter `UPDATE`
+  (§3.5, §4.3).
 - Gating: a rotating refresh refused by the state gate; refresh against an
   earlier grant after revocation (§3.6).
 - Scope projection: `derivation_count` after a code or refresh projection
@@ -715,10 +738,13 @@ These are honest workarounds and ordering facts, not protocol requirements.
 - **`rotateRefreshToken` replaces the default.** Supplying it removes
   oidc-provider's own rule, so the reference inlines that rule for every
   non-family grant (`lib/helpers/defaults.js` L528-547).
-- **Access-token lifetime.** `ttl` overrides only `RefreshToken`. The access
-  token's TTL is the resource server's `accessTokenTTL`
-  (`lib/helpers/defaults.js` L347-350), set per audience by
-  `getResourceServerInfo`.
+- **Credential lifetimes.** `ttl` sets `AccessToken` (the resource server's
+  `accessTokenTTL`, or 1 hour), `RefreshToken` (14 days; a delegation-family
+  token is uncapped), `AuthorizationCode` (60 seconds) and `IdToken` (1 hour),
+  each clamped to the Mission's `expires_at` by `clampToMission`. Each
+  configured value is oidc-provider 9.10.0's own default
+  (`lib/helpers/defaults.js`), so a token under a grant that is not
+  Mission-bound is unchanged.
 - **Introspection.** The adapter owns `/introspect` (§3.8). Its comment
   records that JWT access tokens cannot use oidc-provider's endpoint, a spike
   finding not re-verified here.

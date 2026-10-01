@@ -29,6 +29,7 @@ import {
 import {
   calculateJwkThumbprint,
   createRemoteJWKSet,
+  decodeJwt,
   exportJWK,
   generateKeyPair,
   importJWK,
@@ -254,6 +255,25 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
     // value unchanged: the same string, never re-derived from the replay's own
     // (later) clock.
     expect(secondBody.mission_expires_at).toBe(body.mission_expires_at);
+  });
+
+  it("a dispatched instance ending inside the token lifetime gets an access token that expires no later than it (@spec mission#mission-bound-tokens)", async () => {
+    const created = await createTemplateAdmin(readOnlyTemplateBody());
+    const { template_id } = (await created.json()) as { template_id: string };
+    const intent = JSON.stringify({
+      intent: {
+        goal: "reconcile Acme invoices",
+        target_resources: [RESOURCE],
+        expires_at: new Date(Date.now() + 60_000).toISOString(), // inside the 300 s lifetime
+      },
+    });
+    const res = await dispatch({ templateId: template_id, intent, dispatchEventId: "evt-exp-clamp" });
+    const body = (await res.json()) as { access_token?: string; mission_id?: string; expires_in?: number };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    const missionExp = Math.floor(Date.parse(as.kernel.get(body.mission_id as string)?.expires_at as string) / 1000);
+    const at = decodeJwt(body.access_token as string) as { iat: number; exp: number };
+    expect(at.exp).toBeLessThanOrEqual(missionExp);
+    expect(at.exp - at.iat).toBeLessThan(300);
   });
 
   it("param-stripping regression: template_id/mission_intent/dispatch_event_id survive to the handler", async () => {

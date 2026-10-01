@@ -16,6 +16,7 @@ import { CANONICAL_RESOURCE } from "@mission/demo-data";
 import {
   calculateJwkThumbprint,
   createRemoteJWKSet,
+  decodeJwt,
   exportJWK,
   generateKeyPair,
   importJWK,
@@ -101,7 +102,9 @@ async function tokenRequest(params: Record<string, string>, keys: DpopKeys = dpo
 }
 
 /** Full PAR -> approval -> token dance yielding an ACTIVE mission (grant-bound). */
-async function issueBaseMissionToken(): Promise<{ token: string; missionId: string }> {
+async function issueBaseMissionToken(
+  expiresAt = "2027-01-01T00:00:00Z",
+): Promise<{ token: string; missionId: string }> {
   const verifier = "dtr-endpoint-verifier-0123456789-0123456789-01234";
   const challenge = Buffer.from(
     await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)),
@@ -111,7 +114,7 @@ async function issueBaseMissionToken(): Promise<{ token: string; missionId: stri
     intent: {
       goal: "Pay Acme invoices and send remittance",
       target_resources: [RESOURCE],
-      expires_at: "2027-01-01T00:00:00Z",
+      expires_at: expiresAt,
     },
   });
   const authorizationDetails = JSON.stringify([
@@ -373,5 +376,30 @@ describe("requested scope on the deferred grant (@spec mission#scope-projection)
     expect(body.error).toBe("invalid_scope");
     expect(body.error_description).toMatch(/consumes authorization_details/);
     expect(body.access_token).toBeUndefined();
+  });
+});
+
+describe("the deferred grant and the Mission's expires_at (@spec mission#mission-bound-tokens)", () => {
+  it("an approval expiry later than the Mission's expires_at does not let the deferred access token outlive the Mission", async () => {
+    // The deferred mint clamps to approved_until, which the approver sets; the
+    // Mission's own expires_at bounds it too (ttl.AccessToken).
+    const short = await issueBaseMissionToken(new Date(Date.now() + 60_000).toISOString());
+    const record = as.kernel.get(short.missionId) as { authority_set: AuthorityEntry[]; expires_at: string };
+    const requested = record.authority_set
+      .filter((e) => e.actions.includes("payments:invoice.read"))
+      .map((e) => ({ ...e, actions: ["payments:invoice.read"] }));
+    const init = await tokenRequest({
+      grant_type: DEFERRED_GRANT_TYPE,
+      deferred_authorization: JSON.stringify({ mission_id: short.missionId, requested }),
+    });
+    const { deferral_code } = (await init.json()) as { deferral_code: string };
+    as.deferrals.approve(deferral_code, new Date(Date.now() + 3_600_000).toISOString());
+    const res = await poll(deferral_code);
+    const body = (await res.json()) as { access_token?: string; expires_in?: number };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    const missionExp = Math.floor(Date.parse(record.expires_at) / 1000);
+    const at = decodeJwt(body.access_token as string) as { iat: number; exp: number };
+    expect(at.exp).toBeLessThanOrEqual(missionExp);
+    expect(at.exp - at.iat).toBeLessThan(300);
   });
 });

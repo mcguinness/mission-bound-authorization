@@ -700,6 +700,81 @@ export function buildProvider(opts: AdapterOptions): Provider {
   }
 
   /**
+   * @spec mission#mission-bound-tokens — the Mission whose `expires_at` bounds
+   * a credential saved under `grantId`, resolved the way issuance resolves it:
+   * the Mission's own grant, then the delegation-family store, then the durable
+   * bound-grant index (which refuses an index hit whose Mission is gone).
+   * Undefined for a grant that was never Mission-bound.
+   */
+  function missionForGrant(grantId: string | undefined): MissionRecord | undefined {
+    if (!grantId) return undefined;
+    const record = kernel.findByGrant(grantId);
+    if (record) return record;
+    const fam = opts.familyStore?.resolve(grantId);
+    if (fam) return kernel.get(fam.missionId);
+    return missionForBoundGrant(grantId);
+  }
+
+  /**
+   * @spec mission#mission-bound-tokens — "A credential the Mission Issuer
+   * derives MUST have an `exp` that does not exceed the Mission's
+   * `expires_at`." The lifetime of a credential saved under a Mission-bound
+   * grant is the configured lifetime or the Mission's remaining whole seconds,
+   * whichever is shorter. A non-Mission grant keeps `configured` unchanged.
+   *
+   * oidc-provider evaluates a token's lifetime BEFORE `extraTokenClaims` runs
+   * the state gate (lib/models/formats/opaque.js 9.10.0 L28 before L39), and
+   * saves a rotated refresh token before the access token is gated (the
+   * refresh_token grant, L168 before L216). So this hook is reached for a
+   * Mission at or past `expires_at`, and it never returns a 0 or negative
+   * lifetime: it runs the state gate itself, which commits the expiry and
+   * refuses exactly as the gate does, and a Mission with under one second left
+   * is refused the same way rather than given a token that outlives it.
+   *
+   * `surface` selects the refusal's error vocabulary. A token-endpoint mint
+   * refuses `invalid_grant` (with `mission_error`). The authorization code is
+   * minted at the authorization endpoint's resume, whose response RFC 6749
+   * Section 4.1.2.1 defines without `invalid_grant`, so it refuses
+   * `access_denied` (@spec mission#error-mapping: an authorization decision
+   * refused by AS policy).
+   */
+  function clampToMission(
+    configured: number,
+    grantId: string | undefined,
+    surface: "token-endpoint" | "authorization-endpoint" = "token-endpoint",
+  ): number {
+    const authorization = surface === "authorization-endpoint";
+    const expiring = (): Error =>
+      authorization
+        ? new errors.AccessDenied("the Mission expires before the authorization can complete")
+        : new MissionGrantError("the Mission expires before a credential can be issued", "mission_expired");
+    let record: MissionRecord | undefined;
+    try {
+      record = missionForGrant(grantId);
+    } catch (e) {
+      if (authorization && e instanceof errors.InvalidGrant) {
+        throw new errors.AccessDenied("the Mission is not available");
+      }
+      throw e;
+    }
+    if (!record) return configured;
+    const remaining = Math.floor((Date.parse(record.expires_at) - Date.now()) / 1000);
+    if (remaining >= 1) return Math.min(configured, remaining);
+    try {
+      kernel.gateActive(record.id);
+    } catch (e) {
+      if (e instanceof GateError) {
+        if (authorization) {
+          throw e.reason === "mission_expired" ? expiring() : new errors.AccessDenied("the Mission is not active");
+        }
+        throw new MissionGrantError(e.message, gateErrorToMissionError(e.reason, kernel.get(record.id)?.state));
+      }
+      throw e;
+    }
+    throw expiring();
+  }
+
+  /**
    * @spec issuance-grant#effective-set-projection (#617 review 1) — project
    * through the source, mapping the TRANSIENT class to
    * `temporarily_unavailable` (HTTP 503) rather than letting it read as a
@@ -1307,23 +1382,43 @@ export function buildProvider(opts: AdapterOptions): Provider {
         },
       },
     } as never,
+    // @spec mission#mission-bound-tokens — every credential oidc-provider
+    // issues under a Mission-bound grant is clamped to the Mission's
+    // `expires_at` (clampToMission). Each configured lifetime is oidc-provider's
+    // own default (lib/helpers/defaults.js, 9.10.0), so a non-Mission token is
+    // unchanged. A partial ttl override deep-merges with the defaults. Regular
+    // functions (not arrows) satisfy checkTTL.
     ttl: {
+      // The resource server's lifetime (resourceServerInfoFor), or 1 hour.
+      AccessToken: function AccessTokenTTL(_ctx, token) {
+        const t = token as { grantId?: string; resourceServer?: { accessTokenTTL?: number } };
+        return clampToMission(t.resourceServer?.accessTokenTTL || 60 * 60, t.grantId);
+      },
+      // Minted at the authorization endpoint's resume: its refusal is an
+      // authorization-response error, never invalid_grant.
+      AuthorizationCode: function AuthorizationCodeTTL(_ctx, code) {
+        return clampToMission(60, (code as { grantId?: string }).grantId, "authorization-endpoint");
+      },
+      // An ID Token is not saved, but it is issued under the grant: its
+      // AccessToken entity carries the grant id on both the code exchange and
+      // refresh.
+      IdToken: function IdTokenTTL(ctx) {
+        const at = (ctx as { oidc?: { entities?: { AccessToken?: { grantId?: string } } } } | undefined)?.oidc
+          ?.entities?.AccessToken;
+        return clampToMission(60 * 60, at?.grantId);
+      },
       // @spec async-delegation — absolute-lifetime clamp. A per-delegation family
-      // refresh token never outlives its Mission: its lifetime is bounded by the
-      // Mission's expires_at. Any other refresh token keeps the oidc-provider
-      // default (lib/helpers/defaults.js RefreshTokenTTL, 9.10.0 L397: 14 days). A
-      // partial ttl override deep-merges with the defaults, so AccessToken et al.
-      // are unaffected. A regular function (not arrow) satisfies checkTTL.
+      // refresh token lives exactly until its Mission's expires_at (no
+      // configured cap), through the same clamp and refusal as every other
+      // credential: no 1 s floor, so under one second left it is refused.
+      // Any other refresh token is oidc-provider's 14 days, clamped.
       RefreshToken: function RefreshTokenTTL(_ctx, token) {
         const grantId = (token as { grantId?: string }).grantId;
         const fam = grantId ? opts.familyStore?.resolve(grantId) : undefined;
-        if (fam) {
-          const record = kernel.get(fam.missionId);
-          if (record) {
-            return Math.max(1, Math.floor((Date.parse(record.expires_at) - Date.now()) / 1000));
-          }
-        }
-        return 14 * 24 * 60 * 60;
+        // Uncapped only when the family's Mission resolves, so the clamp always
+        // bounds it; otherwise the ordinary 14-day value applies.
+        const familyBound = fam !== undefined && kernel.get(fam.missionId) !== undefined;
+        return clampToMission(familyBound ? Number.POSITIVE_INFINITY : 14 * 24 * 60 * 60, grantId);
       },
     },
   };

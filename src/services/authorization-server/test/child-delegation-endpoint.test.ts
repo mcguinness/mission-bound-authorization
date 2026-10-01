@@ -659,6 +659,32 @@ describe("PR4b: child redeems the child-bound grant AS ITSELF at /token (@spec #
     p = await issueParentMission();
   });
 
+  it("a child ending inside the token lifetimes gets a child-bound assertion and an access token that expire no later than it (@spec mission#mission-bound-tokens)", async () => {
+    const res = await createChildViaExchange({
+      subjectToken: p.accessToken,
+      parent: p.missionId,
+      childActor: { sub: "subagent-invoice-extractor", sub_profile: "ai_agent" },
+      intent: {
+        goal: "Extract Acme invoices",
+        target_resources: [RESOURCE],
+        expires_at: new Date(Date.now() + 60_000).toISOString(), // inside the 300 s lifetimes
+      },
+    });
+    const created = (await res.json()) as { mission_id?: string; access_token?: string };
+    expect(res.status, JSON.stringify(created)).toBe(200);
+    const childExp = Math.floor(Date.parse(as.kernel.get(created.mission_id as string)?.expires_at as string) / 1000);
+    const assertion = decodeJwt(created.access_token as string) as { iat: number; exp: number };
+    expect(assertion.exp).toBeLessThanOrEqual(childExp);
+    expect(assertion.exp - assertion.iat).toBeLessThan(300);
+
+    const redeemed = await childTokenRequest({ grant_type: CHILD_GRANT_TYPE, assertion: created.access_token as string });
+    const body = (await redeemed.json()) as { access_token?: string };
+    expect(redeemed.status, JSON.stringify(body)).toBe(200);
+    const at = decodeJwt(body.access_token as string) as { iat: number; exp: number };
+    expect(at.exp).toBeLessThanOrEqual(childExp);
+    expect(at.exp - at.iat).toBeLessThan(300);
+  });
+
   it("happy path: child redeems its assertion -> 200 DPoP-bound child token carrying the child mission", async () => {
     const { missionId, assertion } = await makeChild({ sub: "subagent-invoice-extractor", sub_profile: "ai_agent" });
 
