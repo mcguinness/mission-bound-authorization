@@ -3649,6 +3649,15 @@ bound profiled by `aauth-mission-expiry`.
 
 \[\[ To be removed from the final specification ]]
 
+- Density, with no change to any profile's requirements. Long
+  paragraphs are split to one idea each and long sentences shortened;
+  Continue lists the three continuities and keeps the residual for
+  authority already issued under a continued grant; the binding
+  properties' mechanism mapping is a table; the kill-switch
+  composition table has short cells with numbered notes; and
+  meta-commentary about the document is removed. OAuth-specific
+  statements the pass found unlabeled now say so.
+
 - Reading order and section ownership, with no change to any
   profile's requirements. A Mission's Life leads the model; Meaning
   and Derivation gathers the ontology contract, the derivation
