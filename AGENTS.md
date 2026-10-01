@@ -59,12 +59,16 @@ Rules every agent follows:
 
 - Merge with a merge commit, never squash: ledger pins name branch
   commits.
-- Merge only after every check has completed.
+- Merge only after every applicable check has completed successfully
+  at the current head, with any exception explicitly approved by the
+  owner.
 - In a stacked chain, retarget the dependent PR to `main` before
-  deleting its parent's branch; deleting it first closes the
-  dependent.
-- A PR in the CONFLICTING state gets no CI runs; resolve the conflict
-  first.
+  deleting its parent's branch. GitHub retargets same-repository
+  dependents itself when the parent PR merges; retargeting first does
+  not rely on that.
+- Resolve conflicts before relying on PR merge-result checks: a
+  conflicting PR runs no `pull_request` workflows, although
+  branch-push workflows such as Update Editor's Copy still run.
 - A change under `.github/workflows` needs a token with `workflow`
   scope.
 

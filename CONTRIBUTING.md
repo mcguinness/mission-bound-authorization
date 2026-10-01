@@ -158,8 +158,10 @@ Coverage changes follow the same discipline:
   matches the test's exact `describe > it` path. Never change a row's
   coverage by editing its note; a note explains coverage, it never
   establishes it.
-- Prove each new test by disabling the code it covers and watching it
-  fail.
+- Prove each new test: introduce a relevant behavioral defect, confirm
+  the intended assertion fails, then restore the implementation and
+  confirm it passes. An import error or an unrelated crash does not
+  establish coverage.
 - Cite a row under the role it proves; a PEP test is not a PDP
   witness. Demote a row tested on the wrong role's test, even though
   the count drops.
