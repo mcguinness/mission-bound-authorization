@@ -68,10 +68,6 @@
 //                                OAuth binding's own document) and every reader surface must be
 //                                free of it, modulo the adjectival followers and the explicit
 //                                allowlist in RETIRED_CORE_ALLOWLIST
-//   (q) title drift           - a draft's front-matter `title:` != manifest `title`, or an
-//                                in-family reference entry (I-D.<slug>, no revision suffix)
-//                                in any draft's front matter has no `title:` or one that
-//                                differs from the cited draft's manifest `title`
 //   (u) binding packages      - README.md's "Find your path" generated "Minimum package" table
 //                                (#709: verbs are the README's public front door, one link to
 //                                the full catalog) is stale against the manifest, or
@@ -106,6 +102,10 @@
 //                                Conformance-titled floor, and examples/vectors or a recorded,
 //                                non-empty waiver reason (see
 //                                scripts/generate-drafts-index.mjs's validateCandidateGate())
+//   (aa) title drift          - a draft's front-matter `title:` != manifest `title`, or an
+//                                in-family reference entry (I-D.<slug>, no revision suffix)
+//                                in any draft's front matter has no `title:` or one that
+//                                differs from the cited draft's manifest `title`
 
 import fs from "node:fs";
 import path from "node:path";
@@ -416,7 +416,7 @@ function main() {
     }
   }
 
-  // (q) Title drift: the manifest's `title` is the one name the family uses
+  // (aa) Title drift: the manifest's `title` is the one name the family uses
   // for a draft. The draft's own front matter and every in-family reference
   // entry citing it must carry that exact title, or a References section
   // renders a name the family has retired.

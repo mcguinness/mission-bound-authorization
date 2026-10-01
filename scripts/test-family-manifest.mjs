@@ -240,7 +240,7 @@ test("HAND_TYPED_COUNT: does NOT fire on a spelled-out count", () => {
 });
 
 // ---------------------------------------------------------------------
-// parseFrontMatterTitle() / parseFamilyRefTitles() (check (q)'s parsers)
+// parseFrontMatterTitle() / parseFamilyRefTitles() (check (aa)'s parsers)
 // ---------------------------------------------------------------------
 
 const TITLE_FIXTURE = [
