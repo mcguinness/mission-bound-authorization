@@ -1230,7 +1230,8 @@ export interface DemoTemplateInput {
   ceiling: CeilingEntry[];
   dispatch_policy: string;
   dispatchers: string[];
-  recipients: string[];
+  /** `allowed_recipients`: independent Subject and Agent lists. */
+  recipients: { subjects: Array<{ iss: string; sub: string }>; agents: string[] };
   per_instance_lifetime_s: number;
   max_active: number;
   rate_per_min: number;
@@ -1278,9 +1279,10 @@ export function demoReconciliationTemplate(issuer: string): DemoTemplateInput {
     approver: { iss: issuer, sub: "bob" },
     ceiling,
     dispatch_policy: "read-only-reconciliation",
-    // The orchestrator dispatches; the invoice sub-agent receives.
+    // The orchestrator dispatches; the invoice sub-agent receives, acting for
+    // the consenting human (the established Subject of every instance).
     dispatchers: ["ap-agent"],
-    recipients: ["subagent-invoice-extractor"],
+    recipients: { subjects: [{ iss: issuer, sub: "bob" }], agents: ["subagent-invoice-extractor"] },
     per_instance_lifetime_s: 900,
     max_active: 5,
     rate_per_min: 30,

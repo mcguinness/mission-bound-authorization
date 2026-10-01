@@ -322,7 +322,7 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
       ceiling: DERIVATION_POLICY.ceiling,
       dispatch_policy: "wide-reconciliation",
       dispatchers: ["ap-agent"],
-      recipients: ["subagent-invoice-extractor"],
+      recipients: { subjects: [{ iss: ISSUER, sub: "bob" }], agents: ["subagent-invoice-extractor"] },
       per_instance_lifetime_s: 900,
       max_active: 5,
       rate_per_min: 30,
@@ -355,6 +355,18 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
     const body = (await res.json()) as { mission_denial_reason?: string };
     expect(res.status, JSON.stringify(body)).toBe(403);
     expect(body.mission_denial_reason).toBe("dispatcher_not_allowed");
+  });
+
+  it("recipient_not_allowed: the established Subject (the template's approver) is not in recipients.subjects (@spec mission-template#the-mission-template)", async () => {
+    const created = await createTemplateAdmin({
+      ...readOnlyTemplateBody(),
+      recipients: { subjects: [{ iss: ISSUER, sub: "carol" }], agents: ["subagent-invoice-extractor"] },
+    });
+    const { template_id } = (await created.json()) as { template_id: string };
+    const res = await dispatch({ templateId: template_id, intent: readOnlyIntent(), dispatchEventId: "evt-subject" });
+    const body = (await res.json()) as { mission_denial_reason?: string };
+    expect(res.status, JSON.stringify(body)).toBe(403);
+    expect(body.mission_denial_reason).toBe("recipient_not_allowed");
   });
 
   it("lifecycle revoke: a revoked template refuses a subsequent dispatch with template_not_active", async () => {

@@ -276,7 +276,7 @@ function reconciliationTemplateBody(): Record<string, unknown> {
     ceiling: reconciliationCeiling(),
     dispatch_policy: "aam-nightly-reconciliation",
     dispatchers: ["ap-agent"], // the scheduler dispatches
-    recipients: ["subagent-invoice-extractor"], // the reconciliation sub-agent receives
+    recipients: { subjects: [{ iss: ISSUER, sub: "bob" }], agents: ["subagent-invoice-extractor"] }, // the reconciliation sub-agent receives, for the consenting human
     per_instance_lifetime_s: LIFETIME_S,
     max_active: 5,
     rate_per_min: 30,
