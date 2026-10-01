@@ -48,11 +48,7 @@ export type ProviderCapability =
   /** OIDC: `openid` and the OIDC scope values, userinfo, and RP-initiated logout. */
   | "oidc"
   /** RFC 7009 token revocation. */
-  | "token-revocation"
-  /** The `mission_attenuation_supported` metadata member. */
-  | "attenuation"
-  /** The `service_catalog_endpoint` metadata member. */
-  | "service-catalog";
+  | "token-revocation";
 
 /** Every capability, in declaration order. */
 export const ALL_PROVIDER_CAPABILITIES: readonly ProviderCapability[] = [
@@ -73,8 +69,6 @@ export const ALL_PROVIDER_CAPABILITIES: readonly ProviderCapability[] = [
   "dev-token",
   "oidc",
   "token-revocation",
-  "attenuation",
-  "service-catalog",
 ];
 
 /** The token-exchange profiles; the exchange grant is registered when any is on. */
