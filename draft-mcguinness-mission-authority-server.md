@@ -142,6 +142,7 @@ informative:
   RFC8126:
   RFC8414:
   RFC8693:
+  RFC9449:
   RFC9635:
   I-D.draft-mcguinness-mission-harness:
     title: "Mission-Aware Agent Harnesses"
@@ -547,9 +548,9 @@ map to this endpoint's error codes ({{submission-errors}}):
   evidence type absent from the submission
   ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, Section
   "Required Evidence Is Resolved Before Derivation") MUST be refused
-  with `invalid_intent_evidence` (the MAS equivalent of the issuance
-  profile's `invalid_mission_intent_evidence`); presented evidence is
-  never silently ignored.
+  with `invalid_mission_intent_evidence`, the code the issuance profile
+  registers for the same condition, carried here in the MAS error
+  body; presented evidence is never silently ignored.
 
 The request body MAY additionally carry an `authorization_details`
 member: the client's authority proposal, an array of
@@ -680,7 +681,7 @@ A consumer MUST ignore members it does not recognize.
 |---|---|---|
 | `invalid_mission_intent` | 400 | Unparseable, structurally invalid, oversized, or containing an undefined top-level member. |
 | `invalid_authority` | 400 | Well-formed Intent, but no valid Authority Set is derivable under policy. |
-| `invalid_intent_evidence` | 400 | An evidence entry of unsupported type or failing its type's verification, or a policy-required evidence type absent from the submission. |
+| `invalid_mission_intent_evidence` | 400 | An evidence entry of unsupported type or failing its type's verification, or a policy-required evidence type absent from the submission. |
 | `unauthorized` | 401 | Request not authenticated. |
 | `not_found` | 404 | A referenced submission or Mission does not exist OR is not visible to the caller. |
 | `rate_limited` | 429 | Caller is rate-limited. |
@@ -1708,7 +1709,8 @@ The PEP, or the client acting for it, POSTs a JSON object:
   token's ASCII bytes. This is a member-named digest construction
   outside the default prefixed form: the member name fixes the
   algorithm, and a successor algorithm enters as a new member, never
-  by reinterpreting this one.
+  by reinterpreting this one. For the same token it equals the `ath`
+  value of a DPoP proof ({{Section 4.2 of RFC9449}}).
 
 `token_jkt`:
 : A string. The JWK thumbprint {{RFC7638}}, using SHA-256, of the

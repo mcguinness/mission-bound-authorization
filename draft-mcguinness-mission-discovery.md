@@ -654,7 +654,8 @@ Evidence object:
 
 `resource_declaration_digest`:
 : CONDITIONAL. REQUIRED when a self-declaration existed at
-  encounter: its content-addressed digest.
+  encounter: the integrity-anchor encoded raw-octet digest of its
+  exact retrieved bytes.
 
 `sought_classes`:
 : REQUIRED. An array of strings: the action classes of the authority

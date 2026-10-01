@@ -152,6 +152,22 @@ protocol requirement. And a runner never marks an unclaimed optional
 capability nonconforming, or a justified SHOULD departure a failure
 (RFC 2119 Section 3); both are recorded, not failed.
 
+Coverage changes follow the same discipline:
+
+- A row reaches `tested` only with a real assertion and a citation that
+  matches the test's exact `describe > it` path. Never change a row's
+  coverage by editing its note; a note explains coverage, it never
+  establishes it.
+- Prove each new test: introduce a relevant behavioral defect, confirm
+  the intended assertion fails, then restore the implementation and
+  confirm it passes. An import error or an unrelated crash does not
+  establish coverage.
+- Cite a row under the role it proves; a PEP test is not a PDP
+  witness. Demote a row tested on the wrong role's test, even though
+  the count drops.
+- A change to a clause a row quotes re-quotes that row in the same
+  commit, and a changed draft is re-pinned in `source.specs`.
+
 ## Maintenance Classes Convention
 
 `family-manifest.json`'s `maintenance` field states how responsively
