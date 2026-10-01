@@ -1571,7 +1571,8 @@ that carries a continuation ACROSS a trust boundary the origin does
 not control; Identity Continuation
 (<span>[<a href="#I-D.draft-mcguinness-oauth-id-continuation-assertion" class="cite xref">I-D.draft-mcguinness-oauth-id-continuation-assertion</a>]</span>) and async
 delegation (<span>[<a href="#I-D.draft-zhu-oauth-async-delegation" class="cite xref">I-D.draft-zhu-oauth-async-delegation</a>]</span>) are the
-intra-domain transports.<a href="#section-6-1" class="pilcrow">¶</a></p>
+transports within that boundary: every Identity Continuation hop
+reaches a Resource AS that trusts the same identity provider.<a href="#section-6-1" class="pilcrow">¶</a></p>
 <p id="section-6-2">What the profile adds over this document is
 the Mission binding common to every transport: a continuation handle
 grants nothing, each continued grant derives a subset of the Mission's
@@ -2811,7 +2812,7 @@ defined by that profile's Mission Resource Access Profile
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-id-continuation-assertion">[I-D.draft-mcguinness-oauth-id-continuation-assertion]</dt>
         <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Identity Continuation Assertion for OAuth 2.0 Token Exchange"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/draft-mcguinness-oauth-id-continuation-assertion/">https://datatracker.ietf.org/doc/draft-mcguinness-oauth-id-continuation-assertion/</a>&gt;</span>. </dd>
+<span class="refAuthor">McGuinness, K.</span> and <span class="refAuthor">A. Parecki</span>, <span class="refTitle">"Identity Continuation Assertion for OAuth 2.0 Token Exchange"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-id-continuation-assertion-02</span>, <time datetime="2026-09-08" class="refDate">8 September 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-id-continuation-assertion-02">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-id-continuation-assertion-02</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-containment">[I-D.draft-mcguinness-oauth-mission-containment]</dt>
         <dd>
