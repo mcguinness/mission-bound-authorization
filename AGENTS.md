@@ -63,9 +63,10 @@ Rules every agent follows:
   at the current head, with any exception explicitly approved by the
   owner.
 - In a stacked chain, retarget the dependent PR to `main` before
-  deleting its parent's branch. GitHub retargets same-repository
-  dependents itself when the parent PR merges; retargeting first does
-  not rely on that.
+  deleting its parent's branch. GitHub documents automatic retargeting
+  of same-repository dependents when the parent PR merges, but here a
+  dependent was closed when its parent merged with `--delete-branch`
+  (#372, recreated as #375), so do not rely on it.
 - Resolve conflicts before relying on PR merge-result checks: a
   conflicting PR runs no `pull_request` workflows, although
   branch-push workflows such as Update Editor's Copy still run.
