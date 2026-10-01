@@ -1681,9 +1681,15 @@ token binding instead of operating a mapping table. A MAS that
 supports the upgrade publishes its join-assertion endpoint as
 `mission_join_assertion_endpoint` ({{discovery}}). The endpoint MUST
 meet the TLS and caller-authentication requirements of the mission
-submission endpoint ({{mission-submission}}), with a client assertion's
-`aud` naming this endpoint, and accepts the methods and algorithms
-advertised for the submission endpoint.
+submission endpoint ({{mission-submission}}), and accepts the
+authentication methods and client-assertion algorithms advertised for
+it. A client assertion's `aud` and a caller-authentication access
+token's audience MUST name the join-assertion endpoint. For
+access-token authentication, the MAS publishes Protected Resource
+Metadata {{RFC9728}} for this endpoint, identifying its resource,
+required scope, and accepted sender constraints. That caller token is
+distinct from the acting `access_token` the request body carries
+({{join-assertion-request}}), the credential whose join is asserted.
 
 ## Assertion Request {#join-assertion-request}
 
@@ -2629,7 +2635,9 @@ document requests no IANA action for it.
   `*_auth_methods_supported` and `*_auth_signing_alg_values_supported`
   members for the submission, status, and lifecycle endpoints replace
   `mission_auth_methods_supported`, and the submission endpoint accepts
-  all three Status mechanisms, including mTLS-bound access tokens.
+  all three Status mechanisms, including mTLS-bound access tokens. The
+  join-assertion endpoint shares the submission methods but names its
+  own token audience and Protected Resource Metadata.
 
 - Specify the PEP/PDP responsibilities for required instance-bound joins
   and their refusal behavior. Join Assertions continue to carry no
