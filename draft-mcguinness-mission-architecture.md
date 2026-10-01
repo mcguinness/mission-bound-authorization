@@ -2399,8 +2399,9 @@ policy systems cannot implement equivalent outcomes.
 
 ## A Worked Composition {#worked-composition}
 
-This non-normative example composes an Action-Enforced deployment
-from four providers, none of which is the OAuth binding, to show that
+This non-normative example composes a deployment that enforces at
+action time from four providers, none of which is the OAuth binding,
+to show that
 the substrate contract ({{I-D.draft-mcguinness-mission-substrate}})
 carries the weight: an AAuth agent acts under a PS-governed Mission
 and calls a payment API whose authority vocabulary is owned by the
