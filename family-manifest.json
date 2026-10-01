@@ -84,7 +84,7 @@
    "architecture_name": "High-assurance architecture"
   }
  },
- "count": 49,
+ "count": 50,
  "drafts": [
   {
    "file": "draft-mcguinness-mission-control-plane.md",
@@ -306,6 +306,7 @@
     "draft-mcguinness-mission-uma",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-approval",
+    "draft-mcguinness-oauth-mission-approved-set-verification",
     "draft-mcguinness-oauth-mission-attenuation",
     "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-consent-evidence",
@@ -593,6 +594,7 @@
     "draft-mcguinness-mission-runtime-oauth",
     "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-approved-set-verification",
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-expansion",
@@ -756,6 +758,7 @@
    "normative_references": [
     "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-approved-set-verification",
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-derivation-limits",
     "draft-mcguinness-oauth-mission-expansion",
@@ -795,6 +798,12 @@
      "requires": [
       "draft-mcguinness-oauth-mission-submission-evidence"
      ]
+    },
+    {
+     "when": "a verifier checks carried authority against the complete approved Authority Set",
+     "requires": [
+      "draft-mcguinness-oauth-mission-approved-set-verification"
+     ]
     }
    ],
    "references": [
@@ -814,6 +823,7 @@
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-approval",
     "draft-mcguinness-oauth-mission-approval-revision",
+    "draft-mcguinness-oauth-mission-approved-set-verification",
     "draft-mcguinness-oauth-mission-attenuation",
     "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-consent-evidence",
@@ -1104,6 +1114,7 @@
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-approved-set-verification",
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-continuation",
     "draft-mcguinness-oauth-mission-cross-domain",
@@ -1152,6 +1163,7 @@
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-approved-set-verification",
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-issuance-grant",
@@ -1420,6 +1432,7 @@
    "normative_references": [
     "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-approved-set-verification",
     "draft-mcguinness-oauth-mission-derivation-limits",
     "draft-mcguinness-oauth-mission-submission-evidence"
    ],
@@ -1442,6 +1455,7 @@
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-approval",
     "draft-mcguinness-oauth-mission-approval-revision",
+    "draft-mcguinness-oauth-mission-approved-set-verification",
     "draft-mcguinness-oauth-mission-attenuation",
     "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-consent-evidence",
@@ -1465,6 +1479,12 @@
      "when": "the submission carries Intent Submission Evidence or policy requires it",
      "requires": [
       "draft-mcguinness-oauth-mission-submission-evidence"
+     ]
+    },
+    {
+     "when": "a verifier checks carried authority against the complete approved Authority Set",
+     "requires": [
+      "draft-mcguinness-oauth-mission-approved-set-verification"
      ]
     }
    ]
@@ -2377,6 +2397,7 @@
     "draft-mcguinness-mission-shaping",
     "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission-approval",
+    "draft-mcguinness-oauth-mission-approved-set-verification",
     "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-consent-evidence",
     "draft-mcguinness-oauth-mission-containment",
@@ -2452,6 +2473,33 @@
     "draft-mcguinness-oauth-mission-approval-revision",
     "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-expansion"
+   ]
+  },
+  {
+   "file": "draft-mcguinness-oauth-mission-approved-set-verification.md",
+   "slug": "draft-mcguinness-oauth-mission-approved-set-verification",
+   "title": "Mission Approved-Set Verification for OAuth 2.0",
+   "category": "std",
+   "role": "companion",
+   "spec_maturity": "experimental",
+   "maintenance": "active",
+   "group": "proof-portability",
+   "verbs": [
+    "prove"
+   ],
+   "summary": "Lets a verifying Resource Server or policy decision point check a token's carried authority against the complete committed Authority Set: authenticated complete-set retrieval, recomputation of authority_hash, a subset check, optional independent pinning, and fail-closed handling.",
+   "pull_when": "A Resource Server must not rely on the issuer's subset assertion alone for high-consequence authority.",
+   "normative_references": [
+    "draft-mcguinness-oauth-mission"
+   ],
+   "adoption_requires": [
+    "draft-mcguinness-oauth-mission"
+   ],
+   "requires_when": [],
+   "references": [
+    "draft-mcguinness-mission-substrate",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-status"
    ]
   }
  ]

@@ -203,7 +203,7 @@
    "template.dispatch",
    "progressive.ceiling-drawdown",
    "cross-domain.projection",
-   "core.local-approved-set-verification",
+   "approved-set-verification.verification",
    "authzen.runtime-evidence",
    "authzen.obligations",
    "authzen.arap",
@@ -5495,19 +5495,17 @@
    ]
   },
   {
-   "id": "core.local-approved-set-verification.tier1-retrieval-recompute-subset-fail-closed",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "lasv-retrieval",
-   "text": "MUST fail closed: a retrieval failure, an unauthenticated response, a commitment mismatch, or a subset-test failure refuses the request under {{rs-enforcement}}, never falls back to trusting the token signature alone as if this profile were not claimed.",
+   "id": "approved-set-verification.retrieval.tier1-retrieval-recompute-subset-fail-closed",
+   "spec": "draft-mcguinness-oauth-mission-approved-set-verification.md",
+   "anchor": "retrieval",
+   "text": "MUST fail closed: a retrieval failure, an unauthenticated response, a commitment mismatch, or a subset-test failure refuses the request under {{I-D.draft-mcguinness-oauth-mission}}, Section \"Resource Server Enforcement\", never falls back to trusting the token signature alone as if this profile were not claimed.",
    "role": "verifier",
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.local-approved-set-verification"
+    "capability": "approved-set-verification.verification"
    },
-   "profiles": [
-    "issuance"
-   ],
+   "profiles": [],
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
@@ -5544,19 +5542,17 @@
    "notes": "review #725 P1-3: reference implementation is verifyLocalApprovedSet() (packages/mission-core/src/local-approved-set-verification.ts). No party in this repo currently CALLS it in production (no Resource Server or PDP here claims this OPTIONAL capability), so coverage is the unit-level function contract, not an integration wiring; that is the honest ceiling for a capability this repo does not itself deploy."
   },
   {
-   "id": "core.local-approved-set-verification.tier2-independent-pinning",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "lasv-retrieval",
+   "id": "approved-set-verification.pinning.tier2-independent-pinning",
+   "spec": "draft-mcguinness-oauth-mission-approved-set-verification.md",
+   "anchor": "independent-pinning",
    "text": "the verifying party additionally holds an expected `authority_hash` obtained from a source independent of the Tier 1 retrieval channel, never re-derived from the same call being verified, and MUST reject unless the retrieved (and recomputed-matching) value also equals that independently held one.",
    "role": "verifier",
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.local-approved-set-verification"
+    "capability": "approved-set-verification.verification"
    },
-   "profiles": [
-    "issuance"
-   ],
+   "profiles": [],
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
@@ -5580,19 +5576,17 @@
    ]
   },
   {
-   "id": "core.local-approved-set-verification.retrieval-transport-and-disclosure-gate",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "lasv-retrieval",
+   "id": "approved-set-verification.surface.retrieval-transport-and-disclosure-gate",
+   "spec": "draft-mcguinness-oauth-mission-approved-set-verification.md",
+   "anchor": "retrieval-surface",
    "text": "The retrieval surface MUST refuse a caller that does not hold the disclosure privilege",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.local-approved-set-verification"
+    "capability": "approved-set-verification.verification"
    },
-   "profiles": [
-    "issuance"
-   ],
+   "profiles": [],
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
@@ -5604,18 +5598,17 @@
    "notes": "review #725 P1-3: disputed as untestable in this repo by the spec's own design, not merely unimplemented. The document explicitly does not mandate a retrieval endpoint or transport (deployment-provisioned), so there is no concrete surface here to gate-check against; a conformance row can only restate the requirement, which this row does, pending a deployment that actually provisions such a surface."
   },
   {
-   "id": "core.local-approved-set-verification.status-not-compatible-retrieval-surface",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "lasv-retrieval",
+   "id": "approved-set-verification.surface.status-not-compatible-retrieval-surface",
+   "spec": "draft-mcguinness-oauth-mission-approved-set-verification.md",
+   "anchor": "retrieval-surface",
    "text": "Recomputing `authority_hash` over a Status response therefore fails by construction for any multi-audience Mission, and fails after any containment or discharge even for a single-audience one.",
    "role": "verifier",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "approved-set-verification.verification"
    },
-   "profiles": [
-    "issuance"
-   ],
+   "profiles": [],
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
