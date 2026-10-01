@@ -372,9 +372,9 @@ A refusal at this exchange uses that draft's codes
 in place of the issuance profile's `invalid_grant`: a terminal Mission
 is `invalid_continuation`, a suspended Mission is `unauthorized_client`,
 no remaining authority for the audience is `invalid_target`, and a
-derivation or hop-count limit is `invalid_grant`. The `mission_error`
-member of {{I-D.draft-mcguinness-oauth-mission}} accompanies each refusal
-for which it defines a value.
+derivation or hop-count limit is `invalid_grant`. The issuance
+profile's requirements for the `mission_error` diagnostic
+({{I-D.draft-mcguinness-oauth-mission}}) apply unchanged.
 The assertion carries no user subject: the IdP resolves the subject for
 each target from the hop, so continuation preserves the Mission's
 subject rather than projecting it; the actor is rebound per hop.
