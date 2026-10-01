@@ -142,6 +142,7 @@ informative:
   RFC8126:
   RFC8414:
   RFC8693:
+  RFC9449:
   RFC9635:
   I-D.draft-mcguinness-mission-harness:
     title: "Mission-Aware Agent Harnesses"
@@ -1708,7 +1709,8 @@ The PEP, or the client acting for it, POSTs a JSON object:
   token's ASCII bytes. This is a member-named digest construction
   outside the default prefixed form: the member name fixes the
   algorithm, and a successor algorithm enters as a new member, never
-  by reinterpreting this one.
+  by reinterpreting this one. For the same token it equals the `ath`
+  value of a DPoP proof ({{Section 4.2 of RFC9449}}).
 
 `token_jkt`:
 : A string. The JWK thumbprint {{RFC7638}}, using SHA-256, of the
