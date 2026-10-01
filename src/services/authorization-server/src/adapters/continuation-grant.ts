@@ -36,7 +36,7 @@ import {
   validateContinuationAssertion,
 } from "../kernel/continuation-assertion.js";
 import { DEFAULT_CONTINUATION_HOP_LIMIT, newContinuationHandle } from "../kernel/continuation-store.js";
-import { ID_JAG_TOKEN_TYPE, issueCrossDomainGrant } from "../kernel/cross-domain.js";
+import { audienceScopedAuthority, ID_JAG_TOKEN_TYPE, issueCrossDomainGrant } from "../kernel/cross-domain.js";
 import {
   type EffectiveAuthoritySource,
   projectRarThroughMission,
@@ -155,15 +155,14 @@ class ContinuationRefusal extends Error {
  * may still continue later: `unauthorized_client`, never `invalid_continuation`.
  * Contained or exhausted authority leaves the audience unpermitted:
  * `invalid_target`. The derivation cap is a limit: `invalid_grant`. Every other
- * exchange keeps core's `invalid_grant` (mission#issuance-gating). The Mission's
- * state is read after the throw, since the gate's expiry clock may have just
- * committed `expired`; `mission_error` rides as the diagnostic where core
- * defines one.
+ * exchange keeps core's `invalid_grant` (mission#issuance-gating). `state` is
+ * the Mission's own state, read after a gate throw, since the gate's expiry
+ * clock may have just committed `expired`; `mission_error` rides as the
+ * diagnostic where core defines one.
  */
-function refuseContinuationGate(ctx: KoaContextWithOIDC, opts: AdapterOptions, missionId: string, e: GateError): void {
-  const state = opts.kernel.get(missionId)?.state;
+function refuseContinuationGate(ctx: KoaContextWithOIDC, reason: GateError["reason"], state: string | undefined): void {
   let error: string;
-  switch (e.reason) {
+  switch (reason) {
     case "mission_expired":
       error = "invalid_continuation";
       break;
@@ -177,8 +176,8 @@ function refuseContinuationGate(ctx: KoaContextWithOIDC, opts: AdapterOptions, m
     default:
       error = "invalid_grant";
   }
-  txError(ctx, 400, error, `continuation Mission gate refused issuance (${e.reason})`);
-  const missionError = gateErrorToMissionError(e.reason, state);
+  txError(ctx, 400, error, `continuation Mission gate refused issuance (${reason})`);
+  const missionError = gateErrorToMissionError(reason, state);
   if (missionError) (ctx.body as Record<string, unknown>).mission_error = missionError;
 }
 
@@ -278,13 +277,16 @@ export async function handleTokenExchangeGrant(
   }
   if (profileDisabled("continuation")) return;
 
-  // @spec mission#scope-projection — this exchange issues an identity
-  // grant, not a Mission-bound access token: a requested `scope` cannot be
-  // granted, so it is refused rather than dropped.
-  if (params.scope !== undefined) {
-    throw new errors.InvalidScope("scope is not supported on this exchange", String(params.scope));
-  }
-  // Step 1: RFC 8693 param shape.
+  // @spec id-continuation-assertion — the rules run in ICA -02 5.5.3 order, so
+  // a request failing several gets the code of the earliest (5.5.6): request
+  // parameters, then the assertion's well-formedness and issuer trust, then the
+  // current actor and its key proof, then chain state (a permanently unusable
+  // hop before a limit), then replay, then authorization (target and scope
+  // last). No chain-state code reaches a caller that has not authenticated as
+  // the current actor and proved the cnf key, and nothing before the
+  // reservation in beforeSign has a side effect.
+
+  // Rule 1: RFC 8693 param shape.
   if (params.requested_token_type !== ID_JAG_TOKEN_TYPE) {
     throw new errors.InvalidRequest("requested_token_type MUST be the id-jag token type");
   }
@@ -333,9 +335,26 @@ export async function handleTokenExchangeGrant(
   }
   const hopLimit = opts.continuationHopLimit ?? DEFAULT_CONTINUATION_HOP_LIMIT;
 
-  // Client auth: the authenticated presenter. Its canonical actor identity is
-  // (AS issuer, client_id), the contract the Chain Authority MUST mint the ICA
-  // `act` against; compared raw and case-sensitive below (ICA -02 5.5.2).
+  // Rules 2-3: validate the ICA's well-formedness (signature included) and its
+  // issuer. `audience` is the AS issuer identifier (NOT /token). The presenter
+  // key and replay checks are left to rules 5 and 6 below, so the validator
+  // gets neither. Every typed validator error maps to invalid_request with its
+  // specific message preserved (invalid_request, unlike invalid_grant, is not
+  // re-rendered), so exp>300 / forbidden-claim reasons stay visible.
+  let ica: ValidatedContinuation;
+  try {
+    ica = await validateContinuationAssertion(subjectToken, { audience: opts.issuer, issuers });
+  } catch (e) {
+    if (e instanceof ContinuationAssertionError) {
+      throw new errors.InvalidRequest(e.message);
+    }
+    throw e;
+  }
+
+  // Rule 5: the current actor and its key proof. Client auth already ran: the
+  // presenter's canonical actor identity is (AS issuer, client_id), the
+  // contract the Chain Authority MUST mint the ICA `act` against (ICA -02
+  // 5.5.2).
   const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
   const currentActor = { iss: opts.issuer, sub: client.clientId };
 
@@ -364,37 +383,24 @@ export async function handleTokenExchangeGrant(
     txError(ctx, 400, "invalid_dpop_proof", "DPoP proof jti missing or replayed");
     return;
   }
-
-  // Step 4: validate the ICA. `audience` is the AS issuer identifier (NOT /token).
-  // The validator CHECKS the (iss, jti) is unseen and records nothing
-  // (continuation-assertion.ts step 9); the reservation is taken in beforeSign
-  // below, once the Mission gate admits (@spec
-  // issuance-grant#effective-set-projection, #617 review 1), so a request that
-  // fails a LATER step leaves the ICA unconsumed and retryable. Every typed validator error maps to invalid_request with its
-  // specific message preserved (invalid_request, unlike invalid_grant, is not
-  // re-rendered), so exp>300 / forbidden-claim / replay / presenter-key reasons
-  // stay visible.
-  let ica: ValidatedContinuation;
-  try {
-    ica = await validateContinuationAssertion(subjectToken, {
-      audience: opts.issuer,
-      issuers,
-      presenterJkt: jkt,
-      replay,
-    });
-  } catch (e) {
-    if (e instanceof ContinuationAssertionError) {
-      throw new errors.InvalidRequest(e.message);
-    }
-    throw e;
+  // The DPoP key MUST be the ICA's confirmed key: an ICA is never a bearer
+  // token.
+  if (ica.cnf.jkt !== jkt) {
+    throw new errors.InvalidRequest("presenter key does not match assertion cnf.jkt");
+  }
+  // @spec id-continuation-assertion — an act that is not the authenticated
+  // client's canonical actor identity (raw ===, case-sensitive) is
+  // invalid_request (ICA -02 5.5.6).
+  if (ica.act.iss !== currentActor.iss || ica.act.sub !== currentActor.sub) {
+    throw new errors.InvalidRequest("continuation assertion actor does not match the authenticated client");
   }
 
-  // Step 5: resolve the handle -> Mission (@spec id-continuation-assertion, ICA
-  // -02 5.5.6). An unknown handle is invalid_request; invalid_continuation is
-  // reserved for an issued hop that is permanently unusable: a terminal handle
-  // or anchor (incl. a Mission that reached a terminal lifecycle state, via the
+  // Rule 4: chain state (@spec id-continuation-assertion, ICA -02 5.5.6). An
+  // unknown handle is invalid_request; invalid_continuation is reserved for an
+  // issued hop that is permanently unusable: a terminal handle or anchor (incl.
+  // a Mission that reached a terminal lifecycle state, via the
   // onLifecycleCommit fan-out). This description pins the STORE path (distinct
-  // from the gate path in step 9).
+  // from the gate path).
   const found = store.lookup(ica.handle);
   if (found.status === "unknown") {
     throw new errors.InvalidRequest("unknown continuation handle");
@@ -404,54 +410,83 @@ export async function handleTokenExchangeGrant(
     return;
   }
   const resolved = found.continuation;
-  // @spec id-continuation-assertion — the chain's finite hop-count limit (ICA
-  // -02 6.3), a limit and so invalid_grant (5.5.6). Checked here, before any
-  // side effect, and again where the hop is recorded.
-  const hopLimitReached = (): boolean => store.hopCount(resolved.anchor.anchorId) >= hopLimit;
-  if (hopLimitReached()) {
-    txError(ctx, 400, "invalid_grant", "continuation hop-count limit reached");
-    return;
-  }
-
-  // Step 6: invalid_target — every requested resource MUST be served by the
-  // named audience.
-  if (resources.some((r) => resourceToAs(r) !== audience)) {
-    txError(ctx, 400, "invalid_target", "resource is not served by the requested audience");
-    return;
-  }
-
-  // Step 8: CURRENT-ACTOR AGREEMENT. The ICA act (iss,sub) MUST equal the
-  // authenticated client's canonical actor identity (raw ===, case-sensitive),
-  // and the ICA cnf.jkt MUST be the presenter key.
-  if (ica.cnf.jkt !== jkt) {
-    // Defence in depth (the validator already enforced this).
-    txError(ctx, 400, "invalid_grant", "continuation assertion cnf.jkt does not match the presenter key");
-    return;
-  }
-  // @spec id-continuation-assertion — an act that is not the authenticated
-  // client's canonical actor identity is invalid_request (ICA -02 5.5.6).
-  if (ica.act.iss !== currentActor.iss || ica.act.sub !== currentActor.sub) {
-    throw new errors.InvalidRequest("continuation assertion actor does not match the authenticated client");
-  }
-
-  // Step 9: mint the continuation ID-JAG. gateDerivation runs INSIDE
-  // issueCrossDomainGrant (exactly once); kernel.get here is a non-gating read
-  // only for the deterministic sub, so there is no double-gate.
+  // A non-gating read: the counted Mission gate runs once, inside
+  // issueCrossDomainGrant.
   const record = opts.kernel.get(resolved.missionId);
   if (!record) {
     txError(ctx, 400, "invalid_continuation", "continuation Mission not found");
     return;
   }
+  // A Mission that ended (terminal, or past its expiry) ended the chain, even
+  // where the store has not yet observed it.
+  const expired = record.state === "expired" || Date.parse(record.expires_at) <= opts.kernel.nowDate().getTime();
+  if (expired || TERMINAL_STATES.has(record.state)) {
+    refuseContinuationGate(ctx, expired ? "mission_expired" : "mission_not_active", record.state);
+    return;
+  }
+  // Limits come after a permanently unusable hop: the chain's finite hop-count
+  // limit (ICA -02 6.3; checked again where the hop is recorded) and the
+  // Mission's derivation cap (enforced atomically by the gate), both
+  // invalid_grant (5.5.6).
+  const hopLimitReached = (): boolean => store.hopCount(resolved.anchor.anchorId) >= hopLimit;
+  if (hopLimitReached()) {
+    txError(ctx, 400, "invalid_grant", "continuation hop-count limit reached");
+    return;
+  }
+  if (record.derivation_limit !== null && record.derivation_count >= record.derivation_limit) {
+    refuseContinuationGate(ctx, "derivation_cap_exhausted", record.state);
+    return;
+  }
+
+  // Rule 6: single use. A reserved (iss, jti) is invalid_request (ICA -02
+  // 5.5.6); the reservation itself is taken in beforeSign below.
+  if (replay.seen(ica.iss, ica.jti)) {
+    throw new errors.InvalidRequest("continuation assertion replay");
+  }
+
+  // Rule 7: authorization. The Mission must currently permit continuation: a
+  // suspended Mission or non-active ancestor is unauthorized_client (a
+  // non-counting gate read).
+  try {
+    opts.kernel.gateActive(resolved.missionId);
+  } catch (e) {
+    if (e instanceof GateError) {
+      refuseContinuationGate(ctx, e.reason, opts.kernel.get(resolved.missionId)?.state);
+      return;
+    }
+    throw e;
+  }
+  // invalid_target: every requested resource MUST be served by the named
+  // audience, and the Mission MUST hold authority for that audience. (An empty
+  // effective set is left to the gate, which refuses it by cause.)
+  if (resources.some((r) => resourceToAs(r) !== audience)) {
+    txError(ctx, 400, "invalid_target", "resource is not served by the requested audience");
+    return;
+  }
+  const effective = opts.kernel.effectiveAuthoritySet(record);
+  if (effective.length > 0 && audienceScopedAuthority(effective, resourceToAs, audience).length === 0) {
+    txError(ctx, 400, "invalid_target", "no audience-scoped authority for the target Resource AS");
+    return;
+  }
+  // @spec mission#scope-projection — this exchange issues an identity
+  // grant, not a Mission-bound access token: a requested `scope` cannot be
+  // granted, so it is refused rather than dropped.
+  if (params.scope !== undefined) {
+    throw new errors.InvalidScope("scope is not supported on this exchange", String(params.scope));
+  }
+
+  // Mint the continuation ID-JAG. gateDerivation runs INSIDE
+  // issueCrossDomainGrant (exactly once).
   // Audience-local, deterministic sub (NOT the global mission subject).
   const localSub = subjectResolver(audience, record.subject);
   // Fresh new-hop handle, named in the ID-JAG but recorded only in beforeSign
   // below, once the Mission gate has admitted the grant: a refused request
   // leaves no orphan hop (@spec id-continuation-assertion, ICA -02 5.5.4).
   const freshHandle = newContinuationHandle();
-  // Collapse the current actor over the ICA hop lineage. Because the step-8
-  // check forces currentActor === ICA act and the ICA `act` is single-level, this
-  // ALWAYS collapses to a depth-1 lineage (a single actor's multi-hop
-  // continuation keeps one entry) — it never extends here by construction.
+  // Collapse the current actor over the ICA hop lineage. Because rule 5 forces
+  // currentActor === ICA act and the ICA `act` is single-level, this ALWAYS
+  // collapses to a depth-1 lineage (a single actor's multi-hop continuation
+  // keeps one entry) — it never extends here by construction.
   const collapsedAct: ActObject = extendChainCollapsing(
     { iss: currentActor.iss, sub: currentActor.sub },
     { iss: ica.act.iss, sub: ica.act.sub },
@@ -508,13 +543,15 @@ export async function handleTokenExchangeGrant(
       return;
     }
     // A non-active / expired / contained / cap-exhausted Mission (gate path ->
-    // distinct description from the store path in step 5).
+    // distinct description from the store path in rule 4). The checks above
+    // leave this to an empty effective set, or to a state change since they ran.
     if (e instanceof GateError) {
-      refuseContinuationGate(ctx, opts, resolved.missionId, e);
+      refuseContinuationGate(ctx, e.reason, opts.kernel.get(resolved.missionId)?.state);
       return;
     }
     // issueCrossDomainGrant throws a bare Error when no authority-set entry maps
-    // to the target audience (reachable even past the step-6 target check).
+    // to the target audience (reachable past the rule-7 check only by a state
+    // change since it ran).
     if (e instanceof Error && /audience-scoped authority/.test(e.message)) {
       txError(ctx, 400, "invalid_target", e.message);
       return;
@@ -522,7 +559,7 @@ export async function handleTokenExchangeGrant(
     throw e;
   }
 
-  // Step 10: RFC 8693 §2.2.1 response (token_type N_A; the ID-JAG is not a bearer
+  // RFC 8693 §2.2.1 response (token_type N_A; the ID-JAG is not a bearer
   // token). Set on ctx directly.
   const claims = decodeJwt(grant);
   const expiresIn = Math.max(0, (claims.exp as number) - Math.floor(Date.now() / 1000));

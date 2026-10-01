@@ -238,6 +238,8 @@ interface ExchangeFields {
   requestedTokenType?: string;
   subjectTokenType?: string;
   extra?: Record<string, string>;
+  /** Send no DPoP header. */
+  noDpop?: boolean;
 }
 
 /** POST /token with the token-exchange grant + private_key_jwt + DPoP (nonce retry). */
@@ -263,7 +265,10 @@ async function tokenExchange(f: ExchangeFields, t: Target = { issuer: ISSUER, cl
     for (const r of resources) body.append("resource", r);
     return fetch(htu, {
       method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await dpopProof(htu, "POST", extra) },
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        ...(f.noDpop ? {} : { dpop: await dpopProof(htu, "POST", extra) }),
+      },
       body: body.toString(),
     });
   };
@@ -353,8 +358,8 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     expect(as.continuationStore.resolve(freshHandle)?.missionId).toBe(missionId);
 
     // Collapsed act: a single actor's continuation keeps a depth-1 lineage (no
-    // nested `act`). NB: on this path the four-signal check forces the ICA actor
-    // to equal the current actor, so this ALWAYS collapses (never extends).
+    // nested `act`). NB: on this path the current-actor check forces the ICA
+    // actor to equal the current actor, so this ALWAYS collapses (never extends).
     expect(payload.act).toEqual({ iss: ISSUER, sub: "ap-agent" });
     expect(payload.act).not.toHaveProperty("act");
 
@@ -485,8 +490,8 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     const ica = await mintICA(handle);
 
     // Suspend: reversible, and NOT terminal, so the handle lineage stays
-    // resolvable (step 5 passes) and the refusal comes from the Mission gate
-    // inside issueCrossDomainGrant (step 9), i.e. AFTER validation.
+    // resolvable (chain state passes) and the refusal comes from the Mission
+    // gate at the authorization rule, i.e. AFTER validation.
     as.kernel.transition(missionId, "suspend");
     const refused = await tokenExchange({ subjectToken: ica });
     const refusedBody = (await refused.json()) as { error?: string; error_description?: string };
@@ -767,6 +772,96 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     expect(body.error).toBe("invalid_continuation");
     // The STORE path (proves the fan-out wiring), distinct from the gate path.
     expect(body.error_description).toMatch(/terminal continuation handle/);
+  });
+});
+
+/**
+ * @spec id-continuation-assertion — error precedence (ICA -02 5.5.6): when
+ * several rules fail, the code of the earliest. Each case pairs two failures
+ * whose codes differ, so the response shows which rule ran first.
+ */
+describe("continuation error precedence (@spec id-continuation-assertion)", () => {
+  /** Undo the store's terminal fan-out, so only the (terminal) Mission ends the chain. */
+  const reopenStore = (missionId: string): void => {
+    as.continuationStore.db.prepare("UPDATE continuation_anchors SET state = 'active' WHERE mission_id = ?").run(missionId);
+    as.continuationStore.db.prepare("UPDATE continuation_handles SET state = 'active' WHERE mission_id = ?").run(missionId);
+  };
+  const errorOf = async (res: Response): Promise<string | undefined> => {
+    const body = (await res.json()) as { error?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    return body.error;
+  };
+
+  it("a malformed assertion precedes a missing DPoP proof and a requested scope: invalid_request", async () => {
+    const { handle } = newLineage("apev-p1");
+    const malformed = await mintICA(handle, { over: { sub: "alice" } }); // a forbidden claim
+    expect(await errorOf(await tokenExchange({ subjectToken: malformed, noDpop: true }))).toBe("invalid_request");
+    expect(await errorOf(await tokenExchange({ subjectToken: malformed, extra: { scope: "payments.read" } }))).toBe(
+      "invalid_request",
+    );
+  });
+
+  it("no chain-state code before the key proof and the actor match: a terminal hop with no DPoP proof is invalid_dpop_proof, with a foreign act invalid_request", async () => {
+    const { missionId, handle } = newLineage("apev-p2");
+    as.kernel.transition(missionId, "revoke");
+    expect(await errorOf(await tokenExchange({ subjectToken: await mintICA(handle), noDpop: true }))).toBe(
+      "invalid_dpop_proof",
+    );
+    const foreign = await mintICA(handle, { act: { iss: ISSUER, sub: "ap-agent-imposter" } });
+    expect(await errorOf(await tokenExchange({ subjectToken: foreign }))).toBe("invalid_request");
+    // Both failures cleared: the chain-state code itself.
+    expect(await errorOf(await tokenExchange({ subjectToken: await mintICA(handle) }))).toBe("invalid_continuation");
+  });
+
+  it("a permanently unusable hop precedes a limit: a terminal Mission with its derivation cap spent is invalid_continuation", async () => {
+    const { missionId, handle } = newLineage("apev-p3", {}, MISSION_EXP, { requested_derivation_limit: 1 });
+    const first = await tokenExchange({ subjectToken: await mintICA(handle) });
+    expect(first.status, await first.clone().text()).toBe(200);
+    as.kernel.transition(missionId, "revoke");
+    reopenStore(missionId);
+    expect(await errorOf(await tokenExchange({ subjectToken: await mintICA(handle) }))).toBe("invalid_continuation");
+  });
+
+  it("chain state precedes replay: a consumed assertion over a terminal hop is invalid_continuation", async () => {
+    const { missionId, handle } = newLineage("apev-p4");
+    const ica = await mintICA(handle);
+    const first = await tokenExchange({ subjectToken: ica });
+    expect(first.status, await first.clone().text()).toBe(200);
+    as.kernel.transition(missionId, "revoke");
+    expect(await errorOf(await tokenExchange({ subjectToken: ica }))).toBe("invalid_continuation");
+  });
+
+  it("a limit precedes target and scope: a spent derivation cap is invalid_grant over an unserved resource or a requested scope", async () => {
+    const { handle } = newLineage("apev-p5", {}, MISSION_EXP, { requested_derivation_limit: 1 });
+    const first = await tokenExchange({ subjectToken: await mintICA(handle) });
+    expect(first.status, await first.clone().text()).toBe(200);
+    const unserved = await tokenExchange({ subjectToken: await mintICA(handle), resource: "https://elsewhere.test/api" });
+    expect(await errorOf(unserved)).toBe("invalid_grant");
+    const scoped = await tokenExchange({ subjectToken: await mintICA(handle), extra: { scope: "payments.read" } });
+    expect(await errorOf(scoped)).toBe("invalid_grant");
+  });
+
+  it("replay precedes authorization: a consumed assertion over a suspended Mission is invalid_request", async () => {
+    const { missionId, handle } = newLineage("apev-p6");
+    const ica = await mintICA(handle);
+    const first = await tokenExchange({ subjectToken: ica });
+    expect(first.status, await first.clone().text()).toBe(200);
+    as.kernel.transition(missionId, "suspend");
+    expect(await errorOf(await tokenExchange({ subjectToken: ica }))).toBe("invalid_request");
+    // A fresh assertion reaches the authorization rule.
+    expect(await errorOf(await tokenExchange({ subjectToken: await mintICA(handle) }))).toBe("unauthorized_client");
+  });
+
+  it("an audience the Mission holds no authority for is invalid_target before the gate counts a derivation", async () => {
+    const { missionId, handle } = newLineage("apev-p7");
+    // The AS itself serves this resource, but every Mission entry maps to RAS_AUD.
+    const res = await tokenExchange({
+      subjectToken: await mintICA(handle),
+      audience: ISSUER,
+      resource: "https://elsewhere.test/api",
+    });
+    expect(await errorOf(res)).toBe("invalid_target");
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(0);
   });
 });
 
