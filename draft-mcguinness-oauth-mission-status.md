@@ -82,6 +82,22 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-containment:
+    title: "Mission Containment for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-runtime-evidence:
+    title: "Mission Runtime Evidence"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-expansion:
     title: "Mission Expansion for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html
@@ -586,7 +602,15 @@ The members are:
     value, {{I-D.draft-mcguinness-oauth-mission-signals}}), a
     lifecycle mutation can guard on it ({{idempotency}}), and a
     materialized policy view names the value it materialized
-    ({{I-D.draft-mcguinness-mission-runtime}}).
+    ({{I-D.draft-mcguinness-mission-runtime}}). Companion records carry
+    this same counter under their own member names:
+    `mission_state_version` in Decision Evidence
+    ({{I-D.draft-mcguinness-mission-runtime-evidence}}), `prior_version`
+    and `new_version` in Containment Evidence
+    ({{I-D.draft-mcguinness-oauth-mission-containment}}), `prior_version`
+    and `current_version` in a Discharge Result
+    ({{I-D.draft-mcguinness-oauth-mission-discharge}}), and
+    `expected_version` on a lifecycle request ({{idempotency}}).
   - Extension members: a companion profile MAY add further members to
     this object. For example, the Status List companion adds a
     `status_list` reference where the deployment publishes a Mission
