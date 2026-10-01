@@ -395,13 +395,17 @@ Table of Contents
    The PAR endpoint reports a failed revision with a specific error:
 
    *  An expired or already-consumed mission_revision_handle yields
-      invalid_grant. - A malformed revision (unparseable, or
-      structurally invalid against the Mission Intent member
-      definitions) yields invalid_request. - A revision whose re-derived
-      Authority Set does not narrow every dimension named in
-      mission_rejected_scope or mission_rejected_authorization_details
-      yields mission_revision_not_narrowing (Section 11). - When the
-      deferral resolved (to access_denied, expired_token, or an
+      invalid_grant.
+
+   *  A malformed revision (unparseable, or structurally invalid against
+      the Mission Intent member definitions) yields invalid_request.
+
+   *  A revision whose re-derived Authority Set does not narrow every
+      dimension named in mission_rejected_scope or
+      mission_rejected_authorization_details yields
+      mission_revision_not_narrowing (Section 11).
+
+   *  When the deferral resolved (to access_denied, expired_token, or an
       approval) while the revision was in flight, the endpoint yields
       invalid_grant and the resolution is conveyed on the next poll of
       the deferral_code.
@@ -497,7 +501,7 @@ Table of Contents
 
    grant_type=authorization_code&code=SplxlOBeZQQYbYS6WxSbIA&
    client_id=s6BhdRkqt3&
-   completion_mode=deferred%20revisable
+   completion_mode=deferred%20mission_revisable
 
    The Mission Issuer routes the proposed Mission to alice for review
    and defers.  The agent polls with the deferred grant type.  On review
@@ -651,26 +655,35 @@ Table of Contents
    *  Narrowing only.  A revision MUST NOT broaden the proposed Mission
       on any dimension.  The Mission Issuer enforces the subset relation
       per parameter (scope, resource, authorization_details) before re-
-      review. - Single-use handle.  A mission_revision_handle MUST be
-      invalidated after one submission, success or failure.  A new
-      handle is issued on a subsequent revision-required response. -
-      Sender-constraint continuity.  The handle MUST be sender-
+      review.
+
+   *  Single-use handle.  A mission_revision_handle MUST be invalidated
+      after one submission, success or failure.  A new handle is issued
+      on a subsequent revision-required response.
+
+   *  Sender-constraint continuity.  The handle MUST be sender-
       constrained to the same key as the deferral_code.  An attacker
-      holding the handle without the key cannot push a revision. -
-      Handle lifetime.  The handle lifetime MUST NOT exceed the
+      holding the handle without the key cannot push a revision.
+
+   *  Handle lifetime.  The handle lifetime MUST NOT exceed the
       remaining lifetime of the deferral_code, and SHOULD be shorter
       when the handle is exposed to orchestration layers outside the
-      OAuth client. - Stale consent.  A re-reviewed revision MUST be
-      presented to the reviewer as a new disclosure with a fresh consent
-      commitment (Section 6); prior consent does not transfer. - Policy
-      disclosure. mission_rejected_scope and
+      OAuth client.
+
+   *  Stale consent.  A re-reviewed revision MUST be presented to the
+      reviewer as a new disclosure with a fresh consent commitment
+      (Section 6); prior consent does not transfer.
+
+   *  Policy disclosure. mission_rejected_scope and
       mission_rejected_authorization_details can reveal policy
       boundaries; a Mission Issuer SHOULD disclose only the minimum
-      needed to narrow and MAY omit them. - Revision bounding.  The
-      revision-cycle bound and the mandatory access_denied resolution at
-      the bound (Section 5.2) keep a client from driving an unbounded
-      reshape-and-retry loop to wear down a reviewer.  A Mission Issuer
-      SHOULD log excessive revision cycles as a security event.
+      needed to narrow and MAY omit them.
+
+   *  Revision bounding.  The revision-cycle bound and the mandatory
+      access_denied resolution at the bound (Section 5.2) keep a client
+      from driving an unbounded reshape-and-retry loop to wear down a
+      reviewer.  A Mission Issuer SHOULD log excessive revision cycles
+      as a security event.
 
 10.  Privacy Considerations
 

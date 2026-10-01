@@ -1384,9 +1384,9 @@ accepted after the approval resolved cannot reopen it.<a href="#section-4-3" cla
       <h2 id="name-revisable-approval">
 <a href="#section-5" class="section-number selfRef">5. </a><a href="#name-revisable-approval" class="section-name selfRef">Revisable Approval</a>
       </h2>
-<p id="section-5-1">A client signals that it accepts a narrowing revision by including
-<code>mission_revisable</code> among its <code>completion_mode</code> values alongside
-<code>deferred</code>:<a href="#section-5-1" class="pilcrow">¶</a></p>
+<p id="section-5-1">A client signals that it accepts a narrowing revision by
+including <code>mission_revisable</code> among its <code>completion_mode</code> values
+alongside <code>deferred</code>:<a href="#section-5-1" class="pilcrow">¶</a></p>
 <div class="lang-text sourcecode" id="section-5-2">
 <pre>
 completion_mode=deferred mission_revisable
@@ -1604,15 +1604,23 @@ start a separate authorization transaction. The Mission Issuer
 <ul class="normal">
 <li class="normal" id="section-5.3-2.1">
             <p id="section-5.3-2.1.1">An expired or already-consumed <code>mission_revision_handle</code> yields
-<code>invalid_grant</code>. - A malformed revision (unparseable, or structurally
-invalid against the Mission Intent member definitions) yields
-<code>invalid_request</code>. - A revision whose re-derived Authority Set does not
-narrow every dimension named in <code>mission_rejected_scope</code> or
+<code>invalid_grant</code>.<a href="#section-5.3-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.3-2.2">
+            <p id="section-5.3-2.2.1">A malformed revision (unparseable, or structurally invalid against the
+Mission Intent member definitions) yields <code>invalid_request</code>.<a href="#section-5.3-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.3-2.3">
+            <p id="section-5.3-2.3.1">A revision whose re-derived Authority Set does not narrow every
+dimension named in <code>mission_rejected_scope</code> or
 <code>mission_rejected_authorization_details</code> yields
-<code>mission_revision_not_narrowing</code> (<a href="#iana" class="auto internal xref">Section 11</a>). - When the deferral
-resolved (to <code>access_denied</code>, <code>expired_token</code>, or an approval) while the
-revision was in flight, the endpoint yields <code>invalid_grant</code> and the
-resolution is conveyed on the next poll of the <code>deferral_code</code>.<a href="#section-5.3-2.1.1" class="pilcrow">¶</a></p>
+<code>mission_revision_not_narrowing</code> (<a href="#iana" class="auto internal xref">Section 11</a>).<a href="#section-5.3-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.3-2.4">
+            <p id="section-5.3-2.4.1">When the deferral resolved (to <code>access_denied</code>, <code>expired_token</code>, or an
+approval) while the revision was in flight, the endpoint yields
+<code>invalid_grant</code> and the resolution is conveyed on the next poll of the
+<code>deferral_code</code>.<a href="#section-5.3-2.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-5.3-3">For example, a revision that keeps a refused write action yields:<a href="#section-5.3-3" class="pilcrow">¶</a></p>
@@ -1730,7 +1738,7 @@ Content-Type: application/x-www-form-urlencoded
 
 grant_type=authorization_code&amp;code=SplxlOBeZQQYbYS6WxSbIA&amp;
 client_id=s6BhdRkqt3&amp;
-completion_mode=deferred%20revisable
+completion_mode=deferred%20mission_revisable
 </pre><a href="#section-7-2" class="pilcrow">¶</a>
 </div>
 <p id="section-7-3">The Mission Issuer routes the proposed Mission to <code>alice</code> for review and
@@ -1913,25 +1921,41 @@ review surface.<a href="#section-9-2.5.1" class="pilcrow">¶</a></p>
 <li class="normal" id="section-9-4.1">
           <p id="section-9-4.1.1">Narrowing only. A revision <span class="bcp14">MUST NOT</span> broaden the proposed Mission on
 any dimension. The Mission Issuer enforces the subset relation per
-parameter (scope, resource, <code>authorization_details</code>) before re-review. -
-Single-use handle. A <code>mission_revision_handle</code> <span class="bcp14">MUST</span> be invalidated after
-one submission, success or failure. A new handle is issued on a
-subsequent revision-required response. - Sender-constraint continuity.
-The handle <span class="bcp14">MUST</span> be sender-constrained to the same key as the
-<code>deferral_code</code>. An attacker holding the handle without the key cannot
-push a revision. - Handle lifetime. The handle lifetime <span class="bcp14">MUST NOT</span> exceed
-the remaining lifetime of the <code>deferral_code</code>, and <span class="bcp14">SHOULD</span> be shorter
-when the handle is exposed to orchestration layers outside the OAuth
-client. - Stale consent. A re-reviewed revision <span class="bcp14">MUST</span> be presented to the
+parameter (scope, resource, <code>authorization_details</code>) before
+re-review.<a href="#section-9-4.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-4.2">
+          <p id="section-9-4.2.1">Single-use handle. A <code>mission_revision_handle</code> <span class="bcp14">MUST</span> be invalidated
+after one submission, success or failure. A new handle is issued on a
+subsequent revision-required response.<a href="#section-9-4.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-4.3">
+          <p id="section-9-4.3.1">Sender-constraint continuity. The handle <span class="bcp14">MUST</span> be sender-constrained to
+the same key as the <code>deferral_code</code>. An attacker holding the handle
+without the key cannot push a revision.<a href="#section-9-4.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-4.4">
+          <p id="section-9-4.4.1">Handle lifetime. The handle lifetime <span class="bcp14">MUST NOT</span> exceed the remaining
+lifetime of the <code>deferral_code</code>, and <span class="bcp14">SHOULD</span> be shorter when the handle
+is exposed to orchestration layers outside the OAuth client.<a href="#section-9-4.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-4.5">
+          <p id="section-9-4.5.1">Stale consent. A re-reviewed revision <span class="bcp14">MUST</span> be presented to the
 reviewer as a new disclosure with a fresh consent commitment
-(<a href="#integration" class="auto internal xref">Section 6</a>); prior consent does not transfer. - Policy disclosure.
-<code>mission_rejected_scope</code> and <code>mission_rejected_authorization_details</code>
-can reveal policy boundaries; a Mission Issuer <span class="bcp14">SHOULD</span> disclose only the
-minimum needed to narrow and <span class="bcp14">MAY</span> omit them. - Revision bounding. The
-revision-cycle bound and the mandatory <code>access_denied</code> resolution at the
-bound (<a href="#revision-submission" class="auto internal xref">Section 5.2</a>) keep a client from driving an unbounded
-reshape-and-retry loop to wear down a reviewer. A Mission Issuer <span class="bcp14">SHOULD</span>
-log excessive revision cycles as a security event.<a href="#section-9-4.1.1" class="pilcrow">¶</a></p>
+(<a href="#integration" class="auto internal xref">Section 6</a>); prior consent does not transfer.<a href="#section-9-4.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-4.6">
+          <p id="section-9-4.6.1">Policy disclosure. <code>mission_rejected_scope</code> and
+<code>mission_rejected_authorization_details</code> can reveal policy boundaries;
+a Mission Issuer <span class="bcp14">SHOULD</span> disclose only the minimum needed to narrow and
+<span class="bcp14">MAY</span> omit them.<a href="#section-9-4.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-4.7">
+          <p id="section-9-4.7.1">Revision bounding. The revision-cycle bound and the mandatory
+<code>access_denied</code> resolution at the bound (<a href="#revision-submission" class="auto internal xref">Section 5.2</a>)
+keep a client from driving an unbounded reshape-and-retry loop to
+wear down a reviewer. A Mission Issuer <span class="bcp14">SHOULD</span> log excessive revision
+cycles as a security event.<a href="#section-9-4.7.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
