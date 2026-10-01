@@ -447,7 +447,9 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     // would answer 501.
     expect(meta.transaction_authorization_endpoint).toBeUndefined();
 
-    // (5) RAS metadata advertises both id-jag grant profiles.
+    // (5) RAS metadata advertises the base id-jag grant profile only: it binds
+    // no continuation handle, so it does not claim id-jag-continuation, which
+    // would also oblige it to advertise jwt-dpop (ICA -02 7.2).
     const rasKeys = await generateKeyPair("ES256", { extractable: true });
     const ras = new ResourceAuthorizationServer({
       localCeiling: DERIVATION_POLICY.ceiling,
@@ -462,8 +464,8 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
       entitlementStalenessBoundSeconds: ENTITLEMENT_BOUND_S,
     });
     const profiles = ras.metadata().authorization_grant_profiles_supported as string[];
-    expect(profiles).toContain("urn:ietf:params:oauth:grant-profile:id-jag");
-    expect(profiles).toContain("urn:ietf:params:oauth:grant-profile:id-jag-continuation");
+    expect(profiles).toEqual(["urn:ietf:params:oauth:grant-profile:id-jag"]);
+    expect(profiles).not.toContain("urn:ietf:params:oauth:grant-profile:id-jag-continuation");
   });
 
   it("(a) ICA lifetime exp-iat > 300s -> invalid_request", async () => {
