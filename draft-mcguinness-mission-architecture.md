@@ -1829,15 +1829,28 @@ guarantee that assumes the anchors, the gating, and the record.
 # The Mission Substrate {#substrate}
 
 The binding-neutral contract is Mission Substrate Requirements
-({{I-D.draft-mcguinness-mission-substrate}}): a contextual-governance
-kernel every binding provides (native reference and controller, actor
-binding, approved context, approval event, governance gate, bounded
-reliance, context propagation, and an ordered governance record) and
-eight optional capabilities each binding claims through its Mission
-Substrate Statement (Lifecycle-Gated Authorization, State-Observable,
-Structured Authority, Monotonic Derivation, Credential-Bound,
-Authorized Context Correlation, Independently Verifiable, and Portable
-Evidence).
+({{I-D.draft-mcguinness-mission-substrate}}), which states this
+checklist normatively for any further binding. Its contextual-governance
+kernel is what every binding provides: a mission-based protocol
+supplies a Mission Context when it maps these native capabilities
+explicitly:
+
+- a stable reference and controlling authority;
+- binding to the acting actor;
+- immutable approved context, or a verifiable commitment to it;
+- an explicit approval event;
+- an active-state gate at declared control points;
+- a stated reliance bound on every governed decision and artifact;
+- context propagation or decision correlation; and
+- an ordered governance or audit record.
+{: #binding-checklist}
+
+Beyond the kernel, each binding claims through its Mission Substrate
+Statement any of eight optional capabilities (Lifecycle-Gated
+Authorization, State-Observable, Structured Authority, Monotonic
+Derivation, Credential-Bound, Authorized Context Correlation,
+Independently Verifiable, and Portable Evidence), and composes only
+the profiles whose required capabilities it provides.
 
 The bindings declare what they provide, each in its Mission Substrate
 Statement. The companion profiles named without "oauth" are defined
@@ -1852,9 +1865,10 @@ the substrate contract by touch
 ({{I-D.draft-mcguinness-mission-substrate}}).
 
 The remainder of this section documents that instantiation: eight
-primitives, each with its normative home and its consumers, six in
-the table below and the Mission-Bound Credential and Approval
-Fidelity in subsections of their own. Every
+primitives, each with its normative home and its consumers: six in
+the table below, the Mission-Bound Credential in its own subsection
+after Token Classes, and the approval event, whose fidelity is
+described with the derivation boundary ({{approval-fidelity}}). Every
 sentence mirrors a rule the named profile states normatively. None of
 these OAuth-binding representations or stronger semantics is
 required verbatim by the binding-neutral kernel, although several
@@ -2110,7 +2124,9 @@ Issuance gating plus runtime enforcement is strictly stronger than
 either alone: a gap in PEP coverage is still bounded at the token
 layer, and an outstanding token is still stopped at the action layer.
 
-The AAuth binding has a narrower structural chokepoint. The Person
+AAuth supplies the Mission Context capabilities in its own idiom but
+not a portable Authority Set or universal subset rule. The AAuth
+binding also has a narrower structural chokepoint. The Person
 Server refuses new PS-asserted issuance or federated brokering for a
 terminated Mission Context, bounding those paths by auth-token lifetime.
 Identity-based and resource-managed decisions do not cross that
@@ -2153,33 +2169,6 @@ remains the Mission Issuer while estate Authorization Servers redeem
 Mission Issuance Grants for Mission-bound, state-gated tokens,
 restoring the token-layer chokepoint without moving approval.
 
-## The Binding Checklist {#binding-checklist}
-
-For a new binding this checklist is normatively stated by Mission
-Substrate Requirements ({{I-D.draft-mcguinness-mission-substrate}});
-this section remains the informative summary, and the existing
-bindings remain authoritative for themselves.
-
-Another mission-based protocol supplies a Mission Context when it maps
-the following native capabilities explicitly:
-
-- a stable reference and controlling authority;
-- binding to the acting actor;
-- immutable approved context, or a verifiable commitment to it;
-- an explicit approval event;
-- an active-state gate at declared control points;
-- a stated reliance bound on every governed decision and artifact;
-- context propagation or decision correlation; and
-- an ordered governance or audit record.
-
-Structured authority, monotonic derivation, credential carriage,
-state observability, independent verification, and portable evidence
-are optional facets. A binding composes only the profiles whose required
-facets it provides. AAuth supplies the Mission Context capabilities in
-its own idiom but not a portable Authority Set or universal subset rule.
-
-The per-profile Mission Substrate sections remain the authoritative
-per-consumer statements of this interface.
 
 # Mission Assurance Levels {#assurance-levels}
 
