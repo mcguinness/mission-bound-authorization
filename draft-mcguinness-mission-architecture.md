@@ -1114,9 +1114,9 @@ one package:
 1. **Mission Control**: the object, approval (including deferred and
    revision), lifecycle, status and signals, expansion, completion,
    management.
-2. **Authority Distribution**: the four issuer bindings, the
-   issuance grant, cross-domain projection, child delegation,
-   offline attenuation.
+2. **Authority Distribution**: the four Mission Issuer bindings
+   (OAuth, the MAS, UMA, and GNAP), the issuance grant, cross-domain
+   projection, child delegation, offline attenuation.
 3. **Runtime Enforcement**: the runtime contract, the AuthZEN
    binding, parameter binding, custody, metering.
 4. **Agent Execution Governance**: the harness, orchestration,
