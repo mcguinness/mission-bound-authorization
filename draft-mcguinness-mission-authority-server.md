@@ -548,9 +548,9 @@ map to this endpoint's error codes ({{submission-errors}}):
   evidence type absent from the submission
   ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, Section
   "Required Evidence Is Resolved Before Derivation") MUST be refused
-  with `invalid_intent_evidence` (the MAS equivalent of the issuance
-  profile's `invalid_mission_intent_evidence`); presented evidence is
-  never silently ignored.
+  with `invalid_mission_intent_evidence`, the code the issuance profile
+  registers for the same condition, carried here in the MAS error
+  body; presented evidence is never silently ignored.
 
 The request body MAY additionally carry an `authorization_details`
 member: the client's authority proposal, an array of
@@ -681,7 +681,7 @@ A consumer MUST ignore members it does not recognize.
 |---|---|---|
 | `invalid_mission_intent` | 400 | Unparseable, structurally invalid, oversized, or containing an undefined top-level member. |
 | `invalid_authority` | 400 | Well-formed Intent, but no valid Authority Set is derivable under policy. |
-| `invalid_intent_evidence` | 400 | An evidence entry of unsupported type or failing its type's verification, or a policy-required evidence type absent from the submission. |
+| `invalid_mission_intent_evidence` | 400 | An evidence entry of unsupported type or failing its type's verification, or a policy-required evidence type absent from the submission. |
 | `unauthorized` | 401 | Request not authenticated. |
 | `not_found` | 404 | A referenced submission or Mission does not exist OR is not visible to the caller. |
 | `rate_limited` | 429 | Caller is rate-limited. |

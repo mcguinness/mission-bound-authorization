@@ -463,6 +463,24 @@ lifetime: narrow, per-task Missions, each separately approved and
 revocable, are preferred over a single broad standing Mission that
 accumulates authority across unrelated tasks.
 
+This preference has a consent cost. Many narrow Missions can create
+approval fatigue; combining unrelated authority into one broad
+Mission can make approval difficult to evaluate. A useful boundary
+is a task whose purpose, authority, and bounds the Approver can
+evaluate together ({{approval-comprehension}}).
+
+For recurring or evolving work, optional, experimental companions
+can reduce repeated approvals through standing consent
+({{standing-consent-bases}}). Mission Template
+({{I-D.draft-mcguinness-oauth-mission-template}}) creates bounded
+instances of recurring tasks. Progressive Authorization
+({{I-D.draft-mcguinness-oauth-mission-progressive}}) permits successor
+Missions within a previously approved authority ceiling as a task
+evolves. The template or ceiling still needs a meaningful human
+approval. Neither mechanism removes its profile's
+fresh-human-approval requirement for prohibited high-consequence
+authority.
+
 The unit of governance is the action, not the content. A Mission
 bounds where an agent may act (resources, actions) and how much
 (constraints and, where metered, cumulative bounds); it does not
@@ -1521,6 +1539,45 @@ approved. Because the proposal is committed separately, a proposal
 swapped between rendering and decision changes `proposal_hash` even
 where `intent_hash` is unchanged.
 
+## Approval Comprehension {#approval-comprehension}
+
+The approval event commits the Mission Intent and Authority Set the
+AS records as approved. Those commitments establish neither that the
+AS rendered them faithfully nor that the Approver understood them
+({{consent-binding}}). Step 5 of {{approval-event}} requires
+human-meaningful rendering; comprehension cannot be inferred from an
+approval or its integrity anchors.
+
+A short task can legitimately have a large or varied Authority Set:
+an erasure request whose proposal or configured lookup
+({{authorization-derivation}}) yields dozens of delete entries across
+resources. The consent object remains the complete derived Authority
+Set. The following non-normative practices can help make it
+reviewable:
+
+- **Group** entries by resource and action, so the Approver reviews
+  kinds of authority rather than a list of entries, while keeping
+  material differences in constraints visible: a group of identical
+  actions still shows an entry whose resource range or consumption
+  bound is much broader than the rest.
+- **Summarize with drill-down**: a summary covering every resource,
+  action, and bound, with each complete entry one interaction away. A
+  summary is a view of the set, never a substitute for it.
+- **Surface high-risk entries**: make the irreversible,
+  external-commitment, privileged-administration, and
+  consumption-bounded authority of {{approval-authentication}}
+  prominent in the initial view, distinguishing materially different
+  risks and bounds.
+- **Split rather than approve**: when the set is too large or varied
+  for one decision, narrower Missions can keep each approval
+  meaningful ({{applicability}}).
+
+Mission Consent Evidence
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}) defines
+layered rendering of a committed disclosure, including what its first
+layer carries, and lets the Approver ask the basis for an entry before
+deciding.
+
 ## Authority Sources {#authority-sources}
 
 A Mission draws its authority from one of three sources: a delegating
@@ -2490,7 +2547,11 @@ the `invalid_grant` error code, a request to derive a token at the
 token endpoint, on refresh, or on Token Exchange ({{RFC8693}}). The
 AS MUST refuse, with the `invalid_grant` error code, a derivation
 request it answers after it has acknowledged a revocation of the
-Mission.
+Mission. Where a profile of a Token Exchange that the AS implements
+assigns its own error code to either refusal, such as a continuation
+profile's code for an ended chain, the AS uses that profile's code
+instead of `invalid_grant`; the refusal itself, and the
+`mission_error` member below, still apply.
 
 A derivation is one issuance operation the issuer AS performs for a
 single request: the initial authorization-code exchange, a refresh, a
@@ -3106,7 +3167,7 @@ elsewhere in this document that names one of these codes
 | Authorization or token request: an explicitly requested `scope` value the issuance cannot grant under a scope-projection mapping the AS trusts ({{scope-projection}}) | `invalid_scope` ({{Section 4.1.2.1 of RFC6749}}, {{Section 5.2 of RFC6749}}) | safe `error_description` |
 | Authorization request: `scope` includes `openid` and the Approver is not the Subject ({{approval-authentication}}) | `invalid_scope` ({{Section 4.1.2.1 of RFC6749}}) | safe `error_description` |
 | Authorization decision: the Approver declines, approval authentication fails the floor or a requested `acr_values`/`max_age`, or a well-formed request (including configured-mapping mode) is refused by AS policy | `access_denied` ({{Section 4.1.2.1 of RFC6749}}) | none unless a defined extension applies |
-| Token endpoint: the Mission is revoked, expired, or superseded | `invalid_grant` ({{Section 5.2 of RFC6749}}) | `mission_error` ({{iana}}) |
+| Token endpoint: the Mission is revoked, expired, or superseded | `invalid_grant` ({{Section 5.2 of RFC6749}}), or the code a Token Exchange profile assigns ({{issuance-gating}}) | `mission_error` ({{iana}}) |
 | Token endpoint: the requested RAR subset exceeds the Mission's granted authority | `invalid_authorization_details` ({{Section 6 of RFC9396}}) | safe detail |
 | Token exchange with no actor ({{self-exchange}}): the authenticated client is not the Mission's approved agent | `invalid_request` ({{Section 2.2.2 of RFC8693}}) | safe `error_description` |
 | Delegated token exchange ({{delegation-constraints}}): narrowing leaves no entries for the delegate | `invalid_target` ({{Section 2.2.2 of RFC8693}}) | safe `error_description` |
@@ -5685,6 +5746,18 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Stated that approval cannot establish comprehension, with
+  non-normative rendering practices for large Authority Sets
+  (Approval Comprehension), and named the approval-granularity
+  trade-off in Applicability. No requirement or wire behavior
+  changed.
+
+- Let a profile of a Token Exchange that the AS implements assign its
+  own error code to the Issuance Gating refusals, such as a
+  continuation profile's code for an ended chain. The refusal and the
+  `mission_error` diagnostic are unchanged, and the code stays
+  `invalid_grant` everywhere else. This changes a requirement.
 
 - Stated the client no-downgrade requirement in Authorization Server
   Metadata, where discovery establishes Mission support; Downgrade by
