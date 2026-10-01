@@ -1491,6 +1491,11 @@ through standard {{RFC8414}} discovery.
   ({{revocation-enforcement-classes}}). When absent, no bound is
   declared, and a consumer sizes reliance to token lifetime alone.
 
+When an endpoint's `*_auth_methods_supported` member is absent, the
+methods that endpoint accepts are known only by out-of-band
+configuration; `token_endpoint_auth_methods_supported` {{RFC8414}}
+describes the token endpoint alone and is never read in its place.
+
 DPoP and mTLS support for issued credentials are read from the
 standard `dpop_signing_alg_values_supported` {{RFC9449}} and
 `tls_client_certificate_bound_access_tokens` {{RFC8705}} metadata;
