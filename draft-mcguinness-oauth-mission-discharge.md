@@ -31,7 +31,10 @@ author:
 normative:
   RFC3339:
   RFC5234:
+  RFC6838:
+  RFC7515:
   RFC7662:
+  RFC8725:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
@@ -733,6 +736,12 @@ retirement of its own guardrail. The member is never a raw principal
 or workload structure, and the requesting client cannot select an
 unapproved fallback.
 
+A carryover replacement inherits the old child's pinned mapping for
+every carried condition. A carried condition does not first enter the
+replacement, so the AS does not resolve it again, and forwarding after
+carryover authorizes against the replacement's inherited pin
+({{discharge-carryover}}).
+
 ### Discharge Anti-Oracle {#discharge-anti-oracle}
 
 An unknown `mission_id`, an unknown `entry_digest`, an unknown
@@ -856,8 +865,82 @@ carrying a `discharge_result` object as a sibling of `mission`:
   the versions the original commit produced, unchanged. They are equal
   for `already_discharged` and `terminal_noop`.
 
+`forwarded_from`:
+: present only when the discharge was forwarded after carryover
+  ({{discharge-carryover}}): a qualified reference (`issuer` and
+  Mission identifier) to the old child the request targeted. The
+  envelope's `mission` and the versions then describe the replacement
+  that changed.
+
 With the echoed `nonce`, this is the durable acknowledgement an
 at-least-once sender stops retrying against.
+
+## Discharge After Carryover {#discharge-carryover}
+
+A discharge can target a Child Mission that has since been carried over
+to a replacement under a successor parent
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section "Child
+Mission Carryover"). The targeted old child is then terminal and would
+answer `terminal_noop`, while its replacement keeps deriving the same
+authority until it expires. This section forwards the discharge
+instead.
+
+- **Resolution.** When Carryover Evidence records the targeted Mission
+  as carried, the AS MUST apply the discharge to the replacement's
+  corresponding entry. The correspondence is the per-entry pairing
+  Carryover Evidence records (the old record `entry_digest` paired with
+  the replacement's), and the AS MUST NOT resolve it any other way, such
+  as by matching resource and condition
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section
+  "Carryover Evidence and Observation"). A chain of carryovers resolves
+  through each recorded pairing in turn. A targeted entry with no
+  recorded counterpart holds no authority in the replacement, and the
+  request is answered as without forwarding, with `terminal_noop`.
+- **Authorization.** The AS MUST authorize the caller against the
+  replacement's pinned mapping for the fired condition
+  ({{discharge-authority}}). A caller that mapping does not admit gets
+  the `not_found` collapse ({{discharge-anti-oracle}}).
+- **Commit.** The replacement's entry is discharged under
+  {{discharge-commit}}, with its own latch, version increment and
+  commit boundary, before the response returns.
+- **Replay.** The AS MUST record the resolved target in the
+  operation's result record at first processing. A retry, including
+  one after a further carryover, recovers that result and never
+  resolves a new target. A replacement created after the discharge
+  committed inherits it under carryover's no-reset rule
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section
+  "No State, Authority, Expiry, or Budget Reset").
+- **Response.** The result describes the record that changed. Where
+  the caller is authorized for the Mission Status operation on the
+  replacement ({{I-D.draft-mcguinness-oauth-mission-status}}, Section
+  "Mission Status Operation"), the response is the replacement's signed
+  Mission Status Response envelope, whose `discharge_result` carries
+  `forwarded_from` ({{discharge-result}}). Otherwise the response is a
+  Discharge Receipt ({{discharge-receipt}}). Neither places the
+  replacement's versions beside the old Mission's status.
+
+### Discharge Receipt {#discharge-receipt}
+
+A Discharge Receipt is a JWS Compact Serialization {{RFC7515}} signed
+with a key published in the AS's `jwks_uri`. Its JWS header carries
+`typ` of `mission-discharge-receipt+jwt` and a `kid` identifying the
+signing key, and the HTTP `Content-Type` is
+`application/mission-discharge-receipt+jwt` ({{iana-receipt}}). A
+consumer MUST validate `typ` exactly and MUST NOT accept a Discharge
+Receipt as a Mission Status Response, or a Mission Status Response as
+a Discharge Receipt ({{RFC8725}}, Sections 3.11 and 3.12).
+
+Its payload carries `iss`, `aud`, `nonce`, `iat`, and `exp` as the
+Status profile's response envelope does, with `aud` the authenticated
+requester's identifier, and a `discharge_receipt` object with:
+
+- `mission_id`: the Mission the request targeted;
+- `event_id` and the target form, echoed as the request sent them; and
+- `outcome`: the string `forwarded`.
+
+A Discharge Receipt carries no `mission` member and no state versions.
+It never names the replacement. With the echoed `nonce`, it is the
+durable acknowledgement an at-least-once sender stops retrying against.
 
 ## Deployment-Internal Adjudication {#internal-adjudication}
 
@@ -961,6 +1044,11 @@ The completion capability ({{completion}}) adds the following:
 - Already-issued tokens. The window between discharge and the expiry
   of a token already issued is the same residual revocation carries,
   bounded the same way ({{discharge}}, {{runtime}}).
+- Forwarding after carryover. A delayed completion reaches the active
+  replacement only through recorded entry pairings, never by matching,
+  and a caller not authorized to inspect the replacement learns
+  nothing about it from the Discharge Receipt
+  ({{discharge-carryover}}).
 
 # Privacy Considerations {#privacy-considerations}
 
@@ -996,8 +1084,9 @@ that already receive that entry's projection.
 # IANA Considerations {#iana}
 
 This document requests IANA actions for a registration in the Mission
-Resource Access Profile's Mission Common Constraints registry. It
-establishes no registry of its own. `discharge_selectors` is a member
+Resource Access Profile's Mission Common Constraints registry and for
+one media type ({{iana-receipt}}). It establishes no registry of its
+own. `discharge_selectors` is a member
 of the introspection `mission` member, under an extension point of
 the OAuth binding that has no IANA registry
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission State via
@@ -1043,6 +1132,33 @@ Profile ({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
 this document, as `purpose` is, so this document establishes no
 registry of event types.
 
+## Media Type Registration {#iana-receipt}
+
+IANA is requested to register one media type per {{RFC6838}}.
+
+### application/mission-discharge-receipt+jwt
+
+- Type name: application
+- Subtype name: mission-discharge-receipt+jwt
+- Required parameters: none
+- Optional parameters: none
+- Encoding considerations: binary; JWS Compact Serialization
+- Security considerations: see {{security-considerations}}
+- Interoperability considerations: see this document
+- Published specification: this document
+- Applications that use this media type: OAuth Mission-Bound discharge
+  sources
+- Fragment identifier considerations: not applicable
+- Restrictions on usage: none
+- Provisional registration: no
+- Magic number(s): none
+- File extension(s): none
+- Macintosh file type code(s): none
+- Person & email address to contact: Karl McGuinness
+  <public@karlmcguinness.com>
+- Intended usage: COMMON
+- Author/Change controller: IETF
+
 # Conformance {#conformance}
 
 An implementation claiming this document's capability MUST meet the
@@ -1065,6 +1181,8 @@ An Authorization Server claiming the completion capability MUST:
   `discharge` operation as {{condition-selectors}} defines, disclosing
   them through token introspection where it supports introspection
   for Mission-bound tokens;
+- forward a discharge that targets a carried-over child as
+  {{discharge-carryover}} defines;
 - meet the commit semantics of {{discharge-commit}}, including
   atomicity, whichever way a discharge is determined;
 - record a committed discharge as latched state that MUST NOT revert

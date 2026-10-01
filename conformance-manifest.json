@@ -6672,6 +6672,148 @@
    "notes": "#898 fix 1. Implementation lands with the #898 implementation PR."
   },
   {
+   "id": "status.discharge.forward-to-replacement",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-carryover",
+   "text": "When Carryover Evidence records the targeted Mission as carried, the AS MUST apply the discharge to the replacement's corresponding entry.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a discharge targeting a carried-over old child discharges the replacement's corresponding entry, including across a chain of carryovers"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 3. Implementation (pairing and forwarding) lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.forward-by-pairing-only",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-carryover",
+   "text": "the AS MUST NOT resolve it any other way, such as by matching resource and condition",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "forwarding resolves the replacement entry only through the recorded per-entry pairing, so a replacement entry whose bytes changed under inherited constraints is still reached, and no other entry is"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 3. Implementation lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.forward-authorization",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-carryover",
+   "text": "The AS MUST authorize the caller against the replacement's pinned mapping for the fired condition",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a forwarded discharge is authorized against the replacement's pinned mapping; a caller it does not admit gets the not_found collapse"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 3. Implementation lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.forward-replay",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-carryover",
+   "text": "The AS MUST record the resolved target in the operation's result record at first processing.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a retry of a forwarded discharge, including one after a further carryover, recovers the original result and never resolves a new target"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 3. Implementation lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.receipt-typ-exclusive",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-receipt",
+   "text": "A consumer MUST validate `typ` exactly and MUST NOT accept a Discharge Receipt as a Mission Status Response, or a Mission Status Response as a Discharge Receipt",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Discharge Receipt (typ mission-discharge-receipt+jwt) is never accepted as a Mission Status Response, nor the reverse"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 3. Consumer-side rule; a verifier test lands with the #898 implementation PR."
+  },
+  {
+   "id": "child-delegation.carryover.entry-pairing",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-evidence",
+   "text": "for each carried entry, the old record entry's `entry_digest` paired with the replacement record entry's `entry_digest`, with at most one counterpart per old entry",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Carryover Evidence for a carried child records, per carried entry, the old record entry_digest and its replacement's, at most one counterpart each"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 3. Carryover Evidence's map gains the per-entry pairing that discharge forwarding resolves through; implementation lands with the #898 implementation PR."
+  },
+  {
    "id": "status.discharge.policy-resolution-on-condition-entry",
    "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-authority",
