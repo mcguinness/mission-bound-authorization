@@ -145,6 +145,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-submission-evidence:
+    title: "Mission Intent Submission Evidence for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-submission-evidence.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -983,10 +991,12 @@ Submission Evidence in the envelope's `evidence` array binds the
 exact `intent_hash` of the submitted Intent: evidence obtained for an
 earlier candidate does not admit a re-shaped Intent, so a shaping
 pass that changes the Intent needs evidence for the Intent it
-actually submits ({{I-D.draft-mcguinness-oauth-mission}}). The Authorization Server {{RFC6749}} acts as the Mission
-Issuer: it validates, narrows, renders the consent disclosure, records
-the approval event, and derives an Authority Set
-({{I-D.draft-mcguinness-oauth-mission}}).
+actually submits
+({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, Section
+"Evidence Binds One Exact Intent"). The Authorization Server
+{{RFC6749}} acts as the Mission Issuer: it validates, narrows,
+renders the consent disclosure, records the approval event, and
+derives an Authority Set ({{I-D.draft-mcguinness-oauth-mission}}).
 
 The shaper does not invoke the PAR endpoint or the Authorization
 Endpoint and does not handle the authorization response. Those are

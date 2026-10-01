@@ -40,6 +40,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-submission-evidence:
+    title: "Mission Intent Submission Evidence for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-submission-evidence.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-approval:
     title: "Mission Deferred Approval for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html
@@ -365,12 +373,14 @@ revision beyond what was actually reviewed.
 A revision changes the semantic Intent, and its `intent_hash` with
 it. Intent Submission Evidence bound to the proposed Mission's
 `intent_hash` MUST NOT be treated as evidence for the revision
-({{I-D.draft-mcguinness-oauth-mission}}): evidence a policy requires
-is presented anew on the revision submission's envelope, bound to the
+({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, Section
+"Evidence Binds One Exact Intent"): evidence a policy requires is
+presented anew on the revision submission's envelope, bound to the
 revised Intent, unless the evidence type's specification authorizes
-defined transformations and verifies their lineage. The issuance
-profile's required-evidence resolution applies to the revision
-submission as to any submission.
+defined transformations and verifies their lineage. Required-evidence
+resolution ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}},
+Section "Required Evidence Is Resolved Before Derivation") applies to
+the revision submission as to any submission.
 
 The client continues polling the existing `deferral_code`; the revision
 does not start a new approval. A PAR `request_uri` returned on the
