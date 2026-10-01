@@ -156,21 +156,21 @@ Table of Contents
    mechanisms express authority, and the Mission is the approved task
    that authority serves.
 
-   The object fills a gap current practice pays for daily: an estate
-   that cannot size authority to a task compensates with read-only
-   scoping, a human executing every write, or permanently fenced pilots,
-   and the Mission is the representation those controls substitute for.
+   The object fills a gap that deployments pay for daily: an estate that
+   cannot size authority to a task compensates with read-only scoping, a
+   human executing every write, or permanently fenced pilots, and the
+   Mission is the representation those controls substitute for.
 
-   The model is deliberately decomposed: the OAuth binding (the
+   The model is deliberately decomposed.  The OAuth binding (the
    "issuance profile" to its OAuth companions,
    [I-D.draft-mcguinness-oauth-mission]) defines the object and its
-   OAuth 2.0 [RFC6749] realization, a standalone binding hosts the same
+   OAuth 2.0 [RFC6749] realization.  A standalone binding hosts the same
    object without changing an existing Authorization Server
-   ([I-D.draft-mcguinness-mission-authority-server]), an AAuth binding
+   ([I-D.draft-mcguinness-mission-authority-server]).  An AAuth binding
    maps the shared approval, reference, lifecycle-gate, and log
    capabilities onto that protocol's native Mission Context without
    importing the OAuth Authority Set
-   ([I-D.draft-mcguinness-mission-aauth]), and optional companions layer
+   ([I-D.draft-mcguinness-mission-aauth]).  Optional companions layer
    approval, lifecycle, enforcement, runtime, delegation, and proof
    capabilities on top.  The decomposition keeps each interface small
    but spreads the structure across many documents and several bindings;
@@ -194,12 +194,12 @@ Table of Contents
    documents it cites; where a summary and its owning profile appear to
    differ, the profile governs.
 
-   Its boundary with the Mission Security Model
-   ([I-D.draft-mcguinness-mission-security-model]) is deliberate: this
-   document describes components, interfaces, and data flows; the
-   security model describes the trusted base and how each component's
-   compromise degrades the guarantees.  Each profile's own Security
-   Considerations remain normative over both.
+   This document describes components, interfaces, and data flows; the
+   Mission Security Model
+   ([I-D.draft-mcguinness-mission-security-model]) describes the trusted
+   base and how each component's compromise degrades the guarantees.
+   Each profile's own Security Considerations remain normative over
+   both.
 
 1.1.  Map of This Document
 
@@ -235,23 +235,23 @@ Table of Contents
    Mission Issuer) are the OAuth binding's
    ([I-D.draft-mcguinness-oauth-mission]); a passage that uses them
    describes that realization or a binding that adopts it.  No binding
-   is the default reading of a passage that does not name one.  Policy
-   Enforcement Point (PEP), Policy Decision Point (PDP), consequential
-   action, the high-consequence classes, and the Enforcement Scope
-   Statement are the runtime profile's
-   ([I-D.draft-mcguinness-mission-runtime]); Effective Authority Set is
-   the status profile's ([I-D.draft-mcguinness-oauth-mission-status]);
-   the transition classification, including decide_anew, is the
-   substrate contract's ([I-D.draft-mcguinness-mission-substrate]);
+   is the default reading of a passage that does not name one.
+
+   Policy Enforcement Point (PEP), Policy Decision Point (PDP),
+   consequential action, the high-consequence classes, and the
+   Enforcement Scope Statement are the runtime profile's
+   ([I-D.draft-mcguinness-mission-runtime]).  Effective Authority Set is
+   the status profile's ([I-D.draft-mcguinness-oauth-mission-status]),
+   and the transition classification, including decide_anew, is the
+   substrate contract's ([I-D.draft-mcguinness-mission-substrate]).
    Mission Authority Server (MAS) is defined by
-   [I-D.draft-mcguinness-mission-authority-server]; the AAuth binding is
-   defined by [I-D.draft-mcguinness-mission-aauth].
+   [I-D.draft-mcguinness-mission-authority-server], and the AAuth
+   binding by [I-D.draft-mcguinness-mission-aauth].
 
 3.  A Mission's Life
 
-   The structure is easiest to see by following one Mission end to end
-   under the OAuth binding: an operator gives an agent the task
-   "reconcile Q3 invoices."
+   Under the OAuth binding, an operator gives an agent the task
+   "reconcile Q3 invoices," and one Mission carries it end to end:
 
    1.  *Propose.* The client shapes the request into a structured
        Mission Intent, untrusted by construction, and submits it in a
@@ -408,11 +408,12 @@ Table of Contents
    intent_hash over the approved Mission Intent, authority_hash over the
    consented Authority Set, and, where the client submitted an authority
    proposal, proposal_hash over the submitted authorization_details
-   array, each computed over a domain-separated, issuer-bound envelope
-   with fixed canonicalization, so an auditor can reproduce each digest
-   from the record alone (the OAuth binding's Mission Approval,
-   Integrity Anchors, and Canonicalization Rules sections).  The record
-   is immutable except for its state (the Mission Record section).
+   array.  Each anchor is computed over a domain-separated, issuer-bound
+   envelope with fixed canonicalization, so an auditor can reproduce
+   each digest from the record alone (the OAuth binding's Mission
+   Approval, Integrity Anchors, and Canonicalization Rules sections).
+   The record is immutable except for its state (the Mission Record
+   section).
 
    In the OAuth binding the lifecycle states are active, revoked, and
    expired, and only active permits issuance or a new positive
@@ -449,8 +450,7 @@ Table of Contents
    with the layers below rather than replacing them, and the Mission
    Authority Server ([I-D.draft-mcguinness-mission-authority-server]) is
    its binding-independent control plane across an estate, whichever
-   party issues a given token.  The control-plane vocabulary is exact,
-   not loose:
+   party issues a given token.  In control-plane terms:
 
    *  the issuer side holds desired state (the record, its authority,
       its lifecycle and state version), reconciles it (gating, the
@@ -464,8 +464,8 @@ Table of Contents
    The plane the layer governs is authority, never operations: how an
    agent runs stays with the harness and the orchestrator.
 
-   Grouped as planes rather than parts, the roles of Section 6 form this
-   layer, with the evidence surface crossing all of them:
+   Grouped as planes, the roles of Section 6 form this layer, with the
+   evidence surface crossing all of them:
 
     control       Mission control point (OAuth AS | MAS | AAuth PS |
                   UMA AS | GNAP AS):
@@ -522,29 +522,30 @@ Table of Contents
    risk warrants (Section 11), and the verbs of Section 7 organize the
    levers by the question each answers.
 
-   What approval commits is broader than the structured Authority Set
-   alone: it also commits the rendered intent context (goal,
-   task_bounds, and, where it differs, the requested ceiling), the
-   effective expires_at, and the rendered derivation_limit and any
-   metering bound ([I-D.draft-mcguinness-oauth-mission],
+   In the OAuth binding, what approval commits is broader than the
+   structured Authority Set alone: it also commits the rendered intent
+   context (goal, task_bounds, and, where it differs, the requested
+   ceiling), the effective expires_at, and the rendered derivation_limit
+   and any metering bound ([I-D.draft-mcguinness-oauth-mission],
    [I-D.draft-mcguinness-oauth-mission-derivation-limits],
    [I-D.draft-mcguinness-mission-metering]).  Concrete request values,
    current consumption, and action sequencing are decision-time facts,
    evaluated later by runtime policy, metering, or action-bound
-   (transaction) approval; core does not require them to be re-rendered
-   to the original Approver, though action-bound approval may re-render
-   exactly that.
+   (transaction) approval; the OAuth binding does not require them to be
+   re-rendered to the original Approver, though action-bound approval
+   may re-render exactly that.
 
    The lifecycle control gates new derivation from the envelope; a
    credential already materialized under it keeps running to its own
-   bound unless an action-time gate reaches it first (Section 11.5).
-   The two halves compose but do not substitute: an envelope real at
-   approval time can still admit, at decision time, an effect the
-   Approver never saw rendered in that form.
+   bound unless an action-time gate reaches it first (Section 10.4,
+   Section 11.5).  Approval-time commitment and decision-time checks
+   compose but do not substitute: an envelope real at approval time can
+   still admit, at decision time, an effect the Approver never saw
+   rendered in that form.
 
-   Attribution shares the grain limit: proving which concurrent task
-   item produced a permitted action needs a verified cross-link that no
-   family carrier supplies (Section 11.3).
+   Attribution has the same limit at task-item grain: proving which
+   concurrent task item produced a permitted action needs a verified
+   cross-link that no family carrier supplies (Section 11.3).
 
 4.2.  Survivable Incorrectness
 
@@ -569,19 +570,18 @@ Table of Contents
    as authority, and mediated custody generalizes from credentials to
    context.
 
-   The arms differ in maturity, and the difference is stated rather than
-   blurred: the exposure arm's enforceable edges are the harness taint
-   rule, egress mediation, and catalog filtering
+   The arms differ in maturity.  The exposure arm's enforceable edges
+   are the harness taint rule, egress mediation, and catalog filtering
    ([I-D.draft-mcguinness-mission-harness],
    [I-D.draft-mcguinness-mission-runtime],
-   [I-D.draft-mcguinness-mission-authzen]), while its interior,
-   retrieval, memory, and context assembly scoped to the Mission, has no
-   interoperable form yet and is deployment discipline, declared in the
+   [I-D.draft-mcguinness-mission-authzen]).  Its interior (retrieval,
+   memory, and context assembly scoped to the Mission) has no
+   interoperable form and is deployment discipline, declared in the
    Deployment Profile (Section 12.6) rather than claimed.
 
 5.  Non-Goals
 
-   The model's boundary is deliberate.  The family does not define:
+   The family does not define:
 
    *  *A new grant protocol.* Rich Authorization Requests [RFC9396] and
       kindred mechanisms already fill the authority-expression role; the
@@ -626,8 +626,7 @@ Table of Contents
 
 6.  Mission Roles and Components
 
-   For each component: what it does, what it holds, and which document
-   specifies it.  What its compromise costs is the security model's
+   What each component's compromise costs is the security model's
    subject ([I-D.draft-mcguinness-mission-security-model]).
 
    Agent (client):  Proposes the Mission Intent and executes the task;
@@ -636,22 +635,21 @@ Table of Contents
       ([I-D.draft-mcguinness-oauth-mission]).
 
       A deployment may authenticate concrete agent instances with client
-      instance identification for attestation-based client
-      authentication, endorsing its attesters in client metadata
+      instance identification, which extends attestation-based client
+      authentication
+      ([I-D.draft-ietf-oauth-attestation-based-client-auth]), and
+      endorse its attesters in client metadata
       ([I-D.draft-mcguinness-oauth-client-instance-id],
-      [I-D.draft-mcguinness-oauth-client-attesters]), which sharpens
-      joins and evidence attribution to instance granularity without
-      touching the Mission model; instance evidence alone identifies no
-      actor or delegate
-      ([I-D.draft-mcguinness-oauth-client-instance-id], Section 5).
-      Attestation-based client authentication
-      ([I-D.draft-ietf-oauth-attestation-based-client-auth]) is the
-      substrate that profile extends, and SPIFFE
-      ([I-D.draft-ietf-oauth-spiffe-client-auth]) supplies workload
-      credentials that on their own convey no instance identity under it
+      [I-D.draft-mcguinness-oauth-client-attesters]), sharpening joins
+      and evidence attribution to instance granularity without touching
+      the Mission model.  Instance evidence alone identifies no actor or
+      delegate ([I-D.draft-mcguinness-oauth-client-instance-id],
+      Section 5); SPIFFE workload credentials
+      ([I-D.draft-ietf-oauth-spiffe-client-auth]) on their own convey no
+      instance identity under that profile
       ([I-D.draft-mcguinness-oauth-client-instance-id], Section 8.2);
-      none of them defines the Mission actor, delegation, intent,
-      lifecycle, or evidence semantics defined here.
+      and none of these mechanisms defines the Mission actor,
+      delegation, intent, lifecycle, or evidence semantics defined here.
 
    Subject:  The user or system on whose behalf the Mission is approved,
       an (iss, sub) pair recorded immutably at approval (the OAuth
@@ -780,12 +778,12 @@ Table of Contents
 
    One material action splits across these roles, and the family keeps
    each distinct and attributable rather than collapsing them into one
-   "agent" identity.  The identifiers below are shown in the OAuth
-   binding's instantiation; each binding carries the same distinctions
-   in its own vocabulary, AAuth natively with its agent identifier, the
+   "agent" identity.  Each binding carries the same distinctions in its
+   own vocabulary; AAuth does so natively with its agent identifier, the
    Person at the PS, parent_agent for a parent-mediated sub-agent, and
    the call chain for a service hop
-   ([I-D.draft-mcguinness-mission-aauth]):
+   ([I-D.draft-mcguinness-mission-aauth]).  The identifiers below are
+   shown in the OAuth binding's instantiation:
 
    Principal:  the Subject, the token sub (the OAuth binding).
 
@@ -840,8 +838,9 @@ Table of Contents
    Agent identity (who is acting):  The logical agent and, where client
       instance identification is deployed, the concrete instance
       (Section 6).  Owned by the deployment's agent IAM, a registry or
-      directory outside this family, and consumed as the client_id, the
-      client-instance attestation, and validated Instance Context.
+      directory outside this family, and consumed, in the OAuth binding,
+      as the client_id, the client-instance attestation, and validated
+      Instance Context.
 
    Agent Deployment (what is running):  The approved behavioral version
       of the agent: its code, model, system prompt, tool allowlist, data
@@ -864,11 +863,8 @@ Table of Contents
 
    An agent registry is a complementary dependency, not part of the
    Mission system; an A2A AgentCard directory ([A2A]) is one example
-   source.  Discovery contents are not authority for workload identity,
-   authorization, or effective capabilities: a deployment applies local
-   admission policy and independently verifies the relevant credential,
-   resource metadata, and capability evidence.  Where one exists, the
-   Mission Issuer and the PDP consume a small, stable slice of it:
+   source.  Where one exists, the Mission Issuer and the PDP consume a
+   small, stable slice of it:
 
    *  the agent identifier and its owner,
 
@@ -880,6 +876,11 @@ Table of Contents
       approved for, a derivation input, never a grant), and
 
    *  risk tier.
+
+   Discovery contents are not authority for workload identity,
+   authorization, or effective capabilities: a deployment applies local
+   admission policy and independently verifies the relevant credential,
+   resource metadata, and capability evidence.
 
    Registry state is a state source like any other: the consuming
    decision point treats it under the runtime profile's freshness
@@ -902,13 +903,14 @@ Table of Contents
    instance-bound binding properties (Section 11.3); none of these steps
    is an assurance level.
 
-   The division of labor with agent IAM is one sentence: agent identity
-   preserves who is acting, and the Mission preserves why their
-   authority exists.  The registry and workload identity authenticate an
-   approved agent instance; the Mission and its derived Authority Set
-   say what sanctioned work that instance carries; per-hop credentials
-   narrow; the runtime layer enforces each action and parameter; and the
-   evidence layer joins what was approved, decided, and done.
+   In the division of labor with agent IAM, agent identity preserves who
+   is acting, and the Mission preserves why their authority exists.  The
+   registry and workload identity authenticate an approved agent
+   instance; the Mission and, where the binding derives one, its
+   Authority Set say what sanctioned work that instance carries; per-hop
+   credentials narrow; the runtime layer enforces each action and
+   parameter; and the evidence layer joins what was approved, decided,
+   and done.
 
 7.  The Mission Verbs
 
@@ -1045,11 +1047,11 @@ Table of Contents
    the disclosure shown to the Approver, and Deferred Approval
    ([I-D.draft-mcguinness-oauth-mission-approval]), the OAuth binding's
    asynchronous path, with an experimental companion adding an in-review
-   narrowing negotiation; the standalone and AAuth bindings are natively
-   asynchronous.  AAuth's baseline approval commits its exact mission
-   blob, not the family Consent Evidence object.  Where the experimental
-   progressive authorization companion is used, the initial approval
-   also consents an authority ceiling for later staged widening
+   narrowing negotiation.  The standalone and AAuth bindings are
+   natively asynchronous.  AAuth's baseline approval commits its exact
+   mission blob, not the family Consent Evidence object.  Where the
+   experimental progressive authorization companion is used, the initial
+   approval also consents an authority ceiling for later staged widening
    ([I-D.draft-mcguinness-oauth-mission-progressive]).
 
    Who holds the deciding side is a spectrum, not a species: the
@@ -1058,15 +1060,14 @@ Table of Contents
    never the approver.  A deterministic, versioned policy can approve at
    machine speed within a ceiling a human consented to (the
    policy_drawdown and template authorization bases that companion
-   profiles define on the OAuth binding's extension point, Section 8):
-   policy approves the instance because a human approved the policy or
-   the template, with policy_version keeping that chain re-checkable,
-   while a model's generated judgment is never the sole authority for
-   granting or widening: a generated approver reading attacker-
-   influenced proposals is itself an injection surface.  The high-
-   consequence classes stay on a fresh human decision, per the
-   progressive profile's prohibited set
-   ([I-D.draft-mcguinness-oauth-mission-progressive]).
+   profiles define on the OAuth binding's extension point, Section 8).
+   Policy approves the instance because a human approved the policy or
+   the template, with policy_version keeping that chain re-checkable.  A
+   model's generated judgment is never the sole authority for granting
+   or widening: a generated approver reading attacker-influenced
+   proposals is itself an injection surface.  The high-consequence
+   classes stay on a fresh human decision, per the progressive profile's
+   prohibited set ([I-D.draft-mcguinness-oauth-mission-progressive]).
 
 7.3.  Govern
 
@@ -1078,21 +1079,23 @@ Table of Contents
    List companion for fleet-scale reliance
    ([I-D.draft-mcguinness-oauth-mission-status-list]) and by the Entry
    Discharge companion for per-entry completion discharge
-   ([I-D.draft-mcguinness-oauth-mission-discharge]); Signals, the push
-   complement ([I-D.draft-mcguinness-oauth-mission-signals]); Expansion,
-   widening only via an approved successor
+   ([I-D.draft-mcguinness-oauth-mission-discharge]); and Signals, the
+   push complement ([I-D.draft-mcguinness-oauth-mission-signals]).
+
+   Further owners: Expansion, widening only via an approved successor
    ([I-D.draft-mcguinness-oauth-mission-expansion]); Containment, event-
    triggered monotonic narrowing of a live Mission's effective authority
    ([I-D.draft-mcguinness-oauth-mission-containment]); Management, fleet
    enumeration and bulk lifecycle for operators
    ([I-D.draft-mcguinness-oauth-mission-management]); and Discovery,
    experimental, binding encountered resources within a pre-consented
-   ceiling ([I-D.draft-mcguinness-mission-discovery]).  The AAuth
-   binding carries this verb natively: its management companion for
-   status, termination, and delegation-tree queries
-   ([I-D.draft-mcguinness-mission-aauth-management]); the approved
-   lifetime bound is AAuth's own expires_at, profiled by the expiry
-   document ([I-D.draft-mcguinness-aauth-mission-expiry]).
+   ceiling ([I-D.draft-mcguinness-mission-discovery]).
+
+   The AAuth binding carries this verb natively through its management
+   companion for status, termination, and delegation-tree queries
+   ([I-D.draft-mcguinness-mission-aauth-management]).  Its native
+   approved lifetime bound is AAuth's own expires_at, profiled by the
+   expiry document ([I-D.draft-mcguinness-aauth-mission-expiry]).
 
 7.4.  Enforce Each Action
 
@@ -1105,7 +1108,7 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-authzen]); the runtime evidence
    companion, the Decision Evidence, Execution Evidence, and Refusal
    Record objects ([I-D.draft-mcguinness-mission-runtime-evidence]).
-   Its decision composes conjunctively with the structural plane above:
+   The runtime decision composes conjunctively with the other gates:
    Effective Authority Set membership, every applicable cumulative-
    consumption or stateful operational gate, and a required action-bound
    approval are each independently necessary, and none grants, widens,
@@ -1130,51 +1133,55 @@ Table of Contents
    authority, and cascade revocation
    ([I-D.draft-mcguinness-oauth-mission-child-delegation]); Offline
    Attenuation, narrower Mission-bound tokens minted off the issuer's
-   hot path ([I-D.draft-mcguinness-oauth-mission-attenuation]).  Offline
-   attenuation requires the runtime enforcement layer: its kill switch
-   is the runtime state re-check.  Both build on the actor chain of the
-   OAuth binding's Delegation Within a Mission section.  The chooser:
-   the OAuth binding's token-exchange delegation for an execution hop
-   living and dying with the parent's lifecycle; a Child Mission when
-   the delegate needs its own lifecycle, approval, or audit identity;
-   attenuation, experimental, only where offline minting is the
-   constraint.  The same principal exercising the same authority
-   concurrently is not delegation at all but swarm execution
-   (Section 7.7).  AAuth delegates natively: a parent-mediated sub-agent
-   under parent_agent, distinct from the call chain of a service hop,
-   with no Authority Set machinery imported
+   hot path ([I-D.draft-mcguinness-oauth-mission-attenuation]).  Both
+   build on the actor chain of the OAuth binding's Delegation Within a
+   Mission section.  Offline attenuation requires the runtime
+   enforcement layer: its kill switch is the runtime state re-check.
+
+   The chooser: the OAuth binding's token-exchange delegation for an
+   execution hop living and dying with the parent's lifecycle; a Child
+   Mission when the delegate needs its own lifecycle, approval, or audit
+   identity; attenuation, experimental, only where offline minting is
+   the constraint.  The same principal exercising the same authority
+   concurrently is not delegation but swarm execution (Section 7.7).
+
+   AAuth delegates natively: a parent-mediated sub-agent under
+   parent_agent, distinct from the call chain of a service hop, with no
+   Authority Set machinery imported
    ([I-D.draft-mcguinness-mission-aauth]).
 
 7.7.  Swarm Execution: Multiplication, Not Delegation
 
-   One composition of the three lifecycle-bearing objects (Section 6.2)
-   recurs often enough to name.  A Mission pinned to an Agent Deployment
-   class or version, executed concurrently by N attested instances of
-   that Deployment, is multiplication, not delegation: no act hop, no
+   Swarm execution is a composition of the three lifecycle-bearing
+   objects (Section 6.2): a Mission pinned to an Agent Deployment class
+   or version, executed concurrently by N attested instances of that
+   Deployment.  It is multiplication, not delegation: no act hop, no
    Child Mission, no attenuation chain, because authority never moves
    between principals.  This pin is a named architectural pattern, not a
-   wire member the OAuth binding currently defines: that document
-   reserves no Intent member for it and points forward to a dedicated
-   Agent Deployment Binding profile that a deployment wanting this pin
-   implements ([I-D.draft-mcguinness-oauth-mission]).  Late binding is
-   attestation: an instance joins the work by authenticating as the
-   pinned Deployment with its own Client Attestation
-   ([I-D.draft-mcguinness-oauth-client-instance-id]), not by receiving a
-   credential from a peer.  The invariant is class-grain authorization,
-   instance-grain attribution: the class, the Agent Deployment projected
-   as client_id, is an authorization subject, never an attribution
-   subject, and attribution stays per-instance through the instance
-   substrate, which attributes a presentation to an instance only under
-   a sender-constraint key unique to it
-   ([I-D.draft-mcguinness-oauth-client-instance-id], Section 7.3).  The
-   derivation limits profile's derivation_limit
+   wire member the OAuth binding defines: that document reserves no
+   Intent member for it and points forward to a dedicated Agent
+   Deployment Binding profile that a deployment wanting this pin
+   implements ([I-D.draft-mcguinness-oauth-mission]).
+
+   Late binding is attestation: an instance joins the work by
+   authenticating as the pinned Deployment with its own Client
+   Attestation ([I-D.draft-mcguinness-oauth-client-instance-id]), not by
+   receiving a credential from a peer.  The invariant is class-grain
+   authorization, instance-grain attribution.  The class, the Agent
+   Deployment projected as client_id, is an authorization subject, never
+   an attribution subject.  Attribution stays per-instance through the
+   instance substrate, which attributes a presentation to an instance
+   only under a sender-constraint key unique to it
+   ([I-D.draft-mcguinness-oauth-client-instance-id], Section 7.3).
+
+   The derivation limits profile's derivation_limit
    ([I-D.draft-mcguinness-oauth-mission-derivation-limits]) is not a
    fan-out or concurrency ceiling: it counts issuance events, not
    instances, and a single instance refreshing N times consumes it
-   exactly as N instances deriving once each would.  What actually
-   bounds a swarm's aggregate consumption is the metering profile's
-   Mission-grain budget: consumption bounds attach to the Mission, not
-   to any one instance, so a swarm of instances shares one budget
+   exactly as N instances deriving once each would.  What bounds a
+   swarm's aggregate consumption is the metering profile's Mission-grain
+   budget: consumption bounds attach to the Mission, not to any one
+   instance, so a swarm of instances shares one budget
    ([I-D.draft-mcguinness-mission-metering]).
 
    Swarm execution is the rung before the Delegate verb's chooser: more
@@ -1192,42 +1199,50 @@ Table of Contents
    Resource AS mints a local token bounded by the projected authority
    ([I-D.draft-mcguinness-oauth-mission-cross-domain]).  Projection
    preserves authority across the boundary rather than narrowing it to a
-   sub-actor, which is why it is a distinct verb from Delegate;
-   downstream revocation latency is the local token lifetime.
+   sub-actor, which makes it a distinct verb from Delegate.  Downstream
+   revocation latency is the local token lifetime.
 
 7.9.  Continue
 
    The question: how does a Mission's authorization continue, under the
    same approval and constraints, when the acting identity must be re-
    established at each hop or after the original credential is gone?
-   The boundary: the seam between authorization continuity, which the
-   Mission owns, and identity continuity, which a transport carries.
-   Owner: Mission Continuation
+   The boundary: the seam between authorization continuity and identity
+   continuity.  Owner: Mission Continuation
    ([I-D.draft-mcguinness-oauth-mission-continuation]), the
    authorization-continuity profile, which keeps three easily conflated
-   things apart.  Identity continuity, who is acting and how that
-   identity legitimately continues, rides a transport rather than this
-   profile: Identity Continuation
-   ([I-D.draft-mcguinness-oauth-id-continuation-assertion]) for short-
-   lived, sender-constrained hops among Resource Authorization Servers
-   that trust a common identity provider; async delegation
-   ([I-D.draft-zhu-oauth-async-delegation]) for a long-running,
-   disconnected task; and the cross-domain grant
-   ([I-D.draft-mcguinness-oauth-mission-cross-domain]) across a trust
-   boundary.  Authorization continuity, what work remains authorized
-   under which constraints on whose approval, is the Mission's: every
-   continued grant derives a subset of the Mission's Authority Set, is
-   state-gated at issuance, is bounded by the Mission's expiry, and ends
-   when the Mission goes terminal.  Execution-time evidence records,
-   against the Mission, what was done at each continued hop.  The load-
-   bearing invariant is that a continuation handle grants nothing: it
-   names an accepted hop, and every continued grant re-passes the
-   Mission's active gate, so continuity is never authority, the rule the
-   harness already applies to session continuity
-   ([I-D.draft-mcguinness-mission-harness]).  Continue is therefore
-   distinct from Delegate, which narrows authority to a sub-actor, and
-   it uses the Project verb's cross-domain grant as one transport rather
-   than replacing it.
+   things apart:
+
+   *  Identity continuity, who is acting and how that identity
+      legitimately continues, rides a transport rather than this
+      profile.  The transports are Identity Continuation
+      ([I-D.draft-mcguinness-oauth-id-continuation-assertion]) for
+      short-lived, sender-constrained hops among Resource Authorization
+      Servers that trust a common identity provider; async delegation
+      ([I-D.draft-zhu-oauth-async-delegation]) for a long-running,
+      disconnected task; and the cross-domain grant
+      ([I-D.draft-mcguinness-oauth-mission-cross-domain]) across a trust
+      boundary.
+
+   *  Authorization continuity, what work remains authorized under which
+      constraints on whose approval, is the Mission's.  Every continued
+      grant derives a subset of the Mission's Authority Set, is state-
+      gated at issuance, and is bounded by the Mission's expiry.  When
+      the Mission goes terminal, new continued grants end; authority
+      already issued under a continued grant runs to its own bound
+      unless a state-aware gate reaches it first.
+
+   *  Execution-time evidence records, against the Mission, what was
+      done at each continued hop.
+
+   A continuation handle grants nothing: it names an accepted hop, and
+   every continued grant re-passes the Mission's active gate.
+   Continuity is therefore never authority, the rule the harness applies
+   to session continuity ([I-D.draft-mcguinness-mission-harness]).
+
+   Continue differs from Delegate, which narrows authority to a sub-
+   actor.  Continue uses the Project verb's cross-domain grant as one
+   transport rather than replacing it.
 
 7.10.  Prove
 
@@ -1301,11 +1316,12 @@ Table of Contents
       is typed: it is defined where a structured-authority vocabulary
       defines it (on the OAuth binding, mission_resource_access and its
       Common Constraints, defined by the OAuth binding's Mission
-      Resource Access Profile), and authority carried in a type with no
+      Resource Access Profile).  Authority carried in a type with no
       defined subset relation is carried as approved, neither narrowed,
-      delegated, nor projected; moving authority into expressive policy-
-      language entries weakens this guarantee exactly there, a trade to
-      make knowingly ([I-D.draft-mcguinness-mission-security-model]).
+      delegated, nor projected.  Moving authority into expressive
+      policy-language entries weakens this guarantee exactly there, a
+      trade to make knowingly
+      ([I-D.draft-mcguinness-mission-security-model]).
 
    *Revocation is possession-independent*:  A Mission ends by a state
       change at its issuer, not by finding and destroying credentials;
@@ -1333,19 +1349,19 @@ Table of Contents
       corresponding integrity property is the s256 commitment over exact
       mission-blob bytes, not the OAuth integrity anchors.
 
-   Three readings of the invariants recur.  Each follows from the seven
-   and adds no eighth:
+   Three readings follow from the seven invariants and add no eighth:
 
    Authorization bases:  "Approved" in the first invariant has more than
       one basis.  The OAuth binding fully defines one, direct, a human's
-      own approval, and provides the extension point, an authorization-
-      basis type string, that companion profiles use to define others:
-      template, a dispatch drawing on a ceiling the human consented to
-      once, and policy_drawdown, a child instance a policy adjudicates
-      within a bound the parent's human already consented to.  Every
-      basis fixes the same accountable human as consent_principal; the
-      bases differ only in what activated this instance and what root
-      that activation traces to (the OAuth binding).
+      own approval.  It also provides the extension point, an
+      authorization-basis type string, that companion profiles use to
+      define others: template, a dispatch drawing on a ceiling the human
+      consented to once, and policy_drawdown, a child instance a policy
+      adjudicates within a bound the parent's human already consented
+      to.  Every basis fixes the same accountable human as
+      consent_principal; the bases differ only in what activated this
+      instance and what root that activation traces to (the OAuth
+      binding).
 
    Work products:  Authority never rides a work product.  Crossing into
       a Mission, a work product is input the receiving Mission re-
@@ -1387,24 +1403,24 @@ Table of Contents
    encounter time breaks that premise, and some authorization mechanisms
    invert it: the resource declares its own operations and consequences.
 
-   The derivation boundary (Section 9.2, below) settles who commits
-   authority; this section settles who owns what an operation means.
-   The ownership statement is one sentence: the resource owns the
-   ontology, its operations, its constraint semantics, and their
-   consequences, while derivation, consent rendering, and enforcement
+   The derivation boundary (Section 9.2) settles who commits authority;
+   this section settles who owns what an operation means.  The resource
+   owns the ontology, its operations, its constraint semantics, and
+   their consequences.  Derivation, consent rendering, and enforcement
    consume that meaning without owning it, and no layer invents meaning
-   it does not own.  The consuming contract is equally short: meaning
-   binds at approval, is enforced at the point of use, and any
-   translation between the resource's vocabulary and another party's is
-   trusted, verified, or separately approved, never a place where
-   authority widens.  One boundary is shared by agreement: the resource
+   it does not own.  One boundary is shared by agreement: the resource
    owns its operation semantics and consequences, while the family owns
    the registered cross-resource constraint vocabulary, which a resource
    explicitly advertises and adopts before it binds
    ([I-D.draft-mcguinness-oauth-mission-resource-access]).
 
+   The consuming contract is that meaning binds at approval and is
+   enforced at the point of use.  Any translation between the resource's
+   vocabulary and another party's is trusted, verified, or separately
+   approved, never a place where authority widens.
+
    Resource-owned meaning reaches the three consuming layers through
-   five mechanisms, each normative in its own home and composing as one
+   five mechanisms, each defined in its own home and composing as one
    contract:
 
    Common Constraints:  The registered constraint vocabulary every
@@ -1446,30 +1462,32 @@ Table of Contents
       addressing is not a baseline AAuth mission anchor.  Home: the
       discovery and R3 compositions, informative.
 
-   Behind the five mechanisms sits one direction axis, and the direction
-   is chosen per encounter, not fixed by binding.  The family inherits
-   OAuth's client-proposed default: the client names the authority it
-   wants and the resource's meaning arrives through metadata, catalogs,
-   and profiles.  Resource-Declared Semantics is the inversion, where
-   the resource speaks first.  Where a structured-authority binding
-   commits that meaning at approval, it is enforced at use and
-   translation never widens.  Under the OAuth binding the resource-
-   declared direction runs entirely through seams the family already
-   has: the encounter contract routes the declaration
-   ([I-D.draft-mcguinness-mission-discovery]), narrowing-mode derivation
-   consumes the declared operations as candidate vocabulary
-   ([I-D.draft-mcguinness-oauth-mission]), consent composes the
-   resource-authored material, and the declaration's digest rides the
-   derived authority (the progressive companion's
+   Behind the five mechanisms sits one direction axis, chosen per
+   encounter, not fixed by binding.  The family inherits OAuth's client-
+   proposed default: the client names the authority it wants and the
+   resource's meaning arrives through metadata, catalogs, and profiles.
+   Resource-Declared Semantics is the inversion, where the resource
+   speaks first.  Where a structured-authority binding commits that
+   meaning at approval, it is enforced at use and translation never
+   widens.
+
+   Under the OAuth binding the resource-declared direction runs entirely
+   through seams the family already has: the encounter contract routes
+   the declaration ([I-D.draft-mcguinness-mission-discovery]),
+   narrowing-mode derivation consumes the declared operations as
+   candidate vocabulary ([I-D.draft-mcguinness-oauth-mission]), consent
+   composes the resource-authored material, and the declaration's digest
+   rides the derived authority (the progressive companion's
    resource_declaration_digest,
-   [I-D.draft-mcguinness-oauth-mission-progressive]).  In AAuth, R3 can
-   describe deterministic resource authorization independently of
-   mission approval; the PS considers the resource request and mission
-   context without turning the R3 declaration into a Mission Authority
-   Set. Proposed RAR-type metadata
-   ([I-D.draft-zehavi-oauth-rar-metadata]), a resource publishing the
-   authorization_details types and fields it understands, is the OAuth-
-   native descriptive surface the direction builds on.
+   [I-D.draft-mcguinness-oauth-mission-progressive]).  Proposed RAR-type
+   metadata ([I-D.draft-zehavi-oauth-rar-metadata]), a resource
+   publishing the authorization_details types and fields it understands,
+   is the OAuth-native descriptive surface the direction builds on.
+
+   In AAuth, R3 can describe deterministic resource authorization
+   independently of mission approval; the PS considers the resource
+   request and mission context without turning the R3 declaration into a
+   Mission Authority Set.
 
    Where a deployed semantic-binding mechanism is in force, both
    directions close the same loop: the meaning source's digest becomes
@@ -1483,22 +1501,21 @@ Table of Contents
    mechanism, meaning is not consulted at approval and assumed at
    enforcement; it is committed at approval and re-verified at use.
 
-   The contract's failure mode is already normative in each home: a
-   consumer that cannot resolve an operation's meaning, a constraint it
-   cannot evaluate, a drifted capability definition, an unrecognized
-   declaration, refuses rather than guesses.  Meaning, like state, fails
+   The contract's failure mode is stated in each home: a consumer facing
+   an operation meaning it cannot resolve, a constraint it cannot
+   evaluate, a drifted capability definition, or an unrecognized
+   declaration refuses rather than guesses.  Meaning, like state, fails
    closed.
 
-   The contract has a dual, and the two statements carry equal force.
-   The resource owns what an action means; the Mission owns why it is
-   happening and where the undertaking stands, and that context exists
-   nowhere else in the stack.  A resource evaluates each request at
-   perfect local resolution and zero task resolution: it can price every
-   consequence its ontology names and cannot see the undertaking the
-   request belongs to.  This is the context asymmetry, and a risk
-   decision composes both sides of it: semantics without purpose prices
-   every delete the same, and purpose without semantics cannot read the
-   call.
+   The contract has a dual of equal force.  The resource owns what an
+   action means; the Mission owns why it is happening and where the
+   undertaking stands, and that context exists nowhere else in the
+   stack.  A resource evaluates each request at perfect local resolution
+   and zero task resolution: it can price every consequence its ontology
+   names and cannot see the undertaking the request belongs to.  A risk
+   decision composes both sides of this context asymmetry: semantics
+   without purpose prices every delete the same, and purpose without
+   semantics cannot read the call.
 
    "Delete database" in isolation is indistinguishable from catastrophe.
    "Delete database" inside an approved migration whose copy steps
@@ -1515,18 +1532,20 @@ Table of Contents
 
 9.2.  The Authority Derivation Boundary
 
-   Deriving the Authority Set from the Mission Intent is the semantic
-   heart of the model and the one step the family deliberately does not
-   standardize.  The consequence is a trust boundary worth stating
-   plainly: interoperability begins at the committed result, not at the
-   Intent.  A Mission Intent has no portable semantics; two conforming
-   Authorization Servers can derive different Authority Sets from the
-   same Intent, and audit can establish what was derived (against
+   In the authority-bearing bindings, deriving the Authority Set from
+   the Mission Intent is the semantic heart of the model and the one
+   step the family deliberately does not standardize.  The consequence
+   is a trust boundary: interoperability begins at the committed result,
+   not at the Intent.  A Mission Intent has no portable semantics; two
+   conforming Mission Issuers can derive different Authority Sets from
+   the same Intent, and audit can establish what was derived (against
    intent_hash and policy_version), never whether it was the right
-   reading of the task.  A deployment whose partners must reason about
-   its derivations can publish a derivation policy identifier and test
-   fixtures that pin Intent-to-Authority-Set outcomes, making the local
-   policy reviewable even though it does not travel.  Narrowing mode
+   reading of the task.
+
+   A deployment whose partners must reason about its derivations can
+   publish a derivation policy identifier and test fixtures that pin
+   Intent-to-Authority-Set outcomes, making the local policy reviewable
+   even though it does not travel.  Narrowing mode
    ([I-D.draft-mcguinness-oauth-mission]) is the checkable path: where
    the client supplies candidate authority, derivation is a subset of it
    and reproducible, which is the closest the family comes to portable
@@ -1539,19 +1558,21 @@ Table of Contents
    The ceiling the derivation narrows against is itself a composition,
    not a single object.  The derived Authority Set sits inside every
    bound on the task: the issuer's derivation policy, the ceiling of the
-   Mission's established authority source (a delegating person's own
+   Mission's established authority source, and, at enforcement time, the
+   resource owner's and deployment's live policy at the decision point.
+   The derivation step intersects the first two and commits the result;
+   the runtime contract re-checks the rest on every action, which is why
+   a permit is never implied by the Authority Set alone.  A deployment
+   adding further sources (a tenant boundary, an environment-specific
+   floor) adds them as derivation-policy inputs or as decision-point
+   policy, never as agent-negotiated widening.
+
+   The established authority source is a delegating person's own
    authority, a workload's provisioned authority, or governed
-   organizational policy: approval activates authority the source
+   organizational policy.  Approval activates authority the source
    already holds and grants nothing beyond it, and the Approver needs
    authority to activate the source, not personal possession of its
-   permissions), and, at enforcement time, the resource owner's and
-   deployment's live policy at the decision point.  The derivation step
-   intersects the first two and commits the result; the runtime contract
-   re-checks the rest on every action, which is why a permit is never
-   implied by the Authority Set alone.  A deployment adding further
-   sources (a tenant boundary, an environment-specific floor) adds them
-   as derivation-policy inputs or as decision-point policy, never as
-   agent-negotiated widening.
+   permissions.
 
    The derivation modes rank by how portable their result is:
 
@@ -1582,10 +1603,10 @@ Table of Contents
 
    For the portable-authority bindings, the approval event authenticates
    the Approver, establishes the Subject, derives and renders the
-   Authority Set for consent, computes the anchors over the consented
-   set, the approved Intent, and, where one was submitted, the authority
-   proposal, and creates the record in active atomically with the
-   decision.
+   Authority Set for consent, and computes the anchors over the
+   consented set, the approved Intent, and, where one was submitted, the
+   authority proposal.  That approval event creates the record in active
+   atomically with the decision.
 
    AAuth approval has different fidelity: the native propose, clarify,
    and approve interaction authenticates the parties, returns the
@@ -1600,8 +1621,8 @@ Table of Contents
 10.  The Mission Substrate
 
    The binding-neutral contract is Mission Substrate Requirements
-   ([I-D.draft-mcguinness-mission-substrate]), which states this
-   checklist normatively for any further binding.  Its contextual-
+   ([I-D.draft-mcguinness-mission-substrate]), which states the
+   checklist below normatively for any further binding.  Its contextual-
    governance kernel is what every binding provides: a mission-based
    protocol supplies a Mission Context when it maps these native
    capabilities explicitly:
@@ -1643,13 +1664,14 @@ Table of Contents
    substrate contract by touch
    ([I-D.draft-mcguinness-mission-substrate]).
 
-   The remainder of this section documents that instantiation: eight
+   The OAuth binding instantiates the substrate through eight
    primitives, each with its normative home and its consumers: six in
    the table below, the Mission-Bound Credential in its own subsection
    after Token Classes, and the approval event, whose fidelity is
-   described with the derivation boundary (Section 9.3).  None of these
-   OAuth-binding representations or stronger semantics is required
-   verbatim by the binding-neutral kernel, although several instantiate
+   described with the derivation boundary (Section 9.3).
+
+   The binding-neutral kernel requires none of these OAuth-binding
+   representations or stronger semantics verbatim.  Several instantiate
    mandatory kernel functions: the identifier and issuer realize the
    Mission Reference and Controller, the lifecycle realizes the
    governance gate, token validity participates in bounded reliance, and
@@ -1755,12 +1777,9 @@ Table of Contents
 
 10.2.  Token Classes
 
-   "Mission-bound" is a specific claim.  This document uses three token
-   shapes descriptively, so a weak one is not read as the strong one;
-   the three names are the OAuth binding's Terminology, and what the
-   strong class requires is the credential-mission-bound equivalence
-   (Section 11.3), which the OAuth binding discharges through its own
-   conformance rule:
+   "Mission-bound" is a specific claim.  Three token shapes, named in
+   the OAuth binding's Terminology, keep a weak one from being read as
+   the strong one:
 
    *  a *Mission-referenced token* carries a Mission identifier only;
 
@@ -1775,10 +1794,11 @@ Table of Contents
 
    Only the third earns the term: a mission claim alone is a reference,
    not Mission-bound authorization.  The family reserves "Mission-bound"
-   for that class.  Its definition is the credential-mission-bound
+   for that class, and its definition is the credential-mission-bound
    equivalence of the binding properties (Section 11.3): six conditions,
    each mapped to what discharges it, earned only where all hold
-   together.
+   together.  The OAuth binding discharges the equivalence through its
+   own conformance rule.
 
 10.3.  The Mission-Bound Credential
 
@@ -1790,23 +1810,23 @@ Table of Contents
    is never required for it, per condition 2 of credential-mission-bound
    (Section 11.3).
 
-   This is the binding-dependent primitive, and it is exactly where the
-   bindings split.  The OAuth binding provides it.  The standalone
-   binding does not: the MAS's Mission Substrate section states that a
-   MAS provides neither this credential nor issuance gating
+   The credential is the binding-dependent primitive, and the bindings
+   split on it.  The OAuth binding provides it.  The standalone binding
+   does not: the MAS's Mission Substrate section states that a MAS
+   provides neither this credential nor issuance gating
    ([I-D.draft-mcguinness-mission-authority-server]).  An AAuth auth
    token can carry the native {approver, s256} mission reference, but it
    does not carry Mission-derived authorization details and therefore is
    Mission-referenced, not a Mission-bound credential in the strong
-   sense defined above ([I-D.draft-mcguinness-mission-aauth]).
+   sense ([I-D.draft-mcguinness-mission-aauth]).
 
    For profiles that compose with it, the seam is the runtime profile's
    Mission binding establishment step
-   ([I-D.draft-mcguinness-mission-runtime]): the credential carries the
-   Mission reference where the binding provides one, and a binding
-   without it supplies an externally established reference, verified
-   under a join the binding defines, which the MAS profiles as its
-   Mission Join.
+   ([I-D.draft-mcguinness-mission-runtime]).  At that step, the
+   credential carries the Mission reference where the binding provides
+   one; a binding without it supplies an externally established
+   reference, verified under a join the binding defines, which the MAS
+   profiles as its Mission Join.
 
    Offline Attenuation attenuates this credential and the token-carriage
    aspects of delegation ride it, so both require it; the companions
@@ -1816,9 +1836,9 @@ Table of Contents
 
    The issuance-grant companion
    ([I-D.draft-mcguinness-oauth-mission-issuance-grant]) composes the
-   two: the standalone Mission Issuer mints a Mission Issuance Grant
-   that a consuming Authorization Server redeems for Mission-bound
-   tokens, providing this primitive compositely.
+   OAuth and standalone bindings: the standalone Mission Issuer mints a
+   Mission Issuance Grant that a consuming Authorization Server redeems
+   for Mission-bound tokens, providing this primitive compositely.
 
 10.4.  The Validity Model
 
@@ -1860,26 +1880,29 @@ Table of Contents
    cryptography and a clock: no state source, no freshness discipline,
    no availability coupling, and a worst-case exposure equal to the
    lifetime by construction.  Where every fresh credential crosses a
-   Mission-state decision point, this realizes the *lifecycle-gated*
-   capability with reliance bounded by credential lifetime alone
-   ([I-D.draft-mcguinness-mission-substrate]); it is not a property of
-   every access mode, since AAuth's PS-asserted and federated paths have
-   that gate while its direct modes do not.
+   Mission-state decision point, this posture realizes the *lifecycle-
+   gated* capability with reliance bounded by credential lifetime alone
+   ([I-D.draft-mcguinness-mission-substrate]).  That holds only for
+   access modes with such a gate: AAuth's PS-asserted and federated
+   paths have it, while its direct modes do not.
 
-   TTL-only is the right choice at action grain, where an artifact lives
-   seconds to minutes and a revocation landing inside its window has no
-   observation point that could reach the artifact before its own expiry
-   does, and for short missions; the family's own short-lived artifacts
-   (the permit, the cross-domain grant, the Join Assertion) already sit
-   at this end.
+   TTL-only is appropriate where the artifact's lifetime meets the
+   tolerated exposure bound and no required state check would shorten
+   that exposure.  That is the case at action grain, where an artifact
+   lives seconds to minutes and a revocation landing inside its window
+   has no observation point that could reach the artifact before its own
+   expiry does, and for short missions.  The family's own short-lived
+   artifacts (the permit, the cross-domain grant, the Join Assertion)
+   sit at this end.
 
-   What a lifetime cannot do is suspend, complete, or kill now, which is
-   the task-grain residue the Mission's state carries and which the
+   A lifetime cannot suspend, complete, or kill at once.  That task-
+   grain residue is what the Mission's state carries and what the
    *state-observable* capability reaches: an authenticated freshness
-   source with a stated staleness bound, a named substrate capability a
-   binding may provide beyond the kernel's bounded-reliance floor
-   ([I-D.draft-mcguinness-mission-substrate]), and the one runtime
-   enforcement requires ([I-D.draft-mcguinness-mission-runtime]).
+   source with a stated staleness bound.  State-observable is a named
+   substrate capability a binding may provide beyond the kernel's
+   bounded-reliance floor ([I-D.draft-mcguinness-mission-substrate]),
+   and it is the one runtime enforcement requires
+   ([I-D.draft-mcguinness-mission-runtime]).
 
    The two ends are one mechanism seen from opposite sides: a lifetime
    relocates the freshness check from the verification path to the
@@ -1902,23 +1925,26 @@ Table of Contents
 
    Peer standing among the bindings is a deployment-topology claim, not
    a data-model-independence claim: each attaches to its own protocol as
-   an equally adoptable unit, and OAuth is the family's first-authored
+   an equally adoptable unit.  OAuth is the family's first-authored
    binding, built on widely deployed OAuth infrastructure, a deployment
    fact and not a maturity ranking.  Adopting Missions on OAuth requires
-   the changes the OAuth binding defines.  The two axes diverge for the
-   standalone binding: the Mission Authority Server
-   ([I-D.draft-mcguinness-mission-authority-server]) is a normative
-   standalone-controller protocol binding over the OAuth Mission data
-   model: a peer deployment topology, but not an independent substrate
-   model, since it normatively imports the OAuth Mission record and
-   issuance profile.  AAuth demonstrates model independence: it maps the
-   shared kernel onto its own protocol's native Mission Context without
-   importing the OAuth Authority Set
-   ([I-D.draft-mcguinness-mission-aauth]).  Peer standing implies
-   neither identical capabilities nor identical adoption cost: AAuth,
-   natively contextual, adds no new wire members, and each binding
-   declares what it supplies, in a Mission Substrate Statement or, for
-   the OAuth binding, an informative Mapping Assessment.
+   the changes the OAuth binding defines.
+
+   The two axes diverge for the standalone binding.  The Mission
+   Authority Server ([I-D.draft-mcguinness-mission-authority-server]) is
+   a normative standalone-controller protocol binding over the OAuth
+   Mission data model: a peer deployment topology, but not an
+   independent substrate model, since it normatively imports the OAuth
+   Mission record and issuance profile.  AAuth demonstrates model
+   independence: it maps the shared kernel onto its own protocol's
+   native Mission Context without importing the OAuth Authority Set
+   ([I-D.draft-mcguinness-mission-aauth]).
+
+   Peer standing implies neither identical capabilities nor identical
+   adoption cost: AAuth, natively contextual, adds no new wire members,
+   and each binding declares what it supplies, in a Mission Substrate
+   Statement or, for the OAuth binding, an informative Mapping
+   Assessment.
 
    The bindings share Mission Context capabilities but are not one
    security system: each has its own authority representation, trust
@@ -1999,10 +2025,9 @@ Table of Contents
 
                                   Table 4
 
-   The table is the one-page answer to a question the object-level
-   framing invites: a MAS deployment does not provide AS-native
-   semantics just because both hold the same Mission, and a reader
-   comparing deployments compares architectures first.
+   A MAS deployment does not provide AS-native semantics just because
+   both hold the same Mission, so a comparison of deployments compares
+   their architectures first.
 
    The OAuth binding stacks two independent chokepoints.  Issuance
    gating acts at the token layer: a revoked or expired Mission stops
@@ -2011,7 +2036,8 @@ Table of Contents
    action is re-checked against current state at the point of use.
    Issuance gating plus runtime enforcement is strictly stronger than
    either alone: a gap in PEP coverage is still bounded at the token
-   layer, and an outstanding token is still stopped at the action layer.
+   layer, and an outstanding token is still stopped at the action layer
+   on mediated paths.
 
    AAuth supplies the Mission Context capabilities in its own idiom but
    not a portable Authority Set or universal subset rule.  The AAuth
@@ -2023,7 +2049,7 @@ Table of Contents
    composition or independently resource-verifiable Authority Set
    ([I-D.draft-mcguinness-mission-aauth]).
 
-   Per-action enforcement is budgeted, not blanket: only consequential
+   Per-action enforcement is budgeted, not blanket.  Only consequential
    actions are gated, the common-case decision is a local evaluation
    against a materialized policy view whose network cost is paid per
    freshness window, and only the high-consequence classes are required
@@ -2098,14 +2124,15 @@ Table of Contents
    bundle.  They are guidance, never a conformance class, an earned
    label, or a ladder a deployment must climb; a deployment adopts the
    bundle its risk warrants and stops there.  A level does not determine
-   any action class's containment property, and the proof obligations
-   noted with each level are the claims that become available at that
-   bundle, not properties the level name asserts.  A relying party
-   compares claims, not levels (Section 11.2), because the family's
-   strongest properties are deployment properties, not protocol
-   properties: complete PEP placement, a trusted freshness source, and
-   credential custody are things a deployment does, not things a token
-   proves.
+   any action class's containment property.  The proof obligations noted
+   with each level are the claims that become available at that bundle,
+   not properties the level name asserts.
+
+   A relying party compares claims, not levels (Section 11.2), because
+   the family's strongest properties are deployment properties, not
+   protocol properties: complete PEP placement, a trusted freshness
+   source, and credential custody are things a deployment does, not
+   things a token proves.
 
    The levels build on one another in the order deployments build:
    recording and governing the approved task (Baseline Issuance), then
@@ -2116,16 +2143,17 @@ Table of Contents
    authority-bearing bindings name their level separately from their
    binding.  The standalone MAS is the case that matters most: it
    provides the Mission record, lifecycle, and authority but no Mission-
-   bound credential and no issuance gating, so under it the kill switch
-   is the runtime layer alone, not the token gate, and a deployment
-   states that.  An AAuth deployment reports the Mission Context
-   capabilities and resource access modes it actually uses instead of a
-   level.  Selecting the AAuth binding does not by itself satisfy
-   structured-authority, subset, portable-evidence, or runtime proof
-   obligations; its lifecycle gate covers PS-asserted and federated
-   access but not identity-based or resource-managed access; and its
-   native auth token is Mission-referenced, not Mission-bound
-   (Section 10.2).
+   bound credential and no issuance gating.  Under the standalone MAS,
+   the kill switch is the runtime layer alone, not the token gate, and a
+   deployment states that.
+
+   An AAuth deployment reports the Mission Context capabilities and
+   resource access modes it actually uses instead of a level.  Selecting
+   the AAuth binding does not by itself satisfy structured-authority,
+   subset, portable-evidence, or runtime proof obligations.  Its
+   lifecycle gate covers PS-asserted and federated access but not
+   identity-based or resource-managed access, and its native auth token
+   is Mission-referenced, not Mission-bound (Section 10.2).
 
    The levels, cumulative:
 
@@ -2135,31 +2163,31 @@ Table of Contents
 
       Where a structured-authority binding issues Mission-bound
       credentials, issuance is bounded by the subset rule and gated on
-      Mission state, which grants task-bound, auditable authority and a
-      possession-independent kill switch at the issuance gate; it grants
-      no per-action control, and outstanding tokens run to their own
-      expiry.
+      Mission state.  That gated issuance grants task-bound, auditable
+      authority and a possession-independent kill switch at the issuance
+      gate.  It grants no per-action control, and outstanding tokens run
+      to their own expiry.
 
       Sized deliberately, that expiry is the level's revocation bound:
       *lifetime-bounded reliance*, access-token lifetimes no longer than
       the deployment's tolerated staleness
       ([I-D.draft-mcguinness-oauth-mission-status]), gives a quantified
       cutoff, revocation within one token lifetime, with no Resource
-      Server changes and no status traffic; expiry closes the temporal
-      bound by the clock alone, observing no revocation, suspension,
+      Server changes and no status traffic.  Expiry closes the temporal
+      bound by the clock alone and observes no revocation, suspension,
       completion, or containment, which is why the lifetime must not
       exceed the tolerated staleness.  Revocation latency is a number,
       not a level: what the higher levels add is per-action enforcement,
       parameter binding, and evidence, not a faster clock.
 
       Under a binding without credential-carried authority (the
-      standalone MAS), Baseline grants governance and audit; no kill
-      switch of any kind exists until a freshness surface (the half-step
-      named under Proof obligations below) and runtime enforcement (the
-      next level) arrive, and a deployment states that; the issuance
-      join ([I-D.draft-mcguinness-oauth-mission-issuance-grant])
-      restores gated issuance at each consuming Authorization Server,
-      and Baseline with it.
+      standalone MAS), Baseline grants governance and audit.  No kill
+      switch of any kind exists under such a binding until a freshness
+      surface and runtime enforcement (the next level) arrive, and a
+      deployment states that.  The issuance join
+      ([I-D.draft-mcguinness-oauth-mission-issuance-grant]) restores
+      gated issuance at each consuming Authorization Server, and
+      Baseline with it.
 
       The nearest AAuth comparison, stated as capabilities rather than a
       level: native approval, exact-byte commitment, active or
@@ -2184,17 +2212,17 @@ Table of Contents
       action, a trusted state source with a published staleness bound,
       parameter binding, and runtime evidence
       ([I-D.draft-mcguinness-mission-runtime] and its AuthZEN profile).
-      Grants per-action enforcement and revocation bounded, for gated
-      classes, by the staleness bound plus the permit window plus the
-      class's execution bound, and by token lifetime, where issuance is
-      gated, for paths no runtime gate reaches.
+      Grants per-action enforcement and bounded revocation: for gated
+      classes, within the staleness bound plus the permit window plus
+      the class's execution bound; for paths no runtime gate reaches,
+      within token lifetime where issuance is gated.
 
-      This is the smallest deployment that turns a Mission from governed
-      issuance into action-time defense, and every normative dependency
-      it needs is a family document intended for the Standards Track; it
-      is a substantial build, not a wedge, and a deployment sizes the
-      effort from the runtime profile's conformance section rather than
-      from this level's one-line summary.
+      Runtime-Enforced is the smallest deployment that turns a Mission
+      from governed issuance into action-time defense, and every
+      normative dependency it needs is a family document intended for
+      the Standards Track.  It is a substantial build, not a wedge: a
+      deployment sizes the effort from the runtime profile's conformance
+      section rather than from this level's one-line summary.
 
       Proof obligations: PEP-placement completeness and the declared
       freshness source and bound.  Documents: Baseline plus the
@@ -2217,17 +2245,17 @@ Table of Contents
       credential custody, a declared-and-audited path scope, action-
       bound approval for the high-consequence classes, an active-
       freshness state source, and approval disclosures rendered by a
-      component isolated from the agent, so a compromised agent cannot
-      unilaterally take a high-consequence action for which it does not
-      hold a mediated credential.
+      component isolated from the agent.  With these, a compromised
+      agent cannot unilaterally take a high-consequence action for which
+      it does not hold a mediated credential.
 
       *Trifecta containment*: least exposure, the harness taint rule
       enforced as a mandatory requirement of the harness profile, with
       pre-consented egress to Approver-named destinations as its one
-      carve-out, and full mediation of the external-communication and
-      external-commitment classes with the egress-channel enumeration,
-      so an injected agent cannot egress on the strength of untrusted
-      content alone.
+      carve-out; and full mediation of the external-communication and
+      external-commitment classes with the egress-channel enumeration.
+      With both, an injected agent cannot egress on the strength of
+      untrusted content alone.
 
       These are named high bars, never implied by basic adoption; a
       deployment can bind its Enforcement Scope Statement to execution-
@@ -2235,14 +2263,14 @@ Table of Contents
       organizational ([I-D.draft-mcguinness-mission-runtime],
       [I-D.draft-mcguinness-mission-harness]).
 
-   Read as an adoption ladder, each level makes a broader class of agent
+   Read in adoption order, each level makes a broader class of agent
    work defensible to grant.  The mapping is informative: the action
    classes are the runtime profile's
    ([I-D.draft-mcguinness-mission-runtime]), resource policy remains
    authoritative for its own objects, and what a level grants varies
-   with the binding; the Mission Deployment Profile (Section 12.6) is
-   where a deployment states its own mediated_action_classes and
-   exclusions.
+   with the binding.  A deployment states its own
+   mediated_action_classes and exclusions in the Mission Deployment
+   Profile (Section 12.6).
 
      +==================+===========================================+
      | Level            | What a deployment can defensibly grant    |
@@ -2305,24 +2333,27 @@ Table of Contents
    *  *Reference security architecture* (Runtime-Enforced): the protocol
       core plus runtime enforcement, its AuthZEN profile, runtime
       evidence (the decision and execution objects AuthZEN consumes),
-      and a freshness source, Status being the reference choice; the
-      substrate contract arrives with them as runtime and AuthZEN's
-      normative kernel, by adoption closure.  This is the architecture
-      this document means when it says a Mission is enforced, and the
-      one an evaluation should picture by default.  It presumes an
-      authority-bearing binding; under AAuth the analogous per-action
-      control is the Person Server's contextual gate on PS-mediated
-      paths ([I-D.draft-mcguinness-mission-aauth]).
+      and a freshness source, Status being the reference choice.  The
+      substrate contract arrives with them by adoption closure, as the
+      normative kernel of runtime and AuthZEN.  When this document says
+      a Mission is enforced, it means this architecture, and an
+      evaluation should picture it by default.  The architecture
+      presumes an authority-bearing binding; under AAuth the analogous
+      per-action control is the Person Server's contextual gate on PS-
+      mediated paths ([I-D.draft-mcguinness-mission-aauth]).
 
    *  *Recommended agent architecture* (Governed Agent): what a
       deployment running autonomous AI agents should build.
 
-   *  *High-assurance architecture* (High-Assurance Agent).
+   *  *High-assurance architecture* (High-Assurance Agent): the
+      recommended agent architecture plus mediated custody, no
+      unmediated path, action-bound approval, active freshness, and
+      agent-isolated approval rendering.
 
 11.2.  Assurance Claims
 
-   The levels are the adoption ladder: what a deployment has built, in
-   the order deployments build it.  What a deployment can prove is an
+   The levels are adoption bundles: what a deployment has built, in the
+   order deployments build it.  What a deployment can prove is an
    orthogonal axis, claimed as named *assurance claims*, each with a
    proof obligation an existing profile fixes, and listed in the
    Deployment Profile (Section 12.6) rather than implied by a level:
@@ -2360,17 +2391,19 @@ Table of Contents
 11.3.  Mission Binding Properties
 
    Whether an operation is bound to a Mission is not one question but
-   three independent ones: who selected and attached the Mission to this
-   work item (attachment provenance), whether the acting credential's
-   authority was issued and bounded for the Mission (credential
-   binding), and whether one authenticated permit covers these exact
-   operation inputs (action binding).  The dimensions are independent: a
-   native Mission-bound token has strong credential binding with no
-   harness in sight, a trusted harness attributes work items precisely
-   while the credential is an ordinary bearer token, and an action-bound
-   permit can exist over either.  No single ladder orders them, so the
-   family names the properties directly, as a vector, and a deployment
-   claims the combination each path actually has.
+   three.  Attachment provenance asks who selected and attached the
+   Mission to this work item.  Credential binding asks whether the
+   acting credential's authority was issued and bounded for the Mission.
+   Action binding asks whether one authenticated permit covers these
+   exact operation inputs.
+
+   The dimensions are independent: a native Mission-bound token has
+   strong credential binding with no harness in sight, a trusted harness
+   attributes work items precisely while the credential is an ordinary
+   bearer token, and an action-bound permit can exist over either.  No
+   single ladder orders them, so the family names the properties
+   directly, as a vector, and a deployment claims the combination each
+   path actually has.
 
    +===========+=============+==================================================+
    |Property   |Meaning      |Minimum proof                                     |
@@ -2486,7 +2519,7 @@ Table of Contents
    capability can select correlation-only fact semantics
    ([I-D.draft-mcguinness-mission-substrate]), which by itself evidences
    neither the derivation-link condition (6) nor the authority-
-   projection condition (3); a Credential-Bound claim alone, whatever
+   projection condition (3).  A Credential-Bound claim alone, whatever
    semantics it selects, never by itself evidences credential-mission-
    bound, since conditions 1 and 4 come from the deployment's issuer
    trust configuration and the credential's own subject, client_id, and
@@ -2504,15 +2537,14 @@ Table of Contents
    Sender constraint is deliberately not among them: issuance-time key
    targeting and presentation-time proof are presenter-key-bound, a
    separate property, so a path that needs possession requires the
-   composition rather than reading it into the equivalence.  That is
-   also what the mechanisms support: the OAuth binding recommends
-   sender-constrained tokens and the generic Issuance Grant leaves cnf
-   optional, so native issuance, the Mission Issuance Grant, and a
-   conforming cross-domain exchange satisfy this one property, and
-   supply presenter-key-bound exactly where their confirmation binding
-   is actually in force.  A Mission Join Assertion fails conditions 3,
-   5, and 6 by design, which is what separates correlation from
-   issuance.
+   composition rather than reading it into the equivalence.  The
+   mechanisms match: the OAuth binding recommends sender-constrained
+   tokens and the generic Issuance Grant leaves cnf optional.  Native
+   issuance, the Mission Issuance Grant, and a conforming cross-domain
+   exchange therefore satisfy the equivalence, and supply presenter-key-
+   bound exactly where their confirmation binding is actually in force.
+   A Mission Join Assertion fails conditions 3, 5, and 6 by design,
+   which is what separates correlation from issuance.
 
    *Presenter-key-bound* is possession and nothing more: the credential
    names a confirmation key at issuance, and the presenter proves
@@ -2569,42 +2601,70 @@ Table of Contents
    Mission still substitute.  The composition becomes definable only
    when a verified cross-link exists, the action permit or its
    authenticated request context binding the same tamper-resistant work-
-   item identifier the harness recorded; no family carrier supplies
-   that, so a deployment claims the two properties separately and
-   nothing more.
+   item identifier the harness recorded.  No family carrier supplies
+   that cross-link, so a deployment claims the two properties separately
+   and nothing more.
 
-   The mechanism mapping is conservative: a propagated Mission-Reference
-   is selection only; a mapping join is credential-correlated, with its
-   equivalence-class ambiguity; a Mission Join Assertion is a stronger,
-   token- and key-specific credential-correlated, still never issuance;
-   a trusted harness supplies work-item-bound where its attacher
-   requirements hold; a native or issuance-grant-derived token is
-   credential-mission-bound, and presenter-key-bound where its
-   confirmation binding is in force end to end; Instance Context whose
-   association with the presenter is established, over an instance-
-   unique confirmation key and, for context preserved from an input
-   token, authenticated provenance
-   ([I-D.draft-mcguinness-oauth-client-instance-id], Sections 7.3 and
-   7.5), is what makes a path instance-bound; a verified transaction
-   token is the portable action-bound form, and an AuthZEN runtime
-   permit is the channel-bound form under that binding's conditions.
+   The mechanism mapping is conservative:
+
+    +=============+===================================================+
+    | Mechanism   | Binding property it establishes                   |
+    +=============+===================================================+
+    | Propagated  | Selection only                                    |
+    | Mission-    |                                                   |
+    | Reference   |                                                   |
+    +-------------+---------------------------------------------------+
+    | Mapping     | credential-correlated, with its equivalence-class |
+    | join        | ambiguity                                         |
+    +-------------+---------------------------------------------------+
+    | Mission     | A stronger, token- and key-specific credential-   |
+    | Join        | correlated, still never issuance                  |
+    | Assertion   |                                                   |
+    +-------------+---------------------------------------------------+
+    | Trusted     | work-item-bound, where its attacher requirements  |
+    | harness     | hold                                              |
+    +-------------+---------------------------------------------------+
+    | Native or   | credential-mission-bound, and presenter-key-bound |
+    | issuance-   | where its confirmation binding is in force end to |
+    | grant-      | end                                               |
+    | derived     |                                                   |
+    | token       |                                                   |
+    +-------------+---------------------------------------------------+
+    | Instance    | what makes the path instance-bound, where its     |
+    | Context     | association with the presenter is established     |
+    |             | over an instance-unique confirmation key and, for |
+    |             | context preserved from an input token,            |
+    |             | authenticated provenance                          |
+    |             | ([I-D.draft-mcguinness-oauth-client-instance-id], |
+    |             | Sections 7.3 and 7.5)                             |
+    +-------------+---------------------------------------------------+
+    | Verified    | The portable action-bound form                    |
+    | transaction |                                                   |
+    | token       |                                                   |
+    +-------------+---------------------------------------------------+
+    | AuthZEN     | The channel-bound action-bound form, under that   |
+    | runtime     | binding's conditions                              |
+    | permit      |                                                   |
+    +-------------+---------------------------------------------------+
+
+                    Table 8: Mission binding mechanisms
 
    The property names above are stable identifiers, and a claim is a
    per-path declaration, not prose: each claimed property or composition
    names the covered issuer, resource, and action-class paths.  The
    Enforcement Scope Statement carries the per-path declarations for the
    enforcement-adjacent properties, and the Mission Deployment Profile
-   (Section 12.6) composes them; a binding's Statement declares what the
-   binding can supply, which is never itself a deployment claim.  An
+   (Section 12.6) composes them.  A binding's Statement declares what
+   the binding can supply, which is never itself a deployment claim.  An
    unknown property identifier, an undeclared path, or an unstated
    property is not claimed, and a consumer treats it as not held;
    nothing downgrades silently.  Schema-level claim identifiers and
    validation rules remain the Deployment Profile's own future work.
 
    Binding properties and the assurance claims above compose rather than
-   repeat: a binding property says what a path establishes, from the
+   repeat.  A binding property says what a path establishes, from the
    Mission a work item is attached to through the credential, presenter
-   key, and instance to the authorized action; an assurance claim says
+   key, and instance to the authorized action.  An assurance claim says
    what the deployment's enforcement proves.  Credential-level and
    action-level binding likewise compose rather than substitute.
 
@@ -2620,7 +2680,11 @@ Table of Contents
    |Capability|one          |the issuer-held containment overlay                    |
    |kill      |capability   |([I-D.draft-mcguinness-oauth-mission-containment])     |
    |          |within one   |                                                       |
-   |          |Mission: new |                                                       |
+   |          |Mission and  |                                                       |
+   |          |the Child    |                                                       |
+   |          |Missions it  |                                                       |
+   |          |justifies:   |                                                       |
+   |          |new          |                                                       |
    |          |derivation at|                                                       |
    |          |once at      |                                                       |
    |          |commit;      |                                                       |
@@ -2680,24 +2744,24 @@ Table of Contents
    |          |path         |                                                       |
    +----------+-------------+-------------------------------------------------------+
 
-                                  Table 8
+                                  Table 9
 
    Mission termination participates in incident response; it does not
    replace it.  Revoking the Mission stops issuance at once where the
    binding gates it, and stops mediated actions within the staleness
    bound plus the permit window and the class's execution bound
-   (Section 10.4), but it terminates no process and closes no network
-   path.  The converse holds too: killing a workload leaves the Mission
-   active and its authority derivable to a replacement instance unless
-   the Mission is also revoked.
+   (Section 10.4, Section 11.2).  Revoking the Mission terminates no
+   process and closes no network path.  The converse holds too: killing
+   a workload leaves the Mission active and its authority derivable to a
+   replacement instance unless the Mission is also revoked.
 
    Capability kill provides, per action class and consumer, one of two
    containment properties or neither, never by the deployment's
    assurance level ([I-D.draft-mcguinness-oauth-mission-containment],
-   Section "Containment Properties"): the Baseline property, a new-
+   Section "Containment Properties").  The Baseline property is a new-
    derivation kill that also propagates to Child Missions justified by
-   the contained entry, and the Runtime-Enforced property, an action-
-   time kill that also reaches a token issued before the transition.  A
+   the contained entry.  The Runtime-Enforced property is an action-time
+   kill that also reaches a token issued before the transition.  A
    standalone MAS path with no runtime gate gets neither.  Section 11.5
    composes the properties by rung and binding, with what each leaves
    running.
@@ -2713,91 +2777,142 @@ Table of Contents
    containment profile uses the same two words for a property a consumer
    obtains per action class
    ([I-D.draft-mcguinness-oauth-mission-containment],
-   Section "Containment Properties").  The two are not 1:1: a Runtime-
+   Section "Containment Properties").  The two are not 1:1.  A Runtime-
    Enforced deployment can still provide only the Baseline property for
    a class its Enforcement Scope Statement leaves lifecycle-gated-only,
    because the property requires a state-observable substrate per class,
-   not per deployment ([I-D.draft-mcguinness-mission-runtime]).  The
-   table below names the property in its own column, apart from the
-   rung; a row can carry a Runtime-Enforced rung and a Baseline property
+   not per deployment ([I-D.draft-mcguinness-mission-runtime]).  A row
+   can therefore carry a Runtime-Enforced rung and a Baseline property
    together without contradiction.
 
-   The table composes a deployment that runs the containment profile
-   with a rung and a binding.  A rung and a binding alone confer neither
-   containment property: containment is an overlay a deployment
-   separately adopts ([I-D.draft-mcguinness-oauth-mission-containment]).
-   "Stops at commit" names what a contain transition's own state-version
-   commit reaches immediately
+   Each row below assumes a deployment that runs the containment
+   profile, at the row's rung and under its binding.  A rung and a
+   binding alone confer neither containment property: containment is an
+   overlay a deployment separately adopts
+   ([I-D.draft-mcguinness-oauth-mission-containment]).  "Stops at
+   commit" names what a contain transition's own state-version commit
+   reaches immediately
    ([I-D.draft-mcguinness-oauth-mission-containment], Section "The
    Contain Transition"); "runs to its own bound" names the residual the
    transition does not reach.
 
-   +========+============+=====================================================+==================================================+=====================================================+
-   |Rung    |Binding     |Property                                             |Stops at commit                                   |Runs to its own bound                                |
-   +========+============+=====================================================+==================================================+=====================================================+
-   |Baseline|OAuth       |Baseline, a new-derivation kill                      |New derivation, delegation, cross-domain          |Tokens already issued, to exp; a cross-domain        |
-   |Issuance|binding,    |([I-D.draft-mcguinness-oauth-mission-containment],   |projection, and offline attenuation roots minted  |projection grant already redeemed and an offline     |
-   |        |structured- |Section "Containment Properties")                    |after the transition                              |attenuation root already minted before the           |
-   |        |authority   |                                                     |([I-D.draft-mcguinness-oauth-mission-containment],|transition, each to its own lifetime or del_max_depth|
-   |        |            |                                                     |Section "Derivation Gating")                      |([I-D.draft-mcguinness-oauth-mission-containment],   |
-   |        |            |                                                     |                                                  |Section "The Materialized-Capability Residual"); a   |
-   |        |            |                                                     |                                                  |consequential read under the token-lifetime default, |
-   |        |            |                                                     |                                                  |the same bound                                       |
-   |        |            |                                                     |                                                  |([I-D.draft-mcguinness-mission-runtime])             |
-   +--------+------------+-----------------------------------------------------+--------------------------------------------------+-----------------------------------------------------+
-   |Baseline|Standalone  |Neither; the runtime layer is the only cutoff, and it|Nothing at the resource; the transition commits   |Every action, to whatever native credential, session,|
-   |Issuance|MAS, no     |is absent at this rung                               |and is visible on the Mission Status Response and |or resource-local bound the resource enforces on its |
-   |        |credential- |                                                     |the introspection projection                      |own, if any, until runtime enforcement over a        |
-   |        |carried     |                                                     |([I-D.draft-mcguinness-oauth-mission-containment],|freshness source arrives or the issuance join        |
-   |        |authority   |                                                     |Section "Visibility")                             |restores a gate                                      |
-   |        |            |                                                     |                                                  |([I-D.draft-mcguinness-oauth-mission-issuance-grant])|
-   +--------+------------+-----------------------------------------------------+--------------------------------------------------+-----------------------------------------------------+
-   |Runtime-|Any binding,|Runtime-Enforced for that class                      |The contained capability, denied at the class's   |Paths no action-time gate reaches: token lifetime    |
-   |Enforced|a class     |([I-D.draft-mcguinness-oauth-mission-containment],   |next gated action once the source reflects the    |where issuance is gated, otherwise no bound          |
-   |        |using a     |Section "Containment Properties"): full Status or    |overlay, within the staleness bound plus the      |                                                     |
-   |        |containment-|introspection carrying containment_version, or       |permit window plus the class's execution bound    |                                                     |
-   |        |aware state |Signals carrying the overlay change; a fresh         |([I-D.draft-mcguinness-mission-runtime])          |                                                     |
-   |        |source      |derivation narrows what it mints and can shorten the |                                                  |                                                     |
-   |        |within its  |residual, but it checks nothing at action time, so it|                                                  |                                                     |
-   |        |published   |carries Baseline, not Runtime-Enforced               |                                                  |                                                     |
-   |        |bound       |([I-D.draft-mcguinness-oauth-mission-containment],   |                                                  |                                                     |
-   |        |            |Section "Containment Properties"); a class checked   |                                                  |                                                     |
-   |        |            |only against an active-but-not-containment-aware     |                                                  |                                                     |
-   |        |            |source, gated only by fresh derivation, or left      |                                                  |                                                     |
-   |        |            |lifecycle-gated-only, gets Baseline only regardless  |                                                  |                                                     |
-   |        |            |of rung ([I-D.draft-mcguinness-mission-runtime])     |                                                  |                                                     |
-   +--------+------------+-----------------------------------------------------+--------------------------------------------------+-----------------------------------------------------+
-   |Baseline|MAS as      |Baseline, from Derivation Gating at the Mission      |New grant minting only: the Mission Issuer's      |An outstanding grant redeems once, to its own maximum|
-   |Issuance|estate      |Issuer                                               |Derivation Gating evaluates the Effective         |lifetime of 300 seconds, at any consuming AS whose   |
-   |        |control     |([I-D.draft-mcguinness-oauth-mission-containment],   |Authority Set, so a grant minted after the        |redemption check is active-only rather than          |
-   |        |plane,      |Section "Derivation Gating"); the consuming AS's     |transition excludes contained authority           |containment-aware                                    |
-   |        |issuance    |redemption and refresh checks are the issuance       |([I-D.draft-mcguinness-oauth-mission-containment],|([I-D.draft-mcguinness-oauth-mission-issuance-grant],|
-   |        |join at each|profile's ordinary active gate, not containment-aware|Section "Derivation Gating")                      |Section "Redemption")                                |
-   |        |consuming AS|on their own, since a contained Mission stays active,|                                                  |                                                     |
-   |        |            |unless the consuming AS separately retrieves and     |                                                  |                                                     |
-   |        |            |applies the containment overlay or current Effective |                                                  |                                                     |
-   |        |            |Authority Set                                        |                                                  |                                                     |
-   |        |            |([I-D.draft-mcguinness-oauth-mission-issuance-grant],|                                                  |                                                     |
-   |        |            |Section "Redemption")                                |                                                  |                                                     |
-   +--------+------------+-----------------------------------------------------+--------------------------------------------------+-----------------------------------------------------+
+   +========+============+==================================================+==================================================+=====================================================+
+   |Rung    |Binding     |Property                                          |Stops at commit                                   |Runs to its own bound                                |
+   +========+============+==================================================+==================================================+=====================================================+
+   |Baseline|OAuth       |Baseline, a new-derivation kill                   |New derivation, delegation, and cross-domain      |Tokens already issued, to exp, and a consequential   |
+   |Issuance|binding,    |([I-D.draft-mcguinness-oauth-mission-containment],|projection minted after the transition            |read under the token-lifetime default, the same bound|
+   |        |structured- |Section "Containment Properties")                 |([I-D.draft-mcguinness-oauth-mission-containment],|([I-D.draft-mcguinness-mission-runtime]); pre-       |
+   |        |authority   |                                                  |Section "Derivation Gating")                      |transition projection grants (note 1)                |
+   +--------+------------+--------------------------------------------------+--------------------------------------------------+-----------------------------------------------------+
+   |Baseline|Standalone  |Neither; the runtime layer is the only cutoff, and|Nothing at the resource; the transition commits   |Every action, to the resource's own bound, if any    |
+   |Issuance|MAS, no     |it is absent at this rung                         |and is visible on the Mission Status Response and |(note 2)                                             |
+   |        |credential- |                                                  |the introspection projection                      |                                                     |
+   |        |carried     |                                                  |([I-D.draft-mcguinness-oauth-mission-containment],|                                                     |
+   |        |authority   |                                                  |Section "Visibility")                             |                                                     |
+   +--------+------------+--------------------------------------------------+--------------------------------------------------+-----------------------------------------------------+
+   |Runtime-|Any binding,|Runtime-Enforced for that class                   |The contained capability, denied at the class's   |Paths no action-time gate reaches: token lifetime    |
+   |Enforced|a class     |([I-D.draft-mcguinness-oauth-mission-containment],|next gated action once the source reflects the    |where issuance is gated, otherwise no bound          |
+   |        |using a     |Section "Containment Properties"); Baseline only  |overlay, within the staleness bound plus the      |                                                     |
+   |        |containment-|for the classes in note 4                         |permit window plus the class's execution bound    |                                                     |
+   |        |aware state |                                                  |([I-D.draft-mcguinness-mission-runtime])          |                                                     |
+   |        |source      |                                                  |                                                  |                                                     |
+   |        |within its  |                                                  |                                                  |                                                     |
+   |        |published   |                                                  |                                                  |                                                     |
+   |        |bound (note |                                                  |                                                  |                                                     |
+   |        |3)          |                                                  |                                                  |                                                     |
+   +--------+------------+--------------------------------------------------+--------------------------------------------------+-----------------------------------------------------+
+   |Baseline|MAS as      |Baseline, from Derivation Gating at the Mission   |New grant minting only: the Mission Issuer's      |An outstanding grant redeems once, to its own maximum|
+   |Issuance|estate      |Issuer                                            |Derivation Gating evaluates the Effective         |lifetime of 300 seconds, at any consuming AS whose   |
+   |        |control     |([I-D.draft-mcguinness-oauth-mission-containment],|Authority Set, so a grant minted after the        |redemption check is active-only rather than          |
+   |        |plane,      |Section "Derivation Gating"); the consuming AS's  |transition excludes contained authority           |containment-aware                                    |
+   |        |issuance    |checks are not containment-aware on their own     |([I-D.draft-mcguinness-oauth-mission-containment],|([I-D.draft-mcguinness-oauth-mission-issuance-grant],|
+   |        |join at each|(note 5)                                          |Section "Derivation Gating")                      |Section "Redemption")                                |
+   |        |consuming AS|                                                  |                                                  |                                                     |
+   +--------+------------+--------------------------------------------------+--------------------------------------------------+-----------------------------------------------------+
+   |Runtime-|OAuth       |Baseline                                          |New attenuation roots, which exclude contained    |Roots minted before the transition, to their own     |
+   |Enforced|binding with|([I-D.draft-mcguinness-oauth-mission-containment],|authority                                         |lifetime (note 6)                                    |
+   |        |offline     |Section "Containment Properties"): a contained    |([I-D.draft-mcguinness-oauth-mission-containment],|                                                     |
+   |        |attenuation,|Mission stays active                              |Section "Derivation Gating")                      |                                                     |
+   |        |a consumer  |                                                  |                                                  |                                                     |
+   |        |whose check |                                                  |                                                  |                                                     |
+   |        |is active-  |                                                  |                                                  |                                                     |
+   |        |state only  |                                                  |                                                  |                                                     |
+   |        |(note 6)    |                                                  |                                                  |                                                     |
+   +--------+------------+--------------------------------------------------+--------------------------------------------------+-----------------------------------------------------+
 
-                                  Table 9
+                                  Table 10
+
+   Notes:
+
+   1.  Under the OAuth binding at Baseline Issuance, a cross-domain
+       projection grant already redeemed before the transition runs to
+       its own lifetime
+       ([I-D.draft-mcguinness-oauth-mission-containment], Section "The
+       Materialized-Capability Residual").  Offline attenuation is not
+       accepted at this rung (note 6).
+
+   2.  Under the standalone MAS at Baseline Issuance, every action runs
+       to whatever native credential, session, or resource-local bound
+       the resource enforces on its own, if any.  It does so until
+       runtime enforcement over a freshness source arrives or the
+       issuance join restores a gate
+       ([I-D.draft-mcguinness-oauth-mission-issuance-grant]).
+
+   3.  Under any binding, a containment-aware state source is full
+       Status or introspection carrying containment_version, or Signals
+       carrying the overlay change.
+
+   4.  Under any binding, where a class is checked only against an
+       active-but-not-containment-aware source, left lifecycle-gated-
+       only, or gated only by fresh derivation, it gets the Baseline
+       property only, regardless of rung
+       ([I-D.draft-mcguinness-mission-runtime]).  A fresh derivation
+       narrows what it mints and can shorten the residual, but it checks
+       nothing at action time, so it carries the Baseline property, not
+       the Runtime-Enforced one
+       ([I-D.draft-mcguinness-oauth-mission-containment],
+       Section "Containment Properties").
+
+   5.  Under the MAS as estate control plane, the consuming AS's
+       redemption and refresh checks are the issuance profile's ordinary
+       active gate, and a contained Mission stays active.  Those checks
+       are therefore not containment-aware on their own, unless the
+       consuming AS separately retrieves and applies the containment
+       overlay or current Effective Authority Set
+       ([I-D.draft-mcguinness-oauth-mission-issuance-grant],
+       Section "Redemption").
+
+   6.  Under the OAuth binding with offline attenuation, a consumer
+       accepts a chain only under runtime enforcement, with a fresh
+       active-state check on every presentation regardless of action
+       class ([I-D.draft-mcguinness-oauth-mission-attenuation],
+       Section "The Kill Switch Requires Runtime Enforcement"), so no
+       Baseline-only, lifetime-only path accepts one.  Revoking the
+       Mission fails that check, so acceptance of every chain stops
+       within the deployment's declared freshness bound.  Containing an
+       entry leaves the Mission active, so the same check does not stop
+       a root minted before the transition from supporting the contained
+       capability: the root keeps minting narrower children for its own
+       lifetime, and its del_max_depth limits how deep they go, not how
+       long they live ([I-D.draft-mcguinness-oauth-mission-containment],
+       Section "The Materialized-Capability Residual").  Claiming the
+       Runtime-Enforced property for attenuated chains needs a
+       containment-aware action-time check (note 3).
 
    None of this closes the conforming Baseline residual on a path or for
    a class no containment-aware action-time gate reaches.  For a class a
    Runtime-Enforced action-time gate reaches instead, a pre-transition
-   credential does not run to its own bound at all.  The binding
-   determines the artifact and its cutoff where the residual does
-   persist: an ungated standalone-MAS path, for instance, runs to
-   whatever native credential, session, or resource-local bound the
-   resource enforces on its own, if any, or to none, not to a token
-   lifetime.  What changes row to row is which gate, if any, reaches a
-   class before its own bound, and how tight that bound is.
+   credential does not run to its own bound at all.  Where the residual
+   does persist, the binding determines the artifact and its cutoff.  An
+   ungated standalone-MAS path, for instance, runs to whatever native
+   credential, session, or resource-local bound the resource enforces on
+   its own, if any, or to none, not to a token lifetime.  What changes
+   row to row is which gate, if any, reaches a class before its own
+   bound, and how tight that bound is.
 
 11.6.  Prevention, Detection, and Residue
 
-   Each layer earns a specific property and leaves a specific residue.
-   Stated as a table so a claim cannot be read as more than it is:
+   Each layer earns a specific property and leaves a specific residue:
 
     +==============+=====================+============+==============+
     | Mechanism    | Prevents            | Detects    | Does not     |
@@ -2831,14 +2946,14 @@ Table of Contents
     |              | committed facts     | facts      | none)        |
     +--------------+---------------------+------------+--------------+
 
-                                 Table 10
+                                 Table 11
 
    The pattern is uniform: the family commits and checks what a party
    was shown, decided, or did; it does not make the human attentive, the
    producer honest, or the unmediated path disappear.  Those are the
    residues the Mission Assurance Levels (Section 11) and the security
-   model make a deployment state rather than assume, and the exposure
-   arm (Section 4.2) carries the same honesty in the other direction.
+   model make a deployment state rather than assume.  The exposure arm
+   (Section 4.2) carries the same honesty in the other direction.
 
 12.  Mission Deployment Patterns
 
@@ -2902,7 +3017,7 @@ Table of Contents
    |             |needs it  |                                                     |
    +-------------+----------+-----------------------------------------------------+
 
-                                  Table 11
+                                  Table 12
 
    Every row shares the record, anchors, and lifecycle, so a ramp is an
    entry point, not a fork: Missions carry unchanged from any row to the
@@ -2913,24 +3028,31 @@ Table of Contents
    The last row of the entry-ramp table is a deployment in its own
    right, the *issuance-only deployment*: the Authorization Server and
    the Mission-creating client change, and Resource Servers need not be
-   Mission-aware.  A delegated token reaches only a Mission-aware
-   Resource Server, so a delegate calling any other resource runs under
-   a Child Mission where child creation is authorized
-   ([I-D.draft-mcguinness-oauth-mission-child-delegation]).  The OAuth
-   binding's invariants carry the deployment: every derived token is a
-   subset of the Authority Set, no audience receives a grant it would
-   over-grant on, and no credential outlives the Mission's expiry; the
-   deployment sizes token lifetime to its tolerated staleness.  Where
-   the Authorization Server offers introspection, a Resource Server that
-   introspects per request stops honoring a token at its next request
-   once the Mission leaves active, with no Mission-specific code
-   ([I-D.draft-mcguinness-oauth-mission]).  The deployment claims
-   approved-record integrity and bounded revocation latency
-   (Section 11.2), and Appendix F shows its Deployment Profile.  The
-   runtime layer ([I-D.draft-mcguinness-mission-runtime]) joins for the
-   high-consequence classes and for an action class that needs per-
-   action evaluation or evidence, approval bound to a single action, or
-   a bound the receiving Resource Server cannot enforce.
+   Mission-aware.
+
+   A delegated token reaches only a Mission-aware Resource Server, so a
+   delegate calling any other resource runs under a Child Mission where
+   child creation is authorized
+   ([I-D.draft-mcguinness-oauth-mission-child-delegation]).
+
+   The OAuth binding's invariants carry the deployment: every derived
+   token is a subset of the Authority Set, no audience receives a grant
+   it would over-grant on, and no credential outlives the Mission's
+   expiry.  The deployment sizes token lifetime to its tolerated
+   staleness.
+
+   Where the Authorization Server offers introspection, a Resource
+   Server that introspects per request stops honoring a token at its
+   next request once the Mission leaves active, with no Mission-specific
+   code ([I-D.draft-mcguinness-oauth-mission]).
+
+   The deployment claims approved-record integrity and bounded
+   revocation latency (Section 11.2), and Appendix F shows its
+   Deployment Profile.  The runtime layer
+   ([I-D.draft-mcguinness-mission-runtime]) joins for the high-
+   consequence classes and for an action class that needs per-action
+   evaluation or evidence, approval bound to a single action, or a bound
+   the receiving Resource Server cannot enforce.
 
 12.3.  The Short Mission
 
@@ -2938,7 +3060,7 @@ Table of Contents
    expires_at sits minutes out, run in records mode with lifetime-
    bounded reliance, is a durable approval record with TTL-grade
    operational cost: audit, anchors, and bounded exposure with no
-   external state-observation surface, the issuer still owning Mission
+   external state-observation surface.  The issuer still owns Mission
    state and the issuance gate (Section 10.4).  A deployment can adopt
    the family this way first, per task, and add state surfaces only
    where missions grow long enough to need suspend, complete, or kill-
@@ -2969,8 +3091,10 @@ Table of Contents
    communicating it.  The Mission Work Products companion
    ([I-D.draft-mcguinness-oauth-mission-work-products]) defines the
    provenance object that attributes an artifact without granting
-   anything.  Ingesting a work product is an added conjunctive gate at
-   the receiving Mission's boundary: it composes with the three objects'
+   anything.
+
+   Ingesting a work product is an added conjunctive gate at the
+   receiving Mission's boundary: it composes with the three objects'
    independent gates and does not nest inside them, so Agent identity,
    Agent Deployment, and Mission stay a gating pipeline, not a
    containment hierarchy (Section 6.2).
@@ -2983,12 +3107,12 @@ Table of Contents
 12.5.  The Standing-Agent Pattern
 
    The *standing-agent pattern* governs the agent whose work never ends.
-   The agent stands; the authority cycles: the standing thing is a
-   charter, a Mission with a consented authority ceiling and drawdown
+   The agent stands; the authority cycles.  The standing thing is a
+   charter: a Mission with a consented authority ceiling and drawdown
    policy ([I-D.draft-mcguinness-oauth-mission-progressive],
-   experimental), and the working thing is the bounded Mission each unit
-   of work draws under it, as an in-ceiling successor or a policy-
-   approved Child Mission
+   experimental).  The working thing is the bounded Mission each unit of
+   work draws under it, as an in-ceiling successor or a policy-approved
+   Child Mission
    ([I-D.draft-mcguinness-oauth-mission-child-delegation]), each
    expiring and discharging as its unit completes
    ([I-D.draft-mcguinness-oauth-mission-status],
@@ -2998,7 +3122,7 @@ Table of Contents
    classes on a fresh human approval inside the ceiling, and its Ceiling
    Review bounds the chain in time with an evidence-rendering renewal.
 
-   Without the progressive profile the same pattern runs as ordinary,
+   Without the progressive profile, the same pattern runs as ordinary,
    freshly approved unit Missions with deferred approval
    ([I-D.draft-mcguinness-oauth-mission-approval]) absorbing the volume:
    the experimental profile changes the unit economics, not the
@@ -3009,21 +3133,25 @@ Table of Contents
    The Mission Assurance Levels (Section 11) name what to deploy, and
    the assurance claims (Section 11.2) name what may be proven; a claim
    is only checkable if a deployment states, concretely, what it
-   enforces and what it leaves outside the boundary.  The *Mission
-   Deployment Profile* is that system-level artifact: the published
-   composition of the per-layer statements the profiles themselves
-   demand (the runtime profile's Enforcement Scope Statement, the
-   harness environment statement, the MAS mapping contract, the Resource
-   Server coverage split, the transparency-service topology and
-   schedule, and the progressive profile's bounds and ceiling-review
-   cadence, each where its profile is run), composed into one object an
-   auditor, a procurement, or a security review can read.  It is one
-   artifact, not a second one: each fact's owning profile governs its
-   meaning and normative force, and this document fixes no
-   serialization.  A machine-readable manifest schema, with stable claim
-   identifiers and validation rules, is deferred family work; until it
-   exists, the shapes in Appendix F are illustrative and the per-profile
-   statements are the checkable form.
+   enforces and what it leaves outside the boundary.
+
+   The *Mission Deployment Profile* is that system-level artifact: the
+   published composition of the per-layer statements the profiles
+   themselves demand, composed into one object an auditor, a
+   procurement, or a security review can read.  The composition includes
+   each statement where its profile is run: the runtime profile's
+   Enforcement Scope Statement, the harness environment statement, the
+   MAS mapping contract, the Resource Server coverage split, the
+   transparency-service topology and schedule, and the progressive
+   profile's bounds and ceiling-review cadence.
+
+   The profile composes existing statements into one artifact rather
+   than restating them: each fact's owning profile governs its meaning
+   and normative force, and this document fixes no serialization.  A
+   machine-readable manifest schema, with stable claim identifiers and
+   validation rules, is deferred family work; until it exists, the
+   shapes in Appendix F are illustrative and the per-profile statements
+   are the checkable form.
 
    Its distinguishing field is residual_risks: the profile is not
    credible unless it states, in the same object as its guarantees, what
@@ -3035,18 +3163,20 @@ Table of Contents
    and the erasure policy that pairs retention with deletion
    accountability ([I-D.draft-mcguinness-mission-audit]).
 
-   The key_custody member declares, as a list keyed by key and
-   application rather than one row per key class, the custody a
-   deployment states for each signing key it operates: the key class
-   (the five classes [I-D.draft-mcguinness-mission-security-model]
+   The key_custody member declares the custody a deployment states for
+   each signing key it operates, as a list keyed by key and application
+   rather than one row per key class.  Each entry names its key class,
+   one of the five classes [I-D.draft-mcguinness-mission-security-model]
    enumerates: issuer signing, evidence signing, agent sender-
-   constraint, mediating-PEP custody, attenuation roots), the artifact
-   classes or kid selector the entry covers (core recommends segmenting
-   issuer signing keys by artifact class under distinct kid values
-   within one jwks_uri, [I-D.draft-mcguinness-oauth-mission]), the
-   holder, whether the key is exportable, its generation and signing-use
+   constraint, mediating-PEP custody, attenuation roots.  It names the
+   artifact classes or kid selector it covers (the OAuth binding
+   recommends segmenting issuer signing keys by artifact class under
+   distinct kid values within one jwks_uri,
+   [I-D.draft-mcguinness-oauth-mission]).  It also states the holder,
+   whether the key is exportable, its generation and signing-use
    controls, a reference to its documented compromise-recovery
    procedure, and any attestation or verifier reference for that key.
+
    software and hsm_or_kms are example holder values, a mechanism family
    rather than an assurance grade; this document defines neither as a
    normative custody-grade enum and fixes no validation rule for either.
@@ -3065,15 +3195,17 @@ Table of Contents
    This document defines no wire mechanism; each profile's own Security
    Considerations remain normative, and the consolidated trusted base
    and compromise analysis are the Mission Security Model's
-   ([I-D.draft-mcguinness-mission-security-model]).  What this document
-   does introduce is composition, and the risks that emerge only at
-   composition are its security subject matter:
+   ([I-D.draft-mcguinness-mission-security-model]).  This document
+   introduces composition, and its security subject matter is the risks
+   that emerge only at composition:
 
    *  stale state and materialized authority: an already-issued
       credential, redeemed grant, or minted attenuation root stays
       usable to its artifact-specific bound only where no timely state-
-      aware or action-time gate reaches it; where one does, reliance
-      ends at that earlier gate (Section 10.4, Section 11.5);
+      aware or action-time gate reaches it, and, for a contained
+      capability, where no containment-aware gate does (Section 11.5);
+      where one does, reliance ends at that earlier gate (Section 10.4,
+      Section 11.5);
 
    *  unmediated paths: enforcement claims hold only inside the declared
       PEP boundary, and the Enforcement Scope Statement's exclusions are
@@ -3103,35 +3235,37 @@ Table of Contents
 14.  Privacy Considerations
 
    The privacy properties of the Mission record and the Mission Intent
-   are the OAuth binding's ([I-D.draft-mcguinness-oauth-mission]) and
-   each adopted profile's; this document describes them and adds no data
-   element of its own.  The OAuth binding's Privacy Considerations cover
-   Mission Identifier correlation, token payload disclosure, and Intent
-   retention, with the audit profile's erasure record as the
-   transparency-side mechanism ([I-D.draft-mcguinness-mission-audit]).
-   The status profile's anti-oracle property bounds what its status
-   surfaces disclose ([I-D.draft-mcguinness-oauth-mission-status]).
+   are the OAuth binding's ([I-D.draft-mcguinness-oauth-mission]), for
+   it and for the bindings that import its record, and each adopted
+   profile's; the AAuth binding's are its own, below.  This document
+   describes them and adds no data element of its own.  The OAuth
+   binding's Privacy Considerations cover Mission Identifier
+   correlation, token payload disclosure, and Intent retention, with the
+   audit profile's erasure record as the transparency-side mechanism
+   ([I-D.draft-mcguinness-mission-audit]).  The status profile's anti-
+   oracle property bounds what its status surfaces disclose
+   ([I-D.draft-mcguinness-oauth-mission-status]).
 
-   Read across profiles rather than per document, the dataflow
-   concentrates in three places: the record and its evidence at the
-   issuer (task prose, principals, authority, provenance); the decision
-   and execution evidence joined on the Mission Identifier at the
-   runtime and audit layers; and the correlation surface that identifier
-   creates wherever it travels (tokens, status responses, evidence,
-   receipts, the Mandate).  Minimization therefore has one shape
-   everywhere: audience-scope what each party receives, prefer audience-
-   scoped references over content (a stable reference reused across
-   audiences is itself a correlation surface), and let the record's
-   access governance, not possession of a reference, decide who reads
-   the concentrated view.
+   Read across profiles, the dataflow concentrates in three places: the
+   record and its evidence at the issuer (task prose, principals,
+   authority, provenance); the decision and execution evidence joined on
+   the Mission Identifier at the runtime and audit layers; and the
+   correlation surface that identifier creates wherever it travels
+   (tokens, status responses, evidence, receipts, the Mandate).
+
+   Minimization therefore has one shape everywhere: audience-scope what
+   each party receives, prefer audience-scoped references over content
+   (a stable reference reused across audiences is itself a correlation
+   surface), and let the record's access governance, not possession of a
+   reference, decide who reads the concentrated view.
 
    The AAuth binding's privacy posture is its own
-   ([I-D.draft-mcguinness-mission-aauth]): the private mission blob
-   never leaves the agent and the Person Server, the stable {approver,
-   s256} reference is a correlation handle across every resource that
-   sees it, and the mission log concentrates a detailed activity history
-   at the Person Server, with the binding's minimization and retention
-   duties applying there.
+   ([I-D.draft-mcguinness-mission-aauth]).  The private mission blob
+   never leaves the agent and the Person Server, and the stable
+   {approver, s256} reference is a correlation handle across every
+   resource that sees it.  The mission log concentrates a detailed
+   activity history at the Person Server, where the binding's
+   minimization and retention duties apply.
 
 15.  IANA Considerations
 
@@ -3612,13 +3746,14 @@ Appendix B.  Comparison to a Conventional Stack
 
    A skeptical reading of this family asks why Rich Authorization
    Requests [RFC9396], short-lived tokens, and an AuthZEN PDP holding
-   policy and session state server-side would not suffice.  Steelmanned
-   first: RAR supplies structured authorization data an Authorization
-   Server renders into an itemized approval experience; RAR itself
-   guarantees neither approval fidelity nor a consent UI.  A short token
-   lifetime bounds revocation only when every issuance, refresh, and
-   exchange path re-evaluates current grant or session state; absent
-   that discipline a fresh short token keeps issuing against stale state
+   policy and session state server-side would not suffice.
+
+   RAR supplies structured authorization data an Authorization Server
+   renders into an itemized approval experience; RAR itself guarantees
+   neither approval fidelity nor a consent UI.  A short token lifetime
+   bounds revocation only when every issuance, refresh, and exchange
+   path re-evaluates current grant or session state; absent that
+   discipline a fresh short token keeps issuing against stale state
    regardless of lifetime, the dependency the Validity Model already
    states (Section 10.4).  AuthZEN specifies a decision API, not a
    global PDP, a durable session store, complete PEP placement, or a
@@ -3688,7 +3823,7 @@ Appendix B.  Comparison to a Conventional Stack
    |           |issuance     |                                     |             |
    +-----------+-------------+-------------------------------------+-------------+
 
-     Table 12: Where a conventional stack meets Mission standardization
+     Table 13: Where a conventional stack meets Mission standardization
 
    Past these crossovers, a conventional deployment often accumulates a
    durable task record, a stable join key, lifecycle checks, narrowing
@@ -3701,7 +3836,7 @@ Appendix C.  A Worked Composition
    This non-normative example composes a deployment that enforces at
    action time from four providers, none of which is the OAuth binding,
    to show that the substrate contract
-   ([I-D.draft-mcguinness-mission-substrate]) carries the weight: an
+   ([I-D.draft-mcguinness-mission-substrate]) carries the weight.  An
    AAuth agent acts under a PS-governed Mission and calls a payment API
    whose authority vocabulary is owned by the resource.
 
@@ -3728,7 +3863,7 @@ Appendix C.  A Worked Composition
      | PEP/PDP    |                       | routes                  |
      +------------+-----------------------+-------------------------+
 
-           Table 13: Provider claims in the worked composition
+           Table 14: Provider claims in the worked composition
 
    Action-time enforcement and decision evidence are supplied by the
    runtime profile and its evidence companion at the gateway
@@ -3740,9 +3875,10 @@ Appendix C.  A Worked Composition
    and failure elements ([I-D.draft-mcguinness-mission-aauth]).  The
    payment policy adapter's and the gateway's claims remain the
    deployment's own, stated as deployment-local provider claims; nothing
-   here implies every provider claim becomes binding-owned.  The
-   deployment declaration names the four providers, the two routes, and
-   the consequence class; no machine-readable declaration format is
+   here implies every provider claim becomes binding-owned.
+
+   The deployment declaration names the four providers, the two routes,
+   and the consequence class; no machine-readable declaration format is
    defined (the Mission Deployment Profile's schema remains reserved
    future work, Section 12.6), and the declaration is ordinary
    deployment documentation.
@@ -3751,13 +3887,14 @@ Appendix C.  A Worked Composition
    gateway accepts is PS-issued or PS-brokered and carries the signed
    mission_s256 reference, the protected propagation path; identity-
    based and resource-managed access are out of scope here, because
-   those paths are not PS-gated and may ignore the reference.  The
-   gateway's join validates the carrying artifact's issuer (the Person
-   Server), its audience (the payment API), the actor binding (the
-   agent's key, proven on the request), and the request binding, before
-   joining the PS evidence, the Actor proof, the request, and the
-   adapter's output; the join is scoped to the two named routes with a
-   lifetime no longer than the state observation's declared freshness,
+   those paths are not PS-gated and may ignore the reference.
+
+   Before joining the PS evidence, the Actor proof, the request, and the
+   adapter's output, the gateway's join validates the carrying
+   artifact's issuer (the Person Server), its audience (the payment
+   API), the actor binding (the agent's key, proven on the request), and
+   the request binding.  The join is scoped to the two named routes with
+   a lifetime no longer than the state observation's declared freshness,
    and a missing or conflicting input fails closed.
 
    The composition succeeds with these results and limits:
@@ -3793,25 +3930,25 @@ Appendix C.  A Worked Composition
       |             | gateway    | evidence                         |
       +-------------+------------+----------------------------------+
 
-                        Table 14: Composition result
+                        Table 15: Composition result
 
-   Two classifications make the example honest.  The payment authority's
-   fresh decision is decide_anew in the substrate's transition
-   classification, never an attenuation of AAuth authority across
-   vocabularies; and the AAuth Mission context never becomes a Rich
-   Authorization Request object.  AAuth supplies work continuity, the
-   payment authority decides permission in its own vocabulary, and the
-   gateway is the scoped joining and enforcement authority.
+   The payment authority's fresh decision is decide_anew in the
+   substrate's transition classification, never an attenuation of AAuth
+   authority across vocabularies; and the AAuth Mission context never
+   becomes a Rich Authorization Request object.  AAuth supplies work
+   continuity, the payment authority decides permission in its own
+   vocabulary, and the gateway is the scoped joining and enforcement
+   authority.
 
-   The same composition fails when any of the following holds: the state
-   source is disabled with no equivalent fresh local read; the adapter
-   publishes descriptive strings rather than machine-evaluable
-   semantics; the gateway accepts a Mission reference from the agent
-   without validated provenance (context splicing); the state source's
-   staleness exceeds the declared maximum; a direct route bypasses the
-   gateway; the gateway accepts the reference on an identity-based or
-   resource-managed request; or the payment-vocabulary claim is
-   generalized to another resource's vocabulary.
+   The same composition fails when the state source is disabled with no
+   equivalent fresh local read, or when the state source's staleness
+   exceeds the declared maximum.  It fails when the adapter publishes
+   descriptive strings rather than machine-evaluable semantics, or when
+   the payment-vocabulary claim is generalized to another resource's
+   vocabulary.  It fails when a direct route bypasses the gateway, when
+   the gateway accepts a Mission reference from the agent without
+   validated provenance (context splicing), or when the gateway accepts
+   the reference on an identity-based or resource-managed request.
 
 Appendix D.  Error Surfaces
 
@@ -3836,21 +3973,23 @@ Appendix D.  Error Surfaces
    not authorized to observe
    ([I-D.draft-mcguinness-mission-aauth-management]).
 
-   Registration posture is likewise deliberate per artifact class:
-   OAuth-facing parameters and media types register with IANA, evidence
-   media types defer registration until cross-domain interoperability
-   demands it, and each profile states which posture it takes.
+   Registration posture differs per artifact class: OAuth-facing
+   parameters and media types register with IANA, evidence media types
+   defer registration until cross-domain interoperability demands it,
+   and each profile states which posture it takes.
 
 Appendix E.  Illustrative Verification Guidance
 
    These scenarios illustrate how a Baseline Issuance deployment can be
    checked.  Each checks a rule its home document states normatively;
    this document owns none of them and confers no conformance class.
+
    Coverage is scoped by the capabilities a binding's Mission Substrate
    Statement claims (the OAuth binding, which publishes no Statement, is
-   covered through its own Conformance gates), so a standalone MAS is
-   never asked to verify a credential behavior it does not claim; the
-   family's conformance manifest carries the profile-owned rows.
+   covered through its own Conformance gates).  A standalone MAS is
+   therefore never asked to verify a credential behavior it does not
+   claim.  The family's conformance manifest carries the profile-owned
+   rows.
 
    Kernel, every Baseline deployment (the substrate contract's approval
    event, governance gate, and bounded reliance,
@@ -3910,16 +4049,17 @@ Appendix F.  Deployment Profile Example Shapes
    These shapes are illustrative.  This document fixes no serialization,
    and each fact's owning profile governs its meaning (Section 12.6).
 
-   An illustrative shape, for a deployment that runs mediated credential
-   custody but makes neither High-Assurance claim: the agent-compromise-
-   resistant claim requires the runtime profile's per-condition evidence
-   bindings (EAT profile and claim identifiers, measurements, appraisal
-   policy, attester identity, freshness, signed approval configuration,
-   rendering evidence, and a path-completeness audit), and this shape's
-   generic attestation reference is declaration input, not that proof.
-   The key_custody entries below are declarations under the same rule: a
-   custody statement made legible, not a checked assurance grade (the
-   member's definition in Section 12.6 states the open verifier gap):
+   The first shape is for a deployment that runs mediated credential
+   custody but makes neither High-Assurance claim.  The agent-
+   compromise-resistant claim requires the runtime profile's per-
+   condition evidence bindings (EAT profile and claim identifiers,
+   measurements, appraisal policy, attester identity, freshness, signed
+   approval configuration, rendering evidence, and a path-completeness
+   audit); this shape's generic attestation reference is declaration
+   input, not that proof.  Its key_custody entries are declarations
+   under the same rule: a custody statement made legible, not a checked
+   assurance grade (the member's definition in Section 12.6 states the
+   open verifier gap):
 
    {
      "profile": "mission-governed-agent-runtime",
@@ -4082,17 +4222,17 @@ Appendix G.  Mission Document Map
    Server's own surfaces keep "oauth" in their names; profiles defined
    against the substrate of Section 10 are named without it.  This
    document is named without it because the architecture is substrate-
-   neutral by construction.
+   neutral.
 
    Maturity is a dependency boundary.  A Standards-Track profile never
-   depends normatively on an experimental one: the experimental profiles
-   extend the stable interface only through its declared seams, the
-   Mission Intent extension seam of the OAuth binding (a named,
-   companion-defined top-level member) and the coordinated-extension
-   rules of the evidence objects, and a Standards-Track document cites
-   them informatively at most.  An experimental profile that stabilizes
-   crosses the boundary by reclassification, not by a stable document
-   absorbing a dependency.
+   depends normatively on an experimental one, and a Standards-Track
+   document cites an experimental profile informatively at most.  The
+   experimental profiles extend the stable interface only through its
+   declared seams: the Mission Intent extension seam of the OAuth
+   binding (a named, companion-defined top-level member) and the
+   coordinated-extension rules of the evidence objects.  An experimental
+   profile that stabilizes crosses the boundary by reclassification, not
+   by a stable document absorbing a dependency.
 
    Within Lifecycle, Status is the OAuth lifecycle suite's root
    document, with Signals (the push channel) and Management (the
@@ -4110,7 +4250,7 @@ Appendix G.  Mission Document Map
         |             | defines no binding or mechanism.         |
         +-------------+------------------------------------------+
 
-                                 Table 15
+                                 Table 16
 
    *The substrate and the bindings:*
 
@@ -4157,7 +4297,7 @@ Appendix G.  Mission Document Map
     |                               | than OAuth publish Statements.  |
     +-------------------------------+---------------------------------+
 
-                                  Table 16
+                                  Table 17
 
    *Approval time:*
 
@@ -4200,7 +4340,7 @@ Appendix G.  Mission Document Map
     |                                   | instantiated Mission.       |
     +-----------------------------------+-----------------------------+
 
-                                  Table 17
+                                  Table 18
 
    *Lifecycle:*
 
@@ -4276,7 +4416,7 @@ Appendix G.  Mission Document Map
      |                                 | termination.               |
      +---------------------------------+----------------------------+
 
-                                 Table 18
+                                 Table 19
 
    *Cross-domain projection and continuity:*
 
@@ -4306,7 +4446,7 @@ Appendix G.  Mission Document Map
    |                                    | hop.                        |
    +------------------------------------+-----------------------------+
 
-                                 Table 19
+                                 Table 20
 
    *Runtime enforcement:*
 
@@ -4354,7 +4494,7 @@ Appendix G.  Mission Document Map
    |                                         | domain decision.        |
    +-----------------------------------------+-------------------------+
 
-                                  Table 20
+                                  Table 21
 
    *Agent runtime:*
 
@@ -4374,7 +4514,7 @@ Appendix G.  Mission Document Map
     |                            | compensation after a stop.        |
     +----------------------------+-----------------------------------+
 
-                                 Table 21
+                                 Table 22
 
    *Sub-agents:*
 
@@ -4391,7 +4531,7 @@ Appendix G.  Mission Document Map
     |                                | preserved by runtime re-check. |
     +--------------------------------+--------------------------------+
 
-                                  Table 22
+                                  Table 23
 
    *Proof and portability:*
 
@@ -4424,7 +4564,7 @@ Appendix G.  Mission Document Map
    |                                         | kinds.                 |
    +-----------------------------------------+------------------------+
 
-                                 Table 23
+                                 Table 24
 
    *Security model:*
 
@@ -4442,11 +4582,20 @@ Appendix G.  Mission Document Map
       |                             | compromise costs.             |
       +-----------------------------+-------------------------------+
 
-                                  Table 24
+                                  Table 25
 
 Appendix H.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Density, with no change to any profile's requirements.  Long
+      paragraphs are split to one idea each and long sentences
+      shortened; Continue lists the three continuities and keeps the
+      residual for authority already issued under a continued grant; the
+      binding properties' mechanism mapping is a table; the kill-switch
+      composition table has short cells with numbered notes; and meta-
+      commentary about the document is removed.  OAuth-specific
+      statements the pass found unlabeled now say so.
 
    *  Reading order and section ownership, with no change to any
       profile's requirements.  A Mission's Life leads the model; Meaning

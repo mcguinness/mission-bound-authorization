@@ -1204,7 +1204,10 @@ continuation handle grants nothing.<a href="#section-abstract-1" class="pilcrow"
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
-            <p id="section-toc.1-1.13.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+            <p id="section-toc.1-1.13.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-document-history" class="internal xref">Document History</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -1495,6 +1498,14 @@ is its rooting anchor: the Mission's grant, which can carry unattended
 work past logout, or a session bound to it. A Mission's terminal state
 withdraws permission to continue and ends the chain
 (<span><a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-id-continuation-assertion-02#section-6.2" class="relref">Section 6.2</a> of [<a href="#I-D.draft-mcguinness-oauth-id-continuation-assertion" class="cite xref">I-D.draft-mcguinness-oauth-id-continuation-assertion</a>]</span>).
+A refusal at this exchange uses that draft's codes
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-id-continuation-assertion-02#section-5.5.6" class="relref">Section 5.5.6</a> of [<a href="#I-D.draft-mcguinness-oauth-id-continuation-assertion" class="cite xref">I-D.draft-mcguinness-oauth-id-continuation-assertion</a>]</span>),
+in place of the issuance profile's <code>invalid_grant</code>: a terminal Mission
+is <code>invalid_continuation</code>, a suspended Mission is <code>unauthorized_client</code>,
+no remaining authority for the audience is <code>invalid_target</code>, and a
+derivation or hop-count limit is <code>invalid_grant</code>. The issuance
+profile's requirements for the <code>mission_error</code> diagnostic
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) apply unchanged.
 The assertion carries no user subject: the IdP resolves the subject for
 each target from the hop, so continuation preserves the Mission's
 subject rather than projecting it; the actor is rebound per hop.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
@@ -1801,8 +1812,33 @@ constrains their use and introduces none of its own.<a href="#section-11-1" clas
 </div>
 </section>
 </div>
-<div id="authors-addresses">
+<div id="document-history">
 <section id="appendix-A">
+      <h2 id="name-document-history">
+<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
+      </h2>
+<p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="appendix-A-2.1">
+          <p id="appendix-A-2.1.1">Aligned with the published Identity Continuation Assertion (-02): the
+transport runs among Resource Authorization Servers that trust a
+common IdP, its assertion issuer is the Continuation Assertion
+Issuer, the Mission binds the chain authorization, lifecycle anchor,
+and chain ending, single use is keyed on <code>(iss, jti)</code>, and Privacy
+Considerations notes that a chain remains correlatable (#906).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">The Identity Continuation Transport states the refusal codes at that
+exchange, those of the Identity Continuation Assertion in place of
+the issuance profile's <code>invalid_grant</code>, as the issuance profile
+permits for a Token Exchange profile that assigns its own code. The
+<code>mission_error</code> diagnostic requirements are unchanged (#921).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-B">
       <h2 id="name-authors-address">
 <a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
       </h2>
