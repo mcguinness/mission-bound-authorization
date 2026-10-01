@@ -1170,12 +1170,13 @@ credential never overrides a revoked agent or a non-active Mission, and
 a live agent under an active Mission still fails on an expired
 credential.
 
-The assurance levels add binding strength in the same order a deployment
-adds it: authority is issued to an authenticated client; client-instance
-attestation pins the concrete instance; sender-constraint keys pin
-possession; attested runtimes pin the execution environment; and an
-Agent Deployment pin holds the behavioral version
-({{assurance-levels}}).
+Binding strength accumulates as a deployment adds it: authority is
+issued to an authenticated client; client-instance attestation pins
+the concrete instance; sender-constraint keys pin possession; attested
+runtimes pin the execution environment; and an Agent Deployment pin
+holds the behavioral version. The instance and key steps are binding
+properties ({{binding-properties}}); none of these steps is an
+assurance level.
 
 The division of labor with agent IAM is one sentence: agent identity
 preserves who is acting, and the Mission preserves why their
@@ -3621,7 +3622,9 @@ bound profiled by `aauth-mission-expiry`.
   verb spine carries an overlay of owning documents and packages.
   Repeated explanations have one home, and a repetition that
   qualifies a guarantee keeps a short local summary. The model is
-  stated binding-neutrally, with each realization labeled.
+  stated binding-neutrally, with each realization labeled, and the
+  Runtime-Enforced bundle's dependencies are described by intended
+  category, not maturity.
 
 - Editorial corrections, with no change to any profile's
   requirements. The capability-kill property is stated per action
