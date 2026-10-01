@@ -30,6 +30,7 @@ import {
 import { errors, type KoaContextWithOIDC } from "oidc-provider";
 import type Provider from "oidc-provider";
 import {
+  checkContinuationFreshness,
   ContinuationAssertionError,
   IDENTITY_CONTINUATION_TOKEN_TYPE,
   type ValidatedContinuation,
@@ -281,8 +282,8 @@ export async function handleTokenExchangeGrant(
   // a request failing several gets the code of the earliest (5.5.6): request
   // parameters, then the assertion's well-formedness and issuer trust, then the
   // current actor and its key proof, then chain state (a permanently unusable
-  // hop before a limit), then replay, then authorization (target and scope
-  // last). No chain-state code reaches a caller that has not authenticated as
+  // hop before a limit), then freshness and replay, then authorization (target
+  // and scope last). No chain-state code reaches a caller that has not authenticated as
   // the current actor and proved the cnf key, and nothing before the
   // reservation in beforeSign has a side effect.
 
@@ -337,13 +338,14 @@ export async function handleTokenExchangeGrant(
 
   // Rules 2-3: validate the ICA's well-formedness (signature included) and its
   // issuer. `audience` is the AS issuer identifier (NOT /token). The presenter
-  // key and replay checks are left to rules 5 and 6 below, so the validator
-  // gets neither. Every typed validator error maps to invalid_request with its
-  // specific message preserved (invalid_request, unlike invalid_grant, is not
-  // re-rendered), so exp>300 / forbidden-claim reasons stay visible.
+  // key, freshness and replay checks are left to rules 5 and 6 below, so the
+  // validator applies none of them. Every typed validator error maps to
+  // invalid_request with its specific message preserved (invalid_request,
+  // unlike invalid_grant, is not re-rendered), so forbidden-claim reasons stay
+  // visible.
   let ica: ValidatedContinuation;
   try {
-    ica = await validateContinuationAssertion(subjectToken, { audience: opts.issuer, issuers });
+    ica = await validateContinuationAssertion(subjectToken, { audience: opts.issuer, issuers, freshness: false });
   } catch (e) {
     if (e instanceof ContinuationAssertionError) {
       throw new errors.InvalidRequest(e.message);
@@ -438,8 +440,17 @@ export async function handleTokenExchangeGrant(
     return;
   }
 
-  // Rule 6: single use. A reserved (iss, jti) is invalid_request (ICA -02
-  // 5.5.6); the reservation itself is taken in beforeSign below.
+  // Rule 6: freshness, then single use. Chain state comes first, so an expired
+  // assertion over an ended chain is invalid_continuation (ICA -02 5.5.6). An
+  // assertion that is stale, early or too long-lived, or whose (iss, jti) is
+  // reserved, is invalid_request; the reservation itself is taken in
+  // beforeSign below.
+  try {
+    checkContinuationFreshness(ica, { nowS: Math.floor(opts.kernel.nowDate().getTime() / 1000) });
+  } catch (e) {
+    if (e instanceof ContinuationAssertionError) throw new errors.InvalidRequest(e.message);
+    throw e;
+  }
   if (replay.seen(ica.iss, ica.jti)) {
     throw new errors.InvalidRequest("continuation assertion replay");
   }

@@ -255,10 +255,12 @@ export {
 } from "./kernel/instance-assertion.js";
 export {
   validateContinuationAssertion,
+  checkContinuationFreshness,
   ContinuationAssertionError,
   IDENTITY_CONTINUATION_JWT_TYP,
   IDENTITY_CONTINUATION_TOKEN_TYPE,
   MAX_CONTINUATION_LIFETIME_S,
+  CONTINUATION_CLOCK_SKEW_S,
   type ContinuationIssuer,
   type ContinuationActor,
   type ValidatedContinuation,

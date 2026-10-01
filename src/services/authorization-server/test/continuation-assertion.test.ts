@@ -8,6 +8,8 @@
 import { calculateJwkThumbprint, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
+  checkContinuationFreshness,
+  CONTINUATION_CLOCK_SKEW_S,
   type ContinuationIssuer,
   ContinuationAssertionError,
   IDENTITY_CONTINUATION_JWT_TYP,
@@ -95,6 +97,56 @@ describe("validateContinuationAssertion — caller-ordered checks (@spec id-cont
     expect(v.jti).toBe(first.jti);
     expect(v.cnf.jkt).toBe(jkt);
   });
+
+  it("with freshness: false it accepts an expired assertion, which checkContinuationFreshness then refuses (the exchange applies rule 6 after chain state)", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const expired = await mintICA({ iatSec: now - 200, expSec: now - 100 });
+    await expect(validateContinuationAssertion(expired, ctx())).rejects.toThrow(/expired/);
+    const v = await validateContinuationAssertion(expired, { ...ctx(), freshness: false });
+    expect(() => checkContinuationFreshness(v)).toThrow(/expired/);
+  });
+});
+
+describe("validateContinuationAssertion — freshness within one clock skew (@spec id-continuation-assertion)", () => {
+  const skew = CONTINUATION_CLOCK_SKEW_S;
+
+  it("uses one skew of at most 60 seconds (ICA -02 5.5.3 rule 6)", () => {
+    expect(skew).toBeGreaterThan(0);
+    expect(skew).toBeLessThanOrEqual(60);
+  });
+
+  it("iat: within the skew in the future is accepted; beyond it is refused", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    await expect(
+      validateContinuationAssertion(await mintICA({ iatSec: now + skew - 5, expSec: now + skew + 60 }), ctx()),
+    ).resolves.toBeDefined();
+    await expect(
+      validateContinuationAssertion(await mintICA({ iatSec: now + skew + 10, expSec: now + skew + 70 }), ctx()),
+    ).rejects.toMatchObject({ code: "invalid_request", message: expect.stringMatching(/iat is in the future/) });
+  });
+
+  it("exp: passed within the skew is accepted; passed beyond it is refused", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    await expect(
+      validateContinuationAssertion(await mintICA({ iatSec: now - 100, expSec: now - skew + 5 }), ctx()),
+    ).resolves.toBeDefined();
+    await expect(
+      validateContinuationAssertion(await mintICA({ iatSec: now - 100, expSec: now - skew - 5 }), ctx()),
+    ).rejects.toThrow(/expired/);
+  });
+
+  it("nbf: a NumericDate, passed within the skew", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    await expect(
+      validateContinuationAssertion(await mintICA({ over: { nbf: now + skew - 5 } }), ctx()),
+    ).resolves.toMatchObject({ nbf: now + skew - 5 });
+    await expect(validateContinuationAssertion(await mintICA({ over: { nbf: now + skew + 10 } }), ctx())).rejects.toThrow(
+      /not yet valid/,
+    );
+    await expect(validateContinuationAssertion(await mintICA({ over: { nbf: "soon" } }), ctx())).rejects.toThrow(
+      /nbf is not a NumericDate/,
+    );
+  });
 });
 
 describe("validateContinuationAssertion — rejects", () => {
@@ -111,7 +163,7 @@ describe("validateContinuationAssertion — rejects", () => {
   });
 
   it("audience = token endpoint instead of the AS issuer identifier", async () => {
-    // Fails inside jwtVerify -> invalid_grant (assert the code, not a message).
+    // Fails the aud check -> invalid_grant (assert the code, not a message).
     await expect(
       validateContinuationAssertion(await mintICA({ aud: `${AS}/token` }), ctx()),
     ).rejects.toMatchObject({ code: "invalid_grant" });
@@ -134,7 +186,7 @@ describe("validateContinuationAssertion — rejects", () => {
   });
 
   it("exp not strictly greater than iat", async () => {
-    // Both in the future so jose's own expiry check passes; step 4 catches exp==iat.
+    // exp == iat: the lifetime check, which freshness runs before the clock checks.
     const future = Math.floor(Date.now() / 1000) + 120;
     await expect(
       validateContinuationAssertion(await mintICA({ iatSec: future, expSec: future }), ctx()),

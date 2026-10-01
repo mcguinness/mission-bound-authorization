@@ -494,6 +494,16 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     expect(body.error_description).toMatch(/aud MUST be a single string/);
   });
 
+  it("(a2) an ICA whose iat is beyond the clock skew in the future -> invalid_request (ICA -02 5.5.3 rule 6)", async () => {
+    const { handle } = newLineage("apev-a2");
+    const now = Math.floor(Date.now() / 1000);
+    const res = await tokenExchange({ subjectToken: await mintICA(handle, { iatSec: now + 120, expSec: now + 240 }) });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toMatch(/iat is in the future/);
+  });
+
   it("(b0) consumption is atomic with issuance (#617 review 1): a redemption refused at the Mission gate leaves the ICA UNCONSUMED; the SAME assertion redeems once the gate reopens", async () => {
     const { missionId, handle } = newLineage("apev-b0");
     const ica = await mintICA(handle);
@@ -848,6 +858,33 @@ describe("continuation error precedence (@spec id-continuation-assertion)", () =
     expect(await errorOf(unserved)).toBe("invalid_grant");
     const scoped = await tokenExchange({ subjectToken: await mintICA(handle), extra: { scope: "payments.read" } });
     expect(await errorOf(scoped)).toBe("invalid_grant");
+  });
+
+  it("chain state precedes freshness: an expired assertion over a terminal hop is invalid_continuation", async () => {
+    const { missionId, handle } = newLineage("apev-p8");
+    const now = Math.floor(Date.now() / 1000);
+    const expired = await mintICA(handle, { iatSec: now - 200, expSec: now - 100 });
+    // On a live chain the same assertion fails freshness.
+    expect(await errorOf(await tokenExchange({ subjectToken: expired }))).toBe("invalid_request");
+    as.kernel.transition(missionId, "revoke");
+    expect(await errorOf(await tokenExchange({ subjectToken: expired }))).toBe("invalid_continuation");
+  });
+
+  it("a limit precedes freshness: an assertion past the lifetime cap over a spent derivation cap is invalid_grant", async () => {
+    const { handle } = newLineage("apev-p9", {}, MISSION_EXP, { requested_derivation_limit: 1 });
+    const first = await tokenExchange({ subjectToken: await mintICA(handle) });
+    expect(first.status, await first.clone().text()).toBe(200);
+    const now = Math.floor(Date.now() / 1000);
+    const tooLong = await mintICA(handle, { iatSec: now, expSec: now + 301 });
+    expect(await errorOf(await tokenExchange({ subjectToken: tooLong }))).toBe("invalid_grant");
+  });
+
+  it("freshness precedes authorization: an expired assertion over a suspended Mission is invalid_request", async () => {
+    const { missionId, handle } = newLineage("apev-p10");
+    as.kernel.transition(missionId, "suspend");
+    const now = Math.floor(Date.now() / 1000);
+    const expired = await mintICA(handle, { iatSec: now - 200, expSec: now - 100 });
+    expect(await errorOf(await tokenExchange({ subjectToken: expired }))).toBe("invalid_request");
   });
 
   it("replay precedes authorization: a consumed assertion over a suspended Mission is invalid_request", async () => {
