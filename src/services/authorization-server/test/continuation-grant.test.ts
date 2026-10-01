@@ -51,10 +51,12 @@ const ISSUER = `http://localhost:${PORT}`;
 const CA = "https://chain-authority.example"; // the injected Chain Authority
 const RESOURCE = CANONICAL_RESOURCE; // in DERIVATION_POLICY's ceiling
 const RAS_AUD = "https://ras.ledgercloud.test"; // the target Resource AS (audience)
-const RESOURCE_B = "https://api.ledgercloud.test/v1"; // a second resource the same RAS serves
+const RESOURCE_B = "https://api.ledgercloud.test/v1"; // a second resource the same RAS serves, never approved
+const RESOURCE_C = TOPOLOGY.resources.saas; // a third resource the same RAS serves, in the ceiling
+const READ_C = { type: "mission_resource_access", resource: RESOURCE_C, actions: ["ledger:vendor.read"] };
 const MISSION_EXP = "2027-01-01T00:00:00Z";
 const JWT_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:jwt";
-const RESOURCE_TO_AS = (r: string) => (r === RESOURCE || r === RESOURCE_B ? RAS_AUD : ISSUER);
+const RESOURCE_TO_AS = (r: string) => (r === RESOURCE || r === RESOURCE_B || r === RESOURCE_C ? RAS_AUD : ISSUER);
 
 // @spec cross-domain#origin-principal-mapping, #dual-axis (#539): every RAS
 // redemption in this file is a CONTINUATION ID-JAG (identity_continuation_handle
@@ -84,6 +86,8 @@ function newLineage(
   envelope: { authTime?: number; acr?: string; amr?: string[] } = {},
   expiresAt: string = MISSION_EXP,
   intentExtra: Record<string, unknown> = {},
+  /** Further approved entries, beyond the payments read every lineage holds. */
+  extraAuthority: Record<string, unknown>[] = [],
 ): {
   missionId: string;
   handle: string;
@@ -91,7 +95,7 @@ function newLineage(
   const intent = validateMissionIntent(
     JSON.stringify({
       goal: "Continue a Mission across an intra-domain hop",
-      target_resources: [RESOURCE],
+      target_resources: [RESOURCE, ...extraAuthority.map((e) => e.resource as string)],
       expires_at: expiresAt,
       ...intentExtra,
     }),
@@ -105,6 +109,7 @@ function newLineage(
         actions: ["payments:invoice.read"],
         constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
       },
+      ...(extraAuthority as never[]),
     ],
     subject: { iss: ISSUER, sub: "alice" }, // the GLOBAL subject
     approver: { iss: ISSUER, sub: "bob" },
@@ -718,10 +723,24 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     expect(res.status, await res.clone().text()).toBe(200);
   });
 
-  it("(f2) several resources, each served by the audience -> issued", async () => {
-    const { handle } = newLineage("apev-f2");
-    const res = await tokenExchange({ subjectToken: await mintICA(handle), resource: [RESOURCE, RESOURCE_B] });
+  it("(f2) several resources, each approved and served by the audience -> issued", async () => {
+    const { handle } = newLineage("apev-f2", {}, MISSION_EXP, {}, [READ_C]);
+    const res = await tokenExchange({ subjectToken: await mintICA(handle), resource: [RESOURCE, RESOURCE_C] });
     expect(res.status, await res.clone().text()).toBe(200);
+  });
+
+  it("(f5) a resource the audience serves but the Mission does not authorize -> invalid_target, with no hop and no derivation (ICA -02 5.5.6)", async () => {
+    const { missionId, handle } = newLineage("apev-f5");
+    const hops = as.continuationStore.handlesForMission(missionId).length;
+    for (const resource of [RESOURCE_B, [RESOURCE, RESOURCE_B]]) {
+      const res = await tokenExchange({ subjectToken: await mintICA(handle), resource });
+      const body = (await res.json()) as { error?: string; error_description?: string };
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_target");
+      expect(body.error_description).toMatch(/not authorized by the Mission/);
+    }
+    expect(as.continuationStore.handlesForMission(missionId)).toHaveLength(hops);
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(0);
   });
 
   it("(f3) one resource the audience does not serve -> invalid_target, in either order (an order-independent set)", async () => {

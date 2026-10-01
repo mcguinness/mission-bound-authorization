@@ -464,8 +464,20 @@ export async function handleTokenExchangeGrant(
     return;
   }
   const effective = opts.kernel.effectiveAuthoritySet(record);
-  if (effective.length > 0 && audienceScopedAuthority(effective, resourceToAs, audience).length === 0) {
+  const audienceScoped = audienceScopedAuthority(effective, resourceToAs, audience);
+  if (effective.length > 0 && audienceScoped.length === 0) {
     txError(ctx, 400, "invalid_target", "no audience-scoped authority for the target Resource AS");
+    return;
+  }
+  // @spec id-continuation-assertion — each requested resource MUST also be
+  // one the Mission authorizes: a resource the audience serves but no
+  // audience-scoped effective entry names is "not permitted by the chain
+  // authorization" (ICA -02 5.5.6: invalid_target), as a token-endpoint
+  // `resource` outside the Authority Set is at core issuance
+  // (mission#error-mapping). Membership is the exact `resource` equality the
+  // kernel's audience-scoped projections use.
+  if (effective.length > 0 && resources.some((r) => !audienceScoped.some((e) => e.resource === r))) {
+    txError(ctx, 400, "invalid_target", "requested resource is not authorized by the Mission");
     return;
   }
   // @spec mission#scope-projection — this exchange issues an identity
