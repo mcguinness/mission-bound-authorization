@@ -858,6 +858,23 @@ Table of Contents
    needs a prompt cutoff on outstanding tokens uses the propagation
    mechanisms of Section 6.
 
+   Suspension is reversible, so a refresh refused for it should not
+   spend the client's ability to refresh after a resume.  After
+   validating a refresh request and before consuming or rotating its
+   refresh token, the AS SHOULD check whether the Mission, or an
+   ancestor whose state gates its derivation
+   ([I-D.draft-mcguinness-oauth-mission-child-delegation]), is
+   suspended.  When this check detects suspension, the AS SHOULD refuse
+   the request without consuming the refresh token or invalidating its
+   otherwise-valid grant solely because of that suspension.  This check
+   does not replace issuance-time state validation.  A concurrent
+   suspension can still cause issuance to be refused after the
+   preliminary check, and preserving refresh capability across that
+   interval requires coordination with the issuance commit.  The check
+   leaves refresh-token rotation and reuse detection intact, and a
+   resume does not revive a credential that expired or was revoked
+   independently.
+
 5.1.  Operations
 
    The endpoint accepts authenticated POST requests with a form-
@@ -1972,6 +1989,11 @@ Informative References
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  A refresh against a suspended Mission is checked, and refused,
+      before its refresh token is consumed, so a resume restores refresh
+      with the same token; issuance-time validation still governs a
+      concurrent suspension (#914).
 
    *  Added conditional carryover correlation on an old child's cascaded
       observation; no state or authority is inferred from the pointer
