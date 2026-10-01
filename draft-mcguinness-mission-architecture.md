@@ -2634,25 +2634,16 @@ converse holds too: killing a workload leaves the Mission `active`
 and its authority derivable to a replacement instance unless the
 Mission is also revoked.
 
-Capability kill provides one of two containment properties, decided
-per action class and consumer, never by the deployment's assurance
-level ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section
-"Containment Properties"). The Baseline property is a new-derivation
-kill: where the binding gates derivation, derivations minted after
-the transition exclude the contained capability, and the exclusion
-propagates to Child Missions justified by the contained entry, while
-a cross-domain grant already redeemed or an offline attenuation root
-already minted before the transition keeps its own bounded lifetime,
-exactly as the credential-kill row's residual does. The
-Runtime-Enforced property is an action-time kill: a consumer that
-checks a containment-aware state source at action time also denies
-the contained capability on a token issued before the transition,
-bounded by that source's staleness plus the permit and execution
-windows. Which property a class gets follows its state source and
-enforcement scope: a Runtime-Enforced deployment provides only the
-Baseline property for a class its Enforcement Scope Statement leaves
-lifecycle-gated-only, and a standalone MAS path with no runtime gate
-gets neither ({{kill-switch-composition}}).
+Capability kill provides one of two containment properties, per
+action class and consumer, never by the deployment's assurance level
+({{I-D.draft-mcguinness-oauth-mission-containment}}, Section
+"Containment Properties"): the Baseline property, a new-derivation
+kill that also propagates to Child Missions justified by the
+contained entry, and the Runtime-Enforced property, an action-time
+kill that also reaches a token issued before the transition. A class
+can get neither, as on a standalone MAS path with no runtime gate.
+{{kill-switch-composition}} composes the properties by rung and
+binding, with what each leaves running.
 
 A deployment's incident runbook names which of these controls exist,
 who may pull each, and, per action class, which capability-kill
