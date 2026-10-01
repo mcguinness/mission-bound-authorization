@@ -38,6 +38,10 @@
     "revision": "0deed864cfd4ceb597047f3a617e0ad492907d76",
     "content_sha256": "e681f15fe23ebf3b0bb8d32f1aed70eef88c140331a5f10216492d3669d045ae"
    },
+   "draft-mcguinness-oauth-mission-continuation.md": {
+    "revision": "c8b265cec29a2ea3e1bf340928861702012c80ef",
+    "content_sha256": "f9b842d98224a63f8159a886f130d2cfac230bbf3df787cef613f87022a9795c"
+   },
    "draft-mcguinness-oauth-mission-signals.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
     "content_sha256": "e06bc60196934a5b5475d51884dd5627bf263cce0fa18973fd49a63f529b77f8"
@@ -59,8 +63,8 @@
     "content_sha256": "1459196e3c443e94aa637b2f3c8245fbeee328beac8b38c78b4506a861af828b"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
-    "content_sha256": "fa5d6774275ef0650706b82ebd4f195f0f68704e35a0b439a691b06197a164f8"
+    "revision": "657279dba0922e1a94e660cf3c6d5196172521d0",
+    "content_sha256": "a7e214cc8d0f7f979450d616bd927cfceaf84034bc41960630c2a35a93039843"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
@@ -222,6 +226,7 @@
    "runtime.instance-context",
    "mas.instance-bound-join",
    "derivation-limits.limit",
+   "continuation.ica-transport",
    "submission-evidence.verification"
   ]
  },
@@ -22920,6 +22925,72 @@
     }
    ],
    "notes": "#762 adds REQUIRED, runtime-validated, versioned RAS local policy after entitlement and before one-time grant consumption, on base and continuation paths. The configured ceiling supplies the deployment-policy term, preserving restrictions and surviving action bindings; unsupported or too-broad restrictions refuse rather than being discarded. The SaaS read/write pair demonstrates narrowed delegated details; the paired PDP test independently varies resource policy while Mission authority and entitlement remain fixed. Cross-Org already applied localCeiling; retargeting it to the shared primitive establishes one comparison invariant, not a newly demonstrated binding bug. #787 settles the ceiling's child-creation term: a ceiling-declared `child_creation_policy` binds under the lineage rule instead of being stripped, and the minted entry keeps the reference with its retained-action provenance (see cross-domain.resource-as.local-policy-bound). Per-token derivation evidence remains separately tracked as SHOULD/todo."
+  },
+  {
+   "id": "continuation.ica-transport.refusal-codes",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "a terminal Mission is `invalid_continuation`, a suspended Mission is `unauthorized_client`, no remaining authority for the audience is `invalid_target`, and a derivation or hop-count limit is `invalid_grant`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "at the ICA continuation exchange the AS refuses a terminal Mission (expired, or revoked whether or not the continuation store has already ended its handles) with invalid_continuation, a suspended Mission with unauthorized_client, fully contained authority with invalid_target, and an exhausted derivation cap or the chain hop-count limit with invalid_grant",
+    "local": "codes only: mission_error stays at the issuance profile's SHOULD and is not asserted by this row ((b1) and (b3) happen to carry it; the ordinary revocation path through a store-terminated handle, (g), returns invalid_continuation without it). The exhausted (non-contained) empty-authority case is not separately exercised."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b0) consumption is atomic with issuance (#617 review 1): a redemption refused at the Mission gate leaves the ICA UNCONSUMED; the SAME assertion redeems once the gate reopens",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b1) a Mission past its expiry at the gate -> invalid_continuation with mission_error (ICA -02 5.5.6)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (g) revoking the Mission terminates its handles (onLifecycleCommit fan-out) -> invalid_continuation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b4) a revoked Mission whose hop the store has not yet ended -> invalid_continuation at the gate, not unauthorized_client",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b2) a Mission whose authority is fully contained -> invalid_target (ICA -02 5.5.6)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b3) an exhausted derivation cap -> invalid_grant with mission_error (a limit, ICA -02 5.5.6)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation hop-count limit (@spec id-continuation-assertion) > refuses a continuation past the chain's limit with invalid_grant, recording no hop and counting no derivation; another chain of the same Mission is unaffected",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#921: the ICA -02 Section 5.5.6 codes apply at this exchange in place of the issuance profile's invalid_grant, which core Issuance Gating permits for a Token Exchange profile that assigns its own code."
   },
   {
    "id": "resource-access.type.prefix-query-fragment-refused",
