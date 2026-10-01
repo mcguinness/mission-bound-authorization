@@ -453,17 +453,17 @@ each interface small but spreads the structure across many documents
 and several bindings; this document is the single structural view.
 
 The bindings are peers: each attaches to its own protocol as an
-equally adoptable unit and declares what it supplies in its Mission
-Substrate Statement. What peer standing implies, and how the bindings
+equally adoptable unit and declares what it supplies, in a Mission Substrate Statement or,
+for the OAuth binding, an informative Mapping Assessment. What peer standing implies, and how the bindings
 differ, is stated once with the binding architectures
 ({{binding-architectures}}).
 
 This document is Informational. It defines no protocol, mechanism,
 requirement, conformance class, or wire format. It does define descriptive
-vocabulary that other documents cite: the token classes
-({{token-classes}}), the assurance levels and claims
-({{assurance-levels}}), and the binding properties
-({{binding-properties}}). Material marked illustrative (the worked
+vocabulary that other documents cite: the assurance levels and claims
+({{assurance-levels}}) and the binding properties
+({{binding-properties}}), whose `credential-mission-bound` equivalence
+is what earns the Mission-bound token class ({{token-classes}}). Material marked illustrative (the worked
 composition, the Deployment Profile shapes, and the verification
 scenarios) shows one way to apply the model and fixes nothing. Every
 other passage summarizes rules owned by the documents it cites; where
@@ -860,8 +860,7 @@ The model's boundary is deliberate. The family does not define:
 
 - **A new grant protocol.** Rich
   Authorization Requests {{RFC9396}} and kindred mechanisms already
-  fill the authority-expression role; the family leaves the grant
-  exchange to them ({{the-mission}}) and defines its own
+  fill the authority-expression role; the family leaves the grant exchange to them and defines its own
   cross-resource `authorization_details` type only where {{RFC9396}}
   leaves type semantics to the type, in the OAuth binding's Mission
   Resource Access Profile
@@ -1556,7 +1555,7 @@ not baseline AAuth Mission Context properties.
   The credential-to-Mission association is itself a carried fact only
   where a binding carries the `mission` claim; under the standalone
   binding the PDP's join establishes it by inference, bounded by that
-  binding's join assurance ({{deployment}}).
+  binding's join assurance ({{binding-architectures}}).
 
 **Enforcement fails closed; inert surfaces fail safe**:
 : A PDP that cannot establish state or authority within the published
@@ -1638,8 +1637,7 @@ owning it, and no layer invents meaning it does not own. The
 consuming contract is equally short: meaning binds at approval, is
 enforced at the point of use, and any translation between the
 resource's vocabulary and another party's is trusted, verified, or
-separately approved, never a place where authority widens
-({{approval-fidelity}}). One boundary is shared by agreement: the
+separately approved, never a place where authority widens. One boundary is shared by agreement: the
 resource owns its operation semantics and consequences, while the
 family owns the registered cross-resource constraint vocabulary,
 which a resource explicitly advertises and adopts before it binds
@@ -1696,7 +1694,7 @@ Behind the five mechanisms sits one direction axis, and the
 direction is chosen per encounter, not fixed by binding. The family
 inherits OAuth's client-proposed default: the client names the
 authority it wants and the resource's meaning arrives through
-metadata, catalogs, and profiles ({{capability-envelope}}).
+metadata, catalogs, and profiles.
 Resource-Declared Semantics is the inversion, where the resource
 speaks first. Where a structured-authority binding commits that meaning
 at approval, it is enforced at use and translation never widens. Under
@@ -1850,15 +1848,16 @@ explicitly:
 - an ordered governance or audit record.
 {: #binding-checklist}
 
-Beyond the kernel, each binding claims through its Mission Substrate
-Statement any of eight optional capabilities (Lifecycle-Gated
+Beyond the kernel, each binding that publishes a Mission Substrate
+Statement claims through it any of eight optional capabilities (Lifecycle-Gated
 Authorization, State-Observable, Structured Authority, Monotonic
 Derivation, Credential-Bound, Authorized Context Correlation,
-Independently Verifiable, and Portable Evidence), and composes only
-the profiles whose required capabilities it provides.
+Independently Verifiable, and Portable Evidence), and composes only the profiles whose required capabilities it
+provides. The OAuth binding publishes no Statement and is mapped to
+the same capabilities in its informative Mapping Assessment
+({{I-D.draft-mcguinness-oauth-mission}}).
 
-The bindings declare what they provide, each in its Mission Substrate
-Statement. The companion profiles named without "oauth" are defined
+The companion profiles named without "oauth" are defined
 against the binding-neutral contract and declare what they consume,
 each in a Mission Substrate section of its own; the runtime profile
 is the exemplar of that consumption declaration
@@ -2070,8 +2069,9 @@ it maps the shared kernel onto its own protocol's native Mission
 Context without importing the OAuth Authority Set
 ({{I-D.draft-mcguinness-mission-aauth}}). Peer standing implies
 neither identical capabilities nor identical adoption cost: AAuth,
-natively contextual, adds no new wire members, and each binding's
-Mission Substrate Statement declares what it supplies.
+natively contextual, adds no new wire members, and each binding declares what it supplies, in a Mission Substrate
+Statement or, for the OAuth binding, an informative Mapping
+Assessment.
 
 The bindings share Mission Context capabilities but are not one security
 system: each has its own authority representation, trust assumptions,
@@ -2094,7 +2094,7 @@ The differences that decide a design:
 |---|---|---|---|---|---|
 | Credential carries the Mission | yes (`mission` claim) | no | native reference where supported | yes (claim or introspection) | yes (protected `mission` claim or introspection assertion) |
 | Issuance gated on state | yes | no (the issuance grant restores it per consuming AS) | PS-asserted and federated only | yes | yes (issuance, grant modification, and rotation) |
-| Runtime PDP required for a kill switch | no (issuance gate exists; runtime tightens) | yes (runtime is the only cutoff) | none from the binding for direct modes, unless a deployment adds its own gateway ({{worked-composition}}); PS-path issuance has a bounded cutoff | no (per-use introspection cuts off) | no (issuance gate exists; per-use introspection cuts off where deployed) |
+| Runtime PDP required for a kill switch | no (issuance gate exists; runtime tightens) | yes (runtime is the only cutoff) | none from the binding for direct modes; PS-path issuance has a bounded cutoff | no (per-use introspection cuts off) | no (issuance gate exists; per-use introspection cuts off where deployed) |
 | Join ambiguity possible | no | yes (bounded by join assurance) | no when the native reference is preserved; it can be ignored in direct modes | no | no (native binding; no cross-authority join) |
 | Revocation latency source | token lifetime, status, or runtime | runtime and status only | auth-token lifetime on PS paths; no Mission cutoff on direct paths | next introspection | token lifetime, or the declared introspection cache bound |
 | Offline Mission verification | partial (claims verify; state does not) | limited (join assertion) | reference integrity only; blob is private | JWT RPTs partial; opaque RPTs none | partial with a structured token or signed Mission Status |
@@ -2365,7 +2365,7 @@ membership.
 
 - **Protocol core** (Baseline Issuance): the OAuth binding alone, the
   standardizable primitive of approved, anchored, state-gated
-  Missions, with Mission-substrate conformance ({{requirements}}).
+  Missions, meeting the Mission Context requirements ({{requirements}}).
 - **Reference security architecture** (Runtime-Enforced): the
   protocol core plus runtime enforcement, its AuthZEN profile,
   runtime evidence (the decision and execution objects AuthZEN
@@ -2714,8 +2714,7 @@ The pattern is uniform: the family commits and checks what a party
 was shown, decided, or did; it does not make the human attentive, the
 producer honest, or the unmediated path disappear. Those are the
 residues the Mission Assurance Levels ({{assurance-levels}}) and the security
-model make a deployment state rather than assume, and the exposure
-arm ({{capability-envelope}}) carries the same honesty in the other
+model make a deployment state rather than assume, and the exposure arm ({{survivable-incorrectness}}) carries the same honesty in the other
 direction.
 
 # Mission Deployment Patterns {#deployment}
@@ -3263,7 +3262,8 @@ These scenarios illustrate how a Baseline Issuance deployment can be
 checked. Each checks a rule its home document states normatively;
 this document owns none of them and confers no conformance class.
 Coverage is scoped by the capabilities a binding's Mission Substrate
-Statement claims, so a standalone MAS is never asked to verify a
+Statement claims (the OAuth binding, which publishes no Statement, is
+covered through its own Conformance gates), so a standalone MAS is never asked to verify a
 credential behavior it does not claim; the family's conformance
 manifest carries the profile-owned rows.
 
@@ -3523,7 +3523,7 @@ bound profiled by `aauth-mission-expiry`.
 | `mission-aauth` | The AAuth binding: Person Server control, the `s256`-committed mission blob, and PS-path gating. |
 | `mission-uma` | Experimental sketch. The UMA 2.0 binding: Intent by claims pushing, the RPT as Mission-bound credential. |
 | `mission-gnap` | Experimental sketch. The GNAP binding: Intent in the grant request; drawdown or expansion on modification. |
-| `mission-substrate` | The binding-neutral kernel contract, normative on any further binding; bindings publish Substrate Statements. |
+| `mission-substrate` | The binding-neutral kernel contract, normative on any further binding; bindings other than OAuth publish Statements. |
 
 **Approval time:**
 
