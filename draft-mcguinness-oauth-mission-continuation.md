@@ -367,6 +367,14 @@ is its rooting anchor: the Mission's grant, which can carry unattended
 work past logout, or a session bound to it. A Mission's terminal state
 withdraws permission to continue and ends the chain
 ({{Section 6.2 of I-D.draft-mcguinness-oauth-id-continuation-assertion}}).
+A refusal at this exchange uses that draft's codes
+({{Section 5.5.6 of I-D.draft-mcguinness-oauth-id-continuation-assertion}}),
+in place of the issuance profile's `invalid_grant`: a terminal Mission
+is `invalid_continuation`, a suspended Mission is `unauthorized_client`,
+no remaining authority for the audience is `invalid_target`, and a
+derivation or hop-count limit is `invalid_grant`. The `mission_error`
+member of {{I-D.draft-mcguinness-oauth-mission}} accompanies each refusal
+for which it defines a value.
 The assertion carries no user subject: the IdP resolves the subject for
 each target from the hop, so continuation preserves the Mission's
 subject rather than projecting it; the actor is rebound per hop.
