@@ -4,8 +4,9 @@ Baseline: `origin/main` at `bf7a753b`, all 50 drafts. Question: are
 parameter, claim, metadata, error-code, member, and value names named
 consistently across the family, and which names should be revisited?
 
-This note proposes; it renames nothing. Renames are owner decisions,
-and anything touching the core (published `-00`) goes issue-first.
+This note proposes; it renames nothing. Renames are owner decisions.
+Anything that renames a core wire name (published `-00`) belongs in the
+parked #705 breaking window, not a piecemeal respin.
 
 ## Method
 
@@ -37,7 +38,7 @@ follows it closely:
 | C2. Family-coined names in a shared IETF registry (OAuth Parameters, OAuth Extensions Error, AS and PR Metadata, Token Introspection Response) carry `mission`: as a prefix, or inside the `invalid_<x>` error pattern | core, attenuation, issuance-grant, status, signals, management | F1 |
 | C3. Members inside a Mission-owned object stay unprefixed; the OAuth-layer parameter that carries one is prefixed | `expires_at` member and `mission_expires_at` parameter; `intent` and `mission_intent` | none |
 | C4. RFC 8414 shapes: `<x>_endpoint`, `<endpoint>_auth_methods_supported`, `<endpoint>_auth_signing_alg_values_supported`, boolean `<feature>_supported` (RFC 9207 precedent), PR-metadata `<x>_required` (RFC 9728 precedent) | status, signals, management, issuance-grant, core | F7 |
-| C5. Instants end in `_at` (bounds in `_until`, `_before`, `_after`) and are RFC 3339 strings, including inside JWT payloads; NumericDate only for JOSE-level `iat`, `exp`, `mandate_exp` | stated only locally: mandate.md:424, core.md:2813 | F10 |
+| C5. Instants end in `_at` (bounds in `_until`, `_before`, `_after`) and are RFC 3339 strings, including inside JWT payloads; NumericDate only for JWT-level `iat`, `exp`, `mandate_exp` | stated only locally: mandate.md:424, core.md:2813 | F10 |
 | C6. Media subtypes `mission-<thing>+json`, `+jws`, `+jwt`; `typ` labels and URN tails in lowercase kebab | all three suffixes are registered (`+jws`: RFC 7515, IANA 2025-12-09) | none |
 
 **R0.** Write C1 to C6 down once (a "Wire names" section in
@@ -51,10 +52,9 @@ Ranked by interoperability cost. Counts are `src` files / ledger hits.
 
 ### Tier 1: shared IETF registries
 
-**F1. Unprefixed family names requested in IETF registries.** Both
-"OAuth Parameters" (RFC 6749 Section 11.2) and the OAuth URI
-sub-namespace (RFC 6755) are Specification Required and first-come. A
-generic name such as `parent` or `predecessor` takes that word from
+**F1. Unprefixed family names requested in IETF registries.** "OAuth
+Parameters" (RFC 6749 Section 11.2) and "OAuth Extensions Error" are
+Specification Required and first-come. A generic name such as `parent` or `predecessor` takes that word from
 every other OAuth extension. RFC 6749 Section 8.2 asks only unregistered
 vendor parameters for a prefix, so C2 is a family choice; five
 companions don't follow it.
@@ -94,7 +94,8 @@ disagree on the after-value: `current_version` in discharge,
 (4 / 5). Keep `version` on the status read surface and
 `mission_state_version` where the counter sits in a non-Mission object,
 and state once in status that they are the same counter. Containment's
-own `containment_version` counter is distinct and fine.
+own `containment_version` counter is distinct and fine. Coordinate with
+open #896, which reworks the discharge state model.
 
 **F3. "Relied-on status, valid through" has three names.** `fresh_until`
 (status.md:556); harness `status_checked_at` and `status_expires_at`
@@ -111,7 +112,9 @@ Harness's `status_expires_at` is the more widely implemented of the two
 named in core.md:5725) and `derivation_limit_exhausted`
 (issuance-grant.md:443, a 409). Same condition. Proposal:
 issuance-grant adopts `derivations_exhausted`, which pairs with
-`derivations_remaining` (0 / 0).
+`derivations_remaining`, and states the mapping, since a shared
+spelling across carriers means nothing unless the defining documents
+say so (expansion.md:1840-1848) (0 / 0).
 
 **F5. Intent-evidence error.** The Mission Authority Server's (MAS)
 `invalid_intent_evidence` is declared "the MAS equivalent of" the core's
@@ -124,9 +127,10 @@ one code and not the other. Proposal: the MAS uses the core spelling
 (issuance-grant.md:441), `parent_not_active` (child-delegation.md:910),
 `predecessor_not_active` (expansion.md:1122), and `mission_inactive`
 (AuthZEN denial reason, authzen.md:1949). Expansion declares
-cross-carrier value spaces separate (expansion.md:1830-1840), so this is
+cross-carrier value spaces separate (expansion.md:1840-1848), so this is
 cosmetic, but three of four follow `<x>_not_active`. Proposal: AuthZEN
-`mission_not_active` (7 / 5), or leave as is.
+`mission_not_active` with a sentence stating the mapping to the
+issuance-grant code (7 / 5), or leave as is.
 
 **F7. Two metadata names for the same endpoints' caller
 authentication.** The MAS's `mission_auth_methods_supported`
@@ -142,13 +146,14 @@ MAS registers per-endpoint names (adding
 umbrella name (0 / 0).
 
 **F8. The deprecated `approver` is still carried.** The core marks
-`approver` a DEPRECATED alias for `approval_basis.consent_principal`
-(core.md:1918-1921). Consent-evidence (:797), mandate (:353), and
-template (:519) still carry `approver`; child-delegation uses
-`consent_principal`. Proposal: an owner decision on whether companion
-records carry the canonical name. Scope it to the three companions'
-own records: `approver` appears in 79 `src` files, mostly the core
-record.
+`approver` both REQUIRED and a DEPRECATED alias for
+`approval_basis.consent_principal` (core.md:1918-1921). Consent-evidence
+(:797), mandate (:353), and template (:519) still carry `approver`;
+child-delegation uses `consent_principal`. Companions can't drop a
+member the core still requires. #701 already ruled this: alias removal
+is parked to the #705 breaking window. Proposal: add these three
+companions to the #705 sweep list; nothing to do now. `approver`
+appears in 79 `src` files.
 
 ### Tier 3: suffixes and encodings
 
@@ -160,9 +165,10 @@ digest; substrate.md:540-558), but each suffix spans species:
   `proposal_hash`), `_digest` (`entry_digest`, `entries_digest`), and
   `_commitment` (`approval_context_commitment`,
   `submission_evidence_commitment`);
-- `root_commitment` (child-delegation.md:1070) is not a digest: it
-  carries a reference to an `authority_hash` or a
-  `child_creation_policy` (14 / 3);
+- `root_commitment` (child-delegation.md:1070, 1083) computes nothing
+  of its own: it holds either an existing `authority_hash` or a
+  `child_creation_policy` reference, so its value is not always a
+  digest (14 / 3);
 - `source_hashes` (consent-evidence.md:306) is an object, not an array;
 - `token_sha256` (authority-server.md:1662) and `token_digest`
   (audit.md:721) hash the same token in two encodings. `token_sha256`
@@ -207,22 +213,27 @@ Reference" (`Mission-Reference` field, `hop_reference`). Proposal:
 `_reference` for new names; consider renaming `evidence_ref` to
 `evidence_uri`, since it is one (5 / 5).
 
-**F13. `goal_lang` is narrower than its scope.** It tags `goal`,
-`task_bounds`, and `success_criteria` (core.md:738). Consent-evidence
-uses `locale` for the same kind of BCP 47 value, and the two cite
-different references (RFC5646 versus BCP47). Neither uses the RFC 7591
-/ OpenID Connect `#` language suffix, which is defensible for one tag
-covering three members. Core issue candidate only.
+**F13. `goal_lang` and `locale` cite different references.** #534
+(PR #625) chose `goal_lang` deliberately, with consent-evidence's
+`locale` as precedent, as one BCP 47 tag for `goal`, `task_bounds`, and
+`success_criteria` (core.md:738). One tag for three members is a sound
+reason not to use the RFC 7591 / OpenID Connect `#` suffix. Residual:
+core cites RFC5646 and consent-evidence cites BCP47 for the same kind of
+value. Harmonize the citation; no rename.
 
 **F14. `mission_error` values mix forms.** The values are
 `mission_revoked`, `mission_expired`, and `mission_superseded`
 (core.md:2504), plus `derivations_exhausted`. The prefix stutters inside
-a member already named `mission_error`. Core: note only.
+a member already named `mission_error`. The #705 breaking window
+already moves these values to termination reasons; drop the stutter
+there.
 
 ## Checked and consistent
 
-- Case: no family-coined camelCase. `policySet` (Cedar, in a core
-  example) and `operationId` (OpenAPI) are external.
+- Case: no family-coined camelCase, including JSON keys in fenced
+  examples. `rarFormat` and `policySet` (draft-cecchetti-oauth-rar-cedar,
+  in a core example), `inputSchema` (MCP), and `operationId` (OpenAPI)
+  are external.
 - Metadata: `mission_<x>_endpoint` is uniform across status, lifecycle,
   submission, event stream, join assertion, issuance grant, and
   management.
@@ -260,4 +271,6 @@ lists change controller IESG (cross-org-delegation.md:700), while
 2. Companion fixes, one PR per finding, renaming the matching ledger
    rows and `src` fixtures in the same PR: F1, F4, F5, F7, F2, F3, F10,
    then the remaining Tier 3 items.
-3. Core-touching items (F13, F14) go issue-first.
+3. Core-touching items ride the parked #705 breaking window instead
+   of separate respins: F8 (alias removal, per #701) and F14. F13 is a
+   citation fix, not a rename.
