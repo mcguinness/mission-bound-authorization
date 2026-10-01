@@ -538,11 +538,11 @@ A reader adopting this deployment depends only on the "On" rows.
 
 ## 9. Pinned adoption closure
 
-**Implementation revision.** This document was written against the branch
-HEAD `59093a87`. Reproduce a reader's revision with
-`git log -1 --format=%H -- src/docs/issuance-only-deployment.md`, the commit
-that last changed this document, or with the merge commit of the PR that
-published it, then `pnpm install --frozen-lockfile` from `src/`.
+**Implementation revision.** The implementation this document describes is
+the commit that last changed it,
+`git log -1 --format=%H -- src/docs/issuance-only-deployment.md`, or the merge
+commit of the PR that published it. Check it out, then run
+`pnpm install --frozen-lockfile` from `src/`.
 
 **In-repo drafts, each at `git log -1 --format=%h -- <draft>.md`:**
 
