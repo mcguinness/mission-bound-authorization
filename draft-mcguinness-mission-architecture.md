@@ -479,23 +479,27 @@ Considerations remain normative over both.
 
 ## Map of This Document {#map}
 
-Part order follows a reader's needs: the model first (the Mission
-and its life, {{the-mission}}; what the family does not do,
-{{non-goals}}), then the verb spine that organizes every mechanism
-({{layers}}), the reference shapes deployments take
-({{reference-architecture}}), the semantic ground rules
-({{invariants}}), the components and identity model
-({{components}}), the binding-neutral substrate summary
-({{substrate}}) with the derivation boundary behind it
-({{derivation-boundary}}), and the deployment layer: patterns and
-entry ramps
-({{deployment}}), assurance levels and binding properties
-({{assurance-levels}}), the Deployment Profile
-({{deployment-profile}}), and the prevention-detection and
-containment matrices ({{prevention-detection}}). The requirements
-the family answers are {{requirements}}; {{document-map}} locates
-every document;
-DRAFTS.md in the repository is the full catalog.
+The body reads in four parts. The model comes first: a Mission's
+life end to end ({{mission-life}}), the Mission and its capability
+envelope ({{the-mission}}), what the family does not do
+({{non-goals}}), the roles ({{components}}), the verb spine that
+organizes every mechanism ({{layers}}), the invariants
+({{invariants}}), and who owns meaning and who commits authority
+({{meaning-and-derivation}}). The substrate and the bindings follow:
+the binding-neutral kernel, the validity model, and how the bindings
+differ ({{substrate}}). Assurance covers what a deployment adopts,
+what it can prove, how its paths are bound, and what a kill reaches
+({{assurance-levels}}). Deployment covers entry ramps, patterns, and
+the Deployment Profile ({{deployment}}).
+
+The appendices hold the requirements the family answers
+({{requirements}}), a comparison with a conventional stack
+({{standardization-crossovers}}), a worked composition
+({{worked-composition}}), the error surfaces ({{error-surfaces}}),
+illustrative verification guidance ({{verification-guidance}}), the
+Deployment Profile shapes ({{deployment-profile-examples}}), and the
+document map ({{document-map}}); DRAFTS.md in the repository is the
+full catalog.
 
 # Conventions and Terminology {#conventions}
 
