@@ -38,6 +38,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-approved-set-verification:
+    title: "Mission Approved-Set Verification for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approved-set-verification.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-status:
     title: "Mission Status and Lifecycle for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html
@@ -896,10 +904,13 @@ inside ({{gating}}); the issuance profile's rule that a profile
 minting a further credential downstream, or verifying Mission
 lifetime from retained state, MUST require it applies here unchanged.
 `authority_hash` is likewise not part of this binding's baseline
-object; it becomes available only on the same disclosure terms the
-issuance profile defines for its own baseline claim (introspection's
-disclosure privilege, or its Local Approved-Set Verification
-profile). The object is delivered on three carriage surfaces:
+object; it becomes available only on the same disclosure terms that
+apply to the issuance profile's own baseline claim: introspection's
+disclosure privilege ({{I-D.draft-mcguinness-oauth-mission}}), or the
+Local Approved-Set Verification profile
+({{I-D.draft-mcguinness-oauth-mission-approved-set-verification}},
+Section "Local Approved-Set Verification"). The object is delivered on
+three carriage surfaces:
 
 - **Token-carried**: a deployment issuing structured tokens (for
   example the `jwt-signed` format of {{RFC9767}}) carries the
