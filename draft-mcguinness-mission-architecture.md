@@ -2157,51 +2157,53 @@ restoring the token-layer chokepoint without moving approval.
 
 # Mission Assurance Levels {#assurance-levels}
 
-Two questions get asked of a Mission deployment: what to deploy for
-a goal, and what a relying party can verify. This document answers
-them on two different axes. The levels below are **adoption
-bundles**: which documents a deployment runs, in the order
-deployments build, named so a deployment, a procurement, or a review
-can cite one bundle. They are guidance, never a conformance class or
-an earned label.
+This document uses six frames for what a deployment does and what
+it can show. Each answers a different question, and none substitutes
+for another:
 
-What a deployment proves is the orthogonal claims axis
-({{assurance-claims-axis}}): scoped, named claims whose proof
-obligations existing profiles fix, listed in the Deployment Profile
-beside the residuals each leaves. The claims, never a level name, are
-what a relying party compares, because the family's strongest
-properties are deployment properties, not protocol properties:
-complete PEP placement, a trusted freshness source, and credential
-custody are things a deployment does, not things a token proves.
+| Frame | Question it answers | Where |
+| --- | --- | --- |
+| Verbs | What happens to a Mission and its authority | {{layers}} |
+| Assurance levels | Which capabilities a deployment adopts, in the order deployments build them | this section |
+| Assurance claims | What a relying party can verify | {{assurance-claims-axis}} |
+| Binding properties | Which relationships a path establishes: Mission attachment, credential, presenter key, instance, and action | {{binding-properties}} |
+| Containment properties | What a capability kill reaches, per action class and state source | {{containment}}, {{kill-switch-composition}} |
+| Deployment Profile | Where a deployment declares all of the above | {{deployment-profile}} |
+{: title="Assurance frames"}
 
-The levels build on one another: a deployment adopts recording and
-governing the approved task (Baseline Issuance), then per-action
-enforcement (Runtime-Enforced), then agent-governance and
-compromise-resistance (Governed and High-Assurance Agent), advancing
-to the bundle its risk warrants and stopping there.
+The levels are **adoption bundles**: which documents a deployment
+runs, named so a deployment, a procurement, or a review can cite one
+bundle. They are guidance, never a conformance class, an earned
+label, or a ladder a deployment must climb; a deployment adopts the
+bundle its risk warrants and stops there. A level does not determine
+any action class's containment property, and the proof obligations
+noted with each level are the claims that become available at that
+bundle, not properties the level name asserts. A relying party
+compares claims, not levels ({{assurance-claims-axis}}), because the
+family's strongest properties are deployment properties, not
+protocol properties: complete PEP placement, a trusted freshness
+source, and credential custody are things a deployment does, not
+things a token proves.
 
-The proof obligations noted with each level below are the claims
-that become available at that bundle, not properties the level name
-asserts.
+The levels build on one another in the order deployments build:
+recording and governing the approved task (Baseline Issuance), then
+per-action enforcement (Runtime-Enforced), then agent governance and
+compromise resistance (Governed Agent and High-Assurance Agent).
 
-The levels are one axis; the **binding** is an orthogonal one. The
+The binding is an orthogonal axis, and a binding is not a level. The
 authority-bearing bindings name their level separately from their
-binding. An AAuth deployment instead reports the Mission Context
-capabilities and resource access modes it actually uses; selecting the
-AAuth binding does not by itself satisfy structured-authority, subset,
-portable-evidence, or runtime proof obligations.
-
-The standalone MAS binding is the case that matters most: it
+binding. The standalone MAS is the case that matters most: it
 provides the Mission record, lifecycle, and authority but no
-Mission-bound credential and no issuance gating, so under it the
-kill switch is the runtime layer alone, not the token gate, and a
-deployment states that. Binding is not a level.
-
-The AAuth distinction is access-mode dependent: PS-asserted and
-federated access have a PS lifecycle gate for new authorization;
-identity-based and resource-managed access do not. Its native auth token
-is Mission-referenced, not the strong Mission-bound credential defined
-by the OAuth binding.
+Mission-bound credential and no issuance gating, so under it the kill
+switch is the runtime layer alone, not the token gate, and a
+deployment states that. An AAuth deployment reports the Mission
+Context capabilities and resource access modes it actually uses
+instead of a level. Selecting the AAuth binding does not by itself
+satisfy structured-authority, subset, portable-evidence, or runtime
+proof obligations; its lifecycle gate covers PS-asserted and federated
+access but not identity-based or resource-managed access; and its
+native auth token is Mission-referenced, not Mission-bound
+({{token-classes}}).
 
 The levels, cumulative:
 
