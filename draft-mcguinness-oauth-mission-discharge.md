@@ -31,6 +31,7 @@ author:
 normative:
   RFC3339:
   RFC5234:
+  RFC7662:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
@@ -490,6 +491,91 @@ Before the AS receives and commits a discharge, it continues issuing
 against the entry. The posture this implies is stated plainly in
 {{completion-security}}.
 
+## Condition Selectors {#condition-selectors}
+
+A condition selector is an opaque string the Mission Issuer issues for
+one condition of one entry in one Mission record. It resolves to that
+condition's target, the (`mission_id`, `entry_digest`,
+`condition_digest`) triple of {{discharge-operation}}. A source that
+holds only its token's narrowed projection can then name the target
+without reconstructing the immutable record entry.
+
+- A selector is lookup state the Mission Issuer holds. It is not
+  committed: `terminal_when`, its Value Space, the subset rule, and
+  `authority_hash` are unchanged by it.
+- The Mission Issuer MUST issue at most one selector per target, and a
+  selector MUST resolve to exactly one target. Byte-identical entries
+  share one `entry_digest`, so they share one selector, as they share
+  one equivalence-class latch ({{discharge-commit}}).
+- A selector MUST NOT let its holder reconstruct the record entry or
+  any part of it: it is never computed from the entry's content without
+  a secret, so it is never an unsalted digest. Its syntax is
+  `1*128( ALPHA / DIGIT / "-" / "_" )` {{RFC5234}}.
+- Knowing a selector authorizes nothing. Discharge authority
+  ({{discharge-authority}}) and the pinned mapping decide, exactly as
+  for the digest form.
+- The Mission Issuer MUST keep a selector resolvable for as long as
+  its target can still be discharged.
+
+Where the AS supports token introspection {{RFC7662}} for
+Mission-bound tokens ({{I-D.draft-mcguinness-oauth-mission}}, Section
+"Mission State via Token Introspection"), the `mission` member of the
+introspection response can carry `discharge_selectors`, a member this
+document defines. It is an array of objects, each with:
+
+`entry`:
+: the zero-based index of a `mission_resource_access` entry in the
+  response's `authorization_details` (number).
+
+`condition`:
+: the zero-based index of a condition in that entry's `terminal_when`
+  (number).
+
+`selector`:
+: the condition selector for that condition's target (string).
+
+The AS MUST NOT include a selector for an entry it does not return to
+that caller in the same response. A projected condition that has no
+counterpart in the immutable record entry, such as one a token
+projection added, has no target and so no selector. The OAuth
+binding's caller-authorization and minimization rules apply
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Caller Authorization
+and Minimization"). An AS MUST NOT include `discharge_selectors` unless
+it is the Mission `issuer` ({{I-D.draft-mcguinness-oauth-mission}},
+Section "Only the Issuer Reports Mission State"). This document
+defines introspection carriage only.
+
+The following is an example of an introspection response carrying a
+selector for the write entry of the worked example ({{example}}):
+
+~~~ json
+{
+  "active": true,
+  "client_id": "s6BhdRkqt3",
+  "exp": 1790000000,
+  "authorization_details": [
+    { "type": "mission_resource_access",
+      "resource": "https://erp.example.com",
+      "actions": ["journal-entries.write"],
+      "constraints": {
+        "max_amount": { "amount": "500.00", "currency": "USD" },
+        "terminal_when": [
+          { "event_type": "accounting-period-closed",
+            "discharge_authority": "close-management-2026-q3" }
+        ] } }
+  ],
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "issuer": "https://as.example.com",
+    "state": "active",
+    "discharge_selectors": [
+      { "entry": 0, "condition": 0,
+        "selector": "dcs_4Kq9vT2mX7pL0sR3nB8wZ1" }
+    ]
+  }
+}
+~~~
+
 ## Entry Discharge Operation {#discharge-operation}
 
 `discharge` commits that a `terminal_when` completion condition
@@ -497,23 +583,39 @@ against the entry. The posture this implies is stated plainly in
 entry ({{discharge}}). It is registered as an extension `operation`
 value on the Status profile's Mission Lifecycle endpoint
 ({{I-D.draft-mcguinness-oauth-mission-status}}). Beyond `mission_id`
-and `nonce`, it requires:
+and `nonce`, it names its target in exactly one of two forms, a
+condition selector ({{condition-selectors}}) or the digest pair, and
+carries:
+
+`condition_selector`:
+: CONDITIONAL. A string, a condition selector
+  ({{condition-selectors}}). Present when the request does not carry
+  `entry_digest` and `condition_digest`. The AS resolves it to its
+  target.
 
 `entry_digest`:
-: REQUIRED. A string. The Authority Set entry commitment
+: CONDITIONAL. A string. Present, with `condition_digest`, when the
+  request does not carry `condition_selector`. The Authority Set entry
+  commitment
   ({{I-D.draft-mcguinness-oauth-mission}}) of the
   `mission_resource_access` entry to discharge, computed over the
   immutable Mission-record entry, never over a narrowed token
   projection.
 
 `condition_digest`:
-: REQUIRED. A string. The digest identifying the single
-  `terminal_when` condition that fired, defined beside that member
-  ({{terminal-when}}).
+: CONDITIONAL. A string. Present with `entry_digest`. The digest
+  identifying the single `terminal_when` condition that fired, defined
+  beside that member ({{terminal-when}}).
+
+The AS MUST refuse a request that carries both target forms, or
+neither, with `invalid_request`. For a request carrying
+`condition_selector`, the rest of this section and its subsections
+apply to the resolved `entry_digest` and `condition_digest` exactly as
+to the digest form.
 
 `event_type`:
 : REQUIRED. A string. Echoed from the fired condition and
-  cross-checked against the condition `condition_digest` names: a
+  cross-checked against the condition the target names: a
   mismatch joins the `not_found` collapse, since distinguishing it
   would reveal information about a condition selected by digest
   ({{discharge-anti-oracle}}). `event_type` is never a selector by
@@ -639,7 +741,10 @@ that does not match the condition `condition_digest` names, and a
 caller not authorized for that target all collapse to the endpoint's
 existing `not_found` treatment
 ({{I-D.draft-mcguinness-oauth-mission-status}}, Section "Error
-Responses"). Authentication failure remains `unauthorized` (401).
+Responses"). A `condition_selector` that does not resolve, or that
+resolves to a target outside the request's `mission_id`, joins the
+same collapse, and its resolution is part of selector existence
+below. Authentication failure remains `unauthorized` (401).
 Detailed refusal reasons live only in issuer audit records.
 
 The AS validates selector existence (`mission_id`, `entry_digest`, and
@@ -696,6 +801,13 @@ commits. `nonce`, client authentication material, the DPoP proof, and
 transport headers are outside the fingerprint: none of them enter the
 assertion object, and none of them affect its value.
 
+**The selector form.** For a request carrying `condition_selector`,
+the AS MUST use the resolved `entry_digest` and `condition_digest` in
+the event tuple and in the assertion fingerprint; the selector itself
+is outside the fingerprint. A selector-form request and a digest-form
+request for the same target and occurrence therefore share one
+deduplication identity and an identical fingerprint.
+
 Over the (discharge authority, `mission_id`, `entry_digest`,
 `condition_digest`, `event_id`) tuple: the same tuple with the same
 fingerprint is the replay case above; the same tuple with a different
@@ -722,8 +834,10 @@ Mission Status Response envelope
 ({{I-D.draft-mcguinness-oauth-mission-status}}, Section "Response"),
 carrying a `discharge_result` object as a sibling of `mission`:
 
-`entry_digest`, `condition_digest`, `event_id`:
-: the request's own selectors, echoed.
+`event_id` and the target form:
+: echoed as the request sent them: `condition_selector`, or
+  `entry_digest` and `condition_digest`. The AS MUST NOT add to the
+  result a digest that a selector-form request did not carry.
 
 `outcome`:
 : one of `discharged` (this request committed the latch),
@@ -789,7 +903,10 @@ write entry's `entry_digest`, this condition's `condition_digest`,
 occurrence record. The Authorization Server authenticates the caller
 against the resolved `discharge_authority` mapping, commits the latch,
 and returns a signed `discharge_result` of outcome `discharged`
-({{discharge-result}}).
+({{discharge-result}}). A Resource Server that holds a token for the
+write entry, and so cannot compute the record entry's digest, names
+the same target by the condition selector it reads from introspection
+({{condition-selectors}}).
 
 From then on the
 Authorization Server refuses to derive the write entry: a refresh
@@ -871,11 +988,20 @@ audit-logging rule
 ({{I-D.draft-mcguinness-oauth-mission-status}}, Section "Status Audit
 Logging").
 
+A condition selector ({{condition-selectors}}) prevents reconstructing
+the record entry, but it is stable for its target and so can correlate
+a caller's requests over time. Its disclosure is limited to parties
+that already receive that entry's projection.
+
 # IANA Considerations {#iana}
 
 This document requests IANA actions for a registration in the Mission
 Resource Access Profile's Mission Common Constraints registry. It
-establishes no registry of its own.
+establishes no registry of its own. `discharge_selectors` is a member
+of the introspection `mission` member, under an extension point of
+the OAuth binding that has no IANA registry
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission State via
+Token Introspection"), so it requires no registration.
 
 ## Common Constraints Registry: terminal_when {#iana-terminal-when}
 
@@ -935,6 +1061,10 @@ An Authorization Server claiming the completion capability MUST:
   its authority, anti-oracle, and idempotency requirements
   ({{discharge-operation}}), or through an equivalently audited
   deployment-internal adjudication ({{internal-adjudication}});
+- issue condition selectors and accept the selector form of the
+  `discharge` operation as {{condition-selectors}} defines, disclosing
+  them through token introspection where it supports introspection
+  for Mission-bound tokens;
 - meet the commit semantics of {{discharge-commit}}, including
   atomicity, whichever way a discharge is determined;
 - record a committed discharge as latched state that MUST NOT revert

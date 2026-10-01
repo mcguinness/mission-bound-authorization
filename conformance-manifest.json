@@ -6318,7 +6318,7 @@
    "surface": "lifecycle-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the signed discharge_result's outcome member is discharged, already_discharged, or terminal_noop matching the actual transition, alongside entry_digest, condition_digest, event_id, prior_version, and current_version"
+    "normative": "the signed discharge_result's outcome member is discharged, already_discharged, or terminal_noop matching the actual transition, alongside the request's target form as sent, event_id, prior_version, and current_version"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -6454,6 +6454,222 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#898 fix 2. No test yet asserts that discharging a child entry leaves its parent's and siblings' entries untouched; it lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.selector-one-per-target",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "condition-selectors",
+   "text": "The Mission Issuer MUST issue at most one selector per target, and a selector MUST resolve to exactly one target.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each (mission_id, entry_digest, condition_digest) target has at most one selector, and every selector resolves to exactly one target"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 1. Implementation (the selector table) lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.selector-non-reconstruction",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "condition-selectors",
+   "text": "A selector MUST NOT let its holder reconstruct the record entry or any part of it",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "introspection",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "a selector is not derived from the entry's content without a secret, so it cannot be tested against guesses of the record entry"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 1. Implementation lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.selector-retention",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "condition-selectors",
+   "text": "The Mission Issuer MUST keep a selector resolvable for as long as its target can still be discharged.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a selector resolves for as long as its target can still be discharged"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 1. Implementation lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.selector-disclosure-scope",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "condition-selectors",
+   "text": "The AS MUST NOT include a selector for an entry it does not return to that caller in the same response.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "introspection",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "discharge_selectors names only entries the same introspection response returns to that caller"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 1. Implementation lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.selector-issuer-only",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "condition-selectors",
+   "text": "An AS MUST NOT include `discharge_selectors` unless it is the Mission `issuer`",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "introspection",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "a non-issuer AS never reports discharge_selectors"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 1. Implementation lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.target-form-exactly-one",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-operation",
+   "text": "The AS MUST refuse a request that carries both target forms, or neither, with `invalid_request`.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a discharge request carrying both condition_selector and the digest pair, or neither, is refused invalid_request"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 1. Implementation lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.selector-collapse",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-anti-oracle",
+   "text": "A `condition_selector` that does not resolve, or that resolves to a target outside the request's `mission_id`, joins the same collapse",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "an unresolvable selector, or one resolving outside the named Mission, produces the same not_found body as the other collapsed cases"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 1. Implementation lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.selector-form-shared-identity",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-idempotency",
+   "text": "the AS MUST use the resolved `entry_digest` and `condition_digest` in the event tuple and in the assertion fingerprint",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a selector-form request and a digest-form request for the same target and occurrence are one event: a repeat in the other form is a replay, not a new assertion or a conflict"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 1. Implementation lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.result-no-added-digests",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-result",
+   "text": "The AS MUST NOT add to the result a digest that a selector-form request did not carry.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "the signed result of a selector-form request echoes the selector and never the record entry's digests"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 1. Implementation lands with the #898 implementation PR."
   },
   {
    "id": "status.discharge.policy-resolution-on-condition-entry",
