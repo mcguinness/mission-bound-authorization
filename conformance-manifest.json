@@ -63,8 +63,8 @@
     "content_sha256": "2ecac7a1642121e76f782cb12941b64fc1ed0782ae6df8a6e82721d5bc280b1f"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "d677072715020d6a44ae84568f7a7a2df2d93602",
-    "content_sha256": "73dcf516b1069a275298847764a1f3fa7294ae47bd58228f2842b9b19a645645"
+    "revision": "888372fdfd333b09fea08dc87caec4a426104f14",
+    "content_sha256": "579285c6113f5b07ea378a16105e5c633b68974285555ea0c70abdeefaf286a1"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7fc9ef45b5fb69f06bd3e90c1a93b6ac71808c10",
@@ -223,6 +223,7 @@
    "approval-context.manifest",
    "child-delegation.carryover",
    "core.instance-context",
+   "core.delegation",
    "runtime.instance-context",
    "mas.instance-bound-join",
    "derivation-limits.limit",
@@ -5537,6 +5538,96 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Documentation surface: observable by reading the deployment's published supported-type documentation, not by an endpoint probe."
+  },
+  {
+   "id": "core.other-types.delegation-only-unchanged",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "other-types",
+   "text": "the AS MUST NOT include an entry of such a type in a delegated token unless it is equal ({{subset}}) to an entry of the presented delegating token",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a delegated token carries an entry of a type that declares delegation without narrowing only when the entry is byte-identical under the canonical form to an entry of the presented delegating token, keeps that entry's approved audience, and the type's delegation policy permits the delegate; an entry the presented token omits is never restored"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D63: the reference AS has no live in-Mission delegation exchange; the OAuth binding's per-entry delegation gate is implemented and unit-tested but unreached by any HTTP path."
+  },
+  {
+   "id": "core.other-types.no-narrowing-original-audience",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "other-types",
+   "text": "Without `narrowing`, the AS MUST NOT issue an entry to any audience other than its original approved audience",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an entry of a type without a declared narrowing capability is issued only to its original approved audience and only exactly as approved, or as scope under a declared projection; audience projection to a Resource AS counts as narrowing"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No test exercises a type without a declared narrowing capability."
+  },
+  {
+   "id": "core.delegation-constraints.depth-from-accounting",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegation-constraints",
+   "text": "The AS MUST establish delegation depth from accounting it maintains for the tokens it issues under the Mission and associates with the credential it validates",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the delegation depth checked against max_depth comes from the AS's own issuance accounting associated with the validated subject token, never from the nesting of a presented act claim; act renders the accounted chain"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D63: the reference AS has no live in-Mission delegation exchange; the OAuth binding's per-entry delegation gate is implemented and unit-tested but unreached by any HTTP path."
+  },
+  {
+   "id": "core.delegation-constraints.unestablished-depth-refused",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegation-constraints",
+   "text": "Where the AS cannot establish the depth of the token being issued, no entry's delegation policy can be evaluated at that depth, so every entry narrows out under the per-entry rule below and the exchange is refused as an empty result",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a delegated exchange whose depth the AS cannot establish from its accounting is refused with invalid_target as an empty result, with no token issued"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D63: the reference AS has no live in-Mission delegation exchange; the OAuth binding's per-entry delegation gate is implemented and unit-tested but unreached by any HTTP path."
   },
   {
    "id": "core.introspection.opaque-requires-introspection",
