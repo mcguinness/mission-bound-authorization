@@ -768,11 +768,14 @@ under the OAuth binding: an operator gives an agent the task
    ({{I-D.draft-mcguinness-oauth-mission-expansion}}), and entries
    retire as their work completes
    ({{I-D.draft-mcguinness-oauth-mission-discharge}}).
-7. **Stop.** Revocation or expiry turns every gate at once: issuance
-   refuses, the PDP denies, the harness pauses bound sessions and
-   queues, and the orchestrator unwinds in-flight work
+7. **Stop.** Revocation or expiry turns every gate: issuance refuses
+   at once, the PDP denies within its state source's staleness bound,
+   the harness pauses bound sessions and queues, and the orchestrator
+   unwinds in-flight work
    ({{I-D.draft-mcguinness-mission-harness}},
-   {{I-D.draft-mcguinness-mission-orchestration}}).
+   {{I-D.draft-mcguinness-mission-orchestration}}); a token no
+   state-aware gate reaches runs to its own expiry
+   ({{validity-model}}).
 8. **Prove.** The record, anchors, evidence, and receipts let an
    auditor reconstruct what was approved, shown, decided, and done,
    and a Mandate carries the committed facts to parties outside the
@@ -3660,6 +3663,8 @@ This document makes no IANA request.
   lowercased, and temporal phrasing is removed. The agent-identity
   section is retitled, the binding-property summary covers the whole
   vector, and the AuthZEN companion is called the AuthZEN profile.
+  The Stop step of A Mission's Life separates what ends at once from
+  what ends within a staleness bound or at a token's own expiry.
 
 - The issuance-only deployment is named under Entry Ramps by Estate
   with its invariants, introspection cutoff, claims, and runtime
