@@ -1222,10 +1222,11 @@ An Authorization Server claiming the completion capability MUST:
   its authority, anti-oracle, and idempotency requirements
   ({{discharge-operation}}), or through an equivalently audited
   deployment-internal adjudication ({{internal-adjudication}});
-- issue condition selectors and accept the selector form of the
-  `discharge` operation as {{condition-selectors}} defines, disclosing
-  them through token introspection where it supports introspection
-  for Mission-bound tokens;
+- where it exposes the `discharge` operation, issue condition
+  selectors and accept the operation's selector form as
+  {{condition-selectors}} defines, disclosing them through token
+  introspection where it supports introspection for Mission-bound
+  tokens;
 - forward a discharge that targets a carried-over child as
   {{discharge-carryover}} defines;
 - meet the commit semantics of {{discharge-commit}}, including
