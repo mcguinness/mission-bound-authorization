@@ -1869,8 +1869,7 @@ The remainder of this section documents that instantiation: eight
 primitives, each with its normative home and its consumers: six in
 the table below, the Mission-Bound Credential in its own subsection
 after Token Classes, and the approval event, whose fidelity is
-described with the derivation boundary ({{approval-fidelity}}). Every
-sentence mirrors a rule the named profile states normatively. None of
+described with the derivation boundary ({{approval-fidelity}}). None of
 these OAuth-binding representations or stronger semantics is
 required verbatim by the binding-neutral kernel, although several
 instantiate mandatory kernel functions: the identifier and issuer
@@ -2674,9 +2673,7 @@ separately adopts
 commit" names what a contain transition's own state-version commit
 reaches immediately ({{I-D.draft-mcguinness-oauth-mission-containment}},
 Section "The Contain Transition"); "runs to its own bound" names the
-residual the transition does not reach. Every cell is informative
-and carries no RFC 2119 language of its own; the cited normative
-profile controls wherever a cell and its citation appear to differ.
+residual the transition does not reach.
 
 | Rung | Binding | Property | Stops at commit | Runs to its own bound |
 |---|---|---|---|---|
