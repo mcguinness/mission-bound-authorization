@@ -45,13 +45,6 @@ informative:
   RFC9700:
   I-D.draft-zhu-oauth-async-delegation:
   I-D.draft-mcguinness-oauth-id-continuation-assertion:
-    title: "Identity Continuation Assertion for OAuth 2.0 Token Exchange"
-    target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-id-continuation-assertion/
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   I-D.draft-mcguinness-oauth-mission-cross-domain:
     title: "Mission Cross-Domain Projection for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html
