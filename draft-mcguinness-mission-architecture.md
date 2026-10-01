@@ -2740,9 +2740,12 @@ Every row shares the record, anchors, and lifecycle, so a ramp is an
 entry point, not a fork: Missions carry unchanged from any row to the
 rows a deployment adopts later.
 
-The last row is a deployment in its own right, the **issuance-only
-deployment**: the Authorization Server and the Mission-creating client
-change, and Resource Servers need not be Mission-aware. A delegated
+## The Issuance-Only Deployment {#issuance-only}
+
+The last row of the entry-ramp table is a deployment in its own
+right, the **issuance-only deployment**: the Authorization Server and
+the Mission-creating client change, and Resource Servers need not be
+Mission-aware. A delegated
 token reaches only a Mission-aware Resource Server, so a delegate
 calling any other resource runs under a Child Mission where child
 creation is authorized
@@ -2756,12 +2759,14 @@ request stops honoring a token at its next request once the Mission
 leaves `active`, with no Mission-specific code
 ({{I-D.draft-mcguinness-oauth-mission}}). The deployment claims
 approved-record integrity and bounded revocation latency
-({{assurance-claims-axis}}), and {{deployment-profile}} shows its
-Deployment Profile. The runtime layer
+({{assurance-claims-axis}}), and {{deployment-profile-examples}}
+shows its Deployment Profile. The runtime layer
 ({{I-D.draft-mcguinness-mission-runtime}}) joins for the
 high-consequence classes and for an action class that needs
 per-action evaluation or evidence, approval bound to a single action,
 or a bound the receiving Resource Server cannot enforce.
+
+## The Short Mission {#short-mission}
 
 One ramp cuts across the rows: the **short mission**. A Mission whose
 `expires_at` sits minutes out, run in records mode with
@@ -2772,6 +2777,8 @@ Mission state and the issuance gate ({{validity-model}}). A deployment
 can adopt the family this way first, per task, and add state
 surfaces only where missions grow long enough to need suspend,
 complete, or kill-now.
+
+## The Quarantine Pattern {#quarantine-pattern}
 
 The quarantine pattern removes a leg of the injection-to-exfiltration
 chain instead of gating it: no single Mission ever holds untrusted
@@ -2787,16 +2794,15 @@ input and an egress path at once.
   claimed, the runtime profile's trifecta containment
   ({{I-D.draft-mcguinness-mission-runtime}}).
 
-The quarantine pattern is the deployment-shaped case of a general rule
-that holds for every work product one Mission passes to another. A work
-product crossing into a receiving Mission is input, not authority: the
-receiving Mission re-evaluates any proposed action under its own
-Authority Set, and the producing Mission's authority does not transfer
-through the artifact by copying, referencing, embedding, or
-communicating it. The Mission Work Products companion
-({{I-D.draft-mcguinness-oauth-mission-work-products}}) is the normative
-home of this rule and defines the provenance object that attributes an
-artifact without granting anything. Ingesting a work product is an added
+The quarantine pattern is the deployment-shaped case of the
+work-products reading of the invariants ({{invariants}}): a work
+product is input, not authority, and the producing Mission's
+authority does not transfer through the artifact by copying,
+referencing, embedding, or communicating it. The Mission Work
+Products companion
+({{I-D.draft-mcguinness-oauth-mission-work-products}}) defines the
+provenance object that attributes an artifact without granting
+anything. Ingesting a work product is an added
 conjunctive gate at the receiving Mission's boundary: it composes with
 the three objects' independent gates and does not nest inside them, so
 Actor, Agent Deployment, and Mission stay a gating pipeline, not a
@@ -2806,6 +2812,8 @@ Where the separation must hold within one Mission, the metering
 profile's exclusivity control
 ({{I-D.draft-mcguinness-mission-metering}}) latches read-and-egress
 apart under a single approval.
+
+## The Standing-Agent Pattern {#standing-agent}
 
 The **standing-agent pattern** governs the agent whose work never
 ends. The agent stands; the authority cycles: the standing thing is
