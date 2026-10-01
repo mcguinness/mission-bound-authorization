@@ -6408,6 +6408,54 @@
    "notes": "Propagation is entry-wise and SYNCHRONOUS in this implementation (`propagateDischargeToChildren`, matching a child entry on the resource plus the fired `condition_digest`, which the subset rule guarantees the child carries, and keyed by the child's own entry commitment with recursion to grandchildren), so the asynchronous materialization gap the clause contemplates does not exist here and there is nothing to race: immediately after the parent commit the already-justified child's effective set is empty and its derivation is refused. The refusal is observed at the kernel derivation gate the token endpoint calls (`gateDerivation`) and at `createChildMission`, not through a full OAuth exchange."
   },
   {
+   "id": "status.discharge.propagation-by-justification",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-commit",
+   "text": "The Mission Issuer MUST propagate a committed discharge to a Child Mission's entry exactly when that entry carries the fired condition and its recorded justification is the discharged entry, or, recursively, an entry the discharge has already reached.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a discharge reaches a Child Mission's entry only through that entry's recorded justification (the parent entry it was derived from), recursively, and only when the entry carries the fired condition; a child entry justified by a different parent entry carrying an identical condition is not discharged"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 2. The implementation matches a child entry on the resource plus the fired condition_digest (see status.discharge.child-propagation); keying on the justification mapping, with the acceptance case of two parent entries carrying identical conditions, lands with the #898 implementation PR."
+  },
+  {
+   "id": "status.discharge.propagation-downward-only",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-commit",
+   "text": "the Mission Issuer MUST NOT discharge a parent's or a sibling's entry because a child entry was discharged.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "discharging a Child Mission's entry leaves its parent's and its siblings' entries undischarged"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#898 fix 2. No test yet asserts that discharging a child entry leaves its parent's and siblings' entries untouched; it lands with the #898 implementation PR."
+  },
+  {
    "id": "status.discharge.policy-resolution-on-condition-entry",
    "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-authority",

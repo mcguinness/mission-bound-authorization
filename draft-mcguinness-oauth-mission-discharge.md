@@ -457,6 +457,17 @@ semantics:
   the committed parent latch until that materialization completes, so
   no Child Mission can derive the discharged parent authority in the
   gap between the parent's commit and the child's materialized view.
+- **Propagation.** The Mission Issuer MUST propagate a committed
+  discharge to a Child Mission's entry exactly when that entry carries
+  the fired condition and its recorded justification is the discharged
+  entry, or, recursively, an entry the discharge has already reached.
+  The recorded justification is the parent entry each child entry was
+  derived from, which the child-delegation profile selects
+  deterministically
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section
+  "Fan-Out Accounting"). Propagation runs downward only: the Mission
+  Issuer MUST NOT discharge a parent's or a sibling's entry because a
+  child entry was discharged.
 
 Once committed, a discharge is recorded as Authorization-Server-side
 state and MUST NOT revert: a later delivery presenting any valid
