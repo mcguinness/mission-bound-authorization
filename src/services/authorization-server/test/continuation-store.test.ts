@@ -1,6 +1,6 @@
 /**
  * Unit tests for the continuation handle store
- * (@spec draft-mcguinness-oauth-id-continuation-assertion-00). Key-free: the
+ * (@spec draft-mcguinness-oauth-id-continuation-assertion-02). Key-free: the
  * store is self-contained SQLite; `onLifecycleCommit` takes a plain event.
  */
 

@@ -1,5 +1,5 @@
 /**
- * @spec draft-mcguinness-oauth-id-continuation-assertion-00 — the continuation
+ * @spec draft-mcguinness-oauth-id-continuation-assertion-02 — the continuation
  * handle store.
  *
  * A continuation ANCHOR captures the root authentication envelope (auth_time,

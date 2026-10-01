@@ -1,5 +1,5 @@
 /**
- * @spec draft-mcguinness-oauth-id-continuation-assertion-00 — the Identity
+ * @spec draft-mcguinness-oauth-id-continuation-assertion-02 — the Identity
  * Continuation Assertion (ICA) subject-token validator.
  *
  * An ICA is a short-lived, DPoP-bound JWT minted by a Continuation Assertion

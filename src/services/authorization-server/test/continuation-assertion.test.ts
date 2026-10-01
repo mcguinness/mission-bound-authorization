@@ -1,6 +1,6 @@
 /**
  * Unit tests for the ICA subject-token validator
- * (@spec draft-mcguinness-oauth-id-continuation-assertion-00). Key-free: mint
+ * (@spec draft-mcguinness-oauth-id-continuation-assertion-02). Key-free: mint
  * assertions with jose against an ephemeral ES256 key and exercise every
  * rejection path. `audience` is the AS issuer identifier (NOT `${iss}/token`).
  */

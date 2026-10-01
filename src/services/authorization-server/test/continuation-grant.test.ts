@@ -1,5 +1,5 @@
 /**
- * @spec draft-mcguinness-oauth-id-continuation-assertion-00 (RFC 8693 token
+ * @spec draft-mcguinness-oauth-id-continuation-assertion-02 (RFC 8693 token
  * exchange -> continuation ID-JAG)
  *
  * The end-to-end intra-domain continuation hop on the real /token endpoint: an

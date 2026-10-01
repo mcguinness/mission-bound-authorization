@@ -1,5 +1,5 @@
 /**
- * @spec draft-mcguinness-oauth-id-continuation-assertion-00 (continuation ID-JAG)
+ * @spec draft-mcguinness-oauth-id-continuation-assertion-02 (continuation ID-JAG)
  *
  * The opt-in continuation extension to `issueCrossDomainGrant`: a single code
  * path that, when the caller passes the new optional fields, emits a fresh
