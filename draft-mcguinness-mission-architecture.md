@@ -1274,25 +1274,24 @@ event is where trust is created. Owners: the five bindings
 the disclosure shown to the Approver, and Deferred Approval
 ({{I-D.draft-mcguinness-oauth-mission-approval}}), the OAuth
 binding's asynchronous path, with an experimental companion adding an
-in-review narrowing negotiation; the
-standalone and AAuth bindings are natively asynchronous. AAuth's
-baseline approval commits its exact mission blob, not the family
-Consent Evidence object. Where the experimental
-progressive authorization companion is used, the initial approval also
-consents an authority ceiling for later staged widening
+in-review narrowing negotiation. The standalone and AAuth bindings are
+natively asynchronous. AAuth's baseline approval commits its exact
+mission blob, not the family Consent Evidence object. Where the
+experimental progressive authorization companion is used, the initial
+approval also consents an authority ceiling for later staged widening
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}).
 
 Who holds the deciding side is a spectrum, not a species: the approval
 event requires an accountable principal deciding against committed
 inputs before any authority exists, and the proposer is never the
-approver. A deterministic, versioned policy can approve at machine speed
-within a ceiling a human consented to (the `policy_drawdown` and
-`template` authorization bases that companion profiles define on the
-OAuth binding's extension point, {{invariants}}): policy approves the
-instance because a human approved the policy or the template, with
-`policy_version` keeping that chain re-checkable, while a model's
-generated judgment is never the sole authority for granting or widening:
-a generated approver reading attacker-influenced proposals is itself an
+approver. A deterministic, versioned policy can approve at machine
+speed within a ceiling a human consented to (the `policy_drawdown`
+and `template` authorization bases that companion profiles define on
+the OAuth binding's extension point, {{invariants}}). Policy approves
+the instance because a human approved the policy or the template, with
+`policy_version` keeping that chain re-checkable. A model's generated
+judgment is never the sole authority for granting or widening: a
+generated approver reading attacker-influenced proposals is itself an
 injection surface. The high-consequence classes stay on a fresh human
 decision, per the progressive profile's prohibited set
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}).
@@ -1307,20 +1306,21 @@ surface with a lifecycle endpoint
 Status List companion for fleet-scale reliance
 ({{I-D.draft-mcguinness-oauth-mission-status-list}}) and by the
 Entry Discharge companion for per-entry completion discharge
-({{I-D.draft-mcguinness-oauth-mission-discharge}}); Signals, the push
-complement ({{I-D.draft-mcguinness-oauth-mission-signals}});
-Expansion, widening only via an approved successor
+({{I-D.draft-mcguinness-oauth-mission-discharge}}); and Signals, the
+push complement ({{I-D.draft-mcguinness-oauth-mission-signals}}).
+
+Further owners: Expansion, widening only via an approved successor
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}); Containment,
 event-triggered monotonic narrowing of a live Mission's effective
 authority ({{I-D.draft-mcguinness-oauth-mission-containment}});
-Management,
-fleet enumeration and bulk lifecycle for operators
+Management, fleet enumeration and bulk lifecycle for operators
 ({{I-D.draft-mcguinness-oauth-mission-management}}); and Discovery,
 experimental, binding encountered resources within a pre-consented
-ceiling ({{I-D.draft-mcguinness-mission-discovery}}). The AAuth
-binding carries this verb natively: its management companion for
-status, termination, and delegation-tree queries
-({{I-D.draft-mcguinness-mission-aauth-management}}); the approved
+ceiling ({{I-D.draft-mcguinness-mission-discovery}}).
+
+The AAuth binding carries this verb natively through its management
+companion for status, termination, and delegation-tree queries
+({{I-D.draft-mcguinness-mission-aauth-management}}). The approved
 lifetime bound is AAuth's own `expires_at`, profiled by the expiry
 document ({{I-D.draft-mcguinness-aauth-mission-expiry}}).
 
@@ -1335,8 +1335,8 @@ profile, the concrete decision API
 ({{I-D.draft-mcguinness-mission-authzen}}); the runtime evidence
 companion, the Decision Evidence, Execution Evidence, and Refusal
 Record objects ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
-Its decision composes conjunctively with the structural plane above:
-Effective Authority Set membership, every applicable
+The runtime decision composes conjunctively with the structural plane
+above: Effective Authority Set membership, every applicable
 cumulative-consumption or stateful operational gate, and a required
 action-bound approval are each independently necessary, and none
 grants, widens, or restores another
@@ -1361,50 +1361,56 @@ Child Delegation, child Missions with lineage, strict-subset
 authority, and cascade revocation
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}); Offline
 Attenuation, narrower Mission-bound tokens minted off the issuer's
-hot path ({{I-D.draft-mcguinness-oauth-mission-attenuation}}).
-Offline attenuation requires the runtime enforcement layer: its kill
-switch is the runtime state re-check. Both
-build on the actor chain of the OAuth binding's Delegation Within a Mission
-section. The chooser: the OAuth binding's token-exchange delegation for an
+hot path ({{I-D.draft-mcguinness-oauth-mission-attenuation}}). Both
+build on the actor chain of the OAuth binding's Delegation Within a
+Mission section. Offline attenuation requires the runtime enforcement
+layer: its kill switch is the runtime state re-check.
+
+The chooser: the OAuth binding's token-exchange delegation for an
 execution hop living and dying with the parent's lifecycle; a Child
-Mission when the delegate needs its own lifecycle, approval, or
-audit identity; attenuation, experimental, only where offline
-minting is the constraint. The same principal exercising the same
-authority concurrently is not delegation at all but swarm execution
-({{swarm-execution}}). AAuth delegates natively: a
-parent-mediated sub-agent under `parent_agent`, distinct from the
-call chain of a service hop, with no Authority Set machinery imported
+Mission when the delegate needs its own lifecycle, approval, or audit
+identity; attenuation, experimental, only where offline minting is
+the constraint. The same principal exercising the same authority
+concurrently is not delegation but swarm execution
+({{swarm-execution}}).
+
+AAuth delegates natively: a parent-mediated sub-agent under
+`parent_agent`, distinct from the call chain of a service hop, with
+no Authority Set machinery imported
 ({{I-D.draft-mcguinness-mission-aauth}}).
 
 ## Swarm Execution: Multiplication, Not Delegation {#swarm-execution}
 
-One composition of the three lifecycle-bearing objects
-({{three-objects}}) recurs often enough to name. A Mission pinned to an
-Agent Deployment class or version, executed concurrently by N attested
-instances of that Deployment, is multiplication, not delegation: no
-`act` hop, no Child Mission, no attenuation chain, because authority
-never moves between principals. This pin is a named architectural
-pattern, not a wire member the OAuth binding currently defines: that
-document reserves no Intent member for it and points forward to a
-dedicated Agent Deployment Binding profile that a deployment wanting
-this pin implements ({{I-D.draft-mcguinness-oauth-mission}}). Late
-binding is attestation: an instance joins the work by authenticating as
-the pinned Deployment with its own Client Attestation
-({{I-D.draft-mcguinness-oauth-client-instance-id}}), not by receiving a
-credential from a peer. The invariant is class-grain authorization,
-instance-grain attribution: the class, the Agent Deployment projected as
-`client_id`, is an authorization subject, never an attribution subject,
-and attribution stays per-instance through the instance substrate, which
-attributes a presentation to an instance only under a sender-constraint
-key unique to it ({{I-D.draft-mcguinness-oauth-client-instance-id}},
-Section 7.3). The derivation limits profile's `derivation_limit`
+Swarm execution is a composition of the three lifecycle-bearing objects
+({{three-objects}}): a Mission pinned to an Agent Deployment class or
+version, executed concurrently by N attested instances of that
+Deployment. It is multiplication, not delegation: no `act` hop, no
+Child Mission, no attenuation chain, because authority never moves
+between principals. This pin is a named architectural pattern, not a
+wire member the OAuth binding defines: that document reserves no
+Intent member for it and points forward to a dedicated Agent
+Deployment Binding profile that a deployment wanting this pin
+implements ({{I-D.draft-mcguinness-oauth-mission}}).
+
+Late binding is attestation: an instance joins the work by
+authenticating as the pinned Deployment with its own Client
+Attestation ({{I-D.draft-mcguinness-oauth-client-instance-id}}), not
+by receiving a credential from a peer. The invariant is class-grain
+authorization, instance-grain attribution. The class, the Agent
+Deployment projected as `client_id`, is an authorization subject,
+never an attribution subject. Attribution stays per-instance through
+the instance substrate, which attributes a presentation to an
+instance only under a sender-constraint key unique to it
+({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 7.3).
+
+The derivation limits profile's `derivation_limit`
 ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}) is not a
 fan-out or concurrency ceiling: it counts issuance events, not
-instances, and a single instance refreshing N times consumes it exactly
-as N instances deriving once each would. What actually bounds a swarm's
-aggregate consumption is the metering profile's Mission-grain budget:
-consumption bounds attach to the Mission, not to any one instance, so a
-swarm of instances shares one budget
+instances, and a single instance refreshing N times consumes it
+exactly as N instances deriving once each would. What bounds a
+swarm's aggregate consumption is the metering profile's Mission-grain
+budget: consumption bounds attach to the Mission, not to any one
+instance, so a swarm of instances shares one budget
 ({{I-D.draft-mcguinness-mission-metering}}).
 
 Swarm execution is the rung before the Delegate verb's chooser: more
@@ -1422,42 +1428,48 @@ issuer, and authority hash into a partner domain unchanged, where a
 Resource AS mints a local token bounded by the projected authority
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}). Projection
 preserves authority across the boundary rather than narrowing it to a
-sub-actor, which is why it is a distinct verb from Delegate;
-downstream revocation latency is the local token lifetime.
+sub-actor, which makes it a distinct verb from Delegate. Downstream
+revocation latency is the local token lifetime.
 
 ## Continue
 
 The question: how does a Mission's authorization continue, under the
 same approval and constraints, when the acting identity must be
 re-established at each hop or after the original credential is gone?
-The boundary: the seam between authorization continuity, which the
-Mission owns, and identity continuity, which a transport carries.
-Owner: Mission Continuation
+The boundary: the seam between authorization continuity and identity
+continuity. Owner: Mission Continuation
 ({{I-D.draft-mcguinness-oauth-mission-continuation}}), the
 authorization-continuity profile, which keeps three easily conflated
-things apart. Identity continuity, who is acting and how that identity
-legitimately continues, rides a transport rather than this profile:
-Identity Continuation
-({{I-D.draft-mcguinness-oauth-id-continuation-assertion}}) for
-short-lived, sender-constrained hops among Resource Authorization
-Servers that trust a common identity provider; async delegation
-({{I-D.draft-zhu-oauth-async-delegation}}) for a long-running,
-disconnected task; and the cross-domain grant
-({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) across a trust
-boundary. Authorization continuity, what work remains authorized under
-which constraints on whose approval, is the Mission's: every continued
-grant derives a subset of the Mission's Authority Set, is state-gated
-at issuance, is bounded by the Mission's expiry, and ends when the
-Mission goes terminal. Execution-time evidence records, against the
-Mission, what was done at each continued hop. The load-bearing
-invariant is that a continuation handle grants nothing: it names an
-accepted hop, and every continued grant re-passes the Mission's
-`active` gate, so continuity is never authority, the rule the harness
-already applies to session continuity
-({{I-D.draft-mcguinness-mission-harness}}). Continue is therefore
-distinct from Delegate, which narrows authority to a sub-actor, and it
-uses the Project verb's cross-domain grant as one transport rather
-than replacing it.
+things apart:
+
+- Identity continuity, who is acting and how that identity
+  legitimately continues, rides a transport rather than this profile.
+  The transports are Identity Continuation
+  ({{I-D.draft-mcguinness-oauth-id-continuation-assertion}}) for
+  short-lived, sender-constrained hops among Resource Authorization
+  Servers that trust a common identity provider; async delegation
+  ({{I-D.draft-zhu-oauth-async-delegation}}) for a long-running,
+  disconnected task; and the cross-domain grant
+  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) across a trust
+  boundary.
+- Authorization continuity, what work remains authorized under which
+  constraints on whose approval, is the Mission's. Every continued
+  grant derives a subset of the Mission's Authority Set, is
+  state-gated at issuance, and is bounded by the Mission's expiry.
+  When the Mission goes terminal, new continued grants end; authority
+  already issued under a continued grant runs to its own bound unless
+  a state-aware gate reaches it first.
+- Execution-time evidence records, against the Mission, what was done
+  at each continued hop.
+
+A continuation handle grants nothing: it names an accepted hop, and
+every continued grant re-passes the Mission's `active` gate.
+Continuity is therefore never authority, the rule the harness applies
+to session continuity ({{I-D.draft-mcguinness-mission-harness}}).
+
+Continue differs from Delegate, which narrows authority to a
+sub-actor. It uses the Project verb's cross-domain grant as one
+transport rather than replacing it.
 
 ## Prove
 
@@ -1489,35 +1501,35 @@ one in those bindings is a change to that model, not to a profile.
 The AAuth binding adopts the context-level invariants: durable approval,
 stable attribution, exact-byte integrity, an active-state gate at the
 PS, and termination. It does not adopt the OAuth Authority Set, the
-OAuth integrity anchors, or universal subset derivation. AAuth resource authority
-is decided afresh in the vocabulary and policy of each Resource or
-Access Server, with contextual PS governance when the PS is on path.
-Read as shared capabilities rather than universal wire semantics, all
-the bindings carry durability, attribution, and termination; narrowing
-and containment require a structured-authority capability, so they are
-not baseline AAuth Mission Context properties.
+OAuth integrity anchors, or universal subset derivation. AAuth resource
+authority is decided afresh in the vocabulary and policy of each
+Resource or Access Server, with contextual PS governance when the PS is
+on path. Read as shared capabilities rather than universal wire
+semantics, all the bindings carry durability, attribution, and
+termination; narrowing and containment require a structured-authority
+capability, so they are not baseline AAuth Mission Context properties.
 
 **Authority serves an approved task**:
 : No Mission-bound authority exists except by derivation for a
   Mission, and a Mission is created only when rooted in an approved
   authorization basis that commits `intent_hash` and `authority_hash`
-  (the OAuth binding). Fields an agent can influence shape authority only
-  through the pre-approval derivation the Approver consents to; once
-  the Mission is approved they are inert and never derive, widen, or
-  gate authority.
+  (the OAuth binding). Fields an agent can influence shape authority
+  only through the pre-approval derivation the Approver consents to;
+  once the Mission is approved they are inert and never derive,
+  widen, or gate authority.
 
 **Only `active` permits**:
-: Issuance, refresh, and every new positive governance decision
-  require the exact state `active`; every other state, including an
-  unrecognized one, fails safe (the OAuth binding's Mission Lifecycle
-  and Gating section). A state-aware consumer relies only while it
-  observes `active`; a state-unaware consumer retains the bounded
-  materialized-credential residual ({{validity-model}}). In AAuth, only PS
-  operations and the PS-asserted and federated authorization paths are
-  structurally gated; identity-based and resource-managed decisions do
-  not pass through the PS. On the gated paths the gate covers requests
-  whose resource token carries the validated Mission Reference; a
-  stripped reference yields a missionless request, bounded by the
+: Issuance, refresh, and every new positive governance decision require
+  the exact state `active`; every other state, including an unrecognized
+  one, fails safe (the OAuth binding's Mission Lifecycle and Gating
+  section). A state-aware consumer relies only while it observes
+  `active`; a state-unaware consumer retains the bounded
+  materialized-credential residual ({{validity-model}}). In AAuth, only
+  PS operations and the PS-asserted and federated authorization paths
+  are structurally gated; identity-based and resource-managed decisions
+  do not pass through the PS. On the gated paths the gate covers
+  requests whose resource token carries the validated Mission Reference;
+  a stripped reference yields a missionless request, bounded by the
   binding's downgrade rules ({{I-D.draft-mcguinness-mission-aauth}}).
 
 **Authority only narrows**:
@@ -1530,9 +1542,9 @@ not baseline AAuth Mission Context properties.
   typed: it is defined where a structured-authority vocabulary defines
   it (on the OAuth binding, `mission_resource_access` and its Common
   Constraints, defined by the OAuth binding's Mission Resource Access
-  Profile), and authority carried in a type with no defined subset
+  Profile). Authority carried in a type with no defined subset
   relation is carried as approved, neither narrowed, delegated, nor
-  projected; moving authority into expressive policy-language entries
+  projected. Moving authority into expressive policy-language entries
   weakens this guarantee exactly there, a trade to make knowingly
   ({{I-D.draft-mcguinness-mission-security-model}}).
 
@@ -1540,7 +1552,8 @@ not baseline AAuth Mission Context properties.
 : A Mission ends by a state change at its issuer, not by finding and
   destroying credentials; outstanding credentials meet the issuance
   gate, the runtime re-check, or their own expiry, whichever comes
-  first ({{validity-model}}; {{I-D.draft-mcguinness-oauth-mission-status}}).
+  first ({{validity-model}};
+  {{I-D.draft-mcguinness-oauth-mission-status}}).
 
 **Attribution is carried, never inferred**:
 : Each role in the actor chain travels in its own construct, and the
@@ -1564,12 +1577,11 @@ not baseline AAuth Mission Context properties.
   the `s256` commitment over exact mission-blob bytes, not the OAuth
   integrity anchors.
 
-Three readings of the invariants recur. Each follows from the seven
-and adds no eighth:
+Three readings follow from the seven invariants and add no eighth:
 
 Authorization bases:
 : "Approved" in the first invariant has more than one basis. The OAuth
-  binding fully defines one, `direct`, a human's own approval, and
+  binding fully defines one, `direct`, a human's own approval. It also
   provides the extension point, an authorization-basis `type` string,
   that companion profiles use to define others: `template`, a
   dispatch drawing on a ceiling the human consented to once, and
