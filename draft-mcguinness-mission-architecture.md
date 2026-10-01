@@ -2273,7 +2273,8 @@ The levels, cumulative:
 
   This is the smallest deployment that turns a Mission from governed
   issuance into action-time defense, and every normative dependency
-  it needs is a non-experimental family document; it is a
+  it needs is a family document intended for the Standards Track;
+  it is a
   substantial build, not a wedge, and
   a deployment sizes the effort from the runtime profile's
   conformance section rather than from this level's one-line
