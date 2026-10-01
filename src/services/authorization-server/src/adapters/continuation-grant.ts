@@ -38,7 +38,16 @@ import {
   validateContinuationAssertion,
 } from "../kernel/continuation-assertion.js";
 import { DEFAULT_CONTINUATION_HOP_LIMIT, newContinuationHandle } from "../kernel/continuation-store.js";
-import { audienceScopedAuthority, ID_JAG_TOKEN_TYPE, issueCrossDomainGrant } from "../kernel/cross-domain.js";
+import {
+  audienceScopedAuthority,
+  ID_JAG_TOKEN_TYPE,
+  issueCrossDomainGrant,
+  RequestedAuthorityExceededError,
+} from "../kernel/cross-domain.js";
+import {
+  SUPPORTED_AUTHORIZATION_DETAILS_TYPES,
+  validateMissionResourceAccessSchema,
+} from "../kernel/authorization-details-metadata.js";
 import {
   type EffectiveAuthoritySource,
   projectRarThroughMission,
@@ -316,6 +325,26 @@ export async function handleTokenExchangeGrant(
   if (params.actor_token !== undefined || params.actor_token_type !== undefined) {
     throw new errors.InvalidRequest("actor_token and actor_token_type are not permitted on a continuation exchange");
   }
+  // @spec id-continuation-assertion — at most one authorization_details, a JSON
+  // array of objects (ICA -02 5.5.3 rule 1; a repeated parameter is refused
+  // by oidc-provider, since only `resource` may repeat on this grant). An
+  // empty array requests nothing, as oidc-provider's own RAR check treats it.
+  // The authorization rule evaluates it below.
+  let requestedDetails: Record<string, unknown>[] | undefined;
+  if (params.authorization_details !== undefined) {
+    let parsed: unknown = params.authorization_details;
+    if (typeof parsed === "string") {
+      try {
+        parsed = JSON.parse(parsed);
+      } catch {
+        throw new errors.InvalidRequest("authorization_details must be a JSON array");
+      }
+    }
+    if (!Array.isArray(parsed) || !parsed.every((d) => typeof d === "object" && d !== null && !Array.isArray(d))) {
+      throw new errors.InvalidRequest("authorization_details must be a JSON array of objects");
+    }
+    if (parsed.length > 0) requestedDetails = parsed as Record<string, unknown>[];
+  }
 
   // Wiring guard: the grant is registered unconditionally, so a request can
   // reach here even when the continuation options were not composed.
@@ -491,6 +520,36 @@ export async function handleTokenExchangeGrant(
     txError(ctx, 400, "invalid_target", "no audience-scoped authority for the target Resource AS");
     return;
   }
+  // @spec id-continuation-assertion — a requested authorization_details is
+  // evaluated by type, and the requested set MUST fit the Mission's Effective
+  // Authority Set for this audience; else invalid_authorization_details (ICA
+  // -02 5.5.3 rule 7, 5.5.6). The issued ID-JAG then carries the requested
+  // subset, projected; absent, the whole audience-scoped set.
+  if (requestedDetails !== undefined) {
+    for (const detail of requestedDetails) {
+      if (typeof detail.type !== "string" || !SUPPORTED_AUTHORIZATION_DETAILS_TYPES.has(detail.type)) {
+        txError(ctx, 400, "invalid_authorization_details", `authorization details type ${String(detail.type)} is not implemented`);
+        return;
+      }
+      // The supported set has one member, mission_resource_access, so its
+      // schema check applies to every entry that reaches here.
+      const schemaError = validateMissionResourceAccessSchema(detail);
+      if (schemaError) {
+        txError(ctx, 400, "invalid_authorization_details", schemaError);
+        return;
+      }
+    }
+    if (
+      effective.length > 0 &&
+      !isSubsetSetIgnoringCapabilitySources(
+        requestedDetails as unknown as AuthorityEntry[],
+        audienceScopedAuthority(effective, resourceToAs, audience),
+      )
+    ) {
+      txError(ctx, 400, "invalid_authorization_details", "requested authorization_details exceed the Mission authority for the target");
+      return;
+    }
+  }
   // @spec mission#scope-projection — this exchange issues an identity
   // grant, not a Mission-bound access token: a requested `scope` cannot be
   // granted, so it is refused rather than dropped.
@@ -537,6 +596,9 @@ export async function handleTokenExchangeGrant(
       identityContinuationHandle: freshHandle,
       act: onwardAct as ActObject,
       authEnvelope,
+      ...(requestedDetails !== undefined
+        ? { requestedAuthority: requestedDetails as unknown as AuthorityEntry[] }
+        : {}),
       // Everything validation and the gate admitted: reserve the ICA, then
       // record the child hop (bound to the SAME anchor/Mission, linked to the
       // prior). @spec id-continuation-assertion — the (iss, jti) reservation
@@ -567,6 +629,12 @@ export async function handleTokenExchangeGrant(
   } catch (e) {
     if (e instanceof ContinuationRefusal) {
       txError(ctx, 400, e.code, e.message);
+      return;
+    }
+    // The requested authorization_details no longer fit (a state change since
+    // the rule-7 check).
+    if (e instanceof RequestedAuthorityExceededError) {
+      txError(ctx, 400, "invalid_authorization_details", e.message);
       return;
     }
     // A non-active / expired / contained / cap-exhausted Mission (gate path ->

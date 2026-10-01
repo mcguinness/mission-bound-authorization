@@ -267,6 +267,8 @@ interface ExchangeFields {
   requestedTokenType?: string;
   subjectTokenType?: string;
   extra?: Record<string, string>;
+  /** Parameters appended as-is, so one name can repeat. */
+  repeated?: Array<[string, string]>;
   /** Send no DPoP header. */
   noDpop?: boolean;
 }
@@ -292,6 +294,7 @@ async function tokenExchange(f: ExchangeFields, t: Target = { issuer: ISSUER, cl
       client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
     });
     for (const r of resources) body.append("resource", r);
+    for (const [name, value] of f.repeated ?? []) body.append(name, value);
     return fetch(htu, {
       method: "POST",
       headers: {
@@ -837,6 +840,92 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     }
   });
 
+  it("(h) a requested authorization_details within the Mission's authority for the audience is issued as requested (ICA -02 5.5.3 rule 7)", async () => {
+    const { handle } = newLineage("apev-h");
+    const requested = [
+      {
+        type: "mission_resource_access",
+        resource: RESOURCE,
+        actions: ["payments:invoice.read"],
+        constraints: { max_amount: { amount: "100.00", currency: "USD" }, vendors: ["acme"] },
+      },
+    ];
+    const res = await tokenExchange({
+      subjectToken: await mintICA(handle),
+      extra: { authorization_details: JSON.stringify(requested) },
+    });
+    const body = (await res.json()) as { access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    const details = decodeJwt(body.access_token as string).authorization_details as Array<Record<string, unknown>>;
+    expect(details).toHaveLength(1);
+    expect(details[0]?.constraints).toEqual(requested[0]?.constraints);
+  });
+
+  it("(h1) without authorization_details, or with an empty array, the grant carries the whole audience-scoped set", async () => {
+    const { handle } = newLineage("apev-h1");
+    for (const extra of [{}, { authorization_details: "[]" }]) {
+      const res = await tokenExchange({ subjectToken: await mintICA(handle), extra });
+      const body = (await res.json()) as { access_token?: string };
+      expect(res.status, JSON.stringify(body)).toBe(200);
+      const details = decodeJwt(body.access_token as string).authorization_details as Array<Record<string, unknown>>;
+      expect(details).toHaveLength(1);
+      expect((details[0]?.constraints as { max_amount: { amount: string } }).max_amount.amount).toBe("500.00");
+    }
+  });
+
+  it("(h2) authorization_details beyond the Mission's authority, or of an unimplemented type -> invalid_authorization_details, with no hop and no derivation", async () => {
+    const { missionId, handle } = newLineage("apev-h2");
+    const hops = as.continuationStore.handlesForMission(missionId).length;
+    for (const [requested, reason] of [
+      [[{ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.pay"] }], /exceed/],
+      [
+        [
+          {
+            type: "mission_resource_access",
+            resource: RESOURCE,
+            actions: ["payments:invoice.read"],
+            constraints: { max_amount: { amount: "900.00", currency: "USD" }, vendors: ["acme"] },
+          },
+        ],
+        /exceed/,
+      ],
+      [[{ type: "payment_initiation", instructedAmount: { amount: "1.00", currency: "EUR" } }], /not implemented/],
+      [[{ type: "mission_resource_access", resource: RESOURCE }], /actions/],
+    ] as const) {
+      const res = await tokenExchange({
+        subjectToken: await mintICA(handle),
+        extra: { authorization_details: JSON.stringify(requested) },
+      });
+      const body = (await res.json()) as { error?: string; error_description?: string };
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_authorization_details");
+      expect(body.error_description).toMatch(reason);
+    }
+    expect(as.continuationStore.handlesForMission(missionId)).toHaveLength(hops);
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(0);
+  });
+
+  it("(h3) malformed or repeated authorization_details -> invalid_request (ICA -02 5.5.3 rule 1)", async () => {
+    const { handle } = newLineage("apev-h3");
+    for (const value of ["not json", '{"type":"mission_resource_access"}', '["read"]']) {
+      const res = await tokenExchange({ subjectToken: await mintICA(handle), extra: { authorization_details: value } });
+      const body = (await res.json()) as { error?: string };
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_request");
+    }
+    const res = await tokenExchange({
+      subjectToken: await mintICA(handle),
+      repeated: [
+        ["authorization_details", "[]"],
+        ["authorization_details", "[]"],
+      ],
+    });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toMatch(/authorization_details/);
+  });
+
   it("(g) revoking the Mission terminates its handles (onLifecycleCommit fan-out) -> invalid_continuation", async () => {
     const { missionId, handle } = newLineage("apev-g");
     const ica = await mintICA(handle);
@@ -1093,6 +1182,15 @@ describe("continuation error precedence (@spec id-continuation-assertion)", () =
     const now = Math.floor(Date.now() / 1000);
     const expired = await mintICA(handle, { iatSec: now - 200, expSec: now - 100 });
     expect(await errorOf(await tokenExchange({ subjectToken: expired }))).toBe("invalid_request");
+  });
+
+  it("a limit precedes authorization_details: an excess authorization detail over a spent derivation cap is invalid_grant", async () => {
+    const { handle } = newLineage("apev-p11", {}, MISSION_EXP, { requested_derivation_limit: 1 });
+    const first = await tokenExchange({ subjectToken: await mintICA(handle) });
+    expect(first.status, await first.clone().text()).toBe(200);
+    const excess = JSON.stringify([{ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.pay"] }]);
+    const res = await tokenExchange({ subjectToken: await mintICA(handle), extra: { authorization_details: excess } });
+    expect(await errorOf(res)).toBe("invalid_grant");
   });
 
   it("replay precedes authorization: a consumed assertion over a suspended Mission is invalid_request", async () => {

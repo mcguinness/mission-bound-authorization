@@ -21,6 +21,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import {
   issueCrossDomainGrant,
   MissionKernel,
+  RequestedAuthorityExceededError,
   type MissionRecord,
   validateMissionIntent,
 } from "../src/index.js";
@@ -184,6 +185,29 @@ describe("issueCrossDomainGrant — continuation ID-JAG (extended path)", () => 
       }),
     ).rejects.toThrow(/hook refused/);
     expect(calls).toBe(1);
+  });
+
+  it("requestedAuthority: the grant carries the requested subset; a request beyond the audience-scoped set is refused before beforeSign (@spec id-continuation-assertion)", async () => {
+    const record = approve(22);
+    const { grant } = await issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
+      ...legacyInput(record.id),
+      requestedAuthority: [{ type: "mission_resource_access", resource: RESOURCE, actions: ["ledger:journal.write"] }],
+    });
+    expect(decodeJwt(grant).authorization_details).toEqual([
+      { type: "mission_resource_access", resource: RESOURCE, actions: ["ledger:journal.write"] },
+    ]);
+
+    let calls = 0;
+    await expect(
+      issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
+        ...legacyInput(approve(23).id),
+        requestedAuthority: [{ type: "mission_resource_access", resource: RESOURCE, actions: ["ledger:journal.delete"] }],
+        beforeSign: () => {
+          calls += 1;
+        },
+      }),
+    ).rejects.toBeInstanceOf(RequestedAuthorityExceededError);
+    expect(calls).toBe(0);
   });
 
   it("omits absent auth-envelope sub-fields (partial envelope)", async () => {

@@ -207,6 +207,7 @@ export * from "./kernel/types.js";
 export {
   issueCrossDomainGrant,
   audienceScopedAuthority,
+  RequestedAuthorityExceededError,
   ID_JAG_TYP,
   ID_JAG_TOKEN_TYPE,
 } from "./kernel/cross-domain.js";
