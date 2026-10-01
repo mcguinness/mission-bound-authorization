@@ -35,7 +35,7 @@ import { IssuerEvidenceStore } from "./kernel/issuer-evidence.js";
 import { defaultSubjectResolver, type SubjectResolver } from "./adapters/continuation-grant.js";
 import type { CarryoverConfig } from "./kernel/carryover.js";
 import type { ContinuationIssuer } from "./kernel/continuation-assertion.js";
-import { ContinuationStore } from "./kernel/continuation-store.js";
+import { ContinuationStore, DEFAULT_CONTINUATION_HOP_LIMIT } from "./kernel/continuation-store.js";
 import { DelegationFamilyStore } from "./kernel/delegation-family-store.js";
 import { DeferralStore, ExpansionDeferralStore } from "./kernel/deferred.js";
 import {
@@ -63,6 +63,8 @@ export {
   GateError,
   LifecycleConflictError,
   ObservationWatermarkError,
+  STATUS_SIGNING_ALG,
+  type DischargeReceiptObservation,
   type ObservationWatermark,
   type StatusObservation,
   type StatusObservationOptions,
@@ -120,6 +122,7 @@ export {
   MISSION_DISCHARGE_SCOPE,
   MISSION_LIFECYCLE_SCOPE,
   MISSION_STATUS_RESPONSE_MEDIA_TYPE,
+  MISSION_STATUS_SCOPE,
   type ServiceTokenPrincipal,
 } from "./adapters/provider.js";
 export {
@@ -145,32 +148,45 @@ export {
   type EffectiveAuthoritySource,
   isSubsetEntry,
   isSubsetSet,
+  type OriginProjection,
   projectThroughEffective,
+  projectThroughEffectiveWithOrigin,
   SourceUnavailableError,
 } from "./kernel/derive.js";
 export {
-  assertDischargePoliciesResolvable,
+  assertDischargeAuthoritiesResolvable,
   conditionDigest,
   conditionsNoBroader,
   DISCHARGE_EVENT_ID_RE,
-  DISCHARGE_POLICY_RE,
+  DISCHARGE_RECEIPT_MEDIA_TYPE,
+  DISCHARGE_RECEIPT_TYP,
+  DISCHARGE_AUTHORITY_RE,
   type DischargeAssertion,
   type DischargeAuthorityMapping,
   type DischargeAuthorityPolicy,
   dischargeAssertionFingerprint,
   DischargeConflictError,
   DischargeNotFoundError,
+  DischargeTraversalError,
   type DischargeOutcome,
   type DischargeRefusalReason,
   type DischargeRequest,
   type DischargeResult,
+  type DischargeTargetForm,
   entryDigest,
   EVIDENCE_REF_MAX_CHARS,
   mappingPermits,
   resolveConditionMapping,
+  targetFormOf,
   terminalWhenOf,
   unionConditions,
 } from "./kernel/discharge.js";
+export {
+  CONDITION_SELECTOR_PREFIX,
+  CONDITION_SELECTOR_RE,
+  type DischargeTargetTriple,
+  DischargeSelectorStore,
+} from "./kernel/discharge-selector-store.js";
 export {
   DEFAULT_DISCHARGE_EVENT_TTL_S,
   DEFAULT_LIFECYCLE_NONCE_TTL_S,
@@ -207,6 +223,8 @@ export * from "./kernel/types.js";
 export {
   issueCrossDomainGrant,
   audienceScopedAuthority,
+  RequestedAuthorityExceededError,
+  AuthorityNarrowedToEmptyError,
   ID_JAG_TYP,
   ID_JAG_TOKEN_TYPE,
 } from "./kernel/cross-domain.js";
@@ -255,19 +273,23 @@ export {
 } from "./kernel/instance-assertion.js";
 export {
   validateContinuationAssertion,
+  checkContinuationFreshness,
   ContinuationAssertionError,
   IDENTITY_CONTINUATION_JWT_TYP,
   IDENTITY_CONTINUATION_TOKEN_TYPE,
   MAX_CONTINUATION_LIFETIME_S,
+  CONTINUATION_CLOCK_SKEW_S,
   type ContinuationIssuer,
   type ContinuationActor,
   type ValidatedContinuation,
 } from "./kernel/continuation-assertion.js";
 export {
   ContinuationStore,
+  DEFAULT_CONTINUATION_HOP_LIMIT,
   type AnchorType,
   type ContinuationState,
   type AuthEnvelope,
+  type HandleLookup,
   type ResolvedAnchor,
   type ResolvedContinuation,
 } from "./kernel/continuation-store.js";
@@ -325,6 +347,8 @@ export {
   type CarryoverCommittedResult,
   type CarryoverConfig,
   type CarryoverEntry,
+  type CarryoverEntryPair,
+  carryoverEntryPairs,
   type CarryoverEvidence,
   type CarryoverExclusionPolicy,
   type CarryoverExternalState,
@@ -475,9 +499,9 @@ export {
  * approval here.
  *
  * The initial handle binds the Mission's actor: the agent CLIENT
- * (iss = AS issuer, sub = client_id), matching the /token four-signal contract's
- * `currentActor`. No cnf is bound (no DPoP key exists at approval); the four-signal
- * check validates the PRESENTED key at /token, never this stored handle's cnf.
+ * (iss = AS issuer, sub = client_id), matching the /token current-actor check's
+ * `currentActor`. No cnf is bound (no DPoP key exists at approval); that check
+ * validates the PRESENTED key at /token, never this stored handle's cnf.
  */
 function rootMissionContinuation(
   store: ContinuationStore,
@@ -494,6 +518,9 @@ function rootMissionContinuation(
     anchorId,
     missionId: commit.id,
     actor: { iss: commit.issuer, sub: commit.client_id },
+    // No root ID-JAG carries this hop: its RAS audience is this AS, where the
+    // Mission's grant is issued (ICA -02 5.1.2).
+    audience: commit.issuer,
   });
 }
 
@@ -627,11 +654,19 @@ export async function buildAuthorizationServer(opts: {
    */
   onLifecycleCommit?: (commit: LifecycleCommit) => void;
   /**
-   * @spec id-continuation-assertion — override the trusted Chain Authority
-   * issuers of ICAs. Defaults to the AS acting as its own Chain Authority (its
-   * jwks_uri keys). Tests inject a dedicated Chain Authority key.
+   * @spec id-continuation-assertion — override the trusted Continuation
+   * Assertion Issuers of ICAs, each scoped to the RAS audiences it attests for
+   * (ICA -02 7.3). Defaults to the AS acting as its own Continuation Assertion
+   * Issuer for its own hops, under its as-continuation key only. Tests inject
+   * a dedicated issuer key.
    */
-  chainAuthorityIssuers?: ContinuationIssuer[];
+  continuationAssertionIssuers?: ContinuationIssuer[];
+  /**
+   * @spec id-continuation-assertion — the IdP's finite hop-count limit for
+   * every continuation chain (ICA -02 6.3), a positive integer. Defaults to
+   * {@link DEFAULT_CONTINUATION_HOP_LIMIT}.
+   */
+  continuationHopLimit?: number;
   /** Resource -> authoritative AS map. Defaults to the demo cross-domain map. */
   resourceToAs?: (resource: string) => string;
   /** Deterministic audience-local subject resolver. Defaults to a stable digest. */
@@ -706,7 +741,7 @@ export async function buildAuthorizationServer(opts: {
   /**
    * @spec discharge#discharge-authority — the issuer-held discharge-authority
    * policy handed to the kernel: which principals may assert which
-   * `event_type`, resolved through a condition's `discharge_policy` selector or
+   * `event_type`, resolved through a condition's `discharge_authority` value or
    * the baseline mapping. Absent (the default) FAILS CLOSED: no condition can
    * enter a record and no discharge is ever authorized.
    */
@@ -968,16 +1003,25 @@ export async function buildAuthorizationServer(opts: {
   const creationIdempotency = new CreationIdempotencyStore(kernel);
 
   // @spec id-continuation-assertion — continuation-grant defaults. The AS is its
-  // OWN Chain Authority in the demo (ICAs trusted when signed by a key on its
-  // jwks_uri). The resource->AS map mirrors the demo cross-domain wiring
-  // (stack.ts). The subject resolver is deterministic over a constant salt.
+  // OWN Continuation Assertion Issuer in the demo, trusted only under its
+  // continuation-purpose as-continuation key, not every key on its jwks_uri
+  // (D39 per-purpose), and only for its own hops: the roots it accepts as their
+  // RAS (ICA -02 5.5.3 rule 3, 7.3). That key also signs the continuation
+  // ID-JAG; the validator's pinned ICA typ keeps the two token types apart. The
+  // resource->AS map mirrors the demo cross-domain wiring (stack.ts). The
+  // subject resolver is deterministic over a constant salt.
   const publicJwks = { keys: [tokenJwkPub, statusJwkPub, txnJwkPub, continuationJwkPub] };
-  const chainAuthorityIssuers: ContinuationIssuer[] =
-    opts.chainAuthorityIssuers ?? [{ iss: opts.issuer, jwks: publicJwks as never }];
+  const continuationAssertionIssuers: ContinuationIssuer[] = opts.continuationAssertionIssuers ?? [
+    { iss: opts.issuer, jwks: { keys: [continuationJwkPub] } as never, attestsFor: [] },
+  ];
   const resourceToAs =
     opts.resourceToAs ??
     ((r: string) => (r === TOPOLOGY.resources.saas ? TOPOLOGY.issuers.ras : opts.issuer));
   const subjectResolver = opts.subjectResolver ?? defaultSubjectResolver(opts.issuer);
+  const continuationHopLimit = opts.continuationHopLimit ?? DEFAULT_CONTINUATION_HOP_LIMIT;
+  if (!Number.isSafeInteger(continuationHopLimit) || continuationHopLimit < 1) {
+    throw new Error("continuationHopLimit must be a finite positive integer (ICA -02 6.3)");
+  }
 
   const provider = buildProvider({
     issuer: opts.issuer,
@@ -1053,8 +1097,9 @@ export async function buildAuthorizationServer(opts: {
     // extraTokenClaims (family fallback), rotateRefreshToken (mandatory family
     // rotation), and ttl.RefreshToken (absolute-lifetime clamp).
     familyStore: delegationFamilyStore,
-    chainAuthorityIssuers,
+    continuationAssertionIssuers,
     continuationReplay: newReplayCache(),
+    continuationHopLimit,
     resourceToAs,
     subjectResolver,
     continuationGrantKey: continuationKeys.privateKey,

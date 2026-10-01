@@ -50,7 +50,7 @@ const WRITE_ENTRY = {
   constraints: {
     max_amount: { amount: "500.00", currency: "USD" },
     vendors: ["acme"],
-    terminal_when: [{ event_type: CLOSE_EVENT, discharge_policy: "close-management-2026-q3" }],
+    terminal_when: [{ event_type: CLOSE_EVENT, discharge_authority: "close-management-2026-q3" }],
   },
 };
 

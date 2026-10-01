@@ -63,6 +63,53 @@ Two bounds:
   establish it; the citation may then stay informative.
 
 
+## Wire Names Convention
+
+This convention governs names a draft newly defines. Existing
+definitions are grandfathered; changing one is a migration that needs
+its own justification. The pattern was inferred from the family's
+usage in the wire-name audit (#911).
+
+New Mission-specific names introduced into shared registries outside
+the family include `mission`, using the registry's required syntax.
+Members within Mission-owned objects need no additional prefix: the
+OAuth parameter is `mission_expires_at`, while the record member stays
+`expires_at`.
+
+New names otherwise follow the family's existing pattern:
+
+- **Case.** Parameters, claims, metadata members, error codes, record
+  members, and enumerated values are lowercase snake_case. Media
+  subtypes, JWS `typ` labels, and URN tails are lowercase kebab-case
+  (`application/mission-<thing>+json`, `+jws`, or `+jwt`).
+- **Metadata shapes.** Endpoint metadata follows RFC 8414:
+  `<x>_endpoint`, per-endpoint `<endpoint>_auth_methods_supported` and
+  `<endpoint>_auth_signing_alg_values_supported`, and
+  `<feature>_supported` for a boolean.
+- **Instants.** An instant ends in `_at` (a bound in `_until`,
+  `_before`, or `_after`) and is an RFC 3339 date-time string.
+  NumericDate is used only for JWT-level claims such as `iat` and `exp`.
+- **Durations.** A new duration defaults to integer seconds. Each
+  definition states its permitted range, the instant it is measured
+  from, and its boundary behavior; positive-only is a per-definition
+  choice, not the default.
+
+Three bounds:
+
+- **Signed and committed values are stable.** Existing names and
+  values inside signed or committed objects (fingerprint `op` values,
+  digest preimages, signed receipts) keep their spelling. A newly
+  defined signed object follows this convention.
+- **Inherited names keep their upstream form.** A name taken from
+  another specification (RFC 8693 parameters, JOSE and JWT claims,
+  AuthZEN and AAuth members) keeps its upstream spelling and semantics.
+- **A lint checks declarations, not words.** An automated check of
+  this convention examines definitions in their namespace (IANA
+  registration entries and member definitions), not every matching
+  word or JSON member, and carries an explicit list of grandfathered
+  definitions.
+
+
 ## Document History Convention
 
 Only the OAuth binding carries a Document History appendix today. A companion

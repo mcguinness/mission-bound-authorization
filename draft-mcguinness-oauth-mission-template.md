@@ -28,6 +28,7 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  RFC3339:
   RFC6755:
   RFC9396:
   I-D.draft-mcguinness-oauth-mission:
@@ -354,25 +355,35 @@ A Mission Template is a consented object with these members:
   cannot mint a Mission for a party the human did not consent to.
 
 `instance_lifetime`:
-: REQUIRED. A duration. The per-instance lifetime clamp: a dispatched
-  Mission's `expires_at` is clamped to no more than this from its
-  committed `created_at` ({{dispatch}}).
+: REQUIRED. A positive integer number of seconds. The per-instance
+  lifetime clamp: a dispatched Mission's `expires_at` is clamped to no
+  more than this from its committed `created_at` ({{dispatch}}).
 
 `max_active`:
-: REQUIRED. An integer. The maximum number of Missions dispatched from
-  this template that may be `active` at once. A Dispatch that would
-  exceed it is refused until an active instance terminates.
+: REQUIRED. A positive integer. The maximum number of Missions
+  dispatched from this template that may be `active` at once. A
+  Dispatch that would exceed it is refused until an active instance
+  terminates.
 
 `dispatch_rate`:
-: REQUIRED. A rate bound on Dispatch from this template per unit time.
+: REQUIRED. An object with two members, each a positive integer:
+  `limit`, a number of instantiations, and `window`, a number of
+  seconds. A Dispatch is refused when its instantiation would bring the
+  instantiations committed from this template within the trailing
+  `window` seconds above `limit`, so a burst of up to `limit` within one
+  window is within the bound. Only committed instantiations count: a
+  refused Dispatch and a recovered retry ({{dispatch}}) count nothing.
 
 `expires_at`:
-: REQUIRED. The template's own expiry ({{I-D.draft-mcguinness-oauth-mission}}).
-  After it, the template dispatches nothing.
+: REQUIRED. A string, an RFC 3339 {{RFC3339}} date-time. The template's
+  own expiry ({{I-D.draft-mcguinness-oauth-mission}}). After it, the
+  template dispatches nothing.
 
 `review_cadence`:
-: REQUIRED. The maximum age of the template's most recent human approval
-  past which the Mission Issuer MUST NOT dispatch ({{template-consent}}).
+: REQUIRED. A positive integer number of seconds. The maximum age of
+  the template's most recent human approval, measured from that
+  approval's `approved_at` ({{dispatch}}), past which the Mission Issuer
+  MUST NOT dispatch ({{template-consent}}).
 
 The concrete values of `instance_lifetime`, `max_active`,
 `dispatch_rate`, and `review_cadence`, and the action-class mapping the
@@ -1055,6 +1066,17 @@ IANA action. Following the restraint of the sibling profiles:
   object by that value.
 
 --- back
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- The dispatch bounds have stated encodings. `instance_lifetime` and
+  `review_cadence` are positive integer seconds, the latter measured
+  from the approval's `approved_at`; `max_active` is a positive
+  integer; `dispatch_rate` is a `limit` of committed instantiations per
+  trailing `window` of seconds, counting neither refused Dispatches nor
+  recovered retries; and `expires_at` is an RFC 3339 date-time.
 
 # Acknowledgments
 {:numbered="false"}

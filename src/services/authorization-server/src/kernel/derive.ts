@@ -764,18 +764,57 @@ export function projectThroughEffective(
   candidate: readonly AuthorityEntry[],
   effective: readonly AuthorityEntry[],
 ): AuthorityEntry[] {
-  const out: AuthorityEntry[] = [];
-  const seen = new Set<string>();
+  return projectThroughEffectiveWithOrigin(
+    candidate,
+    effective.map((entry) => ({ entry, origin: entry })),
+  ).map((p) => p.entry);
+}
+
+/**
+ * One projected fragment and the ORIGINS it was derived from: the origin of
+ * every effective entry whose intersection with a candidate produced these
+ * exact fragment bytes (de-duplication folds such pairings into one fragment,
+ * so more than one origin means the fragment's source is ambiguous).
+ */
+export interface OriginProjection<O> {
+  entry: AuthorityEntry;
+  origins: O[];
+}
+
+/**
+ * {@link projectThroughEffective}, keeping each fragment's origin (for
+ * example the approved record entry an effective entry was computed from,
+ * MissionKernel.effectiveEntriesWithOrigin). The fragments, their order and
+ * their de-duplication are exactly projectThroughEffective's, which is this
+ * function with each effective entry as its own origin.
+ *
+ * @spec discharge#condition-selectors — a selector names a target on the
+ * record entry a projected entry was ACTUALLY derived from; matching fragment
+ * bytes against the record cannot establish that (a contained entry can
+ * project to another, discharged entry's exact bytes), so the origin is
+ * carried through the projection instead.
+ */
+export function projectThroughEffectiveWithOrigin<O>(
+  candidate: readonly AuthorityEntry[],
+  effective: ReadonlyArray<{ entry: AuthorityEntry; origin: O }>,
+): Array<OriginProjection<O>> {
+  const out: Array<OriginProjection<O>> = [];
+  const byKey = new Map<string, OriginProjection<O>>();
   for (const detail of candidate) {
     for (const eff of effective) {
-      const fragment = intersectForProjection(detail, eff);
+      const fragment = intersectForProjection(detail, eff.entry);
       if (!fragment) continue;
       // Field construction is order-stable (intersectForProjection builds every
       // fragment the same way), so the serialization is a usable identity.
       const key = JSON.stringify(fragment);
-      if (seen.has(key)) continue;
-      seen.add(key);
-      out.push(fragment);
+      const seen = byKey.get(key);
+      if (seen) {
+        if (!seen.origins.includes(eff.origin)) seen.origins.push(eff.origin);
+        continue;
+      }
+      const projected = { entry: fragment, origins: [eff.origin] };
+      byKey.set(key, projected);
+      out.push(projected);
     }
   }
   return out;

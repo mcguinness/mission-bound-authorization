@@ -27,7 +27,7 @@
  *
  * Both tables live in the KERNEL's own database (the creation-idempotency
  * precedent), so the event row can share ONE SQLite transaction with the latch
- * and version increment it records (@spec discharge#discharge-operation,
+ * and version increment it records (@spec discharge#discharge-commit,
  * "Atomicity"); nested `withTransaction` calls become savepoints.
  */
 
@@ -67,6 +67,8 @@ CREATE TABLE IF NOT EXISTS discharge_events (
   observed_at TEXT,
   created_at INTEGER NOT NULL,
   expires_at INTEGER NOT NULL,
+  resolved_mission_id TEXT,
+  resolved_entry_digest TEXT,
   PRIMARY KEY (authority, mission_id, entry_digest, condition_digest, event_id)
 ) STRICT;
 `;
@@ -151,7 +153,9 @@ export type LifecycleResponseState = "committed" | "final";
  */
 export type LifecycleResponseMaterial =
   | { kind: "json"; body: Record<string, unknown> }
-  | { kind: "status-observation"; observation: Record<string, unknown> };
+  | { kind: "status-observation"; observation: Record<string, unknown> }
+  // @spec discharge#discharge-receipt — a forwarded discharge's receipt.
+  | { kind: "discharge-receipt"; receipt: Record<string, unknown> };
 
 /** A retained response: claimed and reproducible, or finalized and verbatim. */
 export interface RetainedLifecycleResponse {
@@ -405,6 +409,19 @@ export interface StoredDischargeEvent {
   outcome: DischargeOutcome;
   priorVersion: number;
   currentVersion: number;
+  /**
+   * @spec discharge#discharge-carryover ("Replay") — the target the operation
+   * RESOLVED to at first processing, when it was forwarded after carryover:
+   * a retry recovers this, never a newly resolved target. Absent when the
+   * operation applied to the target it named.
+   */
+  resolved?: DischargeResolvedTarget;
+}
+
+/** The record and entry a forwarded discharge actually applied to. */
+export interface DischargeResolvedTarget {
+  missionId: string;
+  entryDigest: string;
 }
 
 /**
@@ -428,6 +445,7 @@ export class DischargeEventStore {
     private readonly options: { now: () => Date; retentionSeconds?: number },
   ) {
     this.db.exec(SCHEMA);
+    migrateDischargeEvents(this.db);
     this.retentionMs = (options.retentionSeconds ?? DEFAULT_DISCHARGE_EVENT_TTL_S) * 1000;
   }
 
@@ -452,6 +470,14 @@ export class DischargeEventStore {
       outcome: row.outcome as DischargeOutcome,
       priorVersion: row.prior_version as number,
       currentVersion: row.current_version as number,
+      ...(row.resolved_mission_id != null && row.resolved_entry_digest != null
+        ? {
+            resolved: {
+              missionId: row.resolved_mission_id as string,
+              entryDigest: row.resolved_entry_digest as string,
+            },
+          }
+        : {}),
     };
   }
 
@@ -466,6 +492,7 @@ export class DischargeEventStore {
     fingerprint: string,
     result: DischargeResult,
     audit: DischargeEventAudit,
+    resolved?: DischargeResolvedTarget,
   ): void {
     const nowMs = this.options.now().getTime();
     this.db
@@ -479,8 +506,9 @@ export class DischargeEventStore {
       .prepare(
         `INSERT INTO discharge_events (authority, mission_id, entry_digest, condition_digest,
          event_id, fingerprint, outcome, prior_version, current_version, received_at,
-         evidence_ref, evidence_digest, observed_at, created_at, expires_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         evidence_ref, evidence_digest, observed_at, created_at, expires_at,
+         resolved_mission_id, resolved_entry_digest)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT DO NOTHING`,
       )
       .run(
@@ -499,6 +527,8 @@ export class DischargeEventStore {
         audit.observedAt ?? null,
         nowMs,
         nowMs + this.retentionMs,
+        resolved?.missionId ?? null,
+        resolved?.entryDigest ?? null,
       );
   }
 
@@ -508,8 +538,9 @@ export class DischargeEventStore {
     fingerprint: string,
     result: DischargeResult,
     audit: DischargeEventAudit,
+    resolved?: DischargeResolvedTarget,
   ): void {
-    withTransaction(this.db, () => this.recordInCallerTx(key, fingerprint, result, audit));
+    withTransaction(this.db, () => this.recordInCallerTx(key, fingerprint, result, audit, resolved));
   }
 
   private purge(key: DischargeEventKey): void {
@@ -520,5 +551,24 @@ export class DischargeEventStore {
            AND event_id = ?`,
       )
       .run(key.authority, key.missionId, key.entryDigest, key.conditionDigest, key.eventId);
+  }
+}
+
+/**
+ * @spec discharge#discharge-carryover ("Replay") — the resolved-target columns
+ * are additive; a kernel database that predates them is migrated in place, as
+ * {@link migrateLifecycleResponses} does for the response store.
+ */
+function migrateDischargeEvents(db: Database): void {
+  const columns = new Set(
+    (db.prepare("PRAGMA table_info(discharge_events)").all() as Array<{ name: string }>).map(
+      (c) => c.name,
+    ),
+  );
+  if (!columns.has("resolved_mission_id")) {
+    db.exec("ALTER TABLE discharge_events ADD COLUMN resolved_mission_id TEXT");
+  }
+  if (!columns.has("resolved_entry_digest")) {
+    db.exec("ALTER TABLE discharge_events ADD COLUMN resolved_entry_digest TEXT");
   }
 }

@@ -44,9 +44,10 @@ export type ChildFanoutControls = {
 /**
  * @spec discharge#terminal-when — one entry completion condition carried in
  * `constraints.terminal_when`. `event_type` identifies the completion event
- * (deployment- or registry-defined, opaque here). `discharge_policy` is a
- * stable, opaque selector naming the AS-side discharge-authority mapping for
- * this condition (@spec discharge#discharge-authority): the AS resolves it
+ * (deployment- or registry-defined, opaque here). `discharge_authority` is a
+ * stable, opaque name for the authority approved to assert this condition,
+ * which the AS resolves to its discharge-authority mapping
+ * (@spec discharge#discharge-authority): the AS resolves it
  * whenever the condition FIRST enters an immutable Mission-record entry and
  * refuses the derivation when it maps to nothing. Condition identity is byte
  * equality of the canonical form of THIS object, which is also what
@@ -55,7 +56,7 @@ export type ChildFanoutControls = {
  */
 export interface TerminalWhenCondition {
   event_type: string;
-  discharge_policy?: string;
+  discharge_authority?: string;
 }
 
 /** @spec mission#authorization-derivation (type mission_resource_access) */
