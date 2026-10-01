@@ -875,6 +875,23 @@ mirroring the treatment of `superseded`
 needs a prompt cutoff on outstanding tokens uses the propagation
 mechanisms of {{revocation-enforcement-classes}}.
 
+Suspension is reversible, so a refresh refused for it should not spend
+the client's ability to refresh after a `resume`. After validating a
+refresh request and before consuming or rotating its refresh token,
+the AS SHOULD check whether the Mission, or an ancestor whose state
+gates its derivation
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), is
+suspended. When this check detects suspension, the AS SHOULD
+refuse the request without consuming the refresh token or invalidating
+its otherwise-valid grant solely because of that suspension. This
+check does not replace issuance-time state validation. A concurrent
+suspension can still cause issuance to be refused after the
+preliminary check, and preserving refresh capability across that
+interval requires coordination with the issuance commit. The check
+leaves refresh-token rotation and reuse detection intact, and a
+`resume` does not revive a credential that expired or was revoked
+independently.
+
 ## Operations
 
 The endpoint accepts authenticated POST requests with a
