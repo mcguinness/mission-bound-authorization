@@ -604,8 +604,7 @@ The approval-to-permit path in sequence:
 
 Under the standalone binding the same life runs with ordinary tokens
 and the Mission Join in place of step 3's claim carriage. In
-sequence, the standalone mode runs submit, poll, approve, join,
-permit:
+sequence, the standalone mode runs submit, approve, poll, join, permit:
 
 ~~~
  Client               MAS                Approver     PEP/PDP
@@ -810,9 +809,9 @@ evaluated later by runtime policy, metering, or action-bound
 to the original Approver, though action-bound approval may re-render
 exactly that.
 
-The lifecycle control gates new derivation from the envelope; a
-credential already materialized under it keeps running to its own
-bound ({{kill-switch-composition}}). The two halves compose but do
+The lifecycle control gates new derivation from the envelope; a credential already materialized under it keeps running to its own
+bound unless an action-time gate reaches it first
+({{kill-switch-composition}}). The two halves compose but do
 not substitute: an envelope real at approval time can still admit, at
 decision time, an effect the Approver never saw rendered in that
 form.
@@ -1165,8 +1164,8 @@ decision point treats it under the runtime profile's freshness
 discipline, with a declared staleness bound, failing closed when it
 cannot be established ({{I-D.draft-mcguinness-mission-runtime}}).
 
-Authorization composes conjunctively across the three lifecycles: a
-decision may depend on agent state, Mission state, and credential
+Authorization composes conjunctively across these lifecycles and the
+credential's own: a decision may depend on agent state, Mission state, and credential
 validity, and each gates independently. A valid credential never
 overrides a revoked agent or a non-active Mission, and a live agent
 under an active Mission still fails on an expired credential.
@@ -1291,8 +1290,8 @@ Who holds the deciding side is a spectrum, not a species: the
 approval event requires an accountable principal deciding against
 committed inputs before any authority exists, and the proposer is
 never the approver. A deterministic, versioned policy can approve at
-machine speed within a ceiling a human consented to (the OAuth binding's
-`policy_drawdown` and `template` authorization bases, {{invariants}}):
+machine speed within a ceiling a human consented to (the `policy_drawdown` and `template` authorization bases that companion
+profiles define on the OAuth binding's extension point, {{invariants}}):
 policy approves the instance because a human approved the policy or
 the template, with `policy_version` keeping that chain re-checkable,
 while a model's generated judgment is never the sole authority for
@@ -1383,7 +1382,8 @@ call chain of a service hop, with no Authority Set machinery imported
 
 ## Swarm Execution: Multiplication, Not Delegation {#swarm-execution}
 
-One composition of the three objects recurs often enough to name. A
+One composition of the three lifecycle-bearing objects
+({{three-objects}}) recurs often enough to name. A
 Mission pinned to an Agent Deployment class or version, executed
 concurrently by N attested instances of that Deployment, is
 multiplication, not delegation: no `act` hop, no Child Mission, no
@@ -1404,9 +1404,8 @@ attributes a presentation to an instance only under a sender-constraint
 key unique to it ({{I-D.draft-mcguinness-oauth-client-instance-id}},
 Section 7.3). The derivation limits profile's `derivation_limit`
 ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}) is not a fan-out or
-concurrency ceiling: it counts issuance events, not instances, and a
-single instance refreshing repeatedly consumes it exactly as one
-selector among N instances deriving once each would. What actually
+concurrency ceiling: it counts issuance events, not instances, and a single instance refreshing N times consumes it exactly as N
+instances deriving once each would. What actually
 bounds a swarm's aggregate consumption is the metering profile's
 Mission-grain budget: consumption bounds attach to the Mission, not to
 any one instance, so a swarm of instances shares one budget
@@ -2100,8 +2099,7 @@ The differences that decide a design:
 | Offline Mission verification | partial (claims verify; state does not) | limited (join assertion) | reference integrity only; blob is private | JWT RPTs partial; opaque RPTs none | partial with a structured token or signed Mission Status |
 
 The table is the one-page answer to a question the object-level
-framing invites: a MAS deployment does not provide AS-native
-semantics because both hold the same Mission, and a reader
+framing invites: a MAS deployment does not provide AS-native semantics just because both hold the same Mission, and a reader
 comparing deployments compares architectures first.
 
 The OAuth binding stacks two independent chokepoints. Issuance gating
@@ -2350,7 +2348,7 @@ obligations its mechanisms imply:
 - a registration schedule where audit transparency is run
   ({{I-D.draft-mcguinness-mission-audit}}).
 
-The evidence levels are accountability, not prevention: they make
+The evidence mechanisms are accountability, not prevention: they make
 what was recorded tamper-evident, not what was perceived true or
 what was never recorded present.
 
@@ -2631,8 +2629,8 @@ needs the whole matrix:
 | Egress kill | the communication path | gateway and network controls |
 
 Mission termination participates in incident response; it does not
-replace it. Revoking the Mission stops issuance at once and stops
-mediated actions within the staleness bound ({{validity-model}}),
+replace it. Revoking the Mission stops issuance at once where the binding gates
+it, and stops mediated actions within the staleness bound ({{validity-model}}),
 but it terminates no process and closes no network path. The
 converse holds too: killing a workload leaves the Mission `active`
 and its authority derivable to a replacement instance unless the
@@ -2682,7 +2680,7 @@ residual the transition does not reach.
 | Rung | Binding | Property | Stops at commit | Runs to its own bound |
 |---|---|---|---|---|
 | Baseline Issuance | OAuth binding, structured-authority | Baseline, a new-derivation kill ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Containment Properties") | New derivation, delegation, cross-domain projection, and offline attenuation roots minted after the transition ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Derivation Gating") | Tokens already issued, to `exp`; a cross-domain projection grant already redeemed and an offline attenuation root already minted before the transition, each to its own lifetime or `del_max_depth` ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "The Materialized-Capability Residual"); a consequential read under the token-lifetime default, the same bound ({{I-D.draft-mcguinness-mission-runtime}}) |
-| Baseline Issuance | Standalone MAS, no credential-carried authority | Neither; the runtime layer is the only cutoff, and it is absent at this rung | Nothing at the resource; the transition commits and is visible on the Mission Status Response and the introspection projection ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Visibility") | Every action, to whatever native credential, session, or resource-local bound the resource enforces on its own, if any, until a freshness half-step arrives or the issuance join restores a gate ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) |
+| Baseline Issuance | Standalone MAS, no credential-carried authority | Neither; the runtime layer is the only cutoff, and it is absent at this rung | Nothing at the resource; the transition commits and is visible on the Mission Status Response and the introspection projection ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Visibility") | Every action, to whatever native credential, session, or resource-local bound the resource enforces on its own, if any, until runtime enforcement over a freshness source arrives or the issuance join restores a gate ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) |
 | Runtime-Enforced | Any binding, a class using a containment-aware state source within its published bound | Runtime-Enforced for that class ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Containment Properties"): full Status or introspection carrying `containment_version`, or Signals carrying the overlay change; a fresh derivation narrows what it mints and can shorten the residual, but it checks nothing at action time, so it carries Baseline, not Runtime-Enforced ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Containment Properties"); a class checked only against an active-but-not-containment-aware source, gated only by fresh derivation, or left lifecycle-gated-only, gets Baseline only regardless of rung ({{I-D.draft-mcguinness-mission-runtime}}) | The contained capability, denied at the class's next gated action once the source reflects the overlay, within the staleness bound plus the permit window plus the class's execution bound ({{I-D.draft-mcguinness-mission-runtime}}) | Ungated paths, bounded by token lifetime alone |
 | Baseline Issuance | MAS as estate control plane, issuance join at each consuming AS | Baseline, from Derivation Gating at the Mission Issuer ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Derivation Gating"); the consuming AS's redemption and refresh checks are the issuance profile's ordinary `active` gate, not containment-aware on their own, since a contained Mission stays `active`, unless the consuming AS separately retrieves and applies the containment overlay or current Effective Authority Set ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}, Section "Redemption") | New grant minting only: the Mission Issuer's Derivation Gating evaluates the Effective Authority Set, so a grant minted after the transition excludes contained authority ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Derivation Gating") | An outstanding grant redeems once, to its own maximum lifetime of 300 seconds, at any consuming AS whose redemption check is active-only rather than containment-aware ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}, Section "Redemption") |
 
@@ -2753,7 +2751,7 @@ creation is authorized
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). The OAuth
 binding's invariants carry the deployment: every derived token is a
 subset of the Authority Set, no audience receives a grant it would
-over-grant on, and no credential outlives the Mission; the deployment
+over-grant on, and no credential outlives the Mission's expiry; the deployment
 sizes token lifetime to its tolerated staleness. Where the Authorization
 Server offers introspection, a Resource Server that introspects per
 request stops honoring a token at its next request once the Mission
@@ -2806,7 +2804,7 @@ provenance object that attributes an artifact without granting
 anything. Ingesting a work product is an added
 conjunctive gate at the receiving Mission's boundary: it composes with
 the three objects' independent gates and does not nest inside them, so
-Actor, Agent Deployment, and Mission stay a gating pipeline, not a
+Agent identity, Agent Deployment, and Mission stay a gating pipeline, not a
 containment hierarchy ({{three-objects}}).
 
 Where the separation must hold within one Mission, the metering
@@ -3069,8 +3067,7 @@ every one.
   terminated (oauth-mission-status).
 - **R11**: Authority widens only through a fresh approval that
   creates a successor (oauth-mission-expansion).
-- **R12**: Authority retires per entry when the work an entry served
-  is done (oauth-mission-status).
+- **R12**: Authority retires per entry when the work an entry served is done (oauth-mission-discharge).
 
 ## Delegated, Projected, and Enforced Execution {#req-execution}
 
