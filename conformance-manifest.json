@@ -35,8 +35,8 @@
     "content_sha256": "815cbcde45ab0b9fe6e5391596f158d4b282b390b40aa1299e9a8431614bcbae"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "647f05a51463054252ba99826f8328cf8974e26f",
-    "content_sha256": "b15734aad3b7ff884b854d637dc17ed8c1bc0a5c74777eae6f4f9f445bd84f34"
+    "revision": "0deed864cfd4ceb597047f3a617e0ad492907d76",
+    "content_sha256": "e681f15fe23ebf3b0bb8d32f1aed70eef88c140331a5f10216492d3669d045ae"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
@@ -47,12 +47,12 @@
     "content_sha256": "5e120cfbb6299bf1b1f71654c56f560309f46beddb19b968458cbc2105e672db"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "45fda8d107e7fe5c0ed61864358ad28c775ed688",
-    "content_sha256": "29d67521b432c0c03837c5478efdf146fa7b07ed410f8bf213252d4fca15783a"
+    "revision": "0deed864cfd4ceb597047f3a617e0ad492907d76",
+    "content_sha256": "fc347e4d628e5d1134eb5eea32eb6ac7dd91fc191f80edbf6468e7d7d1bcb6a3"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "06f8639a242cc6b2ef5a70b27eff6fb353e5154a",
-    "content_sha256": "f0729bfa452a6e9496be64970b6b4946d81feb877f28958450117864376251f9"
+    "revision": "0deed864cfd4ceb597047f3a617e0ad492907d76",
+    "content_sha256": "ac7581d9a072db60785a0ed6153bce7de7e5ee4b8e48c6fa4e27c9157b1bfcc9"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
@@ -67,8 +67,8 @@
     "content_sha256": "bf4b09b73adfdbf647f9740ef2451862b87212aaa7424496aa865b99d2a2a46d"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
-    "revision": "dc10915ac71b4d50c0867cf7d959ec45bda2eff0",
-    "content_sha256": "777f04c60e95e1d4fb102c1786c9d21339e58e877f2b74c4d7f818e698df846f"
+    "revision": "0deed864cfd4ceb597047f3a617e0ad492907d76",
+    "content_sha256": "b20899599133c6623b927df87f0baf6eb863dc325c337de4cc03f123ebb6a0f0"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
