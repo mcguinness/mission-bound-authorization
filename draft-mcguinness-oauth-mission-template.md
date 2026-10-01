@@ -341,18 +341,24 @@ A Mission Template is a consented object with these members:
   content a human actually consented to, not only its identifier.
 
 `allowed_dispatchers`:
-: REQUIRED. An array identifying the principals permitted to dispatch
-  from this template. A Dispatch request from a principal not in this
-  set is refused ({{dispatch}}).
+: REQUIRED. A non-empty array of strings, each the client identifier
+  (`client_id`) of a principal permitted to dispatch from this
+  template. A Dispatch request whose authenticated client is not in
+  this set is refused ({{dispatch}}).
 
 `allowed_recipients`:
-: REQUIRED. An array bounding which Subjects and Agents a Mission
-  dispatched from this template may be created for. The Mission Issuer
+: REQUIRED. An object bounding which Subjects and Agents a Mission
+  dispatched from this template may be created for, with two members,
+  each a non-empty array: `subjects`, each an object with `iss` and
+  `sub` identifying a Subject as the issuance profile's `subject` does,
+  and `agents`, each a `client_id` string. The Mission Issuer
   establishes the instance's Subject as the issuance profile requires,
   never from Dispatcher input
-  ({{I-D.draft-mcguinness-oauth-mission}}), and refuses a Dispatch whose
-  established Subject or Agent falls outside this set, so a template
-  cannot mint a Mission for a party the human did not consent to.
+  ({{I-D.draft-mcguinness-oauth-mission}}), and refuses a Dispatch
+  whose established Subject does not equal an entry of `subjects` in
+  both `iss` and `sub`, or whose Agent (the instance's `client_id`) is
+  not an entry of `agents`, so a template cannot mint a Mission for a
+  party the human did not consent to.
 
 `instance_lifetime`:
 : REQUIRED. A positive integer number of seconds. The per-instance
@@ -552,7 +558,8 @@ The Mission Issuer adjudicates a Dispatch in this order:
      instance; `approval_basis` is the structured authorization-basis
      record, and the two are consistent by construction;
    - `subject` is established as the issuance profile requires, never
-     taken from Dispatcher input, and is within `allowed_recipients`
+     taken from Dispatcher input, and is an entry of
+     `allowed_recipients` `subjects`
      ({{I-D.draft-mcguinness-oauth-mission}});
    - `intent_hash` and `authority_hash` are computed over the instance's
      own Intent and final Authority Set, never over the template; the
