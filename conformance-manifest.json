@@ -4630,7 +4630,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "no derived credential's exp exceeds the Mission's expires_at",
-    "local": "every credential the issuer derives under a Mission, driven per path against a Mission (or Child, successor or dispatched instance) ending inside the credential's configured lifetime: the code exchange's access token, refresh token, authorization code and ID Token; non-rotating and rotating refresh (access token and rotated refresh token); the async-delegation initial access token, family refresh token, family refresh access token and rotated family refresh token; the AROP deferred access token; the child-bound assertion and child access token; the dispatched instance access token; the expansion successor access token; the ID-JAG continuation grant; and the transaction token. A Mission past expires_at, or with under one second left, is refused rather than minted. Not driven here, because this AS does not derive them from its own Mission: the cross-org audience-local token (bounded by the presented chain's leaf exp, whose nesting the chain verifier enforces; the cross-org companion governs that transitive bound), attenuation roots (clamped to expires_at in kernel/attenuation.ts but not reachable from an AS endpoint) and holder-signed attenuation children"
+    "local": "every credential the issuer derives under a Mission, driven per path against a Mission (or Child, successor or dispatched instance) ending inside the credential's configured lifetime: the code exchange's access token, refresh token, authorization code and ID Token; non-rotating and rotating refresh (access token and rotated refresh token); the async-delegation initial access token, family refresh token, family refresh access token and rotated family refresh token; the AROP deferred access token; the child-bound assertion and child access token; the dispatched instance access token; the expansion successor access token; the ID-JAG continuation grant; and the transaction token. A Mission past expires_at, or with under one second left, is refused rather than minted: invalid_grant mission_expired at the token endpoint, and access_denied at the authorization endpoint's resume, where the authorization code is minted. Not driven here, because this AS does not derive them from its own Mission: the cross-org audience-local token (bounded by the presented chain's leaf exp, whose nesting the chain verifier enforces; the cross-org companion governs that transitive bound), attenuation roots (clamped to expires_at in kernel/attenuation.ts but not reachable from an AS endpoint) and holder-signed attenuation children"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -4730,6 +4730,18 @@
      "name": "credentials never outlive the Mission (@spec mission#mission-bound-tokens) > a credential minted with under one second of Mission left is refused, never given a 0 s or overrunning lifetime",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/exp-clamp.test.ts",
+     "name": "credentials never outlive the Mission (@spec mission#mission-bound-tokens) > an authorization resumed with under one second of Mission left redirects access_denied, never invalid_grant, and issues no code",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/exp-clamp.test.ts",
+     "name": "credentials never outlive the Mission (@spec mission#mission-bound-tokens) > an authorization resumed after expires_at redirects access_denied, never invalid_grant, and commits the expiry",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
     }
    ]
   },

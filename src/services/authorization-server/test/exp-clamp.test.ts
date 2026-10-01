@@ -75,8 +75,16 @@ async function token(params: Record<string, string>): Promise<{ status: number; 
   return { status: res.status, body: (await res.json()) as Json };
 }
 
-/** PAR, approval and the redirect: an authorization code under a Mission ending at `expiresAt`. */
-async function authorize(expiresAt: string | undefined, extra: Record<string, string> = {}): Promise<string> {
+/**
+ * PAR, approval and the authorization resume: the final redirect to the
+ * client. `beforeResume` runs after the approval decision, before the resume
+ * request that mints the authorization code.
+ */
+async function authorizationRedirect(
+  expiresAt: string | undefined,
+  extra: Record<string, string> = {},
+  beforeResume: () => void = () => {},
+): Promise<URL> {
   const challenge = Buffer.from(
     await crypto.subtle.digest("SHA-256", new TextEncoder().encode(VERIFIER)),
   ).toString("base64url");
@@ -132,13 +140,20 @@ async function authorize(expiresAt: string | undefined, extra: Record<string, st
     keep(res);
     location = res.headers.get("location") ?? "";
   }
+  beforeResume();
   while (location.startsWith(ISSUER)) {
     res = await fetch(location, { redirect: "manual", headers: { cookie: cookie() } });
     keep(res);
     location = res.headers.get("location") ?? "";
   }
-  const code = new URL(location).searchParams.get("code");
-  expect(code, location).toBeTruthy();
+  return new URL(location);
+}
+
+/** PAR, approval and the redirect: an authorization code under a Mission ending at `expiresAt`. */
+async function authorize(expiresAt: string | undefined, extra: Record<string, string> = {}): Promise<string> {
+  const redirect = await authorizationRedirect(expiresAt, extra);
+  const code = redirect.searchParams.get("code");
+  expect(code, redirect.href).toBeTruthy();
   return code as string;
 }
 
@@ -325,6 +340,51 @@ describe("credentials never outlive the Mission (@spec mission#mission-bound-tok
     });
     vi.restoreAllMocks();
     expect(as.kernel.get(id)?.state).toBe("active");
+  });
+
+  it("an authorization resumed with under one second of Mission left redirects access_denied, never invalid_grant, and issues no code", async () => {
+    const expiresAt = inSeconds(30);
+    const codesSaved: unknown[] = [];
+    const onCode = (code: unknown) => codesSaved.push(code);
+    as.provider.on("authorization_code.saved", onCode);
+    try {
+      // The resume request (which mints the code) runs with the lifetime clock
+      // 500 ms before expires_at; the kernel's clock is real time, so the
+      // Mission is still active and the state gate passes.
+      const redirect = await authorizationRedirect(expiresAt, {}, () => {
+        vi.spyOn(Date, "now").mockReturnValue(Date.parse(expiresAt) - 500);
+      });
+      vi.restoreAllMocks();
+      expect(redirect.origin + redirect.pathname).toBe(REDIRECT_URI);
+      expect(redirect.searchParams.get("error")).toBe("access_denied");
+      expect(redirect.searchParams.get("error")).not.toBe("invalid_grant");
+      expect(redirect.searchParams.get("error_description")).toBe(
+        "the Mission expires before the authorization can complete",
+      );
+      expect(redirect.searchParams.get("code")).toBeNull();
+      expect(codesSaved).toHaveLength(0);
+    } finally {
+      as.provider.removeListener("authorization_code.saved", onCode);
+    }
+  });
+
+  it("an authorization resumed after expires_at redirects access_denied, never invalid_grant, and commits the expiry", async () => {
+    const expiresAt = inSeconds(30);
+    // Past expires_at by both the lifetime clock and the kernel's own clock,
+    // so the hook's state-gate branch is the one that refuses.
+    const late = Date.parse(expiresAt) + 1_000;
+    const redirect = await authorizationRedirect(expiresAt, {}, () => {
+      vi.spyOn(Date, "now").mockReturnValue(late);
+      vi.spyOn(as.kernel as unknown as { now: () => Date }, "now").mockReturnValue(new Date(late));
+    });
+    vi.restoreAllMocks();
+    expect(redirect.searchParams.get("error")).toBe("access_denied");
+    expect(redirect.searchParams.get("error_description")).toBe(
+      "the Mission expires before the authorization can complete",
+    );
+    expect(redirect.searchParams.get("code")).toBeNull();
+    const mission = as.kernel.allMissions().find((m) => Date.parse(m.expires_at) === Date.parse(expiresAt));
+    expect(mission?.state).toBe("expired");
   });
 
   it("a token under a grant that is not Mission-bound keeps oidc-provider's configured lifetimes", async () => {

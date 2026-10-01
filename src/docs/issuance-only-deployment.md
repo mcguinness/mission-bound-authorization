@@ -154,7 +154,8 @@ target that processes the `act` chain and the `mission` claim.
   Mission-bound grant has its configured lifetime or the Mission's remaining
   whole seconds, whichever is shorter (`clampToMission` and the `ttl`
   configuration in `buildProvider`). A Mission with under one second left is
-  refused `invalid_grant` `mission_expired`, never given a token:
+  refused `invalid_grant` `mission_expired` at the token endpoint, never given
+  a token:
   `credentials never outlive the Mission (@spec mission#mission-bound-tokens) > code exchange: the access token, refresh token and authorization code all expire no later than a Mission ending inside their lifetimes`,
   `> a credential minted with under one second of Mission left is refused, never given a 0 s or overrunning lifetime`.
 - **Access tokens:** 300 seconds (`config/topology.json`
@@ -166,7 +167,10 @@ target that processes the `act` chain and the `mission` claim.
   `mission_error`:
   `credentials never outlive the Mission (@spec mission#mission-bound-tokens) > a refresh after expires_at is refused invalid_grant by the expired refresh token itself, before the state gate (no mission_error)`.
 - **Authorization codes and ID Tokens:** oidc-provider's 60 seconds and 1
-  hour, clamped as above.
+  hour, clamped as above. The code is minted at the authorization endpoint's
+  resume, so a code the clamp refuses there redirects `access_denied`, never
+  `invalid_grant`, and no code is issued:
+  `credentials never outlive the Mission (@spec mission#mission-bound-tokens) > an authorization resumed with under one second of Mission left redirects access_denied, never invalid_grant, and issues no code`.
 - **Refresh gating:** refresh is gated on Mission state.
 
 **Clocks and keys.**

@@ -730,9 +730,33 @@ export function buildProvider(opts: AdapterOptions): Provider {
    * lifetime: it runs the state gate itself, which commits the expiry and
    * refuses exactly as the gate does, and a Mission with under one second left
    * is refused the same way rather than given a token that outlives it.
+   *
+   * `surface` selects the refusal's error vocabulary. A token-endpoint mint
+   * refuses `invalid_grant` (with `mission_error`). The authorization code is
+   * minted at the authorization endpoint's resume, whose response RFC 6749
+   * Section 4.1.2.1 defines without `invalid_grant`, so it refuses
+   * `access_denied` (@spec mission#error-mapping: an authorization decision
+   * refused by AS policy).
    */
-  function clampToMission(configured: number, grantId: string | undefined): number {
-    const record = missionForGrant(grantId);
+  function clampToMission(
+    configured: number,
+    grantId: string | undefined,
+    surface: "token-endpoint" | "authorization-endpoint" = "token-endpoint",
+  ): number {
+    const authorization = surface === "authorization-endpoint";
+    const expiring = (): Error =>
+      authorization
+        ? new errors.AccessDenied("the Mission expires before the authorization can complete")
+        : new MissionGrantError("the Mission expires before a credential can be issued", "mission_expired");
+    let record: MissionRecord | undefined;
+    try {
+      record = missionForGrant(grantId);
+    } catch (e) {
+      if (authorization && e instanceof errors.InvalidGrant) {
+        throw new errors.AccessDenied("the Mission is not available");
+      }
+      throw e;
+    }
     if (!record) return configured;
     const remaining = Math.floor((Date.parse(record.expires_at) - Date.now()) / 1000);
     if (remaining >= 1) return Math.min(configured, remaining);
@@ -740,11 +764,14 @@ export function buildProvider(opts: AdapterOptions): Provider {
       kernel.gateActive(record.id);
     } catch (e) {
       if (e instanceof GateError) {
+        if (authorization) {
+          throw e.reason === "mission_expired" ? expiring() : new errors.AccessDenied("the Mission is not active");
+        }
         throw new MissionGrantError(e.message, gateErrorToMissionError(e.reason, kernel.get(record.id)?.state));
       }
       throw e;
     }
-    throw new MissionGrantError("the Mission expires before a credential can be issued", "mission_expired");
+    throw expiring();
   }
 
   /**
@@ -1367,8 +1394,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
         const t = token as { grantId?: string; resourceServer?: { accessTokenTTL?: number } };
         return clampToMission(t.resourceServer?.accessTokenTTL || 60 * 60, t.grantId);
       },
+      // Minted at the authorization endpoint's resume: its refusal is an
+      // authorization-response error, never invalid_grant.
       AuthorizationCode: function AuthorizationCodeTTL(_ctx, code) {
-        return clampToMission(60, (code as { grantId?: string }).grantId);
+        return clampToMission(60, (code as { grantId?: string }).grantId, "authorization-endpoint");
       },
       // An ID Token is not saved, but it is issued under the grant: its
       // AccessToken entity carries the grant id on both the code exchange and
