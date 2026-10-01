@@ -11,6 +11,7 @@
     { "path": "../services/console-bff" },
     { "path": "../packages/telemetry" },
     { "path": "../packages/demo-data" },
-    { "path": "../services/agent" }
+    { "path": "../services/agent" },
+    { "path": "../services/plain-rs" }
   ]
 }
