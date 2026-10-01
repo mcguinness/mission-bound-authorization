@@ -525,8 +525,8 @@ launcher refuses every excluded path (#873)` unless the row says otherwise.
 | Dev ordinary-token route | Off | 501 `temporarily_unavailable` | `the dev ordinary-token route answers 501 temporarily_unavailable`, and the same wired-assembly test |
 | OIDC (`openid`, `profile`, `email`, `offline_access`; userinfo; RP-initiated logout) | Off | 400 `invalid_scope` at PAR, with or without a Mission Intent; `/me` and `/session/end` are not served (404). No grant can carry `openid`, so no ID Token is issued | `OIDC is off: openid is refused invalid_scope at PAR, and userinfo and RP-initiated logout are not served` |
 | RFC 7009 token revocation (`/token/revocation`) | Off | 404, not served. Mission revocation is the lifecycle `revoke` | `RFC 7009 token revocation is not served (404)` |
-| `mission_attenuation_supported` | Off | Not advertised. The provider parses no `mission_attenuation_root`, even with the member on | `the metadata advertises only the enabled surface` |
-| `service_catalog_endpoint` | Off | Not advertised. No HTTP route serves `/service-catalog` in any assembly | the same |
+| `mission_attenuation_supported` | Never advertised | No capability controls it, and no assembly advertises it. The token endpoint parses no `mission_attenuation_root`. The member returns only with that surface and an integration test that exercises it | `the metadata advertises only the enabled surface`, and `capability gates the launcher's wiring shadows, and the default assembly (#873) > the default assembly (no capability set) is the full provider: every grant registered and every capability member advertised, and no withdrawn member` |
+| `service_catalog_endpoint` | Never advertised | No capability controls it, and no assembly advertises it. The catalog is in-process; no HTTP route serves it. The member returns only with a served route and an integration test that fetches it | the same two tests |
 | Runtime profiles (PEP, PDP, enforcement scope) | Off | Not started: no PDP, PEP or `mcp-payments` runs | |
 | Mission Signals | Off | No lifecycle subscriber is injected | |
 
@@ -549,7 +549,7 @@ The child-creation, continuation, cross-org and expansion branch gates have
 no test of their own yet.
 
 **The default stays the full provider.**
-`capability gates the launcher's wiring shadows, and the default assembly (#873) > the default assembly (no capability set) is the full provider: every grant registered and every member advertised`.
+`capability gates the launcher's wiring shadows, and the default assembly (#873) > the default assembly (no capability set) is the full provider: every grant registered and every capability member advertised, and no withdrawn member`.
 
 A reader adopting this deployment depends only on the "On" rows.
 

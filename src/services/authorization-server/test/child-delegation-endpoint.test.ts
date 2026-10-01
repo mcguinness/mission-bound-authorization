@@ -626,8 +626,9 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
     const meta = (await res.json()) as Record<string, unknown>;
     expect(res.status).toBe(200);
     expect(meta.mission_child_delegation_supported).toBe(true);
-    // Sanity: the sibling attenuation flag is unaffected.
-    expect(meta.mission_attenuation_supported).toBe(true);
+    // The sibling attenuation member is never advertised: the provider issues
+    // no attenuation roots (#897).
+    expect(meta).not.toHaveProperty("mission_attenuation_supported");
   });
 
 });

@@ -3280,9 +3280,11 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       meta.mission_max_stale_seconds = MISSION_MAX_STALE_SECONDS;
       // Each capability member below is advertised only where the deployment
       // enables it (adapters/capabilities.ts); the default enables all of them.
-      // @spec attenuation#request-discovery: this AS issues Mission-bound
-      // attenuation roots and derives their authority from the Authority Set.
-      if (enabled("attenuation")) meta.mission_attenuation_supported = true;
+      // mission_attenuation_supported and service_catalog_endpoint are never
+      // advertised (#897). The token endpoint parses no mission_attenuation_root,
+      // and no HTTP route serves the catalog, which is in-process
+      // (kernel/catalog.ts). Each member is restored only alongside its working
+      // protocol surface and an integration test that exercises that surface.
       // @spec child-delegation#discovery: this AS accepts the child-creation
       // request and enforces the child-delegation controls of that profile.
       if (enabled("child-delegation")) meta.mission_child_delegation_supported = true;
@@ -3294,7 +3296,6 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // continuation transport (RFC 8693 token exchange with request_refresh_token
       // -> a per-delegation grant with a rotated, sender-constrained refresh token).
       if (enabled("async-delegation")) meta.delegated_refresh_token_profile_supported = true;
-      if (enabled("service-catalog")) meta.service_catalog_endpoint = `${opts.issuer}/service-catalog`;
       meta.introspection_endpoint = `${opts.issuer}/introspect`;
       // @spec mission#caller-authorization-and-minimization (cleanup, issue
       // #541) — advertise the introspection endpoint's actual authentication
