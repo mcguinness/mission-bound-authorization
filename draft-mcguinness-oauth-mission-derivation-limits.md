@@ -225,9 +225,14 @@ dispatched Template instance's
 successor's ({{I-D.draft-mcguinness-oauth-mission-expansion}}),
 exactly as at direct approval. An established `derivation_limit` is
 never inherited unchanged from a parent, a template, or a predecessor
-Mission; each Mission Record's ceiling comes only from its own
-Intent's `requested_derivation_limit`, clamped by the deployment's
-policy for that Mission.
+Mission, with one exception: a Child Delegation carryover replacement
+preserves the old child's `derivation_limit` and derivation count, so
+carryover cannot replenish a derivation budget
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section "No
+State, Authority, Expiry, or Budget Reset"). Otherwise each Mission
+Record's ceiling comes only from its own Intent's
+`requested_derivation_limit`, clamped by the deployment's policy for
+that Mission.
 
 ## Mission Record Member {#record-member}
 
