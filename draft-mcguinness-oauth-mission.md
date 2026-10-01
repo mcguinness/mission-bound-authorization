@@ -210,6 +210,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-submission-evidence:
+    title: "Mission Intent Submission Evidence for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-submission-evidence.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-consent-evidence:
     title: "Mission Consent Evidence for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html
@@ -420,12 +428,14 @@ separate Mission-awareness requirement ({{rs-enforcement}}).
 
 Some duties apply only when their condition holds: a submitted
 authority proposal, presented or required submission evidence
-({{intent-submission-evidence}}), or opaque tokens (which require
-introspection). The optional capabilities (Delegation, Introspection
-as a state overlay for JWTs, Cross-Domain projection, and Local
-Approved-Set Verification) are adopted explicitly under
-{{conformance}}. Ordinary JWT consumption does not require retrieving
-the Mission Record or recomputing the complete approved Authority Set.
+({{intent-submission-evidence}},
+{{I-D.draft-mcguinness-oauth-mission-submission-evidence}}), or
+opaque tokens (which require introspection). The optional
+capabilities (Delegation, Introspection as a state overlay for JWTs,
+Cross-Domain projection, and Local Approved-Set Verification) are
+adopted explicitly under {{conformance}}. Ordinary JWT consumption
+does not require retrieving the Mission Record or recomputing the
+complete approved Authority Set.
 
 ## Applicability {#applicability}
 
@@ -870,7 +880,8 @@ Submission is governed by the following rules:
   and the count and per-entry sizes of `evidence` entries, refusing
   a submission that exceeds the deployment-defined limits with
   `invalid_request`. The verification-cost bound of
-  {{intent-submission-evidence}} accompanies these.
+  {{I-D.draft-mcguinness-oauth-mission-submission-evidence}}
+  accompanies these.
 - **Concrete authority is proposed via `authorization_details`.**
   A client proposes concrete authority on the standard
   `authorization_details` parameter in the same push
@@ -1006,18 +1017,8 @@ The Submission envelope's `evidence` array carries **Intent
 Submission Evidence**: typed artifacts the client presents in support
 of claims about the submitted Intent, such as its originator, an
 admission or consent decision that applies to it, or the presenter
-authorized to submit it.
-
-Each entry is a JSON object with a REQUIRED `type` member: a string
-naming the evidence type as a collision-resistant name, under the
-same guidance as anchor `typ` values ({{integrity-anchors}}). The
-specification that owns a `type` defines the entry's remaining
-members as a closed schema, the artifact format, the verification
-procedure, and the verified output facts that verification yields.
-
-This document defines no generic member other than `type`, and no
-evidence types; an AS that supports no evidence type refuses every
-presented entry under the dispatch rule below.
+authorized to submit it. Each entry is a JSON object whose `type`
+member names its evidence type.
 
 Processing is governed by the following rules:
 
@@ -1035,48 +1036,13 @@ Processing is governed by the following rules:
   authenticated input to admission and derivation policy; AS policy
   decides whether the verified claims are acceptable for this
   request.
-- **Required evidence is resolved before derivation.** The AS
-  determines the evidence types its applicable profile, client,
-  resource, or admission policy requires before derivation. When a
-  required type is absent from the submission, the AS MUST refuse the
-  submission with the `invalid_mission_intent_evidence` error code.
-  This is the submission-plane form of the downgrade rules of
-  {{authority-proposal}}.
-- **Evidence binds one exact Intent.** Evidence bound to an
-  `intent_hash` applies only to that exact semantic Intent. When a
-  shaping or approval revision changes `intent_hash`, the AS MUST NOT
-  treat evidence bound to the predecessor Intent as evidence for the
-  revised Intent, unless the evidence type's specification
-  explicitly authorizes that transformation and defines how its
-  lineage is verified.
-- **The exchange establishes the presenter; the evidence must
-  agree.** The AS establishes the presenter through the containing
-  exchange: client authentication and, where present, proof of
-  possession. An entry that names an authorized presenter (a
-  `client_id`, a `cnf` key binding) MUST match the established
-  presenter, and a mismatch fails that entry's verification.
-  Evidence is never an alternative client-authentication mechanism
-  and never selects the presenter.
-- **Bounded verification.** Beyond the size and count bounds of
-  {{submission-via-par}}, the AS MUST bound the verification cost a
-  submission can impose (for example, the number of signature
-  verifications it performs), refusing a submission that exceeds the
-  bound with the `invalid_request` error code.
 
-The AS returns the `invalid_mission_intent_evidence` error code where
-the containing exchange returns its errors: in the PAR error response
-for a PAR submission, and in the token error response for a
-token-endpoint carriage that a companion profile defines.
-
-On a surface that carries a Mission-creation idempotency fingerprint
-(the expansion and child-creation token exchanges,
-{{I-D.draft-mcguinness-oauth-mission-expansion}}), presented evidence
-is a member of that fingerprint, which the owning profile lists.
-Recovery of a completed operation on those surfaces returns the
-recorded outcome without re-verifying the presented evidence, even
-when an artifact's freshness or status has since lapsed. PAR-based
-creation and surfaces that submit no Mission Intent carry no such
-fingerprint and keep their own replay and idempotency mechanisms.
+Mission Intent Submission Evidence for OAuth 2.0
+({{I-D.draft-mcguinness-oauth-mission-submission-evidence}})
+specifies the entry convention, required-evidence resolution, the
+binding of evidence to one Intent and to the presenter, the
+verification-cost bound, where the error is returned, and evidence on
+idempotent creation surfaces.
 
 ## Submission Processing Order {#submission-processing}
 
@@ -1089,11 +1055,14 @@ The AS processes a submission in this order:
 3. Compute the provisional `intent_hash` over the `intent` object
    ({{integrity-anchors}}).
 4. Resolve the evidence types policy requires, and refuse a
-   submission missing a required type.
-5. Verify every `evidence` entry under its type's rules, verifying
-   that intent-bound evidence names exactly the provisional
-   `intent_hash` and is bound to this AS and to the established
-   presenter.
+   submission missing a required type
+   ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}).
+5. Verify every `evidence` entry under its type's rules, including
+   that intent-bound evidence is bound to this AS
+   ({{intent-submission-evidence}}), and verify that intent-bound
+   evidence names exactly the provisional `intent_hash` and is bound
+   to the established presenter
+   ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}).
 6. Apply admission policy and derive the Authority Set independently
    ({{authorization-derivation}}).
 7. Render the Intent, the Authority Set, and the material verified
@@ -3122,7 +3091,7 @@ elsewhere in this document that names one of these codes
 | Surface / failing input | Base OAuth error | Optional detail |
 |---|---|---|
 | PAR: malformed Submission envelope or Intent (schema, unknown member, invalid value) | `invalid_request` ({{Section 5.2 of RFC6749}}) | safe `error_description` |
-| PAR, or a companion's token-endpoint submission: a presented evidence entry of an unsupported type, or failing its type's validation or verification, or a required evidence type absent | `invalid_mission_intent_evidence` ({{intent-submission-evidence}}) | safe `error_description` |
+| PAR, or a companion's token-endpoint submission: a presented evidence entry of an unsupported type, or failing its type's validation or verification ({{intent-submission-evidence}}), or a required evidence type absent ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}) | `invalid_mission_intent_evidence` ({{intent-submission-evidence}}) | safe `error_description` |
 | PAR or authorization: malformed or unsupported actual RAR object (an entry of a submitted `authorization_details` proposal) | `invalid_authorization_details` ({{Section 5 of RFC9396}}) | RAR-defined detail |
 | Request from a client registered as Mission-governed: `authorization_details` without `mission_intent` ({{authority-proposal}}) | `invalid_request` ({{Section 4.1.2.1 of RFC6749}}, {{Section 5.2 of RFC6749}}) | safe `error_description` |
 | Authorization or token request: invalid, unknown, or malformed actual RFC 8707 `resource` parameter, or a token-endpoint `resource` outside the Mission's Authority Set | `invalid_target` ({{Section 2 of RFC8707}}) | safe `error_description` |
@@ -3766,11 +3735,12 @@ This document's extension points are:
   {{other-types}}.
 - **Intent Submission Evidence types.** The `evidence` array of the
   Submission envelope is open to evidence types defined by companion
-  profiles ({{intent-submission-evidence}}): each type is a
-  collision-resistant name whose owning specification defines the
-  entry's closed schema, verification, and verified output facts,
-  and an AS refuses an entry of a type it does not support rather
-  than ignoring it.
+  profiles: each type is a collision-resistant name whose owning
+  specification defines the entry's closed schema, verification, and
+  verified output facts
+  ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}), and
+  an AS refuses an entry of a type it does not support rather than
+  ignoring it ({{intent-submission-evidence}}).
 - **Mission Intent members.** The Mission Intent's top level
   ({{mission-intent}}) is open to members a companion profile
   defines, under a short name it registers in the Mission Intent
@@ -5863,6 +5833,18 @@ Local Approved-Set Verification:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Moved the Intent Submission Evidence framework to the Mission Intent
+  Submission Evidence companion
+  ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}) with
+  its wire names and rules unchanged: the entry convention,
+  required-evidence resolution, binding to one exact Intent,
+  presenter agreement, the verification-cost bound, error placement,
+  and the creation-fingerprint note. This document keeps the
+  `evidence` member and its bounds, the reject and policy-input
+  rules, the `invalid_mission_intent_evidence` registration, and the
+  `submission_evidence` record member; its references to the
+  companion are informative.
 
 - Presented the `direct` approval basis first in the Mission Record and
   collected the standing-consent generalization in Standing-Consent

@@ -47,6 +47,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-submission-evidence:
+    title: "Mission Intent Submission Evidence for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-submission-evidence.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-status:
     title: "Mission Status and Lifecycle for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html
@@ -432,7 +440,8 @@ The child-creation token exchange carries:
   ({{I-D.draft-mcguinness-oauth-mission}}) whose `intent` is the
   proposed Child Mission Intent; its OPTIONAL `evidence` array
   carries Intent Submission Evidence under that profile's dispatch,
-  refusal, and never-authority rules.
+  refusal, and never-authority rules and those of
+  {{I-D.draft-mcguinness-oauth-mission-submission-evidence}}.
 
 `authorization_details`:
 : OPTIONAL. The child's authority proposal: the standard {{RFC9396}}
@@ -1614,9 +1623,10 @@ or make the child ineligible.
 
 This is a carryover-specific exception to starting a new child with a fresh
 derivation counter ({{derivation-budget}};
-{{I-D.draft-mcguinness-oauth-mission-derivation-limits}}, Section
-"Counting Derivations"): the replacement continues the old
-child's remaining budget, despite receiving a new record identifier.
+{{I-D.draft-mcguinness-oauth-mission-derivation-limits}}, Sections
+"Effective Limit" and "Counting Derivations"): the replacement
+continues the old child's remaining budget, despite receiving a new
+record identifier.
 Metering and exclusivity require defined, atomic transfer or shared-state
 binding; changing the key to `replacement_id` is not a transfer. Fan-out is
 recounted against new justifying entries in the same serialization domain,

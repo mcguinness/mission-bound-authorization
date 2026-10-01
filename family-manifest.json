@@ -84,7 +84,7 @@
    "architecture_name": "High-assurance architecture"
   }
  },
- "count": 48,
+ "count": 49,
  "drafts": [
   {
    "file": "draft-mcguinness-mission-control-plane.md",
@@ -322,6 +322,7 @@
     "draft-mcguinness-oauth-mission-signals",
     "draft-mcguinness-oauth-mission-status",
     "draft-mcguinness-oauth-mission-status-list",
+    "draft-mcguinness-oauth-mission-submission-evidence",
     "draft-mcguinness-oauth-mission-transaction-authorization",
     "draft-mcguinness-oauth-mission-work-products"
    ]
@@ -463,7 +464,8 @@
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-expansion",
-    "draft-mcguinness-oauth-mission-status"
+    "draft-mcguinness-oauth-mission-status",
+    "draft-mcguinness-oauth-mission-submission-evidence"
    ],
    "adoption_requires": [
     "draft-mcguinness-mission-substrate",
@@ -496,6 +498,12 @@
       "draft-mcguinness-oauth-mission-child-delegation",
       "draft-mcguinness-oauth-mission-expansion"
      ]
+    },
+    {
+     "when": "the submission carries Intent Submission Evidence or policy requires it",
+     "requires": [
+      "draft-mcguinness-oauth-mission-submission-evidence"
+     ]
     }
    ],
    "references": [
@@ -519,7 +527,8 @@
     "draft-mcguinness-oauth-mission-issuance-grant",
     "draft-mcguinness-oauth-mission-progressive",
     "draft-mcguinness-oauth-mission-signals",
-    "draft-mcguinness-oauth-mission-status"
+    "draft-mcguinness-oauth-mission-status",
+    "draft-mcguinness-oauth-mission-submission-evidence"
    ]
   },
   {
@@ -708,7 +717,8 @@
    "pull_when": "A new evidence kind is being designed and a deployment wants to avoid minting another bespoke media type, or Intent Admission Evidence's inbound assertion and emitted attestation are needed.",
    "normative_references": [
     "draft-mcguinness-mission-substrate",
-    "draft-mcguinness-oauth-mission"
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-submission-evidence"
    ],
    "adoption_requires": [],
    "references": [
@@ -717,7 +727,16 @@
     "draft-mcguinness-mission-runtime-evidence",
     "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
-    "draft-mcguinness-oauth-mission-consent-evidence"
+    "draft-mcguinness-oauth-mission-consent-evidence",
+    "draft-mcguinness-oauth-mission-submission-evidence"
+   ],
+   "requires_when": [
+    {
+     "when": "the deployment produces or verifies Intent Admission Evidence",
+     "requires": [
+      "draft-mcguinness-oauth-mission-submission-evidence"
+     ]
+    }
    ]
   },
   {
@@ -740,7 +759,8 @@
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-derivation-limits",
     "draft-mcguinness-oauth-mission-expansion",
-    "draft-mcguinness-oauth-mission-status"
+    "draft-mcguinness-oauth-mission-status",
+    "draft-mcguinness-oauth-mission-submission-evidence"
    ],
    "adoption_requires": [
     "draft-mcguinness-mission-substrate"
@@ -768,6 +788,12 @@
      "when": "a derivation_limit is established for the Mission",
      "requires": [
       "draft-mcguinness-oauth-mission-derivation-limits"
+     ]
+    },
+    {
+     "when": "the submission carries Intent Submission Evidence or policy requires it",
+     "requires": [
+      "draft-mcguinness-oauth-mission-submission-evidence"
      ]
     }
    ],
@@ -797,7 +823,8 @@
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-progressive",
     "draft-mcguinness-oauth-mission-signals",
-    "draft-mcguinness-oauth-mission-status"
+    "draft-mcguinness-oauth-mission-status",
+    "draft-mcguinness-oauth-mission-submission-evidence"
    ]
   },
   {
@@ -1342,6 +1369,7 @@
     "draft-mcguinness-oauth-mission-consent-evidence",
     "draft-mcguinness-oauth-mission-derivation-limits",
     "draft-mcguinness-oauth-mission-progressive",
+    "draft-mcguinness-oauth-mission-submission-evidence",
     "draft-mcguinness-oauth-mission-template"
    ]
   },
@@ -1392,7 +1420,8 @@
    "normative_references": [
     "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
-    "draft-mcguinness-oauth-mission-derivation-limits"
+    "draft-mcguinness-oauth-mission-derivation-limits",
+    "draft-mcguinness-oauth-mission-submission-evidence"
    ],
    "adoption_requires": [
     "draft-mcguinness-mission-substrate"
@@ -1422,13 +1451,20 @@
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-progressive",
     "draft-mcguinness-oauth-mission-signals",
-    "draft-mcguinness-oauth-mission-status"
+    "draft-mcguinness-oauth-mission-status",
+    "draft-mcguinness-oauth-mission-submission-evidence"
    ],
    "requires_when": [
     {
      "when": "a derivation_limit is established for the Mission",
      "requires": [
       "draft-mcguinness-oauth-mission-derivation-limits"
+     ]
+    },
+    {
+     "when": "the submission carries Intent Submission Evidence or policy requires it",
+     "requires": [
+      "draft-mcguinness-oauth-mission-submission-evidence"
      ]
     }
    ]
@@ -1449,7 +1485,8 @@
    "pull_when": "Reviewers routinely narrow a proposed Mission rather than approve or deny.",
    "normative_references": [
     "draft-mcguinness-oauth-mission",
-    "draft-mcguinness-oauth-mission-approval"
+    "draft-mcguinness-oauth-mission-approval",
+    "draft-mcguinness-oauth-mission-submission-evidence"
    ],
    "adoption_requires": [
     "draft-mcguinness-oauth-mission",
@@ -1461,7 +1498,16 @@
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-approval",
     "draft-mcguinness-oauth-mission-consent-evidence",
-    "draft-mcguinness-oauth-mission-expansion"
+    "draft-mcguinness-oauth-mission-expansion",
+    "draft-mcguinness-oauth-mission-submission-evidence"
+   ],
+   "requires_when": [
+    {
+     "when": "the revised submission carries Intent Submission Evidence or policy requires it",
+     "requires": [
+      "draft-mcguinness-oauth-mission-submission-evidence"
+     ]
+    }
    ]
   },
   {
@@ -1555,7 +1601,8 @@
     "draft-mcguinness-oauth-mission-derivation-limits",
     "draft-mcguinness-oauth-mission-discharge",
     "draft-mcguinness-oauth-mission-expansion",
-    "draft-mcguinness-oauth-mission-status"
+    "draft-mcguinness-oauth-mission-status",
+    "draft-mcguinness-oauth-mission-submission-evidence"
    ],
    "adoption_requires": [
     "draft-mcguinness-oauth-mission"
@@ -1579,6 +1626,12 @@
      "requires": [
       "draft-mcguinness-oauth-mission-derivation-limits"
      ]
+    },
+    {
+     "when": "the submission carries Intent Submission Evidence or policy requires it",
+     "requires": [
+      "draft-mcguinness-oauth-mission-submission-evidence"
+     ]
     }
    ],
    "references": [
@@ -1596,7 +1649,8 @@
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-issuance-grant",
     "draft-mcguinness-oauth-mission-signals",
-    "draft-mcguinness-oauth-mission-status"
+    "draft-mcguinness-oauth-mission-status",
+    "draft-mcguinness-oauth-mission-submission-evidence"
    ]
   },
   {
@@ -1885,7 +1939,8 @@
    "summary": "How to widen a Mission's authority: because authority can only narrow within a Mission, widening requires a fresh approval that creates a successor Mission superseding its predecessor.",
    "pull_when": "Approved authority will predictably need to widen mid-task via fresh approval.",
    "normative_references": [
-    "draft-mcguinness-oauth-mission"
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-submission-evidence"
    ],
    "adoption_requires": [
     "draft-mcguinness-oauth-mission"
@@ -1903,7 +1958,16 @@
     "draft-mcguinness-oauth-mission-progressive",
     "draft-mcguinness-oauth-mission-signals",
     "draft-mcguinness-oauth-mission-status",
+    "draft-mcguinness-oauth-mission-submission-evidence",
     "draft-mcguinness-oauth-mission-template"
+   ],
+   "requires_when": [
+    {
+     "when": "the submission carries Intent Submission Evidence or policy requires it",
+     "requires": [
+      "draft-mcguinness-oauth-mission-submission-evidence"
+     ]
+    }
    ]
   },
   {
@@ -2218,7 +2282,8 @@
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-consent-evidence",
-    "draft-mcguinness-oauth-mission-expansion"
+    "draft-mcguinness-oauth-mission-expansion",
+    "draft-mcguinness-oauth-mission-submission-evidence"
    ],
    "adoption_requires": [
     "draft-mcguinness-mission-runtime",
@@ -2238,7 +2303,16 @@
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-continuation",
     "draft-mcguinness-oauth-mission-expansion",
-    "draft-mcguinness-oauth-mission-progressive"
+    "draft-mcguinness-oauth-mission-progressive",
+    "draft-mcguinness-oauth-mission-submission-evidence"
+   ],
+   "requires_when": [
+    {
+     "when": "the submission carries Intent Submission Evidence or policy requires it",
+     "requires": [
+      "draft-mcguinness-oauth-mission-submission-evidence"
+     ]
+    }
    ]
   },
   {
@@ -2315,6 +2389,7 @@
     "draft-mcguinness-oauth-mission-resource-access",
     "draft-mcguinness-oauth-mission-signals",
     "draft-mcguinness-oauth-mission-status",
+    "draft-mcguinness-oauth-mission-submission-evidence",
     "draft-mcguinness-oauth-mission-template",
     "draft-mcguinness-oauth-mission-work-products"
    ]
@@ -2331,8 +2406,8 @@
    "verbs": [
     "govern"
    ],
-   "summary": "Bounds how many derivations the issuer performs under a Mission: an optional requested ceiling, an AS-established effective limit, atomic counting across code exchange, refresh, and Token Exchange, refusal at the cap, and remaining-count disclosure through introspection.",
-   "pull_when": "A deployment wants a hard cap on issuance operations under one Mission, independent of authority and lifetime.",
+   "summary": "Bounds how many derivations the issuer performs under a Mission: an optional requested ceiling, an AS-established effective limit, atomic counting across code exchange, refresh, and Token Exchange (the refreshes of an async delegation family are not counted), refusal at the cap, and remaining-count disclosure through introspection.",
+   "pull_when": "A deployment wants a cap on counted derivations under one Mission, independent of authority and lifetime; the refreshes of an async delegation family are not counted.",
    "normative_references": [
     "draft-mcguinness-oauth-mission"
    ],
@@ -2344,9 +2419,39 @@
     "draft-mcguinness-mission-metering",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-child-delegation",
+    "draft-mcguinness-oauth-mission-continuation",
     "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-template"
+   ]
+  },
+  {
+   "file": "draft-mcguinness-oauth-mission-submission-evidence.md",
+   "slug": "draft-mcguinness-oauth-mission-submission-evidence",
+   "title": "Mission Intent Submission Evidence for OAuth 2.0",
+   "category": "std",
+   "role": "companion",
+   "spec_maturity": "experimental",
+   "maintenance": "active",
+   "group": "approval-time",
+   "verbs": [
+    "propose"
+   ],
+   "summary": "Defines how typed evidence presented with a Mission Intent is processed: the entry convention, required evidence resolved before derivation, binding to one exact Intent, agreement with the authenticated presenter, bounded verification cost, and where refusals are returned.",
+   "pull_when": "A deployment admits Mission Intents only with authenticated evidence about their origin, consent, or presenter.",
+   "normative_references": [
+    "draft-mcguinness-oauth-mission"
+   ],
+   "adoption_requires": [
+    "draft-mcguinness-oauth-mission"
+   ],
+   "requires_when": [],
+   "references": [
+    "draft-mcguinness-mission-shaping",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-approval-revision",
+    "draft-mcguinness-oauth-mission-child-delegation",
+    "draft-mcguinness-oauth-mission-expansion"
    ]
   }
  ]

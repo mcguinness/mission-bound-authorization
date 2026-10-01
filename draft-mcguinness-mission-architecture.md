@@ -338,6 +338,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-submission-evidence:
+    title: "Mission Intent Submission Evidence for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-submission-evidence.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-mandate:
     title: "Mission Mandate"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html
@@ -860,7 +868,9 @@ The question: how does a user's request become a candidate approved
 task? In OAuth, the boundary is the client side and Intent Shaping
 produces an untrusted Mission Intent
 ({{I-D.draft-mcguinness-mission-shaping}}), entering through Pushed
-Authorization Requests {{RFC9126}} or the MAS submission endpoint. In
+Authorization Requests {{RFC9126}} or the MAS submission endpoint,
+with any Intent Submission Evidence processed under
+{{I-D.draft-mcguinness-oauth-mission-submission-evidence}}. In
 AAuth, the agent sends the native description and requested tools to
 the Person Server's mission endpoint. The AAuth binding defines no
 Mission Intent or dependency on the shaping profile.
@@ -3422,6 +3432,7 @@ bound profiled by `aauth-mission-expiry`.
 | Document | Role |
 |---|---|
 | `mission-shaping` | Client-side shaping of a user's request into a candidate Mission Intent, as untrusted proposal. |
+| `oauth-mission-submission-evidence` | The Intent Submission Evidence framework: the entry convention evidence types follow, required evidence resolved before derivation, binding to one exact Intent and to the presenter, bounded verification cost, and error placement; it defines no evidence types. |
 | `oauth-mission-consent-evidence` | The `consent_rendering_hash` anchor and signed evidence of what the Approver was shown, with the translation floor and Disclosure Interrogation that keep the approval surface readable and questionable. |
 | `oauth-mission-approval` | Asynchronous approval over the deferred substrate. |
 | `mission-approval-governance` | The Approval Governance Record: authenticated, event-bound, policy-authorized assertions standing behind an approval decision, committed atomically with Mission activation and immutable once signed. |
