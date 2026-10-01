@@ -67,7 +67,7 @@ informative:
     date: 2026
   I-D.draft-zhu-oauth-async-delegation:
   I-D.draft-mcguinness-oauth-mission-continuation:
-    title: "Mission Continuation: Authorization Continuity for Mission-Bound Authorization"
+    title: "Mission Continuation for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html
     author:
       -
@@ -123,7 +123,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-mission-uma:
-    title: "Mission-Bound Authorization for UMA 2.0"
+    title: "Mission-Bound Authorization for User-Managed Access (UMA) 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-uma.html
     author:
       -
@@ -131,7 +131,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-mission-gnap:
-    title: "Mission-Bound Authorization for GNAP"
+    title: "Mission-Bound Authorization for the Grant Negotiation and Authorization Protocol (GNAP)"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-gnap.html
     author:
       -
@@ -219,7 +219,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-oauth-mission-discharge:
-    title: "Mission Completion and Entry Discharge for OAuth 2.0"
+    title: "Mission Entry Discharge for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-discharge.html
     author:
       -
@@ -323,7 +323,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-oauth-mission-work-products:
-    title: "Mission Work Products"
+    title: "Mission Work Products for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-work-products.html
     author:
       -

@@ -267,7 +267,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-oauth-mission-work-products:
-    title: "Mission Work Products"
+    title: "Mission Work Products for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-work-products.html
     author:
       -
@@ -283,7 +283,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-oauth-mission-continuation:
-    title: "Mission Continuation: Authorization Continuity for Mission-Bound Authorization"
+    title: "Mission Continuation for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html
     author:
       -
@@ -5550,7 +5550,7 @@ resolve before interoperating.
 
 # OAuth Binding Mapping Assessment {#oauth-statement}
 
-<!-- assessed-substrate-digest: 7195da680769b440 -->
+<!-- assessed-substrate-digest: dbcbb50fd1a96f25 -->
 
 This appendix is informative. It is this document's Mapping
 Assessment of itself against the kernel and capabilities of the
