@@ -1730,6 +1730,11 @@ exists.
 
 \[\[ To be removed from the final specification ]]
 
+- `status_checked_at` is the harness's observation, never earlier than
+  the relied-on status's `iat`; `status_expires_at` is its reliance
+  end, never later than a Mission Status Response's
+  `mission.fresh_until`.
+
 - Client-instance references follow their successors:
   draft-mcguinness-oauth-client-instance-assertion is replaced by
   {I-D.draft-mcguinness-oauth-client-instance-id}, and the
