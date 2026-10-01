@@ -9,7 +9,8 @@ validation and authorization still apply. Every behavioral statement below is
 true of the reference implementation at this revision and cites the function
 or the exact test (`describe > it`) that shows it. A path with no witnessing
 test says "no test yet". This document is the documentation foundation for
-#873; §7 lists what that issue still requires.
+#873; §10 lists what that issue still requires. §7 shows how to run both
+configurations.
 
 ## 1. Scope and claims
 
@@ -353,7 +354,165 @@ endpoint tests remove the entry between approval and issuance. The strict
 loader runs when `packages/demo-data` is imported (`SCOPE_PROJECTION`), so a
 mapping that fails it stops the AS before any issuance.
 
-## 7. Status
+## 7. Run it
+
+Both configurations run from `src/` with no OpenFGA, PDP or PEP. Install once
+with `pnpm install --frozen-lockfile`.
+
+| Configuration | Start | Walkthrough (second shell) |
+|---|---|---|
+| JWT validation alone | `pnpm issuance-only` | `pnpm issuance-only:walkthrough` |
+| JWT plus per-request introspection | `pnpm issuance-only --introspection` | `pnpm issuance-only:walkthrough` |
+
+**What the launcher starts.** `pnpm issuance-only` (`scripts/issuance-only.mjs`
+→ `demo/src/issuance-only-serve.ts` → `startIssuanceOnly` in
+`demo/src/issuance-only.ts`) starts two servers:
+
+- **The reference AS**, at `http://localhost:4400`. This is the full
+  `buildAuthorizationServer` assembly, the same as `src/server.ts`. It is the
+  issuer, and its JWKS is at `/jwks`.
+- **`plain-rs`**, at `http://localhost:4410`, audience
+  `http://localhost:4410/api`.
+
+It reads the shipped config:
+
+- `config/topology.json`: ports, resources, the 300 s access-token lifetime,
+  and the `as-token` key id.
+- `config/scope-projection.json`: the plain RS's `scope_only` entry.
+- `config/policy.json`: the plain RS ceiling entry.
+- `config/clients.json`: the `ap-agent` client.
+- `config/introspection.json`: the `rs-plain` principal, used with
+  `--introspection`.
+
+The environment can override the ports with `AS_PORT` and `PLAIN_RS_PORT`.
+The audience stays the mapped one. The launcher adds one input that
+`src/server.ts` lacks: the demo's trusted approval input (below).
+
+It writes the per-boot dev credentials, mode 0600, to
+`$TMPDIR/mission-issuance-only.credentials.json` (override with
+`ISSUANCE_ONLY_CREDENTIALS`): the `ap-agent` private key, which is generated
+per boot (D25), the approver console's token, and the lifecycle console's
+token. In a real deployment three different parties hold these three
+credentials. Here the walkthrough plays all three, each step under its own
+credential.
+
+**Approval input, not end-user consent.** Step 2 is the demo's trusted
+approval input. It is the `svc:approver-console` service principal (approver
+`bob`, achieved `acr` `mfa`) behind `allowHeadlessAdjudication`, the same input
+the demo stack uses (`demo/src/stack.ts`). The approver identity comes from
+that registration, never from the `decide` body. It is not a browser login
+and not end-user consent. A deployment replaces it with its own approver
+authentication (`ApprovalSessionStore`).
+
+**The walkthrough** (`runWalkthrough`), over real HTTP. The `mission_intent`
+targets the plain RS, the `authorization_details` proposal is
+`reports:report.read`, the request names no `scope`, and the Subject is
+`alice`. Each step prints its request and result. Expected output, abridged:
+
+```
+1. PAR                     <- 201 {"request_uri":"urn:ietf:params:oauth:request_uri:..."}
+2. Approval                <- 200 {"code":"(redacted)"}             (as svc:approver-console)
+3. Code exchange           <- 200 {"token_type":"DPoP","scope":"reports.read","expires_in":300,
+                                   "access_token_claims":{"aud":"http://localhost:4410/api","scope":"reports.read",
+                                   "mission":{"id":"msn_...","issuer":"http://localhost:4400"},"cnf":{"jkt":"..."}}}
+4. GET /api/reports        <- 200 {"reports":[]}
+5. POST /api/reports       <- 403 {"error":"insufficient_scope", ... scope="reports.write" ...}
+6. Revoke                  <- 200 {"id":"msn_...","state":"revoked","version":2}   (as svc:console)
+6a. Refresh after revoke   <- 400 {"error":"invalid_grant"}
+6b. GET after revoke       <- 200 {"reports":[]}                                    JWT only: honored until exp
+6b. GET after revoke       <- 401 {"error":"invalid_token","error_description":"the access token is not active"}
+                                                                                    with --introspection
+```
+
+Step 6a's refusal has two independent causes:
+
+- the lifecycle endpoint destroys the Mission's grant on a terminal
+  transition;
+- the issuance gate refuses a non-active Mission.
+
+Either alone refuses the refresh.
+
+CI runs the same two walkthroughs in process:
+- `the issuance-only walkthrough (#873) > JWT only: reports.read is issued and served, reports.write is refused insufficient_scope, and after revocation refresh is refused while the access token is still honored until exp`
+- `the issuance-only walkthrough (#873) > JWT plus introspection: the same path, and after revocation the next call is refused invalid_token`
+
+## 8. Enabled capabilities
+
+**On:** issuance (PAR, the authorization code with PKCE, DPoP-bound JWT access
+tokens), scope projection, refresh, and, in the second configuration,
+per-request introspection at the plain RS.
+
+**Not enabled or not claimed.** The launcher runs the full reference AS
+assembly, so most of these are present in the provider but neither exercised
+nor claimed. Only the ones marked "off" are absent from this deployment.
+
+| Capability | Status in this deployment |
+|---|---|
+| In-Mission delegation (`act` from an `actor_token`) | Not implemented in the provider. The async-delegation exchange refuses any `actor_token` (`invalid_request`) |
+| Cross-organization delegation chains (`act`-bearing) | Off: the launcher passes no `crossOrg` configuration, so the chain exchange refuses |
+| Async-delegation Token Exchange (`request_refresh_token`) | Present and reachable for `ap-agent`; unused and unclaimed |
+| Child Missions | Present (child creation and jwt-bearer redemption are registered). Unreachable for the plain RS, because its ceiling entry has no `delegation.children`. Unclaimed |
+| Cross-domain projection (ID-JAG continuation to the RAS) | Present (continuation store and resource-to-AS map are wired by default); unused and unclaimed. No RAS runs |
+| Runtime profiles (PEP, PDP, enforcement scope) | Off: no PDP, PEP or `mcp-payments` is started |
+| Transaction authorization | Off: the launcher passes no `transactionAuthorization`, so `/transaction` replies 501 |
+| Templates and dispatch | Present (the demo template is seeded, and `ap-agent` may use the dispatch grant); unused and unclaimed |
+| Expansion and deferred grants (AROP DTR) | Present; unused and unclaimed |
+| Containment and protected events | Present (trusted sources are seeded); unused and unclaimed |
+| Entry discharge | Off: no `dischargeAuthority` is configured, so no completion condition can enter a record |
+| Status endpoint and Status List | Present; not part of this deployment's revocation contract. plain-rs uses introspection, not Status |
+| Mission Signals | Off: no lifecycle subscriber is injected |
+| Dev ordinary-token route | Off: `devOrdinaryIssuance` is not set |
+| OIDC (`openid`, id_token) | Present (the client may request `openid`); unused by the walkthrough |
+
+A reader adopting this deployment depends only on the "On" set. A present but
+unclaimed capability is neither tested here nor covered by the Deployment
+Profile.
+
+## 9. Pinned adoption closure
+
+**Implementation revision.** This document was written against the branch
+HEAD `59093a87`. Reproduce a reader's revision with
+`git log -1 --format=%H -- src/docs/issuance-only-deployment.md`, the commit
+that last changed this document, or with the merge commit of the PR that
+published it, then `pnpm install --frozen-lockfile` from `src/`.
+
+**In-repo drafts, each at `git log -1 --format=%h -- <draft>.md`:**
+
+| Draft | Revision | Role |
+|---|---|---|
+| `draft-mcguinness-oauth-mission.md` (the OAuth binding) | `4777b582` | Normative: Mission intake, derivation, approval, record, issuance, scope projection, introspection, lifecycle |
+| `draft-mcguinness-oauth-mission-resource-access.md` | `7fc9ef45` | Normative: the `mission_resource_access` type and its scope-projection conditions |
+| `draft-mcguinness-mission-architecture.md` | `e2dda50a` | Informative: the entry ramp, assurance claims and the Deployment Profile shape |
+
+**RFCs used on this path:**
+
+- RFC 6749 (OAuth 2.0)
+- RFC 6750 (bearer tokens and the `WWW-Authenticate` challenge)
+- RFC 7515 (JWS), RFC 7517 (JWK) and RFC 7519 (JWT)
+- RFC 7523 (`private_key_jwt` client authentication)
+- RFC 7636 (PKCE)
+- RFC 7638 (JWK thumbprint, `cnf.jkt`)
+- RFC 7662 (introspection)
+- RFC 7800 (`cnf`)
+- RFC 8707 (resource indicators)
+- RFC 9068 (JWT access tokens)
+- RFC 9126 (PAR)
+- RFC 9396 (RAR, `authorization_details`)
+- RFC 9449 (DPoP)
+- RFC 3986 (URIs)
+
+**Dependencies, from `src/pnpm-lock.yaml`:**
+
+| Package | Version | Used by |
+|---|---|---|
+| `oidc-provider` | 9.10.0 | the AS |
+| `jose` | 6.2.3 | the AS (`^6.1.3`), plain-rs (`^6.1.3`), and `oidc-provider` itself |
+| `better-sqlite3` | 12.11.1 | the Mission kernel store (`@mission/store`) |
+| `tsx` | 4.23.1 | the launcher and walkthrough |
+| `pnpm` | 11.15.1 | `packageManager` |
+| Node.js | `>=22` (`engines`) | oidc-provider supports the v22 LTS; the shell runs below used v23.10.0, for which oidc-provider prints an "Unsupported runtime" warning |
+
+## 10. Status
 
 A proposed reference deployment. It is not an owner-accepted conformance
 class and makes no production-readiness claim.
@@ -362,10 +521,6 @@ This document is the documentation foundation for #873: the deployment
 contract, the claim and residual matrix, a hook inventory, and an index of
 existing evidence. #873 still requires the following before it closes:
 
-- **Runnable configurations:** startup and configuration instructions for the
-  JWT-only and introspection configurations, the approval and token requests,
-  and a successful `reports.read` call. Also the enabled-capability list and
-  the pinned adoption closure.
 - **`src/docs/provider-integration-port.md`:** the full obligation matrix,
   covering the transaction and acceptance boundary, permitted asynchronous
   work, crash and recovery behavior, public-surface test, and residual for
