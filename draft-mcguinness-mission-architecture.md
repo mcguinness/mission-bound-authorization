@@ -1224,6 +1224,30 @@ spine by the question each answers.
  analyze      Security Model (the trusted base)
 ~~~
 
+The family manifest records each verb's owning documents. The
+Packages column gives the product architect's view of the same
+system: five architecture packages a deployment builds, independent
+of how the drafts are cut for standardization. They are Mission
+Control; Authority Distribution, which includes the four Mission
+Issuer bindings (OAuth, the MAS, UMA, and GNAP); Runtime Enforcement;
+Agent Execution Governance; and Evidence and Accountability. A
+document can serve more than one package, and the document map
+({{document-map}}) names every draft.
+
+| Verb | Owning documents | Packages |
+| --- | --- | --- |
+| propose | `mission-shaping`, `oauth-mission-submission-evidence` | Agent Execution Governance |
+| approve and record | `oauth-mission`, `mission-authority-server`, `mission-aauth`, `mission-uma`, `mission-gnap`, `mission-substrate`, `oauth-mission-resource-access`, `oauth-mission-issuance-grant`, `oauth-mission-consent-evidence`, `oauth-mission-approval`, `oauth-mission-approval-revision`, `oauth-mission-template`, `mission-approval-governance` | Mission Control; Authority Distribution; Evidence and Accountability |
+| govern | `oauth-mission-status`, `oauth-mission-status-list`, `oauth-mission-signals`, `oauth-mission-management`, `oauth-mission-discharge`, `oauth-mission-expansion`, `oauth-mission-progressive`, `oauth-mission-containment`, `oauth-mission-derivation-limits`, `mission-control-plane`, `mission-discovery`, `mission-metering`, `mission-aauth-management`, `aauth-mission-expiry` | Mission Control; Runtime Enforcement (metering); Agent Execution Governance (discovery) |
+| enforce each action | `mission-runtime`, `mission-runtime-oauth`, `mission-authzen`, `mission-runtime-evidence`, `mission-capability-binding`, `oauth-mission-transaction-authorization` | Runtime Enforcement; Evidence and Accountability |
+| run and wind down | `mission-harness`, `mission-orchestration` | Agent Execution Governance |
+| delegate | `oauth-mission-child-delegation`, `oauth-mission-attenuation`, `oauth-mission-cross-org-delegation` | Authority Distribution |
+| project | `oauth-mission-cross-domain`, `oauth-mission-cross-org-delegation` | Authority Distribution |
+| continue | `oauth-mission-continuation` | Authority Distribution |
+| prove | `oauth-mission-consent-evidence`, `oauth-mission-approved-set-verification`, `oauth-mission-work-products`, `mission-runtime-evidence`, `mission-mandate`, `mission-audit`, `mission-evidence-envelope` | Evidence and Accountability |
+| analyze | `mission-security-model`, `mission-aam`, this document | all five |
+{: #packages title="The verb spine: owning documents and packages"}
+
 ## Propose
 
 The question: how does a user's request become a candidate approved
@@ -1346,7 +1370,9 @@ section. The chooser: the OAuth binding's token-exchange delegation for an
 execution hop living and dying with the parent's lifecycle; a Child
 Mission when the delegate needs its own lifecycle, approval, or
 audit identity; attenuation, experimental, only where offline
-minting is the constraint. AAuth delegates natively: a
+minting is the constraint. The same principal exercising the same
+authority concurrently is not delegation at all but swarm execution
+({{swarm-execution}}). AAuth delegates natively: a
 parent-mediated sub-agent under `parent_agent`, distinct from the
 call chain of a service hop, with no Authority Set machinery imported
 ({{I-D.draft-mcguinness-mission-aauth}}).
@@ -1382,18 +1408,11 @@ Mission-grain budget: consumption bounds attach to the Mission, not to
 any one instance, so a swarm of instances shares one budget
 ({{I-D.draft-mcguinness-mission-metering}}).
 
-The decision ladder:
-
-- The same principal exercising the same authority concurrently is
-  the swarm: more attested instances of the pinned Deployment
-  deriving under one Mission, no new construct.
-- A different principal acting inline is a delegated token with an
-  `act` hop (the OAuth binding's Delegation Within a Mission section).
-- A durable sub-agent needing its own lifecycle, approval, or audit
-  identity is a Child Mission
-  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
-- Offline narrowing is attenuation
-  ({{I-D.draft-mcguinness-oauth-mission-attenuation}}).
+Swarm execution is the rung before the Delegate verb's chooser: more
+attested instances of the pinned Deployment deriving under one
+Mission, with no new construct. A different principal acting inline,
+a durable sub-agent, and offline narrowing take the chooser's other
+rungs.
 
 ## Project
 
@@ -2429,31 +2448,6 @@ actually take, and the second is the reference:
   path, action-bound approval, active freshness, and agent-isolated
   approval rendering (the High-Assurance Agent level).
 
-### The Five Packages {#packages}
-
-Independent of how the drafts are cut for standardization, the
-system decomposes into five architecture packages; the document map
-({{document-map}}) names every draft, and its groups, not this list,
-are the maintained assignment. The packages are the product
-architect's view of the same system, and a draft can serve more than
-one package:
-
-1. **Mission Control**: the object, approval (including deferred and
-   revision), lifecycle, status and signals, expansion, completion,
-   management.
-2. **Authority Distribution**: the four Mission Issuer bindings
-   (OAuth, the MAS, UMA, and GNAP), the issuance grant, cross-domain
-   projection, child delegation, offline attenuation.
-3. **Runtime Enforcement**: the runtime contract, the AuthZEN
-   profile, parameter binding, custody, metering.
-4. **Agent Execution Governance**: the harness, orchestration,
-   shaping, discovery.
-5. **Evidence and Accountability**: consent evidence, the Mandate,
-   audit transparency, and the decision and execution evidence the
-   runtime package produces.
-
-A product architect deploys packages; a standards reviewer reads
-drafts; the two views name the same system.
 
 ## Assurance Claims {#assurance-claims-axis}
 
