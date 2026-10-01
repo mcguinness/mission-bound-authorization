@@ -149,6 +149,12 @@ export async function validateContinuationAssertion(
   if (header.typ !== IDENTITY_CONTINUATION_JWT_TYP) {
     throw new ContinuationAssertionError("invalid_request", "wrong assertion typ");
   }
+  // @spec id-continuation-assertion — `aud` is "a single string exactly
+  // matching the IdP issuer identifier" (ICA -02 3.2). jose accepts an array
+  // that contains the audience, so an array is refused here.
+  if (typeof payload.aud !== "string") {
+    throw new ContinuationAssertionError("invalid_request", "continuation assertion aud MUST be a single string");
+  }
 
   // 4. Bounded lifetime: exp - iat <= 300 AND exp > iat.
   const iat = payload.iat;

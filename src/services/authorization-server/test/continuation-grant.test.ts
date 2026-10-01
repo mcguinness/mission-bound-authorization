@@ -168,7 +168,7 @@ interface IcaOpts {
   act?: { iss: string; sub: string };
   iatSec?: number;
   expSec?: number;
-  aud?: string;
+  aud?: string | string[];
   over?: Record<string, unknown>;
 }
 
@@ -483,6 +483,15 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_request");
     expect(body.error_description).toMatch(/lifetime/);
+  });
+
+  it("(a1) an ICA whose aud is an array -> invalid_request, even when it holds only the AS issuer (ICA -02 3.2)", async () => {
+    const { handle } = newLineage("apev-a1");
+    const res = await tokenExchange({ subjectToken: await mintICA(handle, { aud: [ISSUER] }) });
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toMatch(/aud MUST be a single string/);
   });
 
   it("(b0) consumption is atomic with issuance (#617 review 1): a redemption refused at the Mission gate leaves the ICA UNCONSUMED; the SAME assertion redeems once the gate reopens", async () => {

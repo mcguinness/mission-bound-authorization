@@ -35,7 +35,7 @@ interface MintOpts {
   over?: Record<string, unknown>;
   omit?: string[];
   typ?: string;
-  aud?: string;
+  aud?: string | string[];
   iss?: string;
   iatSec?: number;
   expSec?: number;
@@ -115,6 +115,15 @@ describe("validateContinuationAssertion — rejects", () => {
     await expect(
       validateContinuationAssertion(await mintICA({ aud: `${AS}/token` }), ctx()),
     ).rejects.toMatchObject({ code: "invalid_grant" });
+  });
+
+  it("an aud array, even one containing only the AS issuer (ICA -02 3.2: a single string)", async () => {
+    for (const aud of [[AS], [AS, "https://other.test"]]) {
+      await expect(validateContinuationAssertion(await mintICA({ aud }), ctx())).rejects.toMatchObject({
+        code: "invalid_request",
+        message: expect.stringMatching(/aud MUST be a single string/),
+      });
+    }
   });
 
   it("lifetime exceeding 300s", async () => {
