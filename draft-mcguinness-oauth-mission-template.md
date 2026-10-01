@@ -358,7 +358,10 @@ A Mission Template is a consented object with these members:
   whose established Subject does not equal an entry of `subjects` in
   both `iss` and `sub`, or whose Agent (the instance's `client_id`) is
   not an entry of `agents`, so a template cannot mint a Mission for a
-  party the human did not consent to.
+  party the human did not consent to. The two lists are independent:
+  any listed Agent may serve any listed Subject, subject to the other
+  Dispatch checks ({{dispatch}}); a deployment that needs restricted
+  pairings uses separate templates.
 
 `instance_lifetime`:
 : REQUIRED. A positive integer number of seconds. The per-instance
@@ -1080,7 +1083,8 @@ IANA action. Following the restraint of the sibling profiles:
 
 - `allowed_dispatchers` lists `client_id` strings, and
   `allowed_recipients` is an object of `subjects` (`iss` and `sub`)
-  and `agents` (`client_id`), each checked separately at Dispatch.
+  and `agents` (`client_id`), each checked separately at Dispatch, so
+  any listed Agent may serve any listed Subject.
 - The dispatch bounds have stated encodings. `instance_lifetime` and
   `review_cadence` are positive integer seconds, the latter measured
   from the approval's `approved_at`; `max_active` is a positive
