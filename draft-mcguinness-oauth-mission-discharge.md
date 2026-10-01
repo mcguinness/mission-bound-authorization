@@ -140,8 +140,11 @@ use discharge to escalate, is given in {{completion-security}}.
 
 This document is optional and depends normatively on the issuance
 profile, its Mission Resource Access Profile, and the Status profile;
-it is not implementable alone. A deployment that ends an entry's
-authority only by Mission revocation or expiry is fully conformant to
+it is not implementable alone. It places no new requirement on the
+issuance profile or the Status profile: it defines one OPTIONAL entry
+member, one OPTIONAL Mission Lifecycle extension operation, and the
+rules for handling them. A deployment that ends an entry's authority
+only by Mission revocation or expiry is fully conformant to
 the issuance profile and is unaffected by this document. A deployment
 claims this capability only when it issues or consumes entries
 carrying `terminal_when`. The capability is newer and less exercised
@@ -442,38 +445,15 @@ at-least-once sender stops retrying against.
 
 # Mission Completion and Entry Discharge {#completion}
 
-This section is OPTIONAL. A deployment that ends an entry's authority
-only by Mission revocation or expiry is fully conformant to the
-issuance profile and is unaffected by this section, which places no
-new requirement on the issuance profile or the Status profile: it
-defines one OPTIONAL entry member, one OPTIONAL Mission Lifecycle
-extension operation, and the rules for handling them. A deployment
-claims the completion capability only when it issues or consumes
-entries carrying `terminal_when`. The capability is newer and less
-exercised than baseline issuance and runtime enforcement, and is not
-required by any Mission Assurance Level; its entry-discharge details
-may change.
+Without entry discharge, a Mission granted authority to release a
+record "for this enrollment" keeps deriving that authority after the
+enrollment closes, until a clock or a revoke stops it. The Intent's
+`success_criteria` describe when the task is complete, but the
+issuance profile keeps them inert: they are rendered and committed,
+and carry no machine effect ({{I-D.draft-mcguinness-oauth-mission}}).
 
-The issuance profile gates issuance on Mission state but has no
-notion of an approved entry being **done**. A Mission granted
-authority to release a record "for this enrollment" keeps deriving
-that authority after the enrollment closes, until a clock or a revoke
-stops it. The Intent's `success_criteria` describe when the task is
-complete, but the issuance profile keeps them inert: they are
-rendered and committed, and carry no machine effect
-({{I-D.draft-mcguinness-oauth-mission}}).
-
-This section supplies the enforceable counterpart. It defines
-`terminal_when`, an OPTIONAL Common Constraint
-({{I-D.draft-mcguinness-oauth-mission-resource-access}}) on a
-`mission_resource_access` entry that carries one or more completion
-conditions. When a condition is met, the entry is **discharged**: the
-Authorization Server no longer derives a token carrying that entry
-({{discharge}}), exactly as it refuses derivation for a non-`active`
-Mission.
-
-Three properties make this safe inside the Mission model and this
-section requires all three:
+Three properties make discharge safe inside the Mission model, and
+this section requires all three:
 
 - **Discharge is monotonic.** It only removes an entry's authority; it
   can never widen the entry or the Mission.
