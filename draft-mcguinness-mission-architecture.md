@@ -777,6 +777,8 @@ Attribution shares the grain limit: proving which concurrent task
 item produced a permitted action needs a verified cross-link that no
 family carrier supplies ({{binding-properties}}).
 
+## Survivable Incorrectness {#survivable-incorrectness}
+
 The levers share one strategy: they convert semantic risk into
 structural signals. A policy decision point is never asked to judge
 whether content is harmful; provenance (the harness taint context),
@@ -807,26 +809,6 @@ taint rule, egress mediation, and catalog filtering
 retrieval, memory, and context assembly scoped to the Mission, has
 no interoperable form yet and is deployment discipline, declared in
 the Deployment Profile ({{deployment-profile}}) rather than claimed.
-
-The envelope meets its hardest case in the open world. The OAuth
-model starts with authority client-proposed and enumerated at approval;
-an agent that discovers resources at encounter time breaks that premise,
-and some authorization mechanisms invert it: the resource declares its
-own operations and consequences. Who owns meaning, and how it reaches
-derivation, consent, and enforcement, is stated once as the ontology
-contract ({{ontology-contract}}).
-
-Where the OAuth discovery profile consumes a self-declaration, the
-declaration's digest is committed with the binding evidence: an
-additional commitment beside the Mission's integrity anchors,
-recording what
-the resource claimed to be at the moment authority bound to it. The rest of the
-encounter, its routing through drawdown, catalog binding, projection,
-or fresh approval, and its identity pinning and floors, is the
-discovery companion's contract
-({{I-D.draft-mcguinness-mission-discovery}}). AAuth can use R3 for
-resource-owned deterministic semantics without placing that declaration
-or such an additional commitment in the private mission blob.
 
 # Non-Goals {#non-goals}
 
@@ -1574,8 +1556,15 @@ tracks.
 
 ## The Ontology Contract {#ontology-contract}
 
-The derivation boundary ({{derivation-boundary}}, later in this
-document) settles who commits authority; this section
+The capability envelope ({{capability-envelope}}) meets its hardest
+case in the open world. The OAuth model starts with authority
+client-proposed and enumerated at approval; an agent that discovers
+resources at encounter time breaks that premise, and some
+authorization mechanisms invert it: the resource declares its own
+operations and consequences.
+
+The derivation boundary ({{derivation-boundary}}, below) settles who
+commits authority; this section
 settles who owns what an operation means. The ownership statement is
 one sentence: the resource owns the ontology, its operations, its
 constraint semantics, and their consequences, while derivation,
@@ -1619,15 +1608,19 @@ Operation Profiles:
 The encounter contract:
 : What is submitted, adjudicated, and recorded when an agent meets a
   resource the approval could not enumerate, so meaning that arrives
-  late still binds before use. Home: the discovery companion
+  late still binds before use: the encounter's routing through
+  drawdown, catalog binding, projection, or fresh approval, and its
+  identity pinning and floors. Home: the discovery companion
   ({{I-D.draft-mcguinness-mission-discovery}}).
 
 Resource-Declared Semantics:
 : The full inversion: the resource publishes its operations, their
   human meaning, and their consequences. Under the OAuth discovery
   composition, the declaration can be content-addressed by `r3_s256`
-  as an additional commitment beside the Mission's integrity anchors; the
-  declared operations become candidate vocabulary that derivation
+  as an additional commitment beside the Mission's integrity anchors,
+  recording what the resource claimed to be at the moment authority
+  bound to it; the declared operations become candidate vocabulary
+  that derivation
   narrows against. AAuth can instead use R3 as a resource-owned
   deterministic authorization vocabulary while the private mission
   blob remains contextual PS governance. R3 content addressing is not
