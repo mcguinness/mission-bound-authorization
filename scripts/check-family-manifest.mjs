@@ -102,6 +102,11 @@
 //                                Conformance-titled floor, and examples/vectors or a recorded,
 //                                non-empty waiver reason (see
 //                                scripts/generate-drafts-index.mjs's validateCandidateGate())
+//   (ab) wire names           - CONTRIBUTING's Wire Names Convention: a name a draft declares in
+//                                its IANA Considerations into a registry the family does not
+//                                create does not contain `mission`, unless it is listed in
+//                                GRANDFATHERED_WIRE_NAMES; or a grandfathered entry is no
+//                                longer declared (remove it)
 
 import fs from "node:fs";
 import path from "node:path";
@@ -178,6 +183,123 @@ export const HAND_TYPED_COUNT = /\b\d+-document\b|\b\d+\s+documents?\b/i;
 // itself: a fixture test demonstrates its shape-sensitivity rather than
 // hiding it (see the review's own P2 note).
 export const UNSTABLE_SELF_CLAIM = /\bthis (?:document|profile|specification|binding|draft)\b[^.]{0,80}\bis\s+(?:not\s+(?:yet\s+)?a\s+stable\s+interface|unstable|not\s+yet\s+stable|immature)\b/i;
+
+// Check (ab): CONTRIBUTING's Wire Names Convention. "New Mission-specific
+// names introduced into shared registries outside the family include
+// `mission`." The check reads declarations only (registration entries in
+// IANA Considerations), never prose or JSON members, and classifies a
+// registry as family-owned when any draft's IANA section creates or
+// establishes it. Existing definitions are grandfathered explicitly; a
+// grandfathered entry that is no longer declared is itself a finding, so
+// the list shrinks as names are migrated.
+export const GRANDFATHERED_WIRE_NAMES = new Set([
+  // OAuth Parameters, ruled grandfathered in the wire-name audit (#911, F1):
+  "draft-mcguinness-oauth-mission-child-delegation:parent",
+  "draft-mcguinness-oauth-mission-child-delegation:child_actor",
+  "draft-mcguinness-oauth-mission-expansion:predecessor",
+  "draft-mcguinness-oauth-mission-expansion:creation_request_id",
+  "draft-mcguinness-oauth-mission-template:dispatch_event_id",
+]);
+
+const WIRE_REGISTRY_QUOTE = /"([^"]+)"\s*(?:sub-)?[Rr]egistry/g;
+const WIRE_REGISTRY_CREATE = /(?:create|establish)\w*\s+(?:a\s+|the\s+|an\s+)?(?:new\s+)?"([^"]+)"\s*(?:sub-)?[Rr]egistry/gi;
+const WIRE_DECLARATIONS = [
+  /^\s*[-*]\s+(?:(?:Claim|Metadata|Parameter|Field|Member|Header Parameter|Capability)\s+)?[Nn]ame\s*:\s*`?([^`\s]+)`?/,
+  /^\s*[-*]\s+(?:Value|Error|Event Type|Token Type URI|URN|URI|Capability URN|Subtype name)\s*:\s*`?([^`\s]+)`?/,
+  /^\s*[-*]\s+`([^`]+)`\s*(?:\([^)]*\))?\s*(?::.*)?$/,
+];
+
+// The lines of a draft's top-level IANA Considerations section, with
+// fenced artwork marked so declarations are never read from examples.
+function ianaLines(text) {
+  const out = [];
+  let inIana = false;
+  let fence = false;
+  text.split("\n").forEach((l, i) => {
+    if (/^(~~~|```)/.test(l)) fence = !fence;
+    if (!fence && /^# /.test(l)) inIana = /IANA/.test(l);
+    if (!fence && /^--- back/.test(l)) inIana = false;
+    if (inIana) out.push({ line: i + 1, text: l, fence });
+  });
+  return out;
+}
+
+// drafts: [{ slug, text }]. Returns finding strings.
+export function validateWireNames(drafts, grandfathered = GRANDFATHERED_WIRE_NAMES) {
+  const familyRegistries = new Set();
+  for (const d of drafts) {
+    const joined = ianaLines(d.text).map((x) => x.text).join(" ").replace(/\s+/g, " ");
+    for (const m of joined.matchAll(WIRE_REGISTRY_CREATE)) familyRegistries.add(m[1].toLowerCase());
+  }
+  const declarations = [];
+  for (const d of drafts) {
+    let registry = null;
+    let para = [];
+    const flush = () => {
+      const t = para.map((x) => x.text).join(" ").replace(/\s+/g, " ");
+      const quoted = [...t.matchAll(WIRE_REGISTRY_QUOTE)];
+      if (quoted.length) registry = quoted[quoted.length - 1][1];
+      // A URN in prose is a declaration only where the sentence registers
+      // it ("This document registers `urn:...` in the ... registry"); a URN
+      // merely mentioned (an inherited type, the namespace) is not.
+      for (const m of t.matchAll(/\bregisters\s+`(urn:[^`\s]+)`/g)) declarations.push({ slug: d.slug, line: para[0].line, registry, name: m[1] });
+      para = [];
+    };
+    const lines = ianaLines(d.text);
+    for (let i = 0; i < lines.length; i++) {
+      const { line, text, fence } = lines[i];
+      if (fence) continue;
+      const heading = text.match(/^#{2,}\s+(.*?)\s*(?:\{#.*\})?$/);
+      if (heading) {
+        flush();
+        registry = heading[1].replace(/\s+(?:Registration|Registrations|Registry)$/, "");
+        continue;
+      }
+      // Definition-list form: "URN:" / ": `urn:...`".
+      if (/^(?:URN|URI|Name|Value):\s*$/.test(text) && i + 1 < lines.length) {
+        const dd = lines[i + 1].text.match(/^:\s+`?([^`\s]+)`?/);
+        if (dd) {
+          flush();
+          declarations.push({ slug: d.slug, line: lines[i + 1].line, registry, name: dd[1] });
+          i++;
+          continue;
+        }
+      }
+      let name = null;
+      for (const re of WIRE_DECLARATIONS) {
+        const m = text.match(re);
+        if (m) {
+          name = m[1];
+          break;
+        }
+      }
+      if (name) {
+        flush();
+        declarations.push({ slug: d.slug, line, registry, name });
+        continue;
+      }
+      if (/^\s*$/.test(text)) {
+        flush();
+        continue;
+      }
+      if (/^\s*[-*]\s/.test(text) || /^\s+\S/.test(text)) continue;
+      para.push({ line, text });
+    }
+    flush();
+  }
+  const findings = [];
+  const declaredKeys = new Set(declarations.map((x) => `${x.slug}:${x.name}`));
+  for (const x of declarations) {
+    if (x.registry && familyRegistries.has(x.registry.toLowerCase())) continue;
+    if (/mission/i.test(x.name)) continue;
+    if (grandfathered.has(`${x.slug}:${x.name}`)) continue;
+    findings.push(`${x.slug}.md:${x.line}: \`${x.name}\` is declared in ${x.registry ? `the "${x.registry}" registry` : "a registry"} outside the family without \`mission\` (CONTRIBUTING, Wire Names Convention); prefix it, or grandfather it in GRANDFATHERED_WIRE_NAMES with a ruling`);
+  }
+  for (const key of grandfathered) {
+    if (!declaredKeys.has(key)) findings.push(`GRANDFATHERED_WIRE_NAMES lists "${key}", which no draft declares any more; remove the entry`);
+  }
+  return findings;
+}
 
 const errors = [];
 const fail = (check, msg) => errors.push(`[${check}] ${msg}`);
@@ -1046,6 +1168,11 @@ function main() {
   // assurance-level/reference-stack axis as generated content, not leave it
   // absent). Same shape as (l) and (u).
   for (const e of validateReferenceStacks(ROOT)) fail("catalog-stacks", e);
+
+  // (ab) Wire names: CONTRIBUTING's Wire Names Convention, checked on IANA
+  // declarations only, with existing names grandfathered explicitly.
+  const wireDrafts = onDisk.map((f) => ({ slug: f.replace(/\.md$/, ""), text: fs.readFileSync(path.join(ROOT, f), "utf8") }));
+  for (const e of validateWireNames(wireDrafts)) fail("wire-names", e);
 
   if (errors.length > 0) {
     console.error(`family-manifest check FAILED with ${errors.length} finding(s):
