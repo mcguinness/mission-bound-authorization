@@ -1078,8 +1078,7 @@ async function main() {
     "Alice's agent asks the catalog what it can reach, before any mission exists.",
     "payments shows as reachable but consent_required; no authority is granted yet.",
   );
-  hop("Agent", "AS", "GET /service-catalog?type=mcp", `in-process; represents GET ${asUrl}/service-catalog`);
-  note("access token audience = catalog");
+  hop("Agent", "AS", "service catalog (type=mcp)", "in-process catalog lookup; no HTTP endpoint is served");
   block("catalog response (before any mission)", stack.catalog.catalog("alice", { type: "mcp" }));
   note("payments is consent_required: reachable, but no mission covers it yet.");
 
@@ -1256,7 +1255,7 @@ async function main() {
     "The agent re-reads the catalog now that an active mission covers payments.",
     "the payments connection reflects the active mission, no longer just consent_required.",
   );
-  hop("Agent", "AS", "GET /service-catalog?type=mcp", `in-process; represents GET ${asUrl}/service-catalog`);
+  hop("Agent", "AS", "service catalog (type=mcp)", "in-process catalog lookup; no HTTP endpoint is served");
   block(
     "catalog payments connection",
     stack.catalog.catalog("alice", { type: "mcp" }).services.find((s) => s.id === "payments")?.connections,

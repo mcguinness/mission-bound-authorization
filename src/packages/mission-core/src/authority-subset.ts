@@ -238,9 +238,10 @@ export function conditionCanonicalBytes(condition: unknown): string | undefined 
     return undefined;
   const c = condition as Record<string, unknown>;
   if (typeof c.event_type !== "string") return undefined;
-  if (c.discharge_policy !== undefined && typeof c.discharge_policy !== "string") return undefined;
+  if (c.discharge_authority !== undefined && typeof c.discharge_authority !== "string")
+    return undefined;
   for (const k of Object.keys(c)) {
-    if (k !== "event_type" && k !== "discharge_policy") return undefined;
+    if (k !== "event_type" && k !== "discharge_authority") return undefined;
   }
   return canonicalize(condition as JsonValue);
 }
