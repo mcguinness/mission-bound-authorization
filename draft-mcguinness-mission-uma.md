@@ -77,6 +77,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-submission-evidence:
+    title: "Mission Intent Submission Evidence for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-submission-evidence.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-substrate:
     title: "Mission Substrate Requirements"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
@@ -503,9 +511,11 @@ issuance profile defines it, `intent` plus OPTIONAL `evidence`, under
 that profile's syntactic and Intent Submission Evidence rules (the
 envelope and the Intent are both closed at the top level, the
 authorization server MUST bound size, array lengths, evidence entry
-count, and evidence verification cost, presented evidence is
-dispatched by type and refused when unsupported or failing, and the
-submission is untrusted client input, never authority). The payload
+count, and evidence verification cost
+({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, Section
+"Bounded Verification"), presented evidence is dispatched by type
+and refused when unsupported or failing, and the submission is
+untrusted client input, never authority). The payload
 MAY additionally carry an `authorization_details` claim: the
 client's authority proposal, an array of `authorization_details`
 objects. This claim replaces the issuance profile's PAR-only

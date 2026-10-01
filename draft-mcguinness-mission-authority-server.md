@@ -54,6 +54,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-submission-evidence:
+    title: "Mission Intent Submission Evidence for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-submission-evidence.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-status:
     title: "Mission Status and Lifecycle for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html
@@ -505,10 +513,13 @@ The endpoint serves two operations, dispatched by request media type:
 The request body is a Mission Intent Submission envelope as the
 issuance profile defines it, `intent` plus OPTIONAL `evidence`, and
 the issuance profile's validation and Intent Submission Evidence
-rules apply unchanged ({{I-D.draft-mcguinness-oauth-mission}}): the
+rules apply unchanged ({{I-D.draft-mcguinness-oauth-mission}},
+{{I-D.draft-mcguinness-oauth-mission-submission-evidence}}): the
 submission is untrusted client input and never authority; the MAS
 MUST bound its total size, array lengths, evidence entry count, and
-evidence verification cost; and the envelope and the Intent are both
+evidence verification cost
+({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, Section
+"Bounded Verification"); and the envelope and the Intent are both
 closed at the top level. The issuance profile's OAuth error outcomes
 map to this endpoint's error codes ({{submission-errors}}):
 
@@ -527,8 +538,10 @@ map to this endpoint's error codes ({{submission-errors}}):
   can distinguish a syntax error from an authority-derivation failure.
 - An Intent Submission Evidence entry of an unsupported type, an
   entry that fails its type's verification, or a policy-required
-  evidence type absent from the submission MUST be refused with
-  `invalid_intent_evidence` (the MAS equivalent of the issuance
+  evidence type absent from the submission
+  ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, Section
+  "Required Evidence Is Resolved Before Derivation") MUST be refused
+  with `invalid_intent_evidence` (the MAS equivalent of the issuance
   profile's `invalid_mission_intent_evidence`); presented evidence is
   never silently ignored.
 

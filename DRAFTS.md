@@ -212,6 +212,19 @@ the proposal was produced. (Informational.)
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-shaping.html)
 
+#### Mission Intent Submission Evidence for OAuth 2.0
+
+The framework that Intent Submission Evidence types and authorization
+servers share: the entry convention an evidence type follows,
+resolution of required evidence before derivation, binding of evidence
+to one exact Mission Intent and to the presenter the containing
+exchange establishes, a bound on verification cost, and where the
+error is returned. The OAuth binding carries the `evidence` member,
+refuses any entry it cannot verify, and treats a verified entry as
+policy input, never authority. It defines no evidence types.
+
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-submission-evidence.html)
+
 #### Mission Consent Evidence for OAuth 2.0
 
 Commits the structured consent disclosure shown to the Approver at the

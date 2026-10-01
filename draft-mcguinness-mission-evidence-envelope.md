@@ -46,6 +46,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-submission-evidence:
+    title: "Mission Intent Submission Evidence for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-submission-evidence.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-substrate:
     title: "Mission Substrate Requirements"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
@@ -532,7 +540,9 @@ them distinct because the AS's own evidence hook does
 ({{intent-admission-assertion}}): this is the first type this document
 series registers under the Mission Intent Submission envelope's
 evidence dispatch, which shipped with an empty type registry and
-refuses every presented entry until a profile registers one. Emitted,
+refuses every presented entry until a profile registers one
+({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, Section
+"Evidence Entries"). Emitted,
 the AS records its own admission attestation as a **Mission Intent
 Admission** payload type of the Mission Evidence Envelope
 ({{intent-admission-payload-type}}): the first payload type this
@@ -665,19 +675,24 @@ this type as follows, rejecting the submission with
 9. Verify `presenter.client_id`, and `cnf` where present, equal the
    presenter the containing exchange established; the assertion is
    never an alternative client-authentication mechanism and never
-   selects the presenter ({{I-D.draft-mcguinness-oauth-mission}}).
+   selects the presenter
+   ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}},
+   Section "The Exchange Establishes the Presenter").
 10. Verify `status` is exactly `active`. On success, **commit** the
     `jti` reservation of step 7 (permanent, see above). On failure at
     this step or any of steps 2-9, **release** the reservation.
 
 This type defines no evidence-lineage exception: a shaping or approval
 revision that changes `intent_hash` requires a fresh assertion with a
-fresh `jti`, under the general rule of
-{{I-D.draft-mcguinness-oauth-mission}}.
+fresh `jti`, under the general rule
+({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, Section
+"Evidence Binds One Exact Intent").
 
 **Composition with creation-fingerprint idempotent recovery.** On a
 surface that also carries a Mission-creation idempotency fingerprint
-(expansion, child creation, {{I-D.draft-mcguinness-oauth-mission}}),
+(expansion, child creation;
+{{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, Section
+"Evidence on Idempotent Creation Surfaces"),
 this `jti` reservation is a distinct, submission-plane replay control,
 not a substitute for that fingerprint's own recovery path. Recovery of
 an already-completed creation operation under the fingerprint's own
