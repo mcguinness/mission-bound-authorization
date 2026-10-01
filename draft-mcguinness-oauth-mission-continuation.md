@@ -521,7 +521,9 @@ continuation immediately but does not shorten a credential already issued;
 deployments requiring tighter bounds choose shorter transport lifetimes.
 
 Replay is a transport concern the Mission binding does not relax: the
-Identity Continuation Assertion is single-use by `jti`, and an async
+Identity Continuation Assertion is single-use, keyed on `(iss, jti)`
+({{Section 5.5.7 of I-D.draft-mcguinness-oauth-id-continuation-assertion}}),
+and an async
 delegation family rotates on each refresh with reuse detection over the
 family. A continuation MUST NOT widen authority; the subset check of
 {{authorization-continuity}} is enforced at every issuance, so a
