@@ -1225,7 +1225,9 @@ async function evaluateInner(
       evaluationId: decisionId,
       validUntilMs: deadline.validUntilMs,
       requester: opts.requester ?? { pep_id: "unbound", pep_epoch: `unbound:${randomUUID()}` },
-      nowMs: now().getTime(),
+      // The decision's own clock, read by the domain inside each transaction
+      // it decides in, never a reading taken before an await.
+      clock: () => now().getTime(),
     };
     // An unreachable domain throws here: no decision, so the PEP records
     // `pdp_unreachable` and nothing executes (runtime: "MUST fail closed
