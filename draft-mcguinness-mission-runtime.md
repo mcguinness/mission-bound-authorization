@@ -1370,10 +1370,12 @@ scope.
 A deployment that claims conformance to this profile MUST publish an
 **Enforcement Scope Statement**: the structured, referenceable
 declaration of its enforcement scope that auditors, procurement, and
-interop tests key on. This statement is what earns the
-Runtime-Enforced level of the Mission Assurance Levels, and it feeds
-the Mission Deployment Profile, the deployment-level manifest the
-architecture defines ({{I-D.draft-mcguinness-mission-architecture}}).
+interop tests key on. A deployment adopting the Runtime-Enforced
+bundle of the Mission Assurance Levels publishes this statement; the
+level stays guidance, and the statement's named claims are what a
+relying party compares. The statement feeds the Mission Deployment
+Profile, the deployment-level manifest the architecture describes
+({{I-D.draft-mcguinness-mission-architecture}}).
 
 The statement's baseline declaration, required of every conforming
 deployment regardless of which named claims or assurance extensions it
@@ -3701,6 +3703,11 @@ worked example shows the concrete record
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The Enforcement Scope Statement is what a deployment adopting the
+  Runtime-Enforced bundle publishes, not what earns the level; the
+  level stays guidance, matching the architecture's assurance levels,
+  and the statement's named claims are what a relying party compares.
 
 - The Introduction states this profile as the per-action decision for
   the action classes it covers, composed over the issuance profile's
