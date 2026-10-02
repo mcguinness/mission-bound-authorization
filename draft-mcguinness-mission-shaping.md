@@ -194,48 +194,37 @@ request, such as "resolve this billing dispute", into a Mission Intent
 with a goal, target resources, task bounds, success criteria, purpose,
 and expiry.
 
-This document describes that step. A Mission Shaper is a client-side
-component that produces a candidate Mission Intent, and any Authority
-Proposal submitted with it, before the issuance profile's approval
-flow begins. The shaper can be a rules engine, a form, a workflow, or a
-function that uses a language model. Whatever its implementation, its
+This document describes that step, performed by a client-side Mission
+Shaper. The shaper can be a rules engine, a form, a workflow, or a
+function that uses a language model; whatever its implementation, its
 output is untrusted input to the Mission Issuer ({{proposes-only}}).
 
 The practices in this document make shaping auditable and fail closed.
-When a request is ambiguous, the shaper narrows, asks for
-clarification, or refuses ({{ambiguity}}). When a capability or
-resource is unknown, the shaper records that fact instead of treating
-natural language as authority to create it ({{capability-resolution}}).
-Shaping Evidence records how each proposal was produced
-({{shaping-evidence}}), and model output is evidence for review, not
-an entitlement decision ({{model-output}}). Every later guarantee (the
+An ambiguous request is narrowed, clarified, or refused
+({{ambiguity}}); an unresolved capability is recorded, not treated as
+authority to create it ({{capability-resolution}}); Shaping Evidence
+records how each proposal was produced ({{shaping-evidence}}); and
+after a refusal, denial, or required revision, the shaper constructs
+a narrower next proposal ({{re-shaping}}). Every later guarantee (the
 derived Authority Set, the approval, per-action decisions, and the
 evidence trail) operates on what the shaper proposed.
-
-Shaping is not a single pass. When the Mission Issuer refuses a
-derivation, a deferred review denies, or a reviewer requires revision,
-the shaper constructs the narrower next proposal ({{re-shaping}}).
 
 ## Scope {#scope}
 
 This document is Informational. Deployments differ in how they process
 prompts, which language models they use, and what their products
 require, so no two transform a request into a Mission Intent the same
-way. The interoperable surface is the result of that transformation,
-the Mission Intent and Authority Proposal, which the issuance profile
-defines and validates. This document therefore describes the shaper's
-role in the trust model and recommended shaper behavior. It
-defines no shaping protocol, media type, claim name, or conformance
-class. A deployment can expose shaping as a network service; that
-interface is a local implementation detail
-({{exposing-shaping-as-a-service}}).
+way. The interoperable surface is the result, the Mission Intent and
+Authority Proposal, which the issuance profile defines and validates.
+This document therefore describes the shaper's role in the trust model
+and recommended shaper behavior. It defines no shaping protocol, media
+type, claim name, conformance class, grant type, token format, policy
+language, runtime decision API, or required endpoint; the approved
+Mission and its tokens remain those of the issuance profile.
 
 This document is optional. A deployment that accepts only
 hand-authored Mission Intents conforms to the issuance profile and is
-unaffected by this document. This document defines no OAuth grant
-type, access token format, policy language, runtime decision API, or
-required endpoint; the approved Mission and its tokens remain those of
-the issuance profile.
+unaffected by this document.
 
 ## Mission Substrate {#mission-substrate}
 
