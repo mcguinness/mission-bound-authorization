@@ -513,7 +513,7 @@ token issuance and MUST NOT bypass step 7.
 
 An approval obtained under step 5 SHOULD carry the shape of an
 AuthZEN Access Request and Approval Profile approval object
-({{ARAP}}); steps 6 and 7 mirror the checks the AuthZEN binding
+({{ARAP}}); steps 6 and 7 mirror the checks the AuthZEN profile
 applies to that object when it is presented as decision input, never
 as a bearer bypass ({{I-D.draft-mcguinness-mission-authzen}}). Where
 an Approval Governance Record backs the decision, that record is the

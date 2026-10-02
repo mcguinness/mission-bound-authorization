@@ -1611,3 +1611,123 @@ describe("async-delegation discovery (@spec async-delegation#discovery)", () => 
     expect(meta.identity_continuation_supported).toBe(true);
   });
 });
+
+describe("a fully contained family is refused after rotation, within the owner's boundary (#914 ruling 3)", () => {
+  const contain = (missionId: string, eventId: string, remove: Array<{ resource: string; actions?: string[] }>) =>
+    as.kernel.contain(missionId, {
+      event: {
+        type: "tainted_read",
+        source: "https://siem.example/detections",
+        observed_at: new Date().toISOString(),
+        event_id: eventId,
+      },
+      remove,
+    });
+  const remittanceOnly = () => [
+    {
+      type: "mission_resource_access",
+      resource: RESOURCE,
+      actions: ["payments:remittance.send"],
+      constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+    },
+  ];
+  const actionsOf = (details: unknown): string[] =>
+    ((details ?? []) as Array<{ actions: string[] }>).flatMap((e) => e.actions);
+  /** Run `fn`, counting the refresh tokens oidc-provider saves meanwhile. */
+  async function savingRefreshTokens<T>(fn: () => Promise<T>): Promise<{ result: T; saved: number }> {
+    let saved = 0;
+    const onSaved = () => {
+      saved += 1;
+    };
+    as.provider.on("refresh_token.saved", onSaved);
+    try {
+      return { result: await fn(), saved };
+    } finally {
+      as.provider.removeListener("refresh_token.saved", onSaved);
+    }
+  }
+
+  it("(a) and (b): a family whose ENTIRE confined subset is contained is refused, while a sibling family and the approval grant with surviving authority still refresh", async () => {
+    const { missionId, baseAccessToken, missionRefreshToken } = await issueBaseMission();
+    const a = (await (await asyncDelegate(baseAccessToken, { authorizationDetails: confinedAuthority() })).json()) as {
+      refresh_token: string;
+    };
+    const b = (await (await asyncDelegate(baseAccessToken, { authorizationDetails: remittanceOnly() })).json()) as {
+      refresh_token: string;
+    };
+    // Contain exactly family A's whole subset (invoice.read); B's survives.
+    contain(missionId, "ce-family-a-whole", [{ resource: RESOURCE, actions: ["payments:invoice.read"] }]);
+
+    const refusedA = await savingRefreshTokens(() => refreshFamily(a.refresh_token));
+    const bodyA = (await refusedA.result.json()) as { error?: string; access_token?: string };
+    expect(refusedA.result.status, JSON.stringify(bodyA)).toBe(400);
+    expect(bodyA.error).toBe("invalid_grant");
+    expect(bodyA.access_token).toBeUndefined();
+    // Refused after rotation, at the `rar` hook: a rotated token was saved.
+    // The boundary permits this ordering; it does not require it.
+    expect(refusedA.saved).toBe(1);
+
+    const okB = await refreshFamily(b.refresh_token);
+    const bodyB = (await okB.json()) as { authorization_details?: unknown };
+    expect(okB.status, JSON.stringify(bodyB)).toBe(200);
+    expect(actionsOf(bodyB.authorization_details)).toEqual(["payments:remittance.send"]);
+
+    const okApproval = await refreshFamily(missionRefreshToken, codeDpop);
+    const bodyApproval = (await okApproval.json()) as { authorization_details?: unknown };
+    expect(okApproval.status, JSON.stringify(bodyApproval)).toBe(200);
+    expect(actionsOf(bodyApproval.authorization_details)).not.toContain("payments:invoice.read");
+  });
+
+  it("boundary: a family whose confined subset is only PARTLY contained narrows and is not refused", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    // The full derived set: invoice.read and remittance.send.
+    const c = (await (await asyncDelegate(baseAccessToken)).json()) as { refresh_token: string };
+    contain(missionId, "ce-family-c-part", [{ resource: RESOURCE, actions: ["payments:invoice.read"] }]);
+    const res = await refreshFamily(c.refresh_token);
+    const body = (await res.json()) as { authorization_details?: unknown };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    expect(actionsOf(body.authorization_details)).toEqual(["payments:remittance.send"]);
+  });
+
+  it("(c): an Expansion successor is authorized from a Mission access token, never from the contained family's consumed refresh token", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const a = (await (await asyncDelegate(baseAccessToken, { authorizationDetails: confinedAuthority() })).json()) as {
+      refresh_token: string;
+    };
+    contain(missionId, "ce-family-a-expansion", [{ resource: RESOURCE, actions: ["payments:invoice.read"] }]);
+    expect((await refreshFamily(a.refresh_token)).status).toBe(400); // A's token is now consumed
+
+    // Restoring invoice.read widens the contained effective set: an expansion,
+    // whose subject_token is the predecessor's Mission ACCESS token (#448: a
+    // refresh token is never accepted there).
+    const opened = await codeTokenRequest({
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      subject_token: baseAccessToken,
+      subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      login_hint: "alice",
+      mission_intent: JSON.stringify({
+        intent: { goal: "Restore invoice reads after review", target_resources: [RESOURCE], expires_at: FAR_EXP },
+      }),
+      authorization_details: JSON.stringify(fullAuthority()),
+      creation_request_id: crypto.randomUUID(),
+    });
+    const ob = (await opened.json()) as { error?: string; deferral_code?: string };
+    expect(opened.status, JSON.stringify(ob)).toBe(400);
+    expect(ob.error).toBe("authorization_pending");
+    as.expansionDeferrals.approve(ob.deferral_code as string, {
+      approver: { iss: ISSUER, sub: "bob" },
+      approvalEventId: "apev-restore-after-family-containment",
+      approvedUntil: FAR_EXP,
+    });
+    const polled = await codeTokenRequest({
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      deferral_code: ob.deferral_code as string,
+    });
+    const pb = (await polled.json()) as { access_token?: string; mission_id?: string; authorization_details?: unknown };
+    expect(polled.status, JSON.stringify(pb)).toBe(200);
+    expect(pb.mission_id).not.toBe(missionId);
+    expect(actionsOf(pb.authorization_details)).toContain("payments:invoice.read");
+  });
+});

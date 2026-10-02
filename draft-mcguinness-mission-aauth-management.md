@@ -35,13 +35,25 @@ normative:
   RFC9457:
   I-D.draft-hardt-oauth-aauth-protocol:
     title: "AAuth Protocol"
-    target: https://dickhardt.github.io/AAuth/draft-hardt-oauth-aauth-protocol.html
     author:
       -
         ins: D. Hardt
         name: Dick Hardt
-    date: 2026
-    refcontent: "Editor's copy, commit fc5e972c"
+    date: 2026-09-25
+    seriesinfo:
+      Internet-Draft: draft-hardt-oauth-aauth-protocol-11
+  I-D.draft-hardt-httpbis-signature-key:
+    title: "HTTP Signature Keys"
+    author:
+      -
+        ins: D. Hardt
+        name: Dick Hardt
+      -
+        ins: T. Meunier
+        name: Thibault Meunier
+    date: 2026-09-13
+    seriesinfo:
+      Internet-Draft: draft-hardt-httpbis-signature-key-09
 
 informative:
   I-D.draft-mcguinness-aauth-mission-expiry:
@@ -71,11 +83,11 @@ informative:
 
 --- abstract
 
-AAuth defines an immutable mission blob, identifies it by the native
-`{approver, s256}` mission reference, and gives a mission two states:
-`active` and `terminated`.  It leaves revocation, delegation-tree
-queries, and administrative interfaces to a companion specification.
-This document defines that companion.
+AAuth defines an immutable mission blob, identifies it by the
+approving Person Server and the blob's `s256` digest, and gives a
+mission two states: `active` and `terminated`.  It leaves revocation,
+delegation-tree queries, and administrative interfaces to a companion
+specification.  This document defines that companion.
 
 An authenticated caller can read status, permanently terminate an
 authorized mission, and inspect the AAuth agent and token delegation
@@ -100,8 +112,10 @@ to report and bound the residual window honestly.
 The AAuth Protocol {{I-D.draft-hardt-oauth-aauth-protocol}} makes agent
 governance orthogonal to its five resource-access modes.  An agent and
 its Person Server (PS) hold the exact bytes of an approved mission blob.
-The SHA-256 digest of those bytes, paired with the approving PS URL,
-forms the native Mission Reference.
+The SHA-256 digest of those bytes, `s256`, paired with the approving
+PS, is the mission's identity (Section 8.2.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}), which this document calls
+the Mission Reference.
 
 Resources and Access Servers see that reference, not the mission
 body.  The PS retains the context and ordered mission log needed to
@@ -110,14 +124,17 @@ make governance decisions.
 AAuth also deliberately gives a mission only two states.  An `active`
 mission can be used; a `terminated` mission has ended permanently.
 There is no pause or resume operation.  The base protocol defines
-completion through the interaction endpoint and defers other
-transitions, administrative access, and delegation-tree queries.
+completion as the owning agent's `completion` action at the mission's
+own URL, which terminates the mission only on the Person's acceptance
+(Section 8.5 of {{I-D.draft-hardt-oauth-aauth-protocol}}), and defers
+other transitions, administrative access, and delegation-tree
+queries.
 
 This document supplies those management functions without replacing
 AAuth's mission model with an OAuth authorization object.  In
 particular, it introduces no `mission_id`, Authority Set, scope-subset
 rule, status signal, or additional lifecycle state.  Every operation is
-keyed by the exact native `{approver, s256}` pair.  Authorization to a
+keyed by the exact Mission Reference.  Authorization to a
 remote resource remains a decision of that resource, its Access Server,
 and, where involved, the PS; this endpoint manages the contextual
 governance envelope held by the PS.
@@ -145,11 +162,19 @@ its state.
 {::boilerplate bcp14-tagged}
 
 This document uses Person, Agent, Agent Provider (AP), Person Server
-(PS), Access Server (AS), Resource, Agent Token, Resource Token, Auth
-Token, Mission, Mission Reference, mission blob, and mission log as
+(PS), Access Server (AS), Resource, Agent Token, Person Token,
+Resource Token, Auth Token, Mission, mission blob, and mission log as
 defined by {{I-D.draft-hardt-oauth-aauth-protocol}}.
 
 The following additional terms are used:
+
+Mission Reference:
+: The pair of the approving PS and `s256`, AAuth's mission identity
+  (Section 8.2.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}).  The
+  approving PS is named by the `iss` of a Person Token, the `ps` claim
+  of a Resource Token or Auth Token, or the PS a request is made to; the
+  mission blob carries no member naming it.  On the wire, the
+  reference is the `mission_s256` claim or parameter.
 
 Management Principal:
 : An authenticated person, administrator, or service acting under an
@@ -178,21 +203,21 @@ Residual Window:
 
 ## Mission Identity
 
-The Mission Reference `{approver, s256}` remains the management key
-for every mission this specification governs.  On the wire, a request
+The Mission Reference remains the management key for every mission
+this specification governs.  On the wire, a request
 identifies its target with the `{mission_s256}` path segment of the
 mission's own control-plane URL,
 `{mission_control_endpoint}/{mission_s256}`, following the per-mission
 URL convention the base protocol defines at `mission_endpoint`.
 
-The syntax, comparison, and digest rules are those of the AAuth Mission
-Reference.  `approver` is neither a request member nor a path segment:
-it is fixed to the identity of the PS endpoint that receives the
-request, so no part of the request can name another approver.  A PS
-MUST resolve the `{mission_s256}` segment only among the missions it
-itself approved, MUST NOT forward a management operation to another
-approver, and MUST NOT accept an alias for either half of the
-reference.
+The syntax, comparison, and digest rules are those of AAuth's mission
+identifier (Section 8.2.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}).
+The approving PS is neither a request member nor a path segment: it is
+fixed to the identity of the PS endpoint that receives the request, so
+no part of the request can name another PS.  A PS MUST resolve the
+`{mission_s256}` segment only among the missions it itself approved,
+MUST NOT forward a management operation to another PS, and MUST NOT
+accept an alias for either half of the reference.
 
 The pair is the sole protocol key.  Implementations MAY use internal
 database keys, but those keys MUST NOT appear in this protocol.  The PS
@@ -209,17 +234,17 @@ The only protocol states are:
 * `active`: the mission is in progress; and
 * `terminated`: the mission has permanently ended.
 
-Only `active` permits the PS to process a token, permission, audit, or
-interaction request under the mission.  Once the PS commits
-`terminated`, it MUST NOT return the mission to `active`.  A caller that
-needs to continue the work creates and obtains approval for a new
-mission.
+Only `active` permits the PS to process a request that names the
+mission outside this control plane ({{token-consequences}}).  Once the
+PS commits `terminated`, it MUST NOT return the mission to `active`.  A
+caller that needs to continue the work creates and obtains approval
+for a new mission.
 
 This specification defines these termination reasons:
 
 | Reason | Meaning |
 | --- | --- |
-| `completed` | The Person accepted completion of the work. |
+| `completed` | The Person accepted the Owning Agent's completion proposal (Section 8.5 of {{I-D.draft-hardt-oauth-aauth-protocol}}). |
 | `revoked` | The Person, Owning Agent, or an authorized administrator withdrew the mission. |
 | `expired` | The mission reached its approved `expires_at` time. |
 | `superseded` | The Person or an authorized administrator replaced the mission with another approved mission. |
@@ -289,9 +314,18 @@ reject duplicate JSON member names.  Unknown members MUST be ignored
 unless they prevent safe processing.
 
 Every request MUST be authenticated as {{authorization}} requires for
-the caller's class.  A request signed with the AAuth HTTP Message
-Signatures profile {{RFC9421}} uses the covered components and content
-integrity requirements of the base AAuth profile.  A management
+the caller's class.  A signed request uses the AAuth HTTP Message
+Signatures profile (Section 11.3 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}) {{RFC9421}}: its signature
+MUST cover `@method`, `@authority`, `@path`, `signature-key`,
+`content-digest`, and `content-type`, as Section 11.3.3.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}} requires on a request
+carrying a body to a PS endpoint, and MUST carry a `created`
+parameter within the PS's validity window (Sections 11.3.3.2 and
+11.3.4 of {{I-D.draft-hardt-oauth-aauth-protocol}}).  The signing key
+carries a fully specified `alg`, from which the PS determines the
+algorithm, and every party supports `Ed25519` (Sections 11.3.1 and
+11.3.4 of {{I-D.draft-hardt-oauth-aauth-protocol}}).  A management
 operation is never authorized from the Mission Reference alone.
 
 This document defines no action at the bare
@@ -328,11 +362,15 @@ action strings.  The array MUST contain `status` and `terminate` for
 conformance to this specification.  It contains `delegation_tree` when
 the PS implements {{delegation-tree}}.  Unknown values MUST be ignored.
 
-`mission_control_endpoint` is OPTIONAL in the base protocol.  A PS
-that does not publish it implements no operation of this
-specification, whatever `mission_control_actions_supported` would
-advertise.  A caller MUST resolve the endpoint from the metadata and
-MUST NOT construct it from `mission_endpoint`.
+`mission_control_endpoint` is OPTIONAL in the base protocol and adds
+nothing to AAuth PS conformance, which rests on the four REQUIRED
+metadata fields alone (Section 11.2.2 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}); the conformance it carries
+is to this document ({{conformance}}).  A PS that does not publish it
+implements no operation of this specification, whatever
+`mission_control_actions_supported` would advertise.  A caller MUST
+resolve the endpoint from the metadata and MUST NOT construct it from
+`mission_endpoint`.
 
 # Authentication and Authorization {#authorization}
 
@@ -379,14 +417,21 @@ define fleet enumeration or bulk termination.
 ## Management Service
 
 A management service authenticates with the AAuth HTTP Message
-Signatures profile {{RFC9421}}, presenting its key with
-`Signature-Key: sig=jwks_uri`, the scheme the base protocol uses for
-PS-to-AS token requests.  The PS resolves the key as the
-`Signature-Key` profile specifies and MUST hold a deployment-local
-registration of that `jwks_uri` as a management identity; this
-specification adds no discovery surface for management identities.  An
-Agent MUST NOT use this scheme; the base protocol already forbids it
-to agents.
+Signatures profile {{RFC9421}}, signing under the `jwks_uri` scheme of
+HTTP Signature Keys {{I-D.draft-hardt-httpbis-signature-key}}, the
+scheme Section 11.3.2 of {{I-D.draft-hardt-oauth-aauth-protocol}}
+requires of a PS, AS, AP, or resource signing in its own right.  The
+`id` parameter is the service's HTTPS identifier, `dwk` names the
+well-known metadata document the service publishes under a
+deployment-chosen name, and `kid` selects the key.  That document
+MUST contain `issuer`, equal to `id`, and `jwks_uri`, and the PS
+resolves the key by the discovery procedure of Section 3.6 of
+{{I-D.draft-hardt-httpbis-signature-key}}.  The PS MUST hold a
+deployment-local registration of the service's `id` and `dwk` as a
+management identity; this specification adds no discovery surface for
+management identities.  An Agent MUST NOT use this scheme; the base
+protocol already forbids it to agents (Section 11.3.2 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).
 
 A management service is subject to the administrative rules above:
 least-privilege scoping, a separate privilege for delegation data,
@@ -441,8 +486,8 @@ Content-Type: application/json
 Signature-Input: sig=("@method" "@authority" "@path" \
     "content-type" "content-digest" "signature-key");created=1775581200
 Signature: sig=:...signature bytes...:
-Signature-Key: sig=jwks_uri; \
-    jwks_uri="https://mgmt.example/.well-known/jwks.json"
+Signature-Key: sig=jwks_uri;id="https://mgmt.example"; \
+    dwk="example-configuration";kid="key-1"
 Content-Digest: sha-256=:...:
 
 {
@@ -600,11 +645,16 @@ termination obey the same rule.
 
 AAuth does not create child Mission objects for sub-agents or chained
 calls.  It records agent relationships in `parent_agent` and in the
-Auth Tokens issued or provided under the same Mission Reference; auth
-and resource tokens carry no chain claim, so the PS itself holds the
-call-chain state.  The tree operation reports those native
-relationships; it MUST NOT invent a second child mission identifier or
-imply algebraic scope inheritance.
+Auth Tokens issued or provided under the same Mission Reference
+(Section 10.2.3 of {{I-D.draft-hardt-oauth-aauth-protocol}}).  A call
+chain is recorded on the Person Token the PS issues to an
+intermediary: the PS copies the upstream token's `mission_s256` into
+it (Section 7.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}) and
+records it with the upstream token's `(iss, jti)` (Section 11.12.4 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  No token carries a chain
+claim, so the PS itself holds the call-chain state.  The tree
+operation reports those native relationships; it MUST NOT invent a
+second child mission identifier or imply algebraic scope inheritance.
 
 An authorized caller sends:
 
@@ -656,7 +706,7 @@ be returned to a Person or authorized administrator and SHOULD be
 omitted from a response to an admitted Owning Agent unless required
 for that Agent's own revocation accounting.
 
-The result is observational, not exhaustive proof.  Identity-based
+The result is observational, not exhaustive proof.  Agent identity
 calls and resource-managed access can occur without a PS token request.
 An intermediary can make a downstream call outside the PS's view.
 `complete` means only that the returned page exhausts the PS's current
@@ -686,12 +736,15 @@ remaining errors below are defined by this document.
 | `rate_limited` | 429 | The caller exceeded a PS policy limit. |
 
 For a syntactically valid `{mission_s256}` segment, a PS MUST return
-the same status, error, body shape, header set, and observably
-equivalent timing whether the mission is absent or the authenticated
-caller lacks authorization for it, and MUST answer both identically
-within each caller class.  The PS MUST use `mission_not_found` for
-both.  It MUST NOT disclose the state, Agent identifier, timestamps,
-expiry, reason, or tenant before authorization succeeds.
+the same status, error, body, header set, and observably equivalent
+timing whether the mission is absent or the authenticated caller lacks
+authorization for it, and MUST answer both identically within each
+caller class.  The PS MUST use `mission_not_found` for both.  It MUST
+NOT disclose the state, Agent identifier, timestamps, expiry, reason,
+or tenant before authorization succeeds.  As Section 8.7 of
+{{I-D.draft-hardt-oauth-aauth-protocol}} notes for the mission
+endpoint, the natural arrangement leaks the difference in timing:
+checking authorization only after a successful lookup.
 
 The base protocol makes a terminated mission deliberately
 distinguishable to the agent that owns it, at that agent's own
@@ -750,11 +803,17 @@ for the maximum relevant replay and audit horizon.
 ## Local Gating
 
 Immediately after the terminal commit, the PS MUST reject every new
-token, permission, audit, and interaction request under the Mission
-Reference with the AAuth `mission_terminated` error.  It MUST stop
-federating resource-token requests under that mission.  This is the
-reliable AAuth management effect because it occurs at the server that
-owns the mission context.
+request that names the mission, at any PS endpoint other than this
+control plane, with the AAuth `mission_terminated` error (Sections 8.6
+and 8.8 of {{I-D.draft-hardt-oauth-aauth-protocol}}).  A request names
+the mission through a `mission_s256` parameter, as a person token
+request can (Section 7.1 of {{I-D.draft-hardt-oauth-aauth-protocol}});
+through a token carrying `mission_s256`, whether a resource token,
+presented token, or upstream token; or through the mission's own URL
+at `mission_endpoint`, for an `update` or `completion`.  The PS MUST
+stop federating resource-token requests under that mission.  This is
+the reliable AAuth management effect because it occurs at the server
+that owns the mission context.
 
 A Resource Token is a signed request artifact, not authority.  It does
 not need revocation; submitting it under the terminated mission fails at
@@ -779,18 +838,68 @@ are sensitive and follow {{logging}}.
 
 ## Revocation Attempts
 
-After termination, the PS SHOULD invoke each applicable AAuth
-`revocation_endpoint` with `(iss, jti)` for every unexpired Tracked Auth
-Token.  In PS-asserted access, this normally means the Resource.  In
-federated access, the PS SHOULD notify the Resource and MAY also notify
-the issuing AS as supported by the base AAuth protocol.  Retries MUST be
-bounded, authenticated, rate limited, and recorded.
+After termination, the PS SHOULD revoke every unexpired Tracked Auth
+Token, as Section 11.12.4 of {{I-D.draft-hardt-oauth-aauth-protocol}}
+recommends when a PS revokes a mission.  Each revocation is a signed
+`POST` of `{jti, exp}` to the recipient's `revocation_endpoint`, with
+`exp` taken from the PS's record of that token.  The PS signs as a
+server under the `jwks_uri` scheme, with its issuer as `id` and
+`aauth-person.json` as `dwk`, and the signature covers
+`content-digest` and `content-type` (Sections 11.3.2 and 11.12.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  The recipient takes the
+issuer from the signature, so the PS revokes only tokens it issued.
 
-A `200` response or natural token expiry closes the tracked residual for
-that token.  A timeout, unreachable endpoint, absent endpoint, or
-ambiguous result remains unconfirmed until expiry.  The PS MUST NOT
-report successful mission-wide revocation merely because it marked its
-local state or contacted an AS.
+In PS authorization (three-party), the PS revokes an Auth Token it
+issued at the Resource it was issued for.  In federated authorization
+(four-party), the AS issued the Auth Token, so the PS instead revokes
+the Person Token it presented to that AS, known from the issuance
+record that Section 7.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}
+requires, and the AS revokes the Auth Tokens it issued against that
+Person Token (Sections 11.12.2 and 11.12.4 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  Retries MUST be bounded,
+authenticated, rate limited, and recorded.  A repeated revocation is
+idempotent: the recipient records nothing new, re-attempts each
+downstream revocation that did not succeed, and reports the current
+outcome (Section 11.12.3 of {{I-D.draft-hardt-oauth-aauth-protocol}}).
+
+A revocation is confirmed, for `revocation_confirmed` and `complete`
+({{terminate}}), only by an outcome that names the Tracked Auth Token's
+own Resource:
+
+* an Auth Token the PS revoked at the Resource it was issued for is
+  confirmed by that Resource's `200`, which has nothing downstream and
+  carries an empty body; and
+* an Auth Token an AS issued is confirmed only by a `downstream` entry,
+  in the AS's `200` to the Person Token revocation, whose `recipient`
+  is the token's `aud` and which carries no `error`.
+
+An absent body, an absent `downstream` member, or a `downstream` array
+with no entry for the token's `aud` reports nothing about that token,
+which stays unconfirmed (Section 11.12.3 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  A `200` says the recipient
+recorded the revocation and finished its cascade, not that it held a
+record of the token: AAuth defines no not-found response.  Natural
+expiry also closes the tracked residual for a token.
+
+A `202` is pending: the PS polls the pending URL with a signed `GET`
+under the same identity, honoring `Retry-After`, until the terminal
+response (Section 11.12.3 of {{I-D.draft-hardt-oauth-aauth-protocol}}).
+Every other outcome leaves the token unconfirmed until a later attempt
+is confirmed or its `exp` passes:
+
+* a `downstream` entry with `revocation_unsupported` or
+  `revocation_unavailable` leaves the Auth Tokens at its `recipient`
+  honored; after `revocation_unavailable`, the PS can revoke again
+  later;
+* `rate_limited` (`429`) carries a `Retry-After` interval the PS waits
+  before retrying;
+* `unsupported_iss` (`403`) means the recipient does not accept
+  revocations from this PS and honors the token until its `exp`; and
+* a timeout, an unreachable or absent endpoint, a `5xx`, or an
+  unparseable response establishes nothing.
+
+The PS MUST NOT report successful mission-wide revocation merely
+because it marked its local state or contacted an AS.
 
 ## Honest Residual Bounds {#residuals}
 
@@ -808,7 +917,7 @@ inventing a deadline.
 
 The PS has no general visibility or control over:
 
-* identity-based access where a Resource authorizes the Agent directly;
+* agent identity access where a Resource authorizes the Agent directly;
 * an opaque `AAuth-Access` token issued in resource-managed access;
 * a Resource that violated the base protocol's `mission_s256` copy rule;
 * credentials or side effects acquired outside AAuth; or
@@ -925,7 +1034,7 @@ add tamper-evident storage or signed checkpoints.
 ## Delegation-Tree Limits
 
 The returned tree is based on PS observations, not global execution.
-Treating it as complete evidence can hide identity-based, opaque-token,
+Treating it as complete evidence can hide agent identity, opaque-token,
 or off-path activity.  Consumers MUST preserve the distinction between
 page completeness and observational completeness.  `parent_agent`
 values and the PS's own issuance-linked chain state are accepted only
@@ -956,7 +1065,7 @@ This specification does define new wire elements:
   `sub_agent`, and `call_chain` relationship values; and
 * the error values in {{errors}}.
 
-The AAuth Protocol does not currently establish an IANA registry for
+The AAuth Protocol does not establish an IANA registry for
 Person Server metadata members, mission control plane actions or JSON
 members, termination reasons, delegation relationships, or AAuth error
 values.  Consequently, there is no
@@ -981,7 +1090,7 @@ it:
    `mission_control_actions_supported`;
 2. keys every action solely by the `{mission_s256}` path segment of
    the mission's control-plane URL, resolving it only among missions
-   for which it is itself the `approver`;
+   it itself approved;
 3. preserves exactly the `active` and `terminated` states, makes
    termination permanent, and records reasons separately;
 4. authenticates and authorizes every request according to caller role,
@@ -1007,7 +1116,7 @@ available its caller-role authorization policy, Auth Token retention
 period, supported access-mode coverage, maximum token lifetime,
 revocation retry policy, expiry clock policy if used, and worst-case
 residual behavior.  It MUST NOT claim that Mission termination revokes
-identity-based, opaque resource-managed, or otherwise untracked access.
+agent identity, opaque resource-managed, or otherwise untracked access.
 
 --- back
 
