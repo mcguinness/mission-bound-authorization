@@ -410,10 +410,12 @@ not require the PS to approve the request.
 
 The PS MUST maintain the mission log as an ordered record of the AAuth
 interactions defined to belong to the mission, including token requests,
-permission decisions, audit records, interaction requests, and
-clarification chats.  Log records SHOULD preserve sufficient correlation
-data to associate each decision with its authenticated request and any
-issued token without recording raw credentials.
+accepted updates, permission decisions, audit records, interaction
+requests, clarification chats, and the supervision decisions made
+(Section 8.3 of {{I-D.draft-hardt-oauth-aauth-protocol}}).  Log records
+SHOULD preserve sufficient correlation data to associate each decision
+with its authenticated request and any issued token without recording
+raw credentials.
 
 The PS MUST protect the mission log's integrity, MUST restrict read
 access to the person, the PS itself, and parties authorized under its
@@ -432,6 +434,10 @@ a non-bypassable observation point.
 
 The approved blob is immutable.  New facts, decisions, and actions are
 appended to the log; they do not mutate or replace the committed blob.
+An accepted `update` at the mission's own URL is one such entry,
+digested by its own `s256`; it changes neither the blob nor
+`mission_s256` (Section 8.4 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).
 
 ## Deterministic Resource Authorization
 
@@ -595,18 +601,28 @@ terminated:
   or termination operation defined by a companion returns terminal
   state instead ({{mission-log}}).
 
-Completion follows AAuth's interaction flow: the agent proposes
-completion with a summary, the PS presents it to the person, and the
-mission terminates only if the person accepts.  Other termination causes
-and administrative mechanisms are left to AAuth mission-management work.
-A deployment can record a termination reason in its private log without
-creating another protocol state.
+Completion uses the `completion` action at
+`{mission_endpoint}/{mission_s256}`: the agent proposes completion with
+a summary, the PS presents it to the person, and the mission terminates
+with reason `completed` only if the person accepts (Section 8.5 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  The PS records why a
+mission terminated alongside the mission, from AAuth's open reason set
+of `completed`, `revoked`, `expired`, `superseded`, and
+`administrative`; a reason is never a protocol state (Section 8.6 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  A mission reaches
+`terminated` by accepted completion, by its `expires_at`, by PS
+revocation of the mission (Section 11.12.4 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}), or by a control-plane
+operation at the `mission_control_endpoint`, which AAuth Mission
+Management {{I-D.draft-mcguinness-mission-aauth-management}} defines.
 
 Every mission approved under this binding MUST carry AAuth's
 `expires_at` member, and the PS MUST enforce it on every decision path
-as AAuth requires.  When a proposal omits an expiry, the PS MUST set
-one at approval under deployment policy, and that policy SHOULD prefer
-the shortest expiry consistent with the mission's purpose.
+as AAuth requires.  A proposal can request an expiry under AAuth
+Mission Expiry {{I-D.draft-mcguinness-aauth-mission-expiry}}; when it
+requests none, the PS MUST set one at approval under deployment policy,
+and that policy SHOULD prefer the shortest expiry consistent with the
+mission's purpose.
 
 Expiry transitions the mission to `terminated`; it adds no third
 state.  The PS caps the person tokens and auth tokens it issues at
@@ -618,12 +634,13 @@ short-lived request artifact whose lifetime is independent of
 `expires_at`; the PS verifies that the mission is active and unexpired
 whenever it acts on one (Sections 6.7.1 and 6.7.2 of
 {{I-D.draft-hardt-oauth-aauth-protocol}}).  AAuth distinguishes an
-expiry-caused termination with a
-`termination_reason` of `expired`, surfaced where a management
-companion exposes it, rather than with a separate error status.  An
-early completion, revocation, or administrative termination prevents
-new governed issuance; an outstanding person token or auth token
-remains usable until revocation or its own expiry, inside that bound.
+expiry-caused termination with a `termination_reason` of `expired` in
+the `mission_terminated` error (Section 8.8 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}), rather than with a separate
+error status.  An early completion, revocation, or administrative
+termination prevents new governed issuance; an outstanding person
+token or auth token remains usable until revocation or its own expiry,
+inside that bound.
 
 There is no suspended state in this binding.  A short wait uses AAuth's
 deferred-response mechanism.  A long or materially changed pause is
@@ -660,7 +677,8 @@ An implementation conforms as an **AAuth Mission Context Agent** if it:
 An implementation conforms as an **AAuth Mission Context Person Server**
 if it:
 
-- implements AAuth proposal, clarification, approval, and completion;
+- implements AAuth proposal, clarification, approval, update, and
+  completion;
 - binds the approved blob to the authenticated agent identifier;
 - maintains the native active or terminated state and ordered mission
   log;
@@ -883,9 +901,10 @@ The contextual-governance kernel maps as follows:
    atomically ({{approval}}).
 6. **Governance gate**: only `active` permits governed PS processing;
    `terminated` is permanent, and an unrecognized state is not
-   active.  Person-accepted completion and the mission's `expires_at`
-   are the base transitions; administrative termination is supplied
-   by AAuth Mission Management where deployed ({{lifecycle}}).
+   active.  Person-accepted completion, the mission's `expires_at`, and
+   PS revocation of the mission are the base transitions; control-plane
+   termination at the `mission_control_endpoint` is supplied by AAuth
+   Mission Management where deployed ({{lifecycle}}).
 7. **Reliance bound**: every mission carries AAuth's native
    `expires_at` member, enforced on every PS decision path
    ({{lifecycle}}); PS decisions establish `active` at decision time,
