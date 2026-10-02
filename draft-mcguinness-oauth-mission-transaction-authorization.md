@@ -1149,7 +1149,7 @@ Failure vocabulary:
 | Workflow handle | `transaction_authorization_id` and the admission rules of {{two-phase-expiry}} |
 | Result class | `mission-txn-token+jwt` per {{transaction-token}} |
 | Possession | `cnf` under DPoP or mutual TLS, including `ath`, per {{challenge-redemption}} and {{offline-verification}} |
-| Current-state source | Offline verification step 5 of {{offline-verification}}: the Mission Status surface, the Status List, or issuer introspection within declared freshness bounds |
+| Current-state source | Offline verification step 5 of {{offline-verification}}: the Mission Status surface or issuer introspection within declared freshness bounds, with the Status List as a lifecycle prefilter only |
 | Failure vocabulary | The upstream vocabulary applied unchanged per {{failure-semantics}} |
 {: title="OAuth discharge of the carrier requirements"}
 
