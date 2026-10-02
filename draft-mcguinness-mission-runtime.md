@@ -300,7 +300,7 @@ future work are collected in {{deferred}}.
 Because the invariants are not a wire format, two conforming deployments
 do not thereby interoperate at the PEP-PDP boundary; the interoperable
 wire surface is supplied by a separately specified decision API binding
-({{authzen}}), the AuthZEN binding being
+({{authzen}}), the AuthZEN profile being
 {{I-D.draft-mcguinness-mission-authzen}}. That a wire format is a
 deployment choice does not make it an ad hoc one: the Runtime-Enforced
 level of the Mission Assurance Levels
@@ -716,7 +716,7 @@ inventing parallel semantics:
 
 An approval produced by the governance workflow returns as decision
 input on a fresh evaluation ({{action-approval}}), never as output
-state. The AuthZEN binding maps this output onto its response
+state. The AuthZEN profile maps this output onto its response
 context, the obligations profile, and ARAP ({{authzen}}).
 
 ## Decision Inputs {#decision-inputs}
@@ -1369,10 +1369,12 @@ scope.
 A deployment that claims conformance to this profile MUST publish an
 **Enforcement Scope Statement**: the structured, referenceable
 declaration of its enforcement scope that auditors, procurement, and
-interop tests key on. This statement is what earns the
-Runtime-Enforced level of the Mission Assurance Levels, and it feeds
-the Mission Deployment Profile, the deployment-level manifest the
-architecture defines ({{I-D.draft-mcguinness-mission-architecture}}).
+interop tests key on. A deployment adopting the Runtime-Enforced
+bundle of the Mission Assurance Levels publishes this statement; the
+level stays guidance, and the statement's named claims are what a
+relying party compares. The statement feeds the Mission Deployment
+Profile, the deployment-level manifest the architecture describes
+({{I-D.draft-mcguinness-mission-architecture}}).
 
 The statement's baseline declaration, required of every conforming
 deployment regardless of which named claims or assurance extensions it
@@ -1659,7 +1661,7 @@ Five rules govern the approval's enforcement:
    mechanism, the action fails closed.
 2. An action-bound approval MUST carry a maximum age, bounded by a
    value the deployment set publishes, and MAY additionally carry an
-   absolute `approved_until` expiry (the AuthZEN binding surfaces ARAP's
+   absolute `approved_until` expiry (the AuthZEN profile surfaces ARAP's
    approval expiry there, {{authzen}}). The approval is fresh only before
    the earlier of `approved_at` plus the maximum age and any
    `approved_until`; past that bound the approval is not fresh and the PEP
@@ -1691,7 +1693,7 @@ not the age of the approval it relied on.
 This profile does not define the wire workflow that obtains the
 approval. A decision-API binding MAY route the requiring denial through
 a standardized access-request and approval workflow and carry the
-resulting approval back as decision input; the AuthZEN binding composes
+resulting approval back as decision input; the AuthZEN profile composes
 with the AuthZEN Access Request and Approval Profile for exactly this
 ({{authzen}}). However obtained, the approval is decision input, not a
 bearer grant: the runtime decision of {{decision}} remains
@@ -2128,7 +2130,7 @@ locally, is the third lane; this profile reserves it and defines no
 residual form. Two things are not lanes: a description of
 requestable authority is payload a request may carry, and a
 transient condition is a denial outcome carrying a retry signal,
-calling for neither remediation nor a request. The AuthZEN binding
+calling for neither remediation nor a request. The AuthZEN profile
 realizes the first two lanes and the transient outcome as
 obligations, ARAP composition, and its transient-denial members
 ({{authzen}}).
@@ -2964,8 +2966,9 @@ The following requirements apply to every record:
   runtime evidence companion
   ({{I-D.draft-mcguinness-mission-runtime-evidence}}) is the
   suite's one signing convention for evidence objects and SHOULD be
-  used, with a `typ` that names the record's own media type, rather
-  than a record-specific signing scheme.
+  used, with the protected `typ` that convention fixes and a `cty`
+  that names the record's own media type, rather than a
+  record-specific signing scheme.
 - Raw parameters MUST NOT appear in the record; when retained for
   forensics they MUST be in separately access-controlled storage
   referenced by an opaque identifier, with only the
@@ -3700,6 +3703,11 @@ worked example shows the concrete record
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The Enforcement Scope Statement is what a deployment adopting the
+  Runtime-Enforced bundle publishes, not what earns the level; the
+  level stays guidance, matching the architecture's assurance levels,
+  and the statement's named claims are what a relying party compares.
 
 - The Introduction states this profile as the per-action decision for
   the action classes it covers, composed over the issuance profile's

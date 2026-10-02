@@ -470,7 +470,7 @@ The composition consequences follow from those claims:
   status, and signals compose with the capabilities they name. Where
   such a profile names the Mission Issuer or issuer AS, the MAS is that
   party.
-- The runtime profile and its AuthZEN binding, the harness, and
+- The runtime profile and its AuthZEN profile, the harness, and
   orchestration compose through the runtime profile's externally
   established binding mode
   ({{I-D.draft-mcguinness-mission-runtime}}), profiled here as the
@@ -1270,7 +1270,7 @@ A Mission-joining PDP and its PEPs MUST observe the following:
    work is bound to, taken from its Mission binding (a Mission-aware
    harness records exactly this,
    {{I-D.draft-mcguinness-mission-harness}}) or from deployment
-   configuration. In the AuthZEN binding
+   configuration. In the AuthZEN profile
    ({{I-D.draft-mcguinness-mission-authzen}}) this is
    `context.mission`; the PEP additionally populates `state`, and
    `authority_hash` where the MAS's signed Mission Status response
@@ -1362,7 +1362,7 @@ the high-consequence action classes they MUST be. With a pure bearer
 token, any holder inside the (subject, client) equivalence class
 joins ({{join-spoofing}}).
 
-A successful join, in the AuthZEN binding: the PEP supplies
+A successful join, in the AuthZEN profile: the PEP supplies
 `context.mission` populated from its Mission binding, with `state`
 (and `authority_hash` where disclosed) taken from the MAS's signed
 Mission Status response, and the other decision inputs per
@@ -2080,7 +2080,7 @@ Assurance Levels under the MAS binding and adds the obligations below
   residual of {{join-spoofing}} remains, stated in the Mission
   Deployment Profile's `residual_risks`.
 - **Runtime enforcement.** Consequential actions MUST be enforced
-  under the runtime profile and its AuthZEN binding
+  under the runtime profile and its AuthZEN profile
   ({{I-D.draft-mcguinness-mission-authzen}}), with documented PEP
   coverage published in the runtime profile's Enforcement Scope
   Statement.
@@ -2226,7 +2226,7 @@ provider and Authorization Server, changing neither:
   orchestrator, or a legacy-API wrapper) presents the Mission
   reference and calls a PDP before each consequential action;
 - the PDP runs the runtime profile's decision contract and its
-  AuthZEN binding, drawing authority from the MAS-served Authority Set
+  AuthZEN profile, drawing authority from the MAS-served Authority Set
   or a materialized policy view ({{policy-distribution}});
 - the MAS mints a Join Assertion after introspecting the presented
   token, so the PDP verifies one signed proof rather than a mapping
@@ -2374,7 +2374,7 @@ A **Mission-joining PDP**:
   ({{enterprise-profile}});
 - evaluates joined actions under the runtime profile's decision
   contract, drawing authority from the Mission; and
-- when the AuthZEN binding is in use, emits Decision Evidence per
+- when the AuthZEN profile is in use, emits Decision Evidence per
   {{I-D.draft-mcguinness-mission-runtime-evidence}}, recording the
   Mission reference the join was verified against.
 

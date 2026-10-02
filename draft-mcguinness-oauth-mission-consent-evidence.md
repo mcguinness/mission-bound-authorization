@@ -30,10 +30,12 @@ normative:
   BCP47:
   RFC3339:
   RFC6234:
+  RFC6749:
   RFC6838:
   RFC7515:
   RFC8259:
   RFC8785:
+  RFC9126:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
@@ -453,11 +455,13 @@ A Consent Disclosure object has these members:
   committed by `consent_rendering_hash` and rendered for consent.
 
 `shaping_evidence_hash`:
-: OPTIONAL. A string. Present when shaping was used: the envelope
-  anchor, with `typ` `mission-shaping-evidence`, over the Shaping
-  Evidence object, as Shaping defines it
-  ({{I-D.draft-mcguinness-mission-shaping}}, Section "Integrity and the
-  Evidence Hash").
+: OPTIONAL. A string. Present when the client supplied the
+  `mission_shaping_evidence_hash` parameter
+  ({{shaping-evidence-hash-parameter}}) or the deployment otherwise
+  holds the hash: the envelope anchor, with `typ`
+  `mission-shaping-evidence`, over the Shaping Evidence object, as
+  Shaping defines it ({{I-D.draft-mcguinness-mission-shaping}},
+  Section "Integrity and the Evidence Hash").
 
 `predecessor`:
 : OPTIONAL. A string. The predecessor Mission identifier when this
@@ -650,6 +654,41 @@ question, what it concerned, and what grounded the answer
 (`interrogation`, {{consent-evidence}}). Interrogation before a decline
 is the record's most valuable case: it preserves which entry the
 Approver probed and could not accept.
+
+## Shaping Evidence Hash Parameter {#shaping-evidence-hash-parameter}
+
+A client whose Mission Intent was produced by a Mission Shaper
+({{I-D.draft-mcguinness-mission-shaping}}) MAY send the
+`mission_shaping_evidence_hash` request parameter in the pushed
+authorization request {{RFC9126}} that carries `mission_intent`
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Submission via
+PAR"). Its value is the `shaping_evidence_hash` that Shaping defines
+({{I-D.draft-mcguinness-mission-shaping}}, Section "Integrity and the
+Evidence Hash"), computed with `iss` set to this AS's issuer
+identifier.
+
+The value is a client-supplied audit commitment. It is not verified
+provenance, because the AS does not receive the Shaping Evidence and
+cannot check the value against it; it is not admission evidence; and
+it grants no authority. An AS that implements this document:
+
+1. MUST refuse a value that is not a string in the integrity-anchor
+   encoding ({{I-D.draft-mcguinness-oauth-mission}}, Section
+   "Integrity Anchors") with the `invalid_request` error code
+   ({{Section 2.3 of RFC9126}});
+2. MUST record the value unchanged as the `shaping_evidence_hash`
+   member of the Consent Disclosure object ({{consent-disclosure}}),
+   where `consent_rendering_hash` commits it
+   ({{consent-rendering-hash}});
+3. MUST NOT use the value as input to admission, derivation, or the
+   approval decision; and
+4. MUST ignore the parameter on the front-channel authorization
+   request that redeems the `request_uri`, as the issuance profile
+   requires for `mission_intent`.
+
+An AS that does not implement this document ignores the parameter, as
+{{Section 3.1 of RFC6749}} requires for an unrecognized request
+parameter, so a client can send it without first discovering support.
 
 # The Consent Rendering Hash {#consent-rendering-hash}
 
@@ -1221,7 +1260,9 @@ MUST:
 - for the high-risk classes, include their material notices with the
   per-notice acknowledgment those classes require, recording each
   acknowledgment completion ({{material-notices}});
-- record the interrogation it offers ({{interrogation}}); and
+- record the interrogation it offers ({{interrogation}});
+- process a client-supplied `mission_shaping_evidence_hash` as
+  {{shaping-evidence-hash-parameter}} specifies; and
 - retain evidence for audit reconstruction ({{audit}}).
 
 Beyond that floor, a conforming Mission Issuer:
@@ -1406,6 +1447,21 @@ IANA.
 - Restrictions on usage: none
 - Author: IETF
 - Change controller: IETF
+
+## OAuth Parameters Registry {#oauth-parameters-registration}
+
+This document requests registration of the following in the "OAuth
+Parameters" registry:
+
+- Name: `mission_shaping_evidence_hash`
+- Parameter Usage Location: authorization request
+- Change Controller: IETF
+- Specification Document(s): this document,
+  {{shaping-evidence-hash-parameter}}
+
+PAR {{RFC9126}} carries authorization-request parameters without a
+distinct usage location, so the pushed parameter needs no separate
+registration.
 
 --- back
 
@@ -1656,6 +1712,15 @@ An implementation that canonicalizes the same envelope, computes
 SHA-256, and encodes as `sha-256:` followed by base64url with no
 padding reproduces this value exactly. A divergence indicates a JCS or
 encoding difference to resolve before interoperating.
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Defined and registered the `mission_shaping_evidence_hash` request
+  parameter, which carries a client-supplied `shaping_evidence_hash`
+  in the pushed authorization request into the Consent Disclosure
+  object, as a commitment that is never provenance or authority.
 
 # Acknowledgments
 {:numbered="false"}
