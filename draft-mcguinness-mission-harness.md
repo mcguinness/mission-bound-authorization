@@ -474,11 +474,21 @@ task graph node to a Mission reference:
   profile discloses it to it.
 
 `status_checked_at`:
-: REQUIRED when the harness has checked status. An RFC 3339 timestamp.
+: REQUIRED when the harness has checked status. An RFC 3339 timestamp:
+  the harness's own clock reading when it observed the status it
+  relies on, recorded as read. With unsynchronized clocks it can
+  precede that status's issuance (a Mission Status Response's `iat`,
+  {{I-D.draft-mcguinness-oauth-mission-status}}), but by no more than
+  the deployment's published maximum clock skew
+  ({{I-D.draft-mcguinness-mission-authzen}}, Section "Clock skew").
 
 `status_expires_at`:
 : REQUIRED when the harness relies on a status lease. An RFC 3339
-  timestamp after which the status MUST NOT be used for continuation.
+  timestamp after which the status MUST NOT be used for continuation:
+  the end of the harness's reliance. For a Mission Status Response it
+  never exceeds the response's `mission.fresh_until`
+  ({{I-D.draft-mcguinness-oauth-mission-status}}), and deployment
+  policy can set it earlier.
 
 `state`:
 : REQUIRED when known. The last Mission state established by the
@@ -1722,6 +1732,12 @@ exists.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- `status_checked_at` is the harness's observation as its own clock
+  read it, preceding the relied-on status's `iat` by no more than the
+  published maximum clock skew; `status_expires_at` is its reliance
+  end, never later than a Mission Status Response's
+  `mission.fresh_until`.
 
 - Client-instance references follow their successors:
   draft-mcguinness-oauth-client-instance-assertion is replaced by
