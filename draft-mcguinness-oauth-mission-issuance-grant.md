@@ -36,6 +36,7 @@ normative:
   RFC7800:
   RFC8414:
   RFC8705:
+  RFC9101:
   RFC9126:
   RFC9396:
   RFC9449:
@@ -863,6 +864,16 @@ A client tells three cases apart:
 Deployments whose clients must traverse the authorization code flow
 MAY carry the grant in a Pushed Authorization Request {{RFC9126}} as
 the request parameter `mission_issuance_grant` ({{iana}}).
+
+The AS MUST accept the `mission_issuance_grant` parameter only in a
+pushed authorization request, whether sent directly or inside a
+Request Object {{RFC9101}} pushed there. It MUST reject, with the
+`invalid_request` error code ({{Section 4.1.2.1 of RFC6749}}), an
+authorization request that carries the parameter any other way,
+including in a Request Object passed to the authorization endpoint
+outside PAR. The front channel then carries only the `request_uri`.
+This restriction concerns the authorization-request parameter; direct
+redemption at the token endpoint ({{redemption}}) is unaffected.
 
 The AS applies the grant validation of {{grant-validation}} at the PAR
 endpoint and treats the grant as the authorization already obtained.

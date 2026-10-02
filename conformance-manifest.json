@@ -22657,6 +22657,27 @@
    "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with #963 decision D2; todo until that path exists."
   },
   {
+   "id": "issuance-grant.par-carriage.par-only",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "par-carriage",
+   "text": "The AS MUST accept the `mission_issuance_grant` parameter only in a pushed authorization request",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an authorization request carrying mission_issuance_grant other than in a pushed authorization request (directly or in a Request Object pushed there), including in a Request Object passed to the authorization endpoint outside PAR, is refused invalid_request without validating or consuming the grant; direct redemption at the token endpoint is unaffected"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with #963 decision D3; todo until that path exists."
+  },
+  {
    "id": "txn-authorization.token.txn-scoped-mint-gate",
    "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
    "anchor": "offline-verification",
