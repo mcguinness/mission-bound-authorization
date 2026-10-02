@@ -419,10 +419,14 @@ identifies the retained representation: the payload schema for a
 `+json` object, the compact artifact itself for a `+jwt`, `+sd-jwt`,
 or SET form. The protected `typ` of an operational signature
 envelope, where the defining profile fixes one, names the signed
-object as that profile scopes it: either the payload, as the runtime
-evidence types do, or the secured representation itself, as Consent
-Evidence's `mission-consent-evidence+jws` names the JWS over the
-`application/mission-consent-evidence+json` payload. The
+object as that profile scopes it: either the payload, as Discovery
+Evidence's `mission-discovery-evidence+json` does, or the secured
+representation itself, as Consent Evidence's
+`mission-consent-evidence+jws` names the JWS over the
+`application/mission-consent-evidence+json` payload. The runtime
+evidence types and the Approval Governance Record name the secured
+representation in `typ` and carry the payload's media type in the
+protected `cty`. The
 `payload-preimage-content-type` identifies the media type of the
 preimage committed at the transparency boundary; the exact bytes are
 what the canonical-bytes column fixes ({{evidence-types}},
@@ -461,11 +465,11 @@ proves neither that a record is true nor that a feed is complete
 
 The anti-cross-use rule above depends on
 keeping the identifiers' roles and checks distinct, not their string
-values: the runtime evidence rows deliberately carry the same media
-type string as operational `typ` and as
-`payload-preimage-content-type`. Collapsing the types into one
-envelope, one media type, or a shared `typ` list would relocate
-domain separation from the registered identifier into a payload
+values: the runtime evidence rows carry the same media type string as
+the protected `cty` and as `payload-preimage-content-type`, under one
+secured `typ`. Naming the record kind only in a payload member,
+rather than in a registered identifier the signature protects, would
+relocate domain separation from the registered identifier into that
 member.
 
 ## Evidence Types {#evidence-types}
@@ -498,11 +502,11 @@ Mission's feed; a row registers nothing on its own.
 | Lifecycle transition | Signals SET as issued, as the signals profile fixes; else {{transition-object}} (JCS) | `application/secevent+jwt`, else `application/mission-lifecycle-transition+json` | `secevent+jwt`, else none | `issuer` |
 | Derivation record | {{derivation-record}} (JCS) | `application/mission-derivation-record+json` | none | `issuer` |
 | Consent evidence | complete retained object, `evidence_envelope` included (JCS) | `application/mission-consent-evidence+json` | `mission-consent-evidence+jws` | `issuer` |
-| Approval governance | complete record including `envelope` (JCS), the record-digest preimage | `application/mission-approval-governance+json` | `application/mission-approval-governance+json` | `issuer` |
-| Decision evidence | complete object, `evidence_envelope` included (JCS) | `application/mission-decision-evidence+json` | `application/mission-decision-evidence+json` | PDP key |
-| Execution evidence | complete object, `evidence_envelope` included (JCS) | `application/mission-execution-evidence+json` | `application/mission-execution-evidence+json` | PEP key |
-| Refusal Record | complete object, `evidence_envelope` included (JCS) | `application/mission-refusal-record+json` | `application/mission-refusal-record+json` | PEP key |
-| Mission Receipt | complete object, `evidence_envelope` included (JCS) | `application/mission-receipt+json` | `application/mission-receipt+json` | receipt issuer key |
+| Approval governance | complete record including `envelope` (JCS), the record-digest preimage | `application/mission-approval-governance+json` | `application/mission-approval-governance+jws` | `issuer` |
+| Decision evidence | complete object, `evidence_envelope` included (JCS) | `application/mission-decision-evidence+json` | `application/mission-runtime-evidence+jws` | PDP key |
+| Execution evidence | complete object, `evidence_envelope` included (JCS) | `application/mission-execution-evidence+json` | `application/mission-runtime-evidence+jws` | PEP key |
+| Refusal Record | complete object, `evidence_envelope` included (JCS) | `application/mission-refusal-record+json` | `application/mission-runtime-evidence+jws` | PEP key |
+| Mission Receipt | complete object, `evidence_envelope` included (JCS) | `application/mission-receipt+json` | `application/mission-runtime-evidence+jws` | receipt issuer key |
 | Mission Mandate | plain form: JWS Compact Serialization, as issued; SD-JWT form: issuer-signed JWT component, as issued | `application/mission-mandate+jwt`, else `application/mission-mandate+sd-jwt` | `mission-mandate+jwt`, else `mission-mandate+sd-jwt` | `issuer` |
 | Work Product Binding | JWS Compact Serialization, as issued | `application/mission-work-product-binding+jwt` | `mission-work-product-binding+jwt` | signing `mediator` principal |
 | Child Evidence | Child Evidence object (JCS), as the child-delegation profile fixes | `application/mission-child-evidence+json` | none | `issuer` |
@@ -565,7 +569,11 @@ digest while the operational signature stayed valid.
 
 The operational `typ` column records the protected `typ` of the
 signature envelope a type's retained form carries, none where the
-type is retained unsigned. It is the per-type mapping named in
+type is retained unsigned. Where the defining profile pairs that
+`typ` with a protected `cty`, as the runtime evidence types and the
+Approval Governance Record do, the `cty` is the row's
+`payload-preimage-content-type`, and a verifier checks the pair. It
+is the per-type mapping named in
 {{evidence-base}}, checked when verifying the operational signature,
 never in place of `payload-preimage-content-type`. Harness and Egress
 Evidence fix none: their defining profile fixes the raw object's JCS
