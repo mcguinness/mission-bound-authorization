@@ -19,6 +19,11 @@
 import { describe, expect, it } from "vitest";
 import type { Fga } from "../src/fga.js";
 import { evaluate, type ActionApproval, type EvaluationRequest, type MissionView, relationForAction, stalenessBound } from "../src/index.js";
+import { freshKey, openTestClaims } from "./claim-fixture.js";
+
+// @spec runtime#idempotency (#917): every high-consequence permit is claimed;
+// a fixture domain that also mediates privileged administration.
+const CLAIMS = openTestClaims({ now: () => new Date("2026-07-22T12:00:00Z") });
 
 const RESOURCE = "http://localhost:4403/mcp";
 const NOW = new Date("2026-07-22T12:00:00Z");
@@ -43,7 +48,7 @@ const HIGH_CONSEQUENCE_CLASSES = ["irreversible_action", "external_commitment", 
 const reqFor = (actionClass: string, approval?: ActionApproval): EvaluationRequest => ({
   subject: { id: "alice" },
   resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
-  action: { name: "payments:invoice.read" },
+  action: { name: "payments:invoice.read", properties: { idempotency_key: freshKey() } },
   context: {
     audience: RESOURCE,
     mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
@@ -70,6 +75,7 @@ const optsFor = (actionClass: string) => ({
   maxApprovalAgeSeconds: 300,
   relationForAction,
   allowedFreshnessSources: new Set(["status"]),
+  claims: CLAIMS,
 });
 
 describe("action-bound approval gate, one high-consequence class at a time (@spec runtime#compromise-resistant)", () => {

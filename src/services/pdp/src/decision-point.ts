@@ -21,10 +21,52 @@
  * author of a record.
  */
 
-import { generateKeyPairSync } from "node:crypto";
+import { generateKeyPairSync, randomUUID } from "node:crypto";
 import { createDecisionEvidenceEmitter, type DecisionEvidenceEmitter } from "./decision-evidence.js";
 import { type DecisionFn, type EvaluateOptions, evaluate } from "./evaluate.js";
+import type {
+  ClaimRequester,
+  ClaimResolution,
+  ConsumptionStatusFn,
+  IdempotencyClaimDomain,
+  SettlementResult,
+  UnresolvedClaim,
+} from "./idempotency-claims.js";
 import type { EvidenceKeyLike, EvidenceSigningKey } from "./runtime-evidence-integrity.js";
+
+/**
+ * @spec runtime#idempotency (#917, owner ruling 2026-10-02) — what an
+ * executing PEP may tell the claim domain, over the same decision channel it
+ * asks for decisions on, scoped to the authenticated requester. It settles
+ * and reconciles claims from authenticated Execution Evidence or from its own
+ * redemption store; it cannot release a claim, and it never redeems through
+ * the PDP.
+ */
+export interface ClaimChannel {
+  /** The redeeming attempt's PEP-signed Execution Evidence. Idempotent on `execution_id`. */
+  settle(record: unknown): Promise<SettlementResult>;
+  /** This requester's unresolved claims, for the declared reconciler. */
+  listUnresolved(): Promise<UnresolvedClaim[]>;
+  /** Resolve one unresolved claim. */
+  reconcile(evaluationId: string, resolution: ClaimResolution): Promise<SettlementResult>;
+}
+
+/** The channel a decision point without a claim domain offers: nothing settles. */
+const NO_CLAIM_CHANNEL: ClaimChannel = {
+  settle: async () => ({ accepted: false, reason: "no_claim_domain" }),
+  listUnresolved: async () => [],
+  reconcile: async () => ({ accepted: false, reason: "no_claim_domain" }),
+};
+
+/** The claim channel over one domain, bound to one authenticated requester. */
+export function claimChannelFor(claims: IdempotencyClaimDomain | undefined, requester: ClaimRequester): ClaimChannel {
+  if (!claims) return NO_CLAIM_CHANNEL;
+  return {
+    settle: (record) => claims.settle(requester, record),
+    listUnresolved: async () => claims.listUnresolved(requester),
+    reconcile: (evaluationId, resolution) => claims.reconcile(requester, evaluationId, resolution),
+  };
+}
 
 /**
  * What a relying PEP registers to verify (and then retain) the Decision
@@ -54,6 +96,15 @@ export interface DecisionPointConfig {
     emitterId: string;
     audience: string;
   };
+  /**
+   * @spec runtime#idempotency (#917) — this decision point's Exact
+   * idempotency claim domain, bound here exactly as the evidence path is and
+   * for the same reason: an enforcement component that could supply one
+   * could choose the domain its own requests are claimed in. Absent, the
+   * decision point declares no domain and refuses every high-consequence
+   * permit.
+   */
+  claims?: IdempotencyClaimDomain;
 }
 
 export interface DecisionPoint {
@@ -61,29 +112,64 @@ export interface DecisionPoint {
   decide: DecisionFn;
   /** Published alongside `decide`, so the PEP that holds one can verify what the other returns. */
   evidenceVerification?: DecisionEvidenceVerification;
+  /**
+   * @spec runtime#idempotency (#917) — the decision channel's seam: `decide`
+   * bound to one authenticated requester and that requester's read-only
+   * consumption-status capability. Only trusted assembly and the channel call
+   * this; a PEP receives the function it returns.
+   */
+  decideAs?: (requester: ClaimRequester, consumptionStatus?: ConsumptionStatusFn) => DecisionFn;
+  /** @spec runtime#idempotency (#917) — settlement and reconciliation for one authenticated requester. */
+  claimsFor?: (requester: ClaimRequester) => ClaimChannel;
 }
 
 /**
- * Bind one emission path to one decision function. The returned function
- * strips any `evidence` a caller's options object carries before applying
- * this decision point's own: {@link DecisionOptions} omits the member, but an
- * options object built elsewhere and widened is still structurally
- * assignable, so it is removed rather than merely overwritten. The emission
- * path therefore cannot be supplied, replaced, or suppressed from the
+ * Bind one emission path, one claim domain and one requester to one decision
+ * function. The returned function strips any `evidence`, `claims`,
+ * `requester` or `consumptionStatus` a caller's options object carries before
+ * applying this decision point's own: {@link DecisionOptions} omits the
+ * members, but an options object built elsewhere and widened is still
+ * structurally assignable, so they are removed rather than merely
+ * overwritten. None of them can be supplied, replaced, or suppressed from the
  * enforcement side.
  */
-function bindDecide(emitter: DecisionEvidenceEmitter | undefined): DecisionFn {
+function bindDecide(
+  emitter: DecisionEvidenceEmitter | undefined,
+  claims: IdempotencyClaimDomain | undefined,
+  requester: ClaimRequester,
+  consumptionStatus?: ConsumptionStatusFn,
+): DecisionFn {
   return async (req, opts) => {
     const forwarded = { ...opts } as EvaluateOptions;
     delete forwarded.evidence;
+    delete forwarded.claims;
+    delete forwarded.requester;
+    delete forwarded.consumptionStatus;
     if (emitter) forwarded.evidence = emitter;
+    if (claims) forwarded.claims = claims;
+    forwarded.requester = requester;
+    if (consumptionStatus) forwarded.consumptionStatus = consumptionStatus;
     return evaluate(req, forwarded);
   };
 }
 
+/**
+ * The requester a decision point's plain `decide` answers to: a co-resident
+ * caller that no channel authenticated. Its epoch is fresh per decision
+ * point and it has no consumption-status capability, so a retransmission can
+ * never be returned to it; every other guarantee of the claim holds.
+ */
+function unboundRequester(): ClaimRequester {
+  return { pep_id: "co-resident", pep_epoch: `co-resident:${randomUUID()}` };
+}
+
 /** Construct a co-resident PDP: one decision function, bound once to one emission path. */
-export function createDecisionPoint(config: Required<DecisionPointConfig>): Required<DecisionPoint>;
-export function createDecisionPoint(config?: DecisionPointConfig): DecisionPoint;
+export function createDecisionPoint(
+  config: DecisionPointConfig & Required<Pick<DecisionPointConfig, "evidence">>,
+): Required<DecisionPoint>;
+export function createDecisionPoint(
+  config?: DecisionPointConfig,
+): DecisionPoint & Required<Pick<DecisionPoint, "decideAs" | "claimsFor">>;
 export function createDecisionPoint(config: DecisionPointConfig = {}): DecisionPoint {
   const emitter = config.evidence
     ? createDecisionEvidenceEmitter({
@@ -93,7 +179,9 @@ export function createDecisionPoint(config: DecisionPointConfig = {}): DecisionP
       })
     : undefined;
   return {
-    decide: bindDecide(emitter),
+    decide: bindDecide(emitter, config.claims, unboundRequester()),
+    decideAs: (requester, consumptionStatus) => bindDecide(emitter, config.claims, requester, consumptionStatus),
+    claimsFor: (requester) => claimChannelFor(config.claims, requester),
     ...(config.evidence
       ? {
           evidenceVerification: {
@@ -116,22 +204,31 @@ export function createDecisionPoint(config: DecisionPointConfig = {}): DecisionP
  * have emitted, on the same emitter (and so the same sequence counters) its
  * `decide` uses. Enforcement wiring takes `decide` and `evidenceVerification`
  * and never this.
+ *
+ * `claims` binds a claim domain exactly as {@link createDecisionPoint} does;
+ * absent, this decision point declares none and refuses high-consequence
+ * permits.
  */
 export interface EphemeralDecisionPoint extends DecisionPoint {
   evidenceVerification: DecisionEvidenceVerification;
   emitter: DecisionEvidenceEmitter;
+  decideAs: NonNullable<DecisionPoint["decideAs"]>;
+  claimsFor: NonNullable<DecisionPoint["claimsFor"]>;
 }
 
 export function createEphemeralDecisionPoint(options: {
   emitterId: string;
   audience: string;
   kid?: string;
+  claims?: IdempotencyClaimDomain;
 }): EphemeralDecisionPoint {
-  const { emitterId, audience, kid = "ephemeral-pdp" } = options;
+  const { emitterId, audience, kid = "ephemeral-pdp", claims } = options;
   const { privateKey, publicKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
   const emitter = createDecisionEvidenceEmitter({ signer: { kid, key: privateKey }, emitterId, audience });
   return {
-    decide: bindDecide(emitter),
+    decide: bindDecide(emitter, claims, unboundRequester()),
+    decideAs: (requester, consumptionStatus) => bindDecide(emitter, claims, requester, consumptionStatus),
+    claimsFor: (requester) => claimChannelFor(claims, requester),
     evidenceVerification: { kid, publicKey, emitterId, audience },
     emitter,
   };

@@ -16,13 +16,16 @@ import {
   type EntitlementObservation,
   entitlementPermits,
   type EntitlementResolver,
+  idempotencyScopeDigest,
   isActionPhase,
+  isIdempotencyKey,
   isValidAmount,
   MISSION_ORIGIN_SUBJECT_TYP,
   type OriginPrincipal,
   type PrincipalMappingObservation,
   type PrincipalMappingResolver,
 } from "@mission/core";
+import { randomUUID } from "node:crypto";
 import { getTracer } from "@mission/telemetry";
 import { SignJWT, type CryptoKey } from "jose";
 import type {
@@ -36,7 +39,15 @@ import type {
 } from "./decision-evidence.js";
 import { runtimeCapabilitySourceOf, evaluationRequestDigest } from "./decision-evidence.js";
 import type { Fga } from "./fga.js";
+import type {
+  ClaimInput,
+  ClaimRequester,
+  ClaimTicket,
+  ConsumptionStatusFn,
+  IdempotencyClaimDomain,
+} from "./idempotency-claims.js";
 import { type DelegatePolicy, resolveBaselineJoin } from "./mas-join.js";
+import { decisionCacheKey, idempotencyScopeOf, operationIdentity } from "./projections.js";
 import {
   type AuthorityEntry,
   deriveContextualTuples,
@@ -121,7 +132,17 @@ export interface EvaluationRequest {
    * step 6a).
    */
   resource: { type: string; id: string; properties?: { vendor_id?: string; vendor_ids?: string[] } };
-  action: { name: string };
+  action: {
+    name: string;
+    /**
+     * @spec authzen#parameter-digest `idempotency_key` — CONDITIONAL: the
+     * key the Operation Profile defines for a non-idempotent high-consequence
+     * action, carried distinct from `parameter_digest` and never inside it.
+     * Typed `string` deliberately: a malformed value is refused at the claim
+     * step, never admitted by the type system.
+     */
+    properties?: { idempotency_key?: string };
+  };
   context: {
     audience: string; // matched against the approved entry's resource
     mission: {
@@ -246,7 +267,22 @@ export type DenialReason =
    * rejection, and mcp-payments/src/server.ts's `"txn_mission_mismatch"`
    * transaction-authorization refusal): neither is this `DenialReason`.
    */
-  | "mission_mismatch";
+  | "mission_mismatch"
+  /**
+   * @spec authzen#runtime-denial-classification, runtime#idempotency (#917) —
+   * the request's `idempotency_key` and operation identity match a prior
+   * claim that is in flight, unresolved, completed, failed, or indeterminate,
+   * or whose permit cannot be returned as a retransmission: no second permit
+   * issues. Transient (`next_action: retry`) while the outcome is unresolved,
+   * terminal (`next_action: none`) once it is not.
+   */
+  | "duplicate_suppressed"
+  /**
+   * @spec authzen#runtime-denial-classification, runtime#idempotency (#917) —
+   * the `idempotency_key` was claimed under a different operation identity:
+   * a conflict, never a new execution, terminal in every claim state.
+   */
+  | "idempotency_conflict";
 
 export interface Decision {
   decision: boolean;
@@ -338,6 +374,28 @@ export interface EvaluateOptions {
    * fail-closed-on-unconfigured idiom as `allowedFreshnessSources`).
    */
   delegatePolicy?: DelegatePolicy;
+  /**
+   * @spec runtime#idempotency (#917) — this PDP's Exact idempotency claim
+   * domain, bound at decision-point construction exactly as `evidence` is.
+   * Absent, no high-consequence class has a declared domain, and a request in
+   * one is refused rather than permitted without the claim.
+   */
+  claims?: IdempotencyClaimDomain;
+  /**
+   * @spec runtime#idempotency, retransmission condition 5 (#917) — the
+   * authenticated PEP and redemption-store epoch this decision is issued to,
+   * bound by the decision channel and never read from the request. Absent
+   * (a direct call outside any channel), every claim gets a fresh epoch, so
+   * no retransmission can ever match it.
+   */
+  requester?: ClaimRequester;
+  /**
+   * @spec runtime#idempotency, retransmission condition 6 (#917) — the
+   * requester's read-only consumption status for a stored `evaluation_id`,
+   * answered from its D28 redemption store. Bound with the requester; absent
+   * is `unknown`, which suppresses.
+   */
+  consumptionStatus?: ConsumptionStatusFn;
 }
 
 /**
@@ -350,8 +408,21 @@ export interface EvaluateOptions {
  * through a caller's options object: an enforcement component that could put
  * an emitter there holds the capability to have an arbitrary record signed
  * under the decision point's identity, which is the defect this split closes.
+ *
+ * @spec runtime#idempotency (#917) — the claim domain, the requester and its
+ * consumption-status capability are PDP-side and channel-side bindings for
+ * the same reason: a caller that could supply them could point the claim at
+ * a domain of its choosing or answer for another PEP's redemption store.
  */
-export type DecisionOptions = Omit<EvaluateOptions, "evidence">;
+export type DecisionOptions = Omit<EvaluateOptions, "evidence" | "claims" | "requester" | "consumptionStatus">;
+
+/** What the claim step left for {@link evaluate} to finish. */
+interface ClaimContext {
+  /** This evaluation holds a claim: its permit is persisted before it is returned. */
+  ticket?: ClaimTicket;
+  /** The returned decision is a stored one: it already carries its own signed evidence. */
+  retransmitted?: boolean;
+}
 
 /**
  * The PDP's decision entry point as an enforcement component sees it: submit
@@ -368,10 +439,15 @@ export type DecisionOptions = Omit<EvaluateOptions, "evidence">;
  */
 export type DecisionFn = (req: EvaluationRequest, opts: DecisionOptions) => Promise<Decision>;
 
-let decisionCounter = 0;
+/**
+ * @spec authzen#response-context `evaluation_id`, runtime#idempotency (#917):
+ * unique across restarts, not only within one process. The claim domain
+ * stores it durably and the PEP's redemption store answers for it by value,
+ * so a counter that restarts at 1 would let one boot's identifier name
+ * another boot's permit.
+ */
 function newDecisionId(): string {
-  decisionCounter += 1;
-  return `dec_${decisionCounter}_${Math.floor(performance.now())}`;
+  return `dec_${randomUUID()}`;
 }
 
 export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): Promise<Decision> {
@@ -383,14 +459,28 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
       // Private per-evaluation trace: never read a request-supplied list, and
       // never reconstruct outcomes by rewalking the authority set after a deny.
       const contributions = new Set<string>();
-      const decision = await evaluateInner(req, opts, contributions);
+      const claim: ClaimContext = {};
+      const decision = await evaluateInner(req, opts, contributions, claim);
       span.setAttribute("mission.action", req.action.name);
       span.setAttribute("mission.decision", decision.decision);
       if (decision.context.denial_reason) {
         span.setAttribute("mission.denial_reason", String(decision.context.denial_reason));
       }
-      if (opts.evidence) {
-        decision.context.decision_evidence = await emitDecisionEvidence(req, opts, opts.evidence, decision, contributions, requestDigest);
+      // @spec runtime#idempotency (#917) — a retransmission is the stored
+      // decision with its stored Decision Evidence; emitting again would sign
+      // a second record for one `evaluation_id`.
+      if (claim.retransmitted) return decision;
+      try {
+        if (opts.evidence) {
+          decision.context.decision_evidence = await emitDecisionEvidence(req, opts, opts.evidence, decision, contributions, requestDigest);
+        }
+        // The single writer persists the whole decision before it returns,
+        // so a crash after this point yields at most this same permit again.
+        claim.ticket?.persist(decision);
+      } finally {
+        // Persisted or not, this evaluation no longer holds the claim. An
+        // unpersisted row is adoptable: no permit left the PDP.
+        claim.ticket?.release();
       }
       return decision;
     } finally {
@@ -494,7 +584,12 @@ async function emitDecisionEvidence(
   });
 }
 
-async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions, contributions: Set<string>): Promise<Decision> {
+async function evaluateInner(
+  req: EvaluationRequest,
+  opts: EvaluateOptions,
+  contributions: Set<string>,
+  claim: ClaimContext,
+): Promise<Decision> {
   const { view, fga, modelId, now } = opts;
   const pvid = policyViewId(view, modelId);
   const actionClass = req.context.action_class;
@@ -1094,6 +1189,61 @@ async function evaluateInner(req: EvaluationRequest, opts: EvaluateOptions, cont
   // send_remittance_email (external_commitment) permit never carried a use
   // limit at all: a genuine value-level bug this migration also fixes.
   const highConsequence = HIGH_CONSEQUENCE_ACTION_CLASSES.has(actionClass ?? "");
+
+  // 9. Idempotency claim (@spec runtime#idempotency, authzen#parameter-digest,
+  // #917): "Before issuing a permit for a keyed action in the
+  // irreversible-action, external-commitment, or privileged-administration
+  // classes, the PDP MUST atomically claim the pair (idempotency scope,
+  // `idempotency_key`) together with the request's operation identity". It
+  // runs only here, once the request would otherwise permit, so a caller
+  // without authority learns nothing about which keys exist.
+  if (highConsequence) {
+    const domain = opts.claims;
+    // A high-consequence class with no declared claim domain is a class the
+    // deployment published no Exact domain for: the undeclared-class
+    // refusal, never a permit issued without the claim.
+    if (!domain?.declares(actionClass)) return deny("out_of_authority");
+    const key = req.action.properties?.idempotency_key;
+    if (!isIdempotencyKey(key)) return deny("parameter_violation");
+    const scope = idempotencyScopeOf(req);
+    const input: ClaimInput = {
+      actionClass: actionClass as string,
+      scope,
+      scopeDigest: idempotencyScopeDigest(scope),
+      key,
+      operationIdentity: operationIdentity(req),
+      cacheKey: decisionCacheKey(req, view, modelId),
+      evaluationId: decisionId,
+      validUntilMs: deadline.validUntilMs,
+      requester: opts.requester ?? { pep_id: "unbound", pep_epoch: `unbound:${randomUUID()}` },
+      nowMs: now().getTime(),
+    };
+    // An unreachable domain throws here: no decision, so the PEP records
+    // `pdp_unreachable` and nothing executes (runtime: "MUST fail closed
+    // rather than issue a permit").
+    const outcome = await domain.claim(input);
+    const idempotencyDenial = (reason: "duplicate_suppressed" | "idempotency_conflict", next: Record<string, unknown>): Decision => ({
+      decision: false,
+      context: base({ denial_reason: reason, reason, ...next }),
+    });
+    if (outcome.kind === "conflict") return idempotencyDenial("idempotency_conflict", { next_action: "none" });
+    if (outcome.kind === "suppressed") {
+      return idempotencyDenial(
+        "duplicate_suppressed",
+        outcome.transient ? { next_action: "retry", retry_after: outcome.retryAfterSeconds ?? 1 } : { next_action: "none" },
+      );
+    }
+    if (outcome.kind === "retransmission_candidate") {
+      const prior = await domain.retransmit(input, outcome, opts.consumptionStatus);
+      if (prior) {
+        claim.retransmitted = true;
+        return prior;
+      }
+      return idempotencyDenial("duplicate_suppressed", { next_action: "retry", retry_after: 1 });
+    }
+    claim.ticket = outcome.ticket;
+  }
+
   return {
     decision: true,
     context: base({
