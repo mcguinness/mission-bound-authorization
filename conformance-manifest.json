@@ -75,8 +75,8 @@
     "content_sha256": "055d460354f9c98d981f74ce661daa606685695bedd42d04a31981158f8389d7"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "0da7a02d16762185010ab53ec555c77e10729acd",
-    "content_sha256": "2c63cf0670a58275f31a6a1fb3990df601e301b6606ef22bc9663dcb0b60dbec"
+    "revision": "a0ed2253257e1084af1a0ca8e9e4916a7a657906",
+    "content_sha256": "a3cf68f964225bf6908a62ad254a6b3494a0404bc04c6878b5be5cf92d612c31"
    },
    "draft-mcguinness-mission-orchestration.md": {
     "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
@@ -23864,6 +23864,72 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "progressive.in-ceiling.contained-overlap-falls-back",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "in-ceiling-expansion",
+   "text": "The drawdown policy MUST NOT policy-adjudicate a successor whose complete Authority Set, including authority carried forward from its predecessor, overlaps in authority capability under a containment restriction of its expansion chain",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A policy-adjudicated drawdown request whose complete successor Authority Set, including authority carried forward from the predecessor, overlaps capability the predecessor contained produces no successor by policy; it falls back to a fresh human approval whose consent disclosure names the contained capability and the event class that caused its containment."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Binds where containment.narrowing also runs (Containment Section \"Restoration Through Expansion\"). The negative test waits for a Progressive implementation (#999)."
+  },
+  {
+   "id": "progressive.in-ceiling.unrelated-drawdown-policy-eligible",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "in-ceiling-expansion",
+   "text": "A drawdown whose authority overlaps no restricted capability remains eligible for policy adjudication under the other guards of this section",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "While the chain carries a containment restriction, a drawdown whose complete successor Authority Set overlaps no restricted capability is still adjudicated by policy under the other in-ceiling guards; a non-empty overlay alone does not force a human approval."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Binds where containment.narrowing also runs (Containment Section \"Restoration Through Expansion\"). The negative test waits for a Progressive implementation (#999)."
+  },
+  {
+   "id": "progressive.in-ceiling.restriction-survives-intervening-successor",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "in-ceiling-expansion",
+   "text": "The Mission Issuer MUST apply this test to every drawdown in the chain after the containment, not only to one from the Mission that holds the overlay",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "After Mission A contains capability X and an unrelated policy drawdown creates successor B with an empty overlay, a later drawdown from B whose Authority Set overlaps X is refused policy adjudication and falls back to a fresh human approval disclosing the containment of X and its cause; an unrelated approval or a ceiling review in between does not clear the restriction."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Binds where containment.narrowing also runs (Containment Section \"Restoration Through Expansion\"). The negative test waits for a Progressive implementation (#999)."
   },
   {
    "id": "cross-domain.delegation-depth.composed-bound-disclosure",
