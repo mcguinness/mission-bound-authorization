@@ -20537,6 +20537,12 @@
      "name": "a permit the PDP did not evidence is refused, never executed (#741) > refuses the action when the decision carries no Decision Evidence",
      "level": "endpoint",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
+     "name": "one catalog snapshot from discovery to invocation > a capability refusal after the invoice resolves records the resource and digests it in the pre-request input",
+     "level": "endpoint",
+     "surface": "evidence-emission"
     }
    ]
   },
@@ -20572,8 +20578,15 @@
      "name": "approval resolution is outside the mediated tool boundary (#759) > approval-resolution tool names refuse unknown_tool and retain one PEP Refusal Record",
      "level": "unit",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
+     "name": "one catalog snapshot from discovery to invocation > a capability refusal after the invoice resolves records the resource and digests it in the pre-request input",
+     "level": "endpoint",
+     "surface": "evidence-emission"
     }
-   ]
+   ],
+   "notes": "The PEP witnesses cover both sides of the known-resource clause: an unknown_tool refusal before any resource is established omits it, and a capability-source refusal after the invoice resolved includes it, so refusals for different invoices differ."
   },
   {
    "id": "evidence.retention.audit-window-floor",
