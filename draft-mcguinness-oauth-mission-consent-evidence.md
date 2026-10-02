@@ -119,14 +119,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-oauth-mission-approval:
-    title: "Mission Deferred Approval for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   I-D.draft-mcguinness-oauth-mission-approval-revision:
     title: "Mission Approval Revision for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval-revision.html
@@ -1721,6 +1713,10 @@ encoding difference to resolve before interoperating.
   parameter, which carries a client-supplied `shaping_evidence_hash`
   in the pushed authorization request into the Consent Disclosure
   object, as a commitment that is never provenance or authority.
+
+- Removed the uncited Mission Deferred Approval reference; the
+  Approval Governance Record is the cited home of approval-governance
+  facts.
 
 # Acknowledgments
 {:numbered="false"}
