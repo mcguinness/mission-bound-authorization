@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-02T04:22:42Z
-Source repository commit: 238580581c8c4a78cb65a82732adeb7f1e50ad7a
+Generated: 2026-10-02T04:47:40Z
+Source repository commit: 4ae6ff2d9d43b4d9b6299e8b603679dfc986691e
 Member count: 9
 
 Reading order:
@@ -10303,6 +10303,11 @@ Table of Contents
    mission_bound_authorization_supported as true (Section 16), the
    machine-checkable form of that claim.
 
+   The Mission Binding Properties vector of
+   [I-D.draft-mcguinness-mission-architecture] names this discharge as
+   its credential-mission-bound property, informatively; these gates
+   remain authoritative for OAuth binding conformance regardless.
+
    This document publishes a Mapping Assessment of how the surfaces
    above realize the Mission Substrate contract's kernel and
    capabilities (Appendix F).  It is not this document's conformance
@@ -16707,10 +16712,12 @@ Table of Contents
    A deployment that claims conformance to this profile MUST publish an
    *Enforcement Scope Statement*: the structured, referenceable
    declaration of its enforcement scope that auditors, procurement, and
-   interop tests key on.  This statement is what earns the Runtime-
-   Enforced level of the Mission Assurance Levels, and it feeds the
-   Mission Deployment Profile, the deployment-level manifest the
-   architecture defines ([I-D.draft-mcguinness-mission-architecture]).
+   interop tests key on.  A deployment adopting the Runtime-Enforced
+   bundle of the Mission Assurance Levels publishes this statement; the
+   level stays guidance, and the statement's named claims are what a
+   relying party compares.  The statement feeds the Mission Deployment
+   Profile, the deployment-level manifest the architecture describes
+   ([I-D.draft-mcguinness-mission-architecture]).
 
    The statement's baseline declaration, required of every conforming
    deployment regardless of which named claims or assurance extensions
@@ -19626,6 +19633,12 @@ Appendix C.  Runtime Evidence Worked Examples
 Appendix D.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The Enforcement Scope Statement is what a deployment adopting the
+      Runtime-Enforced bundle publishes, not what earns the level; the
+      level stays guidance, matching the architecture's assurance
+      levels, and the statement's named claims are what a relying party
+      compares.
 
    *  The Introduction states this profile as the per-action decision
       for the action classes it covers, composed over the issuance

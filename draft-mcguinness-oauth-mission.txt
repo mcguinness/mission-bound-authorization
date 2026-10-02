@@ -4007,6 +4007,11 @@ Table of Contents
    mission_bound_authorization_supported as true (Section 16), the
    machine-checkable form of that claim.
 
+   The Mission Binding Properties vector of
+   [I-D.draft-mcguinness-mission-architecture] names this discharge as
+   its credential-mission-bound property, informatively; these gates
+   remain authoritative for OAuth binding conformance regardless.
+
    This document publishes a Mapping Assessment of how the surfaces
    above realize the Mission Substrate contract's kernel and
    capabilities (Appendix F).  It is not this document's conformance
