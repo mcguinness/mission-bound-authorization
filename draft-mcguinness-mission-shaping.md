@@ -314,6 +314,10 @@ Shaping ceiling:
   pre-consented Template Ceiling on Missions dispatched from a template
   ({{I-D.draft-mcguinness-oauth-mission-template}}).
 
+Partial proposal:
+: A shaped proposal that omits authority the task needs, emitted only
+  under the conditions of {{authority-ceiling}}.
+
 Resolution basis:
 : The ground on which the shaper admits a resource or action into a
   proposal ({{capability-resolution}}).
@@ -666,8 +670,9 @@ sub-task into the proposed Child Mission Intent is a shaping act, and
 this document applies to it unchanged. The Parent Mission's Authority
 Set is the shaping ceiling. The child-delegation profile refuses a
 child that is not a strict subset of its parent, so a proposal that
-exceeds the parent cannot be approved, and the shaper narrows,
-clarifies, or refuses instead of emitting one. Shaping Evidence for a
+exceeds the parent cannot be approved; the shaper instead requests
+clarification, refuses, or emits a partial proposal
+({{authority-ceiling}}). Shaping Evidence for a
 child proposal SHOULD record the parent Mission identifier and the
 parent-derived ceiling it shaped under.
 
@@ -971,9 +976,10 @@ to propose the same authority under different names. A shaper SHOULD
 NOT re-encode refused authority in new vocabulary. It MUST NOT use
 iterative resubmission to probe the Mission Issuer's policy boundary
 ({{silent-broadening}}). When a narrower proposal can no longer
-complete the task, the shaper requests clarification or refuses
-({{ambiguity}}). A task that needs more than was refused is a new
-proposal through the normal flow, not a widened retry.
+complete the task, the shaper requests clarification, refuses, or
+emits a partial proposal ({{authority-ceiling}}). A task that needs
+more than was refused is a new proposal through the normal flow, not a
+widened retry.
 
 # Deployment Considerations {#deployment-considerations}
 
