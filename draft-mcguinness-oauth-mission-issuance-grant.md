@@ -1000,26 +1000,22 @@ consuming AS's refresh gating adds the state-aware half-step.
 - the `active`-only gate;
 - subset and audience scoping;
 - derivation counting where a `derivation_limit` is set;
+- `cnf` only from a verified sender constraint;
 - minting evidence; and
 - grants shaped exactly as {{grant}} requires.
 
 **Consuming Authorization Server** implements {{redemption}} in
 full:
 
-- `typ`, signature, audience, lifetime, single-use, and client
-  binding validation;
-- `mission` claim carriage, with `id`, `issuer`, and `expires_at`
-  unchanged, and `authority_hash` recorded with each issuance;
-- subset-bounded minting;
-- `expires_at` capping;
-- Effective Authority Set projection at redemption, which binds every
-  state-integrated consuming AS unconditionally
-  ({{effective-set-projection}});
-- Effective Authority Set projection at every refresh, which binds a
-  consuming AS that issues refresh tokens ({{effective-set-projection}});
-- no refresh tokens without a Mission-state integration
-  ({{no-state-integration}});
-- no re-approval; and
+- grant validation and single use ({{grant-validation}},
+  {{single-use}});
+- token issuance ({{token-issuance}}): `mission` claim carriage with
+  `authority_hash` recorded, subset-bounded authority, the
+  `expires_at` cap, and no re-approval;
+- with a Mission-state integration, Effective Authority Set
+  projection at redemption and at every refresh
+  ({{effective-set-projection}}); without one, no refresh tokens
+  ({{no-state-integration}}); and
 - the redemption error mapping of {{redemption-errors}}.
 
 The PAR carriage of {{par-carriage}} is OPTIONAL.
