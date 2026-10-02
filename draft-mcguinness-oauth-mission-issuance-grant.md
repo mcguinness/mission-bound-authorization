@@ -625,25 +625,23 @@ On success the consuming AS mints tokens under these rules:
   grant's. The consuming AS's own policy can only narrow them: it
   MUST NOT widen, remap, or supplement them. Representing them as
   `scope` (below) is not a remapping.
-- **Token response.** Where the consuming AS issues
-  `authorization_details`, the token response carries them as the
-  issuance profile requires for Mission-bound issuance
-  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission-Bound
-  Access Tokens", and {{Section 7 of RFC9396}}); where it projects
-  them to `scope`, the response carries `scope`
-  ({{Section 5.1 of RFC6749}}). Either way it carries the `mission_id`
-  and `mission_expires_at` parameters as the issuance profile
-  recommends ({{I-D.draft-mcguinness-oauth-mission}}, Section "Binding
-  the Mission to the Grant").
-- **Scope projection.** Carrying `authorization_details` at all
-  requires {{RFC9396}} support at the consuming AS. An AS that
-  models authority as `scope` instead projects the grant's
+- **Token response.** The token response carries the issued
+  `authorization_details` as the issuance profile requires for
+  Mission-bound issuance ({{I-D.draft-mcguinness-oauth-mission}},
+  Section "Mission-Bound Access Tokens", and {{Section 7 of RFC9396}}),
+  any projected `scope` beside them ({{Section 5.1 of RFC6749}}), and
+  the `mission_id` and `mission_expires_at` parameters as the issuance
+  profile recommends ({{I-D.draft-mcguinness-oauth-mission}}, Section
+  "Binding the Mission to the Grant").
+- **Scope projection.** Where a target's enforcement path consumes
+  `scope`, the consuming AS also projects the issued
   `authorization_details` to `scope` under the issuance profile's
   scope-projection rule ({{I-D.draft-mcguinness-oauth-mission}},
-  Section "Scope Projection"):
-  every issued scope value corresponds to authority the grant
-  conveys, and none conveys authority, or relaxes a constraint, that
-  the grant does not.
+  Section "Scope Projection"): every issued scope value corresponds
+  to authority the grant conveys, and none conveys authority, or
+  relaxes a constraint, that the grant does not. The consuming AS
+  therefore supports {{RFC9396}} even where its targets consume only
+  `scope`.
 - **Lifetime.** The consuming AS MUST NOT issue an access or refresh
   token under the grant with an expiry later than the `mission`
   object's `expires_at`. That ceiling is the Mission horizon, not a
