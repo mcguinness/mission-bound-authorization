@@ -901,8 +901,9 @@ The contextual-governance kernel maps as follows:
    never disclosed to Resources or Access Servers.  Both governance
    parties retain the decoded blob, satisfying the kernel's
    maintained-value branch; `s256` is verification material for
-   holders, and algorithm migration follows AAuth ({{blob}},
-   {{reference}}).
+   holders, and AAuth fixes its algorithm at SHA-256 with no migration
+   path (Section 8.2 of {{I-D.draft-hardt-oauth-aauth-protocol}};
+   {{blob}}, {{reference}}).
 5. **Approval ceremony**: the AAuth propose, clarify, and approve
    interaction creates the approved blob and the `active` mission
    atomically ({{approval}}).
