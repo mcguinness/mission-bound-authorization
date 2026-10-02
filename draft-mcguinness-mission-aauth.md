@@ -654,10 +654,9 @@ without the reference.
 Intentionally missionless authorization is a separate path, admitted by
 explicit deployment policy from the outset for requests with no
 required or inherited Mission association.  It is never a fallback
-after Mission validation fails.  The Lifecycle-Gated Authorization and
-Credential-Bound claims of {{mission-substrate}} cover only requests
-whose resource token carries the protected `mission_s256` claim, and
-not that path.
+after Mission validation fails.  It is outside the Lifecycle-Gated
+Authorization and Credential-Bound claims.  Each claim's scope and
+activation conditions are stated in {{mission-substrate}}.
 
 ## Lifecycle {#lifecycle}
 
