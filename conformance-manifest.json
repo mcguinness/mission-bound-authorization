@@ -14387,7 +14387,7 @@
    "id": "authzen.pdp-request.no-downgrade-to-non-mission-policy",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "pdp-request",
-   "text": "A PDP that also serves non-Mission AuthZEN traffic MUST NOT downgrade: for an action within a runtime enforcement scope it mediates, a request whose `context` lacks the `mission` member ({{context-mission}}) is malformed under this binding, and the PDP MUST refuse it rather than evaluate it against non-Mission policy alone, and MUST record the refusal as a Refusal Record with `denial_reason` `mission_context_missing`",
+   "text": "A PDP that also serves non-Mission AuthZEN traffic MUST NOT downgrade: for an action within a runtime enforcement scope it mediates, a request whose `context` lacks the `mission` member ({{context-mission}}) is malformed under this profile, and the PDP MUST refuse it rather than evaluate it against non-Mission policy alone, and MUST record the refusal as a Refusal Record with `denial_reason` `mission_context_missing`",
    "role": "PDP",
    "strength": "MUST NOT",
    "applicability": {
@@ -15945,7 +15945,7 @@
    "id": "authzen.failure-condition-coverage.exactly-one-carrier",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "failure-condition-coverage",
-   "text": "Every runtime failure condition, whether named in the runtime profile's failure-mode table or in its other normative requirements ({{I-D.draft-mcguinness-mission-runtime}}), surfaces through exactly one of four carriers in this binding: a Refusal Record for a PEP or PDP refusal before any PDP decision ({{I-D.draft-mcguinness-mission-runtime-evidence}}), a PDP denial (`reason` in the decision context, `denial_reason` in Decision Evidence), a permit obligation ({{obligations}}), or an Execution Evidence `error` for a failure after a permit",
+   "text": "Every runtime failure condition, whether named in the runtime profile's failure-mode table or in its other normative requirements ({{I-D.draft-mcguinness-mission-runtime}}), surfaces through exactly one of four carriers in this profile: a Refusal Record for a PEP or PDP refusal before any PDP decision ({{I-D.draft-mcguinness-mission-runtime-evidence}}), a PDP denial (`reason` in the decision context, `denial_reason` in Decision Evidence), a permit obligation ({{obligations}}), or an Execution Evidence `error` for a failure after a permit",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -15957,7 +15957,7 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "every runtime-profile failure condition maps to exactly one of the four evidence/response carriers this binding defines; none is left uncarried and none is carried by more than one"
+    "normative": "every runtime-profile failure condition maps to exactly one of the four evidence/response carriers this profile defines; none is left uncarried and none is carried by more than one"
    },
    "level": "unit",
    "coverage": "partial",
@@ -16377,7 +16377,7 @@
    "id": "authzen.conformance.pdp-should-advertise-supported-obligations",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "conformance",
-   "text": "A PDP conforming to this binding SHOULD advertise in its metadata `supported_obligations` array each obligation type it supports",
+   "text": "A PDP conforming to this profile SHOULD advertise in its metadata `supported_obligations` array each obligation type it supports",
    "role": "PDP",
    "strength": "SHOULD",
    "applicability": {
