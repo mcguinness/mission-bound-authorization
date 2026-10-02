@@ -236,30 +236,21 @@ informative:
 
 --- abstract
 
-Mission-Bound Authorization for OAuth 2.0 defines the Mission, a
-durable, human-approved, integrity-bound authorization artifact, and
-binds it to OAuth issuance: the Authorization Server derives tokens
-under the Mission and gates them on its state. Many deployments cannot
-change their Authorization Server. This document defines the Mission
-Authority Server, a standalone service that implements the Mission
-Issuer role without being an OAuth Authorization Server: it validates
-Mission Intents, runs approval events, records Missions, operates the
-Mission lifecycle, and serves Mission state. It derives no tokens.
-Access tokens remain ordinary OAuth tokens; a Policy Decision Point
-joins each presented credential to its Mission at the point of use and
+This specification defines the Mission Authority Server (MAS), a
+standalone service that implements the Mission Issuer role of
+Mission-Bound Authorization for OAuth 2.0 (the OAuth binding) without
+being an OAuth Authorization Server. A MAS validates Mission Intents,
+runs approval events, records Missions, operates the Mission
+lifecycle, and serves Mission state. It derives no tokens. Access
+tokens remain ordinary OAuth tokens; a Policy Decision Point joins
+each presented credential to its Mission at the point of use and
 enforces through the Mission-Bound Runtime Enforcement profile. This
-is the standalone binding, the AS-optional
-deployment mode: Mission governance and per-action enforcement with no
-change to the deployment's Authorization Server, forgoing the
-Mission-bound credentials and issuance gating that only the OAuth
-binding provides (the issuance-grant companion restores both at
-Authorization Servers that redeem its grants). Beyond a single-AS workaround, the Mission
-Authority Server is the standalone Mission Issuer for an estate whose
-task governance must span many Authorization Servers, SaaS systems,
-APIs, local tools, and agent runtimes at once: a control plane for
-approved-task authority over an unchanged OAuth estate. This document
-defines a deployable conformance floor and, above it, an Enterprise
-Mission Authority Profile for that role.
+standalone binding leaves Authorization Servers unchanged and
+provides no Mission-bound credentials or issuance gating; the OAuth
+binding provides both, and the issuance-grant companion restores them
+at Authorization Servers that redeem its grants. This document
+defines a conformance floor and an Enterprise Mission Authority
+Profile.
 
 --- middle
 
@@ -267,53 +258,49 @@ Mission Authority Profile for that role.
 
 Mission-Bound Authorization for OAuth 2.0
 {{I-D.draft-mcguinness-oauth-mission}} (the "OAuth binding") binds
-issued authority to a durable, human-approved Mission. Its Mission
-Issuer role is played by the OAuth Authorization Server (AS)
-{{RFC6749}}: the AS validates the Mission Intent, runs the approval
-event, records the Mission, derives Mission-bound tokens, and gates
-issuance on Mission state. That binding places the chokepoint at the
-token plane, supplying the two capabilities a joined deployment
-lacks (Mission-bound credentials and issuance gating), and it
+issued authority to a durable, human-approved Mission. In the OAuth
+binding, the OAuth Authorization Server (AS) {{RFC6749}} plays the
+Mission Issuer role: the AS validates the Mission Intent, runs the
+approval event, records the Mission, derives Mission-bound tokens,
+and gates issuance on Mission state. Deploying the OAuth binding
 requires changing the AS.
 
-Many deployments cannot make that change: the AS is a shared or
-third-party service, while the need to govern agent tasks is
-immediate. This document defines the **Mission Authority Server
-(MAS)** for those deployments: a standalone service that implements
-the Mission Issuer role of the OAuth binding without being an OAuth
-Authorization Server. A MAS validates Mission Intents, runs approval
-events, records Missions, operates the Mission lifecycle, and serves
-Mission state. It derives no tokens, and it requires no change to the
-deployment's existing AS.
+Many deployments cannot make that change, because the AS is a shared
+or third-party service. This document defines the **Mission
+Authority Server (MAS)** for those deployments: a standalone service
+that implements the Mission Issuer role of the OAuth binding without
+being an OAuth Authorization Server. A MAS validates Mission Intents,
+runs approval events, records Missions, operates the Mission
+lifecycle, and serves Mission state. It derives no tokens, and it
+requires no change to the deployment's existing AS.
 
 Because tokens remain ordinary OAuth tokens with no `mission` claim,
 the credential-to-Mission association is established at the point of
-use instead of traveling in the credential: the Policy Enforcement
+use instead of traveling in the credential. The Policy Enforcement
 Point (PEP) presents the Mission reference explicitly, and the Policy
 Decision Point (PDP) joins the credential to the Mission before
 evaluating the action ({{mission-join}}). Per-action enforcement then
 proceeds under the runtime profile
-{{I-D.draft-mcguinness-mission-runtime}} unchanged.
+{{I-D.draft-mcguinness-mission-runtime}}, which applies unchanged.
 
-A deployment that changes its AS gets Mission-bound credentials and
-issuance gating, which the MAS mode does not provide
-({{limitations}}). The MAS is nonetheless a peer binding, not a
-staging area: decoupling governance from token issuance is an
-architectural choice some deployments make deliberately and keep.
-Lacking a Mission-bound credential is not the same as lacking
-strategic value. An enterprise governing agent tasks across many
-Authorization Servers, SaaS tenants, APIs, and tool gateways needs
-one place that holds the approved task, its lifecycle, and its
-authority, independent of which system issued a given token; a
-central MAS can be that place, and can remain the long-term
-architecture even after some Authorization Servers become
-Mission-aware.
+The MAS mode does not provide Mission-bound credentials or issuance
+gating; a deployment that changes its AS obtains both
+({{limitations}}).
 
-For deployments that want Mission-bound tokens on a particular AS
-later, the path is smooth: the record, anchors, and lifecycle a MAS
-operates are the OAuth binding's own, so moving issuance into
-that AS carries them over unchanged, while the MAS continues to
-govern the rest of the estate.
+The MAS mode is a peer binding, not a staging area. A deployment can
+keep governance decoupled from token issuance as its long-term
+architecture. An enterprise that governs agent tasks across many
+Authorization Servers, SaaS tenants, APIs, and tool gateways can use
+a central MAS as the one place that holds the approved task, its
+lifecycle, and its authority, independent of which system issued a
+given token. A central MAS can remain in that role after some
+Authorization Servers become Mission-aware.
+
+A deployment that later wants Mission-bound tokens at a particular AS
+can move issuance into that AS. The record, anchors, and lifecycle
+carry over unchanged, because a MAS operates the OAuth binding's own
+definitions of them. The MAS continues to govern the rest of the
+estate ({{limitations}}).
 
 ## Protocol Overview {#overview}
 
@@ -356,7 +343,7 @@ under the Mission Join.
   submission endpoint and receives a pending-submission reference
   ({{intent-submission}}).
 - Steps 3 and 4: the MAS routes the submission to its approval
-  surface; on approval it records the Mission, `active`
+  surface; on approval it records the Mission in the `active` state
   ({{mission-approval}}).
 - Steps 5 and 6: the client polls submission status and receives the
   `mission_id` and the consented authority ({{mission-reference}}).
@@ -373,25 +360,24 @@ under the Mission Join.
   stops the next such action at step 8.
 
 A Join Assertion moves the join's verification to the MAS
-({{join-assertion}}), and Mission Expansion and Child Creation ride
-the submission endpoint ({{native-surfaces}}). {{e2e-example}} walks
-the same flow with concrete messages.
+({{join-assertion}}). Mission Expansion and Child Creation use the
+submission endpoint ({{native-surfaces}}). {{e2e-example}} shows the
+same flow with concrete messages.
 
 ## Applicability
 
 This profile targets deployments that need governed, approvable,
 revocable agent tasks but cannot extend their Authorization Server,
 and that can route consequential actions through the runtime profile's
-enforcement. It is also a deliberate architectural choice in its own
-right: a deployment MAY prefer a standalone Mission Issuer even where
-it controls its AS, to keep governance decoupled from token issuance
-or to govern with one Mission Issuer across many Authorization
-Servers, accepting the enforcement posture of {{limitations}}. A
-deployment that wants Mission-bound tokens and issuance gating
-implements the OAuth binding; a deployment that cannot deploy runtime
-enforcement over its consequential action paths obtains records but no
-enforcement from this profile and SHOULD NOT claim it
-({{limitations}}).
+enforcement. A deployment MAY also prefer a standalone Mission Issuer
+even where it controls its AS, to keep governance decoupled from token
+issuance or to govern with one Mission Issuer across many
+Authorization Servers, accepting the enforcement posture of
+{{limitations}}. A deployment that wants Mission-bound tokens and
+issuance gating implements the OAuth binding. A deployment that
+cannot deploy runtime enforcement over its consequential action paths
+obtains records but no enforcement from this profile and SHOULD NOT
+claim it ({{limitations}}).
 
 # Conventions and Terminology {#conventions-and-terminology}
 
@@ -406,8 +392,8 @@ audit horizon as defined by {{I-D.draft-mcguinness-oauth-mission}};
 the Mission Status operation and Mission Lifecycle endpoint as defined
 by {{I-D.draft-mcguinness-oauth-mission-status}}; and PEP, PDP,
 consequential action, Mission state source, and enforcement scope as
-defined by {{I-D.draft-mcguinness-mission-runtime}}. It additionally
-uses:
+defined by {{I-D.draft-mcguinness-mission-runtime}}. It also uses
+the following terms:
 
 Mission Authority Server (MAS):
 : A service that implements the Mission Issuer role of the OAuth
@@ -420,9 +406,9 @@ Mission-joining PDP:
   an action ({{mission-join}}).
 
 Standalone binding:
-: This document's deployment mode: the Mission Issuer role implemented
-  by a MAS, with the deployment's tokens unchanged. "AS-optional" is
-  its informal gloss.
+: The deployment mode this document defines: the Mission Issuer role
+  implemented by a MAS, with the deployment's tokens unchanged.
+  "AS-optional" is its informal gloss.
 
 Mapping join:
 : The baseline Mission Join: the PDP compares the presented
