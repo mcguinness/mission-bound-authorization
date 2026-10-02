@@ -48,6 +48,9 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+
+informative:
+  RFC9396:
   I-D.draft-mcguinness-oauth-mission-progressive:
     title: "Mission Progressive Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html
@@ -56,9 +59,6 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-
-informative:
-  RFC9396:
   I-D.draft-mcguinness-oauth-mission-approval:
     title: "Mission Deferred Approval for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html
@@ -696,7 +696,7 @@ built from Mission Record members
 | `intent_hash` | Mission Record `intent_hash` | always |
 | `proposal_hash` | Mission Record `proposal_hash` | iff the Mission Record carries it |
 | `authority_hash` | Mission Record `authority_hash` | always |
-| `ceiling_hash` | Progressive's `ceiling_hash` anchor ({{I-D.draft-mcguinness-oauth-mission-progressive}}) | iff the Mission Record carries it |
+| `ceiling_hash` | Mission Record `ceiling_hash`, verbatim ({{I-D.draft-mcguinness-oauth-mission-progressive}}) | iff the Mission Record carries it |
 | `subject` | Mission Record `subject` | always |
 | `approver` | Mission Record `approver` | always |
 | `client_id` | Mission Record `client_id` | always |
@@ -717,13 +717,13 @@ compute the same manifest.
 `ceiling_hash` is the manifest's fourth anchor alongside `intent_hash`,
 `proposal_hash`, and `authority_hash`: the manifest MUST include
 `ceiling_hash` when the Mission Record carries one and MUST omit it
-when the Mission Record carries none. This member's construction and
-semantics are defined by the Progressive profile
-({{I-D.draft-mcguinness-oauth-mission-progressive}}), a normative
-reference of this document for that reason; this section imports its
-`ceiling_hash` definition without redefining it, and adopting this
-Approval Context Commitment profile does not by itself require
-adopting Progressive ({{I-D.draft-mcguinness-oauth-mission-progressive}}).
+when the Mission Record carries none. The manifest copies the recorded
+value verbatim, as it copies every other member, so computing or
+verifying the manifest never computes `ceiling_hash`. Its construction
+and semantics belong to the Progressive profile
+({{I-D.draft-mcguinness-oauth-mission-progressive}}), and adopting this
+Approval Context Commitment profile does not require adopting
+Progressive.
 
 The manifest excludes the Mission Record's one mutable member,
 `state`, and every value that is not itself a member of the
@@ -1310,6 +1310,13 @@ version before treating the evaluation as re-checked
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The Approval Context Manifest copies a recorded `ceiling_hash`
+  verbatim, so the Progressive profile is an informative reference,
+  meeting the maturity bound of the reference classification
+  convention (a Standards-Track draft never lists an Experimental
+  draft as normative). The manifest's members and both `ceiling_hash`
+  presence requirements are unchanged.
 
 - Clarified that the direct-human degenerate case presumes resolution by
   that human, not agent-invokable approval on the human's behalf (#759).
