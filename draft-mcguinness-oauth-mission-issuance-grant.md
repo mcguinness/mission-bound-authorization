@@ -126,23 +126,21 @@ informative:
 
 --- abstract
 
-The standalone Mission Authority Server binding governs Missions with
-no change to an estate's Authorization Servers: tokens remain
-ordinary, and enforcement joins them to Missions at the point of use.
-That mode provides no Mission-bound credential and no issuance
-gating. This document defines the Mission Issuance Grant: a
-short-lived, audience-bound, one-time assertion, minted by a
-standalone Mission Issuer for an approved, active Mission, that an
-OAuth Authorization Server redeems at its token endpoint to issue
-Mission-bound tokens gated on Mission state and the Mission's current
-effective authority. Approval, record, and lifecycle stay at the
-Mission Authority Server; the Authorization Server keeps the token
-plane and adds only grant validation, subset-bounded minting, and
-refresh gated on that same state and effective authority. This
-issuance join restores Mission-bound credentials and the
-issuance-gate kill switch
-without the Authorization Server implementing the issuance profile's
-intake, approval, or derivation surfaces.
+This specification defines the Mission Issuance Grant, a profile of
+the JSON Web Token (JWT) authorization grant of RFC 7523. A Mission
+Authority Server approves and records Missions without changing an
+estate's OAuth Authorization Servers. Under this profile it also
+issues, for an active Mission, a short-lived, audience-restricted,
+single-use JWT that the client presents at an Authorization Server's
+token endpoint. The Authorization Server validates the grant and
+issues Mission-bound tokens: they carry the Mission, are bounded by
+the authority the grant conveys, and expire no later than the
+Mission. An Authorization Server that checks Mission state at
+redemption and at every refresh stops issuing and renewing those
+tokens once the Mission is no longer active or its authority is
+narrowed; one that does not check issues no refresh tokens. Approval,
+the Mission record, and its lifecycle stay at the Mission Authority
+Server.
 
 --- middle
 
