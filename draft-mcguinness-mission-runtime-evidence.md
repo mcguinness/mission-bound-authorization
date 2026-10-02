@@ -1915,7 +1915,8 @@ A PRODUCER conforming to this document MUST:
   ({{execution-evidence-object}}); and
 - sign every record with the integrity envelope of
   {{decision-evidence-integrity}}, with a `kid` resolvable in its
-  published key set and a `typ` matching the record's own media type.
+  published key set, the protected `typ` that envelope fixes, and a
+  `cty` matching the record's own media type.
 
 A CONSUMER or VERIFIER conforming to this document MUST perform the
 byte-equality verification procedure and key checks of
