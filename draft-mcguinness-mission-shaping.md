@@ -307,8 +307,9 @@ Shaped proposal:
   shaped proposal.
 
 Shaping ceiling:
-: A bound on a shaped proposal, supplied by the deployment or by the
-  caller of the shaper ({{authority-ceiling}}). It is distinct from the
+: A bound on a shaped proposal, expressed as an `authorization_details`
+  array and supplied by the deployment or by the caller of the shaper
+  ({{authority-ceiling}}). It is distinct from the
   consented `authority_ceiling` Mission member of
   {{I-D.draft-mcguinness-oauth-mission-progressive}} and from the
   pre-consented Template Ceiling on Missions dispatched from a template
@@ -643,8 +644,16 @@ Intents instead of one broad proposal, so that each resulting Mission
 stays narrow and is approved and revoked separately.
 
 When a deployment or caller supplies a shaping ceiling, the proposal
-MUST be a subset of it. If the task cannot be completed within that
-ceiling, the shaper MUST request clarification, refuse, or emit a
+MUST be a subset of it: each Authority Proposal entry is a subset of
+a ceiling entry of the same type under that type's subset rule
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Subset Rule"), and
+each `target_resources` value is among the resources the ceiling's
+entries name. An Intent submitted without an Authority Proposal can be
+derived through the Mission Issuer's configured mapping, which can
+grant more actions on the same resources than the ceiling allows.
+When the ceiling must constrain authority, the shaper MUST therefore
+produce an Authority Proposal. If the task cannot be completed within
+that ceiling, the shaper MUST request clarification, refuse, or emit a
 partial proposal. It MUST NOT silently drop necessary authority: it
 emits a partial proposal only when both of the following hold:
 
