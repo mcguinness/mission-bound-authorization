@@ -1338,8 +1338,7 @@ The MAS verifies the join centrally, as follows:
 
 If the acting token does not join, the MAS rejects the request with
 the `join_failed` error code (HTTP 403), in the error format of
-{{submission-errors}}. Like `conflict`, `join_failed` extends that
-section's error code set. If the `mission_id` is unknown or not
+{{submission-errors}}. If the `mission_id` is unknown or not
 visible, the MAS returns the `not_found` error code, preserving the
 anti-oracle property.
 
@@ -1579,9 +1578,8 @@ express as `invalid_grant`:
   serialization refuses the operation (the expansion profile's
   predecessor-active and reconciliation rules; the child-delegation
   profile's parent-active rule), the MAS MUST reject the submission
-  with the `conflict` error code, returned with HTTP 409. `conflict`
-  extends the error code set of {{submission-errors}} and is used
-  only by this section's operations.
+  with the `conflict` error code, returned with HTTP 409. `conflict` is
+  used only by this section's operations.
 
 The profile-defined machine-readable codes ride the MAS error surface
 in the members their profiles define:
