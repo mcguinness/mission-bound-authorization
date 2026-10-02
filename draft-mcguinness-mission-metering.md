@@ -382,7 +382,7 @@ It consumes these optional capabilities:
 | Lifecycle-Gated Authorization | required | Inherited scope: metering is performed by the runtime profile's PDP within a documented enforcement scope ({{relationship}}), so every metered decision is already gated on the only-`active`-permits rule; this document adds counters to that gate and defines no second one |
 | Structured Authority | required when a call class or an exclusive selector is drawn from the Authority Set's identifiers | Two consumers. A `call_class` value SHOULD be drawn from the `actions` identifiers of the entry's `mission_resource_access`, so the metered class maps to evaluated actions; a deployment that meters a coarser or cross-entry class defines that class's membership, and such a class is not interoperable ({{bounds}}). The `exclusive` control consumes it even then: its selectors are interpreted in the identifier space of the approved Authority Set entries and compared with each consequential action, `resource` by equality and the invoked action by membership in `actions`, per group and per Mission; selector semantics are owned by this document ({{bounds}}, {{exclusivity}}) |
 | State-Observable | not consumed | Mission state is established by the runtime decision this document adds counters to, under that profile's freshness rules, not by this document ({{I-D.draft-mcguinness-mission-runtime}}) |
-| Monotonic Derivation | not consumed | A lineage-keyed budget identifier correlates a root Mission and its Child Missions to one shared counter ({{aggregate-bounds}}); lineage counters are correlation, not narrowing, and this document defines no no-broader-than comparison |
+| Monotonic Derivation | not consumed | Ancestor charging and escrowed allocations ({{capacity-across-missions}}) and lineage-keyed counters ({{aggregate-bounds}}) read a Mission's lineage to choose its counters; they compare remaining capacity, not authority, and add nothing to the no-broader-than comparison |
 | Credential-Bound | not consumed | This document defines no binding of its own: enforcement composes through the runtime profile's Mission binding establishment step ({{I-D.draft-mcguinness-mission-runtime}}) |
 | Independently Verifiable | not consumed | This document defines no verification artifact of its own; metered outcomes enter the runtime evidence records and inherit their verification ({{I-D.draft-mcguinness-mission-runtime-evidence}}) |
 | Portable Evidence | not consumed | This document defines no evidence artifact of its own; metered refusals and settlement are carried in the runtime evidence records through the coordinated `metering` member ({{metering-evidence}}, {{I-D.draft-mcguinness-mission-runtime-evidence}}) |
@@ -467,7 +467,9 @@ that a companion profile may add a named member coordinated with it:
 
 The bounds are carried on the Mission and committed by `intent_hash`.
 They are not enforced by the Authorization Server at issuance; they are
-enforced by the runtime layer at the point of use ({{metering}}).
+enforced by the runtime layer at the point of use ({{metering}}). The
+one issuance-time step is the child-creation rule of
+{{capacity-across-missions}}.
 
 Example Mission Intent carrying three of the four bounds
 alongside
@@ -677,6 +679,32 @@ under the AuthZEN profile's coordinated-extension conventions
 group's latch state fails closed for the actions the group covers,
 per the runtime profile's availability posture.
 
+# Capacity Across Missions {#capacity-across-missions}
+
+A consumption bound limits the delegation it is approved for, not a
+credential or record derived from it. Tokens, permits, and instances
+under one Mission draw on one Mission-keyed counter. A Mission created
+from another Mission draws on that Mission's counters and never
+receives a fresh copy of the bound:
+
+- **Child Mission.** A consequential action under a Child Mission
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) is charged
+  to the child's own bound, where it carries one, and to the same
+  bound of every ancestor that carries it. The PDP MUST refuse the
+  action when any of those counters would be exceeded. Where an
+  ancestor's counter is outside the child's consistency domain, the
+  deployment instead reserves the child's bound against the
+  ancestor's counter when the child is created, as an escrowed
+  allocation that MUST NOT exceed the ancestor's remaining quantity.
+  When the child becomes terminal, its unconsumed allocation returns
+  to the ancestor; quantity held by the child's unsettled
+  reservations stays charged until they settle
+  ({{settlement-states}}). A Mission Issuer whose deployment can do
+  neither MUST refuse to create a Child Mission under a Mission that
+  carries a consumption bound. Two children that each carry a bound
+  of 60,000 under a parent bound of 100,000 together consume at most
+  100,000.
+
 # Aggregate Bounds {#aggregate-bounds}
 
 The bounds of this document are Mission-keyed. A deployment MAY
@@ -690,22 +718,21 @@ reserve/commit postures, and refusal behavior are unchanged; only the
 key differs.
 
 A lineage-keyed budget identifier and its authoritative shared counter
-are the only mechanism this document defines for a lineage-wide
-aggregate consumption bound: they meter across every Mission a
-derivation lineage contains, not within one Mission alone. A Child
-Mission's own derivation counter is independent of its parent's and
-bounds nothing beyond that Child Mission itself
-({{I-D.draft-mcguinness-oauth-mission-child-delegation}}); absent a
-deployed lineage-keyed counter, no per-Mission counter, however many
-Missions in a lineage carry one, adds up to an aggregate bound on the
-lineage.
+meter, as deployment policy, across every Mission a derivation lineage
+contains. They are distinct from the ancestor charging of
+{{capacity-across-missions}}, which enforces the bound an Approver
+consented to on one Mission across that Mission's descendants. A Child
+Mission's derivation counter is independent of its parent's, is not a
+consumption bound, and bounds nothing beyond that Child Mission itself
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
 This document is experimental ({{introduction}}), so a deployment
 running only the stable issuance and runtime profiles has no
 lineage-wide aggregate bound in force at all. A deployment MUST NOT
 render, in an Enforcement Scope Statement or at any consent surface,
-a lineage-wide or subtree aggregate bound as in force unless a
-lineage-keyed budget identifier and shared counter meeting this
-section's requirements are actually deployed and metered.
+a lineage-wide or subtree aggregate bound as in force unless it is
+enforced under {{capacity-across-missions}} or by a lineage-keyed
+budget identifier and shared counter meeting this section's
+requirements.
 
 An aggregate bound is deployment policy: it is carried on no single
 Mission Intent, is committed by no `intent_hash`, and is disclosed
