@@ -2013,8 +2013,8 @@ runtime obligations hold for every path in the set; a path outside
 the set is explicitly unclaimed, and never inherits the profile from
 the deployment's name.
 
-The profile is the Runtime-Enforced level of the Mission Assurance
-Levels under the MAS binding, with the obligations below
+The profile builds on the Runtime-Enforced level of the Mission
+Assurance Levels under the MAS binding and adds the obligations below
 ({{I-D.draft-mcguinness-mission-architecture}}).
 
 - **Status and lifecycle.** The MAS MUST serve the Mission Status
@@ -2259,8 +2259,9 @@ is stated ({{I-D.draft-mcguinness-mission-runtime}}).
 
 ## Progressive Adoption {#deployment-adoption}
 
-A MAS is adopted level by level across the Mission Assurance Levels
-({{I-D.draft-mcguinness-mission-architecture}}), each phase
+A MAS deployment adopts the Mission Assurance Levels in the order
+deployments build them ({{I-D.draft-mcguinness-mission-architecture}});
+the levels are adoption bundles, not a ladder, and each phase is
 independently useful. The six phases group into three modes, and a
 deployment's claim is bounded by its mode: **records mode** (phases
 1 and 2) is inventory, approval, lifecycle, and audit, with no
@@ -2268,7 +2269,7 @@ prevention claim of any kind; **enforced-paths mode** (phases 3 and
 4) prevents on exactly the paths the Enforcement Scope Statement
 enumerates and is records mode everywhere else; **issuance mode**
 (phases 5 and 6) restores the token-layer gate. "No AS code change"
-holds in every mode; what changes is the claim, and a
+holds in phases 1 through 5; what changes is the claim, and a
 high-consequence enforcement claim requires issuance mode's
 machinery or the Estate Prerequisites' AS features
 ({{enterprise-prerequisites}}), never records alone:
@@ -2276,16 +2277,17 @@ machinery or the Estate Prerequisites' AS features
 1. The MAS records Missions and approvals: governance and audit of
    what tasks were approved, with no enforcement change yet
    (Baseline Issuance under the MAS binding: governance and audit,
-   without the level's issuance-gate kill switch; phase 2 supplies
-   the state-based cutoff).
-2. Mission Status and lifecycle become the estate-wide kill switch:
-   consumers fail safe on non-`active` state (the state-aware
-   half-step).
+   with no kill switch of any kind).
+2. Mission Status and lifecycle publish Mission state estate-wide:
+   the freshness surface runtime enforcement relies on. Under the MAS
+   binding this alone is no kill switch.
 3. PEP/PDP runtime enforcement gates consequential actions per the
-   runtime profile (the Runtime-Enforced level).
-4. Join Assertions and instance-bound joins harden the join for the
-   high-consequence classes (the Enterprise profile,
-   {{enterprise-profile}}).
+   runtime profile and, with phase 2's state surface, supplies the
+   kill switch (the Runtime-Enforced level).
+4. Join Assertions harden the join on joined paths outside the
+   high-consequence classes, which the Enterprise profile reserves
+   for Mission-bound issuance, and instance-bound joins narrow it to
+   one workload (the Enterprise profile, {{enterprise-profile}}).
 5. Estate Authorization Servers adopt the issuance join
    ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}), redeeming
    MAS-minted grants for Mission-bound, state-gated tokens: the
