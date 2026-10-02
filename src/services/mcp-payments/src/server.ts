@@ -62,6 +62,7 @@ import type { PaymentsStore } from "./payments-store.js";
 import type { CommitResult, Connectors } from "./connectors.js";
 import type { EvidenceStore } from "./evidence.js";
 import { operationKey, type TransactionEngine } from "./transaction.js";
+import { recordRedeemingAttempt } from "./redemption-status.js";
 import { buildEffectiveParams, type EffectiveParams, parameterDigest } from "./effective-params.js";
 
 /** Called only after this path's signature, issuer/chain and expiry checks. */
@@ -1064,7 +1065,10 @@ export class McpPaymentsServer {
     }
     // @spec runtime#idempotency (#917): this attempt now holds the single
     // use, so how it ends is the outcome of the permit's idempotency claim.
+    // The redemption store records WHICH attempt, in this same synchronous
+    // step, so only this attempt's failure can ever settle the claim (#1016).
     attempt.redeemed = true;
+    recordRedeemingAttempt(tx.engine, permitId, attempt.executionId);
 
     beforeCommit?.();
 
