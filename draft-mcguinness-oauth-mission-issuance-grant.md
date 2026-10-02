@@ -522,9 +522,13 @@ On success the consuming AS mints tokens under these rules:
 - **Subset.** Issued `authorization_details` MUST be a subset of the
   grant's. The consuming AS MUST NOT widen, remap, or supplement
   them from its own policy except to narrow.
-- **Echo.** The token response SHOULD echo the issued
-  `authorization_details` as the issuance profile specifies for Mission-bound
-  issuance.
+- **Token response.** The token response carries the issued
+  `authorization_details` as the issuance profile requires for
+  Mission-bound issuance ({{I-D.draft-mcguinness-oauth-mission}},
+  Section "Mission-Bound Access Tokens", and {{Section 7 of RFC9396}}),
+  and the `mission_id` and `mission_expires_at` parameters as it
+  recommends ({{I-D.draft-mcguinness-oauth-mission}}, Section "Binding
+  the Mission to the Grant").
 - **Scope projection.** Carrying `authorization_details` at all
   requires {{RFC9396}} support at the consuming AS. An AS that
   models authority as `scope` instead projects the grant's
