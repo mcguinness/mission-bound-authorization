@@ -421,8 +421,8 @@ Mapping contract:
   publishes it ({{mapping-contract}}).
 
 Join Assertion:
-: A MAS-signed JWT stating that one introspected access token joins a
-  Mission ({{join-assertion}}).
+: A MAS-signed JWT stating that one access token, introspected or
+  locally validated, joins a Mission ({{join-assertion}}).
 
 Mission-selection assertion:
 : The Mission reference a requester attaches to a request. It selects
@@ -2342,7 +2342,7 @@ The contextual-governance kernel maps as follows:
    `active` state at decision time. Standing artifacts carry their own
    bounds: a signed Mission Status is relied on within its declared
    freshness window ({{lifecycle-and-state}}), and a Join Assertion
-   within the introspected token's lifetime ({{join-assertion}}).
+   within the acting token's remaining lifetime ({{join-assertion}}).
    Tokens of the unchanged Authorization Server are not represented as
    Mission-governed artifacts.
 8. **Context propagation**: submission status and signed Mission
