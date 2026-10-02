@@ -115,10 +115,13 @@ export {
   IDEMPOTENCY_SCOPE_DIMENSIONS,
   type IdempotencyScope,
   type IdempotencyScopeDimension,
+  idempotencyScopeActor,
   idempotencyScopeDigest,
   isIdempotencyKey,
   isScopeDimension,
   isVolatileScopeMember,
+  namesClientInstance,
+  type ScopeActorInput,
   VOLATILE_SCOPE_MEMBERS,
 } from "./idempotency.js";
 export {

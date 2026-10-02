@@ -14,32 +14,32 @@
  *   consulted, and never observation telemetry.
  */
 
-import { canonicalDigest, type IdempotencyScope, isActionPhase, type JsonValue } from "@mission/core";
+import { canonicalDigest, type IdempotencyScope, idempotencyScopeActor, isActionPhase, type JsonValue } from "@mission/core";
 import type { EvaluationRequest } from "./evaluate.js";
 import type { MissionView } from "./policy-view.js";
 
 /**
  * @spec runtime#idempotency: the fixed-member scope for a request that
- * reached the claim step. `mission` is the request's reference, which the
+ * reached the claim step, or `undefined` when its actor has no stable
+ * identity to key on. `mission` is the request's reference, which the
  * view-consistency check has already held equal to the loaded view; `actor`
- * is the client and the immediate (leaf) delegation entry only, so a new
- * client instance or a longer chain above the leaf does not split the scope;
- * `audience` is the member the PDP matched the authority entry against and
- * the remote channel checked against the PEP's authorized scopes; `phase` is
- * the validated phase, `null` where the operation is no phase of a compound
- * action.
+ * is the client and, where the immediate (leaf) `act` entry names a
+ * delegate, that delegate (`idempotencyScopeActor`), so a new client
+ * instance, an instance-profiled leaf, or a longer chain above the leaf does
+ * not split the scope; `audience` is the member the PDP matched the authority
+ * entry against and the remote channel checked against the PEP's authorized
+ * scopes; `phase` is the validated phase, `null` where the operation is no
+ * phase of a compound action.
  */
-export function idempotencyScopeOf(req: EvaluationRequest): IdempotencyScope {
-  const leaf = req.context.actor?.act?.[req.context.actor.act.length - 1];
+export function idempotencyScopeOf(req: EvaluationRequest): IdempotencyScope | undefined {
+  // validateContextActor (step 4) already refused an entry whose iss or sub
+  // is not a string; the claim step runs only after it.
+  const actor = idempotencyScopeActor(req.context.actor);
+  if (!actor) return undefined;
   return {
     mission: { iss: req.context.mission.issuer, id: req.context.mission.id },
     subject: { iss: req.subject.properties?.iss ?? null, sub: req.subject.id },
-    actor: {
-      client_id: req.context.actor?.client_id ?? null,
-      // validateContextActor (step 4) already refused an entry whose iss or
-      // sub is not a string; the claim step runs only after it.
-      act: leaf ? { iss: String(leaf.iss), sub: String(leaf.sub) } : null,
-    },
+    actor,
     audience: req.context.audience,
     action: req.action.name,
     resource: { type: req.resource.type, id: req.resource.id },
