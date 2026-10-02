@@ -504,7 +504,7 @@ trust rules, from which the PDP establishes the Mission's lifecycle
 state and the freshness of that observation. Examples include a query
 to the Mission issuer, a local Mission database, an authenticated
 status or event feed, or a short-lived derived credential whose
-lifetime is the deployment's accepted state lease. The materialized
+lifetime is the deployment's accepted state lease. A materialized
 policy view ({{policy-view}}) is not a state source: it commits the
 compiled authority, never the mutable lifecycle state a decision
 consults.
@@ -1307,7 +1307,7 @@ It consumes these optional capabilities:
 
 | Capability | Consumption | Scope of consumption |
 | --- | --- | --- |
-| Structured Authority | required | The decision contract materializes and evaluates the effective Authority Set, with its subset rule and Common Constraints ({{input-authority}}, {{policy-view}}); as the substrate's composition rule warns, a Mission reference alone is not structured authority |
+| Structured Authority | required | The decision contract evaluates the effective Authority Set, directly or through a materialized policy view, with its subset rule and Common Constraints ({{input-authority}}, {{policy-view}}); as the substrate's composition rule warns, a Mission reference alone is not structured authority |
 | Lifecycle-Gated Authorization | required | Every Runtime Decision gates on the only-`active`-permits rule ({{decision}}) |
 | State-Observable | required when the enforcement scope's staleness bound is tighter than the credential lifetime | An authenticated freshness source with a stated staleness bound, consumed wherever an enforcement scope's published staleness bound is tighter than the credential lifetime ({{state-freshness}}) |
 | Monotonic Derivation | required when delegation or attenuation is enforced at action time | Consumed where delegation or attenuation is enforced at action time through effective-set evaluation ({{input-authority}}); observing a later narrowing, such as containment, is not a derivation property, and {{input-authority}} requires a source that reports it |
@@ -2162,11 +2162,15 @@ grants, widens, or restores another.
 
 ## Materialized Policy View {#policy-view}
 
-A PDP evaluates a Mission against an action through a **materialized
-policy view**: the reproducible, evaluable form of the Mission's
-approved authority, produced by the Mission Issuer or a trusted compiler
-and loaded by the PDP. A **trusted compiler** is a component the
-deployment trusts to materialize the Mission's approved authority
+This section governs a PDP that evaluates a Mission against an action
+through a **materialized policy view**: the reproducible, evaluable
+form of the Mission's approved authority, produced by the Mission
+Issuer or a trusted compiler and loaded by the PDP. A PDP can instead
+evaluate the Mission's recorded authority directly; the authority
+bounds, the state-source rule, and capability-source provenance apply
+either way ({{input-authority}}). A **trusted compiler** is a
+component the deployment trusts to materialize the Mission's approved
+authority
 faithfully and reproducibly; it is in the deployment's trust domain and
 its output is bound by the content-addressed `policy_view_id` below. The
 view is substrate-independent runtime machinery; a decision-API binding
