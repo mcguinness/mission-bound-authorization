@@ -368,20 +368,19 @@ Three consequences follow:
    assertion, emits a credential, or otherwise behaves as a credential
    issuer is acting outside this role and is NOT RECOMMENDED. A
    deployment MAY integrity-protect shaper output for client-internal
-   reasons, for example to detect
-   tampering between the shaper and the submission step in a
-   multi-process client ({{multi-process}}). Such protection has no
-   authority semantics at the Mission Issuer and MUST NOT be relied
-   upon beyond the client.
+   reasons, for example to detect tampering between the shaper and the
+   submission step in a multi-process client ({{multi-process}}). Such
+   protection has no authority semantics at the Mission Issuer and MUST
+   NOT be relied upon beyond the client.
 
-2. It does not mimic Mission Issuer output. The proposal MUST NOT carry
-   `mission.id`, `intent_hash`, `authority_hash`, an Authority Set, a
-   lifecycle state, or approving-principal evidence. The Mission Issuer
-   produces those values on the Mission record at and after the
-   approval event ({{I-D.draft-mcguinness-oauth-mission}}, Section
-   "Mission Record"). The issuance profile rejects a Mission Intent
-   that carries an unrecognized top-level member, including any such
-   issuer-output member, with the `invalid_request` error code
+2. It does not mimic Mission Issuer output. The Mission Intent proposal
+   MUST NOT carry `mission.id`, `intent_hash`, `authority_hash`, an
+   Authority Set, a lifecycle state, or approving-principal evidence.
+   The Mission Issuer produces those values on the Mission record at
+   and after the approval event ({{I-D.draft-mcguinness-oauth-mission}},
+   Section "Mission Record"). The issuance profile rejects a Mission
+   Intent that carries an unrecognized top-level member, including any
+   such issuer-output member, with the `invalid_request` error code
    ({{I-D.draft-mcguinness-oauth-mission}}, Section "Submission via
    PAR").
 
@@ -728,7 +727,7 @@ Refusal is a shaper-internal decision. It requires no Mission Issuer
 involvement, and this document defines no wire-level refusal error. A
 shaper SHOULD refuse to shape when one of the following conditions
 holds. Each label is a recommended value for Shaping Evidence and for
-reporting the refusal to the requesting client:
+reporting the refusal to the client:
 
 `unsupported_task`:
 : The shaper cannot produce a Mission Intent for the task class.
