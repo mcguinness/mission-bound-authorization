@@ -761,16 +761,14 @@ substitutes the shaper's judgment for the Approver's.
 Shaping Evidence records how a proposal was produced. It is audit
 material: it does not grant authority and MUST NOT be used by a
 Resource Server or Policy Decision Point (PDP) to permit an action. It
-keeps the intent generator a distinct, attributable role: a record of
-what the shaper emitted, separate from the requester who asked, the
-Approver who consented, and the agent that executes
+makes the intent generator an attributable role, distinct from the
+requester, the Approver, and the executing agent
 ({{I-D.draft-mcguinness-mission-architecture}}). This document defines
-no required schema, media type, or transport for Shaping Evidence. The
-digests in this section are canonical-object digests and envelope
-anchors under the substrate's Default Commitment Construction, which
-this document imports normatively
-({{I-D.draft-mcguinness-mission-substrate}}, Section "Default
-Commitment Construction").
+no required schema, media type, or transport for Shaping Evidence. Its
+digests are canonical-object digests and envelope anchors under the
+substrate's Default Commitment Construction, which this document
+imports normatively ({{I-D.draft-mcguinness-mission-substrate}},
+Section "Default Commitment Construction").
 
 The following members are RECOMMENDED content. They are not a required
 schema: a deployment can omit a member that does not apply and can add
@@ -818,8 +816,7 @@ to every outcome.
   of the request after removing the fields that the named exclusion
   ruleset marks as not retained. To make the digest recomputable by a
   later auditor, the evidence MUST also record
-  `input_exclusion_ruleset`. A digest whose exclusion ruleset is not
-  recorded cannot be reproduced.
+  `input_exclusion_ruleset`.
 
 `input_exclusion_ruleset`:
 : String. An identifier, with version, of the exclusion ruleset
