@@ -46,6 +46,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-mission-runtime:
+    title: "Mission-Bound Runtime Enforcement"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-transaction-authorization:
     title: "Mission Transaction Authorization Profile for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-transaction-authorization.html
@@ -531,32 +539,66 @@ This binding does not claim the transaction authorization capability.
 The Carrier Binding Floor of
 {{I-D.draft-mcguinness-oauth-mission-transaction-authorization}} names
 the slots a binding must provide to host action-bound transaction
-authorization, and several have no native home in AAuth or R3.
+authorization.  R3 supplies per-call authorization in its own terms
+({{I-D.draft-hardt-aauth-r3}}); the gap is to the family's stronger
+transaction profile.  The table classifies each slot as supplied, supplied conditionally,
+unproven equivalence, or absent, and names the signed native field and
+verifier step that supply it.  Its section numbers refer to
+{{I-D.draft-hardt-oauth-aauth-protocol}}, or to
+{{I-D.draft-hardt-aauth-r3}} where marked R3; the management status
+operation is that of {{I-D.draft-mcguinness-mission-aauth-management}}.
 Consistent with this document's rule that it adds no new AAuth wire
-members, it defines no extensions to close them.
+members, it defines no extensions to close a gap.
 
-| Requirement | Native | Missing home |
-| --- | --- | --- |
-| Challenge carrier | The AAuth-Requirement challenge with a signed resource token | Members committing to the concrete parameters, the mission reference, and the presenter key |
-| Operation identity | R3 vocabulary operations, pinned by the content-addressed R3 document | Definition versioning and supersession |
-| Parameter commitment | The content-addressed R3 per-call document | A defined parameter-commitment member |
-| Workflow handle | None: `r3_s256` is a content address, and intentionally identical calls share it | A transaction-instance identifier with its own lifetime and admission idempotency |
-| Result class | None: the per-call result is an ordinary `aa-auth+jwt` | A class every verifier can distinguish, with single use semantic to the class |
-| At most one result | R3 single-uses one issued token | An issuance guard giving one admitted transaction at most one result |
-| Possession | AAuth proof of possession | An execution proof bound to the presented artifact itself |
-| Current-state source | Conditional: the management status operation where deployed ({{I-D.draft-mcguinness-mission-aauth-management}}) | An unconditional source on the execution path |
-| Failure vocabulary | Proposal pending; the `denied`, `abandoned`, `expired`, and `revoked` polling errors (Section 11.9.4 of {{I-D.draft-hardt-oauth-aauth-protocol}}); and `expired_presented_token` when a per-call approval outlives the presented auth token (Section 10.2 of {{I-D.draft-hardt-aauth-r3}}) | None |
-| Fresh decision | PS adjudication under the lifecycle gate ({{lifecycle}}) | None |
-{: title="Transaction authorization requirements: native and missing"}
+| Requirement | Native carrier and verifier step | Status | Gap |
+| --- | --- | --- | --- |
+| Challenge carrier | The resource token, signed by the resource and verified against its published keys (6.7.2), commits to the operation and parameters through `r3_uri` and `r3_s256` (R3 7.3), to the Mission through `mission_s256`, and to the presenter key through `agent_jkt` (6.7.1) | Supplied; the Mission commitment when the presented token carries one | The parameter commitment, in its own row |
+| Operation identity | The R3 document, identified by `r3_s256` over its served bytes, names the operation in the resource's vocabulary (R3 7.2) | Supplied for identity; absent for supersession | A superseded definition that resolves only for workflows admitted under it |
+| Parameter commitment | The proposal's `parameters`, committed by `r3_s256`; under `401` the resource compares the retried call to them structurally, and under `202` it executes the held call (R3 10.1, R3 10.2) | Unproven equivalence | A verifiable equivalence to `parameter_digest` (below) |
+| Workflow handle | Under `202`, the pending URL; once the call completes, its record and result are keyed by the auth token's `jti` and retained at least until that token's `exp` (6.5.1) | Supplied conditionally (`202` only) | A declared lifetime for the pending workflow; a handle under `401`; admission idempotency on either path |
+| Result class | The per-call result is an ordinary `aa-auth+jwt` with the members of any R3 auth token (R3 9); only the referenced proposal and the resource's state show that it is per-call | Absent | A class every verifier can distinguish, with single use semantic to the class |
+| At most one result | One invocation per per-call auth token, with a repeated presentation answered from the retained result (R3 10.2, 6.5.1) | Supplied per token | An issuance guard: issuers need not keep replay state for resource tokens (6.7.1, 11.3.4.2), so one proposal can yield more than one per-call auth token; the resource's consumption of the proposal bounds execution, not issuance |
+| Possession | The per-call auth token travels in `Signature-Key`, a covered component, on the `401` retry and the `202` poll alike, and its `cnf.jwk` must equal the request-signing key; the PS checks `agent_jkt` at redemption (11.3.3.1, 9.4.3.2, 6.7.2) | Supplied | None |
+| Current-state source | The PS checks mission state when it acts on the resource token (6.7.2); at the resource, the management status operation where deployed | Supplied conditionally | An unconditional source on the execution path |
+| Failure vocabulary | Proposal pending; the `denied`, `abandoned`, `expired`, and `revoked` polling errors (11.9.4); and an expired presented token when a per-call approval outlives it (R3 10.2) | Supplied | None |
+| Fresh decision | PS adjudication under the lifecycle gate ({{lifecycle}}) | Supplied | None |
+{: title="Transaction authorization requirements: native carriers and status"}
 
-A deployment could claim the capability only after the missing homes
-exist upstream and this binding additionally claims State-Observable
-unconditionally on the execution path (it is claimed conditionally),
-and either Structured Authority or an equivalent resource-owned
-evaluation of the operation commitment (not supplied).  Until then the
-execution gate and the authority evaluation the transaction invariants
-require have no source in this binding, and hosting the flow is
-unsupported.
+The R3 parameter commitment is not shown to be equivalent to
+`parameter_digest` ({{I-D.draft-mcguinness-mission-runtime}}).  R3
+commits to the parameters exactly as the resource serialized them in
+the proposal, and under `401` compares the retried call to them by
+JSON value equality or by the digest of a presented value.
+`parameter_digest` is a digest of a normalized parameter object: an
+Operation Profile fixes default insertion, omitted optional fields, and
+set-like arrays, and every parameter that influences the action's
+external effect enters it.  The two coincide for one resource
+operation only when the resource's proposal carries every
+effect-bearing parameter in that normalized form, which neither R3 nor
+this binding requires.  Under `202` the held call itself is executed,
+so no parameter can be substituted, but no digest exists for another
+verifier to recompute.  This binding defines no second
+canonicalization to close the gap.
+
+R3 also lets a resource seek approval to release a result it has
+already computed, rather than approval to execute (Section 10.4 of
+{{I-D.draft-hardt-aauth-r3}}).  That approval gates disclosure, not
+execution.  The floor's invariants concern pre-execution approval, so a
+release-gated call is outside this mapping, and approving release is
+never treated as approving execution.
+
+The slots without a native home are operation supersession, parameter
+equivalence, a declared pending-workflow lifetime, the `401` workflow
+handle and admission idempotency, a distinguishable result class, an
+issuance guard giving one result per transaction instance, and an
+unconditional current-state source.  A
+deployment could claim the capability only after those exist upstream
+and this binding additionally claims State-Observable unconditionally
+on the execution path (it is claimed conditionally), and either
+Structured Authority or an equivalent resource-owned evaluation of the
+operation commitment (not supplied).  Until then the execution gate and
+the authority evaluation the transaction invariants require have no
+source in this binding, and hosting the flow is unsupported.
 
 ## Reference Propagation {#ref-propagation}
 
