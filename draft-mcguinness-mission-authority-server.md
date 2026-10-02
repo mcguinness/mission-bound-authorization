@@ -897,7 +897,7 @@ The join proves that the credential belongs to the subject and client
 the Mission names, never that the credential was issued for the
 Mission. No MAS-mode mechanism can prove derivation under the Mission,
 because the AS issues tokens with no knowledge of Missions
-({{limitations}}, {{join-spoofing}}). No assertion raises this
+({{limitations}}). No assertion raises this
 ceiling.
 
 For the high-consequence classes, association is therefore not the
@@ -1431,7 +1431,7 @@ is sender-constrained to a key unique to the instance
 client-shared key, so the assertion's token binding is materially
 stronger. An instance-bound join on this path takes the instance only
 from Instance Context whose association with the presenter has been
-established ({{mission-join}}). The token digest and `jkt` alone do
+established ({{join-instance}}). The token digest and `jkt` alone do
 not establish that association.
 
 The endpoint returns HTTP 200 with a JSON object whose `assertion`
@@ -1496,7 +1496,7 @@ at the MAS under the runtime profile's freshness rules, denies with
 from the Mission.
 
 For an instance-bound join, the PDP also applies the instance mapping
-of {{mission-join}} to the validated presenter context supplied by the
+of {{join-instance}} to the validated presenter context supplied by the
 PEP. The Join Assertion replaces only the subject and client mapping
 checks. Its signature, token digest, and key thumbprint cannot replace
 the instance check or satisfy a missing required instance association.
@@ -1578,7 +1578,8 @@ endpoint's error surface as the OAuth binding's outcomes do
 `invalid_authority`. Two rules cover the outcomes those profiles
 express as `invalid_grant`:
 
-- If the binding does not resolve a `predecessor` or `parent`,
+- If the binding of {{native-binding}} does not resolve a
+  `predecessor` or `parent`,
   whether the Mission does not exist or is recorded under another
   client, the MAS MUST reject the submission with the `not_found`
   error code and a response identical in both cases, preserving the
@@ -2075,7 +2076,7 @@ following obligations:
 - **Instance-bound joins.** Where the acting credential carries
   Instance Context ({{I-D.draft-mcguinness-oauth-client-instance-id}})
   whose association with the presenter is established as
-  {{mission-join}} describes, a high-consequence join MUST bind
+  {{join-instance}} describes, a high-consequence join MUST bind
   (`subject`, `client`, `instance`), not (`subject`, `client`), so a
   single workload joins rather than every workload sharing a gateway
   `client_id`. Client-instance identity rests on an unratified
@@ -2473,7 +2474,7 @@ residuals remain:
   share one `client_id`: any of them joins. Client instance
   identification ({{I-D.draft-mcguinness-oauth-client-instance-id}})
   addresses this: the join then binds the validated instance
-  ({{mission-join}}), and this residual remains only for deployments
+  ({{join-instance}}), and this residual remains only for deployments
   without instance identity.
 - **Same-party misattribution.** Two Missions held by the same subject
   and client are distinguished only by the PEP-supplied reference. A
@@ -2664,8 +2665,8 @@ registry {{RFC8615}}:
 IANA is requested to create the "Mission Authority Server Metadata"
 registry. The registration policy is
 Specification Required {{RFC8126}}. A Designated Expert reviews a
-submission for: a Metadata Name following the metadata naming
-conventions of {{discovery}} and not already registered; a definition
+submission for: a Metadata Name in the style of the members of
+{{discovery}} and not already registered; a definition
 precise enough that a client can consume the member from its
 specification alone; and no overlap with an existing member's
 semantics (a refinement belongs in the defining specification, not a
@@ -2890,8 +2891,8 @@ The join holds and the action is within the Mission's Authority Set,
 so the PDP permits. The PEP executes the call to
 `https://erp.example.com`, and both record their evidence
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}). A revocation at
-the MAS stops the next such action at this step, through the runtime
-state re-check. The permit example in {{join-authzen}} shows the
+the MAS stops the next such action at the PDP's state check (step 8
+of {{overview}}). The permit example in {{join-authzen}} shows the
 decision.
 
 ## Revoke
@@ -2963,7 +2964,7 @@ shows the denial:
 
 - Client-instance references follow their successors:
   draft-mcguinness-oauth-client-instance-assertion is replaced by
-  {I-D.draft-mcguinness-oauth-client-instance-id}, and the
+  {{I-D.draft-mcguinness-oauth-client-instance-id}}, and the
   deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
   cited. The Mission Join binds the
   instance from Instance Context whose association with the presenter is
