@@ -1,5 +1,5 @@
 ---
-title: "Mission-Bound Authorization for the Agent Access Model"
+title: "Mapping the Agent Access Model to Mission-Bound Authorization"
 abbrev: "Mission AAM"
 category: exp
 
@@ -50,7 +50,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-oauth-mission-continuation:
-    title: "Mission Continuation: Authorization Continuity for Mission-Bound Authorization"
+    title: "Mission Continuation for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html
     author:
       -

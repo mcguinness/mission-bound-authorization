@@ -11,80 +11,80 @@
     "content_sha256": "65d2ca723d57c52271cc278da2932077bc4d3af3ebf32423f8244e7b95d8de70"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "48b7abcdacfb66289c29c5312e5d6c6e683b5141",
-    "content_sha256": "052d86ffd6770cd0efa75663567fd2ba3cdbccdd3b4a05f92300cfeaa21c0f56"
+    "revision": "211ec56b1f64ddda2aae20c65e31aac88cfde85e",
+    "content_sha256": "cd1b5235841cfab924c5bc0331db443b62c306473cff6098eec7e38762e522f7"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "48b7abcdacfb66289c29c5312e5d6c6e683b5141",
-    "content_sha256": "110170d05aa8c19a1d69dc74acbb99ab20915d78f241216deb5dba92c5624415"
+    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
+    "content_sha256": "342738b24fa1729e97afb9bb08cf81ec70545f5d37d136dd9a49720d449cb3b9"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "79344a58d878545e3daa6d5b880f6fe5dedb51b2",
-    "content_sha256": "3d83bff5bc2fff67a0b741b51bbb56e3d1584597d97c45bbb06417b4fe52727b"
+    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
+    "content_sha256": "593860aeb0c8b45b829b3240b47c277bfcbe4a20fb4c2269b0ea8b444f17f066"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
-    "revision": "48b7abcdacfb66289c29c5312e5d6c6e683b5141",
-    "content_sha256": "bc38949bab486178be786972579b8ee9217016aa76f457e98112d2f8388f4edf"
+    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
+    "content_sha256": "94d185b18c5e2210e90f60eb0a5f04cd4ff0d990b6b73b1b1503267535e372ab"
    },
    "draft-mcguinness-mission-substrate.md": {
-    "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
-    "content_sha256": "7195da680769b4404eaa88c65764198af32e016527dc2c1306e89e24611375cd"
+    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
+    "content_sha256": "dbcbb50fd1a96f25a2419e88676f6cce42b548d343ac5ed7ff2217e6cf8cf2d1"
    },
    "draft-mcguinness-oauth-mission-cross-org-delegation.md": {
-    "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
-    "content_sha256": "9d6ada5d10abb2862280d8e923f5c1164f3c16c3102675ea402ef4839afb14c0"
+    "revision": "72e61f7bcca5c697221bdeb738d1880c5dfa88d1",
+    "content_sha256": "815cbcde45ab0b9fe6e5391596f158d4b282b390b40aa1299e9a8431614bcbae"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "647f05a51463054252ba99826f8328cf8974e26f",
-    "content_sha256": "b15734aad3b7ff884b854d637dc17ed8c1bc0a5c74777eae6f4f9f445bd84f34"
+    "revision": "0deed864cfd4ceb597047f3a617e0ad492907d76",
+    "content_sha256": "e681f15fe23ebf3b0bb8d32f1aed70eef88c140331a5f10216492d3669d045ae"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
-    "revision": "c8b265cec29a2ea3e1bf340928861702012c80ef",
-    "content_sha256": "f9b842d98224a63f8159a886f130d2cfac230bbf3df787cef613f87022a9795c"
+    "revision": "b2fc342c888c7ee1e4b3510c2bd16fdf84911cc1",
+    "content_sha256": "3886265332b089d2ac8123be32b0ae3a45c01ae971b8cb2fbe06452b78bf95f2"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
-    "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
-    "content_sha256": "bd53c614b8389e6f5f91fba0e9caf61e9e22e0d5d75d8e7571511ab61185df2b"
+    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
+    "content_sha256": "e06bc60196934a5b5475d51884dd5627bf263cce0fa18973fd49a63f529b77f8"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
-    "revision": "457ccd452157cbfba11598ac75b4308c299b6b18",
-    "content_sha256": "790b2bdac7819c4a3af571d0b79ce31bbc0b2531b9666f0cd2855ab1f7be5065"
+    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
+    "content_sha256": "5e120cfbb6299bf1b1f71654c56f560309f46beddb19b968458cbc2105e672db"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "582a6e16beed189e7e579b0e079a1ce695d94ff7",
-    "content_sha256": "32d89ebbb29946e878f5d78fe8ff9c1cb57d3d3954460a6daea6097e0b68066e"
+    "revision": "6a3c451eff8b0568e16817fbb84be343f8e8e485",
+    "content_sha256": "17967b2dc4d1760b9b494f2e0c202d87bc665054410626952561c570e3017ad4"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "7a1e80432e75d0221064b5e1b78743bb1c120d58",
-    "content_sha256": "bae2f5c34036c303d1a4f1b9fc037d2aebe1b5d7518308eb02e2bc74a6d919eb"
+    "revision": "6a3c451eff8b0568e16817fbb84be343f8e8e485",
+    "content_sha256": "eda0e3228ae98dc29894171fd1eec3d297b3591384036fa40a00c72ac62d0f6a"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
-    "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
-    "content_sha256": "2ecac7a1642121e76f782cb12941b64fc1ed0782ae6df8a6e82721d5bc280b1f"
+    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
+    "content_sha256": "1459196e3c443e94aa637b2f3c8245fbeee328beac8b38c78b4506a861af828b"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "7044eecabde35ef61e22859a9753f6c723dfcce6",
-    "content_sha256": "4bdb90e21646f0c93687d084ca30fec8e7f09118be87ec746f06567e931a5af9"
+    "revision": "599ee4561420145610926556b32b154fbe874b82",
+    "content_sha256": "b592894011628b2423c7755353ccd6b6a056eab285750467dcdb4ea31aa99dd1"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "7fc9ef45b5fb69f06bd3e90c1a93b6ac71808c10",
-    "content_sha256": "f32cf81e773c9098464a50e451f559b3a5ad31485a315cc611df8e60fcafa2a7"
+    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
+    "content_sha256": "bf4b09b73adfdbf647f9740ef2451862b87212aaa7424496aa865b99d2a2a46d"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
-    "revision": "0d75d8a324bbf4737d65ad92a107dc74ef508e9c",
-    "content_sha256": "fd9175feb9dfeaa7555cf331bee63d7c75ca7b34832759a5b24b747d057c73e9"
+    "revision": "6a3c451eff8b0568e16817fbb84be343f8e8e485",
+    "content_sha256": "73deb3473bca62b2eeef325b317707f6d14753e3bfc5e312be7848304d37ea0d"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
-    "content_sha256": "325699395a6957d5d0da454eca000210406852fa2eb9298ab9462170d70e6968"
+    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
+    "content_sha256": "714a2ad1509b2ee9ab6c20aaa287a9c1856e608c3993171ca3b15e4c84eb1052"
    },
    "draft-mcguinness-mission-orchestration.md": {
     "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
     "content_sha256": "bc498b14258afa19a5f311310f5710722b5ae67c778d9ddbd299123d054246ad"
    },
    "draft-mcguinness-mission-evidence-envelope.md": {
-    "revision": "4e62524f4be6e2376195919d2440effb4e001a9d",
-    "content_sha256": "b958327378aa196b93f49cb24edfc19355cb11e92591354816a891f8976e5544"
+    "revision": "72e61f7bcca5c697221bdeb738d1880c5dfa88d1",
+    "content_sha256": "97efe5e1262062ad614f60f79a97e4978f2977d88bc99d792e49e68366d8e00c"
    },
    "draft-mcguinness-mission-approval-governance.md": {
     "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
@@ -95,16 +95,16 @@
     "content_sha256": "021a33fbbe788eabefdf9bc5756bffcb156824873f157ad7682e5ce65dcefa1f"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "4e62524f4be6e2376195919d2440effb4e001a9d",
-    "content_sha256": "7bc59ddd33c1c48b9e6b915d9bad75d099ca7f1e95235343b5c06499b59929c5"
+    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
+    "content_sha256": "adb2e8708f616b7504425b3134c2376ad3422d9c947b380645f54fb3e8db8f1d"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "781c088698621e47f6a44fd4ebb0a584cb7a8e59",
-    "content_sha256": "352dee1a22c64ae629e6421941812b05714b10bda692ceb2fdfc50ff78609e55"
+    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
+    "content_sha256": "f167be17415c38e6047b7ea9ea3f5464cf70cc1d4789a0316c4d9d89f9dacea4"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
-    "revision": "ae8e99208ff97d35379cdeca4dccddd9e99861f1",
-    "content_sha256": "9bbf98746769f7bf782bd3c350af0dcf10675775f7d5d1beb7106051e006e776"
+    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
+    "content_sha256": "b27c8935ea126e885d0ec3377d2d6bb0e2e2ca98ac7ff99d5a1c42c6f59b8e3c"
    },
    "draft-mcguinness-oauth-mission-approved-set-verification.md": {
     "revision": "48b7abcdacfb66289c29c5312e5d6c6e683b5141",
@@ -223,6 +223,7 @@
    "approval-context.manifest",
    "child-delegation.carryover",
    "core.instance-context",
+   "core.delegation",
    "runtime.instance-context",
    "mas.instance-bound-join",
    "derivation-limits.limit",
@@ -5537,6 +5538,96 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Documentation surface: observable by reading the deployment's published supported-type documentation, not by an endpoint probe."
+  },
+  {
+   "id": "core.other-types.delegation-only-unchanged",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "other-types",
+   "text": "the AS MUST NOT include an entry of such a type in a delegated token unless it is equal ({{subset}}) to an entry of the presented delegating token",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a delegated token carries an entry of a type that declares delegation without narrowing only when the entry is byte-identical under the canonical form to an entry of the presented delegating token, keeps that entry's approved audience, and the type's delegation policy permits the delegate; an entry the presented token omits is never restored"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D63: the reference AS has no live in-Mission delegation exchange; the OAuth binding's per-entry delegation gate is implemented and unit-tested but unreached by any HTTP path."
+  },
+  {
+   "id": "core.other-types.no-narrowing-original-audience",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "other-types",
+   "text": "Without `narrowing`, the AS MUST NOT issue an entry to any audience other than its original approved audience",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an entry of a type without a declared narrowing capability is issued only to its original approved audience and only exactly as approved, or as scope under a declared projection; audience projection to a Resource AS counts as narrowing"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No test exercises a type without a declared narrowing capability."
+  },
+  {
+   "id": "core.delegation-constraints.depth-from-accounting",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegation-constraints",
+   "text": "The AS MUST establish delegation depth from accounting it maintains for the tokens it issues under the Mission and associates with the credential it validates",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the delegation depth checked against max_depth comes from the AS's own issuance accounting associated with the validated subject token, never from the nesting of a presented act claim; act renders the accounted chain"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D63: the reference AS has no live in-Mission delegation exchange; the OAuth binding's per-entry delegation gate is implemented and unit-tested but unreached by any HTTP path."
+  },
+  {
+   "id": "core.delegation-constraints.unestablished-depth-refused",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegation-constraints",
+   "text": "Where the AS cannot establish the depth of the token being issued, no entry's delegation policy can be evaluated at that depth, so every entry narrows out under the per-entry rule below and the exchange is refused as an empty result",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a delegated exchange whose depth the AS cannot establish from its accounting is refused with invalid_target as an empty result, with no token issued"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D63: the reference AS has no live in-Mission delegation exchange; the OAuth binding's per-entry delegation gate is implemented and unit-tested but unreached by any HTTP path."
   },
   {
    "id": "core.introspection.opaque-requires-introspection",

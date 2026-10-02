@@ -102,7 +102,11 @@
 //                                Conformance-titled floor, and examples/vectors or a recorded,
 //                                non-empty waiver reason (see
 //                                scripts/generate-drafts-index.mjs's validateCandidateGate())
-//   (ab) wire names           - CONTRIBUTING's Wire Names Convention: a name a draft declares in
+//   (aa) title drift          - a draft's front-matter `title:` != manifest `title`, or an
+//                                in-family reference entry (I-D.<slug>, no revision suffix)
+//                                in any draft's front matter has no `title:` or one that
+//                                differs from the cited draft's manifest `title`
+//   (ab) wire names          - CONTRIBUTING's Wire Names Convention: a name a draft declares in
 //                                its IANA Considerations into a registry the family does not
 //                                create does not contain `mission`, unless it is listed in
 //                                GRANDFATHERED_WIRE_NAMES; or a grandfathered entry is no
@@ -353,6 +357,37 @@ function parseFrontMatterCategory(text) {
   return km ? km[1].trim() : null;
 }
 
+function unquoteYaml(v) {
+  return v.length >= 2 && v[0] === v[v.length - 1] && (v[0] === '"' || v[0] === "'") ? v.slice(1, -1) : v;
+}
+
+// The front matter's own `title:` value, one layer of matching YAML quotes
+// removed; null when the front matter has no title line.
+export function parseFrontMatterTitle(text) {
+  const m = text.match(/^---\n([\s\S]*?)\n---/);
+  if (!m) return null;
+  const km = m[1].match(/^title:\s*(.*?)\s*$/m);
+  return km ? unquoteYaml(km[1]) : null;
+}
+
+// Every in-family reference entry in a draft's front matter, with the title
+// it renders (null when the entry has none). A key pinned to a numbered
+// revision (I-D.draft-mcguinness-x-03) is not a manifest slug, so a
+// deliberate citation of a historical version keeps that version's title.
+export function parseFamilyRefTitles(text, familySlugs) {
+  const fmEnd = text.indexOf("\n--- abstract");
+  const head = fmEnd > 0 ? text.slice(0, fmEnd) : text.slice(0, 8000);
+  const out = [];
+  const re = /^  I-D\.(draft-mcguinness-[a-z0-9-]+):[ \t]*\r?\n((?:    .*\r?\n|[ \t]*\r?\n)*)/gm;
+  let m;
+  while ((m = re.exec(head))) {
+    if (!familySlugs.has(m[1])) continue;
+    const tm = m[2].match(/^    title:\s*(.*?)\s*$/m);
+    out.push({ slug: m[1], title: tm ? unquoteYaml(tm[1]) : null });
+  }
+  return out;
+}
+
 // The in-family references a draft's own front matter declares, split by
 // reference class: the ground truth the manifest's extracted edge sets must
 // match. Only slugs that are family drafts count; external I-Ds are out of
@@ -523,6 +558,26 @@ function main() {
     const actual = parseFrontMatterCategory(text);
     if (actual !== d.category) {
       fail("category", `${d.file}: front-matter category is "${actual}", manifest says "${d.category}"`);
+    }
+  }
+
+  // (aa) Title drift: the manifest's `title` is the one name the family uses
+  // for a draft. The draft's own front matter and every in-family reference
+  // entry citing it must carry that exact title, or a References section
+  // renders a name the family has retired.
+  const titleBySlug = new Map(drafts.map((d) => [d.slug, d.title]));
+  for (const d of drafts) {
+    if (!onDiskSet.has(d.file)) continue;
+    const text = readFile(path.join(ROOT, d.file), d.file);
+    const actual = parseFrontMatterTitle(text);
+    if (actual !== d.title) {
+      fail("title", `${d.file}: front-matter title is ${JSON.stringify(actual)}, manifest says ${JSON.stringify(d.title)}`);
+    }
+    for (const ref of parseFamilyRefTitles(text, manifestSlugs)) {
+      const want = titleBySlug.get(ref.slug);
+      if (ref.title !== want) {
+        fail("title", `${d.file}: reference I-D.${ref.slug} has title ${JSON.stringify(ref.title)}, manifest says ${JSON.stringify(want)}`);
+      }
     }
   }
 

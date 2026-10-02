@@ -22,7 +22,7 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 import { roleFor, maturityDisplay, CORE_SLUG, BINDING_SLUGS, validateCandidateGate, loadConformanceCounts, validateNoStatusSections } from "./generate-drafts-index.mjs";
-import { HAND_TYPED_COUNT, UNSTABLE_SELF_CLAIM, validateWireNames, GRANDFATHERED_WIRE_NAMES, MISSION_COMPONENT } from "./check-family-manifest.mjs";
+import { HAND_TYPED_COUNT, UNSTABLE_SELF_CLAIM, parseFrontMatterTitle, parseFamilyRefTitles, validateWireNames, GRANDFATHERED_WIRE_NAMES, MISSION_COMPONENT } from "./check-family-manifest.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
@@ -237,6 +237,69 @@ test("HAND_TYPED_COUNT: fires on a spaced document count", () => {
 
 test("HAND_TYPED_COUNT: does NOT fire on a spelled-out count", () => {
   assert.doesNotMatch("the kernel contract first, then its five peer bindings", HAND_TYPED_COUNT);
+});
+
+// ---------------------------------------------------------------------
+// parseFrontMatterTitle() / parseFamilyRefTitles() (check (aa)'s parsers)
+// ---------------------------------------------------------------------
+
+const TITLE_FIXTURE = [
+  "---",
+  'title: "Mission Example for OAuth 2.0"',
+  'abbrev: "OAuth Mission Example"',
+  "normative:",
+  "  I-D.draft-mcguinness-oauth-mission:",
+  '    title: "Mission-Bound Authorization for OAuth 2.0"',
+  "    target: https://example.com/oauth-mission",
+  "informative:",
+  "  I-D.draft-mcguinness-mission-audit:",
+  "    title: Mission Audit",
+  "",
+  "  I-D.draft-mcguinness-mission-audit-03:",
+  '    title: "Mission Transparency"',
+  "  I-D.draft-mcguinness-oauth-actor-profile:",
+  '    title: "Not a family draft"',
+  "  I-D.draft-mcguinness-mission-harness:",
+  "    target: https://example.com/harness",
+  "--- abstract",
+  "",
+  "Body.",
+  "",
+].join("\n");
+const TITLE_SLUGS = new Set(["draft-mcguinness-oauth-mission", "draft-mcguinness-mission-audit", "draft-mcguinness-mission-harness"]);
+
+test("parseFrontMatterTitle: reads the title with its YAML quotes removed", () => {
+  assert.equal(parseFrontMatterTitle(TITLE_FIXTURE), "Mission Example for OAuth 2.0");
+  assert.equal(parseFrontMatterTitle("---\ntitle: Bare Title\n---\n"), "Bare Title");
+  assert.equal(parseFrontMatterTitle("---\nabbrev: x\n---\n"), null);
+});
+
+test("parseFamilyRefTitles: family entries with their titles, quoted or bare, null when absent", () => {
+  assert.deepEqual(parseFamilyRefTitles(TITLE_FIXTURE, TITLE_SLUGS), [
+    { slug: "draft-mcguinness-oauth-mission", title: "Mission-Bound Authorization for OAuth 2.0" },
+    { slug: "draft-mcguinness-mission-audit", title: "Mission Audit" },
+    { slug: "draft-mcguinness-mission-harness", title: null },
+  ]);
+});
+
+test("parseFamilyRefTitles: a revision-pinned key and a non-family I-D are not compared", () => {
+  const slugs = parseFamilyRefTitles(TITLE_FIXTURE, TITLE_SLUGS).map((r) => r.slug);
+  assert.ok(!slugs.includes("draft-mcguinness-mission-audit-03"));
+  assert.ok(!slugs.includes("draft-mcguinness-oauth-actor-profile"));
+});
+
+test("title drift: the real repository's drafts and family references carry manifest titles", () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "family-manifest.json"), "utf8"));
+  const titleBySlug = new Map(manifest.drafts.map((d) => [d.slug, d.title]));
+  const drift = [];
+  for (const d of manifest.drafts) {
+    const text = fs.readFileSync(path.join(REPO_ROOT, d.file), "utf8");
+    if (parseFrontMatterTitle(text) !== d.title) drift.push(`${d.file}: front matter`);
+    for (const ref of parseFamilyRefTitles(text, new Set(titleBySlug.keys()))) {
+      if (ref.title !== titleBySlug.get(ref.slug)) drift.push(`${d.file}: ${ref.slug}`);
+    }
+  }
+  assert.deepEqual(drift, []);
 });
 
 // ---------------------------------------------------------------------
