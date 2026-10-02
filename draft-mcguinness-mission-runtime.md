@@ -258,7 +258,7 @@ point-of-use check, an active Mission becomes ambient authority for
 the actions an agent takes within a token's lifetime. This document
 is that check. It defines where enforcement sits, how a permit is
 bound to concrete parameters to close the time-of-check to
-time-of-use gap, the materialized policy view a decision evaluates
+time-of-use gap, the materialized policy view a decision can evaluate
 against, the fail-closed posture for constraints and consumption
 bounds, and the runtime evidence every decision and refusal path
 produces. For the high-consequence classes it further defines
@@ -338,8 +338,8 @@ issuance-and-derivation layer; it reads only the credential's
 established Mission reference, effective authority, subject and actor
 context, and sender-constraint confirmation, each realized concretely by
 the binding's credential profile. It obtains any value the credential
-does not carry (the current Mission lifecycle state, or a materialized
-policy-view version) at runtime as described below, never by requiring
+does not carry (the current Mission lifecycle state, or a policy-view
+version) at runtime as described below, never by requiring
 the issuance-and-derivation layer to add a field.
 
 For the OAuth binding, that issuance-and-derivation layer is
@@ -1232,9 +1232,12 @@ Established Mission:
   ({{mission-binding}}).
 
 Policy-view version:
-: A deployment-opaque identifier the PDP emits for the materialized
-  policy and Mission view it evaluated against, so a permit and its
-  evidence record tie to a reproducible decision basis. It need not
+: A deployment-opaque identifier the PDP emits for the decision basis
+  it evaluated against, so a permit and its evidence record tie to a
+  reproducible decision basis: the materialized policy and Mission
+  view where the PDP uses one ({{policy-view}}), or the Mission's
+  `authority_hash` and the PDP's local policy version where it
+  evaluates the Mission's recorded authority directly. It need not
   reveal policy content; it is a correlator that lets an operator
   determine which materialized policy, Mission state view, and
   constraint interpretation a decision used. It is local to
@@ -1242,8 +1245,8 @@ Policy-view version:
   `policy_version` Mission-record field
   ({{I-D.draft-mcguinness-oauth-mission}}); this document does not
   interpret it beyond correlation, and defines no portable policy-version
-  registry. The materialized policy view and its content-addressed
-  `policy_view_id` are defined in {{policy-view}}.
+  registry. Where a view is used, the materialized policy view and its
+  content-addressed `policy_view_id` are defined in {{policy-view}}.
 
 Runtime enforcement evidence:
 : The record a consequential action produces for a PDP decision or a
@@ -3723,7 +3726,8 @@ worked example shows the concrete record
   governs a PDP that uses one, and the authority input requires
   whatever the PDP evaluates to be no broader than the current
   effective authority and bound to the Mission, with mutable state
-  from a state source.
+  from a state source; the policy-view version names whichever basis
+  the PDP evaluated.
 
 - The Enforcement Scope Statement is what a deployment adopting the
   Runtime-Enforced bundle publishes, not what earns the level; the
