@@ -2375,7 +2375,7 @@ A client cannot gain authority by asserting another party's
 `mission_id`: the join requires the subject and client the PEP
 authenticates from the credential to match values the MAS recorded at
 approval, which the client cannot alter, so a reference to someone
-else's Mission fails with `mission_mismatch`. Three residuals remain:
+else's Mission fails with `mission_mismatch`. Four residuals remain:
 
 - **Mapping coarseness.** Where the deployment's account mapping is
   many-to-one (several AS accounts map to one directory subject), any
