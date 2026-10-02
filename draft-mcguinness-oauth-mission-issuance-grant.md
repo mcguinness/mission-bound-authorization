@@ -292,14 +292,14 @@ the grant carries.
 
 ## Issued Tokens {#issued-tokens}
 
-Tokens issued under this profile are Mission-bound in the issuance profile's
-sense: they carry the `mission` claim, their authority is a subset
-of the consented Authority Set, and issuance is gated on Mission
-state: at grant issuance always, and at redemption and every refresh
-where the consuming AS has a Mission-state integration. Runtime
-enforcement
-({{I-D.draft-mcguinness-mission-runtime}}) composes
-credential-carried for these tokens. The Mission Join's limit, that it
+Tokens issued under this profile are Mission-bound in the issuance
+profile's sense: they carry the `mission` claim, their authority is a
+subset of the consented Authority Set, and issuance is gated on
+Mission state: at grant issuance always, and at redemption and every
+refresh where the consuming AS has a Mission-state integration.
+Runtime enforcement ({{I-D.draft-mcguinness-mission-runtime}})
+composes credential-carried for these tokens. The Mission Join's
+limit, that it
 proves a credential belongs to the Mission's parties but never that
 it was issued for the Mission
 ({{I-D.draft-mcguinness-mission-authority-server}}, Section "Mission
@@ -630,12 +630,11 @@ On success the consuming AS mints tokens under these rules:
   the grant does not.
 - **Lifetime.** The consuming AS MUST NOT issue an access or refresh
   token under the grant with an expiry later than the `mission`
-  object's `expires_at`. That
-  ceiling is the Mission horizon, not a liveness bound, so access
-  tokens issued under a grant SHOULD be short-lived: absent a
-  redemption-time state check, an issued access token's own lifetime is
-  the window in which a revoked Mission's token keeps working at the
-  token layer.
+  object's `expires_at`. That ceiling is the Mission horizon, not a
+  liveness bound, so access tokens issued under a grant SHOULD be
+  short-lived: absent a redemption-time state check, an issued access
+  token's own lifetime is the window in which a revoked Mission's
+  token keeps working at the token layer.
 - **Effective Authority Set projection.** A consuming AS with a
   Mission-state integration gates redemption and every refresh on
   current Mission state and projects them through the Mission's
@@ -674,10 +673,9 @@ A grant redeems exactly once, meaning exactly one successful
 issuance: a redemption that fails before issuance leaves the grant
 unconsumed ({{single-use}}); under the authorization code flow
 carriage, PAR validation is the consuming step ({{par-carriage}}).
-Subsequent token needs are
-met by the issued refresh token (state-gated) or a fresh grant
-(state-gated at minting); either way, every path to new authority
-re-enters a Mission-state gate.
+Subsequent token needs are met by the issued refresh token
+(state-gated) or a fresh grant (state-gated at minting); either way,
+every path to new authority re-enters a Mission-state gate.
 
 ## Effective Authority Set Projection {#effective-set-projection}
 
@@ -732,12 +730,11 @@ member where Containment causally removed the authority, and a
 collapse from any other cause MUST NOT be reported as containment
 merely because Containment is composed
 ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "The
-authority_contained Denial Reason"). Where that
-authorization survives and only the narrowing the client requested
-fails to intersect it, the request is at fault: the refusal is
-`invalid_scope` where the request carried `scope`, or
-`invalid_authorization_details` {{RFC9396}} where it carried
-`authorization_details`.
+authority_contained Denial Reason"). Where that authorization
+survives and only the narrowing the client requested fails to
+intersect it, the request is at fault: the refusal is `invalid_scope`
+where the request carried `scope`, or `invalid_authorization_details`
+{{RFC9396}} where it carried `authorization_details`.
 
 ### Transient Source Failure {#transient-failure}
 
@@ -781,8 +778,7 @@ refresh tokens under a grant, and relies instead on the grant's
 `active`-at-minting gate and the short access-token lifetime above. A
 source that reports lifecycle state alone is not a Mission-state
 integration under this profile ({{mission-state-source}}). A consuming
-AS
-that cannot perform this projection MUST NOT claim containment- or
+AS that cannot perform this projection MUST NOT claim containment- or
 discharge-aware issuance.
 
 ## Redemption Errors {#redemption-errors}
@@ -817,10 +813,10 @@ A client tells three cases apart:
   The AS SHOULD include the issuance profile's `mission_error`
   member with the value naming the Mission's state
   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Issuance
-  Gating"), and a client
-  that requests a fresh grant is in any case refused at the MAS
-  `active` gate with `mission_not_active` ({{minting-errors}}), which
-  is the authoritative signal to stop rather than retry.
+  Gating"), and a client that requests a fresh grant is in any case
+  refused at the MAS `active` gate with `mission_not_active`
+  ({{minting-errors}}), which is the authoritative signal to stop
+  rather than retry.
 
 # Authorization Code Flow Carriage {#par-carriage}
 
@@ -854,8 +850,8 @@ so the exchange stays retryable within the code's own lifetime.
 
 This carriage serves user-delegated Missions
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Authority Sources"),
-where an authenticated
-resource owner exists to bind. The AS MUST bind the resource owner
+where an authenticated resource owner exists to bind. The AS MUST
+bind the resource owner
 authenticated at the authorization endpoint to the grant's `sub`: it
 proceeds only where the authenticated user is the grant's Subject
 under the deployment's mapping policy ({{trust}}). The AS
@@ -909,8 +905,9 @@ required. A deployment does not use this profile across domains;
 projection exists for that.
 
 **Native Mission-aware issuance replaces this grant.** An AS that
-becomes natively Mission-aware implements the issuance profile and mints without
-grants for its own resources; the record, anchors, and lifecycle it
+becomes natively Mission-aware implements the issuance profile and
+mints without grants for its own resources; the record, anchors, and
+lifecycle it
 consumes are the same ones the MAS already operates, so nothing is
 re-approved in migration. Until then, the issuance join gives the
 estate Mission-bound tokens without the issuance profile's intake,
@@ -918,9 +915,8 @@ approval, and record surfaces at each AS.
 
 **The runtime join remains for everything else.** Tokens minted
 under this profile compose credential-carried at the Policy Decision
-Point (PDP); ordinary
-tokens continue to compose through the Mission Join. The two joins
-coexist per resource and per AS.
+Point (PDP); ordinary tokens continue to compose through the Mission
+Join. The two joins coexist per resource and per AS.
 
 ## Composite Provision {#composite}
 
@@ -968,8 +964,8 @@ The PAR carriage of {{par-carriage}} is OPTIONAL.
 A deployment claiming this profile states, alongside its
 Enforcement Scope Statement ({{I-D.draft-mcguinness-mission-runtime}},
 Section "Enforcement Scope and Conformance"), which Authorization
-Servers consume
-grants, the staleness bound of each one's state gating, and its
+Servers consume grants, the staleness bound of each one's state
+gating, and its
 reconciliation posture ({{security-considerations}}): the window
 within which minting and redemption logs are reconciled, or that
 they are not. A consuming AS advertises its support with the
