@@ -145,8 +145,9 @@ issues Mission-bound tokens: they carry the Mission, are bounded by
 the authority the grant conveys, and expire no later than the
 Mission. An Authorization Server that checks Mission state at
 redemption and at every refresh stops issuing and renewing those
-tokens once the Mission is no longer active or its authority is
-narrowed; one that does not check issues no refresh tokens. Approval,
+tokens once the Mission is no longer active, and narrows them when
+its authority is narrowed; one that does not check issues no refresh
+tokens. Approval,
 the Mission record, and its lifecycle stay at the Mission Authority
 Server.
 
@@ -206,7 +207,8 @@ profile the MAS is the Mission Issuer. It additionally uses:
 
 Issuance join:
 : The integration this document defines: a MAS-approved Mission
-  consumed at an Authorization Server's token endpoint.
+  carried by a grant that an Authorization Server redeems at its
+  token endpoint.
 
 Mission Issuance Grant (grant):
 : The signed assertion of {{grant}}, issued by the MAS and redeemed
@@ -822,10 +824,10 @@ A client tells three cases apart:
   validation failures (an untrusted issuer, a wrong audience, an
   unmappable subject or authority) are configuration faults that a
   fresh grant does not cure.
-- **Stop.** Neither a retry nor a fresh grant cures a refusal because
-  the Mission is not `active`. The AS SHOULD include the issuance
-  profile's `mission_error` member (`mission_revoked`,
-  `mission_expired`, or `mission_superseded`;
+- **Stop.** While the Mission stays out of the `active` state,
+  neither a retry nor a fresh grant cures the refusal. The AS SHOULD
+  include the issuance profile's `mission_error` member
+  (`mission_revoked`, `mission_expired`, or `mission_superseded`;
   {{I-D.draft-mcguinness-oauth-mission}}, Section "Issuance Gating").
   A client that requests a fresh grant is refused at the MAS with
   `mission_not_active` ({{minting-errors}}), the authoritative signal
@@ -967,8 +969,7 @@ full:
   state-integrated consuming AS unconditionally
   ({{effective-set-projection}});
 - Effective Authority Set projection at every refresh, which binds a
-  consuming AS that issues refresh tokens; a deployment that issues
-  none meets this duty by issuing none ({{effective-set-projection}});
+  consuming AS that issues refresh tokens ({{effective-set-projection}});
 - no refresh tokens without a Mission-state integration
   ({{no-state-integration}});
 - no re-approval; and
@@ -1045,8 +1046,8 @@ exclusive validation rules ({{Section 3.11 of RFC8725}} and
 the moment of state commit. A grant already issued can still be
 redeemed within its 300 seconds at a consuming AS without a
 Mission-state integration. Issued access tokens run to their own
-expiry, and refresh tokens stop at the consuming AS's next
-state-gated refresh; where the runtime layer is deployed, the PDP's
+expiry, and an outstanding refresh token is refused at its next
+state-gated use; where the runtime layer is deployed, the PDP's
 re-check bounds outstanding-token use independently. A refresh
 re-projects through
 the Effective Authority Set ({{effective-set-projection}}), so a
