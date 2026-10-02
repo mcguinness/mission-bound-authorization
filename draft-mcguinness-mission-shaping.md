@@ -569,10 +569,11 @@ Where cross-vendor interoperability matters, the shaper SHOULD carry
 the concrete candidate authority it proposes (the resources, actions,
 and constraints) in an Authority Proposal, and record the same
 proposal in Shaping Evidence. The Mission Issuer then derives the
-Authority Set by narrowing the proposal under its subset rule, with the
-deterministic-reproducibility rule applying, instead of generating
-authority from free text ({{I-D.draft-mcguinness-oauth-mission}},
-Section "Mission Authority"). Narrowing is the portable derivation
+Authority Set in narrowing mode, each entry a subset of a proposed
+entry, instead of from a configured mapping keyed on the Intent or
+from local policy that interprets free text
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
+Authority"). Narrowing is the portable derivation
 path: the proposal format and the narrowing rule are interoperable, so
 the resulting Authority Set is enforceable and auditable across
 domains, while the Mission Issuer's policy decision about what to
