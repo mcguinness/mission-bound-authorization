@@ -2575,8 +2575,8 @@ artifacts of the companions. A MAS SHOULD hold the key in a
 non-exportable keystore (an HSM or equivalent KMS-grade custody) with
 dual-controlled generation. A MAS SHOULD sign high-volume surfaces
 (status, Join Assertions) and long-lived artifacts (Mandates, Issuance
-Grants) under distinct `kid`s in one `jwks_uri`, so custody can differ
-by surface.
+Grants) under distinct `kid`s in one `jwks_uri`, so custody can follow
+the consequence of each key's compromise.
 
 The introspection credential that the MAS holds at the estate AS
 ({{join-assertion-request}}) is secret material of the same tier: its
