@@ -3184,7 +3184,29 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "Gated on core.standing-consent, the common source of kind policy (Template dispatch, policy drawdown, ceiling drawdown); the same rule binds a kind policy accountable assertion under an Approval Governance Record (core.governance-record). Re-checkability is the stated property beside it: re-evaluating the recorded policy version over the recorded inputs, model output included, reproduces the decision."
+   "notes": "Standing-consent facet: gated on core.standing-consent, the common source of kind policy (Template dispatch, policy drawdown, ceiling drawdown). The governance facet, core.approval-basis.adjudication-policy-model-input-narrows-governance, covers an Approval Governance Record accountable policy assertion. Re-checkability is the stated property beside it: re-evaluating the recorded policy version over the recorded inputs, model output included, reproduces the decision."
+  },
+  {
+   "id": "core.approval-basis.adjudication-policy-model-input-narrows-governance",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "the AS MUST NOT let it supply or widen authority",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where an Approval Governance Record's accountable assertion is kind policy (including a direct approval with no standing-consent basis) and that policy's recorded inputs include a model's output, the activated Authority Set is no wider than the same policy version yields over the same recorded inputs with that output treated as no objection"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Governance facet of core.approval-basis.adjudication-policy-model-input-narrows, quoting the same clause: kind policy reaches adjudication through an Approval Governance Record's accountable policy assertion without claiming capability core.standing-consent."
   },
   {
    "id": "core.approval-basis.discriminator-unknown-value-rule",
