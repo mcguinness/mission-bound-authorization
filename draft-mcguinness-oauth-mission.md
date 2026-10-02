@@ -3479,8 +3479,10 @@ delegate execution to downstream actors (a sub-agent, service, or tool
 that is itself an OAuth client) within a Mission. An intermediary in
 the agent's own trust domain that presents the agent's own tokens,
 such as a gateway holding the agent's credentials, acts as part of
-that client and is not a delegate; one that obtains its own token by
-Token Exchange is a delegate.
+that client and is not a delegate; acting as that client, it can
+also narrow by self-exchange ({{self-exchange}}), which does not
+delegate. An intermediary authenticated as a distinct actor that
+obtains a delegated token by Token Exchange is a delegate.
 Delegation is represented with the OAuth Actor Profile
 {{I-D.draft-mcguinness-oauth-actor-profile}}, which profiles the
 `act` (actor) claim of {{Section 4.1 of RFC8693}}.
@@ -5866,8 +5868,9 @@ Cross-Domain:
   a Non-Goal for joint outcomes and cross-resource effects (the
   `mission` claim does not identify a business transaction), stated
   that an intermediary in the agent's own trust domain presenting the
-  agent's own tokens acts as part of that client rather than as a
-  delegate, and pointed to RFC 9728's
+  agent's own tokens acts as part of that client, self-exchange
+  included, while one authenticated as a distinct actor that obtains
+  a delegated token is a delegate, and pointed to RFC 9728's
   `authorization_details_types_supported`. No requirement or wire
   behavior changed.
 
