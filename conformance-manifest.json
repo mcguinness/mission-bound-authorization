@@ -63,8 +63,8 @@
     "content_sha256": "873b64d56c1813874239d7c4e07d5e1cbc777809c05d725efbf79439038750f9"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "1d03c2573a162a9bb3424d4f8471e13b9417be36",
-    "content_sha256": "c73822fd3c970cfa15e0e1c027de33dfb172803d1dd7621d695ac02e26e74e82"
+    "revision": "4aa384020091ffbb0cc90464cf93ee3fd0c4cac3",
+    "content_sha256": "33a6eb3328e2316f9228fead8b60cc4f306390f5ba5ca81920a62e2c22255866"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
@@ -3163,6 +3163,53 @@
    "notes": "New member (#701); demonstrates the multi-assertion-AGR-not-collapsed property from the #701 and #716 reviews. Scoped to core.governance-record: the clause binds only an approval whose `adjudication.governance_record` is `true`, which requires an Approval Governance Record (the approval-governance companion); no published baseline selects it, matching that companion's own rows."
   },
   {
+   "id": "core.approval-basis.adjudication-policy-model-input-narrows",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "the AS MUST NOT let it supply or widen authority",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "governance-decision",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where a kind policy adjudicator's recorded inputs include a model's output, the activated Authority Set is no wider than the same policy version yields over the same recorded inputs with that output treated as no objection: the model's output can refuse the activation or narrow it, never add an entry or widen one"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Standing-consent facet: gated on core.standing-consent, the common source of kind policy (Template dispatch, policy drawdown, ceiling drawdown). The governance facet, core.approval-basis.adjudication-policy-model-input-narrows-governance, covers an Approval Governance Record accountable policy assertion. Re-checkability is the stated property beside it: re-evaluating the recorded policy version over the recorded inputs, model output included, reproduces the decision."
+  },
+  {
+   "id": "core.approval-basis.adjudication-policy-model-input-narrows-governance",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "the AS MUST NOT let it supply or widen authority",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where an Approval Governance Record's accountable assertion is kind policy (including a direct approval with no standing-consent basis) and that policy's recorded inputs include a model's output, the activated Authority Set is no wider than the same policy version yields over the same recorded inputs with that output treated as no objection"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Governance facet of core.approval-basis.adjudication-policy-model-input-narrows, quoting the same clause: kind policy reaches adjudication through an Approval Governance Record's accountable policy assertion without claiming capability core.standing-consent."
+  },
+  {
    "id": "core.approval-basis.discriminator-unknown-value-rule",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "mission-record",
@@ -4395,6 +4442,30 @@
     }
    ],
    "notes": "Core configured-mapping mode, not the Mission Template companion; the companion's unknown template_id error is specified and tested separately. The third test pins the companion branch (a submitted proposal deriving nothing stays invalid_authorization_details) so the two codes are not confused going forward."
+  },
+  {
+   "id": "core.derivation.prose-gates-no-adjudicator",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "authorization-derivation",
+   "text": "MUST NOT gate issuance on those members, whether in derivation, in an adjudicating policy, or through a model input to either",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "two submissions that differ only in goal, goal_lang, task_bounds, or success_criteria receive the same issuance outcome, refused or issued, under derivation and under any adjudicating policy, including one that takes a model's output as an input"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The AS-side rule only: a human Approver reading the rendered prose and declining is the intended consent check, not issuance gating by the AS."
   },
   {
    "id": "core.approval-authentication.floor-and-requested-carriage-both-satisfied",
