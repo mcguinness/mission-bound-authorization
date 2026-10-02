@@ -748,6 +748,16 @@ its own narrower authority. The OAuth realization of both bounds is
 {{I-D.draft-mcguinness-mission-runtime-oauth}}, Section "Credential
 Authority and Current Effective Authority".
 
+A PDP evaluates these bounds either through a materialized policy
+view ({{policy-view}}) or directly against the Mission's recorded
+authority. Whichever representation it evaluates MUST NOT be broader
+than the current effective authority, and MUST be bound to the
+Mission it represents by the Mission's identifier and
+`authority_hash`. Mutable Mission state, including the narrowing the
+current effective authority reflects, comes from a state source
+within the staleness bound ({{state-freshness}}), never from that
+representation.
+
 Where the deployment enforces a narrowing mechanism at action time,
 the PDP MUST establish the current effective authority from a source
 that reports that mechanism's narrowing, within the staleness bound
