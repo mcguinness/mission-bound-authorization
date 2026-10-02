@@ -569,7 +569,7 @@ carrying a proposal records `proposed_authority` and `proposal_hash`
 as the issuance profile's Mission record defines them.
 
 A MAS has no derivation event: no token is issued under the Mission,
-so a requested `requested_derivation_limit`
+so a `requested_derivation_limit` member
 ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}) binds nothing here (a MAS
 implementing the issuance-grant companion has one, each grant
 minted, and applies that profile's counting rule,
