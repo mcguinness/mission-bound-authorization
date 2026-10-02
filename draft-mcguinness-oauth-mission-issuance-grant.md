@@ -241,7 +241,7 @@ MAS, and a consuming AS:
     |                         |<-- (D) Mission Status -------|
     |                         |--- state and Effective ----->|
     |                         |    Authority Set             |
-    |<-- (E) access token, refresh token --------------------|
+    |<-- (E) access token (and refresh token) ---------------|
     |                         |                              |
     |-- (F) refresh request -------------------------------->|
     |                         |<-- (D) repeated -------------|
@@ -336,7 +336,7 @@ Claims:
 : REQUIRED. `exp` MUST NOT be more than 300 seconds after `iat`.
 
 `jti`:
-: REQUIRED. Unique per grant; single use ({{redemption}}).
+: REQUIRED. Unique per grant; single use ({{single-use}}).
 
 `client_id`:
 : REQUIRED. The Mission's recorded agent client identifier at the
@@ -589,10 +589,9 @@ any check fails:
 3. `aud` names this AS; `exp` is no more than 300 seconds after
    `iat`, `iat` is not in the future, and `exp` has not passed, each
    within the clock-skew allowance of {{Section 4.1.4 of RFC7519}};
-   and the (`iss`, `jti`) pair has not been seen. The record of a
-   seen pair is written atomically with successful issuance and
-   retained until `exp` plus that allowance passes (single use,
-   {{effective-set-projection}});
+   and the `jti` has not been seen. The record of a seen `jti` is
+   written atomically with successful issuance and retained until
+   `exp` plus that allowance passes ({{single-use}});
 4. the requester is the grant's `client_id` ({{redemption}}): the
    authenticated client equals it or, for a public client, the
    request proves possession of the `cnf` key; and whenever `cnf` is
@@ -680,8 +679,9 @@ every path to new authority re-enters a Mission-state gate.
 ## Effective Authority Set Projection {#effective-set-projection}
 
 A consuming AS with a Mission-state integration applies this section
-at redemption and at every refresh; {{no-state-integration}} states
-what applies to one without.
+at redemption and at every refresh. {{single-use}} applies to every
+consuming AS, and {{no-state-integration}} states what applies to one
+without an integration.
 
 ### Mission State Source {#mission-state-source}
 
@@ -761,7 +761,8 @@ and retryable, and concurrent redemptions of one grant are resolved by
 that atomic record: the loser is a replay, refused `invalid_grant`. On
 the refresh path a transient source failure MUST NOT consume or rotate
 the presented refresh token, so the client retries with the credential
-it already holds.
+it already holds. Under the authorization code flow carriage, PAR
+validation is the consuming step instead ({{par-carriage}}).
 
 ### Refresh {#refresh}
 
