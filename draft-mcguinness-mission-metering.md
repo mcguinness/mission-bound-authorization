@@ -157,7 +157,7 @@ This document defines that metering layer:
 
 - the consumption-bounds vocabulary a Mission Intent carries,
 - the metering semantics a runtime deployment enforces, and
-- the AuthZEN wire binding
+- the AuthZEN wire representation
   ({{I-D.draft-mcguinness-mission-authzen}}) for settlement and
   duration-lease renewal.
 
@@ -807,7 +807,7 @@ refusal under an aggregate bound reads:
 }
 ~~~
 
-# AuthZEN Binding {#authzen-binding}
+# AuthZEN Wire Representation {#authzen-binding}
 
 Where the runtime deployment uses the AuthZEN profile
 ({{I-D.draft-mcguinness-mission-authzen}}), this section defines the
