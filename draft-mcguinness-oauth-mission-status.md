@@ -58,6 +58,14 @@ informative:
   RFC9110:
   RFC9457:
   RFC9700:
+  I-D.draft-mcguinness-oauth-mission-issuance-grant:
+    title: "Mission Issuance Grant for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-resource-access:
     title: "Mission Resource Access Profile for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
@@ -342,8 +350,10 @@ The request is an HTTPS POST with an
 
 `audience`:
 : CONDITIONAL. A string. The audience identifier of the
-  requesting consumer. An authorized non-RS consumer (for example an
-  auditor or a cross-domain Resource AS) that needs only Mission state,
+  requesting consumer, or of another audience the Mission Issuer
+  authorizes that consumer to request (below). An authorized non-RS
+  consumer (for example an auditor or a cross-domain Resource AS) that
+  needs only Mission state,
   not audience-scoped authority, MAY omit `audience`; the response is
   then state-only and carries no `authorization_details`
   ({{mission-status-response}}). A Resource Server resolving authority
@@ -356,6 +366,18 @@ The request is an HTTPS POST with an
   does not equal the one it sent. This is a standard client challenge:
   echoing it in the signed response anti-replay-binds that response to
   this specific request.
+
+A request's `audience` names the caller's own audience unless the
+Mission Issuer's configuration authorizes the caller for another. A
+consuming Authorization Server under the Mission Issuance Grant
+profile ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}), for
+example, requests the projection for each resource it issues tokens
+for. The Mission Issuer MUST honor a request naming an audience other
+than the caller's own only where its configuration authorizes the
+authenticated caller for that audience, and MUST otherwise refuse it
+with the not-found response of {{mission-status-errors}}. The
+response's `aud` is the requested `audience`
+({{mission-status-response}}).
 
 ## Authentication {#mission-status-authentication}
 
@@ -639,7 +661,9 @@ A consumer MUST verify, before honoring a response:
 3. the JWS signature against a current `jwks_uri` entry for the
    `issuer` AS;
 4. `iss` equals the expected AS issuer URL;
-5. `aud` equals the consumer's own audience identifier;
+5. `aud` equals the `audience` the request named or, for a
+   state-only response, the requester's identifier
+   ({{mission-status-request}});
 6. `sub` equals the requesting client's identifier;
 7. `nonce` equals the request's nonce;
 8. `mission.id` equals the requested `mission_id`; and
@@ -1720,8 +1744,9 @@ authenticated, authorized requester, and MAY additionally disclose
 `authority_hash` to a requester authorized for it. A deployment MUST
 treat both as Mission information-disclosure surfaces with the same
 privacy posture, audience-filtering the disclosed authority so a
-consumer never sees entries addressed to other audiences
-({{mission-status-response}}).
+consumer never sees entries addressed to audiences it is not
+authorized to request ({{mission-status-request}},
+{{mission-status-response}}).
 
 ## Status Audit Logging
 
@@ -1812,6 +1837,11 @@ Authorization work for feedback that shaped these extensions.
 
 \[\[ To be removed from the final specification ]]
 
+- A caller may request the projection for an audience other than its
+  own, such as each resource a Mission Issuance Grant consuming
+  Authorization Server serves, only where the Mission Issuer's
+  configuration authorizes it; the consumer checks `aud` against the
+  `audience` its request named (#963).
 - The mutual-TLS method value is `tls_client_auth`, the registered
   {{RFC8705}} spelling, and an absent endpoint auth-methods member is
   never read from token-endpoint metadata. The Mission Authority Server
