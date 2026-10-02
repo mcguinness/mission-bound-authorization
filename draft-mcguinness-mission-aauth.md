@@ -248,9 +248,11 @@ Lifecycle gate:
   `terminated` mission is permanently non-active.
 
 Bounded reliance:
-: AAuth enforces `expires_at` on every PS decision path and caps every
-  token carrying `mission_s256` to it ({{lifecycle}}); the PS still
-  establishes `active` at decision time.
+: AAuth enforces `expires_at` on every PS decision path and caps the
+  person tokens and auth tokens the PS issues at it ({{lifecycle}}); the
+  PS still establishes `active` at decision time, including when it
+  acts on a resource token, whose lifetime is independent of
+  `expires_at`.
 
 Context propagation:
 : The signed `mission_s256` claim, carried by person, resource, and
@@ -607,13 +609,21 @@ one at approval under deployment policy, and that policy SHOULD prefer
 the shortest expiry consistent with the mission's purpose.
 
 Expiry transitions the mission to `terminated`; it adds no third
-state, and no token carrying `mission_s256` outlives the mission's
-approved `expires_at`.  AAuth distinguishes an expiry-caused termination with a
+state.  The PS caps the person tokens and auth tokens it issues at
+`expires_at` (Sections 7.1.2 and 9.4.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}), and the presented token
+carries that bound to an AS (Section 9.1.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  A resource token is a
+short-lived request artifact whose lifetime is independent of
+`expires_at`; the PS verifies that the mission is active and unexpired
+whenever it acts on one (Sections 6.7.1 and 6.7.2 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  AAuth distinguishes an
+expiry-caused termination with a
 `termination_reason` of `expired`, surfaced where a management
 companion exposes it, rather than with a separate error status.  An
 early completion, revocation, or administrative termination prevents
-new governed issuance; an outstanding token remains usable until
-revocation or its own expiry, inside that approved bound.
+new governed issuance; an outstanding person token or auth token
+remains usable until revocation or its own expiry, inside that bound.
 
 There is no suspended state in this binding.  A short wait uses AAuth's
 deferred-response mechanism.  A long or materially changed pause is
@@ -623,10 +633,14 @@ scoped mission while retaining the old log for audit.
 Termination prevents new governed issuance and PS operations.  It does
 not retroactively erase a previously issued credential or guarantee that
 all independently authorizing resources learn the state immediately.
-Short token lifetimes bound this residual window in PS authorization
-and federated authorization modes.  A resource needing stronger
-termination latency requires an additional revocation or event
-mechanism.
+In the modes that present a person token, short token lifetimes bound
+this residual window: a party that no revocation reaches is bounded
+by token lifetime alone, at most one hour for a person token or an auth
+token (Section 11.12.5 of {{I-D.draft-hardt-oauth-aauth-protocol}}).
+AAuth token revocation shortens the window where the token's recipient
+supports it (Section 11.12 of {{I-D.draft-hardt-oauth-aauth-protocol}});
+a resource needing stronger termination latency requires an additional
+event mechanism.
 
 # Conformance
 
@@ -875,11 +889,12 @@ The contextual-governance kernel maps as follows:
 7. **Reliance bound**: every mission carries AAuth's native
    `expires_at` member, enforced on every PS decision path
    ({{lifecycle}}); PS decisions establish `active` at decision time,
-   no token carrying `mission_s256` exceeds the mission's `expires_at`,
-   and the residual after a transition is bounded by outstanding token
-   lifetime.  AAuth Mission Expiry
-   {{I-D.draft-mcguinness-aauth-mission-expiry}} profiles the member
-   this binding relies on.
+   including on a resource token, whose lifetime is independent of
+   `expires_at`; no person token or auth token carrying `mission_s256`
+   exceeds the mission's `expires_at`; and the residual after a
+   transition is bounded by outstanding token lifetime.  AAuth Mission
+   Expiry {{I-D.draft-mcguinness-aauth-mission-expiry}} profiles the
+   member this binding relies on.
 8. **Context propagation**: the signed `mission_s256` claim, carried
    by person, resource, and auth tokens, carries governance context;
    the blob itself never propagates; coverage varies by access mode
