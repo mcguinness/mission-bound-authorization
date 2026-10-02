@@ -25,7 +25,13 @@ import {
 } from "../src/enforcement-scope.js";
 import type { Fga } from "../src/fga.js";
 import { evaluate, type EvaluationRequest, type MissionView, relationForAction, stalenessBound } from "../src/index.js";
-import { loadRuntimePosture, PostureConfigError, RUNTIME_POSTURE } from "../src/runtime-posture.js";
+import {
+  loadRuntimePosture,
+  PostureConfigError,
+  reversibleWritePermitMaxSeconds,
+  RUNTIME_POSTURE,
+  type RuntimePosture,
+} from "../src/runtime-posture.js";
 
 const RESOURCE = "http://localhost:4403/mcp";
 const NOW = new Date("2026-10-02T12:00:00Z");
@@ -169,5 +175,29 @@ describe("the PDP refuses a declared reversible write that carries no idempotenc
       expect(windowMs).toBeGreaterThan(0);
       expect(windowMs).toBeLessThanOrEqual(300_000);
     }
+  });
+
+  it("caps the permit at the operation's published permit_validity_max_seconds: 30 s under a 30 s maximum, and the shipped 300 s posture is unchanged", async () => {
+    const short = withDeclarations((decls) => {
+      for (const d of decls) {
+        d.permit_validity_max_seconds = 30;
+        d.retention_horizon = "PT60S";
+      }
+    }) as unknown as RuntimePosture;
+    // A valid statement: the retention is still longer than the permit.
+    expect(validateEnforcementScopeStatement(short)).toEqual([]);
+    expect(() => loadRuntimePosture(short)).not.toThrow();
+    const capped = await evaluate(request("payments:payment.schedule", KEY), {
+      ...opts,
+      reversibleWritePermitMaxSeconds: (c: string | undefined, a: string) => reversibleWritePermitMaxSeconds(short, c, a),
+    });
+    expect(capped.decision).toBe(true);
+    const cappedUntil = (capped.context.conditions as { valid_until: string }).valid_until;
+    expect(Date.parse(cappedUntil) - NOW.getTime()).toBeLessThanOrEqual(30_000);
+    expect(Date.parse(cappedUntil) - NOW.getTime()).toBeGreaterThan(0);
+
+    const shipped = await evaluate(request("payments:payment.schedule", KEY), opts);
+    const shippedUntil = (shipped.context.conditions as { valid_until: string }).valid_until;
+    expect(Date.parse(shippedUntil) - NOW.getTime()).toBe(300_000);
   });
 });
