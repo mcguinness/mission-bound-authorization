@@ -757,7 +757,7 @@ empty current intersection.
 ### Single Use {#single-use}
 
 Consumption is atomic with issuance. The single-use `jti` check of
-{{redemption}} refuses a grant already recorded; the record itself is
+{{grant-validation}} refuses a grant already recorded; the record itself is
 written atomically with successful issuance, after the state gate and
 this projection. A redemption that fails before issuance, a transient
 source failure in particular, therefore leaves the grant unconsumed
@@ -866,8 +866,8 @@ mint tokens for the wrong resource owner.
 For a service-owned or organizational Mission there is no delegating
 user to authenticate; such a grant is redeemed directly
 ({{redemption}}), not carried through the authorization code flow.
-The authenticated client MUST still be the grant's `client_id`
-({{redemption}}).
+The requester MUST still be the grant's `client_id`
+({{grant-validation}}).
 
 # Metadata {#metadata}
 
@@ -940,10 +940,11 @@ half-step arrives with the consuming AS's refresh gating.
 
 **Mission Authority Server** implements {{minting}} in full:
 
-- the authenticated, visibility-guarded endpoint;
+- the authenticated endpoint, answering any caller other than the
+  recorded client with `not_found`;
 - the `active`-only gate;
 - subset and audience scoping;
-- derivation counting where consented;
+- derivation counting where a `derivation_limit` is set;
 - minting evidence; and
 - grants shaped exactly as {{grant}} requires.
 
@@ -985,10 +986,11 @@ join.
 
 **Grant theft.** The grant authorizes issuance, so it is defended in
 depth: 300-second lifetime, single-use `jti`, audience binding to
-one AS, redemption bound to the Mission's authenticated `client_id`,
-and optional `cnf` key binding. A stolen grant is useless to any
-party that cannot also authenticate as the recorded client at the
-named AS within the window; deployments whose client credentials are
+one AS, redemption bound to the Mission's `client_id`, and optional
+`cnf` key binding. A stolen grant is useless to any party that cannot
+also authenticate as the recorded client, or prove possession of the
+`cnf` key, at the named AS within the window; deployments whose client
+credentials are
 weak SHOULD require `cnf` (DPoP {{RFC9449}} or mTLS {{RFC8705}}
 bindings serve).
 
