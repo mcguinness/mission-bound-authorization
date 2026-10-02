@@ -285,6 +285,13 @@ artifacts it emits: a code exchange that returns both an access token
 and a refresh token is one derivation. A derivation that fails,
 including one refused for exceeding the bound, MUST NOT be counted.
 
+A child-creation token exchange
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) is not a
+derivation of the Parent Mission: it returns the child's
+authorization grant, not a token. The child's redemption of that
+grant is a derivation of the Child Mission, counted against the
+child's own `derivation_limit`.
+
 ## Atomicity and Concurrency {#concurrency}
 
 The AS MUST NOT let concurrent derivations collectively exceed the
@@ -634,6 +641,9 @@ intent_hash = sha-256:r--mF07yZfWRGV6N28A2u_8rUzIG-bNhpvFSS5FhoBk
 
 -00
 
+- What Counts states that a child-creation token exchange is not a
+  derivation of the Parent Mission; the child's redemption of its
+  grant counts against the child's own limit.
 - Composition Across Missions states that the example's 12
   descendants and 120 derivations count Missions live at once, not a
   lifetime total.
