@@ -44,6 +44,7 @@ normative:
     author:
       - org: Model Context Protocol Project
     date: 2026
+  RFC8414:
   RFC9068:
   RFC9325:
   RFC9728:
@@ -140,7 +141,6 @@ informative:
     date: 2026
   RFC6749:
   RFC8126:
-  RFC8414:
   RFC8693:
   RFC9449:
   RFC9635:
