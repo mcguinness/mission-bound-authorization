@@ -205,6 +205,11 @@ export const GRANDFATHERED_WIRE_NAMES = new Set([
   "draft-mcguinness-oauth-mission-expansion|OAuth Parameters|predecessor",
   "draft-mcguinness-oauth-mission-expansion|OAuth Parameters|creation_request_id",
   "draft-mcguinness-oauth-mission-template|OAuth Parameters|dispatch_event_id",
+  // OAuth Extensions Error, ruled in #963 (D4): reuse of the existing OAuth
+  // error name of RFC 6749 Section 4.1.2.1, registered only to add its
+  // token-endpoint usage location. The name keeps its upstream spelling
+  // (CONTRIBUTING, Wire Names Convention); this is not a new wire name.
+  "draft-mcguinness-oauth-mission-issuance-grant|OAuth Extensions Error|temporarily_unavailable",
 ]);
 
 // `mission` as a distinct name component: bounded by a non-alphanumeric

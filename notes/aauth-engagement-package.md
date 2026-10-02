@@ -6,28 +6,30 @@ the AAuth repository. The owner chooses the timing and outbound venue.
 The six items travel as one engagement, retaining the stable A-IDs even
 if the editor later chooses separate disposition threads.
 
-This incorporates the September 4 sketch and review refinements. The
-quoting baseline is `dickhardt/AAuth@fc5e972c58d42a4f899d43acba39995081b87712`.
-Upstream proposals are separately identified, not represented as landed:
+This incorporates the September 4 sketch and review refinements,
+re-baselined on 2026-10-01 to the published `draft-hardt-oauth-aauth-protocol-11`
+(2026-09-25) and `draft-hardt-aauth-r3-00` (2026-09-28), the revisions
+the family pins (issue #915). Section numbers below are those revisions'.
+The upstream proposals the package tracked have merged and are in -11:
 
-| Proposal | Reviewed head | Relevance |
+| Proposal | Merged commit | Subject |
 | --- | --- | --- |
-| [#128](https://github.com/dickhardt/AAuth/pull/128) | `74799af35e91e27be7ab592d4f16da44883cbf96` | Per-call and result-release gating |
-| [#131](https://github.com/dickhardt/AAuth/pull/131) | `b3859fd4f3cd7350800fe6fccbbc86fabb3a9c95` | PS-side expiry bound and person-token presentation |
-| [#132](https://github.com/dickhardt/AAuth/pull/132) | `56884a8ca7d626bec0a17cecb203ef2e90586e4a` | Mission control-plane caller wording |
+| [#128](https://github.com/dickhardt/AAuth/pull/128) | `b240c1111838915243327810761c789faa267d36` | Consent Presentation, R3 release gating, budgets presented-token record (#128) |
+| [#131](https://github.com/dickhardt/AAuth/pull/131) | `927b662370af53424a59d566c1b383ce3f8bf9de` | -11 issue batch 3: person_token to the AS, as_unreachable, out-of-band completion, deferred verification (#121 #123 #111 #114) (#131) |
+| [#132](https://github.com/dickhardt/AAuth/pull/132) | `7030c949bb73b0cdead834433dcff81080616699` | Move the person token endpoint into the Person Server chapter (#103) (#132) |
 
-Before dispatch, refresh the baseline and proposal states, refresh the
-quoted text and its section references, and remove any ask already
+Before dispatch, check the quoted text and its section references
+against the then-latest published revisions, and remove any ask already
 resolved. On an authorized dispatch the items travel as discrete
 per-item threads in the order A17, A16, A15, A18, A11, plus the A20
 question, filed as issues on `dickhardt/AAuth`, whose CONTRIBUTING makes
-GitHub Issues the primary venue for specification proposals. A11 goes
-first as a comment on upstream PR #131, the open expiry-ceiling rewrite,
-and becomes its own issue only if #131 merges without the sentence.
-Nothing here executes that. The package does not wait for or travel with
-a WG submission bundle. A5, A7, and A12 remain separate watches; A14
-and A19 were handled by family PRs #767 and #763. No new upstream issue
-is implied by this local document.
+GitHub Issues the primary venue for specification proposals. A11 was to
+go first as a comment on upstream PR #131 and become its own issue only
+if #131 merged without the sentence; #131 merged without it, so A11 is
+its own issue. Nothing here executes that. The package does not wait
+for or travel with a WG submission bundle. A5, A7, and A12 remain
+separate watches; A14 and A19 were handled by family PRs #767 and #763.
+No new upstream issue is implied by this local document.
 
 ## Cover note
 
@@ -54,11 +56,18 @@ different transactions. Conversely, retrying one admission must not
 create parallel approvals or executions. Pending lifetime is a separate
 bound from challenge or resulting token expiry.
 
-**Upstream text (`fc5e972c`).** R3 Content Addressing: "The `r3_s256`
-hash is the document's identity, not the URI." Per-Call Proposals, Flow
-step 1: "The resource builds the proposal, persists it keyed by its
-`r3_s256`". Flow step 4: "The resource SHOULD retain the result at least
-until the auth token's `exp`."
+**Upstream text (R3 -00, -11).** R3 Section 7.2: "The `r3_s256` hash is
+the document's identity, not the URI." R3 Section 10.2 step 1: "The
+resource builds the proposal, persists it keyed by its `r3_s256`". Step
+4: "A resource MUST NOT execute more than one invocation under one
+per-call auth token". Section 6.5.1 of -11: "The record is keyed by
+the auth token's jti."
+
+**Status.** Partly resolved. Single use and the retained result are
+keyed by the per-call auth token's `jti`, so a repeated presentation of
+that token is answered from the retained result. Still open: a handle
+distinct from `r3_s256`, admission idempotency, and a declared pending
+lifetime.
 
 **Request.** Define a transaction-instance handle distinct from
 `r3_s256`, with a declared pending lifetime and admission idempotency
@@ -89,12 +98,17 @@ authorization if a verifier does not first consult the pending proposal
 record. Endpoint context alone does not give every verifier an
 interoperable class distinction.
 
-**Upstream text (`fc5e972c`).** R3 Auth Token Extensions: the per-call
-result is "a JWT with `typ: aa-auth+jwt`". Per-Call Proposals, Flow step
-2: "the AS issues a per-call auth token that echoes the proposal's
-`r3_uri`/`r3_s256` and lists the now-approved operation in
-`r3_granted`". Resource Enforcement step 1: "Match in `r3_granted`:
-serve the request."
+**Upstream text (R3 -00).** R3 Section 9: the auth token is "a JWT with
+typ: aa-auth+jwt". Section 10.2 step 2: "the per-call auth token the
+issuer returns echoes the proposal's r3_uri/r3_s256 and lists the
+now-approved operation in r3_granted". Section 9.1 step 1: "Match in
+r3_granted: serve the request."
+
+**Status.** Still open. The per-call result is an `aa-auth+jwt` and the
+verifier consults the stored proposal to tell it apart; no distinct class
+exists. R3 Section 9 names the per-call operations `r3_per_call`, and
+Section 10.4 adds release of an already-computed result under the same
+per-call mode.
 
 **Request.** Give the per-call result a class distinguishable from
 general authorization, with acceptance only for the approved invocation
@@ -103,8 +117,9 @@ equivalent dispatch could provide it. Single-use and retained-result
 behavior are semantics of the class, and both the 202 and 401 paths
 enforce them. The token is neither a person token nor general resource
 authorization. The verification path also distinguishes execution from
-release of an already-computed result under the release gating upstream
-#128 proposes.
+release of an already-computed result under R3 Section 10.4: "What
+needs authorization is not the execution but the release of the result
+to the agent."
 
 **Decline posture.** The family invents no AAuth class member. It keeps
 transaction authorization unsupported if native class dispatch remains
@@ -117,13 +132,17 @@ admission or retention of the old bytes. Replacing a document at one URI
 can strand a previously admitted workflow or leave a stale definition
 eligible for a new one.
 
-**Upstream text (`fc5e972c`).** R3 Content Addressing: "If a resource
-updates the document at the same URI, existing auth tokens still
-reference the previous hash (which the AS has cached). New resource
-tokens reference the new hash." AS Processing step 3: "If the hashes do
-not match, the AS MUST reject the resource token." Caching: "The AS is
-not required to retain R3 documents beyond their immediate use in token
-issuance."
+**Upstream text (R3 -00).** R3 Section 7.2: "If a resource updates the
+document at the same URI, existing auth tokens still reference the
+previous hash (which the AS has cached). New resource tokens reference
+the new hash." Section 8.1 step 3: "If the hashes do not match, the
+issuer MUST reject the resource token." Section 8.3: "The issuer is not
+required to retain R3 documents beyond their immediate use in token
+issuance." The R3 changelog: "Removed the version field. R3 documents
+are content-addressed, so a revision is a different document at a
+different hash".
+
+**Status.** Still open. No current or superseded signal exists.
 
 **Proposed property.** A superseded definition remains resolvable for
 workflows admitted under it and is closed to new admission. An admitted
@@ -146,17 +165,23 @@ not itself guarantee.
 of that key alone does not identify which artifact's single-use state a
 request is consuming.
 
-**Upstream text (`fc5e972c`).** Protocol Covered Components: the
-signature MUST cover "`signature-key`: The Signature-Key header value",
-because "`signature-key` binds the signature to the presented key
-material, preventing key substitution". R3 Flow step 3: under `202` "the
-resource executes the held call when a valid per-call auth token arrives
-at the pending URL"; under `401` the resource "MUST verify that the
-agent's actual parameters match the approved proposal".
+**Upstream text (-11, R3 -00).** Section 11.3.3.1 of -11: the signature
+MUST cover "signature-key: The Signature-Key header value", and
+Appendix C.2.4 states that "signature-key prevents key substitution".
+Section 6.5.1: the agent "polls the pending URL with signed GET
+requests, presenting the auth token via Signature-Key once it holds
+one". R3 Section 10.2 step 3: under `202` "the resource executes the
+held call when a valid per-call auth token arrives at the pending URL";
+under `401` the resource "MUST verify that the agent's actual
+parameters match the approved proposal".
+
+**Status.** The verification half is resolved: `Signature-Key` coverage
+and token-bound key verification hold on both completion paths. The
+residual ask is a cross-reference only.
 
 **Verification first.** Check the base profile's exact `Signature-Key`
 coverage and token-bound key verification on both supported completion
-paths. If that already covers the presented artifact bytes, request only
+paths. Where that covers the presented artifact bytes, request only
 an explicit cross-reference and verification-order clarification in R3:
 before consuming single-use state, verify the message signature covers
 the field carrying this per-call token and verifies under that token's
@@ -165,7 +190,7 @@ path. A path lacking the property needs artifact-digest-equivalent
 substitution resistance; no particular encoding is prescribed here.
 
 Parameter matching does not substitute for artifact binding, including
-under the release gating upstream #128 proposes, where there are no
+under the release gating of R3 Section 10.4, where there are no
 original input parameters to compare.
 
 **Decline posture.** Keep the verification-order rule in the family
@@ -177,11 +202,16 @@ profile where existing AAuth signature coverage supplies the property.
 performing the `expires_at` comparison, separately from message-signature
 freshness policy.
 
-**Upstream text (`fc5e972c`).** Mission Approval: "Every PS decision
-path that acts on a mission MUST compare the current time to
-`expires_at` and MUST treat a mission past it as terminated".
-Verification step 3: "Servers and agents SHOULD synchronize their clocks
-using NTP", with `signature_window` advertised in resource metadata.
+**Upstream text (-11).** Section 8.2: "Every PS decision path that acts
+on a mission MUST compare the current time to `expires_at` and MUST
+treat a mission past it as terminated". Section 11.3.4 step 3: "Servers
+and agents SHOULD synchronize their clocks using NTP", with
+`signature_window` advertised in resource metadata. Section 11.5.2 step
+3: "This document defines no tolerance for clock skew on exp."
+
+**Status.** Still open. The condition for this item fired: #131 merged
+without a skew sentence for the `expires_at` comparison, so A11 is its
+own issue and no longer a comment on that PR. Nothing is dispatched.
 
 **Proposed sentence.** A PS should synchronize its clock and document
 the comparison precision and tolerated skew it uses for `expires_at`;
@@ -191,22 +221,24 @@ to extend the approved lifetime.
 
 The family's
 [expiry profile](https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-aauth-mission-expiry.html)
-already carries this delta. At dispatch this text goes as a comment on
-upstream PR #131, the open expiry-ceiling rewrite, where the editor's
-attention already is, and becomes its own issue only if #131 merges
-without the sentence. That still requires the owner's authorization;
-this document sends nothing.
+already carries this delta. At dispatch this text goes as its own
+issue, which still requires the owner's authorization; this document
+sends nothing.
 
 ## A20: owning-agent control-plane caller, question only
 
-**Upstream text (`fc5e972c`).** Person Server Metadata:
-`mission_control_endpoint` is the "URL of the PS's mission control
-plane", "where parties other than the owning agent read and manage
-missions". Mission Management: "Reading a mission's status, terminating
-one, and querying delegation are operations for parties other than the
-owning agent, and belong at the `mission_control_endpoint`". The
-`revoked` termination reason: "The person, the owning agent, or an
-authorized administrator withdrew the mission".
+**Upstream text (-11).** Section 11.2.2: `mission_control_endpoint` is
+the "URL of the PS's mission control plane, where parties other than the
+owning agent read and manage missions", and "Its authentication model,
+operations, and responses are out of scope for this document", with
+"a mission control companion specification is TBD". Section 8.6:
+"Reading a mission's status, terminating one, and querying delegation
+are operations for parties other than the owning agent, and belong at
+the mission_control_endpoint". The `revoked` termination reason: "The
+person, the owning agent, or an authorized administrator withdrew the
+mission".
+
+**Status.** Still open.
 
 The control plane is described for parties other than the owning agent,
 while owning-agent withdrawal is a named termination cause. Is that
@@ -227,6 +259,6 @@ in the preamble, one upstream URL per item id in a `Filed` column of the
 open-asks table, `asked: #NNN` on A20's coordination-watch row, and each
 item's later disposition beside its stable A-ID. The package itself
 remains banked until then. A21 remains a local expiry-alignment
-follow-up, contingent on the final merged/released semantics of upstream
-#131; neither that proposed change nor retirement of the expiry
-companion is presumed here.
+follow-up, contingent on the merged -11 semantics of upstream #131;
+neither that change nor retirement of the expiry companion is presumed
+here.

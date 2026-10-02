@@ -131,7 +131,7 @@
    "verbs": [
     "govern"
    ],
-   "summary": "Profiles AAuth's `expires_at` mission-blob member: an immutable, consent-bound lifetime the base protocol enforces on every Person Server decision path, with lifetime caps on every token carrying `mission_s256`.",
+   "summary": "Profiles AAuth's `expires_at` mission-blob member: an immutable, consent-bound lifetime the base protocol enforces on every Person Server decision path, with the PS capping the person tokens and auth tokens it issues at `expires_at`.",
    "pull_when": "A citable profile of AAuth's native `expires_at` is needed (base AAuth enforces it regardless; the profile's own conformance line is OPTIONAL).",
    "adoption_alias": "aauth-expiry",
    "normative_references": [],
@@ -186,9 +186,9 @@
    "verbs": [
     "approve"
    ],
-   "summary": "The thin AAuth-native binding: it uses AAuth's existing mission blob, `{approver, s256}` reference, propose/clarify/approve flow, and active and terminated states unchanged, and defines no new wire members.",
+   "summary": "The thin AAuth-native binding: it uses AAuth's existing mission blob, Mission Reference (the approving PS and `s256`), propose/clarify/approve flow, and active and terminated states unchanged, and defines no new wire members.",
    "pull_when": "The substrate is AAuth: Mission context on its native propose/approve flow.",
-   "maintenance_exception": "2026-08-20 (#554, PR #621): the Mission Substrate Statement migration to the supplied/not-supplied format is a substrate-contract conformance change applied under owner direction; no AAuth wire member or protocol behavior changed. The frozen-until-upstream-release text-fix policy is otherwise unchanged.",
+   "maintenance_exception": "2026-08-20 (#554, PR #621): the Mission Substrate Statement migration to the supplied/not-supplied format is a substrate-contract conformance change applied under owner direction; no AAuth wire member or protocol behavior changed. 2026-10-02 (#835): the Mission Substrate Statement failure paragraph no longer permits a missionless fallback; Reference Propagation states the fail-closed rule (a failed required association is never evaluated or retried as missionless) and separates the intentionally missionless path; no AAuth wire member or protocol behavior changed. The frozen-until-upstream-release text-fix policy is otherwise unchanged.",
    "normative_references": [
     "draft-mcguinness-mission-substrate"
    ],
@@ -214,7 +214,7 @@
    "verbs": [
     "govern"
    ],
-   "summary": "The AAuth-native companion promised by the AAuth protocol: authenticated status, permanent termination, optional immutable expiry, and delegation-tree queries at the Person Server `mission_control_endpoint`.",
+   "summary": "The AAuth-native companion anticipated by the AAuth protocol: authenticated status, permanent termination, optional immutable expiry, and delegation-tree queries at the Person Server `mission_control_endpoint`.",
    "pull_when": "Alongside the AAuth binding: status, termination, delegation-tree queries.",
    "normative_references": [],
    "adoption_requires": [],
@@ -2036,6 +2036,7 @@
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-consent-evidence",
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-derivation-limits",
@@ -2253,6 +2254,7 @@
     "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-discharge",
     "draft-mcguinness-oauth-mission-expansion",
+    "draft-mcguinness-oauth-mission-issuance-grant",
     "draft-mcguinness-oauth-mission-management",
     "draft-mcguinness-oauth-mission-resource-access",
     "draft-mcguinness-oauth-mission-signals",
@@ -2446,6 +2448,7 @@
     "draft-mcguinness-oauth-mission-continuation",
     "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-expansion",
+    "draft-mcguinness-oauth-mission-issuance-grant",
     "draft-mcguinness-oauth-mission-template"
    ]
   },
