@@ -2147,18 +2147,20 @@ Authorization Server, and it assumes capabilities there:
 configuration rather than code, but gating nonetheless. Before
 claiming the profile a deployment confirms its estate AS provides:
 
-- **Token introspection.** {{RFC7662}} introspection reachable by the
-  MAS, under credentials the deployment protects
-  ({{sec-join-assertion}}); the MAS cannot mint a Join Assertion
-  without it ({{join-assertion-request}}).
+- **Token introspection or validatable JWT access tokens.**
+  {{RFC7662}} introspection reachable by the MAS, under credentials the
+  deployment protects ({{sec-join-assertion}}), or JWT access tokens
+  the MAS can validate locally under {{RFC9068}}; the MAS cannot mint a
+  Join Assertion for a token it can neither introspect nor validate
+  ({{join-assertion-request}}).
 - **Sender-constrained issuance.** DPoP-bound or mutual-TLS-bound
   access tokens for the agent clients acting in the high-consequence
   classes: the join requires sender-constraint for those classes
   ({{mission-join}}), and the MAS MUST NOT mint an assertion for a
   token without a `cnf` key ({{join-assertion-request}}).
-- **`cnf` in introspection.** Introspection responses that report the
-  token's `cnf` confirmation, since the assertion binds the key
-  thumbprint that response reports.
+- **`cnf` in introspection or token claims.** Introspection responses,
+  or validated JWT claims, that report the token's `cnf` confirmation,
+  since the assertion binds the key thumbprint they report.
 
 An estate whose Authorization Server cannot provide these still
 joins under the mapping join at the conformance floor
