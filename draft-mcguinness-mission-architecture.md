@@ -1290,9 +1290,10 @@ Who holds the deciding side is a spectrum, not a species: the approval
 event requires an accountable principal deciding against committed
 inputs before any authority exists, and the proposer is never the
 approver. A deterministic, versioned policy can approve at machine
-speed within a ceiling a human consented to (the `policy_drawdown`
-and `template` authorization bases that companion profiles define on
-the OAuth binding's extension point, {{invariants}}). Policy approves
+speed within a ceiling a human consented to (the `template`,
+`policy_drawdown`, and `ceiling_drawdown` authorization bases that
+companion profiles define on the OAuth binding's extension point,
+{{invariants}}). Policy approves
 the instance because a human approved the policy or the template, with
 `policy_version` keeping that chain re-checkable. A model's generated
 judgment is never the sole authority for granting or widening: a
@@ -1591,9 +1592,12 @@ Authorization bases:
   binding fully defines one, `direct`, a human's own approval. It also
   provides the extension point, an authorization-basis `type` string,
   that companion profiles use to define others: `template`, a
-  dispatch drawing on a ceiling the human consented to once, and
+  dispatch drawing on a ceiling the human consented to once;
   `policy_drawdown`, a child instance a policy adjudicates within a
-  bound the parent's human already consented to. Every basis fixes
+  bound the parent's human already consented to; and
+  `ceiling_drawdown`, a successor a policy adjudicates within an
+  authority ceiling the Approver consented to at the initial
+  approval. Every basis fixes
   the same accountable human as `consent_principal`; the bases differ
   only in what activated this instance and what root that activation
   traces to (the OAuth binding).
