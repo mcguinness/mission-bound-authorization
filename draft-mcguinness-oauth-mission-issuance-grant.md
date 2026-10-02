@@ -467,14 +467,17 @@ endpoint uses:
 
 | `error` | HTTP | Condition |
 |---|---|---|
-| `invalid_request` | 400 | Missing or malformed `mission_id` or `audience`, or an unparseable body. |
-| `unauthorized` | 401 | Request not authenticated. |
-| `not_found` | 404 | The `mission_id` is unknown, or the requester is not the Mission's recorded client. |
-| `invalid_audience` | 400 | `audience` names no AS this MAS mints for. |
-| `mission_not_active` | 409 | The Mission is not `active` ({{minting-rules}}). |
-| `invalid_authorization_details` | 400 | The requested subset is not a subset of the consented Authority Set, or exceeds the audience scope. |
-| `derivations_exhausted` | 409 | The Mission's established `derivation_limit` is reached ({{minting-rules}}): the condition the OAuth binding's `mission_error` value `derivations_exhausted` reports ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}). |
+| `invalid_request` | 400 | Missing or malformed `mission_id` or `audience`, or an unparseable body |
+| `unauthorized` | 401 | Request not authenticated |
+| `not_found` | 404 | Unknown `mission_id`, or the requester is not the Mission's recorded client |
+| `invalid_audience` | 400 | `audience` names no AS this MAS issues grants for |
+| `mission_not_active` | 409 | The Mission is not `active` |
+| `invalid_authorization_details` | 400 | The request is wider than the Effective Authority Set or the audience's scope |
+| `derivations_exhausted` | 409 | The Mission's `derivation_limit` is reached |
 
+`derivations_exhausted` is the condition the `mission_error` value of
+that name reports at a token endpoint
+({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}).
 `not_found` covers both an unknown Mission and a requester that is not
 the recorded client, so the split never becomes a membership oracle;
 the other codes are returned only to the authenticated recorded client,
