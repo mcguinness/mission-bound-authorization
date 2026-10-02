@@ -13,6 +13,7 @@
       { "id": "payments:invoice.read", "amount_bearing": true, "tool_name": "get_invoice" },
       { "id": "payments:vendor.read", "amount_bearing": false, "tool_name": "lookup_vendor" },
       { "id": "payments:payment.schedule", "amount_bearing": true, "tool_name": "schedule_payment" },
+      { "id": "payments:payment.schedule.cancel", "amount_bearing": true, "tool_name": "cancel_scheduled_payment" },
       {
         "id": "payments:payment.execute",
         "amount_bearing": true,

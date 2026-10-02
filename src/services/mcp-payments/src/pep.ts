@@ -239,10 +239,13 @@ export interface ActionMapping {
   phase?: ActionPhase;
   needsInvoice: boolean;
   /**
-   * @spec runtime#idempotency, authzen#parameter-digest (#917): the
-   * Operation Profile defines an idempotency key for this non-idempotent
-   * high-consequence operation. The caller supplies `idempotency_key` (one
-   * key per intended execution) and this PEP forwards it unchanged as
+   * @spec runtime#idempotency, authzen#parameter-digest (#917, #918): the
+   * Operation Profile defines an idempotency key for this operation: a
+   * non-idempotent high-consequence one, whose key the PDP claims, or a
+   * reversible write electing the "short validity window combined with an
+   * idempotency key" control (@spec runtime#permit-binding), whose key this
+   * PEP reserves. The caller supplies `idempotency_key` (one key per intended
+   * execution) and this PEP forwards it unchanged as
    * `action.properties.idempotency_key`; it never enters `parameter_digest`,
    * which is built from store state alone.
    */
@@ -276,7 +279,8 @@ const TOOL_ACTIONS: Record<string, ActionMapping> = {
   list_invoices: { action: "payments:invoice.list", actionClass: "consequential_read", needsInvoice: false, bindsVendorScope: true },
   get_invoice: { action: "payments:invoice.read", actionClass: "consequential_read", needsInvoice: true },
   lookup_vendor: { action: "payments:vendor.read", actionClass: "consequential_read", needsInvoice: false },
-  schedule_payment: { action: "payments:payment.schedule", actionClass: "consequential_write", needsInvoice: true },
+  schedule_payment: { action: "payments:payment.schedule", actionClass: "consequential_write", needsInvoice: true, idempotencyKey: true },
+  cancel_scheduled_payment: { action: "payments:payment.schedule.cancel", actionClass: "consequential_write", needsInvoice: true, idempotencyKey: true },
   check_transfer: { action: "payments:payment.execute", phase: "preflight", actionClass: "consequential_read", needsInvoice: true },
   hold_transfer: { action: "payments:payment.execute", phase: "prepare", actionClass: "consequential_write", needsInvoice: true },
   execute_wire_transfer: { action: "payments:payment.execute", phase: "commit", actionClass: "irreversible_action", tier: "transaction-assurance", needsInvoice: true, idempotencyKey: true },

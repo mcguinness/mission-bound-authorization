@@ -116,6 +116,7 @@ export const TOOLS: ToolDef[] = [
   { name: "get_invoice", description: "Read one invoice", action: "payments:invoice.read" },
   { name: "lookup_vendor", description: "Look up a vendor", action: "payments:vendor.read" },
   { name: "schedule_payment", description: "Schedule a payment", action: "payments:payment.schedule" },
+  { name: "cancel_scheduled_payment", description: "Cancel a scheduled payment", action: "payments:payment.schedule.cancel" },
   { name: "check_transfer", description: "Check whether a wire transfer is feasible, reserving nothing", action: "payments:payment.execute" },
   { name: "hold_transfer", description: "Place a hold for a wire transfer", action: "payments:payment.execute" },
   { name: "execute_wire_transfer", description: "Execute a wire transfer", action: "payments:payment.execute" },
