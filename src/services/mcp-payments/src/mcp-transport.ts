@@ -34,7 +34,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { MCP_REFERENCE_META_KEY, parseMcpReferenceMeta } from "@mission/core";
 import { type InsufficientAuthorization, type RequestSignals, TOOL_ACTIONS, type TokenFacts } from "./pep.js";
-import type { McpPaymentsServer } from "./server.js";
+import { dispatchPathFor, type McpPaymentsServer } from "./server.js";
 
 /**
  * The namespaced `_meta` key that carries the mission access token (JWT) across
@@ -84,23 +84,22 @@ async function route(
   token: TokenFacts,
   signals?: RequestSignals,
 ): Promise<MediatedToolResult> {
-  const mapping = TOOL_ACTIONS[name];
-  if (mapping?.tier === "transaction-assurance" && paymentsServer.hasTransactionTier()) {
-    return paymentsServer.callTransactionTool(name, args, token, undefined, signals);
-  }
   // @spec runtime#compound-actions — a `prepare` crossing creates state, so it
   // takes the write path; a `preflight` crossing creates none and takes the
   // read path. Both are consequential enough to reach a Decision and both go
   // through the same pre-effect phase comparison, which is exactly why the
-  // comparison cannot live on the connector path alone.
-  if (
-    name === "schedule_payment" ||
-    mapping?.phase === "prepare" ||
-    (mapping?.tier === "transaction-assurance" && !paymentsServer.hasTransactionTier())
-  ) {
-    return paymentsServer.callWriteTool(name, args, token, undefined, signals);
+  // comparison cannot live on the connector path alone. @spec
+  // runtime#idempotency (#918): every consequential write, the keyed
+  // reversible ones included, takes the write path, and only the
+  // transaction-assurance tier reaches `callTransactionTool`.
+  switch (dispatchPathFor(TOOL_ACTIONS[name], paymentsServer.hasTransactionTier())) {
+    case "transaction":
+      return paymentsServer.callTransactionTool(name, args, token, undefined, signals);
+    case "write":
+      return paymentsServer.callWriteTool(name, args, token, undefined, signals);
+    default:
+      return paymentsServer.callReadTool(name, args, token, undefined, signals);
   }
-  return paymentsServer.callReadTool(name, args, token, undefined, signals);
 }
 
 /**
