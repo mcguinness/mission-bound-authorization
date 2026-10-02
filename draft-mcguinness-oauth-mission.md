@@ -4427,9 +4427,12 @@ single approval appears to bound at consent time. This is a composition
 property of independently bounded mechanisms.
 
 For example, a child-delegation deployment allowing `max_children` 3 per
-Mission with `max_child_depth` 2 admits up to 12 descendant Missions (3
-in the first generation, up to 9 in the second) under one root
-Mission.
+Mission with `max_child_depth` 2 admits up to 12 concurrently
+non-terminal descendant Missions (3 in the first generation, up to 9
+in the second) under one root Mission. That limits the Missions live
+at once, not those created over the root's lifetime: a child that
+reaches a terminal state frees its slot
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
 
 Cross-domain projection composes separately: a projected grant preserves
 the Mission's lineage rather than rooting a new one, and the Resource
@@ -5799,6 +5802,10 @@ Cross-Domain:
 
 -01
 
+- Corrected the child-delegation example in Composition and the
+  Effective Ceiling: `max_children` limits concurrently non-terminal
+  children, so the example's 12 descendants are Missions live at
+  once, not a lifetime count.
 - Separated exact `target_resources` membership, checked for the
   Authority Set and for a proposal at submission, from later token
   narrowing under the subset rule. Made the per-capability
