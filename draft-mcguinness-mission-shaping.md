@@ -241,21 +241,20 @@ the issuance profile.
 ## Mission Substrate {#mission-substrate}
 
 This document is written against the Mission model, not OAuth 2.0
-mechanics. A shaper consumes two substrate primitives: the Mission
-Intent structure it proposes, and the submission channel through which
-a proposal reaches the Mission Issuer as untrusted input (Pushed
-Authorization Requests in the OAuth binding). Shaping Evidence
-additionally uses the substrate's integrity-anchor envelope
-({{I-D.draft-mcguinness-mission-substrate}}). The issuance profile
-defines these for OAuth 2.0. The Mission Authority Server
-{{I-D.draft-mcguinness-mission-authority-server}} is a standalone
-binding of that submission channel; a shaped proposal enters it
-through the mission submission endpoint unchanged. The AAuth binding
-{{I-D.draft-mcguinness-mission-aauth}} accepts the same structured
-Mission Intent proposal at the AAuth Person Server. Another
-authorization substrate that accepts a structured, untrusted task
-proposal and commits it at approval can host these practices
-unchanged.
+mechanics. A shaper produces a structured Mission Intent and,
+optionally, a proposal of concrete authority, for a submission that
+the receiving issuer treats as untrusted input. Shaping Evidence
+commitments use the Default Commitment Construction of
+{{I-D.draft-mcguinness-mission-substrate}}. The issuance profile
+carries the submission in a Pushed Authorization Request; the Mission
+Authority Server {{I-D.draft-mcguinness-mission-authority-server}}
+accepts the same Mission Intent at its mission submission endpoint.
+The AAuth binding {{I-D.draft-mcguinness-mission-aauth}} defines no
+Mission Intent: its mission proposal is a natural-language
+description, so the construction guidance in this document does not
+apply to it. Another authorization substrate that accepts a
+structured, untrusted task proposal and commits it at approval can
+host these practices unchanged.
 
 # Conventions and Terminology {#conventions-and-terminology}
 
@@ -746,9 +745,10 @@ Approver who consented, and the agent that executes
 ({{I-D.draft-mcguinness-mission-architecture}}). This document defines
 no required schema, media type, or transport for Shaping Evidence. The
 digests in this section are canonical-object digests and envelope
-anchors under the substrate's default commitment construction, which
+anchors under the substrate's Default Commitment Construction, which
 this document imports normatively
-({{I-D.draft-mcguinness-mission-substrate}}).
+({{I-D.draft-mcguinness-mission-substrate}}, Section "Default
+Commitment Construction").
 
 The following members are RECOMMENDED content:
 
