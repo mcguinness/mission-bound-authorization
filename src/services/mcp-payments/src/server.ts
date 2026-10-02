@@ -1107,9 +1107,10 @@ export class McpPaymentsServer {
   /**
    * @spec runtime#idempotency (#918): the store, the pair and the published
    * retention a keyed reversible write needs. `undefined` when any is
-   * missing, which refuses: a key the PDP let through malformed, a store that
-   * is not configured, or a statement that publishes no retention for this
-   * operation all leave exactly-once unestablished.
+   * missing, which refuses: a key the PDP let through malformed, an actor
+   * with no stable identity to scope the key on (no pair at all), a store
+   * that is not configured, or a statement that publishes no retention for
+   * this operation all leave exactly-once unestablished.
    */
   private reservationPair(
     res: EnforceResult,

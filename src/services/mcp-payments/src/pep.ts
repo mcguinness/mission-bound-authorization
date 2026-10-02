@@ -785,7 +785,8 @@ export interface EnforceResult {
    * from the same evaluation request the PDP decided, so the scope is built
    * from this PEP's verified credential and governing Mission and never from
    * an agent argument. `idempotencyKey` is the key that request carried, absent
-   * when it carried none.
+   * when it carried none. Absent as a whole when the actor has no stable
+   * identity to scope the key on, which the write path refuses.
    */
   writeReservation?: WriteReservationScope;
 }
@@ -1694,10 +1695,16 @@ export class Pep {
     }
 
     // @spec runtime#idempotency (#918): the pair a keyed reversible write
-    // reserves, from the request exactly as the PDP received it.
+    // reserves, from the request exactly as the PDP received it, through the
+    // shared scope projection (its actor is `idempotencyScopeActor`'s stable
+    // identity, never the raw leaf). An actor with no stable identity (an
+    // instance-profiled leaf with no client) yields no scope and so no pair:
+    // the write path then refuses before any effect, since a key it cannot
+    // scope cannot be reserved. Nothing here throws after the permit.
     let writeReservation: WriteReservationScope | undefined;
-    if (mapping.idempotencyKey && mapping.actionClass === "consequential_write") {
-      const scope = idempotencyScopeOf(req);
+    const scope =
+      mapping.idempotencyKey && mapping.actionClass === "consequential_write" ? idempotencyScopeOf(req) : undefined;
+    if (scope) {
       const key = req.action.properties?.idempotency_key;
       writeReservation = {
         scope,
