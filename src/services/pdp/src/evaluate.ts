@@ -62,7 +62,7 @@ import {
   vendorConstraintSatisfied,
 } from "./policy-view.js";
 import { permitDeadline } from "./permit-deadline.js";
-import { allowsNoActiveFreshness, RUNTIME_POSTURE, reversibleWriteKeyControl, type StalenessBound } from "./runtime-posture.js";
+import { allowsNoActiveFreshness, RUNTIME_POSTURE, reversibleWritePermitMaxSeconds, type StalenessBound } from "./runtime-posture.js";
 
 export type { EntitlementObservation, EntitlementResolver, OriginPrincipal, PrincipalMappingObservation, PrincipalMappingResolver } from "@mission/core";
 
@@ -386,13 +386,17 @@ export interface EvaluateOptions {
    */
   claims?: IdempotencyClaimDomain;
   /**
-   * @spec runtime#permit-binding (#918): whether the deployment's Enforcement
-   * Scope Statement declares that a request's operation, a reversible
-   * consequential write, elects the "short validity window combined with an
-   * idempotency key" control. Defaults to the shipped statement. Stateless:
-   * the PDP makes no claim for this key, and the enforcing PEP reserves it.
+   * @spec runtime#permit-binding (#918, #1028 review P2): where the
+   * deployment's Enforcement Scope Statement declares that a request's
+   * operation, a reversible consequential write, elects the "short validity
+   * window combined with an idempotency key" control, that operation's
+   * published `permit_validity_max_seconds`; `undefined` where it elects
+   * none. A declared operation requires a well-formed key, and its permit
+   * expires no later than the decision instant plus this maximum. Defaults to
+   * the shipped statement. Stateless: the PDP makes no claim for this key,
+   * and the enforcing PEP reserves it.
    */
-  reversibleWriteKeyControl?: (actionClass: string | undefined, action: string) => boolean;
+  reversibleWritePermitMaxSeconds?: (actionClass: string | undefined, action: string) => number | undefined;
   /**
    * @spec runtime#idempotency, retransmission condition 5 (#917): the
    * authenticated PEP and redemption-store epoch this decision is issued to,
@@ -1185,11 +1189,31 @@ async function evaluateInner(
   // permit: an expired positive Decision would assert a window that had
   // already closed, so this denies `stale_state`, the staleness-bound breach
   // it actually is.
+  //
+  // @spec runtime#permit-binding (#918, #1028 review P2): an operation that
+  // elects the reversible-write key control publishes the short validity
+  // window its key is combined with, and that window is one more named
+  // ceiling here, measured from the same decision instant, so the permit
+  // never outlives the window the published retention was validated against.
+  const decisionNowMs = now().getTime();
+  const reversibleWriteMaxSeconds = HIGH_CONSEQUENCE_ACTION_CLASSES.has(actionClass ?? "")
+    ? undefined
+    : (
+        opts.reversibleWritePermitMaxSeconds ??
+        ((c: string | undefined, a: string) => reversibleWritePermitMaxSeconds(RUNTIME_POSTURE, c, a))
+      )(actionClass, req.action.name);
   const deadline = permitDeadline({
-    nowMs: now().getTime(),
+    nowMs: decisionNowMs,
     permitTtlSeconds: permitTtl,
     stalenessBound: declaredStaleness,
     ...(acceptedObservationMs !== undefined ? { stateObservedAtMs: acceptedObservationMs } : {}),
+    ...(reversibleWriteMaxSeconds !== undefined
+      ? {
+          ceilings: [
+            { name: "reversible_write_permit_max", atMs: decisionNowMs + reversibleWriteMaxSeconds * 1000 },
+          ],
+        }
+      : {}),
   });
   if (deadline.kind === "elapsed") return deny("stale_state");
   const validUntil = deadline.validUntil;
@@ -1210,8 +1234,7 @@ async function evaluateInner(
   // at all and is refused. Stateless: no claim is made here (the PDP "makes no
   // claim for a reversible consequential write's idempotency-key control");
   // the enforcing PEP reserves the key.
-  const keyControl = opts.reversibleWriteKeyControl ?? ((c: string | undefined, a: string) => reversibleWriteKeyControl(RUNTIME_POSTURE, c, a));
-  if (!highConsequence && keyControl(actionClass, req.action.name) && !isIdempotencyKey(req.action.properties?.idempotency_key)) {
+  if (reversibleWriteMaxSeconds !== undefined && !isIdempotencyKey(req.action.properties?.idempotency_key)) {
     return deny("parameter_violation");
   }
 
