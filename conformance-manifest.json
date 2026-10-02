@@ -12971,9 +12971,9 @@
    },
    "level": "concurrency",
    "coverage": "blocked",
-   "blocked_by": "#648",
+   "blocked_by": "#917",
    "tests": [],
-   "notes": "No PDP-side idempotency claim store exists in this codebase (grep -rl idempotency src/services/pdp finds nothing): the claim mechanism this row governs is the transaction-assurance implementation #648 tracks, not a drop-in over the existing resource-side transaction store (src/services/mcp-payments/src/transaction.ts), which is Exact only by virtue of being single-process, not by a declared topology choice this row can observe. Blocked on #648's claim-store landing a PDP-side implementation to test against."
+   "notes": "No PDP-side idempotency claim store exists in this codebase (grep -rl idempotency src/services/pdp finds nothing): the claim mechanism this row governs is the transaction-assurance implementation #648 tracks, not a drop-in over the existing resource-side transaction store (src/services/mcp-payments/src/transaction.ts), which is Exact only by virtue of being single-process, not by a declared topology choice this row can observe. Blocked on #917 (PDP-owned local Exact claim domain, option A ruled; #648 is closed): a PDP-side implementation to test against."
   },
   {
    "id": "runtime.idempotency.exact-domain-unavailable-fail-closed",
@@ -12994,9 +12994,9 @@
    },
    "level": "unit",
    "coverage": "blocked",
-   "blocked_by": "#648",
+   "blocked_by": "#917",
    "tests": [],
-   "notes": "Same PDP-side claim store gap as runtime.idempotency.claim-exact-enforcement-only: there is no claim domain to be unreachable yet. Blocked on #648."
+   "notes": "Same PDP-side claim store gap as runtime.idempotency.claim-exact-enforcement-only: there is no claim domain to be unreachable yet. Blocked on #917 (#648 is closed)."
   },
   {
    "id": "runtime.idempotency.ess-must-name-exact-claim-domain",
@@ -13042,9 +13042,9 @@
    },
    "level": "concurrency",
    "coverage": "blocked",
-   "blocked_by": "#648",
+   "blocked_by": "#918",
    "tests": [],
-   "notes": "This is a distinct reservation/retention duty from the high-consequence transaction-assurance store (src/services/mcp-payments/src/transaction.ts covers the txn class, not the reversible-write class's lighter control); no implementation of it exists yet. Do not satisfy this row with the existing resource-consumption transaction test, which exercises a different class's store under a different (already-atomic) mechanism. Blocked on #648."
+   "notes": "This is a distinct reservation/retention duty from the high-consequence transaction-assurance store (src/services/mcp-payments/src/transaction.ts covers the txn class, not the reversible-write class's lighter control); no implementation of it exists yet. Do not satisfy this row with the existing resource-consumption transaction test, which exercises a different class's store under a different (already-atomic) mechanism. Blocked on #918 (PEP-owned reservation and retention, option A ruled; #648 is closed)."
   },
   {
    "id": "runtime.execution-reverification.mismatch-refusal",
@@ -15153,8 +15153,10 @@
     "normative": "an idempotency_key reused under a different operation identity than the claim it was made under always denies idempotency_conflict, terminal regardless of claim state"
    },
    "level": "concurrency",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "blocked",
+   "blocked_by": "#917",
+   "tests": [],
+   "notes": "Blocked on #917: the PDP must hold the (scope, key) claim with the operation identity before it can return idempotency_conflict for a mismatched operation under the same key (#594 W4-14, comment 13 C.5)."
   },
   {
    "id": "authzen.parameter-digest.constraint-unevaluable-fail-closed",
