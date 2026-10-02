@@ -87,6 +87,8 @@ export {
 export { Connectors, type WireCommit, type EmailCommit, type CommitResult } from "./connectors.js";
 export { TransactionEngine, operationKey, type OpState } from "./transaction.js";
 export { reconcile, type ReconciliationReport } from "./reconcile.js";
+export { type ClaimReconciliationReport, reconcileClaims } from "./claim-reconciliation.js";
+export { type RedemptionStatus, redemptionStatusFor } from "./redemption-status.js";
 export type { ExecutionEvidence } from "./evidence.js";
 export { createEphemeralEvidenceKeys, type EphemeralEvidenceKeys } from "./ephemeral-signer.js";
 export {
