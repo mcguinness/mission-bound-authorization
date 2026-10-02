@@ -212,6 +212,7 @@
    "mas.baseline-join",
    "core.standing-consent",
    "core.standing-consent-recency",
+   "core.governance-record",
    "template.dispatch",
    "progressive.ceiling-drawdown",
    "cross-domain.projection",
@@ -3123,12 +3124,10 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "core.governance-record"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
@@ -3137,7 +3136,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "New member (#701, redesigned per #716 review): replaces the earlier kind: agr value, which conflated a decision mechanism with a storage location and lost whether an AGR-backed decision was human- or policy-adjudicated. kind stays semantic (human or policy); governance_record is an independent boolean flag, not a duplicate reference, since the record is already joined by this Mission's own approval_event_id."
+   "notes": "New member (#701, redesigned per #716 review): replaces the earlier kind: agr value, which conflated a decision mechanism with a storage location and lost whether an AGR-backed decision was human- or policy-adjudicated. kind stays semantic (human or policy); governance_record is an independent boolean flag, not a duplicate reference, since the record is already joined by this Mission's own approval_event_id. Scoped to core.governance-record: the clause binds only an approval whose `adjudication.governance_record` is `true`, which requires an Approval Governance Record (the approval-governance companion); no published baseline selects it, matching that companion's own rows."
   },
   {
    "id": "core.approval-basis.adjudication-no-flatten",
@@ -3147,12 +3146,10 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "core.governance-record"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
@@ -3161,7 +3158,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "New member (#701); demonstrates the multi-assertion-AGR-not-collapsed property from the #701 and #716 reviews."
+   "notes": "New member (#701); demonstrates the multi-assertion-AGR-not-collapsed property from the #701 and #716 reviews. Scoped to core.governance-record: the clause binds only an approval whose `adjudication.governance_record` is `true`, which requires an Approval Governance Record (the approval-governance companion); no published baseline selects it, matching that companion's own rows."
   },
   {
    "id": "core.approval-basis.discriminator-unknown-value-rule",
