@@ -937,16 +937,16 @@ propose, learn what was refused, and propose again. Three refusal
 signals feed the loop:
 
 Derivation refusal:
-: The Mission Issuer refuses a well-formed request that its policy
-  will not grant with the `access_denied` error code, including a bare
-  Intent that matches no configured mapping or whose mapped candidates
-  policy narrows to nothing; the same code reports an Approver who
-  declines ({{I-D.draft-mcguinness-oauth-mission}}, Section "Error and
-  Challenge Mapping"). An Authority Proposal entry of an unsupported
-  type, or one that fails its type's definition, is refused with the
-  `invalid_authorization_details` error code; that is a construction
-  error to correct, not a signal to narrow. Narrowing or omitting a
-  valid proposed entry is not a refusal: the granted
+: When its policy will not grant a well-formed request, the Mission
+  Issuer refuses it with the `access_denied` error code. This covers a
+  bare Intent that matches no configured mapping or whose mapped
+  candidates policy narrows to nothing; the same code also reports an
+  Approver who declines ({{I-D.draft-mcguinness-oauth-mission}},
+  Section "Error and Challenge Mapping"). An Authority Proposal entry
+  of an unsupported type, or one that fails its type's definition, is
+  refused with the `invalid_authorization_details` error code. That is
+  a construction error to correct, not a signal to narrow. Narrowing or
+  omitting a valid proposed entry is not a refusal; the granted
   `authorization_details` reports it
   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Authority
   Proposal").
@@ -1120,12 +1120,12 @@ requiring clarification, narrowing, or refusal. A proposal shaped
 against an outdated catalog can also resolve the wrong capability.
 Capability resolutions SHOULD record source digests
 ({{capability-resolution}}) so that approval and runtime enforcement
-can detect drift. A shaped proposal can go stale: a client that holds a
-freshness bound for a proposal (for example, an expiry, or a source
-digest that no longer matches) SHOULD re-shape it rather than submit a
-proposal built against a capability catalog or policy version that has
-since changed. Deployments SHOULD re-shape when catalog data is
-volatile.
+can detect drift. A shaped proposal can also go stale. When a
+proposal's freshness bound (for example, an expiry, or a source digest
+that no longer matches) shows that it was built against a capability
+catalog or policy version that has since changed, the client SHOULD
+re-shape it instead of submitting it. Deployments SHOULD re-shape when
+catalog data is volatile.
 
 Re-shaping adds a loop variant of the same failure: widening by retry,
 in which refused authority is resubmitted in different words until
