@@ -3186,12 +3186,20 @@ what `mission_denial: insufficient_authority` only points at. Each
 grain keeps the wire shape and response status its defining document
 gives it.
 
-A client that decodes `authorization_remediation` proposes the
-carried entries back on the standard `authorization_details`
-parameter ({{authority-proposal}}), where they derive under this
-document's ordinary rules ({{authorization-derivation}}): of an
+A client that decodes `authorization_remediation` can request the
+carried entries on the standard `authorization_details` parameter of
+a refresh request ({{mission-bound-tokens}}), where they derive under
+this document's ordinary rules ({{authorization-derivation}}): of an
 advertised, schema-valid type ({{discovery}}), narrowed same-type
-({{subset}}, {{other-types}}) like any other proposal.
+({{subset}}, {{other-types}}) like any other request. The AS issues
+only what both the presented refresh grant ({{Section 6 of RFC9396}})
+and the Authority Set contain, so a refresh-token family narrower than
+the Mission does not obtain the Mission's wider authority. For entries
+outside the Authority Set, more authority requires a new approval,
+proposed as for a new Mission ({{authority-proposal}}), or an
+expansion where that companion is deployed ({{rs-enforcement}}). A
+client holding no refresh grant that covers the entries proposes them
+as for a new Mission.
 
 A third grain routes the same denial into a governed access request
 rather than a fresh derivation: the AuthZEN Access Request and
@@ -3468,7 +3476,13 @@ the Mission is revoked ({{composite-active}}):
 
 Delegation is an optional capability ({{conformance}}). An agent may
 delegate execution to downstream actors (a sub-agent, service, or tool
-that is itself an OAuth client) within a Mission.
+that is itself an OAuth client) within a Mission. An intermediary in
+the agent's own trust domain that presents the agent's own tokens,
+such as a gateway holding the agent's credentials, acts as part of
+that client and is not a delegate; acting as that client, it can
+also narrow by self-exchange ({{self-exchange}}), which does not
+delegate. An intermediary authenticated as a distinct actor that
+obtains a delegated token by Token Exchange is a delegate.
 Delegation is represented with the OAuth Actor Profile
 {{I-D.draft-mcguinness-oauth-actor-profile}}, which profiles the
 `act` (actor) claim of {{Section 4.1 of RFC8693}}.
@@ -3931,6 +3945,11 @@ A type-defined `authorization_details` member may define its own
 constraint-discovery surface; `mission_resource_access`'s is defined
 by the Mission Resource Access Profile
 ({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
+
+A protected resource can list the `authorization_details` types it
+accepts in the `authorization_details_types_supported` parameter
+({{Section 2 of RFC9728}}), so a client can propose entries of a
+type its target accepts.
 
 # Conformance {#conformance}
 
@@ -5256,6 +5275,12 @@ The following are out of scope for this document:
   evaluation is the runtime layer's role ({{runtime-boundary}}).
   Verifying an agent's declared reasoning against the task is a
   further attestation problem outside both layers.
+- **Joint outcome and cross-resource effects.** Whether the actions
+  taken under a Mission jointly accomplish its task is outside this
+  document, as are the ordering, timing, atomicity, and compensation
+  of their effects across Resource Servers. The `mission` claim joins
+  requests to an approval for issuance and audit; it does not
+  identify a business transaction.
 - **Approval-free authorization upgrade.** The Authority Set is
   committed at approval; this document defines no mid-stream widening
   that bypasses consent. Widening requires a new approval, a successor
@@ -5835,6 +5860,19 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Routed RAR remediation by containment: entries that both a
+  presented refresh grant and the active Mission's Authority Set
+  contain are requested by refresh, and entries outside the Authority
+  Set need a new approval or an expansion. Added
+  a Non-Goal for joint outcomes and cross-resource effects (the
+  `mission` claim does not identify a business transaction), stated
+  that an intermediary in the agent's own trust domain presenting the
+  agent's own tokens acts as part of that client, self-exchange
+  included, while one authenticated as a distinct actor that obtains
+  a delegated token is a delegate, and pointed to RFC 9728's
+  `authorization_details_types_supported`. No requirement or wire
+  behavior changed.
 
 - Standing-Consent Bases defines the activation policy reference: a
   standing-consent basis whose activation a separate policy artifact
