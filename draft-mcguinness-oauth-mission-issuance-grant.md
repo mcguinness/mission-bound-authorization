@@ -423,7 +423,8 @@ This profile requires two further members:
   approved Authority Set the grant derives from, for a consuming AS
   that, without a Mission-state integration, has no further channel
   back to the Mission Issuer once it holds the grant. The consuming
-  AS carries it unchanged ({{token-issuance}}) and does not verify it.
+  AS records it with each issuance ({{token-issuance}}) and does not
+  verify it.
 
 # Obtaining a Grant {#minting}
 
@@ -642,9 +643,11 @@ any check fails:
 
 On success the consuming AS mints tokens under these rules:
 
-- **Verbatim `mission` claim.** Issued tokens carry the grant's
-  `mission` object verbatim as the issuance profile's `mission` claim, including
-  the `expires_at` member ({{mission-claim}}).
+- **`mission` claim.** Issued tokens carry the issuance profile's
+  `mission` claim with the grant's `id`, `issuer`, and `expires_at`
+  unchanged ({{mission-claim}}). They need not carry `authority_hash`:
+  the consuming AS records it with each issuance instead, which joins
+  its issuance log to the MAS record ({{trust}}).
 - **Subset.** Issued `authorization_details` MUST be a subset of the
   grant's. The consuming AS's own policy can only narrow them: it
   MUST NOT widen, remap, or supplement them. Representing them as
@@ -1010,7 +1013,8 @@ full:
 
 - `typ`, signature, audience, lifetime, single-use, and client
   binding validation;
-- verbatim `mission` claim carriage;
+- `mission` claim carriage, with `id`, `issuer`, and `expires_at`
+  unchanged, and `authority_hash` recorded with each issuance;
 - subset-bounded minting;
 - `expires_at` capping;
 - Effective Authority Set projection at redemption, which binds every
@@ -1062,8 +1066,9 @@ mTLS {{RFC8705}} bindings serve).
 deployment, MAS compromise corrupts records and state. Under this
 profile it additionally mints grants every consuming AS honors:
 compromise reaches token issuance across the estate. The consuming
-ASs' audit logs of redeemed grants (each with `jti` and Mission
-reference) are the independent record that bounds and exposes such
+ASs' audit logs of redeemed grants (each with `jti`, Mission
+reference, and `authority_hash`) are the independent record that
+bounds and exposes such
 minting.
 
 A deployment SHOULD reconcile MAS minting evidence against

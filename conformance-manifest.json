@@ -22523,12 +22523,12 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "every grant the MAS mints carries mission.authority_hash, the integrity anchor of the approved Authority Set the grant derives from"
+    "normative": "every grant the MAS mints carries mission.authority_hash, the integrity anchor of the approved Authority Set the grant derives from; this row covers the grant only, since access tokens issued under the grant need not carry it (#963 D7) and the consuming AS records it with each issuance instead"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added by the #963 editorial review for a requirement that review introduced or made explicit; todo until a redemption path exists."
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with #963 decision review round 1, narrowed by D7 to grant carriage; todo until that path exists."
   },
   {
    "id": "issuance-grant.minting-rules.effective-set-bound",
@@ -22718,6 +22718,27 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with #963 decision D6; todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.token-issuance.mission-claim-carriage",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "token-issuance",
+   "text": "Issued tokens carry the issuance profile's `mission` claim with the grant's `id`, `issuer`, and `expires_at` unchanged",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every token issued under a grant carries a mission claim whose id, issuer, and expires_at equal the grant's mission members; authority_hash need not appear on the token and is recorded with the issuance instead"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with #963 decision D7; todo until that path exists."
   },
   {
    "id": "txn-authorization.token.txn-scoped-mint-gate",
