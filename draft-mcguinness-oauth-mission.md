@@ -5857,6 +5857,18 @@ Cross-Domain:
 
 -01
 
+- Routed RAR remediation by containment: entries the active
+  Mission's Authority Set contains are requested under that Mission
+  by refresh where the client holds a refresh token, and the rest
+  need a new approval or an expansion. Added
+  a Non-Goal for joint outcomes and cross-resource effects (the
+  `mission` claim does not identify a business transaction), stated
+  that an intermediary in the agent's own trust domain presenting the
+  agent's own tokens acts as part of that client rather than as a
+  delegate, and pointed to RFC 9728's
+  `authorization_details_types_supported`. No requirement or wire
+  behavior changed.
+
 - Standing-Consent Bases defines the activation policy reference: a
   standing-consent basis whose activation a separate policy artifact
   adjudicates commits that policy's content as `{id, version,
