@@ -2834,6 +2834,11 @@ registered by {{I-D.draft-mcguinness-oauth-mission}}.
 
 \[\[ To be removed from the final specification ]]
 
+- Defined the input to `evaluation_request_digest`: the complete
+  request body as submitted, extension members included, before any
+  default or enrichment, with header fields and transport framing
+  excluded; a batch carries the one digest of its body (#971).
+
 - The state observation's `mission_status_issued_at` is the RFC 3339
   form of a Mission Status Response's `iat`, which `freshness_at`
   precedes by no more than the published maximum clock skew, and

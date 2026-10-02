@@ -2349,6 +2349,17 @@ evidence representation their shared envelope carries (using the
 
 --- back
 
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- `evaluation_request_digest` covers the evaluation request as the
+  decision-API profile defines it or, for a Refusal Record emitted
+  before any request, a defined pre-request input; the Refusal Record
+  member `request_digest_input` names which. The digest is no longer
+  described as privacy-preserving: it commits to its input and does
+  not hide an input a party can guess (#971).
+
 # Acknowledgments
 {:numbered="false"}
 

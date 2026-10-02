@@ -3704,6 +3704,9 @@ worked example shows the concrete record
 
 \[\[ To be removed from the final specification ]]
 
+- The record minimum's evaluation request digest is over the input
+  the runtime evidence companion defines (#971).
+
 - The Enforcement Scope Statement is what a deployment adopting the
   Runtime-Enforced bundle publishes, not what earns the level; the
   level stays guidance, matching the architecture's assurance levels,
