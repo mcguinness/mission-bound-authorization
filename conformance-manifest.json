@@ -19,8 +19,8 @@
     "content_sha256": "71b93e5299f66eb8ab272da1eebe4dda84f925569a3a4812834a297b8a96e613"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "3b033258ef8f2d89ff25f1cd9821fd60f8df02f3",
-    "content_sha256": "2d73dbd156a67bc6357db13393272707ef9ef58011e0f7114236be1ece882851"
+    "revision": "b145c1b303241a6c351083c8a7474ea46fa51ea8",
+    "content_sha256": "9f67aed07fa469580f4d4fce63d989010ab9234d9e788bdf25cfbe6cd7a87eda"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "daadb45f36cd901f0d646ba0aa942dfec95844ee",
@@ -23453,6 +23453,69 @@
     }
    ],
    "notes": "Covered at unit level only, and unreachable at the endpoint by construction: the mission-dispatch grant names no Agent, and the implementation dispatches to the template's first listed agent, so an endpoint request cannot select an unlisted Agent. The kernel refuses an unlisted recipient with recipient_not_allowed. The draft does not yet say how the instance's Agent is established at Dispatch."
+  },
+  {
+   "id": "template.members.review-cadence-shape",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "the-mission-template",
+   "text": "A positive integer number of seconds. The maximum age of the template's most recent human approval",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a template's review_cadence is a positive integer number of seconds; a template without one, or with zero or a fractional value, is refused at template consent"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "createTemplate (@spec mission-template) > refuses an empty ceiling or non-positive bounds (TemplateError)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    }
+   ]
+  },
+  {
+   "id": "template.consent.review-cadence-stops-dispatch",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "template-consent",
+   "text": "The Mission Issuer MUST NOT dispatch from a template whose most recent human approval is older than the published `review_cadence`",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Dispatch from a template whose most recent human approval is more than review_cadence seconds old is refused, commits no Mission and no dispatch event, and issues no token; at exactly the bound the Dispatch proceeds, and a fresh approval re-consents"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > review_overdue: a template dispatches inside its review_cadence and is refused with access_denied once the approval is older",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "dispatch gates (@spec mission-template#dispatch-refusals) > refuses dispatch once the template's approval is older than review_cadence, allows it exactly at the bound, and commits nothing on refusal",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "The reference implementation measures from the template's created_at, which every instance records as approval_basis.approved_at. Its refusal reason review_overdue is implementation-local on access_denied (D205); the draft registers none."
   },
   {
    "id": "progressive.drawdown-policy.body-commitment-should",
