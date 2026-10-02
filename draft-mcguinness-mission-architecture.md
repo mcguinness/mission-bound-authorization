@@ -1533,7 +1533,11 @@ capability, so they are not baseline AAuth Mission Context properties.
   approved successor: a fresh approval
   ({{I-D.draft-mcguinness-oauth-mission-expansion}}), or policy drawdown
   within a ceiling a human pre-consented
-  ({{I-D.draft-mcguinness-oauth-mission-progressive}}). The relation is
+  ({{I-D.draft-mcguinness-oauth-mission-progressive}}). Within a live
+  Mission, issuer-held narrowing such as containment or discharge only
+  subtracts: each mechanism feeds a single Effective Authority Set,
+  every derivation reads it, and none restores authority
+  ({{I-D.draft-mcguinness-oauth-mission-status}}). The relation is
   typed: it is defined where a structured-authority vocabulary defines
   it (on the OAuth binding, `mission_resource_access` and its Common
   Constraints, defined by the OAuth binding's Mission Resource Access
