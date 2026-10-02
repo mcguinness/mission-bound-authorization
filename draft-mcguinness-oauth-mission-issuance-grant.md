@@ -212,6 +212,13 @@ Consuming Authorization Server (consuming AS):
   Issuance Grants at its token endpoint; conformance role of
   {{conformance}}.
 
+Mission-state integration:
+: A consuming AS's means of resolving the Mission's current state and
+  Effective Authority Set at redemption and at every refresh
+  ({{mission-state-source}}). A consuming AS either has one and
+  applies {{effective-set-projection}}, or has none and issues no
+  refresh tokens under a grant ({{no-state-integration}}).
+
 # The Issuance Join {#issuance-join}
 
 Trust is pre-established and bilateral. A consuming AS accepts
@@ -236,8 +243,10 @@ the grant carries.
 
 Tokens issued under this profile are Mission-bound in the issuance profile's
 sense: they carry the `mission` claim, their authority is a subset
-of the consented Authority Set, and issuance and refresh are gated
-on Mission state. Runtime enforcement
+of the consented Authority Set, and issuance is gated on Mission
+state: at grant issuance always, and at redemption and every refresh
+where the consuming AS has a Mission-state integration. Runtime
+enforcement
 ({{I-D.draft-mcguinness-mission-runtime}}) composes
 credential-carried for these tokens; the MAS-only mode's join caveat
 (the credential's membership is mapped, not issued) does not apply
@@ -527,10 +536,10 @@ On success the consuming AS mints tokens under these rules:
   redemption-time state check, an issued access token's own lifetime is
   the window in which a revoked Mission's token keeps working at the
   token layer.
-- **Effective Authority Set projection.** Redemption and every
-  refresh are gated on current Mission state and projected through
-  the Mission's current Effective Authority Set, per
-  {{effective-set-projection}}.
+- **Effective Authority Set projection.** A consuming AS with a
+  Mission-state integration gates redemption and every refresh on
+  current Mission state and projects them through the Mission's
+  current Effective Authority Set ({{effective-set-projection}}).
 - **No re-approval.** The approval event already occurred at the
   Mission Issuer. The consuming AS MUST NOT prompt the Subject or
   any user for consent at redemption.
@@ -545,7 +554,9 @@ switch this profile restores.
 
 ## Effective Authority Set Projection {#effective-set-projection}
 
-This section applies at redemption and at every refresh.
+A consuming AS with a Mission-state integration applies this section
+at redemption and at every refresh; {{no-state-integration}} states
+what applies to one without.
 
 ### Mission State Source {#mission-state-source}
 
@@ -638,9 +649,9 @@ as a rollback.
 A consuming AS without a Mission-state integration MUST NOT issue
 refresh tokens under a grant, and relies instead on the grant's
 `active`-at-minting gate and the short access-token lifetime above. A
-consuming AS that issues refresh tokens strengthens that integration
-from a lifecycle-state check to this authority-capable form:
-reporting Mission state alone no longer suffices. A consuming AS
+source that reports lifecycle state alone is not a Mission-state
+integration under this profile ({{mission-state-source}}). A consuming
+AS
 that cannot perform this projection MUST NOT claim containment- or
 discharge-aware issuance.
 
