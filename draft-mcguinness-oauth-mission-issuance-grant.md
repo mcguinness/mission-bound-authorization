@@ -709,10 +709,24 @@ audience-scoped to this AS, MUST carry the Mission's current
 answer within a staleness bound the deployment publishes
 ({{conformance}}).
 
-The Mission Status operation has these properties: its response,
-queried with this AS's own audience, is authenticated and
-audience-scoped and carries current `authorization_details` and the
-Mission's state `version` ({{I-D.draft-mcguinness-oauth-mission-status}}).
+Through the Mission Status operation, the consuming AS resolves
+authority per resource, not for an audience of its own. It sends one
+request for each distinct resource audience that the grant's
+`authorization_details` (on refresh, the refresh family's ceiling)
+name, naming that audience in the request's `audience`; the Mission
+Issuer authorizes it separately for each audience it requests
+({{I-D.draft-mcguinness-oauth-mission-status}}, Section "Request").
+The consuming AS validates each response against the audience it
+requested, and MUST combine only responses whose `mission.issuer`,
+`mission.id`, and `mission.version` are identical. When the versions
+differ, it re-queries, up to a bound the deployment configures. If it
+still cannot obtain responses at one version, the state source has
+failed ({{transient-failure}}): the AS refuses with
+`temporarily_unavailable`, and the grant stays unconsumed
+({{single-use}}). Each response is authenticated, scoped to the
+requested audience, and carries current `authorization_details` and
+the Mission's state `version`.
+
 Lifecycle state alone, such as an `active` state or a Status List
 VALID bit, is not enough from any source: containment and discharge
 narrow an active Mission without changing its lifecycle state, and a

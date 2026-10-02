@@ -7641,6 +7641,48 @@
    ]
   },
   {
+   "id": "status.request.served-audience-authorization",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-request",
+   "text": "The AS MUST honor such a request only where its configuration authorizes the authenticated caller for the named audience",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consuming Authorization Server's Mission Status request naming a resource audience its configuration does not authorize that caller for is refused with the not-found response, indistinguishable from an unknown Mission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference Status endpoint has no consuming-Authorization-Server caller class or per-audience caller configuration, and no issuance-grant redemption path exists in src. Added with #963 decision D1; todo until a consuming-AS caller exists."
+  },
+  {
+   "id": "status.response.served-audience-aud",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-response",
+   "text": "the `audience` that request named",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consuming Authorization Server rejects a per-resource Mission Status response whose aud is not the audience its request named"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference Status endpoint has no consuming-Authorization-Server caller class or per-audience caller configuration, and no issuance-grant redemption path exists in src. Added with #963 decision D1; todo until a consuming-AS caller exists."
+  },
+  {
    "id": "signals.discharge.authority-changed-rematerialize",
    "spec": "draft-mcguinness-oauth-mission-signals.md",
    "anchor": "consumer-behavior",
@@ -22529,6 +22571,48 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added by the #963 editorial review for a requirement that review introduced or made explicit; todo until a redemption path exists."
+  },
+  {
+   "id": "issuance-grant.mission-state-source.consistent-version",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "mission-state-source",
+   "text": "MUST combine only responses whose `mission.issuer`, `mission.id`, and `mission.version` are identical",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a consuming AS issues authority from per-resource Mission Status responses only when every combined response carries the same mission.issuer, mission.id, and mission.version; responses at different versions are never merged, so authority from before and after a containment never mixes"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with #963 decision D1; todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.mission-state-source.version-mismatch-refusal",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "mission-state-source",
+   "text": "If it still cannot obtain responses at one version, the state source has failed",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "when the deployment's bounded re-queries do not yield per-resource responses at one Mission version, the redemption or refresh is refused temporarily_unavailable with HTTP 503 and neither the grant nor the presented refresh token is consumed"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with #963 decision D1; todo until that path exists."
   },
   {
    "id": "txn-authorization.token.txn-scoped-mint-gate",

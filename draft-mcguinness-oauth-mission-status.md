@@ -58,6 +58,14 @@ informative:
   RFC9110:
   RFC9457:
   RFC9700:
+  I-D.draft-mcguinness-oauth-mission-issuance-grant:
+    title: "Mission Issuance Grant for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-resource-access:
     title: "Mission Resource Access Profile for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
@@ -357,6 +365,16 @@ The request is an HTTPS POST with an
   echoing it in the signed response anti-replay-binds that response to
   this specific request.
 
+A consuming Authorization Server under the Mission Issuance Grant
+profile ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}})
+resolves authority for the resources it issues tokens for, not for an
+audience of its own. It sends one request per resource audience,
+naming that audience in `audience`. The AS MUST honor such a request
+only where its configuration authorizes the authenticated caller for
+the named audience, and MUST otherwise refuse it with the not-found
+response of {{mission-status-errors}}. The response's `aud` is then
+the requested `audience` ({{mission-status-response}}).
+
 ## Authentication {#mission-status-authentication}
 
 The request MUST be authenticated. The AS MUST support at least one
@@ -639,7 +657,9 @@ A consumer MUST verify, before honoring a response:
 3. the JWS signature against a current `jwks_uri` entry for the
    `issuer` AS;
 4. `iss` equals the expected AS issuer URL;
-5. `aud` equals the consumer's own audience identifier;
+5. `aud` equals the consumer's own audience identifier or, for a
+   consuming Authorization Server's per-resource request
+   ({{mission-status-request}}), the `audience` that request named;
 6. `sub` equals the requesting client's identifier;
 7. `nonce` equals the request's nonce;
 8. `mission.id` equals the requested `mission_id`; and
