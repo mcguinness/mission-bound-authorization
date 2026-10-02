@@ -760,6 +760,12 @@ convention, none of which require registration.
 
 -01
 
+- In-ceiling expansion: a policy-adjudicated drawdown whose complete
+  Authority Set overlaps capability under a containment restriction of
+  its chain falls back to a fresh human approval naming the contained
+  capability and its cause, from any later Mission in the chain; the
+  ceiling review discloses outstanding restrictions and does not clear
+  them.
 - `drawdown_policy` is an activation policy reference (`id`,
   `version`, `digest`) under the issuance profile's Standing-Consent
   Bases, replacing the string or URI and the SHOULD to commit the

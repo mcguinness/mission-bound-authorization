@@ -1148,6 +1148,17 @@ This document registers two media types per {{RFC6838}}.
 - Author: IETF
 - Change controller: IETF
 
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Restoration Through Expansion ({{restoration}}): containing
+  capability places a restriction on the Mission's expansion chain,
+  retained across later successors and surfaced in any later
+  expansion consent whose authority overlaps it, until a fresh human
+  approval explicitly restores that authority with its cause
+  disclosed. A successor's overlay still starts empty.
+
 # Acknowledgments
 {:numbered="false"}
 
