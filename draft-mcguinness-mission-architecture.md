@@ -133,21 +133,22 @@ informative:
     date: 2026
   I-D.draft-hardt-oauth-aauth-protocol:
     title: "AAuth Protocol"
-    target: https://dickhardt.github.io/AAuth/draft-hardt-oauth-aauth-protocol.html
-    refcontent: "Editor's copy, commit fc5e972c"
     author:
       -
         ins: D. Hardt
         name: Dick Hardt
-    date: 2026
+    date: 2026-09-25
+    seriesinfo:
+      Internet-Draft: draft-hardt-oauth-aauth-protocol-11
   I-D.draft-hardt-aauth-r3:
     title: "AAuth Rich Resource Requests (R3)"
-    target: https://dickhardt.github.io/AAuth/draft-hardt-aauth-r3.html
     author:
       -
         ins: D. Hardt
         name: Dick Hardt
-    date: 2026
+    date: 2026-09-28
+    seriesinfo:
+      Internet-Draft: draft-hardt-aauth-r3-00
   I-D.draft-mcguinness-mission-aauth:
     title: "Mission Context Binding for AAuth"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html
