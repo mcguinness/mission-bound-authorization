@@ -380,6 +380,23 @@ The assertion carries no user subject: the IdP resolves the subject for
 each target from the hop, so continuation preserves the Mission's
 subject rather than projecting it; the actor is rebound per hop.
 
+Mission delegation depth at this exchange, the depth at which the
+issuance profile's per-entry delegation constraints apply
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Delegation
+Constraints"), is counted over the selected hop's ancestry as the IdP's
+hop records hold it, from the root to that hop, followed by the current
+authenticated actor. Only consecutive entries with equal `(iss, sub)`
+merge. The root entry is the Mission's approved client at depth 0, and
+each remaining entry adds 1, so the chain A, B, B has depth 1 and A, B,
+A has depth 2. Sibling branches, the presented assertion, and any
+narrowing of what the onward `act` discloses do not change the depth
+({{Section 5.5.5 of I-D.draft-mcguinness-oauth-id-continuation-assertion}}).
+At depth 0 the approved agent continues for itself and no delegation
+narrowing applies. This transport defines no reset: continuing to
+another Resource Authorization Server, or returning to an earlier
+actor, never restarts the count. Where the IdP cannot read a hop's
+complete ancestry, it issues nothing.
+
 ## Async Delegation Transport {#transport-async}
 
 Async delegation ({{I-D.draft-zhu-oauth-async-delegation}}) is the
