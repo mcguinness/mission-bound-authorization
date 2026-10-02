@@ -39,8 +39,8 @@
     "content_sha256": "e681f15fe23ebf3b0bb8d32f1aed70eef88c140331a5f10216492d3669d045ae"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
-    "revision": "fdb274d7a7c5e5a44326254d88836204b6d2693b",
-    "content_sha256": "261cc2a5d18802408f055c84d5c22100a2f8b040754dc92c94a84f8eb6046d2f"
+    "revision": "79ede5a9bff31f6b7953456bacda583acf33b003",
+    "content_sha256": "2ad488a60aa23eab82693e82a53ad82877e4864d881ffdb5f6449a47622f404c"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
@@ -23235,6 +23235,181 @@
     }
    ],
    "notes": "#921: the ICA -02 Section 5.5.6 codes apply at this exchange in place of the issuance profile's invalid_grant, which core Issuance Gating permits for a Token Exchange profile that assigns its own code."
+  },
+  {
+   "id": "continuation.ica-transport.depth-count",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "Only consecutive entries with equal `(iss, sub)` merge",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Mission delegation depth is counted over the selected hop's IdP-held ancestry from the root plus the current authenticated actor, the root (the approved Mission client) at depth 0, merging only consecutive equal (iss, sub): A, B, B is depth 1 and A, B, A is depth 2",
+    "local": "repeating the current actor at a max_depth of 1 still issues; returning to an earlier actor reaches depth 2 and then 3, where max_depth 2 refuses with no hop and no derivation; the onward act shows the merged lineage"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation delegation constraints (@spec mission#delegation-constraints) > max_depth 1: B continuing its own hop (A->B->B) stays at Mission delegation depth 1 and issues, carrying the entry",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation delegation constraints (@spec mission#delegation-constraints) > max_depth 2: A->B and A->B->A issue; A->B->A->B (Mission delegation depth 3) is invalid_target, with no hop and no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation onward act lineage (@spec id-continuation-assertion) > places the current actor atop the hop's recorded lineage from the Mission's client, merging consecutive equal actors",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ]
+  },
+  {
+   "id": "continuation.ica-transport.depth-excluded-inputs",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "Sibling branches, the presented assertion, and any narrowing of what the onward `act` discloses do not change the depth",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the depth ignores sibling branches of the hop tree, is never read from the presented assertion, and does not move with disclosure narrowing of the onward act",
+    "local": "siblings and the hop-record source are exercised; disclosure narrowing is not, because the implementation has no disclosure-narrowing policy"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation delegation constraints (@spec mission#delegation-constraints) > max_depth 1: siblings do not add depth: B and then C each continuing the root (A->B, A->C) issue at Mission delegation depth 1, carrying the entry",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation onward act lineage (@spec id-continuation-assertion) > siblings do not contribute: after B continues the root, A's next continuation from the root is still A alone",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation onward act lineage (@spec id-continuation-assertion) > places the current actor atop the hop's recorded lineage from the Mission's client, merging consecutive equal actors",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "The disclosure-narrowing clause has no implementation to exercise."
+  },
+  {
+   "id": "continuation.ica-transport.depth-zero",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "At depth 0 the approved agent continues for itself and no delegation narrowing applies",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a continuation by the approved Mission client over its own lineage keeps non-delegable entries"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation delegation constraints (@spec mission#delegation-constraints) > a same-actor continuation (Mission delegation depth 0) is not narrowed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ]
+  },
+  {
+   "id": "continuation.ica-transport.no-depth-reset",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "This transport defines no reset",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "returning to an earlier actor or continuing to another Resource Authorization Server never restarts the depth count",
+    "local": "returning to an earlier actor is exercised (A, B, A, B reaches depth 3 and is refused); continuing to a different Resource Authorization Server within one chain is not separately exercised"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation delegation constraints (@spec mission#delegation-constraints) > max_depth 2: A->B and A->B->A issue; A->B->A->B (Mission delegation depth 3) is invalid_target, with no hop and no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ]
+  },
+  {
+   "id": "continuation.ica-transport.incomplete-ancestry",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "Where the IdP cannot read a hop's complete ancestry, it issues nothing",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a continuation from a hop whose recorded ancestry is broken issues no token, records no hop, and counts no derivation",
+    "local": "today the refusal is 500 server_error; the code is an open question on #960, and the row asserts only that nothing is issued"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation delegation constraints (@spec mission#delegation-constraints) > a hop whose recorded parent is gone issues no token: 500 server_error, with no hop and no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-store.test.ts",
+     "name": "ContinuationStore.lineage (@spec id-continuation-assertion) > fails closed on a broken ancestry or one that crosses anchors",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ]
   },
   {
    "id": "resource-access.type.prefix-query-fragment-refused",

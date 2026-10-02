@@ -88,6 +88,9 @@ let svcJkt: string;
 let svcXKeys: Keys; // a third client, svc-x, whose asserted profile no delegation policy names
 let svcXDpopKeys: Keys;
 let svcXJkt: string;
+let svcCKeys: Keys; // a fourth client, svc-c, a second ai_agent delegate
+let svcCDpopKeys: Keys;
+let svcCJkt: string;
 let remoteJwks: ReturnType<typeof createRemoteJWKSet>;
 
 /** A continuation lineage: an active Mission + a grant anchor + an initial handle. */
@@ -98,6 +101,8 @@ function newLineage(
   intentExtra: Record<string, unknown> = {},
   /** Further approved entries, beyond the payments read every lineage holds. */
   extraAuthority: Record<string, unknown>[] = [],
+  /** A delegation policy proposed for the payments read (narrowed by the ceiling's). */
+  baseDelegation?: Record<string, unknown>,
 ): {
   missionId: string;
   handle: string;
@@ -118,6 +123,7 @@ function newLineage(
         resource: RESOURCE,
         actions: ["payments:invoice.read"],
         constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+        ...(baseDelegation ? { delegation: baseDelegation } : {}),
       },
       ...(extraAuthority as never[]),
     ],
@@ -333,6 +339,9 @@ beforeAll(async () => {
   svcXKeys = await generateKeyPair("ES256", { extractable: true });
   svcXDpopKeys = await generateKeyPair("ES256", { extractable: true });
   svcXJkt = await calculateJwkThumbprint(await exportJWK(svcXDpopKeys.publicKey));
+  svcCKeys = await generateKeyPair("ES256", { extractable: true });
+  svcCDpopKeys = await generateKeyPair("ES256", { extractable: true });
+  svcCJkt = await calculateJwkThumbprint(await exportJWK(svcCDpopKeys.publicKey));
   const exchangeClient = async (clientId: string, keys: Keys) => ({
     client_id: clientId,
     grant_types: [TOKEN_EXCHANGE_GRANT_TYPE],
@@ -348,11 +357,15 @@ beforeAll(async () => {
     allowHeadlessAdjudication: true,
     // Further token-exchange clients, so a hop can be continued by an actor
     // other than the one that obtained it.
-    testClients: [await exchangeClient("svc-b", svcKeys), await exchangeClient("svc-x", svcXKeys)],
+    testClients: [
+      await exchangeClient("svc-b", svcKeys),
+      await exchangeClient("svc-x", svcXKeys),
+      await exchangeClient("svc-c", svcCKeys),
+    ],
     // The AS-asserted actor profiles the delegation policies match: the
     // ceiling's payments entries are delegable to ai_agent actors through
     // depth 2 (config/policy.json), and svc-x is a class none names.
-    actorProfiles: { "ap-agent": "ai_agent", "svc-b": "ai_agent", "svc-x": "service" },
+    actorProfiles: { "ap-agent": "ai_agent", "svc-b": "ai_agent", "svc-x": "service", "svc-c": "ai_agent" },
     continuationAssertionIssuers: [
       // Trusted for the root hops (this AS) and the child hops (RAS_AUD).
       { iss: CAI, jwks: { keys: [caiPub] }, attestsFor: [ISSUER, RAS_AUD] },
@@ -968,13 +981,17 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
   });
 });
 
-type Who = "A" | "B" | "X";
+type Who = "A" | "B" | "X" | "C";
 
-/** Present a continuation of `handle` as A (ap-agent), B (svc-b) or X (svc-x). */
+/** Present a continuation of `handle` as A (ap-agent), B (svc-b), X (svc-x) or C (svc-c). */
 async function exchangeAs(handle: string, who: Who, f: Omit<ExchangeFields, "subjectToken"> = {}): Promise<Response> {
   if (who === "A") return tokenExchange({ ...f, subjectToken: await mintICA(handle) });
-  const clientId = who === "B" ? "svc-b" : "svc-x";
-  const [keys, dpopKeys, jkt] = who === "B" ? [svcKeys, svcDpopKeys, svcJkt] : [svcXKeys, svcXDpopKeys, svcXJkt];
+  const delegates = {
+    B: ["svc-b", svcKeys, svcDpopKeys, svcJkt],
+    X: ["svc-x", svcXKeys, svcXDpopKeys, svcXJkt],
+    C: ["svc-c", svcCKeys, svcCDpopKeys, svcCJkt],
+  } as const;
+  const [clientId, keys, dpopKeys, jkt] = delegates[who];
   const ica = await mintICA(handle, { act: { iss: ISSUER, sub: clientId }, cnfJkt: jkt });
   return tokenExchange({ ...f, subjectToken: ica }, { issuer: ISSUER, clientKey: keys.privateKey, clientId, dpopKeys });
 }
@@ -1088,6 +1105,47 @@ describe("continuation delegation constraints (@spec mission#delegation-constrai
   const sideEffects = (missionId: string) => ({
     hops: as.continuationStore.handlesForMission(missionId).length,
     derivations: as.kernel.get(missionId)?.derivation_count,
+  });
+
+  it("max_depth 1: B continuing its own hop (A->B->B) stays at Mission delegation depth 1 and issues, carrying the entry", async () => {
+    const { missionId, handle: root } = newLineage("apev-d6", {}, MISSION_EXP, {}, [], { max_depth: 1 });
+    expect(as.kernel.get(missionId)?.authority_set[0]?.delegation?.max_depth).toBe(1);
+    const hB = await granted(await exchangeAs(root, "B")); // {B, act: A}: depth 1
+    const hBB = await granted(await exchangeAs(hB.hop, "B")); // B atop B merges: still depth 1
+    for (const { details } of [hB, hBB]) {
+      expect(details.map((d) => d.resource)).toEqual([RESOURCE]);
+      expect(details[0]?.delegation?.max_depth).toBe(1);
+    }
+    // The limit binds: A returning atop B (A->B->A) is depth 2.
+    const reason = await refused(await exchangeAs(hB.hop, "A"), "invalid_target");
+    expect(reason).toMatch(/Mission delegation depth 2/);
+  });
+
+  it("max_depth 1: siblings do not add depth: B and then C each continuing the root (A->B, A->C) issue at Mission delegation depth 1, carrying the entry", async () => {
+    const { handle: root } = newLineage("apev-d7", {}, MISSION_EXP, {}, [], { max_depth: 1 });
+    const hB = await granted(await exchangeAs(root, "B"));
+    const hC = await granted(await exchangeAs(root, "C")); // a sibling of hB: depth 1, not 2
+    for (const { details } of [hB, hC]) {
+      expect(details.map((d) => d.resource)).toEqual([RESOURCE]);
+      expect(details[0]?.delegation?.max_depth).toBe(1);
+    }
+    // Through hB instead (A->B->C), C is at depth 2 and refused.
+    const reason = await refused(await exchangeAs(hB.hop, "C"), "invalid_target");
+    expect(reason).toMatch(/Mission delegation depth 2/);
+  });
+
+  it("a hop whose recorded parent is gone issues no token: 500 server_error, with no hop and no derivation", async () => {
+    const { missionId, handle: root } = newLineage("apev-d8");
+    const hB = await granted(await exchangeAs(root, "B"));
+    // Break hB's ancestry: its parent, the root hop, is no longer recorded.
+    as.continuationStore.db.prepare("DELETE FROM continuation_handles WHERE handle = ?").run(root);
+    const before = sideEffects(missionId);
+    const res = await exchangeAs(hB.hop, "B");
+    const body = (await res.json()) as { access_token?: string; error?: string };
+    expect(res.status, JSON.stringify(body)).toBe(500);
+    expect(body.error).toBe("server_error");
+    expect(body).not.toHaveProperty("access_token");
+    expect(sideEffects(missionId)).toEqual(before);
   });
 
   it("max_depth 2: A->B and A->B->A issue; A->B->A->B (Mission delegation depth 3) is invalid_target, with no hop and no derivation", async () => {
