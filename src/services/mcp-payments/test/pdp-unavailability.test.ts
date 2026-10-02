@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { createDecisionChannel, createEphemeralDecisionPoint, type DecisionFn, evaluateRemote, type Fga, isDecisionChannelRefusal, type MissionView, RUNTIME_POSTURE, loadRuntimePosture, relationForAction, stalenessBound } from "@mission/pdp";
+import { canonicalDigest } from "@mission/core";
+import { createDecisionChannel, createEphemeralDecisionPoint, type DecisionEvidenceObject, type DecisionFn, type DecisionOptions, type EvaluationRequest, evaluateRemote, type Fga, isDecisionChannelRefusal, type MissionView, RUNTIME_POSTURE, loadRuntimePosture, relationForAction, stalenessBound } from "@mission/pdp";
 import { CANONICAL_RESOURCE, createEphemeralEvidenceKeys, EvidenceStore, McpPaymentsServer, PaymentsStore, Pep, type TokenFacts } from "../src/index.js";
 import { PaymentsToolCatalog } from "../src/tool-catalog.js";
 
@@ -53,6 +54,27 @@ describe("configured PDP unavailability (@spec runtime#ride-through, authzen#fai
     } finally { await x.channel.close(); x.payments.db.close(); }
   });
 
+  // @spec authzen#evaluation-request-digest-input: the PDP digests the
+  // AuthZEN request the PEP submitted, not the channel's `{ request }`
+  // envelope or its MAC header fields.
+  it("over a remote hop, the PDP's Decision Evidence digests the request as submitted, excluding channel framing", async () => {
+    const x = await build("remote");
+    try {
+      const request = {
+        subject: { id: "alice" },
+        resource: { type: "invoice", id: "one", properties: { vendor_id: "acme" } },
+        action: { name: "payments:invoice.read" },
+        context: { audience: CANONICAL_RESOURCE, mission: { id: x.view.id, issuer: x.view.issuer, authority_hash: x.view.authority_hash } },
+      } as EvaluationRequest;
+      const submitted = canonicalDigest(JSON.parse(JSON.stringify(request)));
+      const decision = await x.channel.decide(request, x.getOptions() as DecisionOptions);
+      const record = decision.context.decision_evidence as DecisionEvidenceObject;
+      expect(record.emitter.role).toBe("pdp");
+      expect(record).not.toHaveProperty("parameter_digest");
+      expect(record.evaluation_request_digest).toBe(submitted);
+    } finally { await x.channel.close(); x.payments.db.close(); }
+  });
+
   it("co-resident remains a direct call with no remote boundary declaration", async () => {
     const x = await build("co-resident");
     try {
@@ -81,7 +103,12 @@ describe("configured PDP unavailability (@spec runtime#ride-through, authzen#fai
   // Refusal Record, no attributed PDP decision, and nothing executed. It is
   // still not disguised as an ordinary policy denial, which would carry a
   // `denial_reason` and a retained Decision Evidence record.
-  const refusesAThrow = async (decide: DecisionFn) => {
+  const refusesAThrow = async (fail: DecisionFn) => {
+    let submitted: string | undefined;
+    const decide: DecisionFn = (req, opts) => {
+      submitted = canonicalDigest(JSON.parse(JSON.stringify(req)));
+      return fail(req, opts);
+    };
     const x = await build("co-resident", decide);
     try {
       const refused = await x.server.callReadTool("get_invoice", { invoice_id: "one" }, x.token);
@@ -98,6 +125,10 @@ describe("configured PDP unavailability (@spec runtime#ride-through, authzen#fai
       expect(refusals).toHaveLength(1);
       expect(refusals[0]!.content).toMatchObject({ emitter: { role: "pep" }, denial_reason: "pdp_unreachable", decision: "deny" });
       expect(refusals[0]!.content).not.toHaveProperty("evaluation_id");
+      // @spec runtime-evidence#request-digest-worked: the refusal follows an
+      // evaluation request, so it digests that request as submitted.
+      expect(submitted).toMatch(/^sha-256:/);
+      expect(refusals[0]!.content).toMatchObject({ request_digest_input: "decision_request", evaluation_request_digest: submitted });
     } finally { await x.channel.close(); x.payments.db.close(); }
   };
   it("refuses a decision function that throws synchronously as pdp_unreachable, with one Refusal Record and no effect", async () => {
@@ -114,7 +145,12 @@ describe("configured PDP unavailability (@spec runtime#ride-through, authzen#fai
   const remoteWith = (fetchImpl: typeof fetch): DecisionFn =>
     (request) => evaluateRemote(request, { url: "http://pdp.unused.test/evaluate", pepId: "payments-pep", secret: "test-only", fetchImpl });
   const refusesAs = async (fetchImpl: typeof fetch, expected: string) => {
-    const x = await build("co-resident", remoteWith(fetchImpl));
+    let submitted: string | undefined;
+    const capture = (async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
+      submitted = canonicalDigest(JSON.parse(String(init?.body)).request);
+      return fetchImpl(input, init);
+    }) as typeof fetch;
+    const x = await build("co-resident", remoteWith(capture));
     try {
       const refused = await x.server.callReadTool("get_invoice", { invoice_id: "one" }, x.token);
       expect(refused.ok).toBe(false);
@@ -124,6 +160,10 @@ describe("configured PDP unavailability (@spec runtime#ride-through, authzen#fai
       expect(records.filter(e => e.kind === "decision")).toHaveLength(0);
       expect(records.filter(e => e.kind === "refusal")).toHaveLength(1);
       expect(records.find(e => e.kind === "refusal")!.content).toMatchObject({ denial_reason: expected });
+      // @spec runtime-evidence#request-digest-worked: the refusal follows the
+      // request on the wire, so it digests that request, not its envelope.
+      expect(submitted).toMatch(/^sha-256:/);
+      expect(records.find(e => e.kind === "refusal")!.content).toMatchObject({ request_digest_input: "decision_request", evaluation_request_digest: submitted });
     } finally { await x.channel.close(); x.payments.db.close(); }
   };
   it("refuses a 503 from a reachable PDP as pdp_unreachable, with no PDP decision retained", async () => {
