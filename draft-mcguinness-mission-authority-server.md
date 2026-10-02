@@ -2647,6 +2647,18 @@ document requests no IANA action for them.
 
 \[\[ To be removed from the final specification ]]
 
+- Corrections. Cross-references name the right sections (the
+  propagation tuple's state source, a client-instance section);
+  Join Spoofing counts four residuals; IANA names both runtime denial
+  reasons; the error table lists `join_failed` and `conflict`; RFC 8414
+  and RFC 9396 are normative references, and the metadata registry
+  uses the RFC 8414 template; the examples show a DPoP-bound
+  Mission-Reference request and classify reads as
+  `consequential_read`; Estate Prerequisites name local RFC 9068
+  validation; Progressive Adoption follows the architecture's
+  Assurance Levels; and the core document is called the OAuth
+  binding.
+
 - Authentication discovery mirrors the Status draft: per-endpoint
   `*_auth_methods_supported` and `*_auth_signing_alg_values_supported`
   members for the submission, status, and lifecycle endpoints replace
