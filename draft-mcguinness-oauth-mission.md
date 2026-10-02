@@ -4439,9 +4439,12 @@ the Mission's lineage rather than rooting a new one, and the Resource
 AS's local issuance under it is bounded by that grant's own lifetime and
 local policy.
 
-A deployment can disclose the composed bound, not only the immediate
-Mission's, at the consent surface, and can impose a global cap out of
-band where a single approval's apparent bound must hold in practice.
+A deployment can disclose the subtree's figures, not only the
+immediate Mission's, at the consent surface, as distinct values
+rather than one composed total
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), and can
+impose a global cap out of band where a single approval's apparent
+bound must hold in practice.
 Bounding aggregate consumption (calls, spend, or activity over the life
 of a Mission and its descendants) is the metering profile's role
 ({{I-D.draft-mcguinness-mission-metering}}).
