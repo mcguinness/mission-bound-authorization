@@ -39,6 +39,7 @@ normative:
   RFC9126:
   RFC9396:
   RFC9449:
+  RFC8693:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
@@ -74,7 +75,6 @@ normative:
 
 informative:
   RFC8725:
-  RFC8693:
   I-D.draft-mcguinness-oauth-mission-containment:
     title: "Mission Containment for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
@@ -286,7 +286,8 @@ Claims:
 
 `client_id`:
 : REQUIRED. The Mission's recorded agent client identifier at the
-  consuming AS. Only this authenticated client redeems the grant.
+  consuming AS ({{Section 4.3 of RFC8693}}). Only this client redeems
+  the grant ({{redemption}}).
 
 `mission`:
 : REQUIRED. The issuance profile's `mission` claim object, with the
@@ -493,12 +494,14 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer
 &assertion=eyJ0eXAiOiJtaXNzaW9uLWlzc3VhbmNlLWdyYW50K2p3dCIs...
 ~~~
 
-The grant is an authorization, not a client credential: redemption
-still requires the requester to prove it is the grant's `client_id`,
-either by authenticating to this AS as it ordinarily does or, where the
-grant carries `cnf`, by proving possession of the bound key. A public
-client that can do neither cannot redeem, since nothing then binds the
-redemption to the grant's `client_id`.
+The grant is an authorization, not a client credential: the requester
+still proves it is the grant's `client_id`. A confidential client
+authenticates to this AS as {{Section 3.2.1 of RFC6749}} requires, and
+possession of a `cnf` key does not replace that authentication. A
+public client, which cannot authenticate, sends `client_id` in the
+request and can redeem only a grant that carries `cnf`: proof of
+possession of that key binds the redemption to the grant's
+`client_id`, and without `cnf` nothing does.
 
 ## Grant Validation {#grant-validation}
 
@@ -520,9 +523,10 @@ any check fails:
    seen pair is written atomically with successful issuance and
    retained until `exp` plus that allowance passes (single use,
    {{effective-set-projection}});
-4. the requester is the grant's `client_id` ({{redemption}}), and,
-   when `cnf` is present, the request proves possession of the bound
-   key ({{grant}});
+4. the requester is the grant's `client_id` ({{redemption}}): the
+   authenticated client equals it or, for a public client, the
+   request proves possession of the `cnf` key; and whenever `cnf` is
+   present, the request proves possession of that key ({{grant}});
 5. `sub` maps to a local account under the deployment's mapping
    policy ({{issuance-join}}), and the grant's `authorization_details`
    map to resources this AS serves.
