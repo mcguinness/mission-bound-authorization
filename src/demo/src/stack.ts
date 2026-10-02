@@ -162,7 +162,7 @@ export interface DemoStack {
   /** Trusted operator shutdown/fault-injection seam, never agent-accessible. */
   decisionChannel: { close: () => Promise<void> };
   /**
-   * @spec runtime#idempotency (#917) — the PDP's Exact claim domain, open
+   * @spec runtime#idempotency (#917): the PDP's Exact claim domain, open
    * single-writer on its configured file for this stack's lifetime. Trusted
    * operator seam: `close()` releases the file (and makes the domain
    * unreachable, so the PDP issues no high-consequence permit after it).
@@ -194,7 +194,7 @@ export async function composeStack(opts: {
   /** Default co-resident; MISSION_PDP_MODE=remote selects a real loopback hop. */
   pdpMode?: "co-resident" | "remote";
   /**
-   * @spec runtime#idempotency (#917) — the claim domain's file. Defaults to
+   * @spec runtime#idempotency (#917): the claim domain's file. Defaults to
    * `topology.json` `stores.pdpIdempotencyClaims.file`; a test passes its own
    * so concurrent stacks never contend for one single-writer file.
    */

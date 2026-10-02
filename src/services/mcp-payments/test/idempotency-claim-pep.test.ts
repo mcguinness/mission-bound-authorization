@@ -1,5 +1,5 @@
 /**
- * @spec runtime#idempotency (#917, owner ruling 2026-10-02) — the PDP's
+ * @spec runtime#idempotency (#917, owner ruling 2026-10-02): the PDP's
  * Exact idempotency claim seen from the executing side, end to end through
  * this resource's real PEP, its real D28 redemption store, its connectors and
  * its evidence store.

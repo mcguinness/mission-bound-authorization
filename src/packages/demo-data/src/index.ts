@@ -235,7 +235,7 @@ export interface Topology {
   };
   openfga: { url: string; presharedKey: string };
   /**
-   * @spec runtime#idempotency (#917) — the deployment's durable stores.
+   * @spec runtime#idempotency (#917): the deployment's durable stores.
    * `pdpIdempotencyClaims.file` is the PDP's Exact claim domain: one SQLite
    * file one PDP process opens single-writer. A relative path resolves against
    * the directory holding `config/`, so the loaded value is always absolute.

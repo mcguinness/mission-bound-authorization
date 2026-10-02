@@ -139,7 +139,7 @@ export interface EvaluationRequest {
   action: {
     name: string;
     /**
-     * @spec authzen#parameter-digest `idempotency_key` — CONDITIONAL: the
+     * @spec authzen#parameter-digest `idempotency_key`. CONDITIONAL: the
      * key the Operation Profile defines for a non-idempotent high-consequence
      * action, carried distinct from `parameter_digest` and never inside it.
      * Typed `string` deliberately: a malformed value is refused at the claim
@@ -273,7 +273,7 @@ export type DenialReason =
    */
   | "mission_mismatch"
   /**
-   * @spec authzen#runtime-denial-classification, runtime#idempotency (#917) —
+   * @spec authzen#runtime-denial-classification, runtime#idempotency (#917):
    * the request's `idempotency_key` and operation identity match a prior
    * claim that is in flight, unresolved, completed, failed, or indeterminate,
    * or whose permit cannot be returned as a retransmission: no second permit
@@ -282,7 +282,7 @@ export type DenialReason =
    */
   | "duplicate_suppressed"
   /**
-   * @spec authzen#runtime-denial-classification, runtime#idempotency (#917) —
+   * @spec authzen#runtime-denial-classification, runtime#idempotency (#917):
    * the `idempotency_key` was claimed under a different operation identity:
    * a conflict, never a new execution, terminal in every claim state.
    */
@@ -379,14 +379,14 @@ export interface EvaluateOptions {
    */
   delegatePolicy?: DelegatePolicy;
   /**
-   * @spec runtime#idempotency (#917) — this PDP's Exact idempotency claim
+   * @spec runtime#idempotency (#917): this PDP's Exact idempotency claim
    * domain, bound at decision-point construction exactly as `evidence` is.
    * Absent, no high-consequence class has a declared domain, and a request in
    * one is refused rather than permitted without the claim.
    */
   claims?: IdempotencyClaimDomain;
   /**
-   * @spec runtime#idempotency, retransmission condition 5 (#917) — the
+   * @spec runtime#idempotency, retransmission condition 5 (#917): the
    * authenticated PEP and redemption-store epoch this decision is issued to,
    * bound by the decision channel and never read from the request. Absent
    * (a direct call outside any channel), every claim gets a fresh epoch, so
@@ -394,7 +394,7 @@ export interface EvaluateOptions {
    */
   requester?: ClaimRequester;
   /**
-   * @spec runtime#idempotency, retransmission condition 6 (#917) — the
+   * @spec runtime#idempotency, retransmission condition 6 (#917): the
    * requester's read-only consumption status for a stored `evaluation_id`,
    * answered from its D28 redemption store. Bound with the requester; absent
    * is `unknown`, which suppresses.
@@ -413,7 +413,7 @@ export interface EvaluateOptions {
  * an emitter there holds the capability to have an arbitrary record signed
  * under the decision point's identity, which is the defect this split closes.
  *
- * @spec runtime#idempotency (#917) — the claim domain, the requester and its
+ * @spec runtime#idempotency (#917): the claim domain, the requester and its
  * consumption-status capability are PDP-side and channel-side bindings for
  * the same reason: a caller that could supply them could point the claim at
  * a domain of its choosing or answer for another PEP's redemption store.
@@ -470,7 +470,7 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
       if (decision.context.denial_reason) {
         span.setAttribute("mission.denial_reason", String(decision.context.denial_reason));
       }
-      // @spec runtime#idempotency (#917) — a retransmission is the stored
+      // @spec runtime#idempotency (#917): a retransmission is the stored
       // decision with its stored Decision Evidence; emitting again would sign
       // a second record for one `evaluation_id`.
       if (claim.retransmitted) return decision;

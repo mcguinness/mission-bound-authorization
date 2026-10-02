@@ -35,7 +35,7 @@ import type {
 import type { EvidenceKeyLike, EvidenceSigningKey } from "./runtime-evidence-integrity.js";
 
 /**
- * @spec runtime#idempotency (#917, owner ruling 2026-10-02) — what an
+ * @spec runtime#idempotency (#917, owner ruling 2026-10-02): what an
  * executing PEP may tell the claim domain, over the same decision channel it
  * asks for decisions on, scoped to the authenticated requester. It settles
  * and reconciles claims from authenticated Execution Evidence or from its own
@@ -97,7 +97,7 @@ export interface DecisionPointConfig {
     audience: string;
   };
   /**
-   * @spec runtime#idempotency (#917) — this decision point's Exact
+   * @spec runtime#idempotency (#917): this decision point's Exact
    * idempotency claim domain, bound here exactly as the evidence path is and
    * for the same reason: an enforcement component that could supply one
    * could choose the domain its own requests are claimed in. Absent, the
@@ -113,13 +113,13 @@ export interface DecisionPoint {
   /** Published alongside `decide`, so the PEP that holds one can verify what the other returns. */
   evidenceVerification?: DecisionEvidenceVerification;
   /**
-   * @spec runtime#idempotency (#917) — the decision channel's seam: `decide`
+   * @spec runtime#idempotency (#917): the decision channel's seam: `decide`
    * bound to one authenticated requester and that requester's read-only
    * consumption-status capability. Only trusted assembly and the channel call
    * this; a PEP receives the function it returns.
    */
   decideAs?: (requester: ClaimRequester, consumptionStatus?: ConsumptionStatusFn) => DecisionFn;
-  /** @spec runtime#idempotency (#917) — settlement and reconciliation for one authenticated requester. */
+  /** @spec runtime#idempotency (#917): settlement and reconciliation for one authenticated requester. */
   claimsFor?: (requester: ClaimRequester) => ClaimChannel;
 }
 

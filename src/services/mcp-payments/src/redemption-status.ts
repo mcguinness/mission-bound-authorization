@@ -1,6 +1,6 @@
 /**
  * @spec runtime#idempotency, retransmission condition 6 (#917, owner ruling
- * 2026-10-02) — the PEP's read-only answer, from its D28 redemption store,
+ * 2026-10-02): the PEP's read-only answer, from its D28 redemption store,
  * to "was this `evaluation_id` consumed?".
  *
  * Redemption stays here and `transaction.ts` is unchanged: this module only

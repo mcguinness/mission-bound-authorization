@@ -405,7 +405,7 @@ describe("Remote Decision Channel (@spec runtime#decision-channel)", () => {
 });
 
 /**
- * @spec runtime#idempotency, retransmission condition 5 (#917) — over the
+ * @spec runtime#idempotency, retransmission condition 5 (#917): over the
  * remote channel the claim's requester is the authenticated PEP identity and
  * the MAC-covered epoch of its redemption store, never a member of the
  * request body, and an unreachable claim domain is no decision at all.

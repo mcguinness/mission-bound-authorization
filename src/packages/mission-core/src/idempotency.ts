@@ -1,5 +1,5 @@
 /**
- * @spec runtime#idempotency, authzen#parameter-digest (`idempotency_key`) —
+ * @spec runtime#idempotency, authzen#parameter-digest (`idempotency_key`):
  * the (idempotency scope, `idempotency_key`) pair a high-consequence claim
  * (the PDP's, #917) or a reversible-write reservation (the enforcing PEP's,
  * #918) is keyed on.
@@ -14,7 +14,7 @@
 import { canonicalDigest, type JsonValue } from "./canonicalize.js";
 
 /**
- * @spec authzen#parameter-digest — the Operation Profile key format: 16 to
+ * @spec authzen#parameter-digest: the Operation Profile key format: 16 to
  * 128 characters of `ALPHA / DIGIT / "-" / "_"`.
  */
 export const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9_-]{16,128}$/;
@@ -25,7 +25,7 @@ export function isIdempotencyKey(value: unknown): value is string {
 }
 
 /**
- * @spec runtime#idempotency — "The idempotency scope is, at minimum, the
+ * @spec runtime#idempotency: "The idempotency scope is, at minimum, the
  * Mission, the subject and the actor, the audience, the action, and the
  * resource", and "Where compound-action phases share an action identifier,
  * the idempotency scope MUST include the phase". A deployment publishes the
@@ -45,7 +45,7 @@ export const IDEMPOTENCY_SCOPE_DIMENSIONS = [
 export type IdempotencyScopeDimension = (typeof IDEMPOTENCY_SCOPE_DIMENSIONS)[number];
 
 /**
- * @spec runtime#idempotency — "Volatile members MUST NOT be added to the
+ * @spec runtime#idempotency: "Volatile members MUST NOT be added to the
  * scope." The members a request carries that change between retries of one
  * intended execution: a published scope naming one of these is refused at
  * load, never encoded.

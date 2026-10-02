@@ -25,7 +25,7 @@ export function channelDeadlineMs(actionClass: string | undefined, configuredMs?
  * the decision point (including its closed-over evidence signer). The PEP
  * receives a decision function and public verification material only.
  *
- * @spec runtime#idempotency (#917) — the channel also binds who is asking:
+ * @spec runtime#idempotency (#917): the channel also binds who is asking:
  * `pepId` and `pepEpoch` (the epoch of the PEP's redemption store) become the
  * claim's requester, and `consumptionStatus` is that store's read-only answer
  * for retransmission condition 6. The PEP receives `claims`, the settlement

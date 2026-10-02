@@ -1,6 +1,6 @@
 /**
  * @spec runtime#idempotency, runtime#runtime-conformance (outcome
- * reconciliation) (#917, owner ruling 2026-10-02) — the declared reconciler
+ * reconciliation) (#917, owner ruling 2026-10-02): the declared reconciler
  * (`outcome_reconciliation.responsible_component`, this PEP) for the PDP's
  * idempotency claims its permits hold.
  *

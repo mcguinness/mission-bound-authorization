@@ -1,6 +1,6 @@
 /**
  * @spec runtime#idempotency, authzen#parameter-digest, authzen#projections
- * (#917, D223) — the PDP-owned, local, durable, single-writer Exact
+ * (#917, D223): the PDP-owned, local, durable, single-writer Exact
  * idempotency claim.
  *
  * Every case runs `evaluate()` against a real claim domain on a real SQLite

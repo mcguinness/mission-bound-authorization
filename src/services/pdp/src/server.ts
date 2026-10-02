@@ -85,7 +85,7 @@ export interface PdpRemoteServerConfig {
    */
   evaluateFn?: typeof evaluate;
   /**
-   * @spec runtime#idempotency (#917) — this PDP's claim domain, bound on this
+   * @spec runtime#idempotency (#917): this PDP's claim domain, bound on this
    * side of the network hop exactly as `evidence` is: a request option naming
    * another is stripped.
    */
@@ -96,7 +96,7 @@ export interface PdpRemoteServerConfig {
    */
   claimsFor?: (requester: ClaimRequester) => ClaimChannel;
   /**
-   * @spec runtime#idempotency, retransmission condition 6 (#917) — a
+   * @spec runtime#idempotency, retransmission condition 6 (#917): a
    * registered PEP's read-only consumption-status capability, injected by
    * trusted assembly beside the PEP's registration. Absent for a PEP, its
    * answer is `unknown`, which suppresses every retransmission to it.
@@ -327,7 +327,7 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
   }
 
   /**
-   * @spec runtime#idempotency (#917, owner ruling 2026-10-02) — settlement
+   * @spec runtime#idempotency (#917, owner ruling 2026-10-02): settlement
    * and reconciliation behind the same gates as a decision request. The
    * requester they act for is the authenticated PEP and epoch, never a body
    * member.

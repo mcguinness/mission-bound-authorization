@@ -88,7 +88,7 @@ export type EnforcementExtensionName =
  * lease by it. `idempotency_claim_domain` says which component holds the
  * claim; it does not assert a PDP-side domain a deployment does not implement.
  *
- * @spec runtime#idempotency (#917) — the remaining members name the Exact
+ * @spec runtime#idempotency (#917): the remaining members name the Exact
  * claim domain per mediated class, never per key: the PDP that owns it, the
  * enforcement profile and topology it runs under, the published idempotency
  * scope, and the horizon a completed key stays refused for. They are

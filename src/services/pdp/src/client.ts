@@ -25,7 +25,7 @@ export interface RemotePdpClientConfig {
   /** The shared secret registered with the PDP for this identity. */
   secret: string;
   /**
-   * @spec runtime#idempotency, retransmission condition 5 (#917) — the epoch
+   * @spec runtime#idempotency, retransmission condition 5 (#917): the epoch
    * of this PEP's redemption store, sent in `X-Pdp-Pep-Epoch` and covered by
    * the request MAC. Absent, the PDP binds a fresh epoch to the request, so
    * no prior decision can be returned to it as a retransmission.
@@ -206,7 +206,7 @@ function claimRoute(cfg: RemotePdpClientConfig, path: string): string {
 }
 
 /**
- * @spec runtime#idempotency (#917, owner ruling 2026-10-02) — the claim
+ * @spec runtime#idempotency (#917, owner ruling 2026-10-02): the claim
  * channel over the same authenticated decision channel: settlement and
  * reconciliation travel behind the same per-PEP MAC, replay window and
  * scope check as a decision request. A channel failure is a refusal the

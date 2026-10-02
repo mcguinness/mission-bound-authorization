@@ -1,5 +1,5 @@
 /**
- * @spec authzen#projections, runtime#idempotency (#917) — the PDP's internal
+ * @spec authzen#projections, runtime#idempotency (#917): the PDP's internal
  * projections of a validated evaluation request that the idempotency claim
  * and permit retransmission turn on. None is a wire member: each is computed
  * here from members the request already carries, after the PDP validated
@@ -19,7 +19,7 @@ import type { EvaluationRequest } from "./evaluate.js";
 import type { MissionView } from "./policy-view.js";
 
 /**
- * @spec runtime#idempotency — the fixed-member scope for a request that
+ * @spec runtime#idempotency: the fixed-member scope for a request that
  * reached the claim step. `mission` is the request's reference, which the
  * view-consistency check has already held equal to the loaded view; `actor`
  * is the client and the immediate (leaf) delegation entry only, so a new

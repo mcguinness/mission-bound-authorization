@@ -224,7 +224,7 @@ export interface ActionMapping {
   phase?: ActionPhase;
   needsInvoice: boolean;
   /**
-   * @spec runtime#idempotency, authzen#parameter-digest (#917) — the
+   * @spec runtime#idempotency, authzen#parameter-digest (#917): the
    * Operation Profile defines an idempotency key for this non-idempotent
    * high-consequence operation. The caller supplies `idempotency_key` (one
    * key per intended execution) and this PEP forwards it unchanged as
@@ -617,7 +617,7 @@ export interface PepDeps {
    */
   decide?: DecisionFn;
   /**
-   * @spec runtime#idempotency (#917, owner ruling 2026-10-02) — the claim
+   * @spec runtime#idempotency (#917, owner ruling 2026-10-02): the claim
    * channel the same decision channel offers this PEP: settlement of a
    * redeemed attempt's outcome from its signed Execution Evidence, and the
    * reconciliation reads. Absent, nothing settles and the PDP keeps every
@@ -808,7 +808,7 @@ export interface ExecutionAttempt {
   /** One execution identity per disposition attempt; reused for emission retries. */
   executionId: string;
   /**
-   * @spec runtime#idempotency (#917, owner ruling 2026-10-02) — set once this
+   * @spec runtime#idempotency (#917, owner ruling 2026-10-02): set once this
    * attempt's single-use redemption succeeded (D28). Only a redeeming
    * attempt settles the PDP's idempotency claim: an attempt that never held
    * the redemption, a duplicate refused as `permit_consumed` included, says
@@ -1737,7 +1737,7 @@ export class Pep {
   }
 
   /**
-   * @spec runtime#idempotency (#917, owner ruling 2026-10-02) — tell the
+   * @spec runtime#idempotency (#917, owner ruling 2026-10-02): tell the
    * PDP's claim domain how a REDEEMED attempt ended, with the attempt's own
    * PEP-signed Execution Evidence over the authenticated decision channel.
    * Redemption, the lease and the effect stay here (D28); the PDP is told,

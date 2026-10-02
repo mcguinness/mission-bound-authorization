@@ -37,7 +37,7 @@ const PAYMENTS_TOOLS: Record<string, { description: string; inputSchema: typeof 
 };
 
 /**
- * @spec runtime#idempotency (#917) — the tools whose Operation Profile defines
+ * @spec runtime#idempotency (#917): the tools whose Operation Profile defines
  * an idempotency key. The planner is never asked for one: each planner tool
  * call is one intended execution, so this loop mints its key when it routes
  * the call, and a call the planner repeats is a new execution under a new key.

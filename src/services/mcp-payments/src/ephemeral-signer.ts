@@ -59,7 +59,7 @@ export interface EphemeralEvidenceKeys {
    */
   decide: DecisionFn;
   /**
-   * @spec runtime#idempotency (#917) — the claim channel for the same
+   * @spec runtime#idempotency (#917): the claim channel for the same
    * requester `decide` answers to: settlement and reconciliation, never a
    * way to name another PEP or release a claim. Pass to `PepDeps.claims`.
    */

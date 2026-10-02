@@ -1,5 +1,5 @@
 /**
- * @spec runtime#idempotency, authzen#parameter-digest (#917, D223) — the
+ * @spec runtime#idempotency, authzen#parameter-digest (#917, D223): the
  * PDP-owned Exact idempotency claim domain: local, durable, single writer.
  *
  * "Before issuing a permit for a keyed action in the irreversible-action,
@@ -58,7 +58,7 @@ import {
 } from "./runtime-evidence-integrity.js";
 
 /**
- * @spec runtime#classification — the three high-consequence classes, the
+ * @spec runtime#classification: the three high-consequence classes, the
  * only classes whose keyed actions the PDP claims.
  */
 export const CLAIMED_ACTION_CLASSES = ["irreversible_action", "external_commitment", "privileged_administration"] as const;
@@ -80,7 +80,7 @@ export interface ClaimRequester {
 }
 
 /**
- * @spec runtime#idempotency, retransmission condition 6 — the PEP's answer
+ * @spec runtime#idempotency, retransmission condition 6: the PEP's answer
  * from its D28 redemption store for one `evaluation_id`. `unknown` covers a
  * store of another epoch, which cannot speak for redemptions it never held.
  */
@@ -504,7 +504,7 @@ export class IdempotencyClaimDomain {
 
   /**
    * @spec runtime-evidence#execution-evidence-object (owner ruling,
-   * 2026-10-02) — accept the redeeming attempt's PEP-signed Execution
+   * 2026-10-02): accept the redeeming attempt's PEP-signed Execution
    * Evidence as the outcome of the claim its `evaluation_id` names.
    * Authenticated (it verifies under the PEP's published key), bound (only
    * the PEP the permit was issued to settles it), and idempotent on
