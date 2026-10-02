@@ -1538,13 +1538,14 @@ capability, so they are not baseline AAuth Mission Context properties.
   subtracts: each mechanism feeds a single Effective Authority Set,
   every derivation reads it, and none restores authority
   ({{I-D.draft-mcguinness-oauth-mission-status}}). The relation is
-  typed: it is defined where a structured-authority vocabulary defines
-  it (on the OAuth binding, `mission_resource_access` and its Common
-  Constraints, defined by the OAuth binding's Mission Resource Access
-  Profile). Authority carried in a type with no defined subset
-  relation is carried as approved, neither narrowed, delegated, nor
-  projected. Moving authority into expressive policy-language entries
-  weakens this guarantee exactly there, a trade to make knowingly
+  typed: a type's specification defines its subset relation, and an
+  issuer narrows, delegates, or projects an entry only under a
+  capability it declares for that type (for example, on the OAuth
+  binding, `mission_resource_access` and its Common Constraints,
+  {{I-D.draft-mcguinness-oauth-mission-resource-access}}). Without that
+  capability the entry is carried exactly as approved. Moving
+  authority into expressive policy-language entries weakens this
+  guarantee exactly there, a trade to make knowingly
   ({{I-D.draft-mcguinness-mission-security-model}}).
 
 **Revocation is possession-independent**:
