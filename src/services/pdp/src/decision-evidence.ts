@@ -219,24 +219,40 @@ export function newRecordId(prefix: string): string {
 }
 
 /**
- * @spec runtime-evidence#request-digest-worked: the `evaluation_request_digest`
- * fallback: a canonical-object digest of exactly the worked example's summary
- * shape (`action`, `audience`, `mission_id`, `resource`, `subject`, all flat
- * strings). Used whenever `parameter_digest` is absent, so Decision Evidence
- * and Refusal Record always carry one or the other as the runtime profile
- * requires. The runtime profile does not standardize the digested request
- * form; this deployment states exactly this input, matching the spec's own
- * non-normative worked value byte-for-byte (pinned in
+ * @spec authzen#evaluation-request-digest-input: the `evaluation_request_digest`
+ * of a decision request: the canonical-object digest (JCS, `sha-256:` +
+ * base64url, no padding) of the complete request body as submitted,
+ * extension members included, computed before any receiver-side default or
+ * enrichment. Member order does not change it; an omitted member and an
+ * explicit `null` do. Used whenever `parameter_digest` is absent, so Decision
+ * Evidence, and a Refusal Record that follows a request, carry one or the
+ * other as the runtime profile requires.
+ */
+export function evaluationRequestDigest(requestBody: unknown): string {
+  return canonicalDigest(requestBody as JsonValue);
+}
+
+/**
+ * @spec runtime-evidence#request-digest-worked: the pre-request input of a
+ * Refusal Record emitted before any evaluation request exists: `action` and
+ * `audience` always; `mission_id` (the established Mission), `resource`, and
+ * `subject` only when known, never as an empty string. With all five members
+ * present this is the spec's worked input, byte for byte (pinned in
  * `packages/mission-core/test/canonical-digest.test.ts`).
  */
-export function requestDigestFallback(input: {
+export function preRequestDigest(input: {
   action: string;
   audience: string;
-  mission_id: string;
-  resource: string;
-  subject: string;
+  mission_id?: string;
+  resource?: string;
+  subject?: string;
 }): string {
-  return canonicalDigest(input as unknown as JsonValue);
+  const body: Record<string, string> = { action: input.action, audience: input.audience };
+  for (const key of ["mission_id", "resource", "subject"] as const) {
+    const value = input[key];
+    if (typeof value === "string" && value.length > 0) body[key] = value;
+  }
+  return canonicalDigest(body);
 }
 
 /**
@@ -272,6 +288,12 @@ export interface DecisionEvidenceEmissionInput {
   credential?: RuntimeCredentialRef;
   principal_mapping?: RuntimePrincipalMapping;
   parameter_digest?: string;
+  /**
+   * @spec authzen#evaluation-request-digest-input: the digest of the request
+   * as submitted, computed by the caller on receipt (before any default or
+   * enrichment). REQUIRED when `parameter_digest` is absent.
+   */
+  evaluation_request_digest?: string;
   conditions?: RuntimeConditions;
   denial_reason?: string;
   contributing_constraints?: readonly string[];
@@ -352,16 +374,10 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
         throw new Error("Decision Evidence high-consequence permit requires use_limit 1");
       }
       const class_source: RuntimeClassSource = input.action_class !== undefined ? "deployment" : "default";
-      const evaluation_request_digest =
-        input.parameter_digest === undefined
-          ? requestDigestFallback({
-              action: input.action.name,
-              audience: input.audience,
-              mission_id: input.mission.id,
-              resource: input.resource.id,
-              subject: input.subject.id,
-            })
-          : undefined;
+      if (input.parameter_digest === undefined && !(typeof input.evaluation_request_digest === "string" && input.evaluation_request_digest.length > 0)) {
+        throw new Error("Decision Evidence requires the evaluation request digest when parameter_digest is absent");
+      }
+      const evaluation_request_digest = input.parameter_digest === undefined ? input.evaluation_request_digest : undefined;
       const capability_source = runtimeCapabilitySourceOf(input.capability_source);
       const actor = runtimeActorOf(input.actor);
       const credential = runtimeCredentialOf(input.credential);

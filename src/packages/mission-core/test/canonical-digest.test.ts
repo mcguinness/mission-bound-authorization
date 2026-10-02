@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { canonicalDigest } from "../src/index.js";
 
-// @spec draft-mcguinness-mission-runtime-evidence.md#request-digest-worked
-// (lines 946-979 at 41f66a4a): the evaluation_request_digest worked value.
+// @spec draft-mcguinness-mission-runtime-evidence.md#request-digest-worked:
+// the evaluation_request_digest worked value over the pre-request input.
 // Pinned so a `canonicalDigest` regression is caught before it is ever used
 // to sign anything (a buggy canonicalizer round-trips clean against itself,
 // so only an external vector like this one catches drift).
-describe("canonicalDigest: spec vectors (runtime-evidence.md @ 41f66a4a)", () => {
-  it("reproduces the evaluation_request_digest worked value", () => {
+describe("canonicalDigest: spec vectors (runtime-evidence.md, authzen.md)", () => {
+  it("reproduces the pre-request evaluation_request_digest worked value", () => {
     const value = {
       action: "journal-entries.read",
       audience: "https://erp.example.com",
@@ -16,6 +16,34 @@ describe("canonicalDigest: spec vectors (runtime-evidence.md @ 41f66a4a)", () =>
       subject: "user_3p2q8mN1a0kV7tR",
     };
     expect(canonicalDigest(value)).toBe("sha-256:sK12VE_g01AHD2v-O1vsf1Gf_xT_htjX0UN0Oe0dDRU");
+  });
+
+  it("reproduces the AuthZEN evaluation request digest worked value, and keeps an explicit null distinct", () => {
+    // @spec draft-mcguinness-mission-authzen.md#evaluation-request-digest-input:
+    // the request body as submitted, member order irrelevant; a member set to
+    // null is a different input from an omitted one.
+    const body = {
+      subject: { type: "user", id: "user_3p2q8mN1a0kV7tR" },
+      resource: {
+        type: "journal-entry",
+        id: "je_2026Q3_inv_8421",
+        properties: { audience: "https://erp.example.com" },
+      },
+      action: { name: "journal-entries.read" },
+      context: {
+        mission: { id: "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-", issuer: "https://as.example.com" },
+      },
+    };
+    expect(canonicalDigest(body)).toBe("sha-256:v_QKMU8dffVDdoAnQkBenjWgtp5U_ffH5ORwT39iaoo");
+    const reordered = {
+      context: body.context,
+      action: body.action,
+      resource: body.resource,
+      subject: body.subject,
+    };
+    expect(canonicalDigest(reordered)).toBe("sha-256:v_QKMU8dffVDdoAnQkBenjWgtp5U_ffH5ORwT39iaoo");
+    const withNull = { ...body, context: { ...body.context, audience: null } };
+    expect(canonicalDigest(withNull)).toBe("sha-256:c23_EDodWHujjUt6XDnd6zEwKNg8AKGh6fTr4r9tNpE");
   });
 
   it("reproduces the Mission Receipt digest vector over the Execution Evidence stand-in", () => {
