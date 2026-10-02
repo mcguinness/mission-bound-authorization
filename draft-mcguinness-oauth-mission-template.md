@@ -804,9 +804,12 @@ the runtime profile's action classes
 classification.
 
 The issuance profile's fourth high-risk class, a consumption bound
-({{I-D.draft-mcguinness-oauth-mission}}), is not on this list: it is
-the containment mechanism a dispatched instance draws down under, not
-a hazard dispatch amplifies. The template's `approval_basis` already
+({{I-D.draft-mcguinness-oauth-mission}}), is not on this list. Each
+instance draws down its own bound, so dispatch multiplies the bound
+by `max_active` and `dispatch_rate`; the template consent renders the
+bound with those limits, so the Approver consents to that product
+({{I-D.draft-mcguinness-mission-metering}}). The template's
+`approval_basis` already
 carries the trace the issuance profile's approval-authentication floor
 requires for that class, through `consent_principal` and
 `approved_at` ({{dispatch}}); a deployment recording Consent Evidence
@@ -1104,6 +1107,10 @@ IANA action. Following the restraint of the sibling profiles:
   need the Dispatch Policy's selection rule. The selection is recorded
   at commit, kept on retries, and separate from Dispatcher
   authentication and the token's presenter binding (#970).
+- The consumption-bound rationale under Prohibited Classes states
+  that dispatch multiplies an instance's bound by `max_active` and
+  `dispatch_rate`, and that the template consent renders that product
+  under the metering profile.
 - `allowed_dispatchers` lists `client_id` strings, and
   `allowed_recipients` is an object of `subjects` (`iss` and `sub`)
   and `agents` (`client_id`), each checked separately at Dispatch, so

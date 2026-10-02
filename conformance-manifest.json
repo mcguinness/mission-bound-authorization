@@ -19,8 +19,8 @@
     "content_sha256": "71b93e5299f66eb8ab272da1eebe4dda84f925569a3a4812834a297b8a96e613"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "b145c1b303241a6c351083c8a7474ea46fa51ea8",
-    "content_sha256": "9f67aed07fa469580f4d4fce63d989010ab9234d9e788bdf25cfbe6cd7a87eda"
+    "revision": "4358276cbe12c0fe00ca89ff00c11fe98a71a0b1",
+    "content_sha256": "22f1e74a1750688ff0408dbbfac28104d389d17bbac5d312c83d534bfa33dd10"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "daadb45f36cd901f0d646ba0aa942dfec95844ee",
@@ -55,8 +55,8 @@
     "content_sha256": "b5bb6abb6737b1fc3c4571380e89cc4d23e960b849450089f0e38b13462f32d7"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "2ee1e63b01ca99ccfeffb3e8b062025fb771f84e",
-    "content_sha256": "35473d1457186e9561cead9b7f33b37fcf39e8327a342bf1ee55fd2cf4947cb7"
+    "revision": "69280616dcc08e451aaedabde23da19bc45f2523",
+    "content_sha256": "5997b2d884ad790e0c68e6ae43d3e14863480d1c353646dbbe7fc18fd45848cc"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "1ea788e00f84b3804c447cb8bbb143c7b803901d",
@@ -75,8 +75,8 @@
     "content_sha256": "055d460354f9c98d981f74ce661daa606685695bedd42d04a31981158f8389d7"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
-    "content_sha256": "714a2ad1509b2ee9ab6c20aaa287a9c1856e608c3993171ca3b15e4c84eb1052"
+    "revision": "69280616dcc08e451aaedabde23da19bc45f2523",
+    "content_sha256": "11cc4ac0fd0eb83b793581784cbfecc1a96145d6984ba51c0dbe57c0616c95fb"
    },
    "draft-mcguinness-mission-orchestration.md": {
     "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
@@ -87,8 +87,8 @@
     "content_sha256": "0ca8901a662c12afc19ed590685652dfe3604d0907364ccfe819a88d584499f9"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "1ea788e00f84b3804c447cb8bbb143c7b803901d",
-    "content_sha256": "c9ed7e78d3821f796ce8d53f76bb5402bf8d599f83a12f650e6c1a1689dc9c5d"
+    "revision": "367e69e46a32d3ae652feea03036d2e4bfea394c",
+    "content_sha256": "88374fb1cbcaee0d11bc3241f3743618ed542e3e86b18bd9f25d5e8617042962"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "175c6252b65d8fdca0347d3f214dd0282d6615fc",
@@ -25701,6 +25701,50 @@
     }
    ],
    "notes": "#699 exercises the baseline-claim half only: the kernel's missionClaim is asserted to be exactly {id, issuer}. The descriptor half (a companion-minted credential-bound Mission descriptor, for example the MAS Join Assertion) has no minting path in this implementation, which resolves the MAS Join from a propagated reference at the PDP, so it stays unexercised and coverage stays partial."
+  },
+  {
+   "id": "approval-governance.assertion.accountable-kind-human-or-policy",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "assertion-requirements",
+   "text": "The matching assertion's `kind` MUST be `human` or `policy`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an evaluation whose assertion matching the accountable approver is kind service does not satisfy the accountable-approver rule: no record commits and the Mission is not created active, whether or not the service assertion was produced by a model"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Makes explicit what the OAuth binding's adjudication kind enum (human, policy) implies when governance_record is true. A model-backed judge enters as a service assertion: a contributing governance input, never the accountable approver."
+  },
+  {
+   "id": "approval-governance.record.service-authority-logic-version",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "record",
+   "text": "For a `service` assertion, the identifier and version of the logic that produced the decision",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a service assertion's authority names the identifier and version of the logic that produced its decision, and the model's identifier and version where a model produced it"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Defines authority for the service kind, previously defined only for human and policy assertions."
   },
   {
    "id": "child-delegation.carryover.no-progressive-drawdown",
