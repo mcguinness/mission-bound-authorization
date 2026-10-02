@@ -1207,8 +1207,10 @@ children, so the Parent Mission's approval MUST render the subtree
 figures for that entry.
 
 The subtree figures are distinct values, never multiplied into one
-total; a figure the entry or the deployment does not set is rendered
-as unlimited:
+total. Each is rendered at its effective value: the value the entry
+or the deployment sets, otherwise its default (`max_child_depth`
+defaults to 1, {{fanout}}). Only a figure with neither a set value nor
+a default is rendered as unlimited:
 
 - `max_children`, stated as a limit on concurrently non-terminal
   children ({{fanout-accounting}}), not on children created over the
