@@ -226,6 +226,50 @@ Mission-state integration:
 
 # The Issuance Join {#issuance-join}
 
+## Protocol Flow {#protocol-flow}
+
+The following figure shows the issuance join between the client, the
+MAS, and a consuming AS:
+
+~~~
+  Client                     MAS                       Consuming AS
+    |                         |                              |
+    |-- (A) grant request --->|                              |
+    |<-- (B) grant -----------|                              |
+    |                         |                              |
+    |-- (C) token request with the grant ------------------->|
+    |                         |<-- (D) Mission Status -------|
+    |                         |--- state and Effective ----->|
+    |                         |    Authority Set             |
+    |<-- (E) access token, refresh token --------------------|
+    |                         |                              |
+    |-- (F) refresh request -------------------------------->|
+    |                         |<-- (D) repeated -------------|
+    |<-- (E) new tokens -------------------------------------|
+~~~
+
+(A) The client requests a grant from the MAS for an active Mission,
+    naming the consuming AS as the audience ({{minting}}).
+
+(B) The MAS returns a grant bound to that AS and to the client, and
+    carrying a subset of the Mission's current authority ({{grant}}).
+
+(C) The client presents the grant at the consuming AS's token
+    endpoint as a JWT authorization grant ({{redemption}}).
+
+(D) A consuming AS with a Mission-state integration resolves the
+    Mission's current state and Effective Authority Set
+    ({{effective-set-projection}}).
+
+(E) The consuming AS issues Mission-bound tokens within the grant's
+    authority and that set ({{token-issuance}}).
+
+(F) Each refresh repeats (D) before (E). A consuming AS without a
+    Mission-state integration skips (D) and issues no refresh token
+    ({{no-state-integration}}).
+
+## Trust {#trust}
+
 Trust is pre-established and bilateral. A consuming AS accepts
 grants only from Mission Issuers its local policy names, resolving
 their signing keys through the MAS's published key material (its
@@ -245,6 +289,8 @@ the grant, refresh, and its ordinary token-plane obligations. An
 auditor attributes what was approved to the MAS record and what was
 issued to the consuming AS's log, joined by the Mission reference
 the grant carries.
+
+## Issued Tokens {#issued-tokens}
 
 Tokens issued under this profile are Mission-bound in the issuance profile's
 sense: they carry the `mission` claim, their authority is a subset
@@ -280,7 +326,7 @@ Claims:
 `sub`:
 : REQUIRED. The Mission's recorded Subject identifier
   (`subject.sub`), interpreted at the consuming AS under the
-  deployment's mapping policy ({{issuance-join}}).
+  deployment's mapping policy ({{trust}}).
 
 `aud`:
 : REQUIRED. The consuming AS's issuer identifier
@@ -387,7 +433,7 @@ TLS, authenticated as {{minting-rules}} requires:
 `audience`:
 : REQUIRED. A string. The consuming AS the grant is for, becoming the
   grant's `aud`. The MAS mints only for audiences its configuration
-  names ({{issuance-join}}).
+  names ({{trust}}).
 
 `authorization_details`:
 : OPTIONAL. An array. A narrower subset the requester asks the grant to
@@ -552,7 +598,7 @@ any check fails:
    request proves possession of the `cnf` key; and whenever `cnf` is
    present, the request proves possession of that key ({{grant}});
 5. `sub` maps to a local account under the deployment's mapping
-   policy ({{issuance-join}}), and the grant's `authorization_details`
+   policy ({{trust}}), and the grant's `authorization_details`
    map to resources this AS serves.
 
 ## Token Issuance {#token-issuance}
@@ -813,7 +859,7 @@ where an authenticated
 resource owner exists to bind. The AS MUST bind the resource owner
 authenticated at the authorization endpoint to the grant's `sub`: it
 proceeds only where the authenticated user is the grant's Subject
-under the deployment's mapping policy ({{issuance-join}}). The AS
+under the deployment's mapping policy ({{trust}}). The AS
 MUST refuse when a different user authenticates, so the grant cannot
 mint tokens for the wrong resource owner.
 
