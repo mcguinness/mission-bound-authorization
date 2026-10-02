@@ -93,6 +93,22 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-expansion:
+    title: "Mission Expansion for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-progressive:
+    title: "Mission Progressive Authorization for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -480,6 +496,21 @@ state and MUST NOT revert: a later delivery presenting any valid
 condition against an already-discharged entry is acknowledged
 `already_discharged` ({{discharge-result}}) and does not restore the
 entry's authority.
+
+A committed discharge also places a discharge restriction on the
+Mission's expansion chain, the successors linked to it through
+`predecessor` ({{I-D.draft-mcguinness-oauth-mission-expansion}}). The
+Mission Issuer MUST retain each restriction, with the discharged entry
+and the condition that discharged it, across every later successor in
+the chain. A restriction clears only for authority that a fresh human
+approval explicitly restores with the discharged entry and its
+condition disclosed; any authority that approval does not restore
+stays restricted. An intervening successor, an approval of unrelated
+authority, and a ceiling renewal under the progressive authorization
+profile ({{I-D.draft-mcguinness-oauth-mission-progressive}}) do not
+clear it. Restoration grants authority through the successor's own
+approval: the discharge never reverts, and the predecessor's entry
+stays discharged.
 
 A committed discharge is a committed metadata-only change for the
 purposes of the state version
