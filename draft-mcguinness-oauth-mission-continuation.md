@@ -596,3 +596,8 @@ constrains their use and introduces none of its own.
   the issuance profile's `invalid_grant`, as the issuance profile
   permits for a Token Exchange profile that assigns its own code. The
   `mission_error` diagnostic requirements are unchanged (#921).
+- The Identity Continuation Transport states how Mission delegation
+  depth is counted there: over the hop's IdP-held ancestry plus the
+  current actor, merging only consecutive equal actors, from the
+  approved client at depth 0, with no reset, and with nothing issued
+  when the ancestry is incomplete (#960).
