@@ -298,10 +298,14 @@ Claims:
   Authority Set, scoped to the resources this AS serves.
 
 `cnf`:
-: OPTIONAL. A proof-of-possession key binding {{RFC7800}} for
-  redemption; when present, the consuming AS MUST require proof of
-  possession of the bound key at redemption, demonstrated with DPoP
-  {{RFC9449}} or mutual TLS {{RFC8705}} as the deployment configures.
+: OPTIONAL. A confirmation claim {{RFC7800}} binding redemption to a
+  key: the `jkt` member for OAuth 2.0 Demonstrating Proof of
+  Possession (DPoP, {{Section 6.1 of RFC9449}}), or the `x5t#S256`
+  member for mutual TLS ({{Section 3.1 of RFC8705}}). When it is
+  present, the consuming AS MUST require proof of possession of that
+  key at redemption: a DPoP proof in the token request whose public
+  key has the `jkt` thumbprint, or a client certificate on the TLS
+  connection whose hash is `x5t#S256`.
 
 An illustrative decoded grant (this Mission and its anchors are not
 the one from the issuance profile's walkthrough):
