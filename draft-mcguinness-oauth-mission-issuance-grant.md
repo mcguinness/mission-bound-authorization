@@ -261,11 +261,11 @@ unchanged and continue to compose through the Mission Join.
 A Mission Issuance Grant is a JWT {{RFC7519}} signed as a JWS
 {{RFC7515}} by the Mission Issuer. Its JOSE header MUST carry `typ`
 `mission-issuance-grant+jwt` ({{iana}}), `alg`, and a `kid` that
-resolves in the Mission Issuer's published key material. A consumer
-MUST reject as a Mission Issuance Grant any JWT whose `typ` differs;
-in particular a Mission Mandate
-({{I-D.draft-mcguinness-mission-mandate}}) is evidence, authorizes
-nothing, and MUST NOT redeem.
+resolves in the Mission Issuer's published key material. A JWT with
+any other `typ`, a Mission Mandate
+({{I-D.draft-mcguinness-mission-mandate}}) in particular, is not a
+Mission Issuance Grant and is refused at redemption
+({{grant-validation}}).
 
 Claims:
 
@@ -278,8 +278,8 @@ Claims:
   deployment's mapping policy ({{issuance-join}}).
 
 `aud`:
-: REQUIRED. The consuming AS's issuer identifier. A consuming AS
-  MUST reject a grant whose `aud` does not name it.
+: REQUIRED. The consuming AS's issuer identifier
+  ({{grant-validation}}).
 
 `iat`, `exp`:
 : REQUIRED. `exp` MUST NOT be more than 300 seconds after `iat`.
@@ -822,8 +822,9 @@ The authenticated client MUST still be the grant's `client_id`
 # Relationship to Other Artifacts {#relationships}
 
 **The Mandate is evidence; this grant authorizes.** Both are
-issuer-signed statements about a Mission; the `typ` values keep them
-apart mechanically, and a verifier of either MUST reject the other
+issuer-signed statements about a Mission, and their `typ` values keep
+them apart: the token endpoint refuses a Mandate
+({{grant-validation}}), and a Mandate verifier refuses a grant
 ({{I-D.draft-mcguinness-mission-mandate}}).
 
 **The cross-domain grant is this shape across a trust boundary.**
@@ -941,11 +942,12 @@ its local
 policy MAY narrow further. The AS remains free to refuse any grant
 its policy distrusts; nothing obliges issuance.
 
-**Type confusion.** Three issuer-signed JWT artifacts about Missions
-now exist: the Mandate (evidence), the cross-domain grant (foreign
-domain), and this grant (same estate). The `typ` discipline is the
-defense; every consumer checks it first, and none accepts another's
-type.
+**Type confusion.** Three issuer-signed JWT artifacts describe
+Missions: the Mandate (evidence), the cross-domain grant (foreign
+domain), and this grant (same estate). Explicit typing with mutually
+exclusive validation rules ({{Section 3.11 of RFC8725}} and
+{{Section 3.12 of RFC8725}}) is the defense: every consumer checks
+`typ` first, and none accepts another's type.
 
 **Revocation latency.** New grants stop at the MAS `active` gate at
 the moment of state commit. Outstanding tokens end at the earlier of
