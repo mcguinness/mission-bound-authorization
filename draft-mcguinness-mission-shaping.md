@@ -315,8 +315,9 @@ Shaping ceiling:
   ({{I-D.draft-mcguinness-oauth-mission-template}}).
 
 Partial proposal:
-: A shaped proposal that omits authority the task needs, emitted only
-  under the conditions of {{authority-ceiling}}.
+: A shaped proposal that omits authority the task needs. It is emitted
+  only with the disclosures that {{authority-ceiling}} and
+  {{ambiguity}} require.
 
 Resolution basis:
 : The ground on which the shaper admits a resource or action into a
@@ -690,6 +691,12 @@ For material ambiguity, the shaper SHOULD do one of the following:
 2. emit a narrower proposal that excludes the ambiguous authority and
    record the exclusion in Shaping Evidence; or
 3. refuse with a reason ({{refusal}}).
+
+When the excluded authority is necessary for the task, the narrower
+proposal is a partial proposal: Shaping Evidence MUST record the
+excluded authority, and the outcome MUST indicate that the proposal
+may not satisfy the task, as under a shaping ceiling
+({{authority-ceiling}}).
 
 When a shaper resolves an ambiguity in the broadening direction,
 Shaping Evidence MUST record the resolution and, where deployment
