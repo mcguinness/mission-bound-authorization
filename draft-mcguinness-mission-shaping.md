@@ -503,7 +503,8 @@ appear in the Intent; it belongs in the Authority Proposal
   ({{prompt-injection}}).
 
 `goal_lang`:
-: The language tag of `goal`, when the shaper knows it.
+: The language tag of the Intent's human-readable members (`goal`,
+  `task_bounds`, and `success_criteria`), when the shaper knows it.
 
 `target_resources`:
 : The resources, datasets, tools, or domains the request referenced,
