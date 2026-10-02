@@ -2690,7 +2690,7 @@ residual the transition does not reach.
 | Baseline Issuance | OAuth binding, structured-authority | Baseline, a new-derivation kill ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Containment Properties") | New derivation, delegation, and cross-domain projection minted after the transition ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Derivation Gating") | Tokens already issued, to `exp`, and a consequential read under the token-lifetime default, the same bound ({{I-D.draft-mcguinness-mission-runtime}}); pre-transition projection grants (note 1) |
 | Baseline Issuance | Standalone MAS, no credential-carried authority | Neither; the runtime layer is the only cutoff, and it is absent at this rung | Nothing at the resource; the transition commits and is visible on the Mission Status Response and the introspection projection ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Visibility") | Every action, to the resource's own bound, if any (note 2) |
 | Runtime-Enforced | Any binding, a class using a containment-aware state source within its published bound (note 3) | Runtime-Enforced for that class ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Containment Properties"); Baseline only for the classes in note 4 | The contained capability, denied at the class's next gated action once the source reflects the overlay, within the staleness bound plus the permit window plus the class's execution bound ({{I-D.draft-mcguinness-mission-runtime}}) | Paths no action-time gate reaches: token lifetime where issuance is gated, otherwise no bound |
-| Baseline Issuance | MAS as estate control plane, issuance join at each consuming AS | Baseline, from Derivation Gating at the Mission Issuer ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Derivation Gating"); the consuming AS's checks are not containment-aware on their own (note 5) | New grant minting only: the Mission Issuer's Derivation Gating evaluates the Effective Authority Set, so a grant minted after the transition excludes contained authority ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Derivation Gating") | An outstanding grant redeems once, to its own maximum lifetime of 300 seconds, at any consuming AS whose redemption check is active-only rather than containment-aware ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}, Section "Redemption") |
+| Baseline Issuance | MAS as estate control plane, issuance join at each consuming AS | Baseline, from Derivation Gating at the Mission Issuer ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Derivation Gating") and, at a consuming AS with a Mission-state integration, from projecting each redemption and refresh through the Effective Authority Set (note 5) | New grant minting: the Mission Issuer's Derivation Gating evaluates the Effective Authority Set, so a grant minted after the transition excludes contained authority ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Derivation Gating"); and, at a consuming AS with a Mission-state integration, each redemption and refresh once its state source reflects the transition ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}, Section "Effective Authority Set Projection") | An outstanding grant redeems once, within its 300-second lifetime, at a consuming AS without a Mission-state integration, which checks no Mission state at redemption and issues no refresh tokens; tokens already issued run to their own `exp` ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}, Section "Redemption") |
 | Runtime-Enforced | OAuth binding with offline attenuation, a consumer whose check is active-state only (note 6) | Baseline ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Containment Properties"): a contained Mission stays `active` | New attenuation roots, which exclude contained authority ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Derivation Gating") | Roots minted before the transition, to their own lifetime (note 6) |
 
 Notes:
@@ -2718,14 +2718,18 @@ Notes:
    Baseline property, not the Runtime-Enforced one
    ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section
    "Containment Properties").
-5. Under the MAS as estate control plane, the consuming AS's redemption
-   and refresh checks are the issuance profile's ordinary `active` gate,
-   and a contained Mission stays `active`. Those checks are therefore
-   not containment-aware on their own, unless the consuming AS
-   separately retrieves and applies the containment overlay or current
-   Effective Authority Set
+5. Under the MAS as estate control plane, a consuming AS either has a
+   Mission-state integration or has none
    ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}, Section
-   "Redemption").
+   "Effective Authority Set Projection"). One that has it projects
+   every redemption and refresh through the Mission's current
+   Effective Authority Set, so its issuance excludes contained
+   authority within its published staleness bound; a lifecycle-state
+   check alone, under which a contained Mission still reads `active`,
+   is not such an integration. One that has none checks no Mission
+   state at redemption, issues no refresh tokens, and relies on the
+   Mission Issuer's minting gate, so a grant minted before the
+   transition can still redeem within its 300-second lifetime.
 6. Under the OAuth binding with offline attenuation, a consumer accepts
    a chain only under runtime enforcement, with a fresh active-state
    check on every presentation regardless of action class
@@ -3690,6 +3694,12 @@ bound profiled by `aauth-mission-expiry`.
 
 \[\[ To be removed from the final specification ]]
 
+- The issuance-join row of the composed kill-switch table and its note
+  follow the Mission Issuance Grant's two consuming-AS modes: with a
+  Mission-state integration, redemption and refresh are projected
+  through the Effective Authority Set; without one, nothing is checked
+  at redemption and no refresh tokens are issued. The earlier
+  "active-only" redemption check no longer exists there.
 - AAuth alignment, with no change to any profile's requirements. The
   AAuth and R3 references cite the published revisions -11 and -00;
   the Mission Reference is the approving PS and `s256`; the access
