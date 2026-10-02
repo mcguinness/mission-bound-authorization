@@ -612,22 +612,25 @@ no `authorization_details` at all.
 
 ### Issued Authority {#issued-authority}
 
-Where the Mission is `active`, the consuming AS
-projects issued authority through the current Effective Authority
-Set: the intersection of the grant's `authorization_details` (on
-refresh, the refresh family's own ceiling), any narrower authority the
-client requests at the token endpoint, that Effective Authority Set,
-and the consuming AS's own policy, which narrows only, per the subset
-rule above. A partial intersection issues only the remainder. This
+Where the Mission is `active`, the consuming AS issues the
+intersection of:
+
+1. the grant's `authorization_details`, or on refresh the refresh
+   family's own ceiling ({{refresh}});
+2. the current Effective Authority Set;
+3. the consuming AS's own policy, which narrows only, per the subset
+   rule above; and
+4. any narrower authority the client requests at the token endpoint.
+
+A partial intersection issues only the remainder. This
 projection precedes scope projection above: an AS that models
 authority as `scope` maps the narrowed remainder, never the grant's
 original set.
 
-An empty intersection is refused by its cause. Where the underlying
-authorization is exhausted, that is, where the grant's own authority
-intersected with the Effective Authority Set and the AS's policy is
-already empty before the request's own narrowing term, the refusal is
-`invalid_grant` ({{redemption-errors}}); it MAY carry Containment's
+An empty intersection is refused by its cause. Where items 1 to 3
+already intersect to nothing, the authorization itself is exhausted
+and the refusal is `invalid_grant` ({{redemption-errors}}); it MAY
+carry Containment's
 `authority_contained` denial reason where Containment causally removed
 the authority, and a collapse from any other cause MUST NOT be
 reported as containment merely because Containment is composed
