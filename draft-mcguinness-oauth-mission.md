@@ -2207,6 +2207,28 @@ The `adjudication` member, where present, follows the basis:
   companion profile MUST NOT flatten a policy's or an Approval
   Governance Record's assertion set into a single principal member.
 
+**Activation policy commitment.** Where a standing-consent basis lets
+a separate policy artifact adjudicate activation (a dispatch,
+drawdown, or child-creation policy, rather than the consented object
+itself), the object the accountable human consented to MUST carry
+that policy as an activation policy reference: an object of `id` (a
+string), `version` (a string), and `digest`. The `digest` is an
+integrity anchor ({{integrity-anchors}}) whose `typ` is
+`mission-activation-policy`, whose `iss` is the activating issuer, and
+whose `value` is an object of `content_type`, the media type of the
+policy snapshot, and `content`, the base64url, no-padding
+{{RFC4648}} encoding of the snapshot's exact bytes. Before each
+activation, the activating issuer MUST compute `digest` over the exact
+snapshot it evaluates, and MUST NOT activate the instance under that
+policy when the result differs; the companion profile fixes what
+follows, as it does for an activation the policy does not authorize.
+The issuer MUST retain each snapshot's bytes and media type for the
+audit horizon ({{mission-record}}) of every Mission it activates
+under that snapshot, so an auditor can reproduce the digest. Where no
+separate policy artifact exists, as when child creation is
+adjudicated against the approved delegation entry itself, this rule
+does not apply.
+
 **Standing-consent recency.** A deployment can declare a maximum
 standing-consent age (a recency ceiling), overall or per
 consequence class. Where a declared ceiling applies, the activating
@@ -5799,6 +5821,11 @@ Cross-Domain:
 
 -01
 
+- Standing-Consent Bases defines the activation policy reference: a
+  standing-consent basis whose activation a separate policy artifact
+  adjudicates commits that policy's content as `{id, version,
+  digest}`, with the `mission-activation-policy` digest, and the
+  activating issuer verifies it before each activation.
 - Separated exact `target_resources` membership, checked for the
   Authority Set and for a proposal at submission, from later token
   narrowing under the subset rule. Made the per-capability
