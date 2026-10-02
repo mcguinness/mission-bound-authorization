@@ -1151,8 +1151,8 @@ fabricated constraints, inconsistent paraphrase, and sensitivity to
 small input perturbations), and SHOULD record the model identifier and
 version in Shaping Evidence so that failures can be attributed. The
 same bound holds at approval: a model's judgment enters adjudication
-only as a recorded input to a deterministic policy, which can refuse
-or narrow and never grant or widen
+only as a recorded input to a deterministic policy, and that input
+can refuse or narrow, never grant or widen
 ({{I-D.draft-mcguinness-oauth-mission}}).
 
 ## Shaper Compromise Does Not Directly Grant Authority {#shaper-compromise}
