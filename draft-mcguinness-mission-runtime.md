@@ -1122,8 +1122,9 @@ A record MUST contain:
 - the decision or refusal result and, on refusal, the failure condition
   from {{failure-modes}};
 - the request time (RFC 3339 {{RFC3339}}); and
-- the `parameter_digest` for parameter-bound classes, or a
-  privacy-preserving digest of the evaluation request otherwise.
+- the `parameter_digest` for parameter-bound classes, or a digest of
+  the evaluation request otherwise, over the input the runtime evidence
+  companion defines ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 A record MUST also contain the following fields when they are available
 and trusted for the refusal or decision path:
