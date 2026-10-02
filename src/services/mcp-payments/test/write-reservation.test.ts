@@ -26,7 +26,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { DurableStoreError, openDurableStore } from "@mission/store";
-import type { Fga, MissionView } from "@mission/pdp";
+import { type Fga, type MissionView, RUNTIME_POSTURE, reversibleWritePermitMaxSeconds, type RuntimePosture } from "@mission/pdp";
 import {
   CANONICAL_RESOURCE,
   Connectors,
@@ -107,7 +107,23 @@ class HeldEvidenceStore extends EvidenceStore {
   }
 }
 
-function harness(o: { file?: string } = {}) {
+/**
+ * The shipped statement with a 30 s permit maximum and a 60 s retention for
+ * both keyed writes: a valid configuration (retention longer than the
+ * permit), the one the #1028 review reproduced against.
+ */
+function shortWindowStatement(): RuntimePosture {
+  const statement = structuredClone(RUNTIME_POSTURE) as unknown as {
+    extensions: { reversible_write_idempotency: Array<Record<string, unknown>> };
+  };
+  for (const d of statement.extensions.reversible_write_idempotency) {
+    d.permit_validity_max_seconds = 30;
+    d.retention_horizon = "PT60S";
+  }
+  return statement as unknown as RuntimePosture;
+}
+
+function harness(o: { file?: string; statement?: RuntimePosture } = {}) {
   let nowMs = BASE_MS;
   const now = () => new Date(nowMs);
   const payments = new PaymentsStore();
@@ -128,8 +144,17 @@ function harness(o: { file?: string } = {}) {
   const engine = new TransactionEngine("epoch-918", now);
   const file = o.file ?? tempFile();
   const store = openWriteReservationStore({ file, owner: OWNER, now });
+  const statement = o.statement;
   const pep = new Pep({
-    decide: KEYS.decide,
+    // A non-shipped statement reaches the PDP the way the shipped one does:
+    // as its declared permit maximum per keyed operation.
+    decide: statement
+      ? (req, options) =>
+          KEYS.decide(req, {
+            ...options,
+            reversibleWritePermitMaxSeconds: (c, a) => reversibleWritePermitMaxSeconds(statement, c, a),
+          } as typeof options)
+      : KEYS.decide,
     payments,
     evidence,
     fga: alwaysAllowFga,
@@ -147,6 +172,7 @@ function harness(o: { file?: string } = {}) {
     issuer: ISSUER,
     transaction: { engine, connectors, evidence },
     writeReservations: store,
+    ...(statement ? { enforcementScopeStatement: statement } : {}),
   });
   const executions = (missionId = "msn_918a") =>
     evidence.forMission(missionId).filter((e): e is ExecutionEvidence => e.kind === "execution");
@@ -372,6 +398,29 @@ describe("the PEP's reservation and retention for keyed reversible writes (@spec
       const heldConflict = await schedule(h, k);
       expect(heldConflict).toEqual({ ok: false, refusal_reason: "permit_expired" });
       expect(h.store.schedules()).toHaveLength(1);
+      h.store.close();
+    });
+  });
+
+  describe("the permit never outlives its reservation's retention (@spec runtime#permit-binding, #1028 review)", () => {
+    it("with a 30 s permit maximum and a 60 s retention, the original permit replayed after the record expired is refused permit_expired and nothing executes", async () => {
+      const h = harness({ statement: shortWindowStatement() });
+      const issuedAtMs = BASE_MS;
+      const original = await h.pep.enforce("schedule_payment", { invoice_id: "inv-1", idempotency_key: key() }, TOKEN_A);
+      const validUntil = (original.decision?.context.conditions as { valid_until: string }).valid_until;
+      const first = await h.server.admitReversibleWrite("schedule_payment", TOKEN_A, original);
+      expect(first.ok, JSON.stringify(first)).toBe(true);
+      expect((await cancel(h, key())).ok).toBe(true);
+
+      // Past the 60 s retention, the schedule's record is outside the
+      // guarantee; the permit it was made under expired at 30 s.
+      h.advance(61_000);
+      const replayed = await h.server.admitReversibleWrite("schedule_payment", TOKEN_A, original);
+      expect(replayed).toEqual({ ok: false, refusal_reason: "permit_expired" });
+      expect(h.store.schedules().map((s) => s.state)).toEqual(["cancelled"]);
+      expect(h.connectors.ledgerEntries()).toHaveLength(0);
+      // Because the PDP issued it under the published 30 s maximum.
+      expect(Date.parse(validUntil) - issuedAtMs).toBeLessThanOrEqual(30_000);
       h.store.close();
     });
   });
