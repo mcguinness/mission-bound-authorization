@@ -468,14 +468,17 @@ resolution basis, which is one of the following:
 A model-generated capability name with none of these bases is
 unresolved ({{refusal}}).
 
-For each resolved capability, Shaping Evidence SHOULD record:
+For each resolved capability, Shaping Evidence SHOULD record the
+following, as a `capability_resolutions` entry ({{shaping-evidence}}):
 
-- what was requested;
-- what it resolved to;
-- the basis;
-- the source consulted (for `catalog` and `capability_projection`); and
-- where available, a digest over the source representation, so that
-  approval and runtime enforcement can detect drift.
+- what was requested (`requested`);
+- what it resolved to (`resolved`);
+- the basis (`basis`);
+- the source consulted, for `catalog` and `capability_projection`
+  (`source_uri`); and
+- where available, a digest over the source representation
+  (`source_digest`), so that approval and runtime enforcement can
+  detect drift.
 
 A confidence value, if recorded, is audit evidence only, and a party
 that receives it MUST NOT treat it as authority.
@@ -674,9 +677,9 @@ Set is the shaping ceiling. The child-delegation profile refuses a
 child that is not a strict subset of its parent, so a proposal that
 exceeds the parent cannot be approved; the shaper instead requests
 clarification, refuses, or emits a partial proposal
-({{authority-ceiling}}). Shaping Evidence for a
-child proposal SHOULD record the parent Mission identifier and the
-parent-derived ceiling it shaped under.
+({{authority-ceiling}}). Shaping Evidence for a child proposal SHOULD
+record the parent Mission identifier (`parent_mission`) and the
+parent-derived ceiling it shaped under (`shaping_ceiling`).
 
 # Ambiguity Handling {#ambiguity}
 
@@ -786,18 +789,48 @@ this document imports normatively
 ({{I-D.draft-mcguinness-mission-substrate}}, Section "Default
 Commitment Construction").
 
-The following members are RECOMMENDED content:
+The following members are RECOMMENDED content. They are not a required
+schema: a deployment can omit a member that does not apply and can add
+members of its own. Unless its entry says otherwise, a member applies
+to every outcome.
 
 `shaper_id`:
-: A string identifying the shaper.
+: String. Identifies the shaper.
 
 `shaper_version`:
-: A string identifying the shaper implementation, model, policy
-  bundle, or workflow version.
+: String. Identifies the shaper implementation, model, policy bundle,
+  or workflow version.
+
+`outcome`:
+: String. The outcome of this shaping pass: `proposal`,
+  `partial_proposal`, `clarification`, or `refusal`
+  ({{processing-model}}).
+
+`refusal_reason`:
+: String. A refusal label ({{refusal}}). Present when `outcome` is
+  `refusal`.
+
+`proposed_intent`:
+: Object. The Mission Intent proposal exactly as emitted, which ties
+  the evidence to the proposal it describes. Present when `outcome` is
+  `proposal` or `partial_proposal`.
+
+`proposed_authorization_details`:
+: Array. The Authority Proposal exactly as emitted. Present when the
+  shaper produced one.
+
+`shaping_ceiling`:
+: Array. The shaping ceiling applied ({{authority-ceiling}}),
+  including one derived from a Parent Mission. Present when a ceiling
+  was supplied.
+
+`parent_mission`:
+: String. The Parent Mission identifier. Present for a Child Mission
+  proposal ({{delegation}}).
 
 `input_digest`:
-: A digest over the shaping request, in the integrity-anchor form of
-  the issuance profile ({{I-D.draft-mcguinness-oauth-mission}},
+: String. A digest over the shaping request, in the integrity-anchor
+  form of the issuance profile ({{I-D.draft-mcguinness-oauth-mission}},
   Section "Integrity Anchors"), computed over the JCS canonical bytes
   of the request after removing the fields that the named exclusion
   ruleset marks as not retained. To make the digest recomputable by a
@@ -806,41 +839,75 @@ The following members are RECOMMENDED content:
   recorded cannot be reproduced.
 
 `input_exclusion_ruleset`:
-: An identifier, with version, of the exclusion ruleset applied to
-  `input_digest`. An auditor recomputes the digest over the retained
-  canonical input under that ruleset.
+: String. An identifier, with version, of the exclusion ruleset
+  applied to `input_digest`. An auditor recomputes the digest over the
+  retained canonical input under that ruleset.
 
 `user_supplied_facts`:
-: Facts copied from the request.
+: Array of strings. Facts copied from the request.
 
 `inferred_facts`:
-: Facts the shaper inferred, each with its supporting evidence and
-  whether human confirmation is required.
+: Array of objects, one per fact the shaper inferred, with the members
+  `fact` (string), `evidence` (string, the supporting evidence), and
+  `confirmation_required` (boolean, whether a human must confirm it).
 
 `policy_decisions`:
-: Policy rules applied during shaping.
+: Array of strings. Identifiers of the policy rules applied during
+  shaping.
 
 `capability_resolutions`:
-: Each resource or action and its resolution basis
-  ({{capability-resolution}}).
+: Array of objects, one per resource or action, with the members
+  `requested` (string), `resolved` (string), `basis` (string, a
+  resolution basis of {{capability-resolution}}), `source_uri`
+  (string, the source consulted, for `catalog` and
+  `capability_projection`), `source_digest` (string, defined below),
+  and optionally `confidence` (number, audit evidence only).
 
 `entry_rationales`:
-: For each proposed resource or action (`applies_to`), the
-  user-supplied or inferred fact that motivated its inclusion
-  (`basis`). A consent surface draws on this record to answer why the
-  task needs an entry (Disclosure Interrogation,
+: Array of objects, one per proposed resource or action, with the
+  members `applies_to` (object naming the `resource` and `action`) and
+  `basis` (string, the user-supplied or inferred fact that motivated
+  its inclusion). A consent surface draws on this record to answer why
+  the task needs an entry (Disclosure Interrogation,
   {{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
 
 `ambiguities`:
-: Material ambiguities and how each was handled.
+: Array of objects, one per material ambiguity, with the members
+  `description` (string) and `handling` (string: `clarified`,
+  `narrowed`, `refused`, or `resolved_by_policy`), plus `policy_rule`
+  (string) when `handling` is `resolved_by_policy` ({{ambiguity}}).
 
 `excluded_authority`:
-: Plausible authority the shaper deliberately excluded.
+: Array of objects in the form of Authority Proposal entries.
+  Plausible authority the shaper deliberately excluded.
+
+`refusal_input`:
+: Object. For a re-proposal, the refusal signal that motivated it
+  ({{re-shaping}}): the `error` code and any `error_description`, or
+  the `mission_rejected_scope` and
+  `mission_rejected_authorization_details` values of a required
+  revision.
+
+`predecessor_evidence`:
+: String. For a re-proposal, the `shaping_evidence_hash` of the
+  predecessor proposal's evidence, or a deployment identifier for that
+  evidence when no hash was computed.
 
 `model_trace`:
-: Model prompts, outputs, or tool calls used during shaping. When
-  retained, it MUST be treated as sensitive audit data
-  ({{privacy-considerations}}). It MUST NOT be rendered as authority.
+: Deployment-defined. Model prompts, outputs, or tool calls used
+  during shaping. When retained, it MUST be treated as sensitive audit
+  data ({{privacy-considerations}}). It MUST NOT be rendered as
+  authority.
+
+A `source_digest` is computed over the source representation the
+shaper consulted: the JCS {{RFC8785}} canonical bytes when that
+representation is a JSON document, and otherwise the bytes as
+retrieved (for an HTTP retrieval, the response content after any
+content coding is removed). It is encoded as an integrity anchor is:
+`sha-256:` followed by the base64url encoding, without padding, of the
+SHA-256 digest ({{I-D.draft-mcguinness-oauth-mission}}, Section
+"Integrity Anchors"). Approval and runtime enforcement detect drift by
+comparing it with a digest of the current representation.
 
 {{example}} shows Shaping Evidence for a complete example.
 
@@ -982,9 +1049,10 @@ Required revision:
 Re-shaping is shaping. A re-proposal passes through the full
 processing model ({{processing-model}}) and is a fresh proposal with
 fresh Shaping Evidence. Evidence for a re-proposal SHOULD record the
-refusal input that motivated it (the error, the resolution, or the
-rejected dimensions) and MAY reference the predecessor proposal's
-evidence, so that an auditor can read the narrowing chain end to end.
+refusal input that motivated it (`refusal_input`: the error, the
+resolution, or the rejected dimensions) and MAY reference the
+predecessor proposal's evidence (`predecessor_evidence`), so that an
+auditor can read the narrowing chain end to end.
 
 A re-proposal after an authority refusal (a policy `access_denied`, a
 deferred denial, or a required revision) narrows. A refusal is a
@@ -1270,12 +1338,14 @@ its Common Constraints
 ~~~
 
 The following example shows the Shaping Evidence the shaper records
-for this proposal:
+for this proposal. For brevity, it omits `proposed_intent` and
+`proposed_authorization_details`, which repeat the two objects above:
 
 ~~~ json
 {
   "shaper_id": "mission-shaper.example.com",
   "shaper_version": "policy-bundle-2026-06-30",
+  "outcome": "proposal",
   "input_digest":
     "sha-256:InP9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4aB7cDe",
   "input_exclusion_ruleset": "standard-2026-06",
@@ -1296,13 +1366,17 @@ for this proposal:
       "requested": "read invoices",
       "resolved": "invoices.read",
       "basis": "catalog",
-      "source_uri": "https://erp.example.com/.well-known/tools"
+      "source_uri": "https://erp.example.com/.well-known/tools",
+      "source_digest":
+        "sha-256:rK6XgVWUx2qYxH37rHShEle6e_sRJcIkdrlaEMoNs_I"
     },
     {
       "requested": "post adjustments",
       "resolved": "journal-entries.write",
       "basis": "catalog",
-      "source_uri": "https://erp.example.com/.well-known/tools"
+      "source_uri": "https://erp.example.com/.well-known/tools",
+      "source_digest":
+        "sha-256:rK6XgVWUx2qYxH37rHShEle6e_sRJcIkdrlaEMoNs_I"
     }
   ],
   "entry_rationales": [
