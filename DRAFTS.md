@@ -397,18 +397,19 @@ family, and documented as such.
 
 #### AAuth Mission Management
 
-The AAuth-native companion promised by the AAuth protocol: authenticated
+The AAuth-native companion anticipated by the AAuth protocol: authenticated
 status, permanent termination, optional immutable expiry, and
 delegation-tree queries at the Person Server
 `mission_control_endpoint`, each an `action` on one Mission's
-control-plane URL. Operations use only AAuth's native
-`{approver, s256}` mission reference and preserve its two protocol states,
+control-plane URL. Operations use only AAuth's native mission
+identity (the approving Person Server and `s256`) and preserve its two
+protocol states,
 `active` and `terminated`; completion, revocation, expiry, supersession,
 and administrative action are separate termination reasons. The Person
-Server closes its local decision and issuance paths atomically, attempts
-revocation of tracked Auth Tokens by `(iss, jti)`, and reports honestly
-where already-issued, opaque, identity-based, or off-path access leaves a
-bounded or unknown residual.
+Server closes its local decision and issuance paths atomically, revokes
+the tokens it issued with AAuth's issuer-signed `{jti, exp}` requests,
+and reports honestly where already-issued, opaque, agent identity, or
+off-path access leaves a bounded or unknown residual.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aauth-management.html)
 
@@ -640,7 +641,8 @@ surfaces.
 #### Mission Context Binding for AAuth
 
 The thin AAuth-native binding. AAuth already defines an immutable
-mission blob, exact-byte `s256` commitment, `{approver, s256}` reference,
+mission blob, exact-byte `s256` commitment, a mission identity of the
+approving Person Server and `s256`,
 propose/clarify/approve flow, native `expires_at`, `active` and
 `terminated` states, and an ordered mission log. The binding uses those
 elements unchanged and defines no new wire members. It treats the
@@ -651,9 +653,10 @@ optionally R3 carry deterministic resource authorization.
 at the Person Server; they are not remote resource authority. A
 mission travels as `mission_s256` in PS-issued person tokens; resources
 must copy it into the resource tokens they issue. Active-state
-issuance gating is structural in PS-asserted and federated access, and
-person-token issuance is itself a PS control point; identity-based and
-resource-managed decisions are not Person-Server-gated. Its Mission
+issuance gating is structural in PS authorization and federated
+authorization access, and person-token issuance is itself a PS control
+point; agent identity and resource-managed decisions are not
+Person-Server-gated. Its Mission
 Substrate Statement declares the kernel mapping and per-mode
 capability claims, including the capabilities it does not supply.
 
