@@ -2811,18 +2811,20 @@ example in {{join-authzen}}.
 The join holds and the action is within the Mission's Authority Set,
 so the PDP permits; the PEP executes the call to
 `https://erp.example.com`, and both record their evidence
-({{I-D.draft-mcguinness-mission-runtime-evidence}}). A revocation at
-the MAS
-stops the next such action at this step, through the runtime state
-re-check. The decision is the permit example in {{join-authzen}}.
+({{I-D.draft-mcguinness-mission-runtime-evidence}}). After a
+revocation at the MAS, the runtime state re-check at this step refuses
+the next such action once it observes the revocation, within the
+published staleness bound. The decision is the permit example in
+{{join-authzen}}.
 
 ## Revoke
 
 An authorized party revokes the Mission at the Mission Lifecycle
 endpoint ({{lifecycle-and-state}}). The agent's token remains valid
-OAuth ({{limitations}}). On the agent's next consequential action the
-PDP's state check reports `revoked`, and the PDP denies with the
-AuthZEN profile's `mission_inactive` reason
+OAuth ({{limitations}}). Once the PDP's state check observes the
+revocation, within the published staleness bound, it reports
+`revoked`, and the PDP denies the agent's next consequential action
+with the AuthZEN profile's `mission_inactive` reason
 ({{I-D.draft-mcguinness-mission-authzen}}):
 
 ~~~ json
