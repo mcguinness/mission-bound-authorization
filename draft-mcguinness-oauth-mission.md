@@ -5806,6 +5806,12 @@ Cross-Domain:
 
 -01
 
+- Stated that a `policy` adjudicator decides deterministically over
+  recorded inputs, that a model's output can be one such input that
+  refuses or narrows but never supplies or widens authority, and that
+  the prose members gate issuance in no adjudicating policy and
+  through no model input. These add requirements.
+
 - Separated exact `target_resources` membership, checked for the
   Authority Set and for a proposal at submission, from later token
   narrowing under the subset rule. Made the per-capability
