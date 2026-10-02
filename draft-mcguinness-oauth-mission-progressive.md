@@ -337,9 +337,9 @@ standing-consent `approval_basis`, under the issuance profile's open
 `ceiling_drawdown`, defined and owned by this profile: its
 `consent_principal` is the Approver who consented the ceiling, its
 `activation` is an object with exactly two members, `policy_id` (the
-drawdown policy identifier, the Mission's `drawdown_policy` value)
-and `policy_version` (the deployment's version identifier for that
-policy's content as applied at this adjudication), its
+Mission's `drawdown_policy.id`) and `policy_version` (its
+`drawdown_policy.version`, the version whose content
+`drawdown_policy.digest` commits and this adjudication evaluated), its
 `activation_actor` is the requesting client, its
 `root_commitment` is the `ceiling_hash`, and its `approved_at` (the
 issuance profile's standing-consent requirement) is the instant the
