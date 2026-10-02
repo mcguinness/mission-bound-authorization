@@ -1195,8 +1195,9 @@ This document has no IANA actions.
 
 # Worked Example {#example}
 
-A user asks an agent: "Reconcile acme-corp's Q3 invoices and post any
-adjustments up to $500." The shaper scopes the proposal to that one
+A user asks an agent: "Reconcile the Q3 invoices in the acme-corp
+tenant and post any adjustments up to $500." The shaper scopes the
+proposal to that one
 task, bounds the work by invariants instead of enumerating invoices it
 cannot yet know, and proposes only authority it can defend from the
 request.
@@ -1212,7 +1213,7 @@ client sends as the `intent` member of the Submission envelope:
   "task_bounds": [
     "Read only invoices in fiscal period 2026-Q3.",
     "Post journal entries of no more than $500.",
-    "Customer scope: acme-corp only."
+    "Tenant scope: acme-corp only."
   ],
   "success_criteria": ["All Q3 invoices for acme-corp reconciled."],
   "purpose": "urn:example:purpose:reconcile",
@@ -1257,9 +1258,16 @@ for this proposal:
     "sha-256:InP9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4aB7cDe",
   "input_exclusion_ruleset": "standard-2026-06",
   "user_supplied_facts": [
-    "customer acme-corp",
-    "fiscal period 2026-Q3",
+    "tenant acme-corp",
+    "fiscal quarter Q3",
     "adjustments up to $500"
+  ],
+  "inferred_facts": [
+    {
+      "fact": "Q3 means fiscal period 2026-Q3",
+      "evidence": "the current fiscal year is 2026",
+      "confirmation_required": false
+    }
   ],
   "capability_resolutions": [
     {
@@ -1301,8 +1309,8 @@ free-text `task_bounds` disclose the same bounds to the Approver and
 grant nothing; the Mission Issuer never parses them. The invariants
 (period, tenant, and amount) bound an open-ended task whose individual
 invoices were unknown when the request was made. Had the request not
-named the customer, the shaper would have asked the requester instead
-of guessing ({{clarifications}}).
+named the tenant, the shaper would have asked the requester instead of
+guessing ({{clarifications}}).
 
 # Document History {#document-history}
 
