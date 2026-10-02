@@ -982,8 +982,8 @@ Cross-domain projection
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) carries a
 Mission to a Resource AS in another domain, under federation trust
 and identity chaining. The issuance join is the same-estate case,
-with bilateral, pre-configured trust ({{trust}}) and no identity
-chaining; a deployment does not use it across domains.
+with bilateral, pre-configured trust ({{trust}}), and requires no
+identity chaining; a deployment does not use it across domains.
 
 **Native Mission-aware issuance replaces this grant.** An AS that
 becomes natively Mission-aware implements the issuance profile and
@@ -1109,7 +1109,8 @@ the moment of state commit. A grant already issued can still be
 redeemed within its 300 seconds at a consuming AS without a
 Mission-state integration. Issued access tokens run to their own
 expiry, and an outstanding refresh token is refused at its next
-state-gated use; where the runtime layer is deployed, the PDP's
+state-gated use; where the runtime layer is deployed, the Policy
+Decision Point's
 re-check bounds outstanding-token use independently. A refresh
 re-projects through
 the Effective Authority Set ({{effective-set-projection}}), so a
