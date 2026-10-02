@@ -75,6 +75,14 @@ normative:
 
 informative:
   RFC8725:
+  I-D.draft-mcguinness-oauth-mission-consent-evidence:
+    title: "Mission Consent Evidence for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-containment:
     title: "Mission Containment for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
@@ -984,7 +992,9 @@ the refresh staleness bound it publishes ({{conformance}}).
 
 **Consent integrity.** The approval the grant rests on was rendered
 and committed at the Mission Issuer under the issuance profile's rules and,
-where deployed, Consent Evidence. The consuming AS relies on that
+where deployed, Consent Evidence
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}). The
+consuming AS relies on that
 event; it MUST NOT substitute a weaker consent of its own, and its
 non-prompting duty ({{redemption}}) prevents consent-surface
 confusion where the Subject holds accounts at both.
