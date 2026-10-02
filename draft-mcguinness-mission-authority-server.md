@@ -1583,18 +1583,19 @@ express as `invalid_grant`:
   extends the error code set of {{submission-errors}} and is used
   only by this section's operations.
 
-The profile-defined machine-readable code rides the MAS error surface
-in the member its profile defines:
+The profile-defined machine-readable codes ride the MAS error surface
+in the members their profiles define:
 
 - A reconciliation status rides in `mission_expansion_status`
   ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 - An adjudication denial reason, for expansion and child creation
   alike, rides in the shared `mission_denial_reason` member that
   profile defines ({{I-D.draft-mcguinness-oauth-mission-expansion}},
-  {{I-D.draft-mcguinness-oauth-mission-child-delegation}}). It is
-  carried as a member of the error response body
-  ({{submission-errors}}) or, for a denial at adjudication, of the
-  `denied` submission-status response ({{submission-status}}).
+  {{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
+
+Each is carried as a member of the error response body
+({{submission-errors}}) or, for a denial at adjudication, of the
+`denied` submission-status response ({{submission-status}}).
 
 ## Request Binding {#native-binding}
 
