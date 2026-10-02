@@ -522,7 +522,9 @@ The MAS MUST apply the following rules:
 5. **Key binding.** When the MAS includes `cnf`, it MUST take the key
    from a sender constraint it verified on the grant request: the
    public key of the request's DPoP proof, as `jkt`, or the client
-   certificate of the mutual-TLS connection, as `x5t#S256`. A
+   certificate of the mutual-TLS connection, as `x5t#S256` (the TLS
+   handshake proves possession of its key whether or not the
+   certificate also authenticated the client). A
    private-key-JWT client assertion's signing key authenticates the
    client and MUST NOT become `cnf`. A grant request with no verified
    sender constraint yields a grant without `cnf`. The redemption
@@ -530,7 +532,8 @@ The MAS MUST apply the following rules:
    ({{redemption}}) apply unchanged, so a public client cannot redeem
    such a grant.
 6. **Evidence.** Each minting is recorded with the Mission record:
-   the `jti`, audience, requested and granted entries, and time.
+   the `jti`, audience, requested and granted entries, any `cnf`, and
+   time.
 
 ## Grant Response {#minting-response}
 
