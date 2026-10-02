@@ -493,9 +493,11 @@ canonicalization, and integrity envelope a deployment emits.
   {{I-D.draft-mcguinness-mission-authzen}}).
 
 `evaluation_request_digest`:
-: CONDITIONAL. A string. A privacy-preserving digest of the whole
-  evaluation request, in the integrity-anchor encoded form
-  ({{I-D.draft-mcguinness-oauth-mission}}). REQUIRED when
+: CONDITIONAL. A string. A canonical-object digest of the whole
+  evaluation request, over the input the decision-API profile defines:
+  under the AuthZEN profile, the request body as submitted
+  ({{I-D.draft-mcguinness-mission-authzen}}, Section "Evaluation
+  Request Digest Input"). REQUIRED when
   `parameter_digest` is absent for a consequential action, so the closed
   object still carries the request digest the runtime profile requires
   of every decision record ({{I-D.draft-mcguinness-mission-runtime}}).
@@ -503,7 +505,8 @@ canonicalization, and integrity envelope a deployment emits.
   binding the decision was bound to;
   `evaluation_request_digest` is this record's fallback digest of the
   whole evaluation request, present whether the decision was a permit
-  or a deny.
+  or a deny. It commits to its input; it does not hide an input a
+  party can guess.
 
 `compensates_evaluation_id`:
 : CONDITIONAL. A string; REQUIRED for a compensate-phase decision.
