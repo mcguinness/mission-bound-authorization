@@ -488,7 +488,7 @@
      ]
     },
     {
-     "when": "the AuthZEN binding emits Decision Evidence",
+     "when": "the AuthZEN profile emits Decision Evidence",
      "requires": [
       "draft-mcguinness-mission-runtime-evidence"
      ]
@@ -544,7 +544,7 @@
    "verbs": [
     "enforce"
    ],
-   "summary": "The concrete OpenID AuthZEN binding of the runtime decision contract.",
+   "summary": "The concrete OpenID AuthZEN profile of the runtime decision contract.",
    "pull_when": "The PDP speaks AuthZEN and needs the decision-contract wire mapping.",
    "normative_references": [
     "draft-mcguinness-mission-runtime",
@@ -974,7 +974,7 @@
    ],
    "requires_when": [
     {
-     "when": "the AuthZEN binding is the runtime wire",
+     "when": "the AuthZEN profile is the runtime wire",
      "requires": [
       "draft-mcguinness-mission-authzen"
      ]

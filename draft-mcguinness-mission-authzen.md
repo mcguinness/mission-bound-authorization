@@ -194,7 +194,7 @@ Mission-Bound Runtime Enforcement defines a substrate-independent
 decision contract: before each consequential action runs, a Policy
 Enforcement Point (PEP) obtains a permit from a Policy Decision Point
 (PDP) that evaluates the action against the established Mission. This
-document is the concrete OpenID AuthZEN binding of that contract,
+document is the concrete OpenID AuthZEN profile of that contract,
 structured as a Decision Base plus named, independently adoptable
 feature profiles. The Decision Base maps the contract's decision
 inputs onto the AuthZEN Authorization API request, shapes the permit
@@ -231,10 +231,10 @@ runtime
 conformance scope, but it states that the decision API wire format is a
 deployment choice and defines no binding of its own.
 
-This document is the OpenID AuthZEN binding of that contract: it maps
+This document is the OpenID AuthZEN profile of that contract: it maps
 the runtime profile's abstract decision contract onto the OpenID
 AuthZEN Authorization API {{AUTHZEN}} and carries only the
-AuthZEN-binding deltas, structured as a **Decision Base** plus named
+AuthZEN-profile deltas, structured as a **Decision Base** plus named
 **feature profiles** documented as a dependency DAG with capability
 identifiers ({{profiles-and-capabilities}}). Neither the base nor a
 profile restates a requirement the runtime profile or a companion
@@ -2561,7 +2561,7 @@ The runtime profile's Security Considerations
 placement and bypass, classification integrity, freshness and
 consumption honesty, Resource policy authority, TOCTOU and replay, and
 the limits of a compromised PEP or PDP. This section addresses only
-threats specific to the AuthZEN binding; threats specific to the
+threats specific to the AuthZEN profile; threats specific to the
 evidence records are the runtime evidence companion's
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}), and threats
 specific to capability-source binding are the capability-binding
@@ -2687,7 +2687,7 @@ enforcement ({{profiles-and-capabilities}}).
 - Capability Name: :mission-runtime
 - Capability URN: urn:ietf:params:authzen:mission-runtime
 - Capability Description: support for the Mission-Bound Runtime
-  Enforcement AuthZEN binding's Decision Base.
+  Enforcement AuthZEN profile's Decision Base.
 - Change Controller: the author of this document
 - Specification Document: this document
 
@@ -2789,7 +2789,7 @@ registered by {{I-D.draft-mcguinness-oauth-mission}}.
 # Acknowledgments
 {:numbered="false"}
 
-This document is the AuthZEN binding of Mission-Bound Runtime
+This document is the AuthZEN profile of Mission-Bound Runtime
 Enforcement and builds on the OpenID AuthZEN
 Authorization API. The author thanks the OpenID AuthZEN community and
 the Mission-Bound Authorization implementer community for feedback.

@@ -14128,7 +14128,7 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a deployment using a decision API other than the AuthZEN binding specifies its own binding to the same normative depth"
+    "normative": "a deployment using a decision API other than the AuthZEN profile specifies its own binding to the same normative depth"
    },
    "level": "endpoint",
    "coverage": "todo",

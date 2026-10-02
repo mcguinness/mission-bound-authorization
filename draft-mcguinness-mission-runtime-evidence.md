@@ -156,7 +156,7 @@ manifest projecting these records into one portable object a holder
 can present without shipping a log. The records are defined against
 the runtime profile's abstract decision output and failure
 classification, so any decision-API binding produces the same
-records; the OpenID AuthZEN binding is one such producer.
+records; the OpenID AuthZEN profile is one such producer.
 
 --- middle
 
@@ -345,7 +345,7 @@ canonicalization, and integrity envelope a deployment emits.
   this record documents: the abstract evaluation identifier of the
   runtime profile's Decision Output
   ({{I-D.draft-mcguinness-mission-runtime}}), as carried by the
-  deployment's decision-API binding (for example, the AuthZEN binding
+  deployment's decision-API binding (for example, the AuthZEN profile
   carries this as the decision-API response's evaluation identifier,
   {{I-D.draft-mcguinness-mission-authzen}}). Distinct
   from `evidence_id`: `evaluation_id` correlates this record with the
@@ -418,7 +418,7 @@ canonicalization, and integrity envelope a deployment emits.
   permit binds ({{I-D.draft-mcguinness-mission-runtime}}, Section
   "Permit Binding"), as carried by the deployment's decision-API
   binding (for example, the AuthZEN
-  binding's decision-API request's audience member,
+  profile's decision-API request's audience member,
   {{I-D.draft-mcguinness-mission-authzen}}).
 
 `mission_state_version`:
@@ -476,7 +476,7 @@ canonicalization, and integrity envelope a deployment emits.
 : REQUIRED whenever the decision response contained obligations, on
   either decision. An array of obligation objects, recorded as
   returned to the PEP (for example, as carried by the AuthZEN
-  binding, {{I-D.draft-mcguinness-mission-authzen}}).
+  profile, {{I-D.draft-mcguinness-mission-authzen}}).
 
 `conditions`:
 : REQUIRED when `decision` is `permit` for a consequential action. An
@@ -489,7 +489,7 @@ canonicalization, and integrity envelope a deployment emits.
   equals the binding carried by the wire conditions. The phase binding
   is likewise recorded once in `action_phase`, under that member's
   equality rule. A binding maps its wire members onto this form (for
-  example the AuthZEN binding's `conditions` response member,
+  example the AuthZEN profile's `conditions` response member,
   {{I-D.draft-mcguinness-mission-authzen}}).
 
 `evaluation_request_digest`:
@@ -565,7 +565,7 @@ canonicalization, and integrity envelope a deployment emits.
   specification-defined extension under that binding's extensibility
   rule; a consumer MUST treat an unrecognized value as a deny and MUST
   NOT attach any other semantics to it. For example, the AuthZEN
-  binding carries this as its wire denial-reason strings
+  profile carries this as its wire denial-reason strings
   ({{I-D.draft-mcguinness-mission-authzen}}). When the denial
   is a constraint violation, the value is `parameter_violation` and the
   specific failing `constraints` keys are carried in
@@ -598,7 +598,7 @@ canonicalization, and integrity envelope a deployment emits.
 
 A Decision Evidence Object is closed to uncoordinated extension; see
 {{evidence-extensions}} for the extension rule and the coordinated
-extension members a deployment following the AuthZEN binding
+extension members a deployment following the AuthZEN profile
 commonly carries (`taint`, `mission_history`, `capability_source`,
 `hop_reference`).
 
@@ -613,7 +613,7 @@ channel failure, PDP unreachability, or the PEP being unable to
 establish Mission state ({{I-D.draft-mcguinness-mission-runtime}}); or
 a PDP refusal of an in-scope request that reaches it without the
 Mission decision context a runtime enforcement scope requires, per
-the AuthZEN binding ({{I-D.draft-mcguinness-mission-authzen}}). Such a
+the AuthZEN profile ({{I-D.draft-mcguinness-mission-authzen}}). Such a
 refusal has no PDP decision and cannot populate the PDP-derived
 members above.
 
@@ -676,7 +676,7 @@ Evidence ({{execution-evidence-object}}), never a Refusal Record:
   `mission_context_missing`. These name pre-evaluation conditions,
   PEP-side or PDP-side, and are disjoint from the runtime profile's
   PDP denial reasons for an evaluated decision (for example, as
-  carried by the AuthZEN binding,
+  carried by the AuthZEN profile,
   {{I-D.draft-mcguinness-mission-authzen}}); a record that can
   populate the PDP-derived members of an evaluated decision is a
   Decision Evidence Object instead.
@@ -723,7 +723,7 @@ Evidence ({{execution-evidence-object}}), never a Refusal Record:
 `subject`, `actor`, `credential`:
 : OPTIONAL. Objects. Verified facts only, in the projected forms
   {{decision-evidence-object}} defines (for example, as carried in the
-  AuthZEN binding's decision-API request,
+  AuthZEN profile's decision-API request,
   {{I-D.draft-mcguinness-mission-authzen}}). A PEP populates them from
   its own credential validation; a PDP populates them from the request
   context it received, never asserting a check only the other role
@@ -805,7 +805,7 @@ that failed closed:
 ~~~
 
 A PDP-side refusal, recorded by the PDP itself: an in-scope request
-reached it without the Mission decision context the AuthZEN binding
+reached it without the Mission decision context the AuthZEN profile
 requires, so no Mission reference is established and the PDP
 populates only what it can attest from the request it received:
 
@@ -1171,7 +1171,7 @@ tier ({{I-D.draft-mcguinness-mission-runtime}}).
   and none of them is the pre-permit denial a PDP records when it
   refuses a duplicate or conflicting claim before deciding, carried
   as `duplicate_suppressed` and `idempotency_conflict` in the AuthZEN
-  binding ({{I-D.draft-mcguinness-mission-authzen}}). A deployment
+  profile ({{I-D.draft-mcguinness-mission-authzen}}). A deployment
   MUST NOT record a post-permit duplicate as a PDP denial reason, or
   a pre-decision duplicate as an Execution Evidence `error`.
 
@@ -1826,9 +1826,9 @@ is recorded as presented; this document does not otherwise define
 its semantics.
 
 The following members are coordinated extensions a deployment
-following the family's Standards-Track AuthZEN binding commonly
+following the family's Standards-Track AuthZEN profile commonly
 carries. Each is registered and owned by the specification named,
-not by this document or by the AuthZEN binding merely because it is
+not by this document or by the AuthZEN profile merely because it is
 a common wire carrier.
 
 `taint`:
@@ -1836,7 +1836,7 @@ a common wire carrier.
   REQUIRED when the decision request carried a taint context. What
   taints a session and when a taint requirement applies are defined
   by the harness profile ({{I-D.draft-mcguinness-mission-harness}}),
-  which owns this member's semantics; the AuthZEN binding is one wire
+  which owns this member's semantics; the AuthZEN profile is one wire
   carrier of the context this member records
   ({{I-D.draft-mcguinness-mission-authzen}}).
 
@@ -1850,7 +1850,7 @@ a common wire carrier.
   evidence store that could not be consulted within its bound).
   REQUIRED when policy selected any history predicate for the
   decision, whether or not the request carried a Mission history
-  member. Registered and owned by the AuthZEN binding
+  member. Registered and owned by the AuthZEN profile
   ({{I-D.draft-mcguinness-mission-authzen}}).
 
 `capability_source`:
@@ -1899,7 +1899,7 @@ emits the records themselves; a CONSUMER, or VERIFIER, that reads
 and checks them after the fact; a RECEIPT ISSUER that assembles and
 signs a Mission Receipt over them; and a RECEIPT VERIFIER that
 verifies one. A decision-API binding's own conformance statement,
-such as the AuthZEN binding's ({{I-D.draft-mcguinness-mission-authzen}}),
+such as the AuthZEN profile's ({{I-D.draft-mcguinness-mission-authzen}}),
 incorporates this document's PRODUCER role for its PDP, PEP, and
 executor.
 
@@ -2327,6 +2327,6 @@ evidence representation their shared envelope carries (using the
 
 This document extracts the Decision Evidence, Execution Evidence, and
 Refusal Record objects that Mission-Bound Runtime Enforcement's
-AuthZEN binding first defined, so any decision-API binding can
+AuthZEN profile first defined, so any decision-API binding can
 produce them. The author thanks the Mission-Bound Authorization
 implementer community for feedback.
