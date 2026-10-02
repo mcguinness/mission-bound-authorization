@@ -663,7 +663,9 @@ async function main() {
     const body = await readJson(c);
     const taskId = String(body.taskId);
     const tool = String(body.tool);
-    const args = (body.args as Record<string, unknown>) ?? {};
+    // The retry carries the first attempt's key when the UI resends the step's
+    // args; otherwise it is minted here (the challenged attempt claimed nothing).
+    const args = keyed(tool, (body.args as Record<string, unknown>) ?? {});
     const handle = txnHandles.get(taskId);
     const task = stack.ars.getTask(taskId);
     if (!handle || !task || task.state === "pending") {
