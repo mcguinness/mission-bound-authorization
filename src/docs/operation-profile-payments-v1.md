@@ -122,6 +122,15 @@ and outbox connectors, which reject duplicates. Retries of the same
 effective operation are therefore safe at the connector even if upstream
 state machines fail mid-flight.
 
+`execute_wire_transfer` and `send_remittance_email`, the two
+high-consequence operations, also require a caller-supplied
+`idempotency_key`: 16 to 128 characters of `ALPHA / DIGIT / "-" / "_"`,
+one key per intended execution. The PEP forwards it as
+`action.properties.idempotency_key`; it never enters `parameter_digest`.
+The PDP claims (idempotency scope, key) with the operation identity before
+it issues a permit, and refuses a missing or malformed key with
+`parameter_violation` (#917).
+
 ## Permits, leases, commit point (D28/D36/D29/D39)
 
 - Permit properties ride the PDP decision: single-use decision identifier,
