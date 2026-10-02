@@ -1235,9 +1235,14 @@ export interface DemoTemplateInput {
   per_instance_lifetime_s: number;
   max_active: number;
   rate_per_min: number;
+  /** `review_cadence`: seconds an approval stands before Dispatch stops (@spec mission-template#template-consent). */
+  review_cadence_s: number;
   approval_event_id: string;
   expires_at: string;
 }
+
+/** The demo templates' `review_cadence`: a 30-day human review cycle. */
+export const DEMO_TEMPLATE_REVIEW_CADENCE_S = 30 * 24 * 60 * 60;
 
 /**
  * @spec mission-template — the demo READ-ONLY reconciliation template: read
@@ -1286,6 +1291,7 @@ export function demoReconciliationTemplate(issuer: string): DemoTemplateInput {
     per_instance_lifetime_s: 900,
     max_active: 5,
     rate_per_min: 30,
+    review_cadence_s: DEMO_TEMPLATE_REVIEW_CADENCE_S,
     approval_event_id: "tmpl-approval-demo-reconciliation",
     expires_at: "2099-01-01T00:00:00Z",
   };
@@ -1341,6 +1347,7 @@ export function aamReconciliationTemplate(
     per_instance_lifetime_s: AAM_RECONCILIATION_LIFETIME_S,
     max_active: 5,
     rate_per_min: 30,
+    review_cadence_s: DEMO_TEMPLATE_REVIEW_CADENCE_S,
     approval_event_id: approvalEventId,
     expires_at: "2099-01-01T00:00:00Z",
   };
