@@ -280,6 +280,7 @@ import {
   DispatchError,
   TemplateError,
   type CreateTemplateInput,
+  type DispatchPolicies,
   type DispatchReason,
 } from "../kernel/template.js";
 import type { TemplateStore } from "../kernel/template-store.js";
@@ -481,6 +482,11 @@ export interface AdapterOptions {
   continuationGrantKid?: string;
   /** Template store backing mission-dispatch + the /templates admin routes. */
   templateStore?: TemplateStore;
+  /**
+   * @spec mission-template#the-mission-template — the deployment's Dispatch
+   * Policies: the Agent selection rule of a template listing several Agents.
+   */
+  dispatchPolicies?: DispatchPolicies;
   /**
    * @spec containment#protected-events — the trusted protected-event source
    * registry, keyed by source IDENTITY (NOT the transport origin). An incoming
@@ -3482,14 +3488,16 @@ export function childErrorCode(reason: ChildDenialReason): string {
 /**
  * @spec mission-template#dispatch-refusals — map a symbolic dispatch denial
  * reason to its layered OAuth error code: `dispatcher_not_allowed`/
- * `recipient_not_allowed`/`template_not_active`/`review_overdue` ride
- * `access_denied` (`review_overdue` is implementation-local, D205);
+ * `agent_not_selected`/`recipient_not_allowed`/`template_not_active`/
+ * `review_overdue` ride `access_denied` (`agent_not_selected` and
+ * `review_overdue` are implementation-local, D205);
  * `out_of_template_ceiling`/`dispatch_prohibited_class`/`max_active_exceeded`/
  * `rate_exceeded` ride `invalid_request`.
  */
 function dispatchErrorCode(reason: DispatchReason): "invalid_request" | "access_denied" {
   switch (reason) {
     case "dispatcher_not_allowed":
+    case "agent_not_selected":
     case "recipient_not_allowed":
     case "template_not_active":
     case "review_overdue":
@@ -3556,18 +3564,14 @@ async function handleMissionDispatchGrant(
   }
 
   // Resolve the template FIRST: we need its approver (to establish the subject)
-  // and its recipient BEFORE dispatch, and to control the unknown-template reply
-  // (dispatchFromTemplate throws a plain Error for unknown ids).
+  // BEFORE dispatch, and to control the unknown-template reply
+  // (dispatchFromTemplate throws a plain Error for unknown ids). The instance's
+  // Agent is NOT chosen here: the kernel selects it under the Dispatch Policy
+  // (@spec mission-template#the-mission-template), and this request names none.
   const template = store.get(templateId);
   if (!template) {
     ctx.status = 400;
     ctx.body = { error: "invalid_request", error_description: "unknown template" };
-    return;
-  }
-  const recipient = template.recipients.agents[0];
-  if (!recipient) {
-    ctx.status = 400;
-    ctx.body = { error: "invalid_request", error_description: "template names no recipient" };
     return;
   }
 
@@ -3644,7 +3648,7 @@ async function handleMissionDispatchGrant(
       templateId,
       dispatchEventId,
       dispatcher: client.clientId,
-      recipient,
+      ...(opts.dispatchPolicies ? { dispatchPolicies: opts.dispatchPolicies } : {}),
       intent,
       ...(proposedAuthority ? { proposedAuthority } : {}),
       ...(submissionEvidence?.length ? { submissionEvidence } : {}),

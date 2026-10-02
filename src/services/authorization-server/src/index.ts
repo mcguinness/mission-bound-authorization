@@ -52,7 +52,7 @@ import { newReplayCache } from "./kernel/instance-assertion.js";
 import { MissionKernel } from "./kernel/kernel.js";
 import type { TxnAuthorizationOptions } from "./adapters/transaction-authorization.js";
 import { StatusListPublisher } from "./kernel/status-list.js";
-import { createTemplate } from "./kernel/template.js";
+import { createTemplate, type DispatchPolicies } from "./kernel/template.js";
 import { trustedCapabilityResolver } from "./adapters/capability-resolver.js";
 import { TemplateStore } from "./kernel/template-store.js";
 import { isActivatingCommit, TERMINAL_STATES } from "./kernel/types.js";
@@ -398,9 +398,12 @@ export {
 export {
   createTemplate,
   dispatchFromTemplate,
+  selectDispatchAgent,
   TemplateStore,
   TemplateError,
   DispatchError,
+  type DispatchPolicies,
+  type DispatchPolicy,
   type MissionTemplate,
   type TemplateCreate,
   type TemplateState,
@@ -610,6 +613,13 @@ export interface BuiltAs {
 export async function buildAuthorizationServer(opts: {
   issuer: string;
   allowHeadlessAdjudication?: boolean;
+  /**
+   * @spec mission-template#the-mission-template — the deployment's Dispatch
+   * Policies, keyed by `dispatch_policy`: the Agent selection rule for a
+   * template that lists several Agents. Absent, only single-Agent templates
+   * dispatch.
+   */
+  dispatchPolicies?: DispatchPolicies;
   /**
    * @spec control-plane#deployment-declaration (D27) — the kernel store. The
    * default is in-memory and single-process; a `file` selects the OPT-IN
@@ -1105,6 +1115,7 @@ export async function buildAuthorizationServer(opts: {
     continuationGrantKey: continuationKeys.privateKey,
     continuationGrantKid: asContinuation.kid,
     templateStore,
+    ...(opts.dispatchPolicies ? { dispatchPolicies: opts.dispatchPolicies } : {}),
     protectedEventSources,
     issuerEvidence,
     // @spec issuance-grant#effective-set-projection (#617 review 1) — the

@@ -330,7 +330,9 @@ A Mission Template is a consented object with these members:
   `version`, and `digest` ({{I-D.draft-mcguinness-oauth-mission}},
   Section "Standing-Consent Bases"), identifying the Dispatch Policy
   under which the Mission Issuer instantiates from this template and
-  committing its content. The policy's content is deployment-defined.
+  committing its content. The policy's content is deployment-defined,
+  and includes the rule that selects the instance's Agent when
+  `allowed_recipients` lists more than one ({{the-mission-template}}).
   Because `template_hash` covers this member, the template commits
   the exact policy the human consented to, and the Mission Issuer
   verifies its `digest` before each Dispatch under that section's
@@ -351,11 +353,16 @@ A Mission Template is a consented object with these members:
   and `agents`, each a `client_id` string. The Mission Issuer
   establishes the instance's Subject as the issuance profile requires,
   never from Dispatcher input
-  ({{I-D.draft-mcguinness-oauth-mission}}), and refuses a Dispatch
-  whose established Subject does not equal an entry of `subjects` in
-  both `iss` and `sub`, or whose Agent (the instance's `client_id`) is
-  not an entry of `agents`, so a template cannot mint a Mission for a
-  party the human did not consent to. The two lists are independent:
+  ({{I-D.draft-mcguinness-oauth-mission}}). It selects the instance's
+  Agent (the instance's `client_id`) from `agents` under the Dispatch
+  Policy, never from Dispatcher input: with one listed Agent, that
+  Agent; with several, the Agent the Dispatch Policy's selection rule
+  names. `agents` bounds the selection and is not a selection rule;
+  its order carries no meaning. The Mission Issuer refuses a Dispatch
+  for which no Agent is selected, whose established Subject does not
+  equal an entry of `subjects` in both `iss` and `sub`, or whose Agent
+  is not an entry of `agents`, so a template cannot mint a Mission for
+  a party the human did not consent to. The two lists are independent:
   any listed Agent may serve any listed Subject, subject to the other
   Dispatch checks ({{dispatch}}); a deployment that needs restricted
   pairings uses separate templates.
@@ -532,9 +539,9 @@ The Mission Issuer adjudicates a Dispatch in this order:
    it would grant a high-consequence class, refuse the Dispatch with
    `dispatch_prohibited_class` ({{denial-reasons}}).
 7. **Enforce the bounds.** Refuse the Dispatch if it would exceed
-   `max_active` or `dispatch_rate`, or if the instance's
-   Mission-Issuer-established Subject or its Agent falls outside
-   `allowed_recipients` ({{the-mission-template}}).
+   `max_active` or `dispatch_rate`, if no Agent is selected, or if the
+   instance's Mission-Issuer-established Subject or its selected Agent
+   falls outside `allowed_recipients` ({{the-mission-template}}).
 8. **Commit the instance.** Commit an ordinary Mission whose Authority
    Set is the surviving set and whose:
 
@@ -566,6 +573,11 @@ The Mission Issuer adjudicates a Dispatch in this order:
      taken from Dispatcher input, and is an entry of
      `allowed_recipients` `subjects`
      ({{I-D.draft-mcguinness-oauth-mission}});
+   - `client_id` is the Agent selected from `allowed_recipients`
+     `agents` ({{the-mission-template}}), never taken from Dispatcher
+     input. The selection is part of the committed instance: a retried
+     or recovered Dispatch returns the committed Agent and does not
+     select again;
    - `intent_hash` and `authority_hash` are computed over the instance's
      own Intent and final Authority Set, never over the template; the
      template commits the ceiling under `template_hash`
@@ -729,7 +741,12 @@ instance with:
 
 The Dispatcher authenticates at the token endpoint with its own client
 credential; the Mission Issuer authorizes it against the template's
-`allowed_dispatchers` as step 2 of {{dispatch}} requires. This grant
+`allowed_dispatchers` as step 2 of {{dispatch}} requires. The request
+names no Agent. The Mission Issuer selects the instance's Agent
+({{the-mission-template}}), and that selection is separate from the
+Dispatcher's authentication and from the presenter binding of the
+returned access token, which is sender-constrained to the
+Dispatcher's key. This grant
 performs exactly one derivation per `dispatch_event_id`: the
 adjudication order of {{dispatch}} runs once for a new identifier, and
 a repeated identifier is gated to the previously committed instance
@@ -1092,6 +1109,12 @@ IANA action. Following the restraint of the sibling profiles:
 
 \[\[ To be removed from the final specification ]]
 
+- The Mission Issuer selects a dispatched instance's Agent from
+  `allowed_recipients` `agents` under the Dispatch Policy, never from
+  Dispatcher input: one listed Agent is selected directly, and several
+  need the Dispatch Policy's selection rule. The selection is recorded
+  at commit, kept on retries, and separate from Dispatcher
+  authentication and the token's presenter binding (#970).
 - `dispatch_policy` is an activation policy reference (`id`,
   `version`, `digest`) under the issuance profile's Standing-Consent
   Bases, replacing the SHOULD to commit the policy body. Dispatch
