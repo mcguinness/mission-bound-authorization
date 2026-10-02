@@ -42,6 +42,7 @@ import {
   bindAuthoritySourceCatalog,
   catalogAuthoritySourceResolver,
   type AuthoritySourceCatalog,
+  type AuthoritySourceCatalogEntry,
   type AuthoritySourceResolution,
   type AuthoritySourceResolver,
   type BoundAuthoritySourceCatalog,
@@ -891,19 +892,33 @@ export class MissionKernel {
     source: AuthoritySource,
     subject: { iss: string; sub: string },
   ): void {
-    assertSubjectDiscipline(
-      this.sourceCatalog,
-      resolveDeclaredSource(this.sourceCatalog, source),
-      subject,
-    );
+    assertSubjectDiscipline(this.sourceCatalog, this.declaredSourceEntry(source), subject);
   }
 
   assertInheritedAuthoritySource(
     inherited: AuthoritySource,
     authoritySet: readonly AuthorityEntry[],
   ): void {
-    const entry = resolveDeclaredSource(this.sourceCatalog, inherited);
+    const entry = this.declaredSourceEntry(inherited);
     assertWithinSourceCeiling(entry, authoritySet);
+  }
+
+  /**
+   * @spec mission#authority-sources (#827): the declaration a DRAWDOWN
+   * re-resolves from the record's provenance. Under the default catalog
+   * resolver that is the same catalog the approval resolved against. Under a
+   * configured replacement resolver it would not be, so a drawdown there
+   * refuses rather than checking a catalog the approval never consulted;
+   * the committed-root binding (#827 part 2) replaces this lookup.
+   */
+  private declaredSourceEntry(source: AuthoritySource): AuthoritySourceCatalogEntry {
+    if (this.opts.authoritySourceResolver) {
+      throw new IntentError(
+        "access_denied",
+        "a drawdown under a configured authority-source resolver needs the Mission's committed root, which this deployment does not record",
+      );
+    }
+    return resolveDeclaredSource(this.sourceCatalog, source);
   }
 
   /**
@@ -1513,7 +1528,7 @@ export class MissionKernel {
     approver: { iss: string; sub: string };
     authoritySet: readonly AuthorityEntry[];
   }): void {
-    const entry = resolveDeclaredSource(this.sourceCatalog, input.source);
+    const entry = this.declaredSourceEntry(input.source);
     assertApproverMayActivate(this.sourceCatalog, entry, input.approver);
     assertSubjectDiscipline(this.sourceCatalog, entry, input.subject);
     assertPolicyDigestMatches(entry, authoritySourceOf(entry));

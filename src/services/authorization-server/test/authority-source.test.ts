@@ -1241,6 +1241,69 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
     );
   });
 
+  it("refuses a drawdown under a configured resolver rather than checking a catalog the approval never consulted", () => {
+    // The configured resolver serves ap-agent a narrow delegated root; the
+    // kernel's own catalog carries a wider entry with the same provenance. A
+    // drawdown resolved from provenance against that catalog would admit
+    // authority the approved root never held.
+    const narrow: AuthoritySourceCatalog = {
+      humanPrincipals: ["alice", "bob", "rita"],
+      entries: [
+        { id: "narrow-people", type: "user_delegated", clients: ["ap-agent"], activators: ["rita"], ceiling: [cap(READS, "acme")] },
+      ],
+    };
+    const kernel = k({
+      authoritySourceCatalog: catalog() as never,
+      authoritySourceResolver: catalogAuthoritySourceResolver(bindAuthoritySourceCatalog(narrow, ISS, ISS)),
+      actorProfiles: { "child-agent": "ai_agent" },
+    });
+    const parent = approveFor(kernel, "alice", "ap-agent", [grant(READS, "acme")]);
+    refusedWith(
+      () =>
+        createChildMission(kernel, {
+          parentId: parent.id,
+          intent: intent({ goal: "Read one invoice", expires_at: "2026-11-01T00:00:00Z" }),
+          proposedAuthority: [grant(["payments:invoice.read"], "acme")],
+          childActor: { sub: "child-agent", sub_profile: "ai_agent" },
+        } as never),
+      /needs the Mission's committed root/,
+    );
+    // Template consent resolves through the resolver; dispatch is a drawdown.
+    const store = new TemplateStore();
+    const template = createTemplate(
+      store,
+      {
+        template_version: "t827-drawdown",
+        issuer: ISS,
+        approver: { iss: ISS, sub: "rita" },
+        ceiling: [grant(["payments:invoice.list", "payments:invoice.read", "payments:vendor.read"], "acme")],
+        dispatch_policy: "read-only",
+        dispatchers: ["ap-agent"],
+        recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents: ["ap-agent"] },
+        per_instance_lifetime_s: 900,
+        max_active: 5,
+        rate_per_min: 30,
+        review_cadence_s: 86400,
+        approval_event_id: `tmpl-827-${seq++}`,
+        expires_at: "2099-01-01T00:00:00Z",
+      } as never,
+      kernel.authoritySourceOptions(),
+    );
+    refusedWith(
+      () =>
+        dispatchFromTemplate(kernel, store, {
+          templateId: template.id,
+          dispatchEventId: `dsp-827-${seq++}`,
+          dispatcher: "ap-agent",
+          intent: intent({ expires_at: "2026-11-01T00:00:00Z" }),
+          subject: { iss: ISS, sub: "alice" },
+          policyVersion: DERIVATION_POLICY.policy_version,
+        } as never),
+      /needs the Mission's committed root/,
+    );
+    expect(kernel.allMissions()).toHaveLength(1);
+  });
+
   it("accepts a source request only as confirmation of the root that resolves, never as a choice of root", () => {
     const resolver = catalogAuthoritySourceResolver(bindAuthoritySourceCatalog(shared(), ISS, ISS));
     const ask = { deployment: ISS, subject: { iss: ISS, sub: "bob" }, clientId: "mixed-agent" };

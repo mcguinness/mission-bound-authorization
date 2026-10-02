@@ -221,9 +221,13 @@ the store.
   `kernel.approve`, Expansion and template consent each resolve once per
   completion. The render consults the same resolver: for the `login_hint`
   Subject, or with none through `resolveForRendering`, which answers only a
-  provenance every Subject of the client shares and otherwise refuses. Drawdowns (child, template dispatch, carryover) re-resolve from
-  provenance and refuse when it denotes more than one root; the committed-root
-  binding is #827's second part.
+  provenance every Subject of the client shares and otherwise refuses.
+  Drawdowns (child, template dispatch, carryover) re-resolve from provenance
+  and refuse when it denotes more than one root. Under a configured
+  replacement resolver they refuse outright, since the catalog behind the
+  kernel is not what the approval consulted. The committed-root binding is
+  #827's second part. Gate 4's human-principal list stays kernel
+  configuration; it can only refuse.
 - **Synchronous resolution.** The resolver is synchronous by contract: it runs
   inside an approval completion, whose record commit is one synchronous store
   transaction. A remote resolver answers from a snapshot and revalidates at

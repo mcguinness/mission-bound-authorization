@@ -3826,6 +3826,12 @@
      "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > establishes a template's source for every recipient Subject through every recipient Agent, refusing recipients whose roots differ",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > refuses a drawdown under a configured resolver rather than checking a catalog the approval never consulted",
+     "level": "unit",
+     "surface": "derivation"
     }
    ]
   },
