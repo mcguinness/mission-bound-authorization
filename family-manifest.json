@@ -488,7 +488,7 @@
      ]
     },
     {
-     "when": "the AuthZEN binding emits Decision Evidence",
+     "when": "the AuthZEN profile emits Decision Evidence",
      "requires": [
       "draft-mcguinness-mission-runtime-evidence"
      ]
@@ -544,7 +544,7 @@
    "verbs": [
     "enforce"
    ],
-   "summary": "The concrete OpenID AuthZEN binding of the runtime decision contract.",
+   "summary": "The concrete OpenID AuthZEN profile of the runtime decision contract.",
    "pull_when": "The PDP speaks AuthZEN and needs the decision-contract wire mapping.",
    "normative_references": [
     "draft-mcguinness-mission-runtime",
@@ -956,7 +956,7 @@
    "verbs": [
     "govern"
    ],
-   "summary": "Defines the cumulative consumption bounds a Mission Intent may carry (`max_budget`, `max_calls`, `max_duration`, `max_egress_volume`), the `exclusive` latch, and the runtime metering and AuthZEN wire binding that enforce them.",
+   "summary": "Defines the cumulative consumption bounds a Mission Intent may carry (`max_budget`, `max_calls`, `max_duration`, `max_egress_volume`), the `exclusive` latch, and the runtime metering and AuthZEN wire representation that enforce them.",
    "pull_when": "A Mission needs cumulative caps (budget, calls, duration, egress), not just scope.",
    "normative_references": [
     "draft-mcguinness-mission-authzen",
@@ -974,7 +974,7 @@
    ],
    "requires_when": [
     {
-     "when": "the AuthZEN binding is the runtime wire",
+     "when": "the AuthZEN profile is the runtime wire",
      "requires": [
       "draft-mcguinness-mission-authzen"
      ]
@@ -1381,6 +1381,7 @@
     "draft-mcguinness-oauth-mission-consent-evidence",
     "draft-mcguinness-oauth-mission-derivation-limits",
     "draft-mcguinness-oauth-mission-progressive",
+    "draft-mcguinness-oauth-mission-resource-access",
     "draft-mcguinness-oauth-mission-submission-evidence",
     "draft-mcguinness-oauth-mission-template"
    ]

@@ -381,7 +381,7 @@ decision-API profile in use, for example
 ## Required Instance Attribution {#instance-attribution}
 
 The instance specification defines how to validate context and associate
-it with a presenter; this binding selects that association when Resource
+it with a presenter; this profile selects that association when Resource
 policy or the Enforcement Scope Statement requires instance attribution.
 The PEP validates the credential, Instance Context, and current proof
 under {{I-D.draft-mcguinness-oauth-client-instance-id}}, Sections 7.3
