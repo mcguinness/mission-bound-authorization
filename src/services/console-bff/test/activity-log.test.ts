@@ -461,6 +461,8 @@ describe("ConsoleBff.activityLog read surface (operator role + join)", () => {
         action: { name: "payments:invoice.read" },
         audience: AUDIENCE,
         evaluation_id: "dec_activity",
+        // @spec authzen#evaluation-request-digest-input: a fixture digest of a submitted request.
+        evaluation_request_digest: "sha-256:v_QKMU8dffVDdoAnQkBenjWgtp5U_ffH5ORwT39iaoo",
         decision: "permit",
         entry_digest: "sha-256:fixture-entry",
         conditions: { valid_until: new Date(Date.now() + 60_000).toISOString() },

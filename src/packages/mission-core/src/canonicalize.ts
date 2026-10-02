@@ -46,14 +46,15 @@ function compareUtf16(a: string, b: string): number {
 }
 
 /**
- * @spec runtime-evidence#receipt-evidence, runtime-evidence#request-digest-worked:
+ * @spec runtime-evidence#receipt-evidence, runtime-evidence#request-digest-worked,
+ * authzen#evaluation-request-digest-input:
  * a "canonical-object digest": SHA-256 over the JCS canonical bytes of a JSON
  * value directly, encoded `sha-256:` + base64url (no padding). Distinct from
  * {@link computeAnchor} (anchors.ts): that helper hashes a `{typ, iss, value}`
  * domain-separated envelope; this one hashes the value's own canonical bytes
  * with no wrapper, matching the Mission Receipt evidence-reference digest and
- * the Decision/Refusal `evaluation_request_digest` fallback exactly as those
- * sections define them.
+ * the Decision/Refusal `evaluation_request_digest` over either input those
+ * sections define (the request body as submitted, or the pre-request input).
  */
 export function canonicalDigest(value: JsonValue): string {
   const digest = createHash("sha256").update(canonicalize(value), "utf8").digest();

@@ -35,6 +35,10 @@ import {
   type TokenFacts,
 } from "../src/index.js";
 
+// @spec authzen#evaluation-request-digest-input: a fixture digest of a submitted
+// request (the AuthZEN profile's worked value), for emitter inputs that model one.
+const FIXTURE_REQUEST_DIGEST = "sha-256:v_QKMU8dffVDdoAnQkBenjWgtp5U_ffH5ORwT39iaoo";
+
 // @spec runtime-evidence#decision-evidence-object (#741, PR #753 review): one
 // decision point per test module, plus the enforcement-side bundle that
 // verifies what it emits. `PDP.emitter` is the PDP-side seam this file uses to
@@ -482,6 +486,7 @@ describe("GAP 2: an unrecognized decision-context member makes a permit unusable
       action: { name: "payments:vendor.read" },
       audience: CANONICAL_RESOURCE,
       evaluation_id: "dec_1",
+      evaluation_request_digest: FIXTURE_REQUEST_DIGEST,
       decision: "permit",
       evaluated_at: new Date().toISOString(),
       action_class: "irreversible_action",

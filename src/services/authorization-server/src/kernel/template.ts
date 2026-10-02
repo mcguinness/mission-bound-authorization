@@ -65,12 +65,16 @@ export class TemplateError extends Error {}
 /**
  * @spec mission-template#dispatch-refusals — why a dispatch was refused.
  * `template_not_active` covers BOTH a revoked and an expired template (there is
- * no separate expiry reason). `out_of_template_ceiling` is the empty double
+ * no separate expiry reason). `review_overdue` is a template whose most recent
+ * human approval is older than its `review_cadence_s`
+ * (@spec mission-template#template-consent); it is implementation-local, with
+ * no registered wire value (D205). `out_of_template_ceiling` is the empty double
  * intersection; a policy-empty intent surfaces as {@link IntentError} instead
  * (matching `kernel.approve`), never as this reason.
  */
 export type DispatchReason =
   | "template_not_active"
+  | "review_overdue"
   | "dispatcher_not_allowed"
   | "recipient_not_allowed"
   | "out_of_template_ceiling"
@@ -105,6 +109,12 @@ export interface CreateTemplateInput {
   per_instance_lifetime_s: number;
   max_active: number;
   rate_per_min: number;
+  /**
+   * @spec mission-template#the-mission-template — `review_cadence`: the
+   * maximum age, in seconds, of the template's most recent human approval
+   * before Dispatch stops (@spec mission-template#template-consent).
+   */
+  review_cadence_s: number;
   approval_event_id: string;
   expires_at: string;
 }
@@ -170,6 +180,9 @@ export function createTemplate(
   if (input.rate_per_min <= 0 || !Number.isInteger(input.rate_per_min)) {
     throw new TemplateError("rate_per_min must be a positive integer");
   }
+  if (!Number.isInteger(input.review_cadence_s) || input.review_cadence_s <= 0) {
+    throw new TemplateError("review_cadence_s must be a positive integer number of seconds");
+  }
   assertDispatchersAndRecipients(input);
 
   // Idempotency first: return the already-consented template unchanged rather
@@ -192,6 +205,7 @@ export function createTemplate(
     per_instance_lifetime_s: input.per_instance_lifetime_s,
     max_active: input.max_active,
     rate_per_min: input.rate_per_min,
+    review_cadence_s: input.review_cadence_s,
     approver: input.approver,
     expires_at: input.expires_at,
   };
@@ -300,8 +314,8 @@ export interface DispatchResult {
  * template. Structure mirrors {@link createChildMission}: resolve the template,
  * idempotency-guard, gate, derive-and-prove authority, clamp expiry, assemble
  * lineage, insert. The gates (in order): idempotency, template active + not
- * expired, dispatcher allowed, recipient allowed, max-active, rate, double
- * intersection, prohibited-class.
+ * expired, review not overdue, dispatcher allowed, recipient allowed,
+ * max-active, rate, double intersection, prohibited-class.
  */
 export function dispatchFromTemplate(
   kernel: MissionKernel,
@@ -316,8 +330,9 @@ export function dispatchFromTemplate(
   const approvalEventId = `dsp_${input.dispatchEventId}`;
 
   // a. Idempotency: a caller-supplied dispatch id makes retries idempotent.
-  // Checked BEFORE the gates so a retry after the template was revoked/expired
-  // still returns the instance the first dispatch created. `approval_event_id`
+  // Checked BEFORE the gates so a retry after the template was revoked/expired,
+  // or its review fell overdue, still returns the instance the first dispatch
+  // created. `approval_event_id`
   // is globally unique, so guard the pathological case of the SAME dispatch id
   // reused against a DIFFERENT template (which would otherwise silently return a
   // mismatched {mission, template} pair).
@@ -345,6 +360,18 @@ export function dispatchFromTemplate(
   }
   if (Date.parse(template.expires_at) <= nowMs) {
     throw new DispatchError("template_not_active", `template ${template.id} is expired`);
+  }
+  // @spec mission-template#template-consent — standing consent decays: no
+  // dispatch from a template whose most recent human approval is OLDER than
+  // its `review_cadence` (strictly: at exactly the bound, dispatch proceeds).
+  // The approval instant is the template's `created_at`, the same instant
+  // every instance records as `approval_basis.approved_at`. A fresh human
+  // approval re-consents as a new template.
+  if (nowMs - Date.parse(template.created_at) > template.review_cadence_s * 1000) {
+    throw new DispatchError(
+      "review_overdue",
+      `template ${template.id} approval is older than its review cadence of ${template.review_cadence_s}s`,
+    );
   }
   if (!template.dispatchers.includes(input.dispatcher)) {
     throw new DispatchError("dispatcher_not_allowed", `dispatcher ${input.dispatcher} is not permitted`);
