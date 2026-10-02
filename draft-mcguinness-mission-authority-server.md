@@ -789,16 +789,15 @@ define for the members of the same names.
 # Mission Join {#mission-join}
 
 In MAS mode the acting access token is an ordinary OAuth token from
-the deployment's unchanged AS: it carries no `mission` claim and no
+the deployment's unchanged AS. It carries no `mission` claim and no
 Mission-derived `authorization_details`, so it cannot identify its
 Mission. The PEP names the Mission explicitly, and the PDP joins the
-credential to it before evaluating the action. The join is this
-profile's load-bearing mechanism: it is what a permit "under this
-Mission" rests on when no cryptographic binding exists.
+credential to it before evaluating the action. When no cryptographic
+binding exists, a permit "under this Mission" rests on the join.
 
-This section defines the baseline mapping join; the Mission Join
+This section defines the baseline mapping join. The Mission Join
 Assertion ({{join-assertion}}) is the enterprise-mode join built on
-it. The Enterprise profile runs two modes: Mission-bound credentials
+it. The Enterprise profile uses two modes: Mission-bound credentials
 carry the high-consequence classes, and Join Assertions carry the
 externally joined governed paths outside those classes
 ({{enterprise-profile}}).
@@ -813,14 +812,14 @@ A Mission-joining PDP and its PEPs MUST observe the following:
    harness records exactly this,
    {{I-D.draft-mcguinness-mission-harness}}) or from deployment
    configuration. In the AuthZEN binding
-   ({{I-D.draft-mcguinness-mission-authzen}}) this is
+   ({{I-D.draft-mcguinness-mission-authzen}}) this reference is
    `context.mission`; the PEP additionally populates `state`, and
    `authority_hash` where the MAS's signed Mission Status response
    discloses it, as OPTIONAL enrichment beyond the required `id` and
    `issuer`.
 2. **The PDP resolves the Mission at the MAS.** The PDP MUST resolve
-   the referenced Mission through the MAS's Mission Status operation
-   and MUST treat the MAS as the Mission state source under the
+   the referenced Mission through the MAS's Mission Status operation.
+   The PDP MUST treat the MAS as the Mission state source under the
    runtime profile's state and freshness rules
    ({{I-D.draft-mcguinness-mission-runtime}}): fail closed when state
    cannot be established within the published staleness bound, and use
@@ -849,7 +848,7 @@ A Mission-joining PDP and its PEPs MUST observe the following:
    and `max_depth` is evaluated from the deployment's actor records
    rather than from a Mission-bound token's `act` chain. A delegate
    with no actor record under the Mission is not recorded as acting
-   under it, and the join fails `mission_mismatch`.
+   under it, and the join fails with `mission_mismatch`.
 6. **Join failure is a deny.** A failure of the subject or client join
    MUST be denied with the `mission_mismatch` denial reason: the
    presented credential does not join to the referenced Mission
@@ -869,7 +868,7 @@ A Mission-joining PDP and its PEPs MUST observe the following:
    the acting credential itself carries (the token as issued, enforced
    at the Resource Server or gateway), the Mission's approved
    authority, and current Resource policy. The join adds the Mission
-   bound; it MUST NOT widen either of the other two, and a PEP MUST
+   bound and MUST NOT widen either of the other two. A PEP MUST
    NOT treat a Mission permit as overriding what the credential or
    the resource would refuse.
 9. **Joined-view evidence commitment.** A decision reached over a
@@ -881,59 +880,59 @@ A Mission-joining PDP and its PEPs MUST observe the following:
    delegate), or the resulting effective Authority Set differs, so a
    verifier can tell a joined decision's evidence from a direct
    Mission-bound decision's, and one joined view from a
-   differently-joined one. This document does not fix the
+   differently-joined one. This document does not specify the
    commitment's construction.
 
 ## What a Join Establishes {#join-scope}
 
-The join proves that the credential belongs to the same subject and
-client the Mission names. It does not prove the credential was derived
-under the Mission; no MAS-mode mechanism can, because the AS issues
-tokens with no knowledge of Missions ({{limitations}},
-{{join-spoofing}}).
+The join proves that the credential belongs to the subject and client
+the Mission names, never that the credential was issued for the
+Mission. No MAS-mode mechanism can prove derivation under the Mission,
+because the AS issues tokens with no knowledge of Missions
+({{limitations}}, {{join-spoofing}}). No assertion raises this
+ceiling.
 
-The join also has a ceiling no assertion raises: it proves the
-credential belongs to the Mission's parties, never that it was
-issued for the Mission ({{limitations}}). For the high-consequence
-classes, association is therefore not the terminal architecture. The
-issuance join ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}})
-or native Mission-bound issuance restores cryptographic derivation.
-A path claiming the Enterprise profile's high-consequence credential
-property MUST use Mission-bound issuance: an acting credential
-satisfying the mission-credential-bound composition of the Mission
-Binding Properties ({{I-D.draft-mcguinness-mission-architecture}}).
+For the high-consequence classes, association is therefore not the
+end state. The issuance join
+({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) or native
+Mission-bound issuance restores cryptographic derivation. A path
+claiming the Enterprise profile's high-consequence credential property
+MUST use Mission-bound issuance: an acting credential satisfying the
+mission-credential-bound composition of the Mission Binding Properties
+({{I-D.draft-mcguinness-mission-architecture}}).
 
-A deployment without it still claims the runtime and join
-capabilities its paths actually have, and states the difference in
-its Mission Deployment Profile; no `residual_risks` entry buys the
-stronger claim, and a Join Assertion cannot satisfy it.
+A deployment without Mission-bound issuance still claims the runtime
+and join capabilities its paths actually have, and states the
+difference in its Mission Deployment Profile. No `residual_risks`
+entry permits the stronger claim, and a Join Assertion cannot satisfy
+it.
 
-In the baseline mapping join the PDP compares the authenticated subject
-and client the PEP attests in the decision request, not the acting
-credential itself: the PEP authenticates the credential at the
-enforcement boundary and populates the decision request from it, and
+In the baseline mapping join, the PDP compares the authenticated
+subject and client that the PEP attests in the decision request, not
+the acting credential itself. The PEP authenticates the credential at
+the enforcement boundary and populates the decision request from it;
 the PDP neither receives nor inspects the credential. Baseline join
 integrity therefore rests wholly within the PEP trust base, and a PEP
 that misattests the subject or client widens the join. The
-credential-bound join, where the acting token itself is inspected, is
-the Mission Join Assertion ({{join-assertion}}), where the MAS resolves
-the token centrally and binds its assertion to that token's digest and
-key.
+credential-bound join, in which the acting token itself is inspected,
+is the Mission Join Assertion ({{join-assertion}}): the MAS resolves
+the token centrally and binds its assertion to that token's digest
+and key.
 
 A deployment MAY move the join's verification from each PDP to the
 MAS with the Mission Join Assertion ({{join-assertion}}). That
-upgrade strengthens who verifies the join, not what the join can
+upgrade strengthens the join's verification, not what the join can
 prove.
 
 ## Acting Credentials {#join-credentials}
 
-The join binds identity, not possession, so the acting credential's
-own sender binding is what keeps a joined permit from being a bearer
-property. Acting credentials for governed work SHOULD be
-sender-constrained, with DPoP or mutual TLS at the unchanged AS. For
-the high-consequence action classes they MUST be. With a pure bearer
-token, any holder inside the (subject, client) equivalence class
-joins ({{join-spoofing}}).
+The join binds identity, not possession. The acting credential's own
+sender binding keeps a joined permit from being a bearer property.
+Acting credentials for governed work SHOULD be sender-constrained,
+with DPoP or mutual TLS at the unchanged AS. For the high-consequence
+action classes, acting credentials MUST be sender-constrained. With a
+pure bearer token, any holder inside the (subject, client) equivalence
+class joins ({{join-spoofing}}).
 
 ## Instance-Bound Joins {#join-instance}
 
@@ -943,39 +942,47 @@ its tokens ({{I-D.draft-mcguinness-oauth-client-instance-id}}: the
 identifies a concrete runtime instance once the PDP has validated that
 context and established its association with the presenter as a Context
 Consumer ({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section
-7.5). A sender-constraint key unique to the instance
+7.5).
+
+A sender-constraint key unique to the instance
 ({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 7.3)
-establishes that association only where the token issuer conveys context
-solely from direct Client Attestation validation; context an issuer may
-have preserved from an input token also needs a profile that
-authenticates its provenance, since such a token can carry one
-instance's context while bound to another's key. The PDP SHOULD include
-that instance in the join, so the client join binds (subject, client,
-instance) rather than (subject, client). This restores per-instance
-granularity behind a shared gateway `client_id`: the validated instance
-joins, not every workload in the `client_id` equivalence class.
+establishes that association only where the token issuer conveys
+context solely from direct Client Attestation validation. Context an
+issuer may have preserved from an input token also needs a profile
+that authenticates its provenance, since such a token can carry one
+instance's context while bound to another's key.
+
+Where the PDP has established the instance in this way, the PDP SHOULD
+include that instance in the join, so the client join binds (subject,
+client, instance) rather than (subject, client). This restores
+per-instance granularity behind a shared gateway `client_id`: the
+validated instance joins, not every workload in the `client_id`
+equivalence class.
 
 In the PEP/PDP split, the PEP performs the credential, context, and
-presenter-proof validation and supplies the established instance through
-the authenticated decision context; the PDP relies on that PEP under
-the decision API's trust boundary. The mapping contract states which
-paths require an instance-bound join and how the established instance
-maps to the Mission's permitted parties. Where the mapping contract
-requires an instance-bound join, the PDP MUST deny with
-`mission_mismatch` if the established instance is absent or does not
-match that contract, without falling back to a subject-and-client-only
-join. A PEP unable to validate required instance attribution refuses
-before requesting a decision, using the instance specification's Section
-7.6 credential error and the runtime profile's pre-decision refusal
+presenter-proof validation and supplies the established instance
+through the authenticated decision context. The PDP relies on that
+PEP under the decision API's trust boundary.
+
+The mapping contract states which paths require an instance-bound join
+and how the established instance maps to the Mission's permitted
+parties. Where the mapping contract requires an instance-bound join,
+the PDP MUST deny with `mission_mismatch` if the established instance
+is absent or does not match that contract, without falling back to a
+subject-and-client-only join.
+
+A PEP unable to validate required instance attribution refuses before
+requesting a decision, using the instance specification's Section 7.6
+credential error and the runtime profile's pre-decision refusal
 evidence ({{I-D.draft-mcguinness-mission-runtime}}).
 
 ## AuthZEN Encoding {#join-authzen}
 
-A successful join, in the AuthZEN binding: the PEP supplies
-`context.mission` populated from its Mission binding, with `state`
-(and `authority_hash` where disclosed) taken from the MAS's signed
-Mission Status response, and the other decision inputs per
-{{I-D.draft-mcguinness-mission-authzen}}:
+The following example shows a decision request for a successful join
+in the AuthZEN binding. The PEP supplies `context.mission` populated
+from its Mission binding, with `state` (and `authority_hash` where
+disclosed) taken from the MAS's signed Mission Status response, and
+the other decision inputs per {{I-D.draft-mcguinness-mission-authzen}}:
 
 ~~~ json
 {
@@ -999,8 +1006,9 @@ Mission Status response, and the other decision inputs per
 ~~~
 
 The credential's authenticated subject and client match the Mission's
-`subject.sub` and `client_id`, so the join holds; the PDP evaluates
-the action under the Mission's Authority Set and permits:
+`subject.sub` and `client_id`, so the join holds, and the PDP evaluates
+the action under the Mission's Authority Set. The following example
+shows the resulting permit:
 
 ~~~ json
 {
@@ -1018,25 +1026,24 @@ the action under the Mission's Authority Set and permits:
 }
 ~~~
 
-`join_view_id` accompanies `policy_view_id` because this decision
-rode the join (rule 9 of {{join-rules}}): the direct-client disposition
-and `client_id` it binds distinguish it from a differently-joined
-decision (a narrowed delegate view) and from a direct Mission-bound
-decision, which never carries `join_view_id` at all.
+The `join_view_id` member accompanies `policy_view_id` because this
+decision was reached over the join (rule 9 of {{join-rules}}). The
+direct-client disposition and `client_id` it binds distinguish it from
+a differently-joined decision (a narrowed delegate view) and from a
+direct Mission-bound decision, which never carries `join_view_id`.
 
 The AuthZEN profile's denial-reason extensibility rule permits a
 companion profile to extend the denial-reason set by specification,
 and requires a consumer to treat an unrecognized reason as a deny
-({{I-D.draft-mcguinness-mission-authzen}}). `mission_mismatch` and
-`mission_reference_conflict` ({{reference-verification}}) are such
-extensions: where this profile is implemented, they are members of
-that denial-reason set, and neither requires IANA action under the
-AuthZEN profile's extension-by-specification model. A consumer that
-does not implement this profile treats them as that rule requires:
-the action stays refused.
+({{I-D.draft-mcguinness-mission-authzen}}). Where this document is
+implemented, `mission_mismatch` and `mission_reference_conflict`
+({{reference-verification}}) are members of that set; neither requires
+IANA action under that extension-by-specification model. A consumer
+that does not implement this document treats them as that rule
+requires, so the action stays refused.
 
-Example AuthZEN denial for a credential whose `client_id` does not
-match the referenced Mission:
+The following is an example of an AuthZEN denial for a credential
+whose `client_id` does not match the referenced Mission:
 
 ~~~ json
 {
@@ -1058,24 +1065,24 @@ The Mission Join consumes a Mission reference the PEP supplies, and
 rule 1 of {{join-rules}} names two sources: the PEP's own recorded
 Mission binding and deployment configuration. When the gateway PEP
 is not the process that holds the binding (an MCP gateway, an egress
-proxy), neither source exists at the enforcement boundary, and
-nothing has said how the requesting side names the Mission a given
-request runs under. This section defines that channel.
+proxy), neither source exists at the enforcement boundary. Mission
+reference propagation is the channel through which the requesting
+side names the Mission a given request runs under.
 
 The carried value is an untrusted **Mission-selection assertion**: it
 routes the request to a Mission for the join to verify. The Mission
 Join verifies the referenced Mission and its subject and client
-relationship and supplies the authoritative state and anchors; in the
-baseline same-party case neither the carriage nor the join proves
-that this particular request was created under that Mission.
+relationship, and supplies the authoritative state and anchors. In
+the baseline same-party case, neither the carriage nor the join
+proves that this particular request was created under that Mission.
 
-Who attached the value is what strengthens attribution: a trusted
-harness attaching it from its recorded Mission binding
+The party that attaches the value determines attribution strength. A
+trusted harness attaching it from its recorded Mission binding
 ({{I-D.draft-mcguinness-mission-harness}}) attests more than the
-agent naming its own Mission, and the deployment's Enforcement Scope
+agent naming its own Mission. The deployment's Enforcement Scope
 Statement records which party attaches it. Grading what an
-established join proves is the join-assurance concern, not this
-channel's.
+established join proves is a join-assurance concern, not a concern
+of this channel.
 
 ## The Reference Tuple {#reference-tuple}
 
@@ -1083,19 +1090,20 @@ The propagated value is exactly the Mission reference tuple:
 `mission_id` and `issuer`, compared as the canonical (`issuer`,
 `mission_id`) pair under the OAuth binding's comparison rules
 ({{I-D.draft-mcguinness-oauth-mission}}). The channel carries nothing
-else: state, integrity anchors, authority, and policy data always
+else. State, integrity anchors, authority, and policy data always
 come from the MAS's signed Mission Status response
 ({{lifecycle-and-state}}), and a request carrying any of them in this
 channel MUST be refused, never silently ignored, so ambiguity is
-detectable rather than absorbed. The tuple is single-homed: each
-carriage below maps this one tuple, and a new carrier profiles it
-rather than defining a second.
+detectable rather than absorbed. Each carriage below maps this one
+tuple, and an additional carrier profiles it rather than defining a
+second.
 
 ## HTTP Carriage: Mission-Reference {#mission-reference-field}
 
 `Mission-Reference` is an HTTP request field {{RFC9110}} whose value
-is a Structured Fields Dictionary {{RFC9651}} (shown wrapped for
-layout; the field is one line):
+is a Structured Fields Dictionary {{RFC9651}}. The following example
+shows a request carrying the field (wrapped for display; the field is
+one line):
 
 ~~~ http-message
 POST /call HTTP/1.1
@@ -1113,23 +1121,23 @@ Mission-Reference: id="msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
   `issuer`, a String carrying the exact issuer identifier the MAS
   publishes in its metadata ({{discovery}}). A MAS participating in
   this profile MUST publish an ASCII issuer identifier (Structured
-  Field Strings are ASCII); the sender copies that published string
+  Field Strings are ASCII). The sender copies that published string
   with no URI normalization of any kind, and equality is byte
   equality of the exact string.
 - A sender MUST NOT emit an `id` longer than 256 characters or an
   `issuer` longer than 512 characters; a receiver MUST treat a longer
   value as malformed.
 - {{RFC9651}} parsing keeps the last of duplicate Dictionary keys, so
-  parse success alone is not enough. A receiver MUST reject as
+  parse success alone is not sufficient. A receiver MUST reject as
   malformed, before map collapse: a duplicate `id` or `issuer`
   occurrence, a parameter on either member, an Inner List or any
   non-String value, and any member other than the two defined here.
   A profile the deployment adopts MAY define an additional member by
-  specification; a receiver MUST NOT act on a member it does not
+  specification. A receiver MUST NOT act on a member it does not
   implement.
-- A sender MUST send exactly one field line. Field lines that do not
+- A sender MUST send exactly one field line. If the field lines do not
   combine into exactly one Dictionary satisfying every rule above, or
-  any parse failure, make the reference malformed.
+  if parsing fails, the reference is malformed.
 - A malformed, missing, or stripped reference fails closed wherever
   Mission governance is required: governed work with no establishable
   Mission reference is refused before evaluation, per the runtime
@@ -1138,13 +1146,14 @@ Mission-Reference: id="msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
 
 ## MCP Carriage {#mcp-reference}
 
-For a tool call governed through MCP, the reference rides the
-request's `params._meta` object on each `tools/call`, never tool
-arguments and never session state, under the key
+For a tool call governed through MCP, the reference is carried in the
+request's `params._meta` object on each `tools/call`, never in tool
+arguments and never in session state. The key is
 `com.karlmcguinness.mission/reference`, a reverse-DNS-prefixed key in
 a namespace this family's author controls, per the pinned MCP
-revision's `_meta` rules ({{MCP-META}}; MCP reserves its own `_meta`
-prefixes):
+revision's `_meta` rules ({{MCP-META}}); MCP reserves its own `_meta`
+prefixes. The following example shows a `tools/call` request carrying
+the reference:
 
 ~~~ json
 {
@@ -1168,22 +1177,22 @@ closed the same way as the HTTP field: a receiver MUST reject
 duplicate JSON member names at parse time, a member other than
 `mission_id` and `issuer`, a non-string member value, and the
 propagation key appearing more than once in `_meta`. Unknown `_meta`
-keys are extensible metadata an ordinary MCP server may ignore; a
-server that silently ignores this key is not a conforming Mission
+keys are extensible metadata that an ordinary MCP server may ignore.
+A server that silently ignores this key is not a conforming Mission
 PEP.
 
 Where a tool is governed as Mission-required, absent negotiated or
 configured propagation support the call MUST be refused, never run
-as ordinary ungoverned execution. A future MCP extension or
-capability mechanism may supersede this carriage; the tuple's
-semantics stay this section's.
+as ordinary ungoverned execution. An MCP extension or capability
+mechanism may supersede this carriage; the tuple semantics remain
+those of {{reference-tuple}}.
 
 ## Verification and Conflict {#reference-verification}
 
 - The value is a selection assertion, never authority: its presence
-  or content grants nothing, the Mission is established only through
-  the Mission Join ({{mission-join}}), and an unverified reference
-  MUST NOT establish the Mission, the runtime profile's
+  or content grants nothing, and the Mission is established only
+  through the Mission Join ({{mission-join}}). An unverified reference
+  MUST NOT establish the Mission; this is the runtime profile's
   externally-established rule
   ({{I-D.draft-mcguinness-mission-runtime}}).
 - Where the acting credential carries a `mission` claim, the
@@ -1195,32 +1204,32 @@ semantics stay this section's.
   pick-one.
 - An attribution conflict, or a malformed reference where governance
   requires one, is denied with the `mission_reference_conflict`
-  denial reason, a member this profile adds to the AuthZEN
-  denial-reason set under its extensibility rule beside
-  `mission_mismatch` ({{mission-join}}): `mission_mismatch` stays the
-  subject-or-client join failure, and `mission_reference_conflict` is
-  reference sources naming different Missions or an unusable
-  reference.
-- A PEP that establishes the conflict before any evaluation surfaces
+  denial reason. This document adds that reason to the AuthZEN
+  denial-reason set under its extensibility rule, beside
+  `mission_mismatch` ({{mission-join}}). The `mission_mismatch` reason
+  remains the subject-or-client join failure, and
+  `mission_reference_conflict` covers reference sources naming
+  different Missions or an unusable reference.
+- If a PEP establishes the conflict before any evaluation, it surfaces
   the same reason as a coordinated pre-decision refusal, recorded as
   a Refusal Record with this `denial_reason`
-  ({{I-D.draft-mcguinness-mission-runtime-evidence}}); an evaluating
-  PDP surfaces it as the AuthZEN denial reason above. One reason, two
-  surfacings, never a silent resolution.
-- The selection assertion applies only to the request it accompanies:
-  it selects the Mission the join is evaluated against, and does not
+  ({{I-D.draft-mcguinness-mission-runtime-evidence}}). An evaluating
+  PDP surfaces it as the AuthZEN denial reason above. Either way the
+  conflict carries one reason and is never silently resolved.
+- The selection assertion applies only to the request it accompanies.
+  It selects the Mission the join is evaluated against and does not
   by itself establish request provenance or attribution.
   Session-scoped stickiness is a deployment choice recorded in the
   Enforcement Scope Statement, and per-request carriage is required
   wherever the runtime profile requires per-action evaluation.
-- The field rides the deployment's TLS, which authenticates the
-  channel endpoint, never which component attached the value:
-  transport protection does not upgrade self-asserted attribution.
-  Where HTTP Message Signatures {{RFC9421}} are deployed on the
-  request, the signature MUST cover `Mission-Reference`.
+- The field is protected by the deployment's TLS, which authenticates
+  the channel endpoint, never which component attached the value.
+  Transport protection therefore does not upgrade self-asserted
+  attribution. Where HTTP Message Signatures {{RFC9421}} are deployed
+  on the request, the signature MUST cover `Mission-Reference`.
 
-Example denial for a propagated reference conflicting with the PEP's
-recorded binding:
+The following is an example of a denial for a propagated reference
+that conflicts with the PEP's recorded binding:
 
 ~~~ json
 {
@@ -1234,13 +1243,13 @@ recorded binding:
 
 ## Forwarding and Privacy {#reference-forwarding}
 
-The tuple is a stable correlator and lands in gateway logs. An
+The tuple is a stable correlator and is recorded in gateway logs. An
 intermediary MUST NOT copy the field or the `_meta` key onto a
-request to an unrelated authority domain, and a terminating PEP
-SHOULD remove it before forwarding unless the downstream recipient
-participates in the same verified binding. The OAuth binding's
-Mission Identifier correlation considerations apply to logged
-values.
+request to an unrelated authority domain. A terminating PEP SHOULD
+remove the field or key before forwarding unless the downstream
+recipient participates in the same verified binding. The OAuth
+binding's Mission Identifier correlation considerations apply to
+logged values.
 
 # Mission Join Assertion {#join-assertion}
 
