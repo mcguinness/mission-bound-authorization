@@ -554,13 +554,12 @@ appear in the Intent; it belongs in the Authority Proposal
   Issuer without it refuses the member as an unknown Intent member.
   Where the task implies a natural issuance count (a one-shot read, a
   fixed number of scheduled runs), the shaper proposes that count.
-  Otherwise it omits the member, which leaves the limit to deployment
-  policy alone, and that policy can impose none
+  Otherwise it omits the member, leaving the limit to deployment policy
+  alone, which can impose none
   ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}, Section
-  "Effective Limit"). A proposed count can only lower the effective
-  limit. The shaper does not propose a large round number "to be
-  safe": a high guess adds no bound that policy does not already set,
-  and it misleads the Approver about what was requested.
+  "Effective Limit"). The shaper does not propose a large round number
+  "to be safe": a proposed count only lowers the effective limit, so a
+  high guess adds no bound and misleads the Approver.
 
 Other companion members:
 : A companion profile can define further top-level Mission Intent
