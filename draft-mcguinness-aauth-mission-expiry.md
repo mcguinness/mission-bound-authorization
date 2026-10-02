@@ -59,10 +59,10 @@ informative:
 
 AAuth's approved mission blob MAY carry `expires_at`: an immutable,
 consent-bound lifetime the Person Server enforces on every decision
-path, capping every token carrying `mission_s256`. This document
-profiles that member: values are RFC 3339 date-times, deployments
-document their clock-skew posture, and the Person Server terminates
-promptly at the deadline.
+path and uses to cap the person tokens and auth tokens it issues. This
+document profiles that member: values are RFC 3339 date-times,
+deployments document their clock-skew posture, and the Person Server
+terminates promptly at the deadline.
 
 --- middle
 
@@ -70,10 +70,10 @@ promptly at the deadline.
 
 AAuth defines `expires_at` as an OPTIONAL member of the approved
 mission blob: every Person Server (PS) decision path MUST compare the
-current time to it and treat a mission past it as terminated, and no
-token carrying `mission_s256` may outlive it
-{{I-D.draft-hardt-oauth-aauth-protocol}}. This document profiles the
-member with the deltas in {{member}} and {{enforcement}}.
+current time to it and treat a mission past it as terminated, and the
+PS caps the Person Tokens and Auth Tokens it issues at it (Section 8.2
+of {{I-D.draft-hardt-oauth-aauth-protocol}}). This document profiles
+the member with the deltas in {{member}} and {{enforcement}}.
 
 An AAuth mission is approved once and then relied on for as long as it
 stays `active`. Absent an expiry, an approval remains usable
@@ -87,8 +87,9 @@ it cannot be changed in place.
 {::boilerplate bcp14-tagged}
 
 This document uses Person, Agent, Person Server (PS), Access Server
-(AS), Resource, Auth Token, mission, approved mission blob, mission
-proposal, and the `{approver, s256}` mission reference as defined by
+(AS), Resource, Person Token, Resource Token, Auth Token, mission,
+approved mission blob, mission proposal, and the `{approver, s256}`
+mission reference as defined by
 {{I-D.draft-hardt-oauth-aauth-protocol}}.
 
 # The expires_at Member {#member}
@@ -112,13 +113,19 @@ expiry.
 # Enforcement {#enforcement}
 
 AAuth requires every PS decision path to compare the current time to
-`expires_at` and to treat a mission past it as terminated, and it caps
-every token carrying `mission_s256` (person, resource, and auth) to
-that deadline {{I-D.draft-hardt-oauth-aauth-protocol}}. This profile
-adds only a promptness requirement: the PS SHOULD terminate at the
-deadline itself, rather than waiting for the next request under the
-reference, so that status and logging reflect the transition without
-delay.
+`expires_at` and to treat a mission past it as terminated (Section 8.2
+of {{I-D.draft-hardt-oauth-aauth-protocol}}). The PS caps the Person
+Tokens and Auth Tokens it issues at `expires_at` (Sections 7.1.2 and
+9.4.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}), and the presented
+token carries that bound to an AS (Section 9.1.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}). A Resource Token is a
+short-lived request artifact whose lifetime is independent of
+`expires_at`; the PS verifies that the mission is active and unexpired
+whenever it acts on one (Sections 6.7.1 and 6.7.2 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}). This profile adds only a
+promptness requirement: the PS SHOULD terminate at the deadline
+itself, rather than waiting for the next request under the reference,
+so that status and logging reflect the transition without delay.
 
 # Proposal and Approval {#approval}
 
@@ -172,10 +179,10 @@ Expiry bounds duration; it does not end a mission early. A compromise
 discovered before the deadline still requires an explicit termination
 mechanism.
 
-Already-issued Auth Tokens are the residual after expiry. The
-issuance bound in {{enforcement}} keeps that residual inside the
-mission's lifetime: no token issued under the mission outlives
-`expires_at`.
+Already-issued Person Tokens and Auth Tokens are the residual after
+expiry. The issuance bound in {{enforcement}} keeps that residual
+inside the mission's lifetime. A Resource Token can outlive
+`expires_at`, but the PS acts on none after it ({{enforcement}}).
 
 Immutability defeats lifetime extension. An attacker who controls an
 Agent cannot stretch an approved mission's lifetime; a longer lifetime
