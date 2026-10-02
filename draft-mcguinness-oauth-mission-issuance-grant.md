@@ -498,25 +498,27 @@ redemption to the grant's `client_id`.
 
 ## Grant Validation {#grant-validation}
 
-The consuming AS MUST validate,
-in an order that fails closed:
+In addition to the processing {{Section 3 of RFC7523}} requires, the
+consuming AS MUST validate the following and refuse the request if
+any check fails:
 
-1. the JOSE `typ` is `mission-issuance-grant+jwt`; any other type is
-   not this profile ({{relationships}}): exact validation of the
-   `typ`, with mutually exclusive validation rules for the artifact
-   profiles, implements the substitution defense of {{RFC8725}},
-   Sections 3.11 and 3.12;
+1. the `typ` JOSE header parameter is `mission-issuance-grant+jwt`,
+   checked first so that no other artifact's validation rules are
+   applied to the grant ({{Section 3.11 of RFC8725}} and
+   {{Section 3.12 of RFC8725}});
 2. the signature, under a `kid` resolving in the published key
    material of an `iss` its local policy trusts for issuance joins;
+   and the `mission` claim's `issuer` equals `iss`;
 3. `aud` names this AS; `exp` and `iat` are within the 300-second
    bound; the `jti` has not been seen. The record of a seen `jti` is
    written atomically with successful issuance and retained until
    `exp` passes (single use, {{effective-set-projection}});
-4. the requester is the grant's `client_id`: the authenticated client
-   equals it, or, where `cnf` is present, the proof of possession of
-   step 5 binds the redemption to the key the grant was minted for;
-5. when `cnf` is present, proof of possession of the bound key with
-   DPoP {{RFC9449}} or mutual TLS {{RFC8705}}.
+4. the requester is the grant's `client_id` ({{redemption}}), and,
+   when `cnf` is present, the request proves possession of the bound
+   key ({{grant}});
+5. `sub` maps to a local account under the deployment's mapping
+   policy ({{issuance-join}}), and the grant's `authorization_details`
+   map to resources this AS serves.
 
 ## Token Issuance {#token-issuance}
 
