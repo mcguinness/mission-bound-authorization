@@ -723,21 +723,7 @@ carry the high-consequence classes, and Join Assertions carry the
 externally joined governed paths outside those classes
 ({{enterprise-profile}}).
 
-The join also has a ceiling no assertion raises: it proves the
-credential belongs to the Mission's parties, never that it was
-issued for the Mission ({{limitations}}). For the high-consequence
-classes, association is therefore not the terminal architecture. The
-issuance join ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}})
-or native Mission-bound issuance restores cryptographic derivation.
-A path claiming the Enterprise profile's high-consequence credential
-property MUST use Mission-bound issuance: an acting credential
-satisfying the mission-credential-bound composition of the Mission
-Binding Properties ({{I-D.draft-mcguinness-mission-architecture}}).
-
-A deployment without it still claims the runtime and join
-capabilities its paths actually have, and states the difference in
-its Mission Deployment Profile; no `residual_risks` entry buys the
-stronger claim, and a Join Assertion cannot satisfy it.
+## Join Rules {#join-rules}
 
 A Mission-joining PDP and its PEPs MUST observe the following:
 
@@ -818,6 +804,30 @@ A Mission-joining PDP and its PEPs MUST observe the following:
    differently-joined one. This document does not fix the
    commitment's construction.
 
+## What a Join Establishes {#join-scope}
+
+The join proves that the credential belongs to the same subject and
+client the Mission names. It does not prove the credential was derived
+under the Mission; no MAS-mode mechanism can, because the AS issues
+tokens with no knowledge of Missions ({{limitations}},
+{{join-spoofing}}).
+
+The join also has a ceiling no assertion raises: it proves the
+credential belongs to the Mission's parties, never that it was
+issued for the Mission ({{limitations}}). For the high-consequence
+classes, association is therefore not the terminal architecture. The
+issuance join ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}})
+or native Mission-bound issuance restores cryptographic derivation.
+A path claiming the Enterprise profile's high-consequence credential
+property MUST use Mission-bound issuance: an acting credential
+satisfying the mission-credential-bound composition of the Mission
+Binding Properties ({{I-D.draft-mcguinness-mission-architecture}}).
+
+A deployment without it still claims the runtime and join
+capabilities its paths actually have, and states the difference in
+its Mission Deployment Profile; no `residual_risks` entry buys the
+stronger claim, and a Join Assertion cannot satisfy it.
+
 In the baseline mapping join the PDP compares the authenticated subject
 and client the PEP attests in the decision request, not the acting
 credential itself: the PEP authenticates the credential at the
@@ -830,6 +840,13 @@ the Mission Join Assertion ({{join-assertion}}), where the MAS resolves
 the token centrally and binds its assertion to that token's digest and
 key.
 
+A deployment MAY move the join's verification from each PDP to the
+MAS with the Mission Join Assertion ({{join-assertion}}). That
+upgrade strengthens who verifies the join, not what the join can
+prove.
+
+## Acting Credentials {#join-credentials}
+
 The join binds identity, not possession, so the acting credential's
 own sender binding is what keeps a joined permit from being a bearer
 property. Acting credentials for governed work SHOULD be
@@ -837,6 +854,42 @@ sender-constrained, with DPoP or mutual TLS at the unchanged AS. For
 the high-consequence action classes they MUST be. With a pure bearer
 token, any holder inside the (subject, client) equivalence class
 joins ({{join-spoofing}}).
+
+## Instance-Bound Joins {#join-instance}
+
+Where the deployment's Authorization Server conveys Instance Context in
+its tokens ({{I-D.draft-mcguinness-oauth-client-instance-id}}: the
+`client_instance` claim or introspection member), the acting credential
+identifies a concrete runtime instance once the PDP has validated that
+context and established its association with the presenter as a Context
+Consumer ({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section
+7.5). A sender-constraint key unique to the instance
+({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 7.3)
+establishes that association only where the token issuer conveys context
+solely from direct Client Attestation validation; context an issuer may
+have preserved from an input token also needs a profile that
+authenticates its provenance, since such a token can carry one
+instance's context while bound to another's key. The PDP SHOULD include
+that instance in the join, so the client join binds (subject, client,
+instance) rather than (subject, client). This restores per-instance
+granularity behind a shared gateway `client_id`: the validated instance
+joins, not every workload in the `client_id` equivalence class.
+
+In the PEP/PDP split, the PEP performs the credential, context, and
+presenter-proof validation and supplies the established instance through
+the authenticated decision context; the PDP relies on that PEP under
+the decision API's trust boundary. The mapping contract states which
+paths require an instance-bound join and how the established instance
+maps to the Mission's permitted parties. Where the mapping contract
+requires an instance-bound join, the PDP MUST deny with
+`mission_mismatch` if the established instance is absent or does not
+match that contract, without falling back to a subject-and-client-only
+join. A PEP unable to validate required instance attribution refuses
+before requesting a decision, using the instance specification's Section
+7.6 credential error and the runtime profile's pre-decision refusal
+evidence ({{I-D.draft-mcguinness-mission-runtime}}).
+
+## AuthZEN Encoding {#join-authzen}
 
 A successful join, in the AuthZEN binding: the PEP supplies
 `context.mission` populated from its Mission binding, with `state`
@@ -918,49 +971,6 @@ match the referenced Mission:
   }
 }
 ~~~
-
-The join proves that the credential belongs to the same subject and
-client the Mission names. It does not prove the credential was derived
-under the Mission; no MAS-mode mechanism can, because the AS issues
-tokens with no knowledge of Missions ({{limitations}},
-{{join-spoofing}}).
-
-A deployment MAY move the join's verification from each PDP to the
-MAS with the Mission Join Assertion ({{join-assertion}}). That
-upgrade strengthens who verifies the join, not what the join can
-prove.
-
-Where the deployment's Authorization Server conveys Instance Context in
-its tokens ({{I-D.draft-mcguinness-oauth-client-instance-id}}: the
-`client_instance` claim or introspection member), the acting credential
-identifies a concrete runtime instance once the PDP has validated that
-context and established its association with the presenter as a Context
-Consumer ({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section
-7.5). A sender-constraint key unique to the instance
-({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 7.3)
-establishes that association only where the token issuer conveys context
-solely from direct Client Attestation validation; context an issuer may
-have preserved from an input token also needs a profile that
-authenticates its provenance, since such a token can carry one
-instance's context while bound to another's key. The PDP SHOULD include
-that instance in the join, so the client join binds (subject, client,
-instance) rather than (subject, client). This restores per-instance
-granularity behind a shared gateway `client_id`: the validated instance
-joins, not every workload in the `client_id` equivalence class.
-
-In the PEP/PDP split, the PEP performs the credential, context, and
-presenter-proof validation and supplies the established instance through
-the authenticated decision context; the PDP relies on that PEP under
-the decision API's trust boundary. The mapping contract states which
-paths require an instance-bound join and how the established instance
-maps to the Mission's permitted parties. Where the mapping contract
-requires an instance-bound join, the PDP MUST deny with
-`mission_mismatch` if the established instance is absent or does not
-match that contract, without falling back to a subject-and-client-only
-join. A PEP unable to validate required instance attribution refuses
-before requesting a decision, using the instance specification's Section
-7.6 credential error and the runtime profile's pre-decision refusal
-evidence ({{I-D.draft-mcguinness-mission-runtime}}).
 
 # Mission Reference Propagation {#reference-propagation}
 
