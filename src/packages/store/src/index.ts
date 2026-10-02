@@ -75,8 +75,13 @@ const IN_MEMORY_NAMES = new Set([":memory:", "file::memory:"]);
  */
 export function openDurableStore(options: DurableStoreOptions): Database.Database {
   const file = options.file;
-  if (typeof file !== "string" || file.trim().length === 0) throw new DurableStoreError("no store file is configured");
-  if (IN_MEMORY_NAMES.has(file) || file.startsWith("file::memory:") || /[?&]mode=memory\b/.test(file)) {
+  if (typeof file !== "string" || file.trim().length === 0)
+    throw new DurableStoreError("no store file is configured");
+  if (
+    IN_MEMORY_NAMES.has(file) ||
+    file.startsWith("file::memory:") ||
+    /[?&]mode=memory\b/.test(file)
+  ) {
     throw new DurableStoreError("an in-memory store is not durable");
   }
   if (!options.owner) throw new DurableStoreError("no owner is named");
@@ -89,26 +94,31 @@ export function openDurableStore(options: DurableStoreOptions): Database.Databas
   try {
     db.pragma("locking_mode = EXCLUSIVE");
     const mode = db.pragma("journal_mode = WAL", { simple: true });
-    if (String(mode).toLowerCase() !== "wal") throw new DurableStoreError(`journal_mode is ${String(mode)}, not wal`);
+    if (String(mode).toLowerCase() !== "wal")
+      throw new DurableStoreError(`journal_mode is ${String(mode)}, not wal`);
     db.pragma("synchronous = FULL");
     db.pragma("foreign_keys = ON");
     db.transaction(() => {
       db.exec("CREATE TABLE IF NOT EXISTS store_meta (k TEXT PRIMARY KEY, v TEXT NOT NULL) STRICT");
-      const owner = db.prepare("SELECT v FROM store_meta WHERE k = 'owner'").get() as { v: string } | undefined;
+      const owner = db.prepare("SELECT v FROM store_meta WHERE k = 'owner'").get() as
+        | { v: string }
+        | undefined;
       if (owner && owner.v !== options.owner) {
         throw new DurableStoreError(`store is owned by ${owner.v}, not ${options.owner}`);
       }
       const version = db.pragma("user_version", { simple: true }) as number;
       if (version > options.migrations.length) {
-        throw new DurableStoreError(`schema version ${version} is newer than this build's ${options.migrations.length}`);
+        throw new DurableStoreError(
+          `schema version ${version} is newer than this build's ${options.migrations.length}`,
+        );
       }
       for (const migration of options.migrations.slice(version)) db.exec(migration);
       db.pragma(`user_version = ${options.migrations.length}`);
       // The startup write: it records the owner and takes the exclusive lock
       // that EXCLUSIVE mode then holds for this handle's lifetime.
-      db.prepare("INSERT INTO store_meta (k, v) VALUES ('owner', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").run(
-        options.owner,
-      );
+      db.prepare(
+        "INSERT INTO store_meta (k, v) VALUES ('owner', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v",
+      ).run(options.owner);
     }).immediate();
   } catch (e) {
     db.close();

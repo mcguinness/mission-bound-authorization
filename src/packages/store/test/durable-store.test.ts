@@ -25,16 +25,17 @@ function tempFile(): string {
 describe("openDurableStore (#917)", () => {
   it("refuses an absent, empty or in-memory file", () => {
     for (const file of [undefined, "", "  "]) {
-      expect(() => openDurableStore({ file, migrations: MIGRATIONS, owner: "pdp" }), String(file)).toThrow(
-        /no store file is configured/,
-      );
+      expect(
+        () => openDurableStore({ file, migrations: MIGRATIONS, owner: "pdp" }),
+        String(file),
+      ).toThrow(/no store file is configured/);
     }
-    expect(() => openDurableStore({ file: ":memory:", migrations: MIGRATIONS, owner: "pdp" })).toThrow(
-      DurableStoreError,
-    );
-    expect(() => openDurableStore({ file: ":memory:", migrations: MIGRATIONS, owner: "pdp" })).toThrow(
-      /an in-memory store is not durable/,
-    );
+    expect(() =>
+      openDurableStore({ file: ":memory:", migrations: MIGRATIONS, owner: "pdp" }),
+    ).toThrow(DurableStoreError);
+    expect(() =>
+      openDurableStore({ file: ":memory:", migrations: MIGRATIONS, owner: "pdp" }),
+    ).toThrow(/an in-memory store is not durable/);
   });
 
   it("keeps committed rows across a close and reopen of the same file", () => {
@@ -51,7 +52,9 @@ describe("openDurableStore (#917)", () => {
   it("refuses a second handle while the first lives, and admits it after the first closes", () => {
     const file = tempFile();
     const first = openDurableStore({ file, migrations: MIGRATIONS, owner: "pdp" });
-    expect(() => openDurableStore({ file, migrations: MIGRATIONS, owner: "pdp" })).toThrow(/locked/);
+    expect(() => openDurableStore({ file, migrations: MIGRATIONS, owner: "pdp" })).toThrow(
+      /locked/,
+    );
     // Not even a plain reader on the same file gets through.
     const raw = new Database(file, { timeout: 0 });
     expect(() => raw.prepare("SELECT COUNT(*) FROM claims").get()).toThrow(/locked/);
@@ -64,15 +67,17 @@ describe("openDurableStore (#917)", () => {
   it("refuses a store whose schema is newer than this build's migrations", () => {
     const file = tempFile();
     openDurableStore({ file, migrations: MIGRATIONS, owner: "pdp" }).close();
-    expect(() => openDurableStore({ file, migrations: MIGRATIONS.slice(0, 1), owner: "pdp" })).toThrow(
-      /newer than this build/,
-    );
+    expect(() =>
+      openDurableStore({ file, migrations: MIGRATIONS.slice(0, 1), owner: "pdp" }),
+    ).toThrow(/newer than this build/);
   });
 
   it("refuses a store recorded for a different owner", () => {
     const file = tempFile();
     openDurableStore({ file, migrations: MIGRATIONS, owner: "pdp-a" }).close();
-    expect(() => openDurableStore({ file, migrations: MIGRATIONS, owner: "pdp-b" })).toThrow(/owned by pdp-a/);
+    expect(() => openDurableStore({ file, migrations: MIGRATIONS, owner: "pdp-b" })).toThrow(
+      /owned by pdp-a/,
+    );
   });
 
   it("applies each pending migration once, in order", () => {

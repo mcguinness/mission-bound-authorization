@@ -50,10 +50,18 @@ export type IdempotencyScopeDimension = (typeof IDEMPOTENCY_SCOPE_DIMENSIONS)[nu
  * intended execution: a published scope naming one of these is refused at
  * load, never encoded.
  */
-export const VOLATILE_SCOPE_MEMBERS = ["client_instance_id", "act_chain", "freshness", "approval", "timestamp"] as const;
+export const VOLATILE_SCOPE_MEMBERS = [
+  "client_instance_id",
+  "act_chain",
+  "freshness",
+  "approval",
+  "timestamp",
+] as const;
 
 export function isScopeDimension(value: unknown): value is IdempotencyScopeDimension {
-  return typeof value === "string" && (IDEMPOTENCY_SCOPE_DIMENSIONS as readonly string[]).includes(value);
+  return (
+    typeof value === "string" && (IDEMPOTENCY_SCOPE_DIMENSIONS as readonly string[]).includes(value)
+  );
 }
 
 export function isVolatileScopeMember(value: unknown): boolean {
