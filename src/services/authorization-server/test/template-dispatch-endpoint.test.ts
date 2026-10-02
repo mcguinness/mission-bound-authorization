@@ -20,6 +20,7 @@
 
 import { type Server } from "node:http";
 import {
+  aamReconciliationTemplate,
   CANONICAL_RESOURCE,
   DERIVATION_POLICY,
   demoReconciliationTemplate,
@@ -175,6 +176,13 @@ describe("Mission Template admin plane (@spec mission-template)", () => {
     expect(body.template_id).toMatch(/^tmpl_/);
     expect(body.template_version).toBeTruthy();
     expect(body.template_hash).toMatch(/^sha-256:/);
+  });
+
+  it("accepts the shared AAM reconciliation template body, the terminal exhibit's payload (@spec mission-template#the-mission-template)", async () => {
+    const res = await createTemplateAdmin(aamReconciliationTemplate(ISSUER, `aam-shared-${seq++}`));
+    const body = (await res.json()) as { template_id?: string };
+    expect(res.status, JSON.stringify(body)).toBe(201);
+    expect(body.template_id).toMatch(/^tmpl_/);
   });
 
   it("rejects an absent or wrong x-service-token with 401", async () => {
