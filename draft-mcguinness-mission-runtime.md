@@ -3710,6 +3710,11 @@ worked example shows the concrete record
 
 \[\[ To be removed from the final specification ]]
 
+- The Operation Profile's items are grouped as the operation's binding
+  and its declarations, with no change to any requirement or to which
+  operations it applies to; a declaration is stated even where the
+  answer is no.
+
 - The Enforcement Scope Statement is what a deployment adopting the
   Runtime-Enforced bundle publishes, not what earns the level; the
   level stays guidance, matching the architecture's assurance levels,
