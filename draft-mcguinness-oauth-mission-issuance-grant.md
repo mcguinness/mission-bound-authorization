@@ -600,11 +600,12 @@ any check fails:
    material of an `iss` its local policy trusts for issuance joins;
    and the `mission` claim's `issuer` equals `iss`;
 3. `aud` names this AS; `exp` is no more than 300 seconds after
-   `iat`, `iat` is not in the future, and `exp` has not passed, each
-   within the clock-skew allowance of {{Section 4.1.4 of RFC7519}};
-   and the `jti` has not been seen. The record of a seen `jti` is
-   written atomically with successful issuance and retained until
-   `exp` plus that allowance passes ({{single-use}});
+   `iat`, compared exactly; `iat` is not after the current time and
+   `exp` is after it, with the clock-skew leeway of
+   {{Section 4.1.4 of RFC7519}} applied to these two comparisons with
+   the current time only; and the `jti` has not been seen. The record
+   of a seen `jti` is written atomically with successful issuance and
+   retained until `exp` plus that leeway passes ({{single-use}});
 4. the client is the grant's `client_id` ({{redemption}}): the
    authenticated client equals it, or, for a public client, the grant
    carries `cnf`; and whenever `cnf` is present, the request proves
