@@ -916,14 +916,15 @@ failure signal:
   reservation does not consume the budget permanently. On lease
   expiry without settlement the PDP reconciles the reservation
   through the runtime profile's orphaned-evidence process
-  ({{I-D.draft-mcguinness-mission-runtime}}). For an idempotent or
-  reversible action class, expiry releases the reservation and
-  returns the budget; for a non-idempotent action class, expiry
-  forces reconciliation or human review rather than release. An
-  unsettled reservation remains charged against the bound until it
-  is reconciled, and is released only on affirmative evidence of
-  non-execution; timeout alone never releases a reservation for a
-  non-idempotent action class.
+  ({{I-D.draft-mcguinness-mission-runtime}}), which queries the
+  resource and matches evidence. An unsettled reservation remains
+  charged against the bound until it is reconciled, and is released
+  only on affirmative evidence of non-execution; timeout alone never
+  releases a reservation, in any action class. An idempotent action
+  class makes a retry safe, not the first attempt void, and reversing
+  a reversible action is a compensation action
+  ({{I-D.draft-mcguinness-mission-orchestration}}), not evidence that
+  the original did not execute.
 - **Conflicting settlement**: fail closed per
   {{settlement-contract}}. The applied settlement is unchanged; the
   conflict is audited, never adjudicated by the intake.
@@ -1066,8 +1067,10 @@ Their enforcement, however, is only as good as the metering:
   never settles them can consume a budget with no executed action,
   denying the Mission its remaining authority. The bounded reservation
   lease ({{settlement-exchange}}) caps this: an unsettled reservation is
-  reconciled on lease expiry rather than held indefinitely, and the
-  idempotent-release path returns the budget.
+  reconciled on lease expiry, and reconciliation that finds no effect
+  at the resource returns the budget. An outcome reconciliation cannot
+  establish stays charged, so the residual is bounded by the published
+  reconciliation cadence, not by a timer.
 - **Latch burning.** Because the first matching action latches an
   exclusivity group, an injected agent can try to burn a group by
   driving the side it wants foreclosed, denying the Mission the other
