@@ -300,7 +300,7 @@ future work are collected in {{deferred}}.
 Because the invariants are not a wire format, two conforming deployments
 do not thereby interoperate at the PEP-PDP boundary; the interoperable
 wire surface is supplied by a separately specified decision API binding
-({{authzen}}), the AuthZEN binding being
+({{authzen}}), the AuthZEN profile being
 {{I-D.draft-mcguinness-mission-authzen}}. That a wire format is a
 deployment choice does not make it an ad hoc one: the Runtime-Enforced
 level of the Mission Assurance Levels
@@ -716,7 +716,7 @@ inventing parallel semantics:
 
 An approval produced by the governance workflow returns as decision
 input on a fresh evaluation ({{action-approval}}), never as output
-state. The AuthZEN binding maps this output onto its response
+state. The AuthZEN profile maps this output onto its response
 context, the obligations profile, and ARAP ({{authzen}}).
 
 ## Decision Inputs {#decision-inputs}
@@ -1661,7 +1661,7 @@ Five rules govern the approval's enforcement:
    mechanism, the action fails closed.
 2. An action-bound approval MUST carry a maximum age, bounded by a
    value the deployment set publishes, and MAY additionally carry an
-   absolute `approved_until` expiry (the AuthZEN binding surfaces ARAP's
+   absolute `approved_until` expiry (the AuthZEN profile surfaces ARAP's
    approval expiry there, {{authzen}}). The approval is fresh only before
    the earlier of `approved_at` plus the maximum age and any
    `approved_until`; past that bound the approval is not fresh and the PEP
@@ -1693,7 +1693,7 @@ not the age of the approval it relied on.
 This profile does not define the wire workflow that obtains the
 approval. A decision-API binding MAY route the requiring denial through
 a standardized access-request and approval workflow and carry the
-resulting approval back as decision input; the AuthZEN binding composes
+resulting approval back as decision input; the AuthZEN profile composes
 with the AuthZEN Access Request and Approval Profile for exactly this
 ({{authzen}}). However obtained, the approval is decision input, not a
 bearer grant: the runtime decision of {{decision}} remains
@@ -2130,7 +2130,7 @@ locally, is the third lane; this profile reserves it and defines no
 residual form. Two things are not lanes: a description of
 requestable authority is payload a request may carry, and a
 transient condition is a denial outcome carrying a retry signal,
-calling for neither remediation nor a request. The AuthZEN binding
+calling for neither remediation nor a request. The AuthZEN profile
 realizes the first two lanes and the transient outcome as
 obligations, ARAP composition, and its transient-denial members
 ({{authzen}}).

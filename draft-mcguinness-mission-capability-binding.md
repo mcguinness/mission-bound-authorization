@@ -107,12 +107,12 @@ contents are discovery metadata, never authority for a server's
 effective capabilities), an MCP tool, an OpenAPI operation, or an
 equivalent capability source, the
 invoked identity can drift from what the catalog served at approval.
-This document defines the companion binding that ties an approved
+This document defines the companion mechanism that ties an approved
 catalog entry to the capability source it was derived from: the
 `tool_id`, source, and content digest recorded at derivation and
 verified at decision time, the per-capability extraction rule that
 computes the digest, the `capability_drift` denial reason as a
-coordinated extension of the AuthZEN binding's runtime denial
+coordinated extension of the AuthZEN profile's runtime denial
 classification, and the mapping onto the OpenID AuthZEN Profile for
 Model Context Protocol Tool Authorization (COAZ) for MCP
 deployments.
@@ -134,26 +134,26 @@ approval.
 
 This document is a companion to Mission-Bound Runtime Enforcement:
 AuthZEN Profile {{I-D.draft-mcguinness-mission-authzen}} (the
-"AuthZEN binding"). It defines the capability-source binding a
+"AuthZEN profile"). It defines the capability-source binding a
 validating server records at derivation and a Policy Enforcement
 Point (PEP) presents at decision time in `context.capability_source`
 of the OpenID AuthZEN Authorization API {{AUTHZEN}} request the
-AuthZEN binding shapes: a stable `tool_id`, the discovery
+AuthZEN profile shapes: a stable `tool_id`, the discovery
 `source_uri`, a `source_digest` over the capability's extracted
 definition, and an `operation_ref`. It defines the per-capability
 extraction rule that computes `source_digest`, the decision-time
 verification a PDP performs, the `capability_drift` denial reason
 this document registers as a coordinated extension of the AuthZEN
-binding's runtime denial classification, and the mapping onto the
+profile's runtime denial classification, and the mapping onto the
 AuthZEN Profile for Model Context Protocol Tool Authorization (COAZ)
 {{COAZ}} for MCP deployments.
 
-This document rides the AuthZEN binding's request as
+This document rides the AuthZEN profile's request as
 `context.capability_source` and the runtime profile's capability
 identity requirement; it defines no drift rule of its own, since that
 requirement is the runtime profile's
 ({{I-D.draft-mcguinness-mission-runtime}}). A deployment that does
-not claim this companion is unaffected: the AuthZEN binding's
+not claim this companion is unaffected: the AuthZEN profile's
 decision contract consumes an already established action identity.
 
 # Conventions and Terminology {#conventions-and-definitions}
@@ -219,7 +219,7 @@ evidence, and runtime metering. A Mission-governed MCP deployment MAY
 use COAZ to construct the AuthZEN `subject`, `resource`, `action`,
 and parameter-bearing `context` members, but the Mission-specific
 `context.mission`, `context.actor`, freshness, permit binding, and
-evidence requirements of the AuthZEN binding
+evidence requirements of the AuthZEN profile
 ({{I-D.draft-mcguinness-mission-authzen}}) still apply.
 
 The minimum binding, committed by the validating server at derivation
@@ -293,7 +293,7 @@ Rules:
   wire representation and per-capability verification, carrying such
   a refusal as `capability_drift` ({{capability-drift-reason}}) with
   its boundary against `out_of_authority` fixed by the AuthZEN
-  binding's runtime denial classification
+  profile's runtime denial classification
   ({{I-D.draft-mcguinness-mission-authzen}}); it defines no drift
   rule of its own.
 - Resource policy MAY refuse a catalog-sourced action whose
@@ -317,7 +317,7 @@ where a `catalog_digest` was recorded, the presented `catalog_digest`
 MUST equal it likewise; otherwise the PDP returns `capability_drift`
 ({{capability-drift-reason}}). Whether an action is catalog-sourced,
 and which digests were recorded, are determined from the
-materialized policy view the AuthZEN binding defines
+materialized policy view the AuthZEN profile defines
 ({{I-D.draft-mcguinness-mission-authzen}}), not from the PEP's
 request; where no source binding was recorded, this check does not
 apply.
@@ -392,7 +392,7 @@ only the stable identifier plus source evidence above.
 
 This document registers `capability_drift` as a coordinated
 extension to the runtime denial classification, under the AuthZEN
-binding's extensibility rule
+profile's extensibility rule
 ({{I-D.draft-mcguinness-mission-authzen}}): an extension value MUST
 be either a collision-resistant name (following the
 Collision-Resistant Name guidance of {{RFC7519}} Section 4.2) or a
@@ -416,7 +416,7 @@ approved set for which no source binding was recorded is
 Capability or catalog drift, and an invoked identity outside the
 approved set when a source binding was recorded, surface as a PDP
 denial carrying `capability_drift`, under the carrier taxonomy of
-the AuthZEN binding ({{I-D.draft-mcguinness-mission-authzen}}).
+the AuthZEN profile ({{I-D.draft-mcguinness-mission-authzen}}).
 
 # Conformance {#conformance}
 
@@ -440,13 +440,13 @@ against the recorded one and return `capability_drift` on a
 mismatch ({{capability-verification}}, {{capability-drift-reason}}).
 
 A deployment that does not claim this document is unaffected: the
-AuthZEN binding's decision contract consumes an already established
+AuthZEN profile's decision contract consumes an already established
 action identity ({{I-D.draft-mcguinness-mission-authzen}}).
 
 # Security Considerations {#security-considerations}
 
 The runtime profile's Security Considerations
-({{I-D.draft-mcguinness-mission-runtime}}) and the AuthZEN binding's
+({{I-D.draft-mcguinness-mission-runtime}}) and the AuthZEN profile's
 ({{I-D.draft-mcguinness-mission-authzen}}) apply in full. This
 section addresses only threats specific to capability-source
 binding.

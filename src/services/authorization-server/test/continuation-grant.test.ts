@@ -38,11 +38,13 @@ import {
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import {
+  AuthorityNarrowedToEmptyError,
   buildAuthorizationServer,
   type BuiltAs,
   ID_JAG_TOKEN_TYPE,
   IDENTITY_CONTINUATION_JWT_TYP,
   IDENTITY_CONTINUATION_TOKEN_TYPE,
+  issueCrossDomainGrant,
   validateMissionIntent,
 } from "../src/index.js";
 
@@ -1590,6 +1592,49 @@ describe("continuation lifecycle invariants (@spec id-continuation-assertion)", 
     const second = approveLineage("apev-life-idem");
     expect(second.missionId).toBe(first.missionId);
     expect(as.continuationStore.handlesForMission(first.missionId)).toHaveLength(1);
+  });
+});
+
+describe("a continuation ID-JAG that fails after admission (@spec mission#issuance-gating, #914 ruling 1)", () => {
+  it("residual: a continuation grant that fails after admission leaves the derivation counted under an unreleased reservation, until an authoritative non-acceptance returns it", async () => {
+    // At the token endpoint the deterministic refusals run before admission:
+    // the audience-scoped authority check counts nothing ((b2), (f5)). A grant
+    // still fails after the gate admits when a state change since that check
+    // narrows its authority to nothing, so drive that failure directly with a
+    // filter that empties the admitted set.
+    const { missionId } = newLineage("apev-after-admission");
+    const count = () => as.kernel.get(missionId)?.derivation_count;
+    const before = count();
+    const { privateKey } = await generateKeyPair("ES256");
+
+    await expect(
+      issueCrossDomainGrant(as.kernel, privateKey, "test-kid", {
+        missionId,
+        targetAs: RAS_AUD,
+        clientId: "ap-agent",
+        cnfJkt: agentJkt,
+        resourceToAs: (r: string) => (r === RESOURCE ? RAS_AUD : ISSUER),
+        authorityFilter: () => [],
+      }),
+    ).rejects.toBeInstanceOf(AuthorityNarrowedToEmptyError);
+
+    // The failed derivation IS counted: its reservation is reserved and never
+    // released, keyed by a grant identity nobody will retry.
+    expect(count()).toBe((before ?? 0) + 1);
+    const rows = as.kernel.db
+      .prepare("SELECT reservation_id, state FROM derivation_reservations WHERE mission_id = ?")
+      .all(missionId) as Array<{ reservation_id: string; state: string }>;
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.state).toBe("reserved");
+
+    // Only an authoritative observation that no artifact was accepted returns it.
+    expect(
+      as.kernel.reconcileDerivation(rows[0]?.reservation_id as string, {
+        accepted: false,
+        authority: "svc:test-issuance-log",
+      }),
+    ).toBe(true);
+    expect(count()).toBe(before);
   });
 });
 
