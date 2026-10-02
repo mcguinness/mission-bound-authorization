@@ -1142,8 +1142,8 @@ Their enforcement, however, is only as good as the metering:
   lease ({{settlement-exchange}}) caps this: an unsettled reservation is
   reconciled on lease expiry, and reconciliation that finds no effect
   at the resource returns the budget. An outcome reconciliation cannot
-  establish stays charged, so the residual is bounded by the published
-  reconciliation cadence, not by a timer.
+  establish stays charged and is escalated, never released by a
+  timer.
 - **Latch burning.** Because the first matching action latches an
   exclusivity group, an injected agent can try to burn a group by
   driving the side it wants foreclosed, denying the Mission the other
