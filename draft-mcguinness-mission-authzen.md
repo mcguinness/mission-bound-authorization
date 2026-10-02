@@ -2413,6 +2413,60 @@ format is `jws-compact`, and the protected `typ` names the record's
 own registered media type
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
+## Evaluation Request Digest Input {#evaluation-request-digest-input}
+
+Under this profile, the input to `evaluation_request_digest`
+({{I-D.draft-mcguinness-mission-runtime-evidence}}) is the complete
+JSON request body the PEP submitted to the evaluation or evaluations
+endpoint: every member it carried, extension members included, before
+the PDP applies any default or enrichment. HTTP header fields and
+transport framing are not part of it. The digest is `sha-256:`
+followed by the base64url, unpadded, encoding of the SHA-256 of the
+body's JCS {{RFC8785}} canonical bytes, so member order and whitespace
+do not change it, while an omitted member and a member set to `null`
+yield different digests. For a batch ({{batch-evaluations}}), the
+input is the batch request body as submitted, before its default
+members are merged into the items; each item's Decision Evidence
+carries that one digest.
+
+The digest commits to its input; it does not hide an input a party
+can guess.
+
+For this abbreviated consequential-read request, submitted without a
+`parameter_digest`:
+
+~~~ json
+{
+  "subject": {
+    "type": "user",
+    "id": "user_3p2q8mN1a0kV7tR"
+  },
+  "resource": {
+    "type": "journal-entry",
+    "id": "je_2026Q3_inv_8421",
+    "properties": {
+      "audience": "https://erp.example.com"
+    }
+  },
+  "action": {
+    "name": "journal-entries.read"
+  },
+  "context": {
+    "mission": {
+      "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+      "issuer": "https://as.example.com"
+    }
+  }
+}
+~~~
+
+the value is:
+
+~~~ text
+evaluation_request_digest =
+  sha-256:v_QKMU8dffVDdoAnQkBenjWgtp5U_ffH5ORwT39iaoo
+~~~
+
 ## Execution Evidence Requirement {#execution-evidence-requirement}
 
 This requirement is the Runtime Evidence feature profile's own
