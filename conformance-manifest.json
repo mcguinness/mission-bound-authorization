@@ -75,8 +75,8 @@
     "content_sha256": "055d460354f9c98d981f74ce661daa606685695bedd42d04a31981158f8389d7"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "5421debe04e26cdce67553b40da55a824f2c8e0e",
-    "content_sha256": "ddaa352d558a90ce64d6b90f37aab38d4a399e8b2a1bb44bb738fa0afdd8733c"
+    "revision": "22cd16a360c79d98439b2dce02dfa3c02dc22f1f",
+    "content_sha256": "c31083a7b057d7086cecae0ed7820085140b2e03e0d5744995424557801060c1"
    },
    "draft-mcguinness-mission-orchestration.md": {
     "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
@@ -95,8 +95,8 @@
     "content_sha256": "7747cec83e69020dce2611fd99172fbe14034d776ba68c9b64cdca9fd410d94f"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "5421debe04e26cdce67553b40da55a824f2c8e0e",
-    "content_sha256": "d0eba8141b989625626e75fdd84be21ea0f4d81222101031f165e837cbe2d55b"
+    "revision": "22cd16a360c79d98439b2dce02dfa3c02dc22f1f",
+    "content_sha256": "08e29eee9728517c02ca3aa1e78ae6aadf19d059ebb701ea99645f40a1a15c9f"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
     "revision": "a27dab30b97ca4e07644a70d0b24f7acaafacfa2",
@@ -26989,6 +26989,50 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Owner ruling on #1026 and #1000 (2026-10-02). No implementation yet."
+  },
+  {
+   "id": "expansion.reconciliation.discharge-between-adjudication-and-activation",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "reconciliation",
+   "text": "the successor's complete Authority Set, including authority carried forward from the predecessor, overlaps in authority no authority under a current containment or discharge restriction of the chain",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "When the predecessor discharges authority X after a successor carrying X was adjudicated (by policy or by a human approval that did not disclose the discharge) and before activation, the completion is refused with invalid_grant and authority_restricted_since_approval and activates no successor; X returns only through a new expansion adjudicated against the current restriction."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Review finding on #1031 (owner ruling D241): narrowing between adjudication and activation. No implementation yet."
+  },
+  {
+   "id": "expansion.reconciliation.containment-between-adjudication-and-activation",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "reconciliation",
+   "text": "the successor's complete Authority Set, including authority carried forward from the predecessor, overlaps in authority no authority under a current containment or discharge restriction of the chain",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "containment.narrowing"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "When the predecessor contains authority X after a successor carrying X was adjudicated and before activation, the completion is refused with invalid_grant and authority_restricted_since_approval and activates no successor; X returns only through a new expansion adjudicated against the current restriction."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Review finding on #1031 (owner ruling D241): narrowing between adjudication and activation. No implementation yet."
   }
  ]
 }
