@@ -335,7 +335,10 @@ function loadTopology(): Topology {
     },
     stores: {
       pdpIdempotencyClaims: {
-        file: resolvePath(dirname(CONFIG_DIR), reqString(file, claimStore, "file", "stores.pdpIdempotencyClaims")),
+        file: resolvePath(
+          dirname(CONFIG_DIR),
+          reqString(file, claimStore, "file", "stores.pdpIdempotencyClaims"),
+        ),
       },
     },
   };
