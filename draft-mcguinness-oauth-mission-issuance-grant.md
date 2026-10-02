@@ -616,7 +616,9 @@ Cache-Control: no-store
 
 A grant redeems exactly once, meaning exactly one successful
 issuance: a redemption that fails before issuance leaves the grant
-unconsumed ({{effective-set-projection}}). Subsequent token needs are
+unconsumed ({{single-use}}); under the authorization code flow
+carriage, PAR validation is the consuming step ({{par-carriage}}).
+Subsequent token needs are
 met by the issued refresh token (state-gated) or a fresh grant
 (state-gated at minting); either way, every path to new authority
 re-enters a Mission-state gate, which is the issuance-gate kill
@@ -772,7 +774,7 @@ Deployments whose clients must traverse the authorization code flow
 MAY carry the grant in a Pushed Authorization Request {{RFC9126}} as
 the request parameter `mission_issuance_grant` ({{iana}}).
 
-The AS applies the grant validation of {{redemption}} at the PAR
+The AS applies the grant validation of {{grant-validation}} at the PAR
 endpoint and treats the grant as the authorization already obtained.
 It MUST NOT re-prompt for consent; at most it renders the Mission
 reference.
@@ -781,9 +783,11 @@ The AS consumes the grant at PAR validation: the 300-second `exp`,
 `iat`, and `aud` checks and the single-use `jti` check are evaluated
 there, and the `jti` is recorded as seen at that point, so the grant
 cannot be replayed into a second authorization request. Recording
-there is the atomic issuance step of {{effective-set-projection}}
-under this carriage, because the issued authorization code becomes the
-grant's carrier from that point on.
+there is the atomic issuance step of {{single-use}} under this
+carriage: from that point the `request_uri`, and then the
+authorization code, carry the authorization. A flow the user abandons,
+or the AS refuses, after PAR validation therefore leaves the grant
+consumed, and the client obtains a fresh grant.
 
 The grant's window is not re-evaluated at code exchange; the issued
 authorization code carries its own lifetime from there. All
