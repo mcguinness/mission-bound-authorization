@@ -162,6 +162,10 @@ fresh Decision; a different operation under the same key is refused
   collision-resistant names
   `https://payments.demo/execution-errors/schedule_exists` and
   `https://payments.demo/execution-errors/schedule_not_found`.
+- A caller whose actor has no stable identity to scope the key on (an
+  instance-profiled leaf with no client) is refused `actor_unkeyable`
+  before any effect, recorded as
+  `https://payments.demo/execution-errors/actor_unkeyable`.
 
 ## Permits, leases, commit point (D28/D36/D29/D39)
 
