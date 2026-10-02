@@ -256,20 +256,16 @@ the Approver MAY additionally consent to:
   reach without a further human approval and that every in-ceiling
   successor MUST be within ({{in-ceiling-expansion}}); and
 - a **drawdown policy**, recorded as a `drawdown_policy` member on the
-  Mission: a string or URI identifying the policy under which the Mission
-  Issuer MAY adjudicate an in-ceiling expansion by policy rather than by
-  a fresh human approval. The policy's content is deployment-defined.
-  Committing only the `drawdown_policy` identifier under `ceiling_hash`
-  leaves the policy body itself uncommitted, so a change to its logic
-  between the initial ceiling consent and a given drawdown is not
-  detectable from `ceiling_hash` alone. A deployment SHOULD
-  additionally commit the drawdown policy body under an integrity
-  anchor, computed the way the issuance profile computes
-  `authority_hash` ({{I-D.draft-mcguinness-oauth-mission}}), or
-  disclose it under Consent Evidence
-  ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), so a
-  policy-adjudicated drawdown stays auditable against the policy
-  content a human actually consented to, not only its identifier.
+  Mission: an activation policy reference, an object of `id`,
+  `version`, and `digest` ({{I-D.draft-mcguinness-oauth-mission}},
+  Section "Standing-Consent Bases"), identifying the policy under
+  which the Mission Issuer MAY adjudicate an in-ceiling expansion by
+  policy rather than by a fresh human approval, and committing its
+  content. The policy's content is deployment-defined. Because
+  `ceiling_hash` covers this member, the ceiling commits the exact
+  policy the human consented to, and the Mission Issuer verifies its
+  `digest` before each policy-adjudicated drawdown under that
+  section's rule.
 
 Where present, `authority_ceiling` and `drawdown_policy` are recorded
 on the Mission and committed by a `ceiling_hash`. The `ceiling_hash`
@@ -279,11 +275,12 @@ is computed with the issuance profile's integrity-anchor envelope
 - `typ`: `mission-authority-ceiling`;
 - hashed object: a JSON object with exactly two members,
   `authority_ceiling` (the ceiling array) and `drawdown_policy` (the
-  policy string or URI), canonicalized as the integrity-anchor
-  envelope requires, so member order follows that canonicalization;
+  activation policy reference object), canonicalized as the
+  integrity-anchor envelope requires, so member order follows that
+  canonicalization;
 - omission rule: when the Mission carries no `drawdown_policy`, the
   `drawdown_policy` member is omitted from the hashed object, never
-  included as null or an empty string.
+  included as null or an empty object.
 
 `ceiling_hash` is an envelope anchor under the issuance profile's
 commitment mechanisms, which this document imports normatively.
@@ -467,7 +464,9 @@ a drawdown.
 
 An in-ceiling request the drawdown policy does not authorize is not
 refused with `out_of_ceiling`; it falls back to an ordinary, freshly
-human-approved expansion.
+human-approved expansion. A drawdown policy snapshot that does not
+match `drawdown_policy.digest` authorizes nothing, so a request under
+it falls back the same way.
 
 The drawdown policy MUST NOT policy-adjudicate a successor Authority
 Set entry whose authority intersects a predecessor entry discharged
