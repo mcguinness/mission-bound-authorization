@@ -1457,9 +1457,12 @@ profile's <code>policy_drawdown</code> basis
 reused: that value names policy-approved child creation, not a
 ceiling drawdown.<a href="#section-4.1-4" class="pilcrow">¶</a></p>
 <p id="section-4.1-5">The issuance profile's fourth high-risk class, a consumption bound
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), is not held back here: it is
-the containment an in-ceiling expansion draws down under, not a
-hazard drawdown amplifies. The <code>ceiling_drawdown</code> <code>approval_basis</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), is not held back here: a
+successor continues its predecessor's consumption counters, and a
+policy-adjudicated successor cannot raise a bound
+(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>), so a drawdown widens
+authority within the ceiling without granting new capacity. The
+<code>ceiling_drawdown</code> <code>approval_basis</code>
 already carries the trace the issuance profile's approval-authentication
 floor requires for that class, through the <code>consent_principal</code> and
 <code>approved_at</code> fields this section defines; a deployment recording
@@ -2007,13 +2010,18 @@ does not match falls back to a fresh human approval. The
 anchored with it.<a href="#appendix-A-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-3.2">
-          <p id="appendix-A-3.2.1">Editorial: disambiguated <code>authority_ceiling</code> from the template
-profile's Template Ceiling and the shaping companion's shaping
-ceiling at its first definition (<a href="#conventions-and-terminology" class="auto internal xref">Section 3</a>), no
-normative change.<a href="#appendix-A-3.2.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-3.2.1">The consumption-bound rationale rests on the metering profile's
+successor rule: a successor continues its predecessor's counters, and
+a policy-adjudicated successor cannot raise a bound.<a href="#appendix-A-3.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-3.3">
-          <p id="appendix-A-3.3.1">Mirrored the OAuth binding's Mission Template uncommitted-policy-body
+          <p id="appendix-A-3.3.1">Editorial: disambiguated <code>authority_ceiling</code> from the template
+profile's Template Ceiling and the shaping companion's shaping
+ceiling at its first definition (<a href="#conventions-and-terminology" class="auto internal xref">Section 3</a>), no
+normative change.<a href="#appendix-A-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-3.4">
+          <p id="appendix-A-3.4.1">Mirrored the OAuth binding's Mission Template uncommitted-policy-body
 pattern onto <code>drawdown_policy</code>: a <span class="bcp14">SHOULD</span> to additionally commit the
 policy body under an integrity anchor or disclose it under Consent
 Evidence (<a href="#progressive-authorization" class="auto internal xref">Section 4</a>). Reframed the ceiling
@@ -2021,7 +2029,7 @@ review cadence as a recency ceiling on the <code>ceiling_drawdown</code>
 approval basis's <code>approved_at</code>, reproducible from the drawdown
 policy's own versioned content identified by the existing
 <code>policy_id</code>/<code>policy_version</code> rather than a new commitment or a new,
-separately versioned member (<a href="#ceiling-review" class="auto internal xref">Section 4.3</a>, <a href="#audit-linkage" class="auto internal xref">Section 6</a>).<a href="#appendix-A-3.3.1" class="pilcrow">¶</a></p>
+separately versioned member (<a href="#ceiling-review" class="auto internal xref">Section 4.3</a>, <a href="#audit-linkage" class="auto internal xref">Section 6</a>).<a href="#appendix-A-3.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
