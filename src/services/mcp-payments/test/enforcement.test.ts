@@ -5,6 +5,7 @@
  * Auto-skips when OpenFGA is unreachable.
  */
 
+import { randomUUID } from "node:crypto";
 import { beforeAll, describe, expect, it } from "vitest";
 import { AUTHORITY_ENTRY_TYP, computeAnchor } from "@mission/core";
 import { Fga, type MissionView } from "@mission/pdp";
@@ -19,6 +20,9 @@ import {
   type ExecutionEvidence,
   type TokenFacts,
 } from "../src/index.js";
+
+/** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
+const idem = (): string => `idem_${randomUUID()}`;
 
 // @spec runtime-evidence#decision-evidence-object (#741): one bundle per
 // test module. `signing`/`resolver` wire the PEP's store; `decide` is the
@@ -244,7 +248,7 @@ d("M4 core enforcement tier", () => {
   // actionable authorization_details the client could propose next.
   it("action absent from the Authority Set entirely denied out_of_authority WITH the insufficient_authorization grain", async () => {
     build();
-    const res = await server.callWriteTool("execute_wire_transfer", { invoice_id: "inv-1" }, TOKEN);
+    const res = await server.callWriteTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
     expect(res.ok).toBe(false);
     expect(res.denial_reason).toBe("out_of_authority");
     expect(res.insufficient_authorization).toBeDefined();
