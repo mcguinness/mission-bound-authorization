@@ -2573,16 +2573,19 @@ registry {{RFC8615}}:
 IANA is requested to create the "Mission Authority Server Metadata"
 registry. The registration policy is
 Specification Required {{RFC8126}}. A Designated Expert reviews a
-submission for: a Member Name following the metadata naming
+submission for: a Metadata Name following the metadata naming
 conventions of {{discovery}} and not already registered; a definition
 precise enough that a client can consume the member from its
 specification alone; and no overlap with an existing member's
 semantics (a refinement belongs in the defining specification, not a
 parallel member). Registration does not require IETF review or a
-Standards Track document. Each entry has: Member Name, Change
-Controller, and Reference. The registry is seeded with the members of
-{{discovery}};
-for each, Change Controller IETF and Reference this document:
+Standards Track document. Each entry has the fields of the
+registration template in Section 7.1.1 of {{RFC8414}}: Metadata Name,
+Metadata Description, Change Controller, and Specification
+Document(s). The registry is seeded with the members of
+{{discovery}}; for each, the Metadata Description is the member's
+definition there, the Change Controller is IETF, and the
+Specification Document is this document:
 
 - `issuer`
 - `mission_submission_endpoint`
