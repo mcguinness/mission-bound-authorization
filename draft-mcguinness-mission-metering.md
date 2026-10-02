@@ -119,6 +119,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-expansion:
+    title: "Mission Expansion for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -704,6 +712,15 @@ receives a fresh copy of the bound:
   carries a consumption bound. Two children that each carry a bound
   of 60,000 under a parent bound of 100,000 together consume at most
   100,000.
+- **Successor and carryover replacement.** An Expansion successor
+  ({{I-D.draft-mcguinness-oauth-mission-expansion}}) and a Child
+  Delegation carryover replacement continue the counters of the
+  Mission they replace: consumption to date carries forward, and the
+  successor's bound caps the cumulative consumption of the chain. A
+  successor adjudicated by policy rather than by a fresh human
+  approval MUST NOT carry a larger bound than its predecessor. Where a
+  successor's bound is larger, its approval rendering MUST include the
+  consumption to date ({{consent}}).
 
 # Aggregate Bounds {#aggregate-bounds}
 
