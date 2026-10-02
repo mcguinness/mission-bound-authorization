@@ -101,7 +101,7 @@ informative:
   I-D.draft-mcguinness-oauth-id-continuation-assertion:
   I-D.draft-zhu-oauth-async-delegation:
   I-D.draft-mcguinness-oauth-mission-continuation:
-    title: "Mission Continuation: Authorization Continuity for Mission-Bound Authorization"
+    title: "Mission Continuation for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html
     author:
       -

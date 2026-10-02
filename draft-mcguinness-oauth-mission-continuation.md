@@ -1,9 +1,10 @@
 ---
-title: "Mission Continuation: Authorization Continuity for Mission-Bound Authorization"
-abbrev: "Mission Continuation"
+title: "Mission Continuation for OAuth 2.0"
+abbrev: "OAuth Mission Continuation"
 docname: draft-mcguinness-oauth-mission-continuation-latest
 category: exp
 submissiontype: IETF
+workgroup: Web Authorization Protocol
 consensus: true
 v: 3
 keyword:
@@ -78,7 +79,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-mission-uma:
-    title: "Mission-Bound Authorization for UMA 2.0"
+    title: "Mission-Bound Authorization for User-Managed Access (UMA) 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-uma.html
     author:
       -

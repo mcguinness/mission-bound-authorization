@@ -1,6 +1,6 @@
 ---
 title: "Mission Issuance Grant for OAuth 2.0"
-abbrev: "Mission Issuance Grant"
+abbrev: "OAuth Mission Issuance Grant"
 category: std
 
 docname: draft-mcguinness-oauth-mission-issuance-grant-latest

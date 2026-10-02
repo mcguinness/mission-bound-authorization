@@ -1,5 +1,5 @@
 ---
-title: "Mission-Bound Authorization for UMA 2.0"
+title: "Mission-Bound Authorization for User-Managed Access (UMA) 2.0"
 abbrev: "Mission UMA"
 category: exp
 
