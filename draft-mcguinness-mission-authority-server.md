@@ -421,9 +421,33 @@ Mission-joining PDP:
 
 Standalone binding:
 : This document's deployment mode: the Mission Issuer role implemented
-  by a MAS, with the deployment's tokens unchanged. The rest of the
-  Mission family cites this mode by this name; "AS-optional" is its
-  informal gloss.
+  by a MAS, with the deployment's tokens unchanged. "AS-optional" is
+  its informal gloss.
+
+Mapping join:
+: The baseline Mission Join: the PDP compares the presented
+  credential's authenticated subject and client with the Mission's
+  recorded parties under the deployment's documented mappings
+  ({{join-rules}}).
+
+Mapping contract:
+: The documented subject, client, delegate, and instance mappings a
+  deployment's joins apply ({{join-rules}}); an Enterprise MAS
+  publishes it ({{mapping-contract}}).
+
+Join Assertion:
+: A MAS-signed JWT stating that one introspected access token joins a
+  Mission ({{join-assertion}}).
+
+Mission-selection assertion:
+: The Mission reference a requester attaches to a request. It selects
+  the Mission a join is evaluated against and grants nothing
+  ({{reference-propagation}}).
+
+High-consequence action classes:
+: The irreversible-action, external-commitment, and
+  privileged-administration classes of
+  {{I-D.draft-mcguinness-mission-runtime}}.
 
 # Mission Submission {#mission-submission}
 
