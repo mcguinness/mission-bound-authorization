@@ -3721,6 +3721,12 @@ bound profiled by `aauth-mission-expiry`.
 
 \[\[ To be removed from the final specification ]]
 
+- Composition states the per-Mission bound model once, with no change
+  to any profile's requirements: an approval bounds the authority each
+  derivation carries; concurrent children, generations, and
+  per-Mission derivations do not multiply into a lifetime total; and
+  an aggregate bound holds only where a deployment enforces one.
+
 - Derivation and narrowing, with no change to any profile's
   requirements. The derivation boundary states the derivation
   procedure the authority-bearing bindings share (narrowing or a
