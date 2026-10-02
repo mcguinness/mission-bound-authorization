@@ -311,9 +311,18 @@ reject duplicate JSON member names.  Unknown members MUST be ignored
 unless they prevent safe processing.
 
 Every request MUST be authenticated as {{authorization}} requires for
-the caller's class.  A request signed with the AAuth HTTP Message
-Signatures profile {{RFC9421}} uses the covered components and content
-integrity requirements of the base AAuth profile.  A management
+the caller's class.  A signed request uses the AAuth HTTP Message
+Signatures profile (Section 11.3 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}) {{RFC9421}}: its signature
+MUST cover `@method`, `@authority`, `@path`, `signature-key`,
+`content-digest`, and `content-type`, as Section 11.3.3.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}} requires on a request
+carrying a body to a PS endpoint, and MUST carry a `created`
+parameter within the PS's validity window (Sections 11.3.3.2 and
+11.3.4 of {{I-D.draft-hardt-oauth-aauth-protocol}}).  The signing key
+carries a fully specified `alg`, from which the PS determines the
+algorithm, and every party supports `Ed25519` (Sections 11.3.1 and
+11.3.4 of {{I-D.draft-hardt-oauth-aauth-protocol}}).  A management
 operation is never authorized from the Mission Reference alone.
 
 This document defines no action at the bare
@@ -401,15 +410,21 @@ define fleet enumeration or bulk termination.
 ## Management Service
 
 A management service authenticates with the AAuth HTTP Message
-Signatures profile {{RFC9421}}, presenting its key with
-`Signature-Key: sig=jwks_uri`, the scheme the base protocol uses for
-PS-to-AS token requests.  The PS resolves the key as HTTP Signature
-Keys {{I-D.draft-hardt-httpbis-signature-key}} specifies and MUST hold
-a deployment-local registration of that `jwks_uri` as a management
-identity; this specification adds no discovery surface for management
-identities.  An
-Agent MUST NOT use this scheme; the base protocol already forbids it
-to agents.
+Signatures profile {{RFC9421}}, signing under the `jwks_uri` scheme of
+HTTP Signature Keys {{I-D.draft-hardt-httpbis-signature-key}}, the
+scheme Section 11.3.2 of {{I-D.draft-hardt-oauth-aauth-protocol}}
+requires of a PS, AS, AP, or resource signing in its own right.  The
+`id` parameter is the service's HTTPS identifier, `dwk` names the
+well-known metadata document the service publishes under a
+deployment-chosen name, and `kid` selects the key.  That document
+MUST contain `issuer`, equal to `id`, and `jwks_uri`, and the PS
+resolves the key by the discovery procedure of Section 3.6 of
+{{I-D.draft-hardt-httpbis-signature-key}}.  The PS MUST hold a
+deployment-local registration of the service's `id` and `dwk` as a
+management identity; this specification adds no discovery surface for
+management identities.  An Agent MUST NOT use this scheme; the base
+protocol already forbids it to agents (Section 11.3.2 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).
 
 A management service is subject to the administrative rules above:
 least-privilege scoping, a separate privilege for delegation data,
@@ -464,8 +479,8 @@ Content-Type: application/json
 Signature-Input: sig=("@method" "@authority" "@path" \
     "content-type" "content-digest" "signature-key");created=1775581200
 Signature: sig=:...signature bytes...:
-Signature-Key: sig=jwks_uri; \
-    jwks_uri="https://mgmt.example/.well-known/jwks.json"
+Signature-Key: sig=jwks_uri;id="https://mgmt.example"; \
+    dwk="example-configuration";kid="key-1"
 Content-Digest: sha-256=:...:
 
 {
