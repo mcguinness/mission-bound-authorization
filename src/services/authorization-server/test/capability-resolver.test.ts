@@ -82,7 +82,7 @@ describe("trusted capability recording", () => {
 
   it("resolves the consented template ceiling before hashing and drawdown inherits it", () => {
     const kernel = build(), store = new TemplateStore();
-    const template = createTemplate(store, { template_version: "1", issuer: "https://as.test", approver: { iss: "https://as.test", sub: "bob" }, ceiling: proposal([read]), dispatch_policy: "test", dispatchers: ["orchestrator"], recipients: ["worker"], per_instance_lifetime_s: 3600, max_active: 10, rate_per_min: 20, approval_event_id: "template", expires_at: "2027-01-01T00:00:00Z" }, kernel.authoritySourceOptions());
+    const template = createTemplate(store, { template_version: "1", issuer: "https://as.test", approver: { iss: "https://as.test", sub: "bob" }, ceiling: proposal([read]), dispatch_policy: "test", dispatchers: ["orchestrator"], recipients: { subjects: [{ iss: "https://as.test", sub: "alice" }], agents: ["worker"] }, per_instance_lifetime_s: 3600, max_active: 10, rate_per_min: 20, approval_event_id: "template", expires_at: "2027-01-01T00:00:00Z" }, kernel.authoritySourceOptions());
     expect(template.ceiling[0]?.capability_sources).toHaveLength(1);
     const { mission } = dispatchFromTemplate(kernel, store, { templateId: template.id, dispatchEventId: "draw", dispatcher: "orchestrator", recipient: "worker", intent, proposedAuthority: proposal([read]), subject: { iss: "https://as.test", sub: "alice" }, policyVersion: DERIVATION_POLICY.policy_version });
     expect(mission.authority_set[0]?.capability_sources).toEqual(template.ceiling[0]?.capability_sources);
