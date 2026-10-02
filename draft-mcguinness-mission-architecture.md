@@ -3690,6 +3690,12 @@ bound profiled by `aauth-mission-expiry`.
 
 \[\[ To be removed from the final specification ]]
 
+- AAuth alignment, with no change to any profile's requirements. The
+  AAuth and R3 references cite the published revisions -11 and -00;
+  the Mission Reference is the approving PS and `s256`; the access
+  modes carry AAuth's names; and the gateway walkthrough names the
+  issuers of the auth tokens it accepts.
+
 - Density, with no change to any profile's requirements. Long
   paragraphs are split to one idea each and long sentences shortened;
   Continue lists the three continuities and keeps the residual for
