@@ -393,13 +393,6 @@ enforcement over its consequential action paths obtains records but no
 enforcement from this profile and SHOULD NOT claim it
 ({{limitations}}).
 
-The Mission Join ({{mission-join}}) is the newest mechanism in the
-family and, like every mechanism in this family, has no known
-production deployment; a deployment that can implement the OAuth
-binding obtains the token-plane chokepoint (Mission-bound
-credentials and issuance gating), a capability difference between
-the bindings rather than a maturity one.
-
 # Conventions and Terminology {#conventions-and-terminology}
 
 {::boilerplate bcp14-tagged}
