@@ -950,9 +950,10 @@ Serialization over the JCS canonical bytes of the evidence. When the
 JWS is embedded in the evidence, the signing input omits the member
 that carries it.
 
-Where the deployment records Consent Evidence, the consent-disclosure
-object defines an OPTIONAL `shaping_evidence_hash` member, which is the
-standard carrier for this commitment in Consent Evidence
+Where the deployment records Consent Evidence, the client conveys the
+hash in the `mission_shaping_evidence_hash` request parameter, and the
+Mission Issuer records it in the OPTIONAL `shaping_evidence_hash`
+member of the consent-disclosure object
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
 
 Neither the hash nor the envelope confers authority. A Resource Server
@@ -995,10 +996,15 @@ flow ({{proposes-only}}) and MAY also convey a `shaping_evidence_hash`
 so that the Mission record can cite the evidence ({{evidence-hash}}).
 Because the issuance profile rejects an unrecognized top-level member
 of both the Submission envelope and the Mission Intent, the hash is
-not carried inside `mission_intent`. A deployment conveys it as a
-separate PAR request parameter it registers (for example, a
-`shaping_evidence_hash` parameter). Conveying it does not require the
-Mission Issuer to trust the shaper.
+not carried inside `mission_intent`. The client conveys it in the
+`mission_shaping_evidence_hash` request parameter of the same pushed
+authorization request, which Consent Evidence defines
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}, Section
+"Shaping Evidence Hash Parameter"). A Mission Issuer that does not
+implement Consent Evidence ignores the parameter, as it does any
+unrecognized request parameter. Conveying it does not require the
+Mission Issuer to trust the shaper: the value is a client-supplied
+audit commitment, not verified provenance.
 
 ## Mission Issuer Handling {#issuer-handling}
 
@@ -1287,8 +1293,11 @@ and the client identity the Mission Issuer already sees.
 
 # IANA Considerations {#iana}
 
-This document has no IANA actions. The parameter and metadata names it
-mentions as examples are not registered.
+This document has no IANA actions. The `mission_shaping_evidence_hash`
+request parameter is registered by
+{{I-D.draft-mcguinness-oauth-mission-consent-evidence}}; the metadata
+names in {{exposing-shaping-as-a-service}} are examples and are not
+registered.
 
 --- back
 
@@ -1461,6 +1470,10 @@ guessing ({{clarifications}}).
   `source_digest`. A shaping ceiling is an `authorization_details`
   array, and one that must constrain authority requires an Authority
   Proposal.
+
+- The evidence hash travels in the `mission_shaping_evidence_hash`
+  pushed authorization request parameter that Consent Evidence
+  defines.
 
 # Acknowledgments
 {:numbered="false"}
