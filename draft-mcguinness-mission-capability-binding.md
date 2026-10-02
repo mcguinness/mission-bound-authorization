@@ -316,9 +316,10 @@ computed over the capability's current extracted definition
 where a `catalog_digest` was recorded, the presented `catalog_digest`
 MUST equal it likewise; otherwise the PDP returns `capability_drift`
 ({{capability-drift-reason}}). Whether an action is catalog-sourced,
-and which digests were recorded, are determined from the
-materialized policy view the AuthZEN profile defines
-({{I-D.draft-mcguinness-mission-authzen}}), not from the PEP's
+and which digests were recorded, are determined from the approved
+entry the Mission Issuer recorded at derivation, read through the
+materialized policy view the AuthZEN profile defines where the PDP
+uses one ({{I-D.draft-mcguinness-mission-authzen}}), not from the PEP's
 request; where no source binding was recorded, this check does not
 apply.
 
