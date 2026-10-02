@@ -123,7 +123,9 @@ and its expiry. It does not bound how many derivations the issuer
 performs. This document adds that bound: a derivation limit on the
 number of derivations the issuer AS performs under a Mission. The limit
 is an issuer-side operational control. It bounds counted issuance
-operations at the token endpoint, not the authority any derived token
+operations at the token endpoint, or at the Mission Authority
+Server's grant endpoint under the Mission Issuance Grant profile
+({{issuance-grant-counting}}), not the authority any derived token
 carries or how often a token already issued is used. The refreshes of
 an async delegation family are not counted ({{refresh-and-exchange}}).
 
@@ -269,7 +271,10 @@ binding defines them ({{I-D.draft-mcguinness-oauth-mission}}, Section
 "Issuance Gating"): one issuance operation the issuer AS performs for
 a single request, namely the initial authorization-code exchange, a
 refresh, a Token Exchange ({{RFC8693}}), or a cross-domain grant
-issuance ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
+issuance ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}). Under
+the Mission Issuance Grant profile the list gains one entry, the
+Mission Authority Server's minting of a grant
+({{issuance-grant-counting}}).
 
 ## What Counts {#counted-operations}
 
@@ -318,10 +323,13 @@ issuer's per-Mission derivation cap.
 
 Under the Mission Issuance Grant profile
 ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}), the Mission
-Authority Server is the issuer, and minting a grant is the derivation
-it performs: each committed minting counts once. Redeeming the grant
-at a consuming Authorization Server, and every refresh there, is not
-a derivation the issuer performs and does not increment the count. As
+Authority Server is the Mission Issuer, and minting a grant is the
+derivation it performs: each committed minting counts once, and the
+MAS refuses minting past the limit with `derivations_exhausted`
+({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}, Section
+"Grant Errors"). Neither redeeming the grant at a consuming
+Authorization Server nor any refresh there is a derivation the issuer
+performs, and neither increments the count. As
 at the cross-domain boundary ({{cross-domain-counting}}), the limit
 therefore bounds the grants the issuer mints, not the number of tokens
 consuming Authorization Servers issue from them.
@@ -333,7 +341,10 @@ binding ({{I-D.draft-mcguinness-oauth-mission}}, Section "Issuance
 Gating"). When the Mission's `derivation_limit` ({{record-member}}) is
 established, the AS MUST refuse, with the `invalid_grant` error code,
 any derivation that would make the number of **derivations** under
-the Mission exceed it.
+the Mission exceed it. Where the derivation is a Mission Authority
+Server's minting of a grant, the refusal is that profile's
+`derivations_exhausted` grant error instead
+({{issuance-grant-counting}}).
 
 The issuer AS enforces the limit at each derivation. The bound is
 never absent at the issuer when established, and it does not bound
@@ -613,3 +624,7 @@ intent_hash = sha-256:r--mF07yZfWRGV6N28A2u_8rUzIG-bNhpvFSS5FhoBk
   `derivation_limit` record member, counting and refusal at issuance,
   the `derivations_exhausted` diagnostic, the `derivations_remaining`
   introspection member, and approval rendering.
+- Under the Mission Issuance Grant profile, the Mission Authority
+  Server's committed grant minting is a counted derivation; redemption
+  and refresh at a consuming Authorization Server are not, and the
+  limit does not cap the tokens they issue (#963).
