@@ -308,8 +308,8 @@ Claims:
   key has the `jkt` thumbprint, or a client certificate on the TLS
   connection whose hash is `x5t#S256`.
 
-An illustrative decoded grant (this Mission and its anchors are not
-the one from the issuance profile's walkthrough):
+The following is an example of a decoded grant payload; the
+`authority_hash` value is illustrative:
 
 ~~~ json
 {
@@ -400,7 +400,10 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
     {
       "type": "mission_resource_access",
       "resource": "https://api.example.com/invoices",
-      "actions": ["read"]
+      "actions": ["read"],
+      "constraints": {
+        "resource_issued_after": "2026-07-01T00:00:00Z"
+      }
     }
   ]
 }
@@ -489,15 +492,21 @@ to which Mission state is already visible.
 # Redemption {#redemption}
 
 The client presents the grant to the consuming AS's token endpoint
-as a JWT authorization grant {{RFC7523}}:
+as a JWT authorization grant {{RFC7523}}. The following example shows
+a confidential client that authenticates with a JWT
+({{Section 2.2 of RFC7523}}); line breaks are for display purposes
+only:
 
-~~~
+~~~ http-message
 POST /token HTTP/1.1
 Host: as.example.com
 Content-Type: application/x-www-form-urlencoded
 
 grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer
 &assertion=eyJ0eXAiOiJtaXNzaW9uLWlzc3VhbmNlLWdyYW50K2p3dCIs...
+&client_assertion_type=urn%3Aietf%3Aparams%3Aoauth%3A
+client-assertion-type%3Ajwt-bearer
+&client_assertion=eyJhbGciOiJFUzI1NiIsImtpZCI6IjE2In0...
 ~~~
 
 The grant is an authorization, not a client credential: the requester
@@ -578,6 +587,32 @@ On success the consuming AS mints tokens under these rules:
 - **No re-approval.** The approval event already occurred at the
   Mission Issuer. The consuming AS MUST NOT prompt the Subject or
   any user for consent at redemption.
+
+The following is an example of a successful token response:
+
+~~~ http-message
+HTTP/1.1 200 OK
+Content-Type: application/json
+Cache-Control: no-store
+
+{
+  "access_token": "eyJ0eXAiOiJhdCtqd3QiLCJhbGciOiJFUzI1NiJ9...",
+  "token_type": "Bearer",
+  "expires_in": 300,
+  "authorization_details": [
+    {
+      "type": "mission_resource_access",
+      "resource": "https://api.example.com/invoices",
+      "actions": ["read"],
+      "constraints": {
+        "resource_issued_after": "2026-07-01T00:00:00Z"
+      }
+    }
+  ],
+  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "mission_expires_at": "2026-12-31T23:59:59Z"
+}
+~~~
 
 A grant redeems exactly once, meaning exactly one successful
 issuance: a redemption that fails before issuance leaves the grant
