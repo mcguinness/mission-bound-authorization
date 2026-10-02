@@ -326,19 +326,16 @@ A Mission Template is a consented object with these members:
   ({{I-D.draft-mcguinness-oauth-mission}}).
 
 `dispatch_policy`:
-: REQUIRED. An object carrying `id` and `version`, identifying the
-  Dispatch Policy under which the Mission Issuer instantiates from this
-  template. Its content is deployment-defined. Committing only `id` and
-  `version` leaves the policy body itself uncommitted, so a change to
-  its logic between template consent and a given dispatch is not
-  detectable from the template alone. A deployment SHOULD additionally
-  commit the Dispatch Policy body under an integrity anchor, computed
-  the way the issuance profile computes `authority_hash`
-  ({{I-D.draft-mcguinness-oauth-mission}}), or disclose it under
-  Consent Evidence
-  ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), so a
-  machine-speed dispatch decision stays auditable against the policy
-  content a human actually consented to, not only its identifier.
+: REQUIRED. An activation policy reference, an object of `id`,
+  `version`, and `digest` ({{I-D.draft-mcguinness-oauth-mission}},
+  Section "Standing-Consent Bases"), identifying the Dispatch Policy
+  under which the Mission Issuer instantiates from this template and
+  committing its content. The policy's content is deployment-defined.
+  Because `template_hash` covers this member, the template commits
+  the exact policy the human consented to, and the Mission Issuer
+  verifies its `digest` before each Dispatch under that section's
+  rule, so a machine-speed dispatch decision stays auditable against
+  the policy content, not only its identifier.
 
 `allowed_dispatchers`:
 : REQUIRED. A non-empty array of strings, each the client identifier
@@ -668,9 +665,10 @@ Template it was dispatched from:
 
 `template`:
 : An object carrying `id`, `issuer`, `template_version`,
-  `template_hash`, and `dispatch_policy` (the policy `id` and
-  `version`). Present on every dispatched Mission and absent on a
-  Mission created by ordinary approval.
+  `template_hash`, and `dispatch_policy` (the activation policy
+  reference: `id`, `version`, and `digest`). Present on every
+  dispatched Mission and absent on a Mission created by ordinary
+  approval.
 
 Consistent with the issuance profile's open-`mission`-claim rule
 ({{I-D.draft-mcguinness-oauth-mission}}), the `template` member is
@@ -908,8 +906,8 @@ Mission an authorized auditor can:
   at the recorded `template_version`, so the accountable principal is
   the human who consented to that version of the template.
 
-Each Dispatch MUST record the Dispatch Policy `id` and `version` that
-instantiated the Mission, and the dispatch event identifier
+Each Dispatch MUST record the Dispatch Policy `id`, `version`, and
+`digest` that instantiated the Mission, and the dispatch event identifier
 ({{dispatch}}), so the policy chain the architecture's Approve verb
 requires stays re-checkable
 ({{I-D.draft-mcguinness-mission-architecture}}). A deployment MUST
