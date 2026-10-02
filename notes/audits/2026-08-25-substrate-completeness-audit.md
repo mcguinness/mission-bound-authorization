@@ -376,3 +376,23 @@ No BCP 14 keyword line changed, so the clause-level inventory in (a) is
 unaffected and no fresh audit is warranted. `candidate-gate.json` now
 attests these bytes: `report.document_sha256` records them and
 `audited_by` names `4fe0d0b0`, where the substrate has them.
+
+## (g) Re-review, 2026-10-01
+
+The substrate's bytes changed again, to sha256
+`dbcbb50fd1a96f25a2419e88676f6cce42b548d343ac5ed7ff2217e6cf8cf2d1`
+(commit `eb59a919`, the family title consistency pass). The complete
+diff from the bytes (f) attests is two informative reference titles,
+following the retitles of the UMA and GNAP bindings:
+
+```
+-    title: "Mission-Bound Authorization for UMA 2.0"
++    title: "Mission-Bound Authorization for User-Managed Access (UMA) 2.0"
+-    title: "Mission-Bound Authorization for GNAP"
++    title: "Mission-Bound Authorization for the Grant Negotiation and Authorization Protocol (GNAP)"
+```
+
+No BCP 14 keyword line changed, so the clause-level inventory in (a) is
+unaffected and no fresh audit is warranted. `candidate-gate.json` now
+attests these bytes: `report.document_sha256` records them and
+`audited_by` names `eb59a919`, where the substrate has them.

@@ -1,6 +1,6 @@
 ---
 title: "Mission-Bound Runtime Enforcement: OAuth 2.0 Profile"
-abbrev: "Runtime OAuth Profile"
+abbrev: "Mission Runtime OAuth Profile"
 category: std
 
 docname: draft-mcguinness-mission-runtime-oauth-latest

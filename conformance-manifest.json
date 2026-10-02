@@ -15,68 +15,68 @@
     "content_sha256": "cd1b5235841cfab924c5bc0331db443b62c306473cff6098eec7e38762e522f7"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "48b7abcdacfb66289c29c5312e5d6c6e683b5141",
-    "content_sha256": "110170d05aa8c19a1d69dc74acbb99ab20915d78f241216deb5dba92c5624415"
+    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
+    "content_sha256": "342738b24fa1729e97afb9bb08cf81ec70545f5d37d136dd9a49720d449cb3b9"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "72e61f7bcca5c697221bdeb738d1880c5dfa88d1",
-    "content_sha256": "4c471e952d6d23832a682430b8c5ae5e95d5fd5c7a8a2b7b84536be1302d74e1"
+    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
+    "content_sha256": "593860aeb0c8b45b829b3240b47c277bfcbe4a20fb4c2269b0ea8b444f17f066"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
-    "revision": "48b7abcdacfb66289c29c5312e5d6c6e683b5141",
-    "content_sha256": "bc38949bab486178be786972579b8ee9217016aa76f457e98112d2f8388f4edf"
+    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
+    "content_sha256": "94d185b18c5e2210e90f60eb0a5f04cd4ff0d990b6b73b1b1503267535e372ab"
    },
    "draft-mcguinness-mission-substrate.md": {
-    "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
-    "content_sha256": "7195da680769b4404eaa88c65764198af32e016527dc2c1306e89e24611375cd"
+    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
+    "content_sha256": "dbcbb50fd1a96f25a2419e88676f6cce42b548d343ac5ed7ff2217e6cf8cf2d1"
    },
    "draft-mcguinness-oauth-mission-cross-org-delegation.md": {
     "revision": "72e61f7bcca5c697221bdeb738d1880c5dfa88d1",
     "content_sha256": "815cbcde45ab0b9fe6e5391596f158d4b282b390b40aa1299e9a8431614bcbae"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "647f05a51463054252ba99826f8328cf8974e26f",
-    "content_sha256": "b15734aad3b7ff884b854d637dc17ed8c1bc0a5c74777eae6f4f9f445bd84f34"
+    "revision": "0deed864cfd4ceb597047f3a617e0ad492907d76",
+    "content_sha256": "e681f15fe23ebf3b0bb8d32f1aed70eef88c140331a5f10216492d3669d045ae"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
-    "revision": "6f40d0dba35d98c5f7ea52742c88864c0c4ae6c0",
-    "content_sha256": "3a885a6c5faa96007d01897144a03960e4037a7db747c6ccb413143739802324"
+    "revision": "79ede5a9bff31f6b7953456bacda583acf33b003",
+    "content_sha256": "2ad488a60aa23eab82693e82a53ad82877e4864d881ffdb5f6449a47622f404c"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
-    "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
-    "content_sha256": "bd53c614b8389e6f5f91fba0e9caf61e9e22e0d5d75d8e7571511ab61185df2b"
+    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
+    "content_sha256": "e06bc60196934a5b5475d51884dd5627bf263cce0fa18973fd49a63f529b77f8"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
-    "revision": "457ccd452157cbfba11598ac75b4308c299b6b18",
-    "content_sha256": "790b2bdac7819c4a3af571d0b79ce31bbc0b2531b9666f0cd2855ab1f7be5065"
+    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
+    "content_sha256": "5e120cfbb6299bf1b1f71654c56f560309f46beddb19b968458cbc2105e672db"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "582a6e16beed189e7e579b0e079a1ce695d94ff7",
-    "content_sha256": "32d89ebbb29946e878f5d78fe8ff9c1cb57d3d3954460a6daea6097e0b68066e"
+    "revision": "6a3c451eff8b0568e16817fbb84be343f8e8e485",
+    "content_sha256": "17967b2dc4d1760b9b494f2e0c202d87bc665054410626952561c570e3017ad4"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "7a1e80432e75d0221064b5e1b78743bb1c120d58",
-    "content_sha256": "bae2f5c34036c303d1a4f1b9fc037d2aebe1b5d7518308eb02e2bc74a6d919eb"
+    "revision": "6a3c451eff8b0568e16817fbb84be343f8e8e485",
+    "content_sha256": "eda0e3228ae98dc29894171fd1eec3d297b3591384036fa40a00c72ac62d0f6a"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
-    "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
-    "content_sha256": "2ecac7a1642121e76f782cb12941b64fc1ed0782ae6df8a6e82721d5bc280b1f"
+    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
+    "content_sha256": "1459196e3c443e94aa637b2f3c8245fbeee328beac8b38c78b4506a861af828b"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "888372fdfd333b09fea08dc87caec4a426104f14",
-    "content_sha256": "579285c6113f5b07ea378a16105e5c633b68974285555ea0c70abdeefaf286a1"
+    "revision": "599ee4561420145610926556b32b154fbe874b82",
+    "content_sha256": "b592894011628b2423c7755353ccd6b6a056eab285750467dcdb4ea31aa99dd1"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "7fc9ef45b5fb69f06bd3e90c1a93b6ac71808c10",
-    "content_sha256": "f32cf81e773c9098464a50e451f559b3a5ad31485a315cc611df8e60fcafa2a7"
+    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
+    "content_sha256": "bf4b09b73adfdbf647f9740ef2451862b87212aaa7424496aa865b99d2a2a46d"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
-    "revision": "0d75d8a324bbf4737d65ad92a107dc74ef508e9c",
-    "content_sha256": "fd9175feb9dfeaa7555cf331bee63d7c75ca7b34832759a5b24b747d057c73e9"
+    "revision": "6a3c451eff8b0568e16817fbb84be343f8e8e485",
+    "content_sha256": "73deb3473bca62b2eeef325b317707f6d14753e3bfc5e312be7848304d37ea0d"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
-    "content_sha256": "325699395a6957d5d0da454eca000210406852fa2eb9298ab9462170d70e6968"
+    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
+    "content_sha256": "714a2ad1509b2ee9ab6c20aaa287a9c1856e608c3993171ca3b15e4c84eb1052"
    },
    "draft-mcguinness-mission-orchestration.md": {
     "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
@@ -95,16 +95,16 @@
     "content_sha256": "021a33fbbe788eabefdf9bc5756bffcb156824873f157ad7682e5ce65dcefa1f"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "4e62524f4be6e2376195919d2440effb4e001a9d",
-    "content_sha256": "7bc59ddd33c1c48b9e6b915d9bad75d099ca7f1e95235343b5c06499b59929c5"
+    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
+    "content_sha256": "adb2e8708f616b7504425b3134c2376ad3422d9c947b380645f54fb3e8db8f1d"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "781c088698621e47f6a44fd4ebb0a584cb7a8e59",
-    "content_sha256": "352dee1a22c64ae629e6421941812b05714b10bda692ceb2fdfc50ff78609e55"
+    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
+    "content_sha256": "f167be17415c38e6047b7ea9ea3f5464cf70cc1d4789a0316c4d9d89f9dacea4"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
-    "revision": "ae8e99208ff97d35379cdeca4dccddd9e99861f1",
-    "content_sha256": "9bbf98746769f7bf782bd3c350af0dcf10675775f7d5d1beb7106051e006e776"
+    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
+    "content_sha256": "b27c8935ea126e885d0ec3377d2d6bb0e2e2ca98ac7ff99d5a1c42c6f59b8e3c"
    },
    "draft-mcguinness-oauth-mission-approved-set-verification.md": {
     "revision": "48b7abcdacfb66289c29c5312e5d6c6e683b5141",
@@ -22575,9 +22575,15 @@
     "normative": "a template's allowed_dispatchers is a non-empty array of client_id strings"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "The reference implementation stores dispatchers as client_id strings, matching the entry type, but does not refuse an empty list at template creation, and no test asserts the shape."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "createTemplate (@spec mission-template) > refuses dispatchers that are not a non-empty array of client_id strings (@spec mission-template#the-mission-template)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    }
+   ]
   },
   {
    "id": "template.members.allowed-recipients-shape",
@@ -22597,9 +22603,15 @@
     "normative": "a template's allowed_recipients is an object whose subjects ({iss, sub} objects) and agents (client_id strings) members are both non-empty arrays"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Implementation gap: the reference implementation's recipients is a flat client_id array (the agents half only) with no subjects member; it refuses an empty recipients list at template creation."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "createTemplate (@spec mission-template) > refuses recipients that are not an object of non-empty subjects ({iss, sub}) and agents (@spec mission-template#the-mission-template)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    }
+   ]
   },
   {
    "id": "template.dispatch.dispatcher-membership",
@@ -22653,9 +22665,21 @@
     "normative": "a Dispatch whose Mission-Issuer-established Subject does not equal a subjects entry in both iss and sub is refused, and no Mission is derived"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Implementation gap: the reference implementation does not check the established Subject against the template; it applies a per-source subject-discipline gate instead, and its recipients carry no subjects."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > recipient_not_allowed: the established Subject (the template's approver) is not in recipients.subjects (@spec mission-template#the-mission-template)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "dispatch gates (@spec mission-template#dispatch-refusals) > refuses a Subject that matches a listed subject in only one of iss and sub (@spec mission-template#the-mission-template)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ]
   },
   {
    "id": "template.dispatch.recipient-agent-membership",
@@ -22684,7 +22708,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "Covered at unit level only: the kernel refuses an unlisted recipient (which becomes the instance client_id) with recipient_not_allowed; no endpoint test dispatches to an unlisted Agent."
+   "notes": "Covered at unit level only, and unreachable at the endpoint by construction: the mission-dispatch grant names no Agent, and the implementation dispatches to the template's first listed agent, so an endpoint request cannot select an unlisted Agent. The kernel refuses an unlisted recipient with recipient_not_allowed. The draft does not yet say how the instance's Agent is established at Dispatch."
   },
   {
    "id": "progressive.drawdown-policy.body-commitment-should",
@@ -23211,6 +23235,181 @@
     }
    ],
    "notes": "#921: the ICA -02 Section 5.5.6 codes apply at this exchange in place of the issuance profile's invalid_grant, which core Issuance Gating permits for a Token Exchange profile that assigns its own code."
+  },
+  {
+   "id": "continuation.ica-transport.depth-count",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "Only consecutive entries with equal `(iss, sub)` merge",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Mission delegation depth is counted over the selected hop's IdP-held ancestry from the root plus the current authenticated actor, the root (the approved Mission client) at depth 0, merging only consecutive equal (iss, sub): A, B, B is depth 1 and A, B, A is depth 2",
+    "local": "repeating the current actor at a max_depth of 1 still issues; returning to an earlier actor reaches depth 2 and then 3, where max_depth 2 refuses with no hop and no derivation; the onward act shows the merged lineage"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation delegation constraints (@spec mission#delegation-constraints) > max_depth 1: B continuing its own hop (A->B->B) stays at Mission delegation depth 1 and issues, carrying the entry",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation delegation constraints (@spec mission#delegation-constraints) > max_depth 2: A->B and A->B->A issue; A->B->A->B (Mission delegation depth 3) is invalid_target, with no hop and no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation onward act lineage (@spec id-continuation-assertion) > places the current actor atop the hop's recorded lineage from the Mission's client, merging consecutive equal actors",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ]
+  },
+  {
+   "id": "continuation.ica-transport.depth-excluded-inputs",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "Sibling branches, the presented assertion, and any narrowing of what the onward `act` discloses do not change the depth",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the depth ignores sibling branches of the hop tree, is never read from the presented assertion, and does not move with disclosure narrowing of the onward act",
+    "local": "siblings and the hop-record source are exercised; disclosure narrowing is not, because the implementation has no disclosure-narrowing policy"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation delegation constraints (@spec mission#delegation-constraints) > max_depth 1: siblings do not add depth: B and then C each continuing the root (A->B, A->C) issue at Mission delegation depth 1, carrying the entry",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation onward act lineage (@spec id-continuation-assertion) > siblings do not contribute: after B continues the root, A's next continuation from the root is still A alone",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation onward act lineage (@spec id-continuation-assertion) > places the current actor atop the hop's recorded lineage from the Mission's client, merging consecutive equal actors",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "The disclosure-narrowing clause has no implementation to exercise."
+  },
+  {
+   "id": "continuation.ica-transport.depth-zero",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "At depth 0 the approved agent continues for itself and no delegation narrowing applies",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a continuation by the approved Mission client over its own lineage keeps non-delegable entries"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation delegation constraints (@spec mission#delegation-constraints) > a same-actor continuation (Mission delegation depth 0) is not narrowed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ]
+  },
+  {
+   "id": "continuation.ica-transport.no-depth-reset",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "This transport defines no reset",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "returning to an earlier actor or continuing to another Resource Authorization Server never restarts the depth count",
+    "local": "returning to an earlier actor is exercised (A, B, A, B reaches depth 3 and is refused); continuing to a different Resource Authorization Server within one chain is not separately exercised"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation delegation constraints (@spec mission#delegation-constraints) > max_depth 2: A->B and A->B->A issue; A->B->A->B (Mission delegation depth 3) is invalid_target, with no hop and no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ]
+  },
+  {
+   "id": "continuation.ica-transport.incomplete-ancestry",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "Where the IdP cannot read a hop's complete ancestry, it issues nothing",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a continuation from a hop whose recorded ancestry is broken issues no token, records no hop, and counts no derivation",
+    "local": "today the refusal is 500 server_error; the code is an open question on #960, and the row asserts only that nothing is issued"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation delegation constraints (@spec mission#delegation-constraints) > a hop whose recorded parent is gone issues no token: 500 server_error, with no hop and no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-store.test.ts",
+     "name": "ContinuationStore.lineage (@spec id-continuation-assertion) > fails closed on a broken ancestry or one that crosses anchors",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ]
   },
   {
    "id": "resource-access.type.prefix-query-fragment-refused",

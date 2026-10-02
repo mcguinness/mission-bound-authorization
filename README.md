@@ -106,8 +106,8 @@ drift from the manifest.
 | Mission-Bound Authorization for OAuth 2.0 | 1 document: itself alone |
 | Mission Authority Server | 4 documents: Mission Substrate Requirements + Mission-Bound Authorization for OAuth 2.0 + Mission Status and Lifecycle for OAuth 2.0 + Mission Authority Server |
 | Mission Context Binding for AAuth | 2 documents: Mission Substrate Requirements + Mission Context Binding for AAuth |
-| Mission-Bound Authorization for UMA 2.0 | 2 documents: Mission Substrate Requirements + Mission-Bound Authorization for UMA 2.0 |
-| Mission-Bound Authorization for GNAP | 2 documents: Mission Substrate Requirements + Mission-Bound Authorization for GNAP |
+| Mission-Bound Authorization for User-Managed Access (UMA) 2.0 | 2 documents: Mission Substrate Requirements + Mission-Bound Authorization for User-Managed Access (UMA) 2.0 |
+| Mission-Bound Authorization for the Grant Negotiation and Authorization Protocol (GNAP) | 2 documents: Mission Substrate Requirements + Mission-Bound Authorization for the Grant Negotiation and Authorization Protocol (GNAP) |
 
 <!-- generated:binding-packages:end -->
 

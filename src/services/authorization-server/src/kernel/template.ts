@@ -38,6 +38,7 @@ import { newMissionId } from "./mission-id.js";
 import {
   type MissionTemplate,
   type TemplateCreate,
+  type TemplateRecipients,
   type TemplateState,
   TemplateStore,
 } from "./template-store.js";
@@ -86,6 +87,8 @@ export class DispatchError extends Error {
   }
 }
 
+export type { TemplateRecipients };
+
 /** The consented body of a template (@spec mission-template): what the human
  *  approves. Hashed under {@link MISSION_TEMPLATE_TYP} to `template_hash`;
  *  excludes the generated id, lifecycle state, and creation time. */
@@ -96,13 +99,41 @@ export interface CreateTemplateInput {
   approver: { iss: string; sub: string };
   ceiling: AuthorityEntry[];
   dispatch_policy: string;
+  /** `allowed_dispatchers`: a non-empty array of `client_id` strings. */
   dispatchers: string[];
-  recipients: string[];
+  recipients: TemplateRecipients;
   per_instance_lifetime_s: number;
   max_active: number;
   rate_per_min: number;
   approval_event_id: string;
   expires_at: string;
+}
+
+const nonEmptyString = (v: unknown): v is string => typeof v === "string" && v.length > 0;
+
+/**
+ * @spec mission-template#the-mission-template — the typed `allowed_dispatchers`
+ * and `allowed_recipients` entries, refused at template consent when malformed.
+ */
+function assertDispatchersAndRecipients(input: CreateTemplateInput): void {
+  if (!Array.isArray(input.dispatchers) || input.dispatchers.length === 0 || !input.dispatchers.every(nonEmptyString)) {
+    throw new TemplateError("template dispatchers must be a non-empty array of client_id strings");
+  }
+  const r = input.recipients as unknown;
+  if (r === null || typeof r !== "object" || Array.isArray(r)) {
+    throw new TemplateError("template recipients must be an object with subjects and agents");
+  }
+  const { subjects, agents } = r as Partial<TemplateRecipients>;
+  if (
+    !Array.isArray(subjects) ||
+    subjects.length === 0 ||
+    !subjects.every((s) => s !== null && typeof s === "object" && nonEmptyString(s.iss) && nonEmptyString(s.sub))
+  ) {
+    throw new TemplateError("template recipients.subjects must be a non-empty array of {iss, sub}");
+  }
+  if (!Array.isArray(agents) || agents.length === 0 || !agents.every(nonEmptyString)) {
+    throw new TemplateError("template recipients.agents must be a non-empty array of client_id strings");
+  }
 }
 
 /**
@@ -139,6 +170,7 @@ export function createTemplate(
   if (input.rate_per_min <= 0 || !Number.isInteger(input.rate_per_min)) {
     throw new TemplateError("rate_per_min must be a positive integer");
   }
+  assertDispatchersAndRecipients(input);
 
   // Idempotency first: return the already-consented template unchanged rather
   // than recomputing the hash (a body change would need a NEW approval event).
@@ -184,11 +216,11 @@ function establishTemplateAuthoritySource(
   options: { authoritySourceCatalog: AuthoritySourceCatalog },
 ): AuthoritySource {
   const catalog = options.authoritySourceCatalog;
-  if (input.recipients.length === 0) {
-    throw new TemplateError("template recipients must be non-empty");
+  if (input.recipients.agents.length === 0) {
+    throw new TemplateError("template recipients.agents must be non-empty");
   }
   let entry: ReturnType<typeof resolveSourceForClient> | undefined;
-  for (const recipient of input.recipients) {
+  for (const recipient of input.recipients.agents) {
     let resolved: ReturnType<typeof resolveSourceForClient>;
     try {
       resolved = resolveSourceForClient(catalog, recipient);
@@ -222,7 +254,7 @@ export interface DispatchInput {
   dispatchEventId: string;
   /** The dispatching actor; MUST be in the template's `dispatchers`. */
   dispatcher: string;
-  /** The receiving actor; MUST be in `recipients`; becomes the instance `client_id`. */
+  /** The receiving actor; MUST be in `recipients.agents`; becomes the instance `client_id`. */
   recipient: string;
   /** The instance's OWN Mission Intent (untrusted, derived under policy first). */
   intent: MissionIntent;
@@ -317,8 +349,17 @@ export function dispatchFromTemplate(
   if (!template.dispatchers.includes(input.dispatcher)) {
     throw new DispatchError("dispatcher_not_allowed", `dispatcher ${input.dispatcher} is not permitted`);
   }
-  if (!template.recipients.includes(input.recipient)) {
+  // @spec mission-template#the-mission-template — `allowed_recipients`: the
+  // instance's Agent must be a listed agent, and its established Subject must
+  // equal a listed subject in BOTH `iss` and `sub`; the lists are independent.
+  if (!template.recipients.agents.includes(input.recipient)) {
     throw new DispatchError("recipient_not_allowed", `recipient ${input.recipient} is not permitted`);
+  }
+  if (!template.recipients.subjects.some((s) => s.iss === input.subject.iss && s.sub === input.subject.sub)) {
+    throw new DispatchError(
+      "recipient_not_allowed",
+      `subject ${input.subject.iss} ${input.subject.sub} is not a permitted recipient`,
+    );
   }
   // max-active: count non-terminal instances (store rows filtered by kernel state).
   const active = store.activeInstanceCount(template.id, (missionId) => {

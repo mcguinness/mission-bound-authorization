@@ -1,5 +1,5 @@
 ---
-title: "Mission Completion and Entry Discharge for OAuth 2.0"
+title: "Mission Entry Discharge for OAuth 2.0"
 abbrev: "OAuth Mission Discharge"
 category: std
 
@@ -173,7 +173,7 @@ Effective Authority Set terms of the Status profile
 All JSON shown in this document is non-normative and illustrative;
 the member definitions in the surrounding text are authoritative.
 
-# Mission Completion and Entry Discharge {#completion}
+# Mission Entry Discharge {#completion}
 
 Without entry discharge, a Mission granted authority to release a
 record "for this enrollment" keeps deriving that authority after the
