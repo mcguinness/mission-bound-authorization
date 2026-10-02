@@ -39,6 +39,7 @@ import {
   type ClaimResolution,
   ClaimDomainUnavailableError,
   type ConsumptionStatusFn,
+  type RedeemingExecutionFn,
   type IdempotencyClaimDomain,
 } from "./idempotency-claims.js";
 
@@ -94,7 +95,7 @@ export interface PdpRemoteServerConfig {
    * The settlement and reconciliation channel for one authenticated
    * requester. Defaults to one over {@link PdpRemoteServerConfig.claims}.
    */
-  claimsFor?: (requester: ClaimRequester) => ClaimChannel;
+  claimsFor?: (requester: ClaimRequester, redeemingExecution?: RedeemingExecutionFn) => ClaimChannel;
   /**
    * @spec runtime#idempotency, retransmission condition 6 (#917): a
    * registered PEP's read-only consumption-status capability, injected by
@@ -102,6 +103,12 @@ export interface PdpRemoteServerConfig {
    * answer is `unknown`, which suppresses every retransmission to it.
    */
   consumptionStatus?: (pepId: string) => ConsumptionStatusFn | undefined;
+  /**
+   * #1016 review round 2: a registered PEP's read-only answer naming the
+   * attempt that redeemed a permit, injected beside its registration. Absent,
+   * no failed or suppressed outcome from that PEP settles.
+   */
+  redeemingExecution?: (pepId: string) => RedeemingExecutionFn | undefined;
 }
 
 export interface PdpHttpServerHandle {
@@ -335,7 +342,9 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
   async function handleClaims(route: string, req: IncomingMessage, res: ServerResponse): Promise<void> {
     const authed = await authenticate(req, res, (body) => body.audience);
     if (!authed) return;
-    const channel = config.claimsFor?.(authed.requester) ?? claimChannelFor(config.claims, authed.requester);
+    const redeemer = config.redeemingExecution?.(authed.pepId);
+    const channel =
+      config.claimsFor?.(authed.requester, redeemer) ?? claimChannelFor(config.claims, authed.requester, redeemer);
     try {
       if (route === "/claims/settle") {
         sendSigned(res, authed, await channel.settle(authed.body.record));

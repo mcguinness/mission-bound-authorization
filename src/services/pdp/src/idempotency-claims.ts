@@ -92,6 +92,18 @@ export type ConsumptionStatusFn = (
   pepEpoch: string,
 ) => ConsumptionStatus | Promise<ConsumptionStatus>;
 
+/**
+ * #1016 review round 2: the PEP's read-only answer, from its D28 redemption
+ * record, to "which attempt took the single use of this `evaluation_id`?":
+ * that attempt's `execution_id`, or `undefined` when the record names none
+ * (never redeemed, or another epoch). Asked only to settle a failed or
+ * suppressed outcome; never cached.
+ */
+export type RedeemingExecutionFn = (
+  evaluationId: string,
+  pepEpoch: string,
+) => string | undefined | Promise<string | undefined>;
+
 /** A startup refusal: the configured domain is not one this PDP can run as Exact. */
 export class ClaimDomainConfigError extends Error {
   constructor(why: string) {
@@ -524,7 +536,11 @@ export class IdempotencyClaimDomain {
    * the PEP the permit was issued to settles it), and idempotent on
    * `execution_id`: a resent record is acknowledged, never applied twice.
    */
-  async settle(requester: ClaimRequester, record: unknown): Promise<SettlementResult> {
+  async settle(
+    requester: ClaimRequester,
+    record: unknown,
+    redeemingExecution?: RedeemingExecutionFn,
+  ): Promise<SettlementResult> {
     const keys = this.options.settlementKeys;
     if (!keys) return { accepted: false, reason: "no_verification_keys" };
     const verified = await verifyEvidenceEnvelope(record, EXECUTION_EVIDENCE_MEDIA_TYPE, keys);
@@ -541,8 +557,50 @@ export class IdempotencyClaimDomain {
     else if (outcome === "failed") next = "failed";
     else if (outcome === "suppressed" && !NON_REDEEMING_ERRORS.has(String(content.error))) next = "failed";
     else return { accepted: false, reason: "not_a_settling_outcome" };
+    // #1016 review round 2: a completed record proves an effect whatever
+    // attempt wrote it. A failed or suppressed one proves no effect only for
+    // the attempt that held the single use: a replay of the same permit that
+    // was refused before redemption (`permit_expired` at admission, say)
+    // says nothing about the redeeming attempt, which may have committed.
+    // So a non-completed record settles only when the redemption owner's
+    // own record names its `execution_id` as the redeeming attempt. The
+    // record's members are never taken as that proof.
+    if (next === "failed") {
+      const row = this.tx(
+        () => this.db.prepare("SELECT * FROM claims WHERE evaluation_id = ?").get(evaluationId) as ClaimRow | undefined,
+      );
+      if (!row) return { accepted: false, reason: "unknown_evaluation" };
+      if (row.pep_id !== requester.pep_id) return { accepted: false, reason: "not_the_permit_holder" };
+      const redeemer = await this.askRedeemer(evaluationId, row.pep_epoch, redeemingExecution);
+      if (redeemer === undefined) return { accepted: false, reason: "redeeming_attempt_unknown" };
+      if (redeemer !== executionId) return { accepted: false, reason: "not_the_redeeming_attempt" };
+    }
     const outcomeRef = typeof content.evidence_id === "string" ? content.evidence_id : executionId;
     return this.tx(() => this.applySettlement(requester, evaluationId, executionId, next, String(outcome), outcomeRef, "settled"));
+  }
+
+  /** The redemption owner's answer; `undefined` for none, a failure, or no answer in time. */
+  private async askRedeemer(
+    evaluationId: string,
+    pepEpoch: string,
+    redeemingExecution: RedeemingExecutionFn | undefined,
+  ): Promise<string | undefined> {
+    if (!redeemingExecution) return undefined;
+    const timeoutMs = this.options.consumptionStatusTimeoutMs ?? 1000;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const answer = await Promise.race([
+        Promise.resolve(redeemingExecution(evaluationId, pepEpoch)),
+        new Promise<undefined>((resolve) => {
+          timer = setTimeout(() => resolve(undefined), timeoutMs);
+        }),
+      ]);
+      return typeof answer === "string" && answer.length > 0 ? answer : undefined;
+    } catch {
+      return undefined;
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   }
 
   private applySettlement(
@@ -603,11 +661,17 @@ export class IdempotencyClaimDomain {
    * no effect, which holds only within the epoch the permit was issued to
    * and only once the permit and its longest lease have both elapsed.
    */
-  async reconcile(requester: ClaimRequester, evaluationId: string, resolution: ClaimResolution): Promise<SettlementResult> {
+  async reconcile(
+    requester: ClaimRequester,
+    evaluationId: string,
+    resolution: ClaimResolution,
+    redeemingExecution?: RedeemingExecutionFn,
+  ): Promise<SettlementResult> {
     if (resolution.kind === "execution_evidence") {
       const content = object(resolution.record) ? resolution.record : undefined;
       if (content?.evaluation_id !== evaluationId) return { accepted: false, reason: "evaluation_mismatch" };
-      return this.settle(requester, resolution.record);
+      // The settlement rule applies unchanged, the redeeming-attempt linkage included.
+      return this.settle(requester, resolution.record, redeemingExecution);
     }
     return this.tx(() => {
       const nowMs = this.now().getTime();

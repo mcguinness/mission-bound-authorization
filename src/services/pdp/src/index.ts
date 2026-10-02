@@ -49,6 +49,7 @@ export {
   type ClaimTicket,
   type ConsumptionStatus,
   type ConsumptionStatusFn,
+  type RedeemingExecutionFn,
   IdempotencyClaimDomain,
   LOCAL_SINGLE_WRITER,
   openEphemeralClaimDomain,

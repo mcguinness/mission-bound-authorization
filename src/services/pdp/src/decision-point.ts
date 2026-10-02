@@ -29,6 +29,7 @@ import type {
   ClaimResolution,
   ConsumptionStatusFn,
   IdempotencyClaimDomain,
+  RedeemingExecutionFn,
   SettlementResult,
   UnresolvedClaim,
 } from "./idempotency-claims.js";
@@ -58,13 +59,22 @@ const NO_CLAIM_CHANNEL: ClaimChannel = {
   reconcile: async () => ({ accepted: false, reason: "no_claim_domain" }),
 };
 
-/** The claim channel over one domain, bound to one authenticated requester. */
-export function claimChannelFor(claims: IdempotencyClaimDomain | undefined, requester: ClaimRequester): ClaimChannel {
+/**
+ * The claim channel over one domain, bound to one authenticated requester
+ * and that requester's read-only redemption record (#1016 review round 2):
+ * without it, no failed or suppressed outcome settles, since nothing can show
+ * it came from the redeeming attempt.
+ */
+export function claimChannelFor(
+  claims: IdempotencyClaimDomain | undefined,
+  requester: ClaimRequester,
+  redeemingExecution?: RedeemingExecutionFn,
+): ClaimChannel {
   if (!claims) return NO_CLAIM_CHANNEL;
   return {
-    settle: (record) => claims.settle(requester, record),
+    settle: (record) => claims.settle(requester, record, redeemingExecution),
     listUnresolved: async () => claims.listUnresolved(requester),
-    reconcile: (evaluationId, resolution) => claims.reconcile(requester, evaluationId, resolution),
+    reconcile: (evaluationId, resolution) => claims.reconcile(requester, evaluationId, resolution, redeemingExecution),
   };
 }
 
@@ -120,7 +130,7 @@ export interface DecisionPoint {
    */
   decideAs?: (requester: ClaimRequester, consumptionStatus?: ConsumptionStatusFn) => DecisionFn;
   /** @spec runtime#idempotency (#917): settlement and reconciliation for one authenticated requester. */
-  claimsFor?: (requester: ClaimRequester) => ClaimChannel;
+  claimsFor?: (requester: ClaimRequester, redeemingExecution?: RedeemingExecutionFn) => ClaimChannel;
 }
 
 /**
@@ -181,7 +191,7 @@ export function createDecisionPoint(config: DecisionPointConfig = {}): DecisionP
   return {
     decide: bindDecide(emitter, config.claims, unboundRequester()),
     decideAs: (requester, consumptionStatus) => bindDecide(emitter, config.claims, requester, consumptionStatus),
-    claimsFor: (requester) => claimChannelFor(config.claims, requester),
+    claimsFor: (requester, redeemingExecution) => claimChannelFor(config.claims, requester, redeemingExecution),
     ...(config.evidence
       ? {
           evidenceVerification: {
@@ -228,7 +238,7 @@ export function createEphemeralDecisionPoint(options: {
   return {
     decide: bindDecide(emitter, claims, unboundRequester()),
     decideAs: (requester, consumptionStatus) => bindDecide(emitter, claims, requester, consumptionStatus),
-    claimsFor: (requester) => claimChannelFor(claims, requester),
+    claimsFor: (requester, redeemingExecution) => claimChannelFor(claims, requester, redeemingExecution),
     evidenceVerification: { kid, publicKey, emitterId, audience },
     emitter,
   };
