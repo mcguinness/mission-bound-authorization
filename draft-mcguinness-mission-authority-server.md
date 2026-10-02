@@ -2923,8 +2923,10 @@ shows the denial:
 
 \[\[ To be removed from the final specification ]]
 
-- Density and OAuth register, with no change to any requirement. The
-  abstract opens "This specification defines" in 129 words; the
+- Density and OAuth register, with no change to the party, behavior,
+  or keyword of any requirement; two conditions the preceding sentence
+  carried are stated in the requirement itself. The abstract opens
+  "This specification defines" in 129 words; the
   Introduction states what the OAuth binding answers and what this
   document answers; no paragraph runs over 130 words; error
   requirements use the active OAuth form; examples open with "The
