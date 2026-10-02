@@ -127,6 +127,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-template:
+    title: "Mission Template for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -721,6 +729,16 @@ receives a fresh copy of the bound:
   approval MUST NOT carry a larger bound than its predecessor. Where a
   successor's bound is larger, its approval rendering MUST include the
   consumption to date ({{consent}}).
+
+A Mission dispatched from a Mission Template
+({{I-D.draft-mcguinness-oauth-mission-template}}) is created from a
+standing consent, not from another Mission, and has its own counters.
+One template consent therefore admits up to `max_active` times an
+instance's bound at once, and more over time at the template's
+`dispatch_rate`. Unless the deployment meters an aggregate bound
+spanning the template's instances ({{aggregate-bounds}}), the
+template's consent rendering MUST present the bound as per instance,
+together with `max_active` and `dispatch_rate`.
 
 # Aggregate Bounds {#aggregate-bounds}
 
