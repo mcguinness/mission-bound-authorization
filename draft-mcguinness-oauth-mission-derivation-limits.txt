@@ -83,6 +83,7 @@ Table of Contents
      4.2.  Atomicity and Concurrency
      4.3.  Refresh and Token Exchange
      4.4.  Cross-Domain Issuance
+     4.5.  Mission Issuance Grant Minting
    5.  Enforcement at Issuance
    6.  Remaining Derivations in Token Introspection
    7.  Approval Rendering
@@ -112,10 +113,13 @@ Table of Contents
    performs.  This document adds that bound: a derivation limit on the
    number of derivations the issuer AS performs under a Mission.  The
    limit is an issuer-side operational control.  It bounds counted
-   issuance operations at the token endpoint, not the authority any
-   derived token carries or how often a token already issued is used.
-   The refreshes of an async delegation family are not counted
-   (Section 4.3).
+   issuance operations at the token endpoint, or at the Mission
+   Authority Server's grant endpoint under the Mission Issuance Grant
+   profile (Section 4.5), not the authority any derived token carries or
+   how often a token already issued is used.  The refreshes of an async
+   delegation family are not counted (Section 4.3), nor are redemption
+   and refresh at a consuming Authorization Server under the Mission
+   Issuance Grant profile (Section 4.5).
 
    The limit uses these extension seams of the OAuth binding and changes
    none of its rules:
@@ -263,6 +267,8 @@ Table of Contents
    performs for a single request, namely the initial authorization-code
    exchange, a refresh, a Token Exchange ([RFC8693]), or a cross-domain
    grant issuance ([I-D.draft-mcguinness-oauth-mission-cross-domain]).
+   Under the Mission Issuance Grant profile the list gains one entry,
+   the Mission Authority Server's minting of a grant (Section 4.5).
 
 4.1.  What Counts
 
@@ -307,6 +313,21 @@ Table of Contents
    grant's own lifetime and local policy, not counted against the origin
    issuer's per-Mission derivation cap.
 
+4.5.  Mission Issuance Grant Minting
+
+   Under the Mission Issuance Grant profile
+   ([I-D.draft-mcguinness-oauth-mission-issuance-grant]), the Mission
+   Authority Server is the Mission Issuer, and minting a grant is the
+   derivation it performs: each committed minting counts once, and the
+   MAS refuses minting past the limit with derivations_exhausted
+   ([I-D.draft-mcguinness-oauth-mission-issuance-grant], Section "Grant
+   Errors").  Neither redeeming the grant at a consuming Authorization
+   Server nor any refresh there is a derivation the issuer performs, and
+   neither increments the count.  As at the cross-domain boundary
+   (Section 4.4), the limit therefore bounds the grants the issuer
+   mints, not the number of tokens consuming Authorization Servers issue
+   from them.
+
 5.  Enforcement at Issuance
 
    The derivation limit is an issuance gate beside those of the OAuth
@@ -314,7 +335,9 @@ Table of Contents
    Gating").  When the Mission's derivation_limit (Section 3.3) is
    established, the AS MUST refuse, with the invalid_grant error code,
    any derivation that would make the number of *derivations* under the
-   Mission exceed it.
+   Mission exceed it.  Where the derivation is a Mission Authority
+   Server's minting of a grant, the refusal is that profile's
+   derivations_exhausted grant error instead (Section 4.5).
 
    The issuer AS enforces the limit at each derivation.  The bound is
    never absent at the issuer when established, and it does not bound
@@ -404,7 +427,11 @@ Table of Contents
    value, not only the requested one.  Where the AS supports the
    Continuation profile's async delegation transport, the rendering MUST
    also state that the refreshes of an async delegation family are not
-   counted against the limit (Section 4.3).
+   counted against the limit (Section 4.3).  Where the Mission Issuer is
+   a Mission Authority Server issuing grants under the Mission Issuance
+   Grant profile, the rendering MUST also state that the limit bounds
+   the grants it issues, not the tokens consuming Authorization Servers
+   issue from them (Section 4.5).
 
    The rendered limit is one Mission's local bound (Section 9.4).  Where
    a deployment runs child delegation, that profile states what an
@@ -439,13 +466,14 @@ Table of Contents
 9.1.  Issuance, Not Authority
 
    The derivation limit bounds how many counted issuance operations the
-   issuer performs; the refreshes of an async delegation family are not
-   counted (Section 9.2).  It does not narrow the Authority Set, shorten
-   a token's lifetime, or bound the requests a Resource Server honors
-   under a token already issued: a derived token remains usable until
-   its exp.  A deployment that needs to bound use, rather than issuance,
-   adopts a runtime control such as metering
-   ([I-D.draft-mcguinness-mission-metering]).
+   issuer performs; the refreshes of an async delegation family, and
+   redemption and refresh at a Mission Issuance Grant consuming
+   Authorization Server, are not counted (Section 9.2, Section 4.5).  It
+   does not narrow the Authority Set, shorten a token's lifetime, or
+   bound the requests a Resource Server honors under a token already
+   issued: a derived token remains usable until its exp.  A deployment
+   that needs to bound use, rather than issuance, adopts a runtime
+   control such as metering ([I-D.draft-mcguinness-mission-metering]).
 
 9.2.  Async Delegation Families
 
@@ -486,10 +514,11 @@ Table of Contents
 
    Cross-domain projection composes separately: local issuance at a
    Resource AS is not counted against the origin issuer's cap
-   (Section 4.4).  The OAuth binding's composition guidance applies to
-   the derivation limit as to its other bounds
-   ([I-D.draft-mcguinness-oauth-mission], Section "Composition and the
-   Effective Ceiling").
+   (Section 4.4), and neither are the tokens a consuming Authorization
+   Server issues under the Mission Issuance Grant profile (Section 4.5).
+   The OAuth binding's composition guidance applies to the derivation
+   limit as to its other bounds ([I-D.draft-mcguinness-oauth-mission],
+   Section "Composition and the Effective Ceiling").
 
 9.5.  Audit Recomputation
 
@@ -604,6 +633,12 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-oauth-mission-expansion.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-issuance-grant]
+              McGuinness, K., "Mission Issuance Grant for OAuth 2.0",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-issuance-
+              grant.html>.
+
    [I-D.draft-mcguinness-oauth-mission-template]
               McGuinness, K., "Mission Template for OAuth 2.0", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
@@ -655,6 +690,12 @@ Appendix B.  Document History
       derivation_limit record member, counting and refusal at issuance,
       the derivations_exhausted diagnostic, the derivations_remaining
       introspection member, and approval rendering.
+
+   *  Under the Mission Issuance Grant profile, the Mission Authority
+      Server's committed grant minting is a counted derivation;
+      redemption and refresh at a consuming Authorization Server are
+      not, and the limit does not cap the tokens they issue; the
+      approval rendering states that bound (#963).
 
 Author's Address
 

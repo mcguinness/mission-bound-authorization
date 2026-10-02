@@ -1701,10 +1701,15 @@ treats every state other than the exact value <code>active</code>, including one
 does not recognize, as non-active, so an unrecognized state fails safe
 (the OAuth binding's Mission Lifecycle and Gating section).<a href="#section-4-7" class="pilcrow">¶</a></p>
 <p id="section-4-8">AAuth realizes the separation differently. Its exact-byte <code>s256</code>
-commits the private approved mission blob, and <code>{approver, s256}</code> is
-the stable reference. The PS applies contextual governance using that
-blob and the ordered mission log; scopes, resource tokens, Resource and
-Access Server policy, and optionally AAuth Rich Resource Requests
+commits the private approved mission blob. The approving PS and <code>s256</code>
+are the Mission Reference, AAuth's mission identity (Section 8.2.1 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>). The blob carries no member
+naming the PS: a person token names it by <code>iss</code>, a resource or auth
+token by <code>ps</code>, and a request by its destination. On the wire the
+reference is the <code>mission_s256</code> claim or parameter. The PS applies
+contextual governance using that blob and the ordered mission log;
+scopes, resource tokens, Resource and Access Server policy, and
+optionally AAuth Rich Resource Requests
 (R3, <span>[<a href="#I-D.draft-hardt-aauth-r3" class="cite xref">I-D.draft-hardt-aauth-r3</a>]</span>) carry deterministic resource
 authorization. AAuth does not add the OAuth Authority Set or its two
 anchors, and its native lifecycle remains exactly <code>active</code> or
@@ -1964,9 +1969,9 @@ PS and does not add this OAuth Subject tuple to the mission blob.<a href="#secti
         <dd style="margin-left: 1.5em" id="section-6-2.6">
           <p id="section-6-2.6.1">The single accountable principal who approves the Mission; equal
 to the Subject for self-approval (the OAuth binding's Single
-Accountable Approver section). In AAuth, the wire <code>approver</code> value
-names the PS, not a portable person identifier; the person reviews
-and approves through that PS.<a href="#section-6-2.6.1" class="pilcrow">¶</a></p>
+Accountable Approver section). In AAuth the approver is always the
+PS, not a portable person identifier, and the blob carries no member
+naming it; the person reviews and approves through that PS.<a href="#section-6-2.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-6-2.7">Mission Issuer:</dt>
@@ -2013,9 +2018,12 @@ and Access Server policy, and optionally R3.<a href="#section-6-2.8.3" class="pi
         <dd style="margin-left: 1.5em" id="section-6-2.10">
           <p id="section-6-2.10.1">The controlling authority for the native Mission Context rather than
 an OAuth-style Mission Issuer. The mission blob is committed by
-AAuth's <code>s256</code>, and the PS gates PS-asserted issuance and federated
-brokering. It does not gate direct identity-based or resource-managed
-decisions (<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>).<a href="#section-6-2.10.1" class="pilcrow">¶</a></p>
+AAuth's <code>s256</code>. In person identity the PS gates person-token
+issuance but does not decide at the resource; it gates PS
+authorization (three-party) and federated authorization
+(four-party). It does not gate agent identity or resource-managed
+access (Section 4.2 of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>,
+<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>).<a href="#section-6-2.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-6-2.11">Resource Server:</dt>
@@ -2755,12 +2763,15 @@ one, fails safe (the OAuth binding's Mission Lifecycle and Gating
 section). A state-aware consumer relies only while it observes
 <code>active</code>; a state-unaware consumer retains the bounded
 materialized-credential residual (<a href="#validity-model" class="auto internal xref">Section 10.4</a>). In AAuth, only
-PS operations and the PS-asserted and federated authorization paths
-are structurally gated; identity-based and resource-managed decisions
-do not pass through the PS. On the gated paths the gate covers
-requests whose resource token carries the validated Mission Reference;
-a stripped reference yields a missionless request, bounded by the
-binding's downgrade rules (<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>).<a href="#section-8-3.4.1" class="pilcrow">¶</a></p>
+PS operations are structurally gated, and agent identity and
+resource-managed access do not pass through the PS. In person
+identity access the gate is person-token issuance (Section 7.1 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>). In PS authorization and
+federated authorization access it covers auth-token issuance and
+federated brokering for requests whose resource token carries the
+validated Mission Reference; a stripped or mismatched reference
+fails the request, which is never evaluated as missionless
+(<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>).<a href="#section-8-3.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-8-3.5">
@@ -3302,7 +3313,7 @@ split on it. The OAuth binding provides it. The standalone binding does
 not: the MAS's Mission Substrate section states that a MAS provides
 neither this credential nor issuance gating
 (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>). An AAuth auth token
-can carry the native <code>{approver, s256}</code> mission reference, but it does
+can carry the native Mission Reference (<code>mission_s256</code>), but it does
 not carry Mission-derived authorization details and therefore is
 Mission-referenced, not a Mission-bound credential in the strong sense
 (<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>).<a href="#section-10.3-2" class="pilcrow">¶</a></p>
@@ -3347,8 +3358,9 @@ mode provide.<a href="#section-10.4-2.2.1" class="pilcrow">¶</a></p>
             <p id="section-10.4-2.4.1">set by the controlling authority and checked at the binding's declared
 control points. In OAuth, the issuance gate, PDP, and state consumers
 enforce it. In AAuth, the PS enforces <code>active</code> or <code>terminated</code> at PS
-endpoints and on PS-asserted and federated paths; direct
-identity-based and resource-managed decisions have no PS state gate.<a href="#section-10.4-2.4.1" class="pilcrow">¶</a></p>
+endpoints and on the person identity, PS authorization, and
+federated authorization modes; agent identity and resource-managed
+access have no PS state gate.<a href="#section-10.4-2.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-10.4-2.5">
@@ -3382,8 +3394,9 @@ by construction. Where every fresh credential crosses a Mission-state
 decision point, this posture realizes the <strong>lifecycle-gated</strong> capability
 with reliance bounded by credential lifetime alone
 (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>). That holds only for access
-modes with such a gate: AAuth's PS-asserted and federated paths have it,
-while its direct modes do not.<a href="#section-10.4-4" class="pilcrow">¶</a></p>
+modes with such a gate: AAuth's person identity, PS authorization, and
+federated authorization modes have it, while agent identity and
+resource-managed access do not.<a href="#section-10.4-4" class="pilcrow">¶</a></p>
 <p id="section-10.4-5">TTL-only is appropriate where the artifact's lifetime meets the
 tolerated exposure bound and no required state check would shorten that
 exposure. That is the case at action grain, where an artifact lives
@@ -3456,10 +3469,11 @@ UMA AS, and GNAP AS);<a href="#section-10.5-6.1.1" class="pilcrow">¶</a></p>
 the association at the decision point (the standalone MAS); and<a href="#section-10.5-6.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-10.5-6.3">
-            <p id="section-10.5-6.3.1"><strong>context-carried</strong>: AAuth carries its native <code>{approver, s256}</code>
-reference while authority remains in resource scopes and policy.
-The PS gates PS-asserted and federated authorization, while direct
-identity-based and resource-managed decisions bypass the PS.<a href="#section-10.5-6.3.1" class="pilcrow">¶</a></p>
+            <p id="section-10.5-6.3.1"><strong>context-carried</strong>: AAuth carries its native Mission Reference
+(<code>mission_s256</code>) while authority remains in resource scopes and
+policy. The PS gates person identity, PS authorization, and
+federated authorization, while agent identity and resource-managed
+access bypass the PS.<a href="#section-10.5-6.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-10.5-7">The differences that decide a design:<a href="#section-10.5-7" class="pilcrow">¶</a></p>
@@ -3488,7 +3502,7 @@ identity-based and resource-managed decisions bypass the PS.<a href="#section-10
               <td class="text-left" rowspan="1" colspan="1">Issuance gated on state</td>
               <td class="text-left" rowspan="1" colspan="1">yes</td>
               <td class="text-left" rowspan="1" colspan="1">no (the issuance grant restores it per consuming AS)</td>
-              <td class="text-left" rowspan="1" colspan="1">PS-asserted and federated only</td>
+              <td class="text-left" rowspan="1" colspan="1">person identity, PS authorization, and federated authorization only</td>
               <td class="text-left" rowspan="1" colspan="1">yes</td>
               <td class="text-left" rowspan="1" colspan="1">yes (issuance, grant modification, and rotation)</td>
             </tr>
@@ -3496,7 +3510,7 @@ identity-based and resource-managed decisions bypass the PS.<a href="#section-10
               <td class="text-left" rowspan="1" colspan="1">Runtime PDP required for a kill switch</td>
               <td class="text-left" rowspan="1" colspan="1">no (issuance gate exists; runtime tightens)</td>
               <td class="text-left" rowspan="1" colspan="1">yes (runtime is the only cutoff)</td>
-              <td class="text-left" rowspan="1" colspan="1">none from the binding for direct modes; PS-path issuance has a bounded cutoff</td>
+              <td class="text-left" rowspan="1" colspan="1">none from the binding for agent identity and resource-managed access; PS-path issuance has a bounded cutoff</td>
               <td class="text-left" rowspan="1" colspan="1">no (per-use introspection cuts off)</td>
               <td class="text-left" rowspan="1" colspan="1">no (issuance gate exists; per-use introspection cuts off where deployed)</td>
             </tr>
@@ -3504,7 +3518,7 @@ identity-based and resource-managed decisions bypass the PS.<a href="#section-10
               <td class="text-left" rowspan="1" colspan="1">Join ambiguity possible</td>
               <td class="text-left" rowspan="1" colspan="1">no</td>
               <td class="text-left" rowspan="1" colspan="1">yes (bounded by join assurance)</td>
-              <td class="text-left" rowspan="1" colspan="1">no when the native reference is preserved; it can be ignored in direct modes</td>
+              <td class="text-left" rowspan="1" colspan="1">no when the native reference is preserved; it can be ignored in agent identity and resource-managed access</td>
               <td class="text-left" rowspan="1" colspan="1">no</td>
               <td class="text-left" rowspan="1" colspan="1">no (native binding; no cross-authority join)</td>
             </tr>
@@ -3512,7 +3526,7 @@ identity-based and resource-managed decisions bypass the PS.<a href="#section-10
               <td class="text-left" rowspan="1" colspan="1">Revocation latency source</td>
               <td class="text-left" rowspan="1" colspan="1">token lifetime, status, or runtime</td>
               <td class="text-left" rowspan="1" colspan="1">runtime and status only</td>
-              <td class="text-left" rowspan="1" colspan="1">auth-token lifetime on PS paths; no Mission cutoff on direct paths</td>
+              <td class="text-left" rowspan="1" colspan="1">auth-token lifetime on PS paths; no Mission cutoff on agent identity and resource-managed paths</td>
               <td class="text-left" rowspan="1" colspan="1">next introspection</td>
               <td class="text-left" rowspan="1" colspan="1">token lifetime, or the declared introspection cache bound</td>
             </tr>
@@ -3540,9 +3554,10 @@ token is still stopped at the action layer on mediated paths.<a href="#section-1
 <p id="section-10.5-11">AAuth supplies the Mission Context capabilities in its own idiom but not
 a portable Authority Set or universal subset rule. The AAuth binding
 also has a narrower structural chokepoint. The Person Server refuses new
-PS-asserted issuance or federated brokering for a terminated Mission
-Context, bounding those paths by auth-token lifetime. Identity-based and
-resource-managed decisions do not cross that chokepoint. The AAuth
+person-token issuance, PS authorization, or federated brokering for a
+terminated Mission Context, bounding those paths by token lifetime.
+Agent identity and resource-managed access do not cross that
+chokepoint. The AAuth
 binding defines no generic family runtime composition or independently
 resource-verifiable Authority Set
 (<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>).<a href="#section-10.5-11" class="pilcrow">¶</a></p>
@@ -3669,8 +3684,9 @@ and a deployment states that.<a href="#section-11-6" class="pilcrow">¶</a></p>
 resource access modes it actually uses instead of a level. Selecting
 the AAuth binding does not by itself satisfy structured-authority,
 subset, portable-evidence, or runtime proof obligations. Its
-lifecycle gate covers PS-asserted and federated access but not
-identity-based or resource-managed access, and its native auth token
+lifecycle gate covers person identity, PS authorization, and federated
+authorization but not agent identity or resource-managed access, and
+its native auth token
 is Mission-referenced, not Mission-bound (<a href="#token-classes" class="auto internal xref">Section 10.2</a>).<a href="#section-11-7" class="pilcrow">¶</a></p>
 <p id="section-11-8">The levels, cumulative:<a href="#section-11-8" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-11-9">
@@ -3707,8 +3723,9 @@ Baseline with it.<a href="#section-11-9.2.4" class="pilcrow">¶</a></p>
 <p id="section-11-9.2.5">The nearest AAuth comparison, stated as capabilities rather than a
 level: native approval, exact-byte commitment, active or terminated
 state, and the ordered mission log. The possession-independent
-issuance cutoff applies only to PS-asserted and federated requests
-whose resource token carries the validated Mission Reference; no
+issuance cutoff applies only to person-token issuance and to PS
+authorization and federated requests whose resource token carries the
+validated Mission Reference; no
 Authority Set or subset proof is implied.<a href="#section-11-9.2.5" class="pilcrow">¶</a></p>
 <p id="section-11-9.2.6">Proof obligations: the anchored approval and, where credentials are
 issued, the subset rule. Where the binding gates issuance, a
@@ -4371,9 +4388,9 @@ residual the transition does not reach.<a href="#section-11.5-2" class="pilcrow"
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Baseline Issuance</td>
               <td class="text-left" rowspan="1" colspan="1">MAS as estate control plane, issuance join at each consuming AS</td>
-              <td class="text-left" rowspan="1" colspan="1">Baseline, from Derivation Gating at the Mission Issuer (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>, Section "Derivation Gating"); the consuming AS's checks are not containment-aware on their own (note 5)</td>
-              <td class="text-left" rowspan="1" colspan="1">New grant minting only: the Mission Issuer's Derivation Gating evaluates the Effective Authority Set, so a grant minted after the transition excludes contained authority (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>, Section "Derivation Gating")</td>
-              <td class="text-left" rowspan="1" colspan="1">An outstanding grant redeems once, to its own maximum lifetime of 300 seconds, at any consuming AS whose redemption check is active-only rather than containment-aware (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>, Section "Redemption")</td>
+              <td class="text-left" rowspan="1" colspan="1">Baseline, from Derivation Gating at the Mission Issuer (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>, Section "Derivation Gating") and, at a consuming AS with a Mission-state integration, from projecting each redemption and refresh through the Effective Authority Set (note 5)</td>
+              <td class="text-left" rowspan="1" colspan="1">New grant minting: the Mission Issuer's Derivation Gating evaluates the Effective Authority Set, so a grant minted after the transition excludes contained authority (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>, Section "Derivation Gating"); and, at a consuming AS with a Mission-state integration, each redemption and refresh once its state source reflects the transition (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>, Section "Effective Authority Set Projection")</td>
+              <td class="text-left" rowspan="1" colspan="1">An outstanding grant redeems once, within its 300-second lifetime, at a consuming AS without a Mission-state integration, which checks no Mission state at redemption and issues no refresh tokens; tokens already issued run to their own <code>exp</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>, Section "Redemption")</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Runtime-Enforced</td>
@@ -4419,14 +4436,18 @@ Baseline property, not the Runtime-Enforced one
 "Containment Properties").<a href="#section-11.5-5.4.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-11.5-5.5">
-            <p id="section-11.5-5.5.1">Under the MAS as estate control plane, the consuming AS's redemption
-and refresh checks are the issuance profile's ordinary <code>active</code> gate,
-and a contained Mission stays <code>active</code>. Those checks are therefore
-not containment-aware on their own, unless the consuming AS
-separately retrieves and applies the containment overlay or current
-Effective Authority Set
+            <p id="section-11.5-5.5.1">Under the MAS as estate control plane, a consuming AS either has a
+Mission-state integration or has none
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>, Section
-"Redemption").<a href="#section-11.5-5.5.1" class="pilcrow">¶</a></p>
+"Effective Authority Set Projection"). One that has it projects
+every redemption and refresh through the Mission's current
+Effective Authority Set, so its issuance excludes contained
+authority within its published staleness bound; a lifecycle-state
+check alone, under which a contained Mission still reads <code>active</code>,
+is not such an integration. One that has none checks no Mission
+state at redemption, issues no refresh tokens, and relies on the
+Mission Issuer's minting gate, so a grant minted before the
+transition can still redeem within its 300-second lifetime.<a href="#section-11.5-5.5.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-11.5-5.6">
             <p id="section-11.5-5.6.1">Under the OAuth binding with offline attenuation, a consumer accepts
@@ -4842,10 +4863,10 @@ reference, decide who reads the concentrated view.<a href="#section-14-3" class=
 <p id="section-14-4">The AAuth binding's privacy posture is its own
 (<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>). The private mission blob
 never leaves the agent and the Person Server, and the stable
-<code>{approver, s256}</code> reference is a correlation handle across every
-resource that sees it. The mission log concentrates a detailed
-activity history at the Person Server, where the binding's
-minimization and retention duties apply.<a href="#section-14-4" class="pilcrow">¶</a></p>
+Mission Reference (<code>mission_s256</code> with the approving PS) is a
+correlation handle across every resource that sees it. The mission log
+concentrates a detailed activity history at the Person Server, where
+the binding's minimization and retention duties apply.<a href="#section-14-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="iana">
@@ -4868,11 +4889,11 @@ minimization and retention duties apply.<a href="#section-14-4" class="pilcrow">
 <dd class="break"></dd>
 <dt id="I-D.draft-hardt-aauth-r3">[I-D.draft-hardt-aauth-r3]</dt>
       <dd>
-<span class="refAuthor">Hardt, D.</span>, <span class="refTitle">"AAuth Rich Resource Requests (R3)"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://dickhardt.github.io/AAuth/draft-hardt-aauth-r3.html" class="reader-edition-ext-link" target="_blank" rel="noopener">https://dickhardt.github.io/AAuth/draft-hardt-aauth-r3.html</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
+<span class="refAuthor">Hardt, D.</span>, <span class="refTitle">"AAuth Rich Resource Requests (R3)"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-hardt-aauth-r3-00</span>, <time datetime="2026-09-28" class="refDate">28 September 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-hardt-aauth-r3-00" class="reader-edition-ext-link" target="_blank" rel="noopener">https://datatracker.ietf.org/doc/html/draft-hardt-aauth-r3-00</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-hardt-oauth-aauth-protocol">[I-D.draft-hardt-oauth-aauth-protocol]</dt>
       <dd>
-<span class="refAuthor">Hardt, D.</span>, <span class="refTitle">"AAuth Protocol"</span>, <span class="refContent">Editor's copy, commit fc5e972c</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://dickhardt.github.io/AAuth/draft-hardt-oauth-aauth-protocol.html" class="reader-edition-ext-link" target="_blank" rel="noopener">https://dickhardt.github.io/AAuth/draft-hardt-oauth-aauth-protocol.html</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
+<span class="refAuthor">Hardt, D.</span>, <span class="refTitle">"AAuth Protocol"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-hardt-oauth-aauth-protocol-11</span>, <time datetime="2026-09-25" class="refDate">25 September 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-hardt-oauth-aauth-protocol-11" class="reader-edition-ext-link" target="_blank" rel="noopener">https://datatracker.ietf.org/doc/html/draft-hardt-oauth-aauth-protocol-11</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-ietf-oauth-attestation-based-client-auth">[I-D.draft-ietf-oauth-attestation-based-client-auth]</dt>
       <dd>
@@ -5445,11 +5466,11 @@ and the consequence class; no machine-readable declaration format is
 defined (the Mission Deployment Profile's schema remains reserved
 future work, <a href="#deployment-profile" class="auto internal xref">Section 12.6</a>), and the declaration is ordinary
 deployment documentation.<a href="#appendix-C-5" class="pilcrow">¶</a></p>
-<p id="appendix-C-6">The deployment runs PS-asserted access. Every resource token the
-gateway accepts is PS-issued or PS-brokered and carries the signed
-<code>mission_s256</code> reference, the protected propagation path;
-identity-based and resource-managed access are out of scope here,
-because those paths are not PS-gated and may ignore the reference.<a href="#appendix-C-6" class="pilcrow">¶</a></p>
+<p id="appendix-C-6">The deployment runs PS authorization (three-party) access. Every auth
+token the gateway accepts is PS-issued and carries the signed
+<code>mission_s256</code> reference copied from the resource token, the
+protected propagation path; agent identity, person identity,
+resource-managed, and federated access are out of scope here.<a href="#appendix-C-6" class="pilcrow">¶</a></p>
 <p id="appendix-C-7">Before joining the PS evidence, the Actor proof, the request, and the
 adapter's output, the gateway's join validates the carrying
 artifact's issuer (the Person Server), its audience (the payment
@@ -5518,7 +5539,7 @@ the payment-vocabulary claim is generalized to another resource's
 vocabulary. It fails when a direct route bypasses the gateway, when
 the gateway accepts a Mission reference from the agent without
 validated provenance (context splicing), or when the gateway accepts
-the reference on an identity-based or resource-managed request.<a href="#appendix-C-11" class="pilcrow">¶</a></p>
+the reference on an agent identity or resource-managed request.<a href="#appendix-C-11" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="error-surfaces">
@@ -6270,17 +6291,32 @@ bound profiled by <code>aauth-mission-expiry</code>.<a href="#appendix-G-3" clas
 <p id="appendix-H-1">[[ To be removed from the final specification ]]<a href="#appendix-H-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-H-2.1">
-          <p id="appendix-H-2.1.1">Density, with no change to any profile's requirements. Long
+          <p id="appendix-H-2.1.1">The issuance-join row of the composed kill-switch table and its note
+follow the Mission Issuance Grant's two consuming-AS modes: with a
+Mission-state integration, redemption and refresh are projected
+through the Effective Authority Set; without one, nothing is checked
+at redemption and no refresh tokens are issued. The earlier
+"active-only" redemption check no longer exists there.<a href="#appendix-H-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-H-2.2">
+          <p id="appendix-H-2.2.1">AAuth alignment, with no change to any profile's requirements. The
+AAuth and R3 references cite the published revisions -11 and -00;
+the Mission Reference is the approving PS and <code>s256</code>; the access
+modes carry AAuth's names; and the gateway walkthrough names the
+issuers of the auth tokens it accepts.<a href="#appendix-H-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-H-2.3">
+          <p id="appendix-H-2.3.1">Density, with no change to any profile's requirements. Long
 paragraphs are split to one idea each and long sentences shortened;
 Continue lists the three continuities and keeps the residual for
 authority already issued under a continued grant; the binding
 properties' mechanism mapping is a table; the kill-switch
 composition table has short cells with numbered notes; and
 meta-commentary about the document is removed. OAuth-specific
-statements the pass found unlabeled now say so.<a href="#appendix-H-2.1.1" class="pilcrow">¶</a></p>
+statements the pass found unlabeled now say so.<a href="#appendix-H-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-H-2.2">
-          <p id="appendix-H-2.2.1">Reading order and section ownership, with no change to any
+        <li class="normal" id="appendix-H-2.4">
+          <p id="appendix-H-2.4.1">Reading order and section ownership, with no change to any
 profile's requirements. A Mission's Life leads the model; Meaning
 and Derivation gathers the ontology contract, the derivation
 boundary, and approval fidelity; the binding comparison, now with
@@ -6295,10 +6331,10 @@ Repeated explanations have one home, and a repetition that
 qualifies a guarantee keeps a short local summary. The model is
 stated binding-neutrally, with each realization labeled, and the
 Runtime-Enforced bundle's dependencies are described by intended
-category, not maturity.<a href="#appendix-H-2.2.1" class="pilcrow">¶</a></p>
+category, not maturity.<a href="#appendix-H-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-H-2.3">
-          <p id="appendix-H-2.3.1">Editorial corrections, with no change to any profile's
+        <li class="normal" id="appendix-H-2.5">
+          <p id="appendix-H-2.5.1">Editorial corrections, with no change to any profile's
 requirements. The capability-kill property is stated per action
 class and consumer rather than per assurance level, matching the
 composition section and the containment profile. The four Mission
@@ -6312,18 +6348,18 @@ lowercased, and temporal phrasing is removed. The agent-identity
 section is retitled, the binding-property summary covers the whole
 vector, and the AuthZEN companion is called the AuthZEN profile.
 The Stop step of A Mission's Life separates what ends at once from
-what ends within a staleness bound or at a token's own expiry.<a href="#appendix-H-2.3.1" class="pilcrow">¶</a></p>
+what ends within a staleness bound or at a token's own expiry.<a href="#appendix-H-2.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-H-2.4">
-          <p id="appendix-H-2.4.1">The issuance-only deployment is named under Entry Ramps by Estate
+        <li class="normal" id="appendix-H-2.6">
+          <p id="appendix-H-2.6.1">The issuance-only deployment is named under Entry Ramps by Estate
 with its invariants, introspection cutoff, claims, and runtime
 triggers; the adoption-ladder table grants Baseline Issuance the
 reads and writes whose bounds the receiving Resource Server
 enforces; and the Deployment Profile gains an issuance-only example
-shape.<a href="#appendix-H-2.4.1" class="pilcrow">¶</a></p>
+shape.<a href="#appendix-H-2.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-H-2.5">
-          <p id="appendix-H-2.5.1">Client-instance references follow their successors:
+        <li class="normal" id="appendix-H-2.7">
+          <p id="appendix-H-2.7.1">Client-instance references follow their successors:
 draft-mcguinness-oauth-client-instance-assertion is replaced by
 {I-D.draft-mcguinness-oauth-client-instance-id} and
 <span>[<a href="#I-D.draft-mcguinness-oauth-client-attesters" class="cite xref">I-D.draft-mcguinness-oauth-client-attesters</a>]</span>, and the
@@ -6331,18 +6367,18 @@ deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
 cited. Instance identity is
 a client-instance attestation and validated Instance Context,
 attribution needs an instance-unique key, and instance evidence
-identifies no actor. No requirement changed.<a href="#appendix-H-2.5.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-H-2.6">
-          <p id="appendix-H-2.6.1">Linked the OAuth binding's informative derivation-policy appendix
-from the authority derivation boundary (#309).<a href="#appendix-H-2.6.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-H-2.7">
-          <p id="appendix-H-2.7.1">Added the optional Control-Plane Consistency companion to the document
-map (#250).<a href="#appendix-H-2.7.1" class="pilcrow">¶</a></p>
+identifies no actor. No requirement changed.<a href="#appendix-H-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-H-2.8">
-          <p id="appendix-H-2.8.1">Controls taxonomy retirement (#636): the swarm-execution discussion
+          <p id="appendix-H-2.8.1">Linked the OAuth binding's informative derivation-policy appendix
+from the authority derivation boundary (#309).<a href="#appendix-H-2.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-H-2.9">
+          <p id="appendix-H-2.9.1">Added the optional Control-Plane Consistency companion to the document
+map (#250).<a href="#appendix-H-2.9.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-H-2.10">
+          <p id="appendix-H-2.10.1">Controls taxonomy retirement (#636): the swarm-execution discussion
 no longer claims <code>derivation_limit</code> (renamed from <code>max_derivations</code>)
 is a fan-out or concurrency ceiling; it counts issuance events, not
 instances, and one instance refreshing repeatedly exhausts it exactly
@@ -6352,10 +6388,10 @@ the OAuth binding currently defines, pointing to a forward-referenced
 Agent Deployment Binding profile instead of the retired
 <code>controls.agent_deployment</code>. References to the OAuth binding's
 retired <code>controls</code> extension seam updated to the Mission Intent's
-own (open, named-member) extension seam.<a href="#appendix-H-2.8.1" class="pilcrow">¶</a></p>
+own (open, named-member) extension seam.<a href="#appendix-H-2.10.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-H-2.9">
-          <p id="appendix-H-2.9.1">PR #717 review fix: precised the "Mission-bound" definition text
+        <li class="normal" id="appendix-H-2.11">
+          <p id="appendix-H-2.11.1">PR #717 review fix: precised the "Mission-bound" definition text
 (<a href="#token-classes" class="auto internal xref">Section 10.2</a> and <a href="#binding-properties" class="auto internal xref">Section 11.3</a>) so it no longer
 requires a Mission Substrate Statement of a binding that
 deliberately publishes none. A binding that claims substrate
@@ -6364,10 +6400,10 @@ Statement; the OAuth binding, which claims no substrate conformance
 and publishes no Statement, is instead assessed through its own
 informative Mapping Assessment and discharges the definition
 directly through its own Conformance gates. No normative content
-changed.<a href="#appendix-H-2.9.1" class="pilcrow">¶</a></p>
+changed.<a href="#appendix-H-2.11.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-H-2.10">
-          <p id="appendix-H-2.10.1">Reworded the blanket "the bindings are peers of one another"
+        <li class="normal" id="appendix-H-2.12">
+          <p id="appendix-H-2.12.1">Reworded the blanket "the bindings are peers of one another"
 sentence in the Introduction to name two independent axes, deployment
 topology and data-model independence, and to classify the Mission
 Authority Server as a normative standalone-controller protocol
@@ -6381,10 +6417,10 @@ binding's Conformance gates): <a href="#binding-properties" class="auto internal
 a binding's Mission Substrate Statement is how it evidences the
 properties, and the OAuth binding's gates are its discharge of the
 definition (#663). No normative content, anchor, or table row
-changed.<a href="#appendix-H-2.10.1" class="pilcrow">¶</a></p>
+changed.<a href="#appendix-H-2.12.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-H-2.11">
-          <p id="appendix-H-2.11.1">Cross-referenced the three previously separate accounts of what
+        <li class="normal" id="appendix-H-2.13">
+          <p id="appendix-H-2.13.1">Cross-referenced the three previously separate accounts of what
 earns the "Mission-bound" term: <a href="#token-classes" class="auto internal xref">Section 10.2</a> now names the
 Mission Binding Properties vector's <code>credential-mission-bound</code>
 property (<a href="#binding-properties" class="auto internal xref">Section 11.3</a>) as the definition. Its six
@@ -6394,18 +6430,18 @@ no longer names a token-carried <code>authority_hash</code>, aligning with
 the ruled minimal-claim direction of #702, and condition 6
 (the auditable derivation link) names the OAuth binding's retained
 Mission Record explicitly rather than asserting an unspecified
-discharge (#663).<a href="#appendix-H-2.11.1" class="pilcrow">¶</a></p>
+discharge (#663).<a href="#appendix-H-2.13.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-H-2.12">
-          <p id="appendix-H-2.12.1">Non-goal reworded (#637): "a new authority format, or a new grant
+        <li class="normal" id="appendix-H-2.14">
+          <p id="appendix-H-2.14.1">Non-goal reworded (#637): "a new authority format, or a new grant
 protocol" narrowed to "a new grant protocol," naming the OAuth
 binding's Mission Resource Access Profile as the family's one
 cross-resource <code>authorization_details</code> type, since RFC 9396 leaves
 type semantics to the type and the family now defines one. Document
-Map gains the profile's row under "The substrate and the bindings."<a href="#appendix-H-2.12.1" class="pilcrow">¶</a></p>
+Map gains the profile's row under "The substrate and the bindings."<a href="#appendix-H-2.14.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-H-2.13">
-          <p id="appendix-H-2.13.1">Editorial density pass on this Informational document: the
+        <li class="normal" id="appendix-H-2.15">
+          <p id="appendix-H-2.15.1">Editorial density pass on this Informational document: the
 aggregate-ceiling and artifact-plane (non-transitive work-product)
 composition readings under <a href="#invariants" class="auto internal xref">Section 8</a> tightened to a summary
 sentence plus citation each, with their "not this summary, is the
@@ -6413,7 +6449,7 @@ normative text this passage tracks" deferral kept; several
 over-long paragraphs in <a href="#capability-envelope" class="auto internal xref">Section 4.1</a>, <a href="#validity-model" class="auto internal xref">Section 10.4</a>,
 <a href="#assurance-levels" class="auto internal xref">Section 11</a>, and <a href="#containment" class="auto internal xref">Section 11.4</a> split for one idea per
 paragraph and front-loaded openers. No normative content, anchor,
-or table row changed.<a href="#appendix-H-2.13.1" class="pilcrow">¶</a></p>
+or table row changed.<a href="#appendix-H-2.15.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

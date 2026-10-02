@@ -1810,12 +1810,16 @@ grant for the Child Mission's tokens. Child credentials <span class="bcp14">MUST
 the parent, and the parent <span class="bcp14">MUST NOT</span> hold child tokens.<a href="#section-5.1-1" class="pilcrow">¶</a></p>
 <p id="section-5.1-2">The child's initial grant <span class="bcp14">MUST</span> be an audience-bound JWT authorization
 grant that the child actor redeems as itself under the <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>
-JWT-bearer grant, of the shape the Mission Issuance Grant profile
-defines (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>): on
-creating the Child Mission the Mission Issuer mints an assertion that
-names the child actor as the authorized redeemer and the Mission
-Issuer's token endpoint as the audience, and the child actor presents it
-there authenticating with its own client credential.<a href="#section-5.1-2" class="pilcrow">¶</a></p>
+JWT-bearer grant: on creating the Child Mission the Mission Issuer
+mints an assertion that names the child actor as the authorized
+redeemer and the Mission Issuer's token endpoint as the audience, and
+the child actor presents it there authenticating with its own client
+credential. The grant follows the Mission Issuance Grant's pattern
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>) except for its
+audience: the Mission Issuer mints and redeems it itself, so the
+audience is its own token endpoint, which <span><a href="https://rfc-editor.org/rfc/rfc7523#section-3" class="relref">Section 3</a> of [<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>
+permits, rather than a consuming Authorization Server's issuer
+identifier.<a href="#section-5.1-2" class="pilcrow">¶</a></p>
 <p id="section-5.1-3">An authorization code <span class="bcp14">MUST NOT</span> be used to convey the child's grant: an
 authorization code is redeemable by the client that obtained it, which
 is the parent, not the child. The child-bound assertion is redeemable
@@ -4108,13 +4112,19 @@ apply unchanged.<a href="#appendix-A-7" class="pilcrow">¶</a></p>
 <p id="appendix-B-1">[[ To be removed from the final specification ]]<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-2.1">
-          <p id="appendix-B-2.1.1">The delegated-token versus Child Mission test adds audience: a
-sub-agent that calls a Resource Server that is not Mission-aware
-runs under a Child Mission, where child creation is authorized and
-that Resource Server can enforce the projected authority.<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.1.1">The child's initial grant states how it differs from the Mission
+Issuance Grant: its audience is the Mission Issuer's own token
+endpoint, since that issuer mints and redeems it, not a consuming
+Authorization Server's issuer identifier. No wire change.<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.2">
-          <p id="appendix-B-2.2.1">Client-instance references follow their successors:
+          <p id="appendix-B-2.2.1">The delegated-token versus Child Mission test adds audience: a
+sub-agent that calls a Resource Server that is not Mission-aware
+runs under a Child Mission, where child creation is authorized and
+that Resource Server can enforce the projected authority.<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.3">
+          <p id="appendix-B-2.3.1">Client-instance references follow their successors:
 draft-mcguinness-oauth-client-instance-assertion is replaced by
 {I-D.draft-mcguinness-oauth-client-instance-id}, and the
 deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
@@ -4122,13 +4132,13 @@ cited. An instance-granular
 <code>child_actor</code> no longer carries the instance identifier in <code>sub</code>:
 the successor forbids setting <code>sub</code> or an actor from instance
 evidence alone (Section 5), and <code>client_instance</code> was a value only
-the deprecated draft defined.<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
+the deprecated draft defined.<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.3">
-          <p id="appendix-B-2.3.1">Added the capability-gated Child Mission Carryover foundation, including
+        <li class="normal" id="appendix-B-2.4">
+          <p id="appendix-B-2.4.1">Added the capability-gated Child Mission Carryover foundation, including
 full snapshot and budget checks, committed exclusion semantics, fresh
 direct approvals, and durable observation and recovery. Carryover
-preserves record continuity, not worker continuity (#576).<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
+preserves record continuity, not worker continuity (#576).<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

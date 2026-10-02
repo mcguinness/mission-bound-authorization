@@ -267,12 +267,13 @@ Table of Contents
       ([I-D.draft-mcguinness-oauth-mission]).
 
    audience:  CONDITIONAL.  A string.  The audience identifier of the
-      requesting consumer.  An authorized non-RS consumer (for example
-      an auditor or a cross-domain Resource AS) that needs only Mission
-      state, not audience-scoped authority, MAY omit audience; the
-      response is then state-only and carries no authorization_details
-      (Section 3.4).  A Resource Server resolving authority for a
-      specific audience MUST send it.
+      requesting consumer, or of another audience the Mission Issuer
+      authorizes that consumer to request (below).  An authorized non-RS
+      consumer (for example an auditor or a cross-domain Resource AS)
+      that needs only Mission state, not audience-scoped authority, MAY
+      omit audience; the response is then state-only and carries no
+      authorization_details (Section 3.4).  A Resource Server resolving
+      authority for a specific audience MUST send it.
 
    nonce:  REQUIRED.  A string.  A client-generated nonce binding the
       response to this request.  It MUST be unique per request within
@@ -280,6 +281,17 @@ Table of Contents
       nonce does not equal the one it sent.  This is a standard client
       challenge: echoing it in the signed response anti-replay-binds
       that response to this specific request.
+
+   A request's audience names the caller's own audience unless the
+   Mission Issuer's configuration authorizes the caller for another.  A
+   consuming Authorization Server under the Mission Issuance Grant
+   profile ([I-D.draft-mcguinness-oauth-mission-issuance-grant]), for
+   example, requests the projection for each resource it issues tokens
+   for.  The Mission Issuer MUST honor a request naming an audience
+   other than the caller's own only where its configuration authorizes
+   the authenticated caller for that audience, and MUST otherwise refuse
+   it with the not-found response of Section 3.7.  The response's aud is
+   the requested audience (Section 3.4).
 
 3.2.  Authentication
 
@@ -575,7 +587,8 @@ Table of Contents
 
    4.  iss equals the expected AS issuer URL;
 
-   5.  aud equals the consumer's own audience identifier;
+   5.  aud equals the audience the request named or, for a state-only
+       response, the requester's identifier (Section 3.1);
 
    6.  sub equals the requesting client's identifier;
 
@@ -1697,7 +1710,7 @@ Table of Contents
    for it.  A deployment MUST treat both as Mission information-
    disclosure surfaces with the same privacy posture, audience-filtering
    the disclosed authority so a consumer never sees entries addressed to
-   other audiences (Section 3.4).
+   audiences it is not authorized to request (Section 3.1, Section 3.4).
 
 11.2.  Status Audit Logging
 
@@ -1969,6 +1982,12 @@ Informative References
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-oauth-mission-expansion.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-issuance-grant]
+              McGuinness, K., "Mission Issuance Grant for OAuth 2.0",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-issuance-
+              grant.html>.
+
    [I-D.draft-mcguinness-oauth-mission-management]
               McGuinness, K., "Mission Management for OAuth 2.0", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
@@ -2013,6 +2032,12 @@ Informative References
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  A caller may request the projection for an audience other than its
+      own, such as each resource a Mission Issuance Grant consuming
+      Authorization Server serves, only where the Mission Issuer's
+      configuration authorizes it; the consumer checks aud against the
+      audience its request named (#963).
 
    *  The mutual-TLS method value is tls_client_auth, the registered
       [RFC8705] spelling, and an absent endpoint auth-methods member is

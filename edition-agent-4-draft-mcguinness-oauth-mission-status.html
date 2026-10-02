@@ -1522,8 +1522,10 @@ issuance profile's external-surface convention
 <code>audience</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-3.1-2.4">
             <p id="section-3.1-2.4.1">CONDITIONAL. A string. The audience identifier of the
-requesting consumer. An authorized non-RS consumer (for example an
-auditor or a cross-domain Resource AS) that needs only Mission state,
+requesting consumer, or of another audience the Mission Issuer
+authorizes that consumer to request (below). An authorized non-RS
+consumer (for example an auditor or a cross-domain Resource AS) that
+needs only Mission state,
 not audience-scoped authority, <span class="bcp14">MAY</span> omit <code>audience</code>; the response is
 then state-only and carries no <code>authorization_details</code>
 (<a href="#mission-status-response" class="auto internal xref">Section 3.4</a>). A Resource Server resolving authority
@@ -1542,6 +1544,17 @@ this specific request.<a href="#section-3.1-2.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
+<p id="section-3.1-3">A request's <code>audience</code> names the caller's own audience unless the
+Mission Issuer's configuration authorizes the caller for another. A
+consuming Authorization Server under the Mission Issuance Grant
+profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>), for
+example, requests the projection for each resource it issues tokens
+for. The Mission Issuer <span class="bcp14">MUST</span> honor a request naming an audience other
+than the caller's own only where its configuration authorizes the
+authenticated caller for that audience, and <span class="bcp14">MUST</span> otherwise refuse it
+with the not-found response of <a href="#mission-status-errors" class="auto internal xref">Section 3.7</a>. The
+response's <code>aud</code> is the requested <code>audience</code>
+(<a href="#mission-status-response" class="auto internal xref">Section 3.4</a>).<a href="#section-3.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="mission-status-authentication">
@@ -1875,7 +1888,9 @@ rejecting <code>none</code> and any algorithm not listed;<a href="#section-3.4-1
             <p id="section-3.4-12.4.1"><code>iss</code> equals the expected AS issuer URL;<a href="#section-3.4-12.4.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-3.4-12.5">
-            <p id="section-3.4-12.5.1"><code>aud</code> equals the consumer's own audience identifier;<a href="#section-3.4-12.5.1" class="pilcrow">¶</a></p>
+            <p id="section-3.4-12.5.1"><code>aud</code> equals the <code>audience</code> the request named or, for a
+state-only response, the requester's identifier
+(<a href="#mission-status-request" class="auto internal xref">Section 3.1</a>);<a href="#section-3.4-12.5.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-3.4-12.6">
             <p id="section-3.4-12.6.1"><code>sub</code> equals the requesting client's identifier;<a href="#section-3.4-12.6.1" class="pilcrow">¶</a></p>
@@ -3403,8 +3418,9 @@ authenticated, authorized requester, and <span class="bcp14">MAY</span> addition
 <code>authority_hash</code> to a requester authorized for it. A deployment <span class="bcp14">MUST</span>
 treat both as Mission information-disclosure surfaces with the same
 privacy posture, audience-filtering the disclosed authority so a
-consumer never sees entries addressed to other audiences
-(<a href="#mission-status-response" class="auto internal xref">Section 3.4</a>).<a href="#section-11.1-1" class="pilcrow">¶</a></p>
+consumer never sees entries addressed to audiences it is not
+authorized to request (<a href="#mission-status-request" class="auto internal xref">Section 3.1</a>,
+<a href="#mission-status-response" class="auto internal xref">Section 3.4</a>).<a href="#section-11.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="status-audit-logging">
@@ -3743,6 +3759,10 @@ Authorization work for feedback that shaped these extensions.<a href="#section-1
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Expansion for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html" class="reader-edition-ext-link" target="_blank" rel="noopener">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-issuance-grant">[I-D.draft-mcguinness-oauth-mission-issuance-grant]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Issuance Grant for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html" class="reader-edition-ext-link" target="_blank" rel="noopener">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-management">[I-D.draft-mcguinness-oauth-mission-management]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Management for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-management.html" class="reader-edition-ext-link" target="_blank" rel="noopener">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-management.html</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
@@ -3788,26 +3808,33 @@ Authorization work for feedback that shaped these extensions.<a href="#section-1
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">The mutual-TLS method value is <code>tls_client_auth</code>, the registered
-<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span> spelling, and an absent endpoint auth-methods member is
-never read from token-endpoint metadata. The Mission Authority Server
-publishes the same per-endpoint members.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.1.1">A caller may request the projection for an audience other than its
+own, such as each resource a Mission Issuance Grant consuming
+Authorization Server serves, only where the Mission Issuer's
+configuration authorizes it; the consumer checks <code>aud</code> against the
+<code>audience</code> its request named (#963).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">A refresh against a suspended Mission is checked, and refused, before
-its refresh token is consumed, so a <code>resume</code> restores refresh with the
-same token; issuance-time validation still governs a concurrent
-suspension (#914).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.2.1">The mutual-TLS method value is <code>tls_client_auth</code>, the registered
+<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span> spelling, and an absent endpoint auth-methods member is
+never read from token-endpoint metadata. The Mission Authority Server
+publishes the same per-endpoint members.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">Added conditional carryover correlation on an old child's cascaded
-observation; no state or authority is inferred from the pointer (#576).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.3.1">A refresh against a suspended Mission is checked, and refused, before
+its refresh token is consumed, so a <code>resume</code> restores refresh with the
+same token; issuance-time validation still governs a concurrent
+suspension (#914).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1">Operational Considerations added (#310): recovery sizing for the
+          <p id="appendix-A-2.4.1">Added conditional carryover correlation on an old child's cascaded
+observation; no state or authority is inferred from the pointer (#576).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.5">
+          <p id="appendix-A-2.5.1">Operational Considerations added (#310): recovery sizing for the
 advertised propagation ceiling, the per-surface distribution posture,
 and the operator observations after a degraded surface recovers. No
-freshness window is extended and no member is added.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+freshness window is extended and no member is added.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

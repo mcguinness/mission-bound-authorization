@@ -1649,11 +1649,11 @@ therefore realizes continuation through its own surfaces, not through a
 substrate row. Two non-OAuth bindings dispose of continuation as a
 composition consequence.<a href="#section-8-1" class="pilcrow">¶</a></p>
 <p id="section-8-2">AAuth (<span>[<a href="#I-D.draft-mcguinness-mission-aauth" class="cite xref">I-D.draft-mcguinness-mission-aauth</a>]</span>): over-time continuation is
-native and needs no new transport. The <code>(approver, s256)</code> mission
-reference is a handle that grants nothing, and the Person Server's
-state-gated, one-hour auth-token issuance and federation is the
-continuation point, with revocation latency bounded by the auth-token
-lifetime.<a href="#section-8-2" class="pilcrow">¶</a></p>
+native and needs no new transport. The mission reference (the
+approving Person Server and <code>s256</code>) is a handle that grants nothing,
+and the Person Server's state-gated, one-hour auth-token issuance and
+federation is the continuation point, with revocation latency bounded
+by the auth-token lifetime.<a href="#section-8-2" class="pilcrow">¶</a></p>
 <p id="section-8-3">The cross-workload transports of this profile have no AAuth
 substrate (AAuth has no token exchange, no <code>act</code> chain, and no ID-JAG),
 and AAuth declines cross-hop authority carry-forward by design: a chained

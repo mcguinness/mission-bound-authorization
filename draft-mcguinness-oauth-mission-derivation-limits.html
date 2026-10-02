@@ -1196,6 +1196,9 @@ bound on the authority a token carries or on how that token is used.<a href="#se
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.4">
                 <p id="section-toc.1-1.4.2.4.1"><a href="#section-4.4" class="auto internal xref">4.4</a>.  <a href="#name-cross-domain-issuance" class="internal xref">Cross-Domain Issuance</a></p>
 </li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.5">
+                <p id="section-toc.1-1.4.2.5.1"><a href="#section-4.5" class="auto internal xref">4.5</a>.  <a href="#name-mission-issuance-grant-mint" class="internal xref">Mission Issuance Grant Minting</a></p>
+</li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
@@ -1275,9 +1278,13 @@ and its expiry. It does not bound how many derivations the issuer
 performs. This document adds that bound: a derivation limit on the
 number of derivations the issuer AS performs under a Mission. The limit
 is an issuer-side operational control. It bounds counted issuance
-operations at the token endpoint, not the authority any derived token
+operations at the token endpoint, or at the Mission Authority
+Server's grant endpoint under the Mission Issuance Grant profile
+(<a href="#issuance-grant-counting" class="auto internal xref">Section 4.5</a>), not the authority any derived token
 carries or how often a token already issued is used. The refreshes of
-an async delegation family are not counted (<a href="#refresh-and-exchange" class="auto internal xref">Section 4.3</a>).<a href="#section-1-1" class="pilcrow">¶</a></p>
+an async delegation family are not counted (<a href="#refresh-and-exchange" class="auto internal xref">Section 4.3</a>),
+nor are redemption and refresh at a consuming Authorization Server
+under the Mission Issuance Grant profile (<a href="#issuance-grant-counting" class="auto internal xref">Section 4.5</a>).<a href="#section-1-1" class="pilcrow">¶</a></p>
 <p id="section-1-2">The limit uses these extension seams of the OAuth binding and changes
 none of its rules:<a href="#section-1-2" class="pilcrow">¶</a></p>
 <ul class="normal">
@@ -1468,7 +1475,10 @@ binding defines them (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class
 "Issuance Gating"): one issuance operation the issuer AS performs for
 a single request, namely the initial authorization-code exchange, a
 refresh, a Token Exchange (<span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>), or a cross-domain grant
-issuance (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>).<a href="#section-4-1" class="pilcrow">¶</a></p>
+issuance (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>). Under
+the Mission Issuance Grant profile the list gains one entry, the
+Mission Authority Server's minting of a grant
+(<a href="#issuance-grant-counting" class="auto internal xref">Section 4.5</a>).<a href="#section-4-1" class="pilcrow">¶</a></p>
 <div id="counted-operations">
 <section id="section-4.1">
         <h3 id="name-what-counts">
@@ -1527,6 +1537,25 @@ own lifetime and local policy, not counted against the origin
 issuer's per-Mission derivation cap.<a href="#section-4.4-1" class="pilcrow">¶</a></p>
 </section>
 </div>
+<div id="issuance-grant-counting">
+<section id="section-4.5">
+        <h3 id="name-mission-issuance-grant-mint">
+<a href="#section-4.5" class="section-number selfRef">4.5. </a><a href="#name-mission-issuance-grant-mint" class="section-name selfRef">Mission Issuance Grant Minting</a>
+        </h3>
+<p id="section-4.5-1">Under the Mission Issuance Grant profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>), the Mission
+Authority Server is the Mission Issuer, and minting a grant is the
+derivation it performs: each committed minting counts once, and the
+MAS refuses minting past the limit with <code>derivations_exhausted</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>, Section
+"Grant Errors"). Neither redeeming the grant at a consuming
+Authorization Server nor any refresh there is a derivation the issuer
+performs, and neither increments the count. As
+at the cross-domain boundary (<a href="#cross-domain-counting" class="auto internal xref">Section 4.4</a>), the limit
+therefore bounds the grants the issuer mints, not the number of tokens
+consuming Authorization Servers issue from them.<a href="#section-4.5-1" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="enforcement">
@@ -1539,7 +1568,10 @@ binding (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">
 Gating"). When the Mission's <code>derivation_limit</code> (<a href="#record-member" class="auto internal xref">Section 3.3</a>) is
 established, the AS <span class="bcp14">MUST</span> refuse, with the <code>invalid_grant</code> error code,
 any derivation that would make the number of <strong>derivations</strong> under
-the Mission exceed it.<a href="#section-5-1" class="pilcrow">¶</a></p>
+the Mission exceed it. Where the derivation is a Mission Authority
+Server's minting of a grant, the refusal is that profile's
+<code>derivations_exhausted</code> grant error instead
+(<a href="#issuance-grant-counting" class="auto internal xref">Section 4.5</a>).<a href="#section-5-1" class="pilcrow">¶</a></p>
 <p id="section-5-2">The issuer AS enforces the limit at each derivation. The bound is
 never absent at the issuer when established, and it does not bound
 another domain's local minting (<a href="#cross-domain-counting" class="auto internal xref">Section 4.4</a>). The
@@ -1641,7 +1673,11 @@ approval sequence (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="c
 only the requested one. Where the AS supports the Continuation
 profile's async delegation transport, the rendering <span class="bcp14">MUST</span> also state
 that the refreshes of an async delegation family are not counted
-against the limit (<a href="#refresh-and-exchange" class="auto internal xref">Section 4.3</a>).<a href="#section-7-1" class="pilcrow">¶</a></p>
+against the limit (<a href="#refresh-and-exchange" class="auto internal xref">Section 4.3</a>). Where the Mission Issuer
+is a Mission Authority Server issuing grants under the Mission
+Issuance Grant profile, the rendering <span class="bcp14">MUST</span> also state that the limit
+bounds the grants it issues, not the tokens consuming Authorization
+Servers issue from them (<a href="#issuance-grant-counting" class="auto internal xref">Section 4.5</a>).<a href="#section-7-1" class="pilcrow">¶</a></p>
 <p id="section-7-2">The rendered limit is one Mission's local bound (<a href="#sec-composition" class="auto internal xref">Section 9.4</a>).
 Where a deployment runs child delegation, that profile states what an
 approval interface discloses beside it
@@ -1691,8 +1727,10 @@ apply. This section covers what the derivation limit adds.<a href="#section-9-1"
 <a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-issuance-not-authority" class="section-name selfRef">Issuance, Not Authority</a>
         </h3>
 <p id="section-9.1-1">The derivation limit bounds how many counted issuance operations the
-issuer performs; the refreshes of an async delegation family are not
-counted (<a href="#sec-async-family" class="auto internal xref">Section 9.2</a>). It does not narrow the Authority Set,
+issuer performs; the refreshes of an async delegation family, and
+redemption and refresh at a Mission Issuance Grant consuming
+Authorization Server, are not counted (<a href="#sec-async-family" class="auto internal xref">Section 9.2</a>,
+<a href="#issuance-grant-counting" class="auto internal xref">Section 4.5</a>). It does not narrow the Authority Set,
 shorten a token's lifetime, or bound the requests a Resource Server
 honors under a token already issued: a derived token remains usable
 until its <code>exp</code>. A deployment that needs to bound use, rather than
@@ -1750,7 +1788,9 @@ each, the subtree admits up to 120 derivations while no single bound
 the Approver saw exceeds 10.<a href="#section-9.4-2" class="pilcrow">¶</a></p>
 <p id="section-9.4-3">Cross-domain projection composes separately: local issuance at a
 Resource AS is not counted against the origin issuer's cap
-(<a href="#cross-domain-counting" class="auto internal xref">Section 4.4</a>). The OAuth binding's composition guidance
+(<a href="#cross-domain-counting" class="auto internal xref">Section 4.4</a>), and neither are the tokens a consuming
+Authorization Server issues under the Mission Issuance Grant profile
+(<a href="#issuance-grant-counting" class="auto internal xref">Section 4.5</a>). The OAuth binding's composition guidance
 applies to the derivation limit as to its other bounds
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Composition and the
 Effective Ceiling").<a href="#section-9.4-3" class="pilcrow">¶</a></p>
@@ -1897,6 +1937,10 @@ document requests no further registration.<a href="#section-11-4" class="pilcrow
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Expansion for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-issuance-grant">[I-D.draft-mcguinness-oauth-mission-issuance-grant]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Issuance Grant for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-template">[I-D.draft-mcguinness-oauth-mission-template]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Template for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html</a>&gt;</span>. </dd>
@@ -1965,6 +2009,13 @@ the <code>requested_derivation_limit</code> Intent member, the
 <code>derivation_limit</code> record member, counting and refusal at issuance,
 the <code>derivations_exhausted</code> diagnostic, the <code>derivations_remaining</code>
 introspection member, and approval rendering.<a href="#appendix-B-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-3.2">
+          <p id="appendix-B-3.2.1">Under the Mission Issuance Grant profile, the Mission Authority
+Server's committed grant minting is a counted derivation; redemption
+and refresh at a consuming Authorization Server are not, and the
+limit does not cap the tokens they issue; the approval rendering
+states that bound (#963).<a href="#appendix-B-3.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

@@ -9,10 +9,10 @@
 <meta content="
        AAuth's approved mission blob  MAY  carry  expires_at : an immutable,
 consent-bound lifetime the Person Server enforces on every decision
-path, capping every token carrying  mission_s256 . This document
-profiles that member: values are RFC 3339 date-times, deployments
-document their clock-skew posture, and the Person Server terminates
-promptly at the deadline. 
+path and uses to cap the person tokens and auth tokens it issues. This
+document profiles that member: values are RFC 3339 date-times,
+deployments document their clock-skew posture, and the Person Server
+terminates promptly at the deadline. 
     " name="description">
 <meta content="xml2rfc 3.34.1" name="generator">
 <meta content="aauth" name="keyword">
@@ -1087,10 +1087,10 @@ svg {
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
 <p id="section-abstract-1">AAuth's approved mission blob <span class="bcp14">MAY</span> carry <code>expires_at</code>: an immutable,
 consent-bound lifetime the Person Server enforces on every decision
-path, capping every token carrying <code>mission_s256</code>. This document
-profiles that member: values are RFC 3339 date-times, deployments
-document their clock-skew posture, and the Person Server terminates
-promptly at the deadline.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+path and uses to cap the person tokens and auth tokens it issues. This
+document profiles that member: values are RFC 3339 date-times,
+deployments document their clock-skew posture, and the Person Server
+terminates promptly at the deadline.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
 <section class="note rfcEditorRemove" id="section-note.1">
       <h2 id="name-about-this-document">
@@ -1209,10 +1209,10 @@ promptly at the deadline.<a href="#section-abstract-1" class="pilcrow">¶</a></p
       </h2>
 <p id="section-1-1">AAuth defines <code>expires_at</code> as an <span class="bcp14">OPTIONAL</span> member of the approved
 mission blob: every Person Server (PS) decision path <span class="bcp14">MUST</span> compare the
-current time to it and treat a mission past it as terminated, and no
-token carrying <code>mission_s256</code> may outlive it
-<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>. This document profiles the
-member with the deltas in <a href="#member" class="auto internal xref">Section 3</a> and <a href="#enforcement" class="auto internal xref">Section 4</a>.<a href="#section-1-1" class="pilcrow">¶</a></p>
+current time to it and treat a mission past it as terminated, and the
+PS caps the Person Tokens and Auth Tokens it issues at it (Section 8.2
+of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>). This document profiles
+the member with the deltas in <a href="#member" class="auto internal xref">Section 3</a> and <a href="#enforcement" class="auto internal xref">Section 4</a>.<a href="#section-1-1" class="pilcrow">¶</a></p>
 <p id="section-1-2">An AAuth mission is approved once and then relied on for as long as it
 stays <code>active</code>. Absent an expiry, an approval remains usable
 indefinitely through a stream of fresh short-lived tokens. Because
@@ -1231,9 +1231,16 @@ it cannot be changed in place.<a href="#section-1-2" class="pilcrow">¶</a></p>
 described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
 appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶</a></p>
 <p id="section-2-2">This document uses Person, Agent, Person Server (PS), Access Server
-(AS), Resource, Auth Token, mission, approved mission blob, mission
-proposal, and the <code>{approver, s256}</code> mission reference as defined by
+(AS), Resource, Person Token, Resource Token, Auth Token, mission,
+approved mission blob, and mission proposal as defined by
 <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>.<a href="#section-2-2" class="pilcrow">¶</a></p>
+<p id="section-2-3">The pair of the approving PS and <code>s256</code> is the Mission Reference,
+AAuth's mission identity (Section 8.2.1 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>). The approving PS is named
+by the <code>iss</code> of a Person Token, the <code>ps</code> claim of a Resource Token or
+Auth Token, or the PS a request is made to; the blob carries no member
+naming it. On the wire, the reference is the <code>mission_s256</code> claim or
+parameter.<a href="#section-2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="member">
@@ -1251,7 +1258,7 @@ an instant later than the blob's <code>approved_at</code>.<a href="#section-3-1"
 <code>s256</code> and cannot be changed in place, as AAuth specifies for every
 blob member. Changing an approved expiry requires proposing and
 approving a new mission, which carries a new <code>s256</code> and therefore a new
-mission reference.<a href="#section-3-2" class="pilcrow">¶</a></p>
+Mission Reference.<a href="#section-3-2" class="pilcrow">¶</a></p>
 <p id="section-3-3">A mission whose approved blob has no <code>expires_at</code> member has no
 expiry.<a href="#section-3-3" class="pilcrow">¶</a></p>
 </section>
@@ -1262,13 +1269,19 @@ expiry.<a href="#section-3-3" class="pilcrow">¶</a></p>
 <a href="#section-4" class="section-number selfRef">4. </a><a href="#name-enforcement" class="section-name selfRef">Enforcement</a>
       </h2>
 <p id="section-4-1">AAuth requires every PS decision path to compare the current time to
-<code>expires_at</code> and to treat a mission past it as terminated, and it caps
-every token carrying <code>mission_s256</code> (person, resource, and auth) to
-that deadline <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>. This profile
-adds only a promptness requirement: the PS <span class="bcp14">SHOULD</span> terminate at the
-deadline itself, rather than waiting for the next request under the
-reference, so that status and logging reflect the transition without
-delay.<a href="#section-4-1" class="pilcrow">¶</a></p>
+<code>expires_at</code> and to treat a mission past it as terminated (Section 8.2
+of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>). The PS caps the Person
+Tokens and Auth Tokens it issues at <code>expires_at</code> (Sections 7.1.2 and
+9.4.1 of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>), and the presented
+token carries that bound to an AS (Section 9.1.1 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>). A Resource Token is a
+short-lived request artifact whose lifetime is independent of
+<code>expires_at</code>; the PS verifies that the mission is active and unexpired
+whenever it acts on one (Sections 6.7.1 and 6.7.2 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>). This profile adds only a
+promptness requirement: the PS <span class="bcp14">SHOULD</span> terminate at the deadline
+itself, rather than waiting for the next request under the reference,
+so that status and logging reflect the transition without delay.<a href="#section-4-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="approval">
@@ -1276,13 +1289,20 @@ delay.<a href="#section-4-1" class="pilcrow">¶</a></p>
       <h2 id="name-proposal-and-approval">
 <a href="#section-5" class="section-number selfRef">5. </a><a href="#name-proposal-and-approval" class="section-name selfRef">Proposal and Approval</a>
       </h2>
-<p id="section-5-1">A mission proposal <span class="bcp14">MAY</span> include <code>expires_at</code>. The PS or the Person <span class="bcp14">MAY</span>
-add or change the value during clarification, before approval. The
-approved value is the one in the approved mission blob, and the Agent
-verifies and stores the decoded blob bytes exactly as AAuth requires.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<p id="section-5-1">A mission proposal <span class="bcp14">MAY</span> include <code>expires_at</code>, a proposal member this
+profile defines; AAuth's proposal carries <code>description</code>, <code>tools</code>, and
+<code>resources</code> (Section 8.1 of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).
+The PS or the Person <span class="bcp14">MAY</span> add or change the value during clarification,
+before approval. The approved value is the one in the approved mission
+blob, and the Agent verifies and stores the decoded blob bytes as
+AAuth specifies (Section 8.2 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).<a href="#section-5-1" class="pilcrow">¶</a></p>
 <p id="section-5-2">Support is discovered from the approved blob itself: a deployment that
 requires a lifetime bound checks the approved blob and treats the
-member's absence according to its policy. A proposal is not a
+member's absence according to its policy. A PS that does not implement
+this profile ignores the proposal member, since AAuth recipients
+ignore what they do not recognize (Section 11.7 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>). A proposal is not a
 guarantee that the approved blob will carry the bound.<a href="#section-5-2" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1332,16 +1352,21 @@ blob member it profiles.<a href="#section-7-3" class="pilcrow">¶</a></p>
       <h2 id="name-security-considerations">
 <a href="#section-8" class="section-number selfRef">8. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
       </h2>
-<p id="section-8-1">Clock synchronization, comparison precision, and tolerated clock skew
-<span class="bcp14">MUST</span> be documented by the deployment. An Agent <span class="bcp14">SHOULD NOT</span> schedule
-work that depends on completing near the deadline.<a href="#section-8-1" class="pilcrow">¶</a></p>
+<p id="section-8-1">AAuth judges a token's <code>exp</code> by the verifier's own clock with no
+tolerance for clock skew (Section 11.5.2 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>), and says nothing about
+tolerance for the <code>expires_at</code> comparison (Section 8.2 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>). Clock synchronization,
+comparison precision, and tolerated clock skew <span class="bcp14">MUST</span> be documented by
+the deployment. An Agent <span class="bcp14">SHOULD NOT</span> schedule work that depends on
+completing near the deadline.<a href="#section-8-1" class="pilcrow">¶</a></p>
 <p id="section-8-2">Expiry bounds duration; it does not end a mission early. A compromise
 discovered before the deadline still requires an explicit termination
 mechanism.<a href="#section-8-2" class="pilcrow">¶</a></p>
-<p id="section-8-3">Already-issued Auth Tokens are the residual after expiry. The
-issuance bound in <a href="#enforcement" class="auto internal xref">Section 4</a> keeps that residual inside the
-mission's lifetime: no token issued under the mission outlives
-<code>expires_at</code>.<a href="#section-8-3" class="pilcrow">¶</a></p>
+<p id="section-8-3">Already-issued Person Tokens and Auth Tokens are the residual after
+expiry. The issuance bound in <a href="#enforcement" class="auto internal xref">Section 4</a> keeps that residual
+inside the mission's lifetime. A Resource Token can outlive
+<code>expires_at</code>, but the PS acts on none after it (<a href="#enforcement" class="auto internal xref">Section 4</a>).<a href="#section-8-3" class="pilcrow">¶</a></p>
 <p id="section-8-4">Immutability defeats lifetime extension. An attacker who controls an
 Agent cannot stretch an approved mission's lifetime; a longer lifetime
 requires a new proposal and a new approval by the Person.<a href="#section-8-4" class="pilcrow">¶</a></p>
@@ -1362,10 +1387,12 @@ the blob itself.<a href="#section-9-1" class="pilcrow">¶</a></p>
       <h2 id="name-iana-considerations">
 <a href="#section-10" class="section-number selfRef">10. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
-<p id="section-10-1">This document requests no IANA registrations. The AAuth Protocol does
-not currently establish a registry for approved mission-blob members.
-If AAuth creates one before publication, this document will request
-registration of <code>expires_at</code>.<a href="#section-10-1" class="pilcrow">¶</a></p>
+<p id="section-10-1">This document requests no IANA registrations. <code>expires_at</code> is an
+AAuth mission blob member (Section 8.2 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>), and AAuth establishes no
+registry for mission proposal members. If AAuth creates one before
+publication, this document will request registration of the proposal
+member <code>expires_at</code>.<a href="#section-10-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="acknowledgments">
@@ -1390,7 +1417,7 @@ Hardt.<a href="#section-11-1" class="pilcrow">¶</a></p>
 <dl class="references">
 <dt id="I-D.draft-hardt-oauth-aauth-protocol">[I-D.draft-hardt-oauth-aauth-protocol]</dt>
         <dd>
-<span class="refAuthor">Hardt, D.</span>, <span class="refTitle">"AAuth Protocol"</span>, <span class="refContent">Editor's copy, commit fc5e972c</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://dickhardt.github.io/AAuth/draft-hardt-oauth-aauth-protocol.html">https://dickhardt.github.io/AAuth/draft-hardt-oauth-aauth-protocol.html</a>&gt;</span>. </dd>
+<span class="refAuthor">Hardt, D.</span>, <span class="refTitle">"AAuth Protocol"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-hardt-oauth-aauth-protocol-11</span>, <time datetime="2026-09-25" class="refDate">25 September 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-hardt-oauth-aauth-protocol-11">https://datatracker.ietf.org/doc/html/draft-hardt-oauth-aauth-protocol-11</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC2119">[RFC2119]</dt>
         <dd>

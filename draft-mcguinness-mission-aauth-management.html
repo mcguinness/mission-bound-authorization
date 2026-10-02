@@ -7,11 +7,11 @@
 <title>AAuth Mission Management</title>
 <meta content="Karl McGuinness" name="author">
 <meta content="
-       AAuth defines an immutable mission blob, identifies it by the native
- {approver, s256}  mission reference, and gives a mission two states:
- active  and  terminated .  It leaves revocation, delegation-tree
-queries, and administrative interfaces to a companion specification.
-This document defines that companion. 
+       AAuth defines an immutable mission blob, identifies it by the
+approving Person Server and the blob's  s256  digest, and gives a
+mission two states:  active  and  terminated .  It leaves revocation,
+delegation-tree queries, and administrative interfaces to a companion
+specification.  This document defines that companion. 
        An authenticated caller can read status, permanently terminate an
 authorized mission, and inspect the AAuth agent and token delegation
 tree recorded for it.  An immutable expiry, AAuth's  expires_at ,
@@ -1099,11 +1099,11 @@ svg {
 <h1 id="title">AAuth Mission Management</h1>
 <section id="section-abstract">
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
-<p id="section-abstract-1">AAuth defines an immutable mission blob, identifies it by the native
-<code>{approver, s256}</code> mission reference, and gives a mission two states:
-<code>active</code> and <code>terminated</code>.  It leaves revocation, delegation-tree
-queries, and administrative interfaces to a companion specification.
-This document defines that companion.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+<p id="section-abstract-1">AAuth defines an immutable mission blob, identifies it by the
+approving Person Server and the blob's <code>s256</code> digest, and gives a
+mission two states: <code>active</code> and <code>terminated</code>.  It leaves revocation,
+delegation-tree queries, and administrative interfaces to a companion
+specification.  This document defines that companion.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 <p id="section-abstract-2">An authenticated caller can read status, permanently terminate an
 authorized mission, and inspect the AAuth agent and token delegation
 tree recorded for it.  An immutable expiry, AAuth's <code>expires_at</code>,
@@ -1342,21 +1342,26 @@ to report and bound the residual window honestly.<a href="#section-abstract-3" c
 <p id="section-1-1">The AAuth Protocol <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span> makes agent
 governance orthogonal to its five resource-access modes.  An agent and
 its Person Server (PS) hold the exact bytes of an approved mission blob.
-The SHA-256 digest of those bytes, paired with the approving PS URL,
-forms the native Mission Reference.<a href="#section-1-1" class="pilcrow">¶</a></p>
+The SHA-256 digest of those bytes, <code>s256</code>, paired with the approving
+PS, is the mission's identity (Section 8.2.1 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>), which this document calls
+the Mission Reference.<a href="#section-1-1" class="pilcrow">¶</a></p>
 <p id="section-1-2">Resources and Access Servers see that reference, not the mission
 body.  The PS retains the context and ordered mission log needed to
 make governance decisions.<a href="#section-1-2" class="pilcrow">¶</a></p>
 <p id="section-1-3">AAuth also deliberately gives a mission only two states.  An <code>active</code>
 mission can be used; a <code>terminated</code> mission has ended permanently.
 There is no pause or resume operation.  The base protocol defines
-completion through the interaction endpoint and defers other
-transitions, administrative access, and delegation-tree queries.<a href="#section-1-3" class="pilcrow">¶</a></p>
+completion as the owning agent's <code>completion</code> action at the mission's
+own URL, which terminates the mission only on the Person's acceptance
+(Section 8.5 of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>), and defers
+other transitions, administrative access, and delegation-tree
+queries.<a href="#section-1-3" class="pilcrow">¶</a></p>
 <p id="section-1-4">This document supplies those management functions without replacing
 AAuth's mission model with an OAuth authorization object.  In
 particular, it introduces no <code>mission_id</code>, Authority Set, scope-subset
 rule, status signal, or additional lifecycle state.  Every operation is
-keyed by the exact native <code>{approver, s256}</code> pair.  Authorization to a
+keyed by the exact Mission Reference.  Authorization to a
 remote resource remains a decision of that resource, its Access Server,
 and, where involved, the PS; this endpoint manages the contextual
 governance envelope held by the PS.<a href="#section-1-4" class="pilcrow">¶</a></p>
@@ -1387,42 +1392,52 @@ its state.<a href="#section-1-7" class="pilcrow">¶</a></p>
 described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
 appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶</a></p>
 <p id="section-2-2">This document uses Person, Agent, Agent Provider (AP), Person Server
-(PS), Access Server (AS), Resource, Agent Token, Resource Token, Auth
-Token, Mission, Mission Reference, mission blob, and mission log as
+(PS), Access Server (AS), Resource, Agent Token, Person Token,
+Resource Token, Auth Token, Mission, mission blob, and mission log as
 defined by <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>.<a href="#section-2-2" class="pilcrow">¶</a></p>
 <p id="section-2-3">The following additional terms are used:<a href="#section-2-3" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-2-4">
-        <dt id="section-2-4.1">Management Principal:</dt>
+        <dt id="section-2-4.1">Mission Reference:</dt>
         <dd style="margin-left: 1.5em" id="section-2-4.2">
-          <p id="section-2-4.2.1">An authenticated person, administrator, or service acting under an
-administrative policy of the PS.  An Agent is not a Management
-Principal merely because it possesses its Agent Token.<a href="#section-2-4.2.1" class="pilcrow">¶</a></p>
+          <p id="section-2-4.2.1">The pair of the approving PS and <code>s256</code>, AAuth's mission identity
+(Section 8.2.1 of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).  The
+approving PS is named by the <code>iss</code> of a Person Token, the <code>ps</code> claim
+of a Resource Token or Auth Token, or the PS a request is made to; the
+mission blob carries no member naming it.  On the wire, the
+reference is the <code>mission_s256</code> claim or parameter.<a href="#section-2-4.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-2-4.3">Owning Agent:</dt>
+<dt id="section-2-4.3">Management Principal:</dt>
         <dd style="margin-left: 1.5em" id="section-2-4.4">
-          <p id="section-2-4.4.1">The Agent whose identifier is the <code>agent</code> member of the approved
-mission blob.<a href="#section-2-4.4.1" class="pilcrow">¶</a></p>
+          <p id="section-2-4.4.1">An authenticated person, administrator, or service acting under an
+administrative policy of the PS.  An Agent is not a Management
+Principal merely because it possesses its Agent Token.<a href="#section-2-4.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-2-4.5">Termination Reason:</dt>
+<dt id="section-2-4.5">Owning Agent:</dt>
         <dd style="margin-left: 1.5em" id="section-2-4.6">
-          <p id="section-2-4.6.1">An audit fact explaining why an <code>active</code> mission became <code>terminated</code>.
-It does not add a state or permit reactivation.<a href="#section-2-4.6.1" class="pilcrow">¶</a></p>
+          <p id="section-2-4.6.1">The Agent whose identifier is the <code>agent</code> member of the approved
+mission blob.<a href="#section-2-4.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-2-4.7">Tracked Auth Token:</dt>
+<dt id="section-2-4.7">Termination Reason:</dt>
         <dd style="margin-left: 1.5em" id="section-2-4.8">
-          <p id="section-2-4.8.1">An Auth Token that the PS issued or provided under a Mission Reference
-and for which it retained at least <code>iss</code>, <code>jti</code>, <code>aud</code>, and <code>exp</code>.<a href="#section-2-4.8.1" class="pilcrow">¶</a></p>
+          <p id="section-2-4.8.1">An audit fact explaining why an <code>active</code> mission became <code>terminated</code>.
+It does not add a state or permit reactivation.<a href="#section-2-4.8.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-2-4.9">Residual Window:</dt>
+<dt id="section-2-4.9">Tracked Auth Token:</dt>
         <dd style="margin-left: 1.5em" id="section-2-4.10">
-          <p id="section-2-4.10.1">The interval after termination during which already-issued authority
+          <p id="section-2-4.10.1">An Auth Token that the PS issued or provided under a Mission Reference
+and for which it retained at least <code>iss</code>, <code>jti</code>, <code>aud</code>, and <code>exp</code>.<a href="#section-2-4.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-4.11">Residual Window:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-4.12">
+          <p id="section-2-4.12.1">The interval after termination during which already-issued authority
 might still be accepted because revocation has not reached a Resource
 or because an independently issued or opaque credential is outside
-the PS's control.<a href="#section-2-4.10.1" class="pilcrow">¶</a></p>
+the PS's control.<a href="#section-2-4.12.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -1438,20 +1453,20 @@ the PS's control.<a href="#section-2-4.10.1" class="pilcrow">¶</a></p>
         <h3 id="name-mission-identity">
 <a href="#section-3.1" class="section-number selfRef">3.1. </a><a href="#name-mission-identity" class="section-name selfRef">Mission Identity</a>
         </h3>
-<p id="section-3.1-1">The Mission Reference <code>{approver, s256}</code> remains the management key
-for every mission this specification governs.  On the wire, a request
+<p id="section-3.1-1">The Mission Reference remains the management key for every mission
+this specification governs.  On the wire, a request
 identifies its target with the <code>{mission_s256}</code> path segment of the
 mission's own control-plane URL,
 <code>{mission_control_endpoint}/{mission_s256}</code>, following the per-mission
 URL convention the base protocol defines at <code>mission_endpoint</code>.<a href="#section-3.1-1" class="pilcrow">¶</a></p>
-<p id="section-3.1-2">The syntax, comparison, and digest rules are those of the AAuth Mission
-Reference.  <code>approver</code> is neither a request member nor a path segment:
-it is fixed to the identity of the PS endpoint that receives the
-request, so no part of the request can name another approver.  A PS
-<span class="bcp14">MUST</span> resolve the <code>{mission_s256}</code> segment only among the missions it
-itself approved, <span class="bcp14">MUST NOT</span> forward a management operation to another
-approver, and <span class="bcp14">MUST NOT</span> accept an alias for either half of the
-reference.<a href="#section-3.1-2" class="pilcrow">¶</a></p>
+<p id="section-3.1-2">The syntax, comparison, and digest rules are those of AAuth's mission
+identifier (Section 8.2.1 of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).
+The approving PS is neither a request member nor a path segment: it is
+fixed to the identity of the PS endpoint that receives the request, so
+no part of the request can name another PS.  A PS <span class="bcp14">MUST</span> resolve the
+<code>{mission_s256}</code> segment only among the missions it itself approved,
+<span class="bcp14">MUST NOT</span> forward a management operation to another PS, and <span class="bcp14">MUST NOT</span>
+accept an alias for either half of the reference.<a href="#section-3.1-2" class="pilcrow">¶</a></p>
 <p id="section-3.1-3">The pair is the sole protocol key.  Implementations <span class="bcp14">MAY</span> use internal
 database keys, but those keys <span class="bcp14">MUST NOT</span> appear in this protocol.  The PS
 <span class="bcp14">MUST NOT</span> require the caller to send the mission blob, and a status or
@@ -1474,11 +1489,11 @@ Possession of it conveys no management authority.<a href="#section-3.1-4" class=
             <p id="section-3.2-2.2.1"><code>terminated</code>: the mission has permanently ended.<a href="#section-3.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-3.2-3">Only <code>active</code> permits the PS to process a token, permission, audit, or
-interaction request under the mission.  Once the PS commits
-<code>terminated</code>, it <span class="bcp14">MUST NOT</span> return the mission to <code>active</code>.  A caller that
-needs to continue the work creates and obtains approval for a new
-mission.<a href="#section-3.2-3" class="pilcrow">¶</a></p>
+<p id="section-3.2-3">Only <code>active</code> permits the PS to process a request that names the
+mission outside this control plane (<a href="#token-consequences" class="auto internal xref">Section 11</a>).  Once the
+PS commits <code>terminated</code>, it <span class="bcp14">MUST NOT</span> return the mission to <code>active</code>.  A
+caller that needs to continue the work creates and obtains approval
+for a new mission.<a href="#section-3.2-3" class="pilcrow">¶</a></p>
 <p id="section-3.2-4">This specification defines these termination reasons:<a href="#section-3.2-4" class="pilcrow">¶</a></p>
 <table class="center" id="table-1">
           <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
@@ -1493,7 +1508,7 @@ mission.<a href="#section-3.2-3" class="pilcrow">¶</a></p>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>completed</code>
 </td>
-              <td class="text-left" rowspan="1" colspan="1">The Person accepted completion of the work.</td>
+              <td class="text-left" rowspan="1" colspan="1">The Person accepted the Owning Agent's completion proposal (Section 8.5 of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
@@ -1594,9 +1609,18 @@ mission as related evidence.<a href="#section-4.1-4" class="pilcrow">¶</a></p>
 reject duplicate JSON member names.  Unknown members <span class="bcp14">MUST</span> be ignored
 unless they prevent safe processing.<a href="#section-4.1-5" class="pilcrow">¶</a></p>
 <p id="section-4.1-6">Every request <span class="bcp14">MUST</span> be authenticated as <a href="#authorization" class="auto internal xref">Section 5</a> requires for
-the caller's class.  A request signed with the AAuth HTTP Message
-Signatures profile <span>[<a href="#RFC9421" class="cite xref">RFC9421</a>]</span> uses the covered components and content
-integrity requirements of the base AAuth profile.  A management
+the caller's class.  A signed request uses the AAuth HTTP Message
+Signatures profile (Section 11.3 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>) <span>[<a href="#RFC9421" class="cite xref">RFC9421</a>]</span>: its signature
+<span class="bcp14">MUST</span> cover <code>@method</code>, <code>@authority</code>, <code>@path</code>, <code>signature-key</code>,
+<code>content-digest</code>, and <code>content-type</code>, as Section 11.3.3.1 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span> requires on a request
+carrying a body to a PS endpoint, and <span class="bcp14">MUST</span> carry a <code>created</code>
+parameter within the PS's validity window (Sections 11.3.3.2 and
+11.3.4 of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).  The signing key
+carries a fully specified <code>alg</code>, from which the PS determines the
+algorithm, and every party supports <code>Ed25519</code> (Sections 11.3.1 and
+11.3.4 of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).  A management
 operation is never authorized from the Mission Reference alone.<a href="#section-4.1-6" class="pilcrow">¶</a></p>
 <p id="section-4.1-7">This document defines no action at the bare
 <code>{mission_control_endpoint}</code> URL.  A PS <span class="bcp14">MAY</span> serve a deployment's
@@ -1639,11 +1663,15 @@ This document defines no member and no <code>action</code> value at
 action strings.  The array <span class="bcp14">MUST</span> contain <code>status</code> and <code>terminate</code> for
 conformance to this specification.  It contains <code>delegation_tree</code> when
 the PS implements <a href="#delegation-tree" class="auto internal xref">Section 8</a>.  Unknown values <span class="bcp14">MUST</span> be ignored.<a href="#section-4.3-3" class="pilcrow">¶</a></p>
-<p id="section-4.3-4"><code>mission_control_endpoint</code> is <span class="bcp14">OPTIONAL</span> in the base protocol.  A PS
-that does not publish it implements no operation of this
-specification, whatever <code>mission_control_actions_supported</code> would
-advertise.  A caller <span class="bcp14">MUST</span> resolve the endpoint from the metadata and
-<span class="bcp14">MUST NOT</span> construct it from <code>mission_endpoint</code>.<a href="#section-4.3-4" class="pilcrow">¶</a></p>
+<p id="section-4.3-4"><code>mission_control_endpoint</code> is <span class="bcp14">OPTIONAL</span> in the base protocol and adds
+nothing to AAuth PS conformance, which rests on the four <span class="bcp14">REQUIRED</span>
+metadata fields alone (Section 11.2.2 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>); the conformance it carries
+is to this document (<a href="#conformance" class="auto internal xref">Section 15</a>).  A PS that does not publish it
+implements no operation of this specification, whatever
+<code>mission_control_actions_supported</code> would advertise.  A caller <span class="bcp14">MUST</span>
+resolve the endpoint from the metadata and <span class="bcp14">MUST NOT</span> construct it from
+<code>mission_endpoint</code>.<a href="#section-4.3-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1702,14 +1730,21 @@ define fleet enumeration or bulk termination.<a href="#section-5.2-3" class="pil
 <a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-management-service" class="section-name selfRef">Management Service</a>
         </h3>
 <p id="section-5.3-1">A management service authenticates with the AAuth HTTP Message
-Signatures profile <span>[<a href="#RFC9421" class="cite xref">RFC9421</a>]</span>, presenting its key with
-<code>Signature-Key: sig=jwks_uri</code>, the scheme the base protocol uses for
-PS-to-AS token requests.  The PS resolves the key as the
-<code>Signature-Key</code> profile specifies and <span class="bcp14">MUST</span> hold a deployment-local
-registration of that <code>jwks_uri</code> as a management identity; this
-specification adds no discovery surface for management identities.  An
-Agent <span class="bcp14">MUST NOT</span> use this scheme; the base protocol already forbids it
-to agents.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
+Signatures profile <span>[<a href="#RFC9421" class="cite xref">RFC9421</a>]</span>, signing under the <code>jwks_uri</code> scheme of
+HTTP Signature Keys <span>[<a href="#I-D.draft-hardt-httpbis-signature-key" class="cite xref">I-D.draft-hardt-httpbis-signature-key</a>]</span>, the
+scheme Section 11.3.2 of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>
+requires of a PS, AS, AP, or resource signing in its own right.  The
+<code>id</code> parameter is the service's HTTPS identifier, <code>dwk</code> names the
+well-known metadata document the service publishes under a
+deployment-chosen name, and <code>kid</code> selects the key.  That document
+<span class="bcp14">MUST</span> contain <code>issuer</code>, equal to <code>id</code>, and <code>jwks_uri</code>, and the PS
+resolves the key by the discovery procedure of Section 3.6 of
+<span>[<a href="#I-D.draft-hardt-httpbis-signature-key" class="cite xref">I-D.draft-hardt-httpbis-signature-key</a>]</span>.  The PS <span class="bcp14">MUST</span> hold a
+deployment-local registration of the service's <code>id</code> and <code>dwk</code> as a
+management identity; this specification adds no discovery surface for
+management identities.  An Agent <span class="bcp14">MUST NOT</span> use this scheme; the base
+protocol already forbids it to agents (Section 11.3.2 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).<a href="#section-5.3-1" class="pilcrow">¶</a></p>
 <p id="section-5.3-2">A management service is subject to the administrative rules above:
 least-privilege scoping, a separate privilege for delegation data,
 <code>administrative</code> limited to the administrator role, and the recorded
@@ -1774,8 +1809,8 @@ Content-Type: application/json
 Signature-Input: sig=("@method" "@authority" "@path" \
     "content-type" "content-digest" "signature-key");created=1775581200
 Signature: sig=:...signature bytes...:
-Signature-Key: sig=jwks_uri; \
-    jwks_uri="https://mgmt.example/.well-known/jwks.json"
+Signature-Key: sig=jwks_uri;id="https://mgmt.example"; \
+    dwk="example-configuration";kid="key-1"
 Content-Digest: sha-256=:...:
 
 {
@@ -1960,11 +1995,16 @@ termination obey the same rule.<a href="#section-7.3-3" class="pilcrow">¶</a></
       </h2>
 <p id="section-8-1">AAuth does not create child Mission objects for sub-agents or chained
 calls.  It records agent relationships in <code>parent_agent</code> and in the
-Auth Tokens issued or provided under the same Mission Reference; auth
-and resource tokens carry no chain claim, so the PS itself holds the
-call-chain state.  The tree operation reports those native
-relationships; it <span class="bcp14">MUST NOT</span> invent a second child mission identifier or
-imply algebraic scope inheritance.<a href="#section-8-1" class="pilcrow">¶</a></p>
+Auth Tokens issued or provided under the same Mission Reference
+(Section 10.2.3 of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).  A call
+chain is recorded on the Person Token the PS issues to an
+intermediary: the PS copies the upstream token's <code>mission_s256</code> into
+it (Section 7.1 of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>) and
+records it with the upstream token's <code>(iss, jti)</code> (Section 11.12.4 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).  No token carries a chain
+claim, so the PS itself holds the call-chain state.  The tree
+operation reports those native relationships; it <span class="bcp14">MUST NOT</span> invent a
+second child mission identifier or imply algebraic scope inheritance.<a href="#section-8-1" class="pilcrow">¶</a></p>
 <p id="section-8-2">An authorized caller sends:<a href="#section-8-2" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-8-3">
 <pre>
@@ -2012,7 +2052,7 @@ page exists, <code>next_cursor</code> is <span class="bcp14">REQUIRED</span> and
 be returned to a Person or authorized administrator and <span class="bcp14">SHOULD</span> be
 omitted from a response to an admitted Owning Agent unless required
 for that Agent's own revocation accounting.<a href="#section-8-8" class="pilcrow">¶</a></p>
-<p id="section-8-9">The result is observational, not exhaustive proof.  Identity-based
+<p id="section-8-9">The result is observational, not exhaustive proof.  Agent identity
 calls and resource-managed access can occur without a PS token request.
 An intermediary can make a downstream call outside the PS's view.
 <code>complete</code> means only that the returned page exhausts the PS's current
@@ -2083,12 +2123,14 @@ remaining errors below are defined by this document.<a href="#section-9-1" class
         </tbody>
       </table>
 <p id="section-9-3">For a syntactically valid <code>{mission_s256}</code> segment, a PS <span class="bcp14">MUST</span> return
-the same status, error, body shape, header set, and observably
-equivalent timing whether the mission is absent or the authenticated
-caller lacks authorization for it, and <span class="bcp14">MUST</span> answer both identically
-within each caller class.  The PS <span class="bcp14">MUST</span> use <code>mission_not_found</code> for
-both.  It <span class="bcp14">MUST NOT</span> disclose the state, Agent identifier, timestamps,
-expiry, reason, or tenant before authorization succeeds.<a href="#section-9-3" class="pilcrow">¶</a></p>
+the same status, error, body, header set, and observably equivalent
+timing whether the mission is absent or the authenticated caller lacks
+authorization for it, and <span class="bcp14">MUST</span> answer both identically within each
+caller class.  The PS <span class="bcp14">MUST</span> use <code>mission_not_found</code> for both.  It <span class="bcp14">MUST NOT</span> disclose the state, Agent identifier, timestamps, expiry, reason,
+or tenant before authorization succeeds.  As Section 8.7 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span> notes for the mission
+endpoint, the natural arrangement leaks the difference in timing:
+checking authorization only after a successful lookup.<a href="#section-9-3" class="pilcrow">¶</a></p>
 <p id="section-9-4">The base protocol makes a terminated mission deliberately
 distinguishable to the agent that owns it, at that agent's own
 <code>mission_endpoint</code>, because that agent already knows the mission
@@ -2163,11 +2205,17 @@ for the maximum relevant replay and audit horizon.<a href="#section-10-5" class=
 <a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-local-gating" class="section-name selfRef">Local Gating</a>
         </h3>
 <p id="section-11.1-1">Immediately after the terminal commit, the PS <span class="bcp14">MUST</span> reject every new
-token, permission, audit, and interaction request under the Mission
-Reference with the AAuth <code>mission_terminated</code> error.  It <span class="bcp14">MUST</span> stop
-federating resource-token requests under that mission.  This is the
-reliable AAuth management effect because it occurs at the server that
-owns the mission context.<a href="#section-11.1-1" class="pilcrow">¶</a></p>
+request that names the mission, at any PS endpoint other than this
+control plane, with the AAuth <code>mission_terminated</code> error (Sections 8.6
+and 8.8 of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).  A request names
+the mission through a <code>mission_s256</code> parameter, as a person token
+request can (Section 7.1 of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>);
+through a token carrying <code>mission_s256</code>, whether a resource token,
+presented token, or upstream token; or through the mission's own URL
+at <code>mission_endpoint</code>, for an <code>update</code> or <code>completion</code>.  The PS <span class="bcp14">MUST</span>
+stop federating resource-token requests under that mission.  This is
+the reliable AAuth management effect because it occurs at the server
+that owns the mission context.<a href="#section-11.1-1" class="pilcrow">¶</a></p>
 <p id="section-11.1-2">A Resource Token is a signed request artifact, not authority.  It does
 not need revocation; submitting it under the terminated mission fails at
 the PS.  Terminating a mission does not revoke the Agent Token, because
@@ -2209,17 +2257,77 @@ are sensitive and follow <a href="#logging" class="auto internal xref">Section 1
         <h3 id="name-revocation-attempts">
 <a href="#section-11.3" class="section-number selfRef">11.3. </a><a href="#name-revocation-attempts" class="section-name selfRef">Revocation Attempts</a>
         </h3>
-<p id="section-11.3-1">After termination, the PS <span class="bcp14">SHOULD</span> invoke each applicable AAuth
-<code>revocation_endpoint</code> with <code>(iss, jti)</code> for every unexpired Tracked Auth
-Token.  In PS-asserted access, this normally means the Resource.  In
-federated access, the PS <span class="bcp14">SHOULD</span> notify the Resource and <span class="bcp14">MAY</span> also notify
-the issuing AS as supported by the base AAuth protocol.  Retries <span class="bcp14">MUST</span> be
-bounded, authenticated, rate limited, and recorded.<a href="#section-11.3-1" class="pilcrow">¶</a></p>
-<p id="section-11.3-2">A <code>200</code> response or natural token expiry closes the tracked residual for
-that token.  A timeout, unreachable endpoint, absent endpoint, or
-ambiguous result remains unconfirmed until expiry.  The PS <span class="bcp14">MUST NOT</span>
-report successful mission-wide revocation merely because it marked its
-local state or contacted an AS.<a href="#section-11.3-2" class="pilcrow">¶</a></p>
+<p id="section-11.3-1">After termination, the PS <span class="bcp14">SHOULD</span> revoke every unexpired Tracked Auth
+Token, as Section 11.12.4 of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>
+recommends when a PS revokes a mission.  Each revocation is a signed
+<code>POST</code> of <code>{jti, exp}</code> to the recipient's <code>revocation_endpoint</code>, with
+<code>exp</code> taken from the PS's record of that token.  The PS signs as a
+server under the <code>jwks_uri</code> scheme, with its issuer as <code>id</code> and
+<code>aauth-person.json</code> as <code>dwk</code>, and the signature covers
+<code>content-digest</code> and <code>content-type</code> (Sections 11.3.2 and 11.12.1 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).  The recipient takes the
+issuer from the signature, so the PS revokes only tokens it issued.<a href="#section-11.3-1" class="pilcrow">¶</a></p>
+<p id="section-11.3-2">In PS authorization (three-party), the PS revokes an Auth Token it
+issued at the Resource it was issued for.  In federated authorization
+(four-party), the AS issued the Auth Token, so the PS instead revokes
+the Person Token it presented to that AS, known from the issuance
+record that Section 7.1 of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>
+requires, and the AS revokes the Auth Tokens it issued against that
+Person Token (Sections 11.12.2 and 11.12.4 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).  Retries <span class="bcp14">MUST</span> be bounded,
+authenticated, rate limited, and recorded.  A repeated revocation is
+idempotent: the recipient records nothing new, re-attempts each
+downstream revocation that did not succeed, and reports the current
+outcome (Section 11.12.3 of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).<a href="#section-11.3-2" class="pilcrow">¶</a></p>
+<p id="section-11.3-3">A revocation is confirmed, for <code>revocation_confirmed</code> and <code>complete</code>
+(<a href="#terminate" class="auto internal xref">Section 7</a>), only by an outcome that names the Tracked Auth Token's
+own Resource:<a href="#section-11.3-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-11.3-4.1">
+            <p id="section-11.3-4.1.1">an Auth Token the PS revoked at the Resource it was issued for is
+confirmed by that Resource's <code>200</code>, which has nothing downstream and
+carries an empty body; and<a href="#section-11.3-4.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-11.3-4.2">
+            <p id="section-11.3-4.2.1">an Auth Token an AS issued is confirmed only by a <code>downstream</code> entry,
+in the AS's <code>200</code> to the Person Token revocation, whose <code>recipient</code>
+is the token's <code>aud</code> and which carries no <code>error</code>.<a href="#section-11.3-4.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-11.3-5">An absent body, an absent <code>downstream</code> member, or a <code>downstream</code> array
+with no entry for the token's <code>aud</code> reports nothing about that token,
+which stays unconfirmed (Section 11.12.3 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).  A <code>200</code> says the recipient
+recorded the revocation and finished its cascade, not that it held a
+record of the token: AAuth defines no not-found response.  Natural
+expiry also closes the tracked residual for a token.<a href="#section-11.3-5" class="pilcrow">¶</a></p>
+<p id="section-11.3-6">A <code>202</code> is pending: the PS polls the pending URL with a signed <code>GET</code>
+under the same identity, honoring <code>Retry-After</code>, until the terminal
+response (Section 11.12.3 of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).
+Every other outcome leaves the token unconfirmed until a later attempt
+is confirmed or its <code>exp</code> passes:<a href="#section-11.3-6" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-11.3-7.1">
+            <p id="section-11.3-7.1.1">a <code>downstream</code> entry with <code>revocation_unsupported</code> or
+<code>revocation_unavailable</code> leaves the Auth Tokens at its <code>recipient</code>
+honored; after <code>revocation_unavailable</code>, the PS can revoke again
+later;<a href="#section-11.3-7.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-11.3-7.2">
+            <p id="section-11.3-7.2.1"><code>rate_limited</code> (<code>429</code>) carries a <code>Retry-After</code> interval the PS waits
+before retrying;<a href="#section-11.3-7.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-11.3-7.3">
+            <p id="section-11.3-7.3.1"><code>unsupported_iss</code> (<code>403</code>) means the recipient does not accept
+revocations from this PS and honors the token until its <code>exp</code>; and<a href="#section-11.3-7.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-11.3-7.4">
+            <p id="section-11.3-7.4.1">a timeout, an unreachable or absent endpoint, a <code>5xx</code>, or an
+unparseable response establishes nothing.<a href="#section-11.3-7.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-11.3-8">The PS <span class="bcp14">MUST NOT</span> report successful mission-wide revocation merely
+because it marked its local state or contacted an AS.<a href="#section-11.3-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="residuals">
@@ -2240,7 +2348,7 @@ inventing a deadline.<a href="#section-11.4-2" class="pilcrow">¶</a></p>
 <p id="section-11.4-3">The PS has no general visibility or control over:<a href="#section-11.4-3" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-11.4-4.1">
-            <p id="section-11.4-4.1.1">identity-based access where a Resource authorizes the Agent directly;<a href="#section-11.4-4.1.1" class="pilcrow">¶</a></p>
+            <p id="section-11.4-4.1.1">agent identity access where a Resource authorizes the Agent directly;<a href="#section-11.4-4.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.4-4.2">
             <p id="section-11.4-4.2.1">an opaque <code>AAuth-Access</code> token issued in resource-managed access;<a href="#section-11.4-4.2.1" class="pilcrow">¶</a></p>
@@ -2398,7 +2506,7 @@ add tamper-evident storage or signed checkpoints.<a href="#section-13.6-1" class
 <a href="#section-13.7" class="section-number selfRef">13.7. </a><a href="#name-delegation-tree-limits" class="section-name selfRef">Delegation-Tree Limits</a>
         </h3>
 <p id="section-13.7-1">The returned tree is based on PS observations, not global execution.
-Treating it as complete evidence can hide identity-based, opaque-token,
+Treating it as complete evidence can hide agent identity, opaque-token,
 or off-path activity.  Consumers <span class="bcp14">MUST</span> preserve the distinction between
 page completeness and observational completeness.  <code>parent_agent</code>
 values and the PS's own issuance-linked chain state are accepted only
@@ -2448,7 +2556,7 @@ token-residual and pagination members;<a href="#section-14-3.3.1" class="pilcrow
           <p id="section-14-3.5.1">the error values in <a href="#errors" class="auto internal xref">Section 9</a>.<a href="#section-14-3.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-14-4">The AAuth Protocol does not currently establish an IANA registry for
+<p id="section-14-4">The AAuth Protocol does not establish an IANA registry for
 Person Server metadata members, mission control plane actions or JSON
 members, termination reasons, delegation relationships, or AAuth error
 values.  Consequently, there is no
@@ -2479,7 +2587,7 @@ it:<a href="#section-15-1" class="pilcrow">¶</a></p>
         <li id="section-15-2.2">
           <p id="section-15-2.2.1">keys every action solely by the <code>{mission_s256}</code> path segment of
 the mission's control-plane URL, resolving it only among missions
-for which it is itself the <code>approver</code>;<a href="#section-15-2.2.1" class="pilcrow">¶</a></p>
+it itself approved;<a href="#section-15-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-15-2.3">
           <p id="section-15-2.3.1">preserves exactly the <code>active</code> and <code>terminated</code> states, makes
@@ -2517,7 +2625,7 @@ available its caller-role authorization policy, Auth Token retention
 period, supported access-mode coverage, maximum token lifetime,
 revocation retry policy, expiry clock policy if used, and worst-case
 residual behavior.  It <span class="bcp14">MUST NOT</span> claim that Mission termination revokes
-identity-based, opaque resource-managed, or otherwise untracked access.<a href="#section-15-4" class="pilcrow">¶</a></p>
+agent identity, opaque resource-managed, or otherwise untracked access.<a href="#section-15-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="sec-combined-references">
@@ -2531,9 +2639,13 @@ identity-based, opaque resource-managed, or otherwise untracked access.<a href="
 <a href="#section-16.1" class="section-number selfRef">16.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-hardt-httpbis-signature-key">[I-D.draft-hardt-httpbis-signature-key]</dt>
+        <dd>
+<span class="refAuthor">Hardt, D.</span> and <span class="refAuthor">T. Meunier</span>, <span class="refTitle">"HTTP Signature Keys"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-hardt-httpbis-signature-key-09</span>, <time datetime="2026-09-13" class="refDate">13 September 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-hardt-httpbis-signature-key-09">https://datatracker.ietf.org/doc/html/draft-hardt-httpbis-signature-key-09</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-hardt-oauth-aauth-protocol">[I-D.draft-hardt-oauth-aauth-protocol]</dt>
         <dd>
-<span class="refAuthor">Hardt, D.</span>, <span class="refTitle">"AAuth Protocol"</span>, <span class="refContent">Editor's copy, commit fc5e972c</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://dickhardt.github.io/AAuth/draft-hardt-oauth-aauth-protocol.html">https://dickhardt.github.io/AAuth/draft-hardt-oauth-aauth-protocol.html</a>&gt;</span>. </dd>
+<span class="refAuthor">Hardt, D.</span>, <span class="refTitle">"AAuth Protocol"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-hardt-oauth-aauth-protocol-11</span>, <time datetime="2026-09-25" class="refDate">25 September 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-hardt-oauth-aauth-protocol-11">https://datatracker.ietf.org/doc/html/draft-hardt-oauth-aauth-protocol-11</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC2119">[RFC2119]</dt>
         <dd>
