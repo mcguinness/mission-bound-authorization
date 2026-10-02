@@ -248,8 +248,8 @@ host these practices unchanged.
 
 {::boilerplate bcp14-tagged}
 
-This document is Informational and defines no conformance class. Its
-BCP 14 keywords state recommended behavior for three parties:
+The BCP 14 keywords in this document state recommended behavior for
+three parties:
 
 - the shaper, expressed where possible on the observable shaping
   artifacts (the Mission Intent proposal and Shaping Evidence);
@@ -262,19 +262,19 @@ None of these is a conformance obligation. The Mission Issuer's
 processing of a submission is specified by the issuance profile; this
 document cites it and does not restate it as its own requirement.
 
-All JSON in this document is non-normative and illustrative; the
-surrounding prose is authoritative. This document uses JSON {{RFC8259}}
-as the data model for illustrative objects, and the JSON
-Canonicalization Scheme (JCS) {{RFC8785}} where a digest is computed
-over Shaping Evidence ({{shaping-evidence}}).
+JSON {{RFC8259}} is the data model for the illustrative objects in
+this document; the surrounding prose is authoritative. Digests over
+Shaping Evidence use the JSON Canonicalization Scheme (JCS)
+{{RFC8785}} ({{shaping-evidence}}).
 
 This document uses the following terms defined by the issuance
 profile: Mission, Mission Intent, Mission Intent Submission (Submission
 envelope), Authority Proposal, Authority Set, Mission Issuer, Approver,
 and Agent (Client). "Client" and "client-side" refer to that Agent
 (Client), the OAuth client that submits the Mission Intent. The
-issuance profile's Mission Issuer is an Authorization Server; this
-document calls it the Mission Issuer throughout. "The issuance profile"
+issuance profile's Mission Issuer is an Authorization Server
+{{RFC6749}}; this document calls it the Mission Issuer throughout.
+"The issuance profile"
 without a section reference means that document as a whole.
 
 This document defines the following terms:
