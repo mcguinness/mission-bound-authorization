@@ -151,6 +151,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-discharge:
+    title: "Mission Entry Discharge for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-discharge.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -649,11 +657,15 @@ profile's overlay where deployed
 Authority the predecessor once held but containment or discharge has
 removed is therefore never `nothing_to_expand`: a request for it
 widens the effective set and is expansion-eligible. Such authority
-returns only through a fresh-consent successor, with the
-predecessor's containment history surfaced in the expansion consent
-disclosure ({{completion-modes}},
-{{I-D.draft-mcguinness-oauth-mission-containment}}), never by
-re-deriving under the predecessor.
+returns only through a fresh-consent successor, never by re-deriving
+under the predecessor. The expansion consent disclosure
+({{completion-modes}}) surfaces the predecessor's containment history
+and the chain's outstanding containment restrictions
+({{I-D.draft-mcguinness-oauth-mission-containment}}). An expansion that
+restores authority under a discharge restriction of the chain MUST
+authorize that authority explicitly, and its consent disclosure MUST
+name the discharged entry and the condition that discharged it
+({{I-D.draft-mcguinness-oauth-mission-discharge}}).
 
 ## Completion modes {#completion-modes}
 
