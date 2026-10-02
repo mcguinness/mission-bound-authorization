@@ -863,12 +863,23 @@ downstream revocation that did not succeed, and reports the current
 outcome (Section 11.12.3 of {{I-D.draft-hardt-oauth-aauth-protocol}}).
 
 A revocation is confirmed, for `revocation_confirmed` and `complete`
-({{terminate}}), when the recipient answers `200` with no `downstream`
-entry carrying an `error`.  A `200` says the recipient recorded the
-revocation and finished its cascade, not that it held a record of the
-token: AAuth defines no not-found response (Section 11.12.3 of
-{{I-D.draft-hardt-oauth-aauth-protocol}}).  Natural expiry also closes
-the tracked residual for a token.
+({{terminate}}), only by an outcome that names the Tracked Auth Token's
+own Resource:
+
+* an Auth Token the PS revoked at the Resource it was issued for is
+  confirmed by that Resource's `200`, which has nothing downstream and
+  carries an empty body; and
+* an Auth Token an AS issued is confirmed only by a `downstream` entry,
+  in the AS's `200` to the Person Token revocation, whose `recipient`
+  is the token's `aud` and which carries no `error`.
+
+An absent body, an absent `downstream` member, or a `downstream` array
+with no entry for the token's `aud` reports nothing about that token,
+which stays unconfirmed (Section 11.12.3 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  A `200` says the recipient
+recorded the revocation and finished its cascade, not that it held a
+record of the token: AAuth defines no not-found response.  Natural
+expiry also closes the tracked residual for a token.
 
 A `202` is pending: the PS polls the pending URL with a signed `GET`
 under the same identity, honoring `Retry-After`, until the terminal
