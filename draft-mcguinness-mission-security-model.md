@@ -1127,13 +1127,17 @@ generations):
   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}},
   {{I-D.draft-mcguinness-oauth-mission-derivation-limits}},
   {{I-D.draft-mcguinness-oauth-mission-child-delegation}}). Residual:
-  the composed bound across all active dimensions, depth times
-  domains times child generations, plus the aggregate derivations a
-  child subtree can draw, can exceed what a single approval appears
-  to authorize; disclosing the composed bound at the consent surface
-  is a deployment's to add, and an aggregate consumption cap is the
-  metering profile's role
-  ({{I-D.draft-mcguinness-mission-metering}}).
+  the reach across all active dimensions (depth times domains times
+  child generations) and the derivations a child subtree can draw
+  exceed what any single approval bounds. The per-Mission figures do
+  not compose into a lifetime total: a completed child frees its
+  `max_children` slot and its replacement brings its own
+  `derivation_limit`, so absent a lineage-wide bound no count limits
+  what a subtree derives over its lifetime. The child-delegation
+  profile's approval rendering states concurrency, depth, and
+  derivation limits distinctly and whether a finite aggregate is
+  enforced; an aggregate consumption cap is the metering profile's
+  role ({{I-D.draft-mcguinness-mission-metering}}).
 
 Approval surface exposed to the agent as a tool (self-approval):
 : Addressed by resolution being unavailable from the agent's tool plane or
@@ -1499,6 +1503,11 @@ model and pipeline layers, and saying so is the point:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The effective-ceiling composition residual states that the
+  per-Mission figures do not compose into a lifetime total, and
+  points at the child-delegation profile's distinct-figures
+  rendering.
 
 - The issuance-only residuals state issuance-time bounding and
   per-request introspection rather than audit only.

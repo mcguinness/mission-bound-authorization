@@ -207,7 +207,22 @@ export type TokenFacts = MissionBoundTokenFacts | OrdinaryTokenFacts;
 
 export interface ActionMapping {
   action: string;
-  actionClass?: "irreversible_action" | "external_commitment";
+  /**
+   * @spec runtime#classification — the action class this deployment assigns
+   * the crossing, by the class predicates (the payments Operation Profile,
+   * `src/docs/operation-profile-payments-v1.md`). Every entry carries one, so
+   * no mediated crossing reaches the PDP unclassified and falls back to the
+   * default; the class is sent on every decision request and recorded in
+   * Decision Evidence with `class_source: "deployment"`.
+   */
+  actionClass: "consequential_read" | "consequential_write" | "irreversible_action" | "external_commitment";
+  /**
+   * The execution tier the crossing routes to: `transaction-assurance` takes
+   * the single-use permit, execution lease, and connector path. Absent means
+   * the core read and write paths. Kept apart from {@link actionClass}: a
+   * class is a classification, not a routing decision.
+   */
+  tier?: "transaction-assurance";
   /**
    * @spec runtime#compound-actions — the phase of the crossing this tool
    * makes, when the Operation Profile places the operation in a compound
@@ -248,14 +263,14 @@ export interface ActionMapping {
  * binding exists to catch.
  */
 const TOOL_ACTIONS: Record<string, ActionMapping> = {
-  list_invoices: { action: "payments:invoice.list", needsInvoice: false, bindsVendorScope: true },
-  get_invoice: { action: "payments:invoice.read", needsInvoice: true },
-  lookup_vendor: { action: "payments:vendor.read", needsInvoice: false },
-  schedule_payment: { action: "payments:payment.schedule", needsInvoice: true },
-  check_transfer: { action: "payments:payment.execute", phase: "preflight", needsInvoice: true },
-  hold_transfer: { action: "payments:payment.execute", phase: "prepare", needsInvoice: true },
-  execute_wire_transfer: { action: "payments:payment.execute", phase: "commit", actionClass: "irreversible_action", needsInvoice: true },
-  send_remittance_email: { action: "payments:remittance.send", actionClass: "external_commitment", needsInvoice: true },
+  list_invoices: { action: "payments:invoice.list", actionClass: "consequential_read", needsInvoice: false, bindsVendorScope: true },
+  get_invoice: { action: "payments:invoice.read", actionClass: "consequential_read", needsInvoice: true },
+  lookup_vendor: { action: "payments:vendor.read", actionClass: "consequential_read", needsInvoice: false },
+  schedule_payment: { action: "payments:payment.schedule", actionClass: "consequential_write", needsInvoice: true },
+  check_transfer: { action: "payments:payment.execute", phase: "preflight", actionClass: "consequential_read", needsInvoice: true },
+  hold_transfer: { action: "payments:payment.execute", phase: "prepare", actionClass: "consequential_write", needsInvoice: true },
+  execute_wire_transfer: { action: "payments:payment.execute", phase: "commit", actionClass: "irreversible_action", tier: "transaction-assurance", needsInvoice: true },
+  send_remittance_email: { action: "payments:remittance.send", actionClass: "external_commitment", tier: "transaction-assurance", needsInvoice: true },
 };
 
 /**
@@ -1277,7 +1292,7 @@ export class Pep {
         ...(effective ? { parameter_digest: parameterDigest(effective) } : {}),
         ...(listDigest ? { parameter_digest: listDigest } : {}),
         ...(amount ? { amount } : {}),
-        ...(mapping.actionClass ? { action_class: mapping.actionClass } : {}),
+        action_class: mapping.actionClass,
         // @spec authzen#context-action-phase — supplied from THIS surface's
         // trusted Operation Profile (`mapping.phase`), never from `args`: an
         // agent-supplied `action_phase` argument is not read anywhere on this

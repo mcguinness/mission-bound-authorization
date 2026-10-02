@@ -1106,7 +1106,10 @@ A model-based shaper inherits its model's failure modes (hallucinated
 resources, fabricated constraints, inconsistent paraphrase, and
 sensitivity to small input perturbations), and SHOULD record the model
 identifier and version in Shaping Evidence so that failures can be
-attributed.
+attributed. The same bound holds at approval: a model's judgment
+enters adjudication only as a recorded input to a deterministic
+policy, and that input can refuse or narrow, never grant or widen
+({{I-D.draft-mcguinness-oauth-mission}}).
 
 ## Shaper Compromise Does Not Directly Grant Authority {#shaper-compromise}
 
@@ -1386,6 +1389,11 @@ guessing ({{clarifications}}).
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Model Output Is Not Authority points to the OAuth binding's
+  issuer-side counterpart: a model enters adjudication only as a
+  recorded input to a deterministic policy, without changing any
+  requirement of this document.
 
 - Restructured for readability without changing any requirement.
   Sections follow the processing model, and the shaper's role and the
