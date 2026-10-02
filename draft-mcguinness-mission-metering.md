@@ -119,6 +119,22 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-expansion:
+    title: "Mission Expansion for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-template:
+    title: "Mission Template for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -346,7 +362,8 @@ member. Metering is performed by the runtime profile's
 PDP within a documented enforcement scope; this document adds metering
 semantics to the runtime profile's decision contract and changes no
 issuance protocol, though it does add consent-surface obligations on
-the Mission Issuer ({{consent}}).
+the Mission Issuer ({{consent}}) and a child-creation rule
+({{capacity-across-missions}}).
 
 # Conventions and Terminology {#conventions}
 
@@ -382,7 +399,7 @@ It consumes these optional capabilities:
 | Lifecycle-Gated Authorization | required | Inherited scope: metering is performed by the runtime profile's PDP within a documented enforcement scope ({{relationship}}), so every metered decision is already gated on the only-`active`-permits rule; this document adds counters to that gate and defines no second one |
 | Structured Authority | required when a call class or an exclusive selector is drawn from the Authority Set's identifiers | Two consumers. A `call_class` value SHOULD be drawn from the `actions` identifiers of the entry's `mission_resource_access`, so the metered class maps to evaluated actions; a deployment that meters a coarser or cross-entry class defines that class's membership, and such a class is not interoperable ({{bounds}}). The `exclusive` control consumes it even then: its selectors are interpreted in the identifier space of the approved Authority Set entries and compared with each consequential action, `resource` by equality and the invoked action by membership in `actions`, per group and per Mission; selector semantics are owned by this document ({{bounds}}, {{exclusivity}}) |
 | State-Observable | not consumed | Mission state is established by the runtime decision this document adds counters to, under that profile's freshness rules, not by this document ({{I-D.draft-mcguinness-mission-runtime}}) |
-| Monotonic Derivation | not consumed | A lineage-keyed budget identifier correlates a root Mission and its Child Missions to one shared counter ({{aggregate-bounds}}); lineage counters are correlation, not narrowing, and this document defines no no-broader-than comparison |
+| Monotonic Derivation | not consumed | Ancestor charging and escrowed allocations ({{capacity-across-missions}}) and lineage-keyed counters ({{aggregate-bounds}}) read a Mission's lineage to choose its counters; they compare remaining capacity, not authority, and add nothing to the no-broader-than comparison |
 | Credential-Bound | not consumed | This document defines no binding of its own: enforcement composes through the runtime profile's Mission binding establishment step ({{I-D.draft-mcguinness-mission-runtime}}) |
 | Independently Verifiable | not consumed | This document defines no verification artifact of its own; metered outcomes enter the runtime evidence records and inherit their verification ({{I-D.draft-mcguinness-mission-runtime-evidence}}) |
 | Portable Evidence | not consumed | This document defines no evidence artifact of its own; metered refusals and settlement are carried in the runtime evidence records through the coordinated `metering` member ({{metering-evidence}}, {{I-D.draft-mcguinness-mission-runtime-evidence}}) |
@@ -467,7 +484,9 @@ that a companion profile may add a named member coordinated with it:
 
 The bounds are carried on the Mission and committed by `intent_hash`.
 They are not enforced by the Authorization Server at issuance; they are
-enforced by the runtime layer at the point of use ({{metering}}).
+enforced by the runtime layer at the point of use ({{metering}}). The
+one issuance-time step is the child-creation rule of
+{{capacity-across-missions}}.
 
 Example Mission Intent carrying three of the four bounds
 alongside
@@ -620,6 +639,11 @@ behavior.
 - It MUST NOT leave the decrement ambiguous: a reservation settles on
   the evidence state ({{settlement-states}}), never on a generic
   failure signal.
+- For a metered action in the runtime profile's high-consequence
+  classes, the declared idempotency horizon
+  ({{I-D.draft-mcguinness-mission-runtime}}) MUST extend at least to
+  the Mission's `expires_at`, so a duplicate the Mission could still
+  admit always resolves against the recorded key.
 
 The reserve/commit posture fixes when consumption is charged; the
 evidence state fixes how the charge settles.
@@ -677,6 +701,57 @@ under the AuthZEN profile's coordinated-extension conventions
 group's latch state fails closed for the actions the group covers,
 per the runtime profile's availability posture.
 
+# Capacity Across Missions {#capacity-across-missions}
+
+A consumption bound limits the delegation it is approved for, not a
+credential or record derived from it. Tokens, permits, and instances
+under one Mission draw on one Mission-keyed counter. A Mission created
+from another Mission draws on that Mission's counters and never
+receives a fresh copy of the bound:
+
+- **Child Mission.** A consequential action under a Child Mission
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) is charged
+  to the child's own bound, where it carries one, and to the same
+  bound of every ancestor that carries it. The PDP MUST refuse the
+  action when any of those counters would be exceeded. Where an
+  ancestor's counter is outside the child's consistency domain, the
+  deployment instead reserves the child's bound against the
+  ancestor's counter when the child is created, as an escrowed
+  allocation that MUST NOT exceed the ancestor's remaining quantity.
+  When the child becomes terminal, the deployment closes the child's
+  allocation so that every later reservation against it fails, even
+  one a PDP permits on a cached `active` state within its staleness
+  bound ({{I-D.draft-mcguinness-mission-runtime}}). The unconsumed
+  remainder MUST NOT return to the ancestor before that closure is
+  confirmed, and quantity held by the child's unsettled reservations
+  stays charged until they settle ({{settlement-states}}). A Mission
+  Issuer whose deployment can do
+  neither MUST refuse to create a Child Mission under a Mission that
+  carries a consumption bound. Two children that each carry a bound
+  of 60,000 under a parent bound of 100,000 together consume at most
+  100,000.
+- **Successor and carryover replacement.** An Expansion successor
+  ({{I-D.draft-mcguinness-oauth-mission-expansion}}) and a Child
+  Delegation carryover replacement continue the counters of the
+  Mission they replace: consumption to date carries forward, and the
+  successor's bound caps the cumulative consumption of the chain. A
+  successor raises a bound when it carries a larger or incomparable
+  value, or omits a bound, a `max_calls` class, or a
+  `max_egress_volume` dimension its predecessor carries. A successor
+  adjudicated by policy rather than by a fresh human approval MUST NOT
+  raise a bound. Where a successor raises a bound, its approval
+  rendering MUST include the consumption to date ({{consent}}).
+
+A Mission dispatched from a Mission Template
+({{I-D.draft-mcguinness-oauth-mission-template}}) is created from a
+standing consent, not from another Mission, and has its own counters.
+One template consent therefore admits up to `max_active` times an
+instance's bound at once, and more over time at the template's
+`dispatch_rate`. Unless the deployment meters an aggregate bound
+spanning the template's instances ({{aggregate-bounds}}), the
+template's consent rendering MUST present the bound as per instance,
+together with `max_active` and `dispatch_rate`.
+
 # Aggregate Bounds {#aggregate-bounds}
 
 The bounds of this document are Mission-keyed. A deployment MAY
@@ -690,22 +765,21 @@ reserve/commit postures, and refusal behavior are unchanged; only the
 key differs.
 
 A lineage-keyed budget identifier and its authoritative shared counter
-are the only mechanism this document defines for a lineage-wide
-aggregate consumption bound: they meter across every Mission a
-derivation lineage contains, not within one Mission alone. A Child
-Mission's own derivation counter is independent of its parent's and
-bounds nothing beyond that Child Mission itself
-({{I-D.draft-mcguinness-oauth-mission-child-delegation}}); absent a
-deployed lineage-keyed counter, no per-Mission counter, however many
-Missions in a lineage carry one, adds up to an aggregate bound on the
-lineage.
+meter, as deployment policy, across every Mission a derivation lineage
+contains. They are distinct from the ancestor charging of
+{{capacity-across-missions}}, which enforces the bound an Approver
+consented to on one Mission across that Mission's descendants. A Child
+Mission's derivation counter is independent of its parent's, is not a
+consumption bound, and bounds nothing beyond that Child Mission itself
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
 This document is experimental ({{introduction}}), so a deployment
 running only the stable issuance and runtime profiles has no
 lineage-wide aggregate bound in force at all. A deployment MUST NOT
 render, in an Enforcement Scope Statement or at any consent surface,
-a lineage-wide or subtree aggregate bound as in force unless a
-lineage-keyed budget identifier and shared counter meeting this
-section's requirements are actually deployed and metered.
+a lineage-wide or subtree aggregate bound as in force unless it is
+enforced under {{capacity-across-missions}} or by a lineage-keyed
+budget identifier and shared counter meeting this section's
+requirements.
 
 An aggregate bound is deployment policy: it is carried on no single
 Mission Intent, is committed by no `intent_hash`, and is disclosed
@@ -916,14 +990,15 @@ failure signal:
   reservation does not consume the budget permanently. On lease
   expiry without settlement the PDP reconciles the reservation
   through the runtime profile's orphaned-evidence process
-  ({{I-D.draft-mcguinness-mission-runtime}}). For an idempotent or
-  reversible action class, expiry releases the reservation and
-  returns the budget; for a non-idempotent action class, expiry
-  forces reconciliation or human review rather than release. An
-  unsettled reservation remains charged against the bound until it
-  is reconciled, and is released only on affirmative evidence of
-  non-execution; timeout alone never releases a reservation for a
-  non-idempotent action class.
+  ({{I-D.draft-mcguinness-mission-runtime}}), which queries the
+  resource and matches evidence. An unsettled reservation remains
+  charged against the bound until it is reconciled, and is released
+  only on affirmative evidence of non-execution; timeout alone never
+  releases a reservation, in any action class. An idempotent action
+  class makes a retry safe, not the first attempt void, and reversing
+  a reversible action is a compensation action
+  ({{I-D.draft-mcguinness-mission-orchestration}}), not evidence that
+  the original did not execute.
 - **Conflicting settlement**: fail closed per
   {{settlement-contract}}. The applied settlement is unchanged; the
   conflict is audited, never adjudicated by the intake.
@@ -1023,6 +1098,9 @@ A runtime deployment that claims this profile MUST:
   on any bound it cannot meter;
 - enforce every consented exclusivity group with a latch atomic with
   the permit ({{exclusivity}});
+- charge a Child Mission's actions to its ancestors' bounds, or settle
+  its escrowed allocation, and continue a successor's counters per
+  {{capacity-across-missions}};
 - where aggregate bounds are configured, meter and disclose them per
   {{aggregate-bounds}};
 - emit the `metering` evidence member on the records
@@ -1036,7 +1114,9 @@ A runtime deployment that claims this profile MUST:
 
 A Mission Issuer in a deployment claiming this profile MUST carry the
 consented bounds on the Mission record committed by `intent_hash`. It
-MUST render them at the approval event per {{consent}}.
+MUST render them at the approval event per {{consent}}, and MUST apply
+the child-creation, successor, and template rules of
+{{capacity-across-missions}}.
 
 # Security Considerations {#security-considerations}
 
@@ -1068,8 +1148,10 @@ Their enforcement, however, is only as good as the metering:
   never settles them can consume a budget with no executed action,
   denying the Mission its remaining authority. The bounded reservation
   lease ({{settlement-exchange}}) caps this: an unsettled reservation is
-  reconciled on lease expiry rather than held indefinitely, and the
-  idempotent-release path returns the budget.
+  reconciled on lease expiry, and reconciliation that finds no effect
+  at the resource returns the budget. An outcome reconciliation cannot
+  establish stays charged and is escalated, never released by a
+  timer.
 - **Latch burning.** Because the first matching action latches an
   exclusivity group, an injected agent can try to burn a group by
   driving the side it wants foreclosed, denying the Mission the other
@@ -1123,6 +1205,18 @@ this registry.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Capacity Across Missions ({{capacity-across-missions}}): a Child
+  Mission is charged to every ancestor's bound or holds an escrowed
+  allocation whose remainder returns only after the allocation is
+  closed, a successor or carryover replacement continues its
+  predecessor's counters, a policy successor keeps every bound, and a
+  template consent renders the
+  per-instance bound with `max_active` and `dispatch_rate`. Lease
+  expiry no longer releases an unsettled reservation for an
+  idempotent or reversible action class ({{settlement-states}}), and a
+  metered high-consequence idempotency horizon reaches the Mission's
+  `expires_at` ({{retry}}).
 
 - Controls taxonomy retirement (#636, #117): `max_budget`, `max_calls`,
   `max_duration`, `max_egress_volume`, and `exclusive` move from

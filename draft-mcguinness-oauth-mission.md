@@ -1189,9 +1189,10 @@ The `goal`, `task_bounds`, and `success_criteria` members are
 human-readable disclosure and audit context. The AS MUST derive the
 same Authority Set, under the same policy, for two submissions that
 differ only in `goal`, `goal_lang`, `task_bounds`, or
-`success_criteria`, and MUST NOT gate issuance on those members;
-translating a user's words into structure is the shaper's job,
-before admission and outside the trust boundary
+`success_criteria`, and MUST NOT gate issuance on those members,
+whether in derivation, in an adjudicating policy, or through a model
+input to either; translating a user's words into structure is the
+shaper's job, before admission and outside the trust boundary
 ({{I-D.draft-mcguinness-mission-shaping}}).
 
 A client-proposed constraint on an individual Authority Set entry
@@ -2183,7 +2184,13 @@ assertion.
   `consent_principal`.
 
   For `kind: policy`: `policy`, a REQUIRED object with `id` and
-  `version` identifying the deciding policy or workflow.
+  `version` identifying the deciding policy or workflow. It decides
+  deterministically over recorded inputs, so re-evaluating that
+  `version` over them re-checks the decision. A model's output can
+  be one such input, recorded with the model's identifier and
+  version: it can refuse an activation or narrow the authority it
+  activates, and the AS MUST NOT let it supply or widen authority. A
+  model is never itself the deciding policy or workflow.
 
   `governance_record`:
   : OPTIONAL. A boolean. `true` when an Approval Governance Record
@@ -2206,6 +2213,28 @@ The `adjudication` member, where present, follows the basis:
   the instance, subject to the same `governance_record` override. A
   companion profile MUST NOT flatten a policy's or an Approval
   Governance Record's assertion set into a single principal member.
+
+**Activation policy commitment.** Where a standing-consent basis lets
+a separate policy artifact adjudicate activation (a dispatch,
+drawdown, or child-creation policy, rather than the consented object
+itself), the object the accountable human consented to MUST carry
+that policy as an activation policy reference: an object of `id` (a
+string), `version` (a string), and `digest`. The `digest` is an
+integrity anchor ({{integrity-anchors}}) whose `typ` is
+`mission-activation-policy`, whose `iss` is the activating issuer, and
+whose `value` is an object of `content_type`, the media type of the
+policy snapshot, and `content`, the base64url, no-padding
+{{RFC4648}} encoding of the snapshot's exact bytes. Before each
+activation, the activating issuer MUST compute `digest` over the exact
+snapshot it evaluates, and MUST NOT activate the instance under that
+policy when the result differs; the companion profile fixes what
+follows, as it does for an activation the policy does not authorize.
+The issuer MUST retain each snapshot's bytes and media type for the
+audit horizon ({{mission-record}}) of every Mission it activates
+under that snapshot, so an auditor can reproduce the digest. Where no
+separate policy artifact exists, as when child creation is
+adjudicated against the approved delegation entry itself, this rule
+does not apply.
 
 **Standing-consent recency.** A deployment can declare a maximum
 standing-consent age (a recency ceiling), overall or per
@@ -2345,7 +2374,7 @@ issuer-bound envelope:
    ~~~
    {
      "typ": "<mission-intent | mission-proposed-authority
-             | mission-authority-set>",
+             | mission-authority-set | mission-activation-policy>",
      "iss": "<the AS issuer URL>",
      "value": <the committed object>
    }
@@ -2360,7 +2389,9 @@ issuer-bound envelope:
    ({{authority-proposal}}); the anchor is present exactly when a
    proposal was submitted. For `authority_hash`, `typ` is
    `mission-authority-set` and `value` is the Authority Set as a JSON
-   array of entries.
+   array of entries. For an activation policy reference's `digest`,
+   `typ` is `mission-activation-policy` and `value` is the policy
+   snapshot object that {{standing-consent-bases}} defines.
 
 2. Canonicalize the envelope with JCS {{RFC8785}}.
 3. Compute SHA-256 {{RFC6234}} over the canonical bytes.
@@ -2452,8 +2483,8 @@ classifies it as one of these species:
 
 - **Envelope anchor**: the domain-separated, issuer-bound envelope of
   {{integrity-anchors}} (`intent_hash`, `proposal_hash`,
-  `authority_hash`, and commitments produced with companion-defined
-  `typ` values).
+  `authority_hash`, an activation policy reference's `digest`, and
+  commitments produced with companion-defined `typ` values).
 - **Canonical-object digest**: `sha-256:` over the JCS serialization
   of a normalized JSON object without the envelope, where protocol
   context already fixes what is committed (for example, a runtime
@@ -5805,11 +5836,24 @@ Cross-Domain:
 
 -01
 
+- Standing-Consent Bases defines the activation policy reference: a
+  standing-consent basis whose activation a separate policy artifact
+  adjudicates commits that policy's content as `{id, version,
+  digest}`, with the `mission-activation-policy` digest, and the
+  activating issuer verifies it before each activation.
+
+- Stated that a `policy` adjudicator decides deterministically over
+  recorded inputs, that a model's output can be one such input that
+  refuses or narrows but never supplies or widens authority, and that
+  the prose members gate issuance in no adjudicating policy and
+  through no model input. These add requirements.
+
 - Corrected the child-delegation example in Composition and the
   Effective Ceiling: `max_children` limits concurrently non-terminal
   children, so the example's 12 descendants are Missions live at
   once, not a lifetime count; disclosure points at the child-delegation
   profile's distinct figures rather than one composed total.
+
 - Separated exact `target_resources` membership, checked for the
   Authority Set and for a proposal at submission, from later token
   narrowing under the subset rule. Made the per-capability

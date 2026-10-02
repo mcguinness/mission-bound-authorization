@@ -18,12 +18,24 @@ document. Version: `payments-runtime-profile-v1`; changes bump the suffix.
 
 | Tool | Action id | Resource type | Class | Tier |
 |---|---|---|---|---|
-| `list_invoices` | `payments:invoice.list` | `invoice` (collection) | read | core |
-| `get_invoice` | `payments:invoice.read` | `invoice` | read | core |
-| `lookup_vendor` | `payments:vendor.read` | `vendor` | read | core |
-| `schedule_payment` | `payments:payment.schedule` | `invoice` | consequential, reversible | core |
-| `execute_wire_transfer` | `payments:payment.execute` | `invoice` | irreversible | transaction-assurance |
-| `send_remittance_email` | `payments:remittance.send` | `invoice` | external commitment | transaction-assurance |
+| `list_invoices` | `payments:invoice.list` | `invoice` (collection) | `consequential_read` | core |
+| `get_invoice` | `payments:invoice.read` | `invoice` | `consequential_read` | core |
+| `lookup_vendor` | `payments:vendor.read` | `vendor` | `consequential_read` | core |
+| `schedule_payment` | `payments:payment.schedule` | `invoice` | `consequential_write` (reversible) | core |
+| `check_transfer` | `payments:payment.execute`, phase `preflight` | `invoice` | `consequential_read` (no state, no effect) | core |
+| `hold_transfer` | `payments:payment.execute`, phase `prepare` | `invoice` | `consequential_write` (a reversible hold) | core |
+| `execute_wire_transfer` | `payments:payment.execute`, phase `commit` | `invoice` | `irreversible_action` | transaction-assurance |
+| `send_remittance_email` | `payments:remittance.send` | `invoice` | `external_commitment` | transaction-assurance |
+
+The Class column is the `action_class` the PEP sends on every decision
+request (`TOOL_ACTIONS` in `services/mcp-payments/src/pep.ts`), recorded
+in Decision Evidence with `class_source: "deployment"`. Every class is one
+the Enforcement Scope Statement declares. The Tier column is the execution
+path (`tier` in the same table): only `transaction-assurance` takes the
+single-use permit, execution lease, and connector path. The three
+`payments:payment.execute` rows are the phases of one compound action
+(runtime compound actions); each phase is classified by what that
+crossing does.
 
 ## Money
 
