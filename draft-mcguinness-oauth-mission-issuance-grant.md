@@ -410,11 +410,14 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
 The Grant Minter MUST observe:
 
-1. **Requester.** The endpoint requires authentication. The
-   requester MUST be the Mission's recorded client; any other caller
-   receives the MAS's `not_found` anti-oracle response, under the
-   same visibility rules as the Mission Join Assertion
-   ({{I-D.draft-mcguinness-mission-authority-server}}).
+1. **Requester.** The MAS authenticates the requester as its Mission
+   submission endpoint does
+   ({{I-D.draft-mcguinness-mission-authority-server}}, Section
+   "Mission Submission"). The requester MUST be the Mission's
+   recorded client. Any other caller, including a delegate or
+   enforcement point that the Mission Join Assertion endpoint admits,
+   receives `not_found`, which preserves the MAS's anti-oracle
+   property.
 2. **State gate.** A grant is minted only while the Mission is
    `active`, established from the MAS's own record at minting. Any
    other state refuses.
