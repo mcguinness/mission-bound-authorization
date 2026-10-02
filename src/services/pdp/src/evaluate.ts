@@ -62,7 +62,7 @@ import {
   vendorConstraintSatisfied,
 } from "./policy-view.js";
 import { permitDeadline } from "./permit-deadline.js";
-import { allowsNoActiveFreshness, type StalenessBound } from "./runtime-posture.js";
+import { allowsNoActiveFreshness, RUNTIME_POSTURE, reversibleWriteKeyControl, type StalenessBound } from "./runtime-posture.js";
 
 export type { EntitlementObservation, EntitlementResolver, OriginPrincipal, PrincipalMappingObservation, PrincipalMappingResolver } from "@mission/core";
 
@@ -385,6 +385,14 @@ export interface EvaluateOptions {
    * one is refused rather than permitted without the claim.
    */
   claims?: IdempotencyClaimDomain;
+  /**
+   * @spec runtime#permit-binding (#918): whether the deployment's Enforcement
+   * Scope Statement declares that a request's operation, a reversible
+   * consequential write, elects the "short validity window combined with an
+   * idempotency key" control. Defaults to the shipped statement. Stateless:
+   * the PDP makes no claim for this key, and the enforcing PEP reserves it.
+   */
+  reversibleWriteKeyControl?: (actionClass: string | undefined, action: string) => boolean;
   /**
    * @spec runtime#idempotency, retransmission condition 5 (#917): the
    * authenticated PEP and redemption-store epoch this decision is issued to,
@@ -1193,6 +1201,19 @@ async function evaluateInner(
   // send_remittance_email (external_commitment) permit never carried a use
   // limit at all: a genuine value-level bug this migration also fixes.
   const highConsequence = HIGH_CONSEQUENCE_ACTION_CLASSES.has(actionClass ?? "");
+
+  // 8b. Reversible-write key control (@spec runtime#permit-binding, #918):
+  // "a short validity window combined with an idempotency key that prevents
+  // repeat execution of the same normalized action". Where the deployment
+  // declares that control for this operation, the permit below is the short
+  // validity window, so a request carrying no well-formed key has no control
+  // at all and is refused. Stateless: no claim is made here (the PDP "makes no
+  // claim for a reversible consequential write's idempotency-key control");
+  // the enforcing PEP reserves the key.
+  const keyControl = opts.reversibleWriteKeyControl ?? ((c: string | undefined, a: string) => reversibleWriteKeyControl(RUNTIME_POSTURE, c, a));
+  if (!highConsequence && keyControl(actionClass, req.action.name) && !isIdempotencyKey(req.action.properties?.idempotency_key)) {
+    return deny("parameter_violation");
+  }
 
   // 9. Idempotency claim (@spec runtime#idempotency, authzen#parameter-digest,
   // #917): "Before issuing a permit for a keyed action in the
