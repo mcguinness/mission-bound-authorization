@@ -504,13 +504,20 @@ appear in the Intent; it belongs in the Authority Proposal
   prompt text that contains instructions or commands
   ({{prompt-injection}}).
 
+`goal_lang`:
+: The language tag of `goal`, when the shaper knows it.
+
 `target_resources`:
 : The resources, datasets, tools, or domains the request referenced,
   each as an absolute URI. A human-readable label belongs in Shaping
-  Evidence as an audit annotation, not in `target_resources`. The
-  shaper SHOULD NOT widen `target_resources` beyond what the request
-  referenced: a resource added "for convenience" enlarges approved
-  authority.
+  Evidence as an audit annotation, not in `target_resources`. Every
+  `resource` value in the Authority Proposal appears here; the
+  issuance profile refuses a proposed entry whose `resource` is not
+  among `target_resources` with the `invalid_request` error code
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Authority
+  Proposal"). The shaper SHOULD NOT widen `target_resources` beyond
+  what the request referenced: a resource added "for convenience"
+  enlarges approved authority.
 
 `task_bounds`:
 : Free-text bounds the requester expressed, plus the deployment-policy
