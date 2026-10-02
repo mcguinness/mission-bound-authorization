@@ -2086,16 +2086,17 @@ following obligations:
 - **Audit evidence.** Joins and decisions MUST produce runtime
   evidence retained for the audit horizon
   ({{I-D.draft-mcguinness-mission-runtime}}).
-- **Approval governance.** Under Mission Approval Governance
-  ({{I-D.draft-mcguinness-mission-approval-governance}}), a recording
-  trigger holds for an approval event when the Approver differs from
-  the Subject, more than one principal contributes, a non-human
-  assertion contributes, a threshold, veto, or separation-of-duty rule
-  is evaluated, or validating an assertion requires authority standing
-  outside the Mission record. Where a recording trigger holds for an
-  approval event, the MAS MUST record the Approval Governance
-  Record, committed atomically with the Mission's creation and
-  retained for its audit horizon. The Mission record still carries
+- **Approval governance.** Where a recording trigger of Mission
+  Approval Governance
+  ({{I-D.draft-mcguinness-mission-approval-governance}}) holds for an
+  approval event, the MAS MUST record the Approval Governance Record,
+  committed atomically with the Mission's creation and retained for
+  its audit horizon. That document defines the triggers: the Approver
+  differs from the Subject, more than one principal contributes, a
+  non-human assertion contributes, a threshold, veto, or
+  separation-of-duty rule is evaluated, or validating an assertion
+  requires authority standing outside the Mission record. The Mission
+  record still carries
   exactly one accountable `approver`, the only principal any
   projection or enforcement consumes. Direct self-approval by one
   authenticated human remains the degenerate case, which the Mission
