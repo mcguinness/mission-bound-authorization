@@ -2127,9 +2127,10 @@ A companion profile can generalize approval to a named standing-consent
 basis, under which a template or policy activates Mission instances
 against an accountable human's earlier approval, with no fresh approval
 event per instance. The `type` values `template`
-({{I-D.draft-mcguinness-oauth-mission-template}}) and `policy_drawdown`
-({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) are such
-bases. For a standing-consent `type`, `activation` takes the shape that
+({{I-D.draft-mcguinness-oauth-mission-template}}), `policy_drawdown`
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), and
+`ceiling_drawdown` ({{I-D.draft-mcguinness-oauth-mission-progressive}})
+are such bases. For a standing-consent `type`, `activation` takes the shape that
 its companion profile defines, and `activation_actor` names a
 dispatching or requesting party distinct from the consenting human.
 
