@@ -362,7 +362,8 @@ member. Metering is performed by the runtime profile's
 PDP within a documented enforcement scope; this document adds metering
 semantics to the runtime profile's decision contract and changes no
 issuance protocol, though it does add consent-surface obligations on
-the Mission Issuer ({{consent}}).
+the Mission Issuer ({{consent}}) and a child-creation rule
+({{capacity-across-missions}}).
 
 # Conventions and Terminology {#conventions}
 
@@ -1089,6 +1090,9 @@ A runtime deployment that claims this profile MUST:
   on any bound it cannot meter;
 - enforce every consented exclusivity group with a latch atomic with
   the permit ({{exclusivity}});
+- charge a Child Mission's actions to its ancestors' bounds, or settle
+  its escrowed allocation, and continue a successor's counters per
+  {{capacity-across-missions}};
 - where aggregate bounds are configured, meter and disclose them per
   {{aggregate-bounds}};
 - emit the `metering` evidence member on the records
@@ -1102,7 +1106,9 @@ A runtime deployment that claims this profile MUST:
 
 A Mission Issuer in a deployment claiming this profile MUST carry the
 consented bounds on the Mission record committed by `intent_hash`. It
-MUST render them at the approval event per {{consent}}.
+MUST render them at the approval event per {{consent}}, and MUST apply
+the child-creation, successor, and template rules of
+{{capacity-across-missions}}.
 
 # Security Considerations {#security-considerations}
 
