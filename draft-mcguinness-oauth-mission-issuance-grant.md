@@ -242,7 +242,7 @@ MAS, and a consuming AS:
     |<-- (B) grant -----------|                              |
     |                         |                              |
     |-- (C) token request with the grant ------------------->|
-    |                         |<-- (D) Mission Status -------|
+    |                         |<-- (D) Status, per resource -|
     |                         |--- state and Effective ----->|
     |                         |    Authority Set             |
     |<-- (E) access token (and refresh token) ---------------|
@@ -262,7 +262,8 @@ MAS, and a consuming AS:
     endpoint as a JWT authorization grant ({{redemption}}).
 
 (D) A consuming AS with a Mission-state integration resolves the
-    Mission's current state and Effective Authority Set
+    Mission's current state and Effective Authority Set, with one
+    Mission Status request per resource the grant names
     ({{effective-set-projection}}).
 
 (E) The consuming AS issues Mission-bound tokens within the grant's
@@ -284,7 +285,10 @@ deployment configuration. Subject and client correspondence between
 the Mission record and the consuming AS's accounts is governed by
 the deployment's mapping policy; where the Enterprise Mission
 Authority Profile is claimed, its mapping contract governs
-({{I-D.draft-mcguinness-mission-authority-server}}).
+({{I-D.draft-mcguinness-mission-authority-server}}). The resources
+the MAS scopes a consuming AS's grants to ({{minting-rules}}) are the
+audiences it authorizes that AS to request from Mission Status
+({{mission-state-source}}).
 
 The duties divide as follows. The MAS holds the approval event,
 the record and its anchors, the lifecycle, and grant minting. The
@@ -731,28 +735,35 @@ Effective Authority Set through the Mission Status operation
 ({{I-D.draft-mcguinness-oauth-mission-status}}) or an equivalent
 authority source, and refuse when the Mission is not established
 `active`. An equivalent source MUST be authenticated, MUST be
-audience-scoped to this AS, MUST carry the Mission's current
-`authorization_details` and a monotonic state `version`, and MUST
-answer within a staleness bound the deployment publishes
+audience-scoped to the resources this AS serves, MUST carry the
+Mission's current `authorization_details` and a monotonic state
+`version`, and MUST answer within a staleness bound the deployment
+publishes
 ({{conformance}}).
 
 Through the Mission Status operation, the consuming AS resolves
-authority per resource, not for an audience of its own. It sends one
-request for each distinct resource audience that the grant's
-`authorization_details` (on refresh, the refresh family's ceiling)
-name, naming that audience in the request's `audience`; the Mission
-Issuer authorizes it separately for each audience it requests
+authority per resource, not for an audience of its own. For each
+distinct `resource` value among the grant's `mission_resource_access`
+entries (on refresh, among the refresh family's ceiling), it sends one
+request whose `audience` is that `resource` value, unchanged; the
+Mission Issuer authorizes it separately for each audience it requests
 ({{I-D.draft-mcguinness-oauth-mission-status}}, Section "Request").
 The consuming AS validates each response against the audience it
 requested, and MUST combine only responses whose `mission.issuer`,
 `mission.id`, and `mission.version` are identical. When the versions
-differ, it re-queries, up to a bound the deployment configures. If it
-still cannot obtain responses at one version, the state source has
-failed ({{transient-failure}}): the AS refuses with
-`temporarily_unavailable`, and the grant stays unconsumed
-({{single-use}}). Each response is authenticated, scoped to the
-requested audience, and carries current `authorization_details` and
-the Mission's state `version`.
+differ and none is older than one already observed, it re-queries the
+lagging audiences without using a cached response, up to a bound the
+deployment configures; a version older than one already observed is a
+rollback ({{transient-failure}}) and is not re-queried. If it still
+cannot obtain responses at one version, the state source has failed
+({{transient-failure}}): the AS refuses with
+`temporarily_unavailable`, and the presented grant, refresh token, or
+authorization code stays unconsumed ({{single-use}},
+{{par-carriage}}). A not-found response for an audience the grant
+names means the Mission is not established `active`, and the AS
+refuses with `invalid_grant`. Each response is authenticated, scoped
+to the requested audience, and carries current
+`authorization_details` and the Mission's state `version`.
 
 Lifecycle state alone, such as an `active` state or a Status List
 VALID bit, is not enough from any source: containment and discharge
@@ -799,7 +810,9 @@ machine-readable shape: this profile defines a token-endpoint use of
 the OAuth `temporarily_unavailable` error code {{RFC6749}}
 ({{oauth-error-registration}}), carried with HTTP status 503. The
 response MAY carry `Retry-After` per the
-deployment's declared state-recovery policy.
+deployment's declared state-recovery policy. Per-resource responses
+that cannot be brought to one version ({{mission-state-source}}) are
+the same transient failure.
 The consuming AS leaves its stored ceiling unchanged. `invalid_grant`
 stays for the permanent classes: an invalid, expired, or replayed
 grant, a Mission that is not established `active`, and a genuinely
@@ -1026,7 +1039,8 @@ Section "Enforcement Scope and Conformance"):
 
 - which Authorization Servers consume grants, and which of them have
   a Mission-state integration;
-- the staleness bound of each one's state gating;
+- the staleness bound of each one's state gating, and the bound on
+  its Mission Status re-queries ({{mission-state-source}});
 - whether each claims containment- or discharge-aware issuance
   ({{no-state-integration}}); and
 - its reconciliation posture ({{security-considerations}}): the

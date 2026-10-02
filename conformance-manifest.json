@@ -22258,7 +22258,7 @@
    "id": "issuance-grant.effective-set-projection.equivalent-source-properties",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
    "anchor": "effective-set-projection",
-   "text": "An equivalent source MUST be authenticated, MUST be audience-scoped to this AS, MUST carry the Mission's current `authorization_details` and a monotonic state `version`, and MUST answer within a staleness bound the deployment publishes",
+   "text": "An equivalent source MUST be authenticated, MUST be audience-scoped to the resources this AS serves, MUST carry the Mission's current `authorization_details` and a monotonic state `version`, and MUST answer within a staleness bound the deployment publishes",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
