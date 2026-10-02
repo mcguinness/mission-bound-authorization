@@ -686,17 +686,18 @@ body:
 
 A consumer MUST ignore members it does not recognize.
 
-| `error` | HTTP | Description |
-|---|---|---|
-| `invalid_mission_intent` | 400 | Unparseable, structurally invalid, oversized, or containing an undefined top-level member. |
-| `invalid_authority` | 400 | Well-formed Intent, but no valid Authority Set is derivable under policy. |
-| `invalid_mission_intent_evidence` | 400 | An evidence entry of unsupported type or failing its type's verification, or a policy-required evidence type absent from the submission. |
-| `unauthorized` | 401 | Request not authenticated. |
-| `join_failed` | 403 | The acting token does not join the referenced Mission ({{join-assertion-request}}). |
-| `not_found` | 404 | A referenced submission or Mission does not exist OR is not visible to the caller. |
-| `conflict` | 409 | A resolved predecessor or parent whose state or serialization refuses the operation ({{native-carriage}}). |
-| `rate_limited` | 429 | Caller is rate-limited. |
-| `unavailable` | 503 | MAS temporarily cannot serve the request. |
+| `error` | HTTP | Returned by | Description |
+|---|---|---|---|
+| `invalid_mission_intent` | 400 | submission | Unparseable, structurally invalid, oversized, or containing an undefined top-level member. |
+| `invalid_authority` | 400 | submission | Well-formed Intent, but no valid Authority Set is derivable under policy. |
+| `invalid_mission_intent_evidence` | 400 | submission | An evidence entry of unsupported type or failing its type's verification, or a policy-required evidence type absent from the submission. |
+| `unauthorized` | 401 | submission, join assertion | Request not authenticated. |
+| `join_failed` | 403 | join assertion | The acting token does not join the referenced Mission ({{join-assertion-request}}). |
+| `not_found` | 404 | submission, join assertion | A referenced submission or Mission does not exist OR is not visible to the caller. |
+| `conflict` | 409 | submission (expansion, child creation) | A resolved predecessor or parent whose state or serialization refuses the operation ({{native-carriage}}). |
+| `rate_limited` | 429 | submission, join assertion | Caller is rate-limited. |
+| `unavailable` | 503 | submission, join assertion | MAS temporarily cannot serve the request. |
+{: title="MAS error codes"}
 
 This aligns with the OAuth-shaped surfaces' shared error idiom
 {{I-D.draft-mcguinness-oauth-mission-status}}: an `error`/
