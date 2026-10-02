@@ -680,10 +680,17 @@ When this profile runs:
   introspection Mission projection MUST carry `containment_version`
   ({{I-D.draft-mcguinness-oauth-mission-status}});
 - any surface of those profiles that discloses Mission authority MUST
-  omit contained capability or annotate it as contained; and
+  omit contained capability, removing contained actions, keeping an
+  entry's uncontained remainder, and omitting an entry with no
+  authority left; and
 - a `mission.lifecycle-change` event MUST carry `containment_version`,
   and MAY carry `authority_hash`
   ({{I-D.draft-mcguinness-oauth-mission-signals}}, {{propagation}}).
+
+An annotation does not substitute for that exclusion from an
+authorization-bearing field. Containment history stays in the records
+this profile retains, for audit and restoration disclosure
+({{restoration}}).
 
 A consumer that does not understand `containment_version` ignores it;
 the state version already makes the change observable
