@@ -1,5 +1,5 @@
 /**
- * @spec mission#approval-event (step 5), mission#authority-sources (#827) —
+ * @spec mission#approval-event (step 5), mission#authority-sources (#827):
  * the approval RENDERING over a catalog where one agent registration serves
  * two sources: alice's and bob's delegated authority, and the organizational
  * policy, selected by Subject. The real AS assembly boots over a copy of the
