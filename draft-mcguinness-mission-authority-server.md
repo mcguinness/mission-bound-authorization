@@ -446,11 +446,12 @@ client using the authentication mechanisms of the Mission Status
 endpoint ({{I-D.draft-mcguinness-oauth-mission-status}}): mTLS client
 authentication, a DPoP- or mTLS-bound access token, or private-key JWT,
 with a token's audience and a client assertion's `aud` naming this
-endpoint. It advertises the methods it accepts in
-`mission_submission_endpoint_auth_methods_supported` ({{discovery}}).
-How clients register with a
-MAS is deployment-defined; the identifier the MAS authenticates is
-recorded as the Mission's `client_id`.
+endpoint. The MAS advertises the accepted methods in the
+`mission_submission_endpoint_auth_methods_supported` metadata member
+({{discovery}}).
+
+Client registration with a MAS is deployment-defined. The MAS records
+the client identifier it authenticates as the Mission's `client_id`.
 
 The endpoint serves two operations, dispatched by request media type:
 
@@ -463,51 +464,55 @@ The endpoint serves two operations, dispatched by request media type:
 ## Intent Submission {#intent-submission}
 
 The request body is a Mission Intent Submission envelope as the
-OAuth binding defines it, `intent` plus OPTIONAL `evidence`, and
-the OAuth binding's validation and Intent Submission Evidence
-rules ({{I-D.draft-mcguinness-oauth-mission}}) and those of
+OAuth binding defines it: `intent` plus OPTIONAL `evidence`. The
+OAuth binding's validation and Intent Submission Evidence rules
+({{I-D.draft-mcguinness-oauth-mission}}) and those of
 {{I-D.draft-mcguinness-oauth-mission-submission-evidence}} apply
-unchanged: the
-submission is untrusted client input and never authority; the MAS
-MUST bound its total size, array lengths, evidence entry count, and
-evidence verification cost
+unchanged. The submission is untrusted client input and never
+authority. The MAS MUST bound the submission's total size, array
+lengths, evidence entry count, and evidence verification cost
 ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, Section
-"Bounded Verification"); and the envelope and the Intent are both
-closed at the top level. The OAuth binding's OAuth error outcomes
-map to this endpoint's error codes ({{submission-errors}}):
+"Bounded Verification"). The envelope and the Intent are both closed
+at the top level.
 
-- A body that cannot be parsed as a JSON {{RFC8259}} object, is
+The OAuth binding's error outcomes map to this endpoint's error codes
+({{submission-errors}}):
+
+- If the body cannot be parsed as a JSON {{RFC8259}} object, is
   structurally invalid, exceeds the deployment's size bounds, or
-  contains a top-level member the OAuth binding does not define
-  MUST be refused with `invalid_mission_intent` (the MAS equivalent of
-  the OAuth binding's `invalid_request` rejections, including
+  contains a top-level member the OAuth binding does not define, the
+  MAS MUST reject it with the `invalid_mission_intent` error code (the
+  MAS equivalent of the OAuth binding's
+  `invalid_request` rejections, including
   reject-unknown-top-level-member).
-- A well-formed Intent from which the MAS cannot derive a valid
-  Authority Set under policy MUST be refused with `invalid_authority`
-  (the MAS's single equivalent of the OAuth binding's two
-  derivation-failure outcomes, `invalid_authorization_details` for a
-  submitted proposal and `access_denied` for configured-mapping mode,
-  {{I-D.draft-mcguinness-oauth-mission}}), so a client
-  can distinguish a syntax error from an authority-derivation failure.
-- An Intent Submission Evidence entry of an unsupported type, an
-  entry that fails its type's verification, or a policy-required
-  evidence type absent from the submission
+- If the Intent is well formed but the MAS cannot derive a valid
+  Authority Set from it under policy, the MAS MUST reject it with the
+  `invalid_authority` error code, so a client can distinguish a syntax
+  error from an authority-derivation failure. This code is the MAS's
+  single equivalent of the OAuth binding's two derivation-failure
+  outcomes ({{I-D.draft-mcguinness-oauth-mission}}):
+  `invalid_authorization_details` for a submitted proposal and
+  `access_denied` for configured-mapping mode.
+- If an Intent Submission Evidence entry is of an unsupported type or
+  fails its type's verification, or a policy-required evidence type is
+  absent from the submission
   ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, Section
-  "Required Evidence Is Resolved Before Derivation") MUST be refused
-  with `invalid_mission_intent_evidence`, the code the OAuth binding
-  registers for the same condition, carried here in the MAS error
-  body; presented evidence is never silently ignored.
+  "Required Evidence Is Resolved Before Derivation"), the MAS MUST
+  reject the submission with the `invalid_mission_intent_evidence`
+  error code. This is the code the OAuth binding registers for the
+  same condition, carried here in the MAS error body. Presented
+  evidence is never silently ignored.
 
 The request body MAY additionally carry an `authorization_details`
 member: the client's authority proposal, an array of
 `authorization_details` objects {{RFC9396}}. This member is this
-binding's proposal carriage, replacing the OAuth binding's PAR-only
-carriage rule; that profile's validation, derivation, recording, and
-hashing semantics apply unchanged
+document's proposal carriage, replacing the OAuth binding's PAR-only
+carriage rule. The OAuth binding's validation, derivation, recording,
+and hashing semantics apply to it unchanged
 ({{I-D.draft-mcguinness-oauth-mission}}). It is a proposal, never
-authority, and it is a submission member, not a Submission-envelope
-member ({{native-carriage}}): the MAS MUST remove it before applying
-the envelope validation above.
+authority, and a submission member, not a Submission-envelope member
+({{native-carriage}}): the MAS MUST remove it before applying the
+envelope validation above.
 
 The OAuth binding's intake refusals for a proposed entry map to
 `invalid_authority` here. A Mission created from a submission
@@ -516,21 +521,23 @@ as the OAuth binding's Mission record defines them.
 
 A MAS has no derivation event: no token is issued under the Mission,
 so a `requested_derivation_limit` member
-({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}) binds nothing here (a MAS
-implementing the issuance-grant companion has one, each grant
-minted, and applies that profile's counting rule,
-{{I-D.draft-mcguinness-oauth-mission-issuance-grant}}). A MAS SHOULD refuse
-an Intent that carries it, or record it and ensure the approval
-rendering marks it non-binding, per the OAuth binding's rule that
-consent is not given to a limit that binds nowhere. The same
-treatment applies to any future Mission Intent member scoped to an
-issuance event.
+({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}) binds
+nothing here. A MAS implementing the issuance-grant companion
+({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) has a
+derivation event per grant minted and applies that companion's
+counting rule.
 
-On acceptance the MAS derives the Authority Set from the Intent, and
-from the authority proposal where one was submitted, under
-the OAuth binding's derivation rules
-({{I-D.draft-mcguinness-oauth-mission}}) and returns HTTP 202 with a
-pending-submission reference:
+Where a MAS has no derivation event, it SHOULD refuse an Intent that
+carries a `requested_derivation_limit` member, or record the member
+and ensure the approval rendering marks it non-binding, per the OAuth
+binding's rule that consent is not given to a limit that binds
+nowhere. The same treatment applies to any future Mission Intent
+member scoped to an issuance event.
+
+On acceptance, the MAS derives the Authority Set from the Intent, and
+from the authority proposal where one was submitted, under the OAuth
+binding's derivation rules ({{I-D.draft-mcguinness-oauth-mission}})
+and returns HTTP 202 with a pending-submission reference:
 
 `submission_id`:
 : REQUIRED. A string. An opaque URL-safe ASCII string of
@@ -545,7 +552,7 @@ pending-submission reference:
 : REQUIRED. A string. An RFC 3339 {{RFC3339}} date-time after which an
   undecided submission lapses to `expired`.
 
-Example:
+The following example shows a submission and its response:
 
 ~~~ http-message
 POST /mas/mission/submit HTTP/1.1
@@ -577,7 +584,8 @@ Cache-Control: no-store
 
 ## Submission Status {#submission-status}
 
-The client polls the outcome with a form-urlencoded POST carrying:
+The client polls for the outcome with a form-urlencoded POST
+carrying:
 
 `submission`:
 : REQUIRED. A string. The `submission_id`.
@@ -591,11 +599,12 @@ A submission is in one of four states:
 | `denied` | Declined by the Approver or refused by policy. Terminal. |
 | `expired` | `expires_at` passed undecided. Terminal. |
 
-Only `approved` delivers a Mission: a consumer MUST treat every other
+Only `approved` delivers a Mission. A consumer MUST treat every other
 `status` value, recognized or not, as not approved, mirroring the
-OAuth binding's only-`active` rule. A resolved submission MUST
-remain resolvable for a deployment-defined window; the reference is
-never reused.
+OAuth binding's only-`active` rule.
+
+A resolved submission MUST remain resolvable for a deployment-defined
+window. The reference is never reused.
 
 The MAS MUST return submission status only to the authenticated client
 that submitted the Intent. For any other caller, and for an unknown
@@ -613,19 +622,19 @@ carries:
 : REQUIRED. A string. The Mission's identifier.
 
 `mission_expires_at`:
-: REQUIRED. A string. The Mission's effective `expires_at`, the
+: REQUIRED. A string. The Mission's effective `expires_at`. It is the
   OAuth binding's common Mission-creating response member
   ({{I-D.draft-mcguinness-oauth-mission}}): this response is the
-  success response that first delivers the newly created Mission's
-  identifier, and no OAuth credential accompanies it here.
+  success response that first delivers the Mission's identifier, and
+  no OAuth credential accompanies it here.
 
 `authorization_details`:
-: REQUIRED. An array. The consented Authority Set, so the client
-  learns its granted authority here; this response is the MAS
+: REQUIRED. An array. The consented Authority Set, from which the
+  client learns its granted authority. This response is the MAS
   counterpart of the OAuth binding's token-response
   `authorization_details` echo.
 
-Example:
+The following example shows an approved status response:
 
 ~~~ http-message
 HTTP/1.1 200 OK
@@ -648,14 +657,14 @@ Cache-Control: no-store
 }
 ~~~
 
-`mission_id` remains a reference, never a credential
-({{I-D.draft-mcguinness-oauth-mission}}): presenting it authorizes
+A `mission_id` remains a reference, never a credential
+({{I-D.draft-mcguinness-oauth-mission}}). Presenting it authorizes
 nothing, and no MAS surface derives authority from possession of it.
 
 ## Error Responses {#submission-errors}
 
-A hard failure returns the matching HTTP status with a JSON object
-body:
+On a hard failure, the MAS returns the matching HTTP status with a
+JSON object body:
 
 `error`:
 : REQUIRED. A string. A code from the table below.
@@ -685,24 +694,23 @@ A consumer MUST ignore members it does not recognize.
 | `unavailable` | 503 | submission, join assertion | MAS temporarily cannot serve the request. |
 {: title="MAS error codes"}
 
-A companion profile's machine-readable codes ride in the members
-{{native-carriage}} names (`mission_expansion_status` and
-`mission_denial_reason`), not as new `error` values.
+A companion profile's machine-readable codes are carried in the
+members {{native-carriage}} names (`mission_expansion_status` and
+`mission_denial_reason`), not as additional `error` values.
 
-This aligns with the OAuth-shaped surfaces' shared error idiom
-{{I-D.draft-mcguinness-oauth-mission-status}}: an `error`/
-`error_description` JSON object body, `application/json` with
-`Cache-Control: no-store`, and `error_description` diagnostic and
-never authorization input. This surface's own requiredness stays as
-above: `error_description` and `error_reason` are OPTIONAL, and
-`error_reason` is MAS-specific. The MAS does not carry `nonce`; that
-member's requiredness on the status and lifecycle surfaces
-({{I-D.draft-mcguinness-oauth-mission-status}}) and on Mission
-Management does not extend here, a deliberate, frozen divergence.
+These responses follow the OAuth-shaped surfaces' shared error idiom
+{{I-D.draft-mcguinness-oauth-mission-status}}: a JSON object body with
+`error` and `error_description`, served as `application/json` with
+`Cache-Control: no-store`; `error_description` is diagnostic and never
+authorization input. On this surface, `error_description` and
+`error_reason` are OPTIONAL, and `error_reason` is MAS-specific. The
+MAS does not carry `nonce`: that member's requiredness on the status
+and lifecycle surfaces ({{I-D.draft-mcguinness-oauth-mission-status}})
+and on Mission Management does not extend here.
 
 # Mission Approval {#mission-approval}
 
-Approval at a MAS is natively asynchronous: there is no authorization
+Approval at a MAS is natively asynchronous. There is no authorization
 code ceremony, so no approval blocks a front-channel redirect. The MAS
 routes each pending submission to its approval surface (a review
 application, queue, or policy engine) and resolves it when the
@@ -714,12 +722,12 @@ binding's approval event unchanged
 
 1. Authenticate the Approver; this authentication MUST satisfy the
    deployment's published approval-authentication floor
-   ({{I-D.draft-mcguinness-oauth-mission}}). This document defines no
-   MAS-native carriage for a client-requested Approver authentication
-   strength (the OAuth binding's direct flow carries one on
-   `acr_values`/`max_age`, an OAuth authorization-request parameter
-   shape a MAS, having no such request, does not share), so the floor
-   alone governs here.
+   ({{I-D.draft-mcguinness-oauth-mission}}). The OAuth binding's
+   direct flow carries a client-requested Approver authentication
+   strength in the `acr_values` and `max_age` authorization request
+   parameters. A MAS receives no authorization request, and this
+   document defines no MAS-native carriage for that strength, so the
+   floor alone governs.
 2. Establish the Subject under the OAuth binding's rules: the MAS
    MUST itself establish the Subject's (`iss`, `sub`) and MUST NOT
    take it from unauthenticated client input.
@@ -728,30 +736,32 @@ binding's approval event unchanged
    strings inert, direction-override and confusable presentation
    mitigated, derived authority visually distinguished from client
    text.
-4. Compute the integrity anchors, `authority_hash`, `intent_hash`,
-   and, where an authority proposal was submitted, `proposal_hash`,
-   using the OAuth binding's envelope with the MAS's issuer URL as
+4. Compute the integrity anchors (`authority_hash`, `intent_hash`,
+   and, where an authority proposal was submitted, `proposal_hash`)
+   using the OAuth binding's envelope, with the MAS's issuer URL as
    `iss`.
 
 Step 5 becomes: create the Mission record in the `active` state
 atomically with the approval decision. The record is the OAuth
-binding's Mission Record, member for member; its `issuer` is the MAS's
-issuer URL and its `approval_event_id` is the approval idempotency
-key. There is no authorization code to bind, so the deferred-approval
-profile's re-sequencing of this step
+binding's Mission Record, member for member. Its `issuer` is the
+MAS's issuer URL, and its `approval_event_id` is the approval
+idempotency key. There is no authorization code to bind, so the
+deferred-approval profile's re-sequencing of this step
 ({{I-D.draft-mcguinness-oauth-mission-approval}}) is not needed:
-deferral is the MAS's native shape.
+approval at a MAS is inherently deferred.
 
-A declined submission resolves to `denied`. Mission Consent Evidence
+A declined submission resolves to `denied`.
+
+Mission Consent Evidence
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}) composes
-unchanged: the MAS is the committing issuer for any
+unchanged, with the MAS as the committing issuer for any
 consent-disclosure commitment.
 
 # Mission Lifecycle and State {#lifecycle-and-state}
 
-In MAS mode there are no Mission-bound tokens and no token
-introspection, so the Mission Status profile's surfaces are the only
-way a consumer observes or changes Mission state. A MAS therefore
+In MAS mode, there are no Mission-bound tokens and no token
+introspection. The Mission Status profile's surfaces are therefore
+the only way a consumer observes or changes Mission state. A MAS
 implements them as its state surface, by reference:
 
 - The MAS MUST serve the Mission Status operation of
