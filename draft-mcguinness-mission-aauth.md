@@ -85,11 +85,11 @@ informative:
 AAuth defines missions as optional, immutable authorization contexts
 for agent governance at a Person Server.  A mission is approved through
 AAuth's native propose, clarify, and approve interaction, is identified
-by the native `approver` and `s256` reference, and accumulates an
-ordered mission log.  This document describes how those native
-facilities realize a Mission Context binding without adding a second
-mission identifier, a portable authority language, or new AAuth wire
-members.
+by the native pair of the approving Person Server and `s256`, and
+accumulates an ordered mission log.  This document describes how those
+native facilities realize a Mission Context binding without adding a
+second mission identifier, a portable authority language, or new AAuth
+wire members.
 
 This binding preserves AAuth's separation between contextual governance
 at the Person Server and deterministic resource authorization through
@@ -113,7 +113,7 @@ Context:
 - the agent proposes a natural-language mission to its PS;
 - the PS and person can clarify and refine the proposal before approval;
 - the approved mission blob is immutable and identified by the native
-  pair of `approver` and `s256`;
+  pair of the approving PS and `s256`;
 - the agent names the mission when it requests a person token from its
   PS, and the PS stamps the mission into the person token, from where
   the resource and the PS copy it into every resource and auth token
@@ -193,7 +193,7 @@ Mission Context:
   by the PS when governing an agent's work.
 
 Controlling authority:
-: The PS identified by the mission reference's `approver` value.  The PS
+: The approving PS of the Mission Reference ({{reference}}).  The PS
   performs approval, stores the mission context, evaluates governed
   requests, and controls the mission's active state.
 
@@ -218,15 +218,13 @@ formal capability claims are this binding's Mission Substrate
 Statement ({{mission-substrate}}).  In AAuth's own terms:
 
 Stable native reference:
-: The pair `{approver, s256}` remains this binding's Mission Reference,
-  with `s256` compared within the approver's namespace.  On the wire it
-  travels as the flat `mission_s256` claim, with that namespace carried
-  by the person token's `iss` and the resource token's `ps`.  No
-  additional `mission_id` is needed or defined.
+: The pair of the approving PS and `s256` is this binding's Mission
+  Reference ({{reference}}), with `s256` compared within the approving
+  PS's namespace.  No additional `mission_id` is needed or defined.
 
 Controlling authority:
-: `approver` identifies the PS responsible for approval and governance.
-  It is not replaced by a separate Mission issuer field.
+: The approving PS is responsible for approval and governance.  No
+  separate Mission issuer field names it.
 
 Agent binding:
 : The approved mission blob contains the AAuth agent identifier in its
@@ -269,14 +267,13 @@ meaning of the AAuth mission blob.
 
 ## Native Reference and Exact-Byte Commitment {#reference}
 
-The mission reference is exactly the AAuth pair:
-
-~~~ json
-{
-  "approver": "https://ps.example",
-  "s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
-}
-~~~
+The pair of the approving PS and `s256` is this binding's Mission
+Reference: AAuth's mission identity (Section 8.2.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  The approving PS is named
+by the `iss` of a person token, the `ps` claim of a resource or auth
+token, or the PS a request is made to; the blob carries no member
+naming it.  On the wire the reference is the `mission_s256` claim or
+parameter.
 
 The PS's approval envelope carries `s256` alongside a `mission` member
 that is the base64url encoding, without padding, of the exact bytes it
@@ -303,8 +300,9 @@ request-context checks before relying on a received reference.
 ## Mission Blob {#blob}
 
 The approved mission blob uses the members defined by AAuth, including
-`approver`, `agent`, `approved_at`, and `description`, and optionally
-`approved_tools` and `approved_resources`.  The blob carries AAuth's
+`agent`, `approved_at`, and `description`, and optionally
+`approved_tools` and `approved_resources` (Section 8.2 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  The blob carries AAuth's
 `expires_at` member, which this binding requires on every mission
 ({{lifecycle}}).  This binding itself defines no additional members.
 AAuth states that these member lists are a floor, not a closed set; a
@@ -372,8 +370,9 @@ member.  Before using the context, the agent MUST:
 1. verify the AAuth response according to the base protocol;
 2. decode `mission` and compute SHA-256 over the exact decoded bytes;
 3. verify that the result equals the envelope's `s256` value;
-4. verify that the blob's `approver` and `agent` members identify the
-   approving PS and requesting agent; and
+4. verify that the blob's `agent` member identifies the requesting
+   agent, and record as the approving PS the PS whose
+   `mission_endpoint` received the proposal; and
 5. store the exact decoded bytes and native reference.
 
 A failed check invalidates the approval response.  The agent MUST NOT
@@ -384,7 +383,7 @@ operate under the resulting reference.
 For every PS request seeking a positive governance decision under a
 mission reference, the PS MUST verify that:
 
-- it is the identified `approver`;
+- it is the PS the reference names;
 - the `s256` identifies a mission blob it approved;
 - the authenticated agent is entitled to act in the referenced context;
   and
@@ -526,9 +525,9 @@ token MUST copy `mission_s256` into the resource token it issues.  When
 an auth token is issued in the mission context, it carries the same
 flat `mission_s256` claim, copied onward from the resource token.
 
-This binding adds no member alongside that claim.  The namespace once
-carried by `approver` is carried by the person token's `iss` and
-the resource token's `ps`.  Receivers MUST NOT require `mission_id`,
+This binding adds no member alongside that claim.  The approving PS
+that scopes it is named as {{reference}} describes.  Receivers MUST NOT
+require `mission_id`,
 `issuer`, `policy_version`, `intent_hash`, `authority_hash`,
 `proposal_hash`, or embedded
 authorization details for conformance to this binding.
@@ -618,7 +617,7 @@ An implementation conforms as an **AAuth Mission Context Agent** if it:
 
 - implements AAuth mission proposal and approval;
 - verifies and preserves the exact approved blob bytes;
-- uses only the native `{approver, s256}` reference;
+- uses only the native reference of the approving PS and `s256`;
 - names the mission at person-token issuance and verifies that a
   returned resource token carries the exact `mission_s256`;
 - stops using a mission after `mission_terminated`;
@@ -660,9 +659,9 @@ properties specific to treating an AAuth mission as a Mission Context.
 
 ## Reference Substitution and Blob Integrity
 
-An attacker can attempt to replace either `approver` or `s256`, attach a
-valid reference to a different agent, or present uncommitted JSON as the
-approved blob.  The decoded-bytes digest check, signed person-token carriage of
+An attacker can attempt to substitute the approving PS or `s256`, attach
+a valid reference to a different agent, or present uncommitted JSON as
+the approved blob.  The decoded-bytes digest check, signed person-token carriage of
 `mission_s256`, signed resource and auth tokens, agent-token
 verification, and proof-of-possession binding are all necessary
 defenses.
@@ -671,8 +670,8 @@ The agent MUST reject an approval response when the digest of the
 decoded `mission` bytes differs from `s256`.  The PS MUST resolve a
 reference only in its own approved-mission store and MUST verify the
 authenticated agent's right to use it.  Resources and Access Servers
-MUST NOT fetch a blob from an attacker-selected `approver` URL; AAuth
-forbids dereferencing the reference.
+MUST NOT fetch a blob from a location derived from the reference, such
+as one under the approving PS's identifier.
 
 ## Confused-Deputy and Audience Checks
 
@@ -756,8 +755,9 @@ scopes, and state remain outside the natural-language decision context.
 The exact mission blob can contain sensitive intent, planned actions,
 tool use, organizational context, and person interactions.  AAuth's
 reference-only design keeps the blob between the agent and PS.  Resources
-and Access Servers receive the opaque `{approver, s256}` reference and
-MUST NOT dereference it.
+and Access Servers receive only the opaque reference, which is `s256`
+and the PS that approved it (Section 14.3 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}), and MUST NOT dereference it.
 
 The stable reference is nevertheless a correlation handle.  Reusing it
 across resources reveals that requests belong to the same mission and
@@ -809,17 +809,16 @@ capability table.
 
 The contextual-governance kernel maps as follows:
 
-1. **Mission Reference**: the native pair `{approver, s256}` remains
-   this binding's Mission Reference.  `approver` is the uniqueness
+1. **Mission Reference**: the native pair of the approving PS and
+   `s256` is this binding's Mission Reference.  The PS is the uniqueness
    namespace, `s256` is compared as the exact unpadded base64url digest
    of the approved bytes, a changed blob is a different mission, a
    reference is never reassigned, retention follows the mission log's
    declared period, and the reference is unguessable to parties that do
    not hold the private blob.  On the wire it travels as the flat
-   `mission_s256` claim, with that namespace carried by the person
-   token's `iss` and the resource token's `ps` ({{reference}},
-   {{mission-log}}).
-2. **Controller**: the PS identified by `approver` controls approval,
+   `mission_s256` claim or parameter, with the PS named as
+   {{reference}} describes ({{mission-log}}).
+2. **Controller**: the approving PS controls approval,
    governance state, and the mission log ({{roles}}).  Consumers
    establish its identity and keys from AAuth's published PS metadata
    and key set ({{I-D.draft-hardt-oauth-aauth-protocol}}).
