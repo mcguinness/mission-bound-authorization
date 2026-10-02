@@ -289,13 +289,8 @@ Claims:
   consuming AS. Only this authenticated client redeems the grant.
 
 `mission`:
-: REQUIRED. The issuance profile's `mission` claim object (`id` and
-  `issuer`, {{I-D.draft-mcguinness-oauth-mission}}), extended with the
-  `expires_at` member of {{expires-at-member}}. This profile REQUIRES
-  `authority_hash` on that object too, reintroducing it beyond the
-  issuance profile's baseline as this profile's own lineage anchor for
-  the consuming AS, which has no further channel back to the Mission
-  Issuer once it holds the grant.
+: REQUIRED. The issuance profile's `mission` claim object, with the
+  members {{mission-claim}} requires.
 
 `authorization_details`:
 : REQUIRED. The `mission_resource_access` entries {{RFC9396}} the
@@ -340,16 +335,25 @@ the one from the issuance profile's walkthrough):
 }
 ~~~
 
-## The `expires_at` Claim Member {#expires-at-member}
+## The `mission` Claim {#mission-claim}
 
-The issuance profile defines `expires_at` as a REQUIRED Mission
-Record member and an OPTIONAL member of the `mission` claim it
-mirrors ({{I-D.draft-mcguinness-oauth-mission}}). This profile
-elevates the claim mirror to REQUIRED for the credentials it governs:
-the `mission` object ({{grant}}) is REQUIRED and extended with
-`expires_at`. The Lifetime rule ({{redemption}}) depends on that
-elevation: no token issued under the grant may expire later than the
-`mission` object's `expires_at`.
+The grant's `mission` claim is the issuance profile's `mission` claim
+object, whose `id` and `issuer` members are REQUIRED there
+({{I-D.draft-mcguinness-oauth-mission}}, Section "The Mission Claim").
+This profile adds two members:
+
+- **`expires_at`.** The issuance profile defines `expires_at` as a
+  REQUIRED Mission Record member and an OPTIONAL member of the
+  `mission` claim it mirrors. This profile elevates the claim mirror
+  to REQUIRED for the credentials it governs. The Lifetime rule
+  ({{token-issuance}}) depends on that elevation: it caps every token
+  issued under the grant at the `mission` object's `expires_at`.
+- **`authority_hash`.** The `mission` object MUST carry
+  `authority_hash` ({{I-D.draft-mcguinness-oauth-mission}}, Section
+  "Integrity Anchors"), reintroducing it beyond the issuance profile's
+  baseline claim as this profile's lineage anchor: it names the
+  approved Authority Set the grant derives from. The consuming AS
+  carries it unchanged ({{token-issuance}}) and does not verify it.
 
 # Obtaining a Grant {#minting}
 
@@ -514,7 +518,7 @@ On success the consuming AS mints tokens under these rules:
 
 - **The claim rides unchanged.** Issued tokens carry the grant's
   `mission` object verbatim as the issuance profile's `mission` claim, including
-  the `expires_at` member ({{expires-at-member}}).
+  the `expires_at` member ({{mission-claim}}).
 - **Subset.** Issued `authorization_details` MUST be a subset of the
   grant's. The consuming AS MUST NOT widen, remap, or supplement
   them from its own policy except to narrow.
