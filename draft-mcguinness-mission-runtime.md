@@ -3718,6 +3718,13 @@ worked example shows the concrete record
 
 \[\[ To be removed from the final specification ]]
 
+- A materialized policy view is one way to evaluate the authority
+  input, not the only one: the Materialized Policy View section
+  governs a PDP that uses one, and the authority input requires
+  whatever the PDP evaluates to be no broader than the current
+  effective authority and bound to the Mission, with mutable state
+  from a state source.
+
 - The Enforcement Scope Statement is what a deployment adopting the
   Runtime-Enforced bundle publishes, not what earns the level; the
   level stays guidance, matching the architecture's assurance levels,
