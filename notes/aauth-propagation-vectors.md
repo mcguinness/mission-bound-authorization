@@ -132,3 +132,29 @@ checks, and the rule forbids a missionless evaluation or retry of the
 same request. V12 refuses only the decision that depends on state. V14
 is the only missionless outcome, and it is reached by policy, not by a
 failed validation.
+
+## Reference confinement fixture (issue #840)
+
+The reference is a deterministic digest, not a secret. This fixture
+checks the binding's namespace confinement instead: every PS surface
+keyed by the reference authenticates the caller and does not disclose
+existence (the binding's Native Reference section).
+
+Fixture: a low-entropy synthetic blob built from a predictable template.
+Its `agent` is known, its `description` comes from a short list, and
+its `approved_at` falls in a one-minute window. A tester can therefore
+enumerate the candidate blobs and their `s256` values. Never treat the
+digest's length as evidence of input entropy.
+
+### P1. Guessed reference from a non-owner agent
+
+- Credentials: an authenticated agent that does not own the mission names a correctly guessed `s256`. It does so at each endpoint that takes a `mission_s256` parameter (person token, permission, audit, interaction) and at `{mission_endpoint}/{mission_s256}`. The mission may be active or terminated.
+- Receiver: the PS.
+- Expected: the same response as for a mission that does not exist. That means the same status, error, body, header set, and observably equivalent timing (8.7 at the mission endpoint; the binding's ownership-first rule elsewhere). Never `mission_terminated`, which -11 Section 8.8 would otherwise report without an ownership condition.
+- Shows: possession or a correct guess discloses nothing and authorizes nothing.
+
+### P2. Guessed reference at the control plane
+
+- Credentials: a caller without authorization for the mission names the guessed `s256` at `mission_control_endpoint`.
+- Receiver: the PS (management companion).
+- Expected: `mission_not_found`, identical for absent and unauthorized (the management companion's anti-oracle rules).
