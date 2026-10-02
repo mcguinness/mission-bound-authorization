@@ -103,9 +103,11 @@ structural and where a mission reference is only advisory context.
 
 The AAuth protocol {{I-D.draft-hardt-oauth-aauth-protocol}} gives agents
 independent cryptographic identities and supports five resource access
-modes: identity-based, resource-managed, person-identity, Person Server
-(PS)-asserted, and federated.  Agent governance is orthogonal to those
-modes.
+modes: agent identity, resource-managed (two-party), person identity,
+Person Server (PS) authorization (three-party), and federated
+authorization (four-party) (Section 4.2 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  Agent governance is
+orthogonal to those modes.
 
 AAuth already defines the protocol elements needed for a durable Mission
 Context:
@@ -435,10 +437,10 @@ A mission approval does not pre-authorize a portable set of remote
 resource operations.  Deterministic resource authorization continues to
 use the AAuth mechanisms appropriate to the access mode:
 
-- the resource's identity-based policy;
+- the resource's own policy in agent identity access;
 - the resource-managed authorization result;
 - scopes in resource and auth tokens;
-- resource policy in PS-asserted access;
+- resource policy in PS authorization access;
 - Access Server policy in federated access; and
 - optionally, resource-owned R3 vocabularies and requests.
 
@@ -461,17 +463,17 @@ the authorization path.
 
 | Resource access mode | Mission Context behavior |
 |---|---|
-| Identity-based | The resource authorizes the signed agent identity directly.  A mission reference can be sent to a mission-aware resource, but the PS does not gate that resource decision and the resource can ignore the reference. |
-| Resource-managed | The resource manages authorization directly.  A mission reference can provide context, but the PS does not gate the resource's issuance or decision and the resource can ignore the reference. |
-| Person-identity | The resource authorizes on the PS-issued person token's identity alone.  Person-token issuance is the PS's control point: mission-scoped via `mission_s256`, capped at one hour and by the mission's `expires_at`; the resource's own decision is not PS-gated. |
-| PS-asserted | The resource token is presented to the PS, which evaluates the active Mission Context before it issues an auth token.  PS issuance gating is structural for a request whose resource token carries the mission's `mission_s256` claim ({{ref-propagation}}).  The resource still applies its own resource policy. |
-| Federated | The PS evaluates the active Mission Context before it federates the request to the resource's Access Server and before returning the resulting auth token.  PS broker gating is structural under the same condition; the Access Server independently applies resource policy. |
+| Agent identity | The resource authorizes the signed agent identity directly.  No AAuth carrier conveys `mission_s256` in this mode (Section 4.5 of {{I-D.draft-hardt-oauth-aauth-protocol}}), and the PS does not gate the resource decision. |
+| Resource-managed (two-party) | The resource manages authorization directly.  No AAuth carrier conveys `mission_s256` in this mode, and the PS does not gate the resource's issuance or decision. |
+| Person identity | The resource authorizes on the PS-issued person token's identity alone.  Person-token issuance is the PS's control point: mission-scoped via `mission_s256`, capped at one hour and by the mission's `expires_at`; the resource's own decision is not PS-gated. |
+| PS authorization (three-party) | The resource token is presented to the PS, which evaluates the active Mission Context before it issues an auth token.  PS issuance gating is structural for a request whose resource token carries the mission's `mission_s256` claim ({{ref-propagation}}).  The resource still applies its own resource policy. |
+| Federated authorization (four-party) | The PS evaluates the active Mission Context before it federates the request to the resource's Access Server and before returning the resulting auth token.  PS broker gating is structural under the same condition; the Access Server independently applies resource policy. |
 
 In every mode, the PS MUST apply the active-state gate to its own
 permission, audit, interaction, mission, and token operations when they
 reference a mission, as required by AAuth, except that an
 authenticated status or termination operation defined by a companion
-returns terminal state instead.  In identity-based and
+returns terminal state instead.  In agent identity and
 resource-managed access, that PS-local gate does not stop an agent from
 making requests directly to a resource.  Deployments MUST NOT claim PS
 issuance gating for those direct resource decisions.
@@ -607,9 +609,10 @@ scoped mission while retaining the old log for audit.
 Termination prevents new governed issuance and PS operations.  It does
 not retroactively erase a previously issued credential or guarantee that
 all independently authorizing resources learn the state immediately.
-Short token lifetimes bound this residual window in PS-asserted and
-federated modes.  A resource needing stronger termination latency
-requires an additional revocation or event mechanism.
+Short token lifetimes bound this residual window in PS authorization
+and federated authorization modes.  A resource needing stronger
+termination latency requires an additional revocation or event
+mechanism.
 
 # Conformance
 
@@ -697,7 +700,7 @@ the PS sees the request: the PS can compare justifications and behavior
 with the approved context and log, request clarification, or deny new
 issuance.  It does not make the compromised agent trustworthy.
 
-In identity-based or resource-managed access, the attacker can contact a
+In agent identity or resource-managed access, the attacker can contact a
 resource without passing through the PS.  Mission termination alone
 cannot stop such access.  Agent-token revocation, key rotation, resource
 policy, resource-managed credential invalidation, and incident response
@@ -712,9 +715,9 @@ authorized administrators through applicable AAuth mechanisms.
 The PS is the controlling authority and holds the private mission blob,
 the person relationship, and the PS-observed governance log.  A compromised
 PS can approve false missions, misrepresent state, disclose sensitive
-context, issue PS-asserted auth tokens, or broker requests to Access
-Servers.  AAuth signature verification does not protect against a
-malicious legitimate PS signing key.
+context, issue auth tokens in PS authorization access, or broker
+requests to Access Servers.  AAuth signature verification does not
+protect against a malicious legitimate PS signing key.
 
 Deployments SHOULD protect PS signing keys and mission stores with
 appropriate isolation, access control, backup, monitoring, and recovery
@@ -733,9 +736,11 @@ token identifiers, and make retention behavior clear to the person.
 The log can also be used for denial of service.  PSes SHOULD bound entry
 size, clarification rounds, request rates, and retention while preserving
 the records needed for active governance and incident investigation.
-Availability loss at the PS prevents new PS-asserted and federated
-authorizations; it does not necessarily stop identity-based or
-resource-managed access.
+Availability loss at the PS prevents new person tokens and new PS
+authorization and federated authorization grants; it does not
+necessarily stop agent identity or resource-managed access, or person
+identity access on a person token already issued, which lives at most
+one hour (Section 7.1.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}).
 
 ## Prompt Injection and Untrusted Text
 
@@ -783,8 +788,9 @@ visibility into the retained history survive the pairwise boundary.
 
 # Operational Considerations
 
-PS-asserted and federated deployments SHOULD use short-lived auth tokens
-so that a terminated mission stops supporting fresh authorization within
+PS authorization and federated authorization deployments SHOULD use
+short-lived auth tokens so that a terminated mission stops supporting
+fresh authorization within
 a bounded period.  Operators SHOULD document that bound and distinguish
 it from immediate revocation.
 
@@ -872,7 +878,7 @@ Bounded Reliance floor ({{I-D.draft-mcguinness-mission-substrate}}):
 | State-Observable | supplied | the AAuth Mission Management status operation active ({{I-D.draft-mcguinness-mission-aauth-management}}) | Authenticated per-role callers, the `active` and `terminated` vocabulary, responses stamped `observed_at` with a declared `fresh_until` reliance bound, failing closed on failed, unrecognized, or stale responses, absent and unauthorized references indistinguishable | The base binding exposes no consumer-facing state source; token acceptance is not observation |
 | Structured Authority | not supplied | -- | -- | The mission description is private prose and `approved_tools` is PS-governance input; scopes or a resource-owned policy language can supply structure inside its own boundary |
 | Monotonic Derivation | not supplied | -- | -- | No cross-boundary subset relation is defined; a resource policy language can define monotonicity within its own vocabulary |
-| Credential-Bound | supplied | PS-asserted or federated access mode, for requests whose resource token carries and validates the signed `mission_s256` claim ({{access-modes}}, {{ref-propagation}}) | PS-issued or PS-brokered artifacts carry the claim, a binding established at issuance rather than by an external join; fact semantics: PS issuance or brokering under the mission | Identity-based and resource-managed modes convey no mission binding; federated artifacts are AS-issued under the PS's brokering |
+| Credential-Bound | supplied | PS authorization or federated authorization access mode, for requests whose resource token carries and validates the signed `mission_s256` claim ({{access-modes}}, {{ref-propagation}}) | PS-issued or PS-brokered artifacts carry the claim, a binding established at issuance rather than by an external join; fact semantics: PS issuance or brokering under the mission | Agent identity and resource-managed modes convey no mission binding; federated authorization artifacts are AS-issued under the PS's brokering |
 | Authorized Context Correlation | not supplied | -- | -- | The PS co-establishes the mission, person, agent, and token where it is on the path; no authoritative join of independently established facts is defined |
 | Independently Verifiable | not supplied | -- | -- | `s256` proves byte identity to parties holding the blob; it does not prove record properties or current state to third parties |
 | Portable Evidence | not supplied | -- | -- | The mission log is PS-local; signed receipts or checkpoints would be an extension |
