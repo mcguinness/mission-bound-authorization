@@ -11,12 +11,12 @@
     "content_sha256": "d00802fb051f408340682374fe233c88477a4005756813f8afcd4cf351307b09"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "3d346c8c52f54d523a51bca2686c97801a23ec33",
-    "content_sha256": "e6a0731586148b7d3427330e400ae5a4ada8f78a6a7b37044b30f28547cec090"
+    "revision": "efbbae900db4e8526b0e8dbe9eeed0e580271c82",
+    "content_sha256": "41a86a0e721af6fed2ae56a271c6a05dc2ff08fab78d2a56cc89206b79f8fa3c"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "c4dda16c409a2ff86de913839919b73c830b52e7",
-    "content_sha256": "164f2d6b8035a95bbabc944c8b059ba878282f5444ae7b56187f384abe4d8d3b"
+    "revision": "365aed445462dad94e264934c28fdfb9f1ddd4f1",
+    "content_sha256": "416d215e69cf8ac023fc294798270156a31dceac9c1bd7c01736176816785418"
    },
    "draft-mcguinness-mission-runtime.md": {
     "revision": "17865ea4544f6fae8f7de94f808fa3677902b9be",
@@ -14522,7 +14522,7 @@
    "id": "authzen.pdp-request.consistency-id-and-issuer-equal",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "pdp-request",
-   "text": "The `id` and `issuer` in `context.mission` equal the `mission_id` and issuer committed in the materialized policy view the PDP has loaded for this Mission ({{I-D.draft-mcguinness-mission-runtime}}); the PDP returns `view_inconsistent` on any inequality.",
+   "text": "The `id` and `issuer` in `context.mission` equal the `mission_id` and issuer committed in the materialized policy view the PDP has loaded for this Mission, or, for a PDP that evaluates the Mission's recorded authority directly, those of the trusted Mission record it evaluates ({{I-D.draft-mcguinness-mission-runtime}}); the PDP returns `view_inconsistent` on any inequality.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -14546,13 +14546,13 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "#702 renamed and narrowed this row (formerly consistency-view-id-and-authority-hash-equal): authority_hash left context.mission's baseline member set, and its own present-then-equal check now lives in the sibling row consistency-authority-hash-equal-when-present. services/pdp/src/evaluate.ts's rule 1 now checks id/issuer unconditionally and authority_hash present-then-check, matching this split."
+   "notes": "#702 renamed and narrowed this row (formerly consistency-view-id-and-authority-hash-equal): authority_hash left context.mission's baseline member set, and its own present-then-equal check now lives in the sibling row consistency-authority-hash-equal-when-present. services/pdp/src/evaluate.ts's rule 1 now checks id/issuer unconditionally and authority_hash present-then-check, matching this split. #986 (D219): the clause now also covers a PDP that evaluates the Mission's recorded authority directly; the reference PDP evaluates through a loaded view, so the cited tests witness that path only and the direct path has no witness yet."
   },
   {
    "id": "authzen.pdp-request.consistency-authority-hash-equal-when-present",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "pdp-request",
-   "text": "When `context.mission.authority_hash` is also present, it MUST equal the view's committed `authority_hash`, with the same `view_inconsistent` result on inequality",
+   "text": "When `context.mission.authority_hash` is also present, it MUST equal the `authority_hash` that view or record commits, with the same `view_inconsistent` result on inequality",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -14582,13 +14582,13 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "#702: split out of the former consistency-view-id-and-authority-hash-equal row, mirroring consistency-policy-view-id-equal's present-then-check pattern now that authority_hash is optional on context.mission."
+   "notes": "#702: split out of the former consistency-view-id-and-authority-hash-equal row, mirroring consistency-policy-view-id-equal's present-then-check pattern now that authority_hash is optional on context.mission. #986 (D219): the clause now also covers a PDP that evaluates the Mission's recorded authority directly; the reference PDP evaluates through a loaded view, so the cited tests witness that path only and the direct path has no witness yet."
   },
   {
    "id": "authzen.pdp-request.consistency-policy-view-id-equal",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "pdp-request",
-   "text": "When `context.mission.policy_view_id` is present, it MUST equal the loaded view's `policy_view_id`, and the PDP returns `view_inconsistent` on inequality.",
+   "text": "Where the PDP evaluates through a view and `context.mission.policy_view_id` is present, it MUST equal the loaded view's `policy_view_id`, and the PDP returns `view_inconsistent` on inequality.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -14611,7 +14611,8 @@
      "level": "endpoint",
      "surface": "decision-request"
     }
-   ]
+   ],
+   "notes": "#986 (D219): the clause now also covers a PDP that evaluates the Mission's recorded authority directly; the reference PDP evaluates through a loaded view, so the cited tests witness that path only and the direct path has no witness yet."
   },
   {
    "id": "authzen.pdp-request.consistency-state-version-mismatch-is-staleness",
@@ -14640,7 +14641,7 @@
    "id": "authzen.pdp-request.consistency-no-fail-on-optional-omission",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "pdp-request",
-   "text": "A PDP MUST NOT fail a decision solely because the optional `policy_view_id`, `policy_version`, or `authority_hash` was omitted; the view the PDP loaded is authoritative.",
+   "text": "A PDP MUST NOT fail a decision solely because the optional `policy_view_id`, `policy_version`, or `authority_hash` was omitted; the view the PDP loaded, or the Mission record it evaluates directly, is authoritative.",
    "role": "PDP",
    "strength": "MUST NOT",
    "applicability": {
