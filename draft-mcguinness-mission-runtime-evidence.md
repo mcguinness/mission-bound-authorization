@@ -361,8 +361,12 @@ canonicalization, and integrity envelope a deployment emits.
     : REQUIRED. From the request's Mission reference.
 
     `policy_view_id`:
-    : REQUIRED. The PDP's own view identifier; the PDP always knows
-      and populates it, whatever the request carried.
+    : REQUIRED where the PDP evaluates through a materialized policy
+      view ({{I-D.draft-mcguinness-mission-runtime}}): the PDP's own
+      view identifier, which it always knows and populates, whatever
+      the request carried. Absent where the PDP evaluates the
+      Mission's recorded authority directly, which records
+      `authority_hash` instead.
 
     `authority_hash`, `intent_hash`:
     : OPTIONAL. Neither is carried on the baseline `mission` claim or
@@ -372,7 +376,9 @@ canonicalization, and integrity envelope a deployment emits.
       privilege, or the request carried it under the Local
       Approved-Set Verification profile
       ({{I-D.draft-mcguinness-oauth-mission-approved-set-verification}},
-      Section "Local Approved-Set Verification").
+      Section "Local Approved-Set Verification"). `authority_hash` is
+      REQUIRED where `policy_view_id` is absent: a PDP that evaluates
+      the Mission's recorded authority directly holds it.
 
     `policy_version`:
     : OPTIONAL. From the request's Mission reference, when known.
@@ -1502,9 +1508,9 @@ that content already carries:
 
 `policy`:
 : OPTIONAL. An object, with `pdp_policy_view` (the projected Decision
-  Evidence's `mission.policy_view_id`) and `mission_policy_version`
-  (its `mission.policy_version`, when the Decision Evidence carries
-  it) ({{decision-evidence-object}}).
+  Evidence's `mission.policy_view_id`, when it carries one) and
+  `mission_policy_version` (its `mission.policy_version`, when the
+  Decision Evidence carries it) ({{decision-evidence-object}}).
 
 `executor`:
 : OPTIONAL. An object, the projected Decision Evidence's `actor`
