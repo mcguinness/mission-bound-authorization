@@ -31,6 +31,7 @@ import {
   type TxnArs,
 } from "./adapters/provider.js";
 import type { CrossOrgOptions } from "./adapters/cross-org-grant.js";
+import { bindAuthoritySourceCatalog } from "./kernel/authority-source.js";
 import { IssuerEvidenceStore } from "./kernel/issuer-evidence.js";
 import { defaultSubjectResolver, type SubjectResolver } from "./adapters/continuation-grant.js";
 import type { CarryoverConfig } from "./kernel/carryover.js";
@@ -414,8 +415,12 @@ export {
 } from "./kernel/template.js";
 export {
   AUTHORITY_SOURCE_TYPES,
+  assertLocalPrincipal,
+  bindAuthoritySourceCatalog,
   type AuthoritySourceCatalog,
   type AuthoritySourceCatalogEntry,
+  type BoundAuthoritySourceCatalog,
+  type LocalPrincipal,
   authoritySourceOf,
   isAuthoritySourceType,
   parseAuthoritySource,
@@ -871,7 +876,10 @@ export async function buildAuthorizationServer(opts: {
   // so a dispatched instance inherits a source this deployment actually
   // declares.
   createTemplate(templateStore, demoReconciliationTemplate(opts.issuer) as never, {
-    authoritySourceCatalog: AUTHORITY_SOURCES as never,
+    // @spec mission#authority-sources (#829): bound to the same issuer the
+    // kernel below binds its catalog to, so consent holds the approver to the
+    // one namespace the kernel recognizes.
+    authoritySourceCatalog: bindAuthoritySourceCatalog(AUTHORITY_SOURCES as never, opts.issuer),
     capabilityResolver: trustedCapabilityResolver(),
   });
   // @spec async-delegation — forward reference to the provider (assigned after

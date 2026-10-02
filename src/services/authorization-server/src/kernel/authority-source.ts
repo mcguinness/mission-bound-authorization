@@ -104,6 +104,82 @@ export interface AuthoritySourceCatalog {
   humanPrincipals: readonly string[];
 }
 
+/**
+ * @spec mission#authority-sources, mission#approval-event (step 3): the
+ * catalog BOUND to the one trusted issuer namespace its subject strings
+ * denote. Two principals are equal only when `iss` and `sub` are both
+ * byte-equal, so a catalog entry naming `bob` names `bob` in exactly this
+ * namespace. The issuer is the kernel's configured issuer, bound at kernel
+ * construction ({@link bindAuthoritySourceCatalog}); it is never derived from
+ * an incoming Subject or Approver.
+ *
+ * Every gate that authorizes a supplied principal takes this type, never the
+ * unbound {@link AuthoritySourceCatalog}: there is no form of a gate whose
+ * missing issuer restores a bare-`sub` comparison. A deployment that accepts
+ * identities from another namespace maps them first, through its own
+ * separately trusted mapping, to a canonical local principal.
+ */
+export interface BoundAuthoritySourceCatalog extends AuthoritySourceCatalog {
+  readonly principalIssuer: string;
+}
+
+/**
+ * Bind a catalog to the kernel's configured issuer. Refuses an empty issuer,
+ * and refuses a catalog already bound to a different issuer rather than
+ * rebinding it, so one kernel's catalog never authorizes another kernel's
+ * principals.
+ */
+export function bindAuthoritySourceCatalog(
+  catalog: AuthoritySourceCatalog,
+  principalIssuer: string,
+): BoundAuthoritySourceCatalog {
+  if (typeof principalIssuer !== "string" || principalIssuer.length === 0) {
+    throw new Error("authority-source catalog: the trusted principal issuer must be a non-empty string");
+  }
+  const bound = (catalog as Partial<BoundAuthoritySourceCatalog>).principalIssuer;
+  if (bound !== undefined && bound !== principalIssuer) {
+    throw new Error(
+      `authority-source catalog is bound to issuer '${bound}', not this kernel's issuer '${principalIssuer}'`,
+    );
+  }
+  return Object.freeze({ ...catalog, principalIssuer });
+}
+
+/** A principal of the catalog's trusted issuer namespace, validated. */
+export interface LocalPrincipal {
+  readonly iss: string;
+  readonly sub: string;
+}
+
+/**
+ * @spec mission#authority-sources, mission#approval-event (step 3): the
+ * canonical-principal guard every source gate runs first: an object with a
+ * non-empty string `iss` and `sub`, whose `iss` is byte-equal to the bound
+ * namespace. No normalization: distinct issuer strings are distinct
+ * namespaces. A foreign or malformed principal refuses `access_denied`; it is
+ * never rewritten into the local namespace.
+ */
+export function assertLocalPrincipal(
+  catalog: BoundAuthoritySourceCatalog,
+  principal: unknown,
+  role: "approver" | "subject",
+): LocalPrincipal {
+  if (principal === null || typeof principal !== "object" || Array.isArray(principal)) {
+    throw new IntentError("access_denied", `the ${role} must be an issuer-qualified principal`);
+  }
+  const { iss, sub } = principal as Record<string, unknown>;
+  if (typeof iss !== "string" || iss.length === 0 || typeof sub !== "string" || sub.length === 0) {
+    throw new IntentError("access_denied", `the ${role} must carry a non-empty iss and sub`);
+  }
+  if (iss !== catalog.principalIssuer) {
+    throw new IntentError(
+      "access_denied",
+      `the ${role} is not a principal of this deployment's issuer namespace`,
+    );
+  }
+  return { iss, sub };
+}
+
 /** The identity a record's immutable `authority_source` denotes: the tuple a
  *  drawdown re-resolves its source by. */
 function sourceIdentity(source: {
@@ -218,16 +294,21 @@ export function authoritySourceOf(entry: AuthoritySourceCatalogEntry): Authority
  *
  * The `activators` list is EXHAUSTIVE and never empty: an empty list is
  * refused at catalog load, so this check has no vacuous form and every source
- * names the Approvers who may activate it.
+ * names the Approvers who may activate it. The Approver is first held to the
+ * catalog's issuer namespace ({@link assertLocalPrincipal}): an activator
+ * entry names a principal of that namespace, never a bare `sub` any issuer
+ * may claim.
  */
 export function assertApproverMayActivate(
+  catalog: BoundAuthoritySourceCatalog,
   entry: AuthoritySourceCatalogEntry,
   approver: { iss: string; sub: string },
 ): void {
-  if (!entry.activators.includes(approver.sub)) {
+  const local = assertLocalPrincipal(catalog, approver, "approver");
+  if (!entry.activators.includes(local.sub)) {
     throw new IntentError(
       "access_denied",
-      `approver '${approver.sub}' is not authorized to activate the ${entry.type} authority source '${entry.id}'`,
+      `approver '${local.sub}' is not authorized to activate the ${entry.type} authority source '${entry.id}'`,
     );
   }
 }
@@ -257,24 +338,26 @@ export function assertWithinSourceCeiling(
  * NOT record a human principal in its place, and that principal MUST be an
  * authorization subject the AS recognizes as a resource owner in its own
  * right. `user_delegated` is the only source whose `sub` carries a delegating
- * person, so the gate is vacuous there.
+ * person, so the discipline is vacuous there; the namespace check is not, and
+ * runs first for every source, so a foreign delegating person is refused too.
  */
 export function assertSubjectDiscipline(
-  catalog: AuthoritySourceCatalog,
+  catalog: BoundAuthoritySourceCatalog,
   entry: AuthoritySourceCatalogEntry,
   subject: { iss: string; sub: string },
 ): void {
+  const local = assertLocalPrincipal(catalog, subject, "subject");
   if (entry.type === "user_delegated") return;
-  if (catalog.humanPrincipals.includes(subject.sub)) {
+  if (catalog.humanPrincipals.includes(local.sub)) {
     throw new IntentError(
       "access_denied",
-      `a ${entry.type} Mission MUST NOT record the human principal '${subject.sub}' as its subject`,
+      `a ${entry.type} Mission MUST NOT record the human principal '${local.sub}' as its subject`,
     );
   }
-  if (!entry.principals?.includes(subject.sub)) {
+  if (!entry.principals?.includes(local.sub)) {
     throw new IntentError(
       "access_denied",
-      `'${subject.sub}' is not a principal this deployment recognizes as a resource owner in its own right`,
+      `'${local.sub}' is not a principal this deployment recognizes as a resource owner in its own right`,
     );
   }
 }
