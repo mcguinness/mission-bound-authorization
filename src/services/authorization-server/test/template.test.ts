@@ -96,7 +96,6 @@ const dispatch = (templateId: string, over: Partial<DispatchInput> = {}) =>
     templateId,
     dispatchEventId: `dsp-${dspSeq++}`,
     dispatcher: "orchestrator",
-    recipient: "worker",
     intent: intentOf(["payments:invoice.read"]),
     subject: { iss: ISS, sub: "alice" },
     policyVersion: POLICY_VERSION,
@@ -274,13 +273,74 @@ describe("dispatch gates (@spec mission-template#dispatch-refusals)", () => {
       expect((e as DispatchError).reason).toBe("dispatcher_not_allowed");
     }
     expectNothingCommitted(t.id, before);
+    // The Agent is never request-selected, so an unlisted one is reachable only
+    // through a Dispatch Policy that names it; the membership check refuses it.
+    const multi = mkTemplate({ recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents: ["worker", "subagent-invoice-extractor"] }, dispatch_policy: "names-unlisted" });
     try {
-      dispatch(t.id, { recipient: "intruder" });
+      dispatch(multi.id, { dispatchPolicies: { "names-unlisted": { selectAgent: () => "intruder" } } });
       expect.unreachable();
     } catch (e) {
       expect((e as DispatchError).reason).toBe("recipient_not_allowed");
     }
-    expectNothingCommitted(t.id, before);
+    expectNothingCommitted(multi.id, before);
+  });
+
+  // @spec mission-template#the-mission-template — the Mission Issuer selects
+  // the instance's Agent from `agents` under the Dispatch Policy, never from
+  // Dispatcher input: one listed Agent directly; several through the policy's
+  // selection rule, never by array position.
+  it("selects the one listed Agent directly and ignores an Agent named in the dispatch input", () => {
+    const t = mkTemplate();
+    expect(dispatch(t.id).mission.client_id).toBe("worker");
+    expect(dispatch(t.id, { recipient: "intruder" } as Partial<DispatchInput>).mission.client_id).toBe("worker");
+  });
+
+  it("with several listed Agents, selects the Agent the Dispatch Policy names, and refuses agent_not_selected when no rule selects one", () => {
+    const agents = ["worker", "subagent-invoice-extractor"];
+    const t = mkTemplate({ recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents }, dispatch_policy: "route-extractor" });
+    const seen: Array<{ agents: readonly string[]; subject: { iss: string; sub: string } }> = [];
+    const routeExtractor = {
+      "route-extractor": {
+        selectAgent: (c: { agents: readonly string[]; subject: { iss: string; sub: string } }) => {
+          seen.push(c);
+          return c.agents.find((a) => a === "subagent-invoice-extractor");
+        },
+      },
+    };
+    const { mission } = dispatch(t.id, { dispatchPolicies: routeExtractor });
+    // Not the first listed Agent: the policy, not array order, selected it.
+    expect(mission.client_id).toBe("subagent-invoice-extractor");
+    expect(seen).toEqual([{ agents, subject: { iss: ISS, sub: "alice" }, templateId: t.id }]);
+
+    const before = kernel.allMissions().length;
+    for (const dispatchPolicies of [undefined, {}, { "other-policy": routeExtractor["route-extractor"] }, { "route-extractor": { selectAgent: () => undefined } }]) {
+      try {
+        dispatch(t.id, dispatchPolicies ? { dispatchPolicies } : {});
+        expect.unreachable();
+      } catch (e) {
+        expect((e as DispatchError).reason).toBe("agent_not_selected");
+      }
+      expect(kernel.allMissions().length).toBe(before);
+      expect(store.dispatchesSince(t.id, "1970-01-01T00:00:00.000Z")).toBe(1);
+    }
+  });
+
+  // @spec mission-template#dispatch — the selected Agent is part of the
+  // committed instance: a retried Dispatch returns it and never selects again.
+  it("a retried Dispatch returns the committed Agent without selecting again", () => {
+    const t = mkTemplate({ recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents: ["worker", "subagent-invoice-extractor"] }, dispatch_policy: "route" });
+    let calls = 0;
+    const select = (agent: string) => ({ route: { selectAgent: () => { calls++; return agent; } } });
+    const first = dispatch(t.id, { dispatchEventId: "evt-agent-retry", dispatchPolicies: select("subagent-invoice-extractor") });
+    expect(first.mission.client_id).toBe("subagent-invoice-extractor");
+    expect(calls).toBe(1);
+    const changed = dispatch(t.id, { dispatchEventId: "evt-agent-retry", dispatchPolicies: select("worker") });
+    expect(changed.mission.id).toBe(first.mission.id);
+    expect(changed.mission.client_id).toBe("subagent-invoice-extractor");
+    const unresolvable = dispatch(t.id, { dispatchEventId: "evt-agent-retry" });
+    expect(unresolvable.mission.id).toBe(first.mission.id);
+    expect(unresolvable.mission.client_id).toBe("subagent-invoice-extractor");
+    expect(calls).toBe(1);
   });
 
   it("refuses a Subject that matches a listed subject in only one of iss and sub (@spec mission-template#the-mission-template)", () => {
@@ -458,7 +518,6 @@ describe("seeded demo reconciliation template (@spec mission-template)", () => {
       templateId: t.id,
       dispatchEventId: "demo-dsp-1",
       dispatcher: "ap-agent",
-      recipient: "subagent-invoice-extractor",
       intent: intentOf(["payments:invoice.read", "payments:vendor.read"]),
       // The demo instance acts for the template's consenting human, its one
       // listed Subject, exactly as the /token dispatch grant establishes it.

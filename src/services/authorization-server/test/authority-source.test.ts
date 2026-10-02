@@ -456,7 +456,6 @@ describe("authority source drawdown (@spec mission#authority-sources, child-dele
       templateId: template.id,
       dispatchEventId: `dsp-${seq++}`,
       dispatcher: "ap-agent",
-      recipient: "ap-agent",
       intent: intent({ expires_at: "2026-11-01T00:00:00Z" }),
       subject: { iss: ISS, sub: "alice" },
       policyVersion: DERIVATION_POLICY.policy_version,

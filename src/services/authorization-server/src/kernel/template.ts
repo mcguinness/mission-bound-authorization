@@ -65,13 +65,16 @@ export class TemplateError extends Error {}
 /**
  * @spec mission-template#dispatch-refusals — why a dispatch was refused.
  * `template_not_active` covers BOTH a revoked and an expired template (there is
- * no separate expiry reason). `out_of_template_ceiling` is the empty double
+ * no separate expiry reason). `agent_not_selected` is a template listing
+ * several Agents whose Dispatch Policy selects none; it is implementation-local,
+ * with no registered wire value (the D205 precedent). `out_of_template_ceiling` is the empty double
  * intersection; a policy-empty intent surfaces as {@link IntentError} instead
  * (matching `kernel.approve`), never as this reason.
  */
 export type DispatchReason =
   | "template_not_active"
   | "dispatcher_not_allowed"
+  | "agent_not_selected"
   | "recipient_not_allowed"
   | "out_of_template_ceiling"
   | "dispatch_prohibited_class"
@@ -254,8 +257,13 @@ export interface DispatchInput {
   dispatchEventId: string;
   /** The dispatching actor; MUST be in the template's `dispatchers`. */
   dispatcher: string;
-  /** The receiving actor; MUST be in `recipients.agents`; becomes the instance `client_id`. */
-  recipient: string;
+  /**
+   * @spec mission-template#the-mission-template — the deployment's Dispatch
+   * Policies, consulted for the Agent selection rule of a template that lists
+   * several Agents. The caller never names the Agent: the Mission Issuer
+   * selects it ({@link selectDispatchAgent}).
+   */
+  dispatchPolicies?: DispatchPolicies;
   /** The instance's OWN Mission Intent (untrusted, derived under policy first). */
   intent: MissionIntent;
   /**
@@ -296,12 +304,48 @@ export interface DispatchResult {
 }
 
 /**
+ * @spec mission-template#the-mission-template — a deployment Dispatch Policy:
+ * its Agent selection rule, for a template whose `allowed_recipients` lists
+ * more than one Agent. The rule sees only Issuer-held facts (the listed
+ * Agents, the established Subject, the template), never Dispatcher input, and
+ * returns one Agent, or undefined when it cannot select.
+ */
+export interface DispatchPolicy {
+  selectAgent?: (context: {
+    agents: readonly string[];
+    subject: { iss: string; sub: string };
+    templateId: string;
+  }) => string | undefined;
+}
+
+/** The deployment's Dispatch Policies, keyed by a template's `dispatch_policy`. */
+export type DispatchPolicies = Readonly<Record<string, DispatchPolicy>>;
+
+/**
+ * @spec mission-template#the-mission-template — select a dispatched
+ * instance's Agent: the one listed Agent directly; with several, the Agent the
+ * template's Dispatch Policy selection rule names. `agents` is an allowlist,
+ * not a selection rule, so its order is never consulted. Undefined when no
+ * Agent can be selected.
+ */
+export function selectDispatchAgent(
+  template: MissionTemplate,
+  subject: { iss: string; sub: string },
+  policies?: DispatchPolicies,
+): string | undefined {
+  const { agents } = template.recipients;
+  if (agents.length === 1) return agents[0];
+  const policy = policies && Object.hasOwn(policies, template.dispatch_policy) ? policies[template.dispatch_policy] : undefined;
+  return policy?.selectAgent?.({ agents: [...agents], subject: { ...subject }, templateId: template.id });
+}
+
+/**
  * @spec mission-template#dispatch — instantiate an ordinary Mission from a
  * template. Structure mirrors {@link createChildMission}: resolve the template,
  * idempotency-guard, gate, derive-and-prove authority, clamp expiry, assemble
  * lineage, insert. The gates (in order): idempotency, template active + not
- * expired, dispatcher allowed, recipient allowed, max-active, rate, double
- * intersection, prohibited-class.
+ * expired, dispatcher allowed, Agent selected, recipient allowed, max-active,
+ * rate, double intersection, prohibited-class.
  */
 export function dispatchFromTemplate(
   kernel: MissionKernel,
@@ -349,11 +393,23 @@ export function dispatchFromTemplate(
   if (!template.dispatchers.includes(input.dispatcher)) {
     throw new DispatchError("dispatcher_not_allowed", `dispatcher ${input.dispatcher} is not permitted`);
   }
-  // @spec mission-template#the-mission-template — `allowed_recipients`: the
-  // instance's Agent must be a listed agent, and its established Subject must
+  // @spec mission-template#the-mission-template — the Mission Issuer selects
+  // the instance's Agent under the Dispatch Policy, never from Dispatcher
+  // input. It is committed below as the instance's `client_id`; a retried
+  // Dispatch returns the committed instance at the idempotency check above
+  // and never selects again.
+  const recipient = selectDispatchAgent(template, input.subject, input.dispatchPolicies);
+  if (recipient === undefined) {
+    throw new DispatchError(
+      "agent_not_selected",
+      `template ${template.id} lists several agents and its dispatch policy selects none`,
+    );
+  }
+  // `allowed_recipients`: the selected Agent must be a listed agent (a policy
+  // that names an unlisted one is refused), and the established Subject must
   // equal a listed subject in BOTH `iss` and `sub`; the lists are independent.
-  if (!template.recipients.agents.includes(input.recipient)) {
-    throw new DispatchError("recipient_not_allowed", `recipient ${input.recipient} is not permitted`);
+  if (!template.recipients.agents.includes(recipient)) {
+    throw new DispatchError("recipient_not_allowed", `recipient ${recipient} is not permitted`);
   }
   if (!template.recipients.subjects.some((s) => s.iss === input.subject.iss && s.sub === input.subject.sub)) {
     throw new DispatchError(
@@ -522,7 +578,7 @@ export function dispatchFromTemplate(
     approver: template.approver,
     approval_basis: approvalBasis,
     authority_source: authoritySource,
-    client_id: input.recipient,
+    client_id: recipient,
     policy_version: input.policyVersion,
     approval_event_id: approvalEventId,
     created_at: nowIso,
