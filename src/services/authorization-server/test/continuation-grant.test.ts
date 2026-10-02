@@ -38,11 +38,13 @@ import {
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import {
+  AuthorityNarrowedToEmptyError,
   buildAuthorizationServer,
   type BuiltAs,
   ID_JAG_TOKEN_TYPE,
   IDENTITY_CONTINUATION_JWT_TYP,
   IDENTITY_CONTINUATION_TOKEN_TYPE,
+  issueCrossDomainGrant,
   validateMissionIntent,
 } from "../src/index.js";
 
@@ -1593,68 +1595,35 @@ describe("continuation lifecycle invariants (@spec id-continuation-assertion)", 
   });
 });
 
-describe("a continuation ID-JAG refused after admission (@spec mission#issuance-gating, #914 ruling 1)", () => {
-  it("residual: an exchange refused invalid_target after admission leaves the derivation counted under an unreleased reservation, until an authoritative non-acceptance returns it", async () => {
-    // A Mission over two resources: payments (served by RAS_AUD) and the plain
-    // RS (served by this issuer).
-    const PLAIN = "http://localhost:4410/api";
-    const intent = validateMissionIntent(
-      JSON.stringify({
-        goal: "Continue across a hop, then lose the hop's authority",
-        target_resources: [RESOURCE, PLAIN],
-        expires_at: MISSION_EXP,
-      }),
-    );
-    const mission = as.kernel.approve({
-      intent,
-      proposedAuthority: [
-        {
-          type: "mission_resource_access",
-          resource: RESOURCE,
-          actions: ["payments:invoice.read"],
-          constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-        },
-        { type: "mission_resource_access", resource: PLAIN, actions: ["reports:report.read"] },
-      ],
-      subject: { iss: ISSUER, sub: "alice" },
-      approver: { iss: ISSUER, sub: "bob" },
-      clientId: "ap-agent",
-      approvalEventId: "apev-after-admission",
-    });
-    const anchorId = as.continuationStore.rootGrantAnchor({ missionId: mission.id, authEnvelope: {} });
-    const handle = as.continuationStore.mint({
-      anchorId,
-      missionId: mission.id,
-      actor: { iss: ISSUER, sub: "ap-agent" },
-      cnfJkt: agentJkt,
-    });
-    // Contain the whole payments entry. The effective set still holds the
-    // plain RS entry, so the state gate admits the derivation and counts it;
-    // nothing left in it is served by RAS_AUD, so the mint then fails.
-    as.kernel.contain(mission.id, {
-      event: {
-        type: "tainted_read",
-        source: "https://siem.example/detections",
-        observed_at: new Date().toISOString(),
-        event_id: "ce-after-admission",
-      },
-      remove: [{ resource: RESOURCE }],
-    });
-    const count = () => as.kernel.get(mission.id)?.derivation_count;
+describe("a continuation ID-JAG that fails after admission (@spec mission#issuance-gating, #914 ruling 1)", () => {
+  it("residual: a continuation grant that fails after admission leaves the derivation counted under an unreleased reservation, until an authoritative non-acceptance returns it", async () => {
+    // At the token endpoint the deterministic refusals run before admission:
+    // the audience-scoped authority check counts nothing ((b2), (f5)). A grant
+    // still fails after the gate admits when a state change since that check
+    // narrows its authority to nothing, so drive that failure directly with a
+    // filter that empties the admitted set.
+    const { missionId } = newLineage("apev-after-admission");
+    const count = () => as.kernel.get(missionId)?.derivation_count;
     const before = count();
+    const { privateKey } = await generateKeyPair("ES256");
 
-    const res = await tokenExchange({ subjectToken: await mintICA(handle), actorToken: await mintActorToken() });
-    const body = (await res.json()) as { error?: string; access_token?: string };
-    expect(res.status, JSON.stringify(body)).toBe(400);
-    expect(body.error).toBe("invalid_target");
-    expect(body.access_token).toBeUndefined();
+    await expect(
+      issueCrossDomainGrant(as.kernel, privateKey, "test-kid", {
+        missionId,
+        targetAs: RAS_AUD,
+        clientId: "ap-agent",
+        cnfJkt: agentJkt,
+        resourceToAs: (r: string) => (r === RESOURCE ? RAS_AUD : ISSUER),
+        authorityFilter: () => [],
+      }),
+    ).rejects.toBeInstanceOf(AuthorityNarrowedToEmptyError);
 
-    // The refused derivation IS counted: its reservation is reserved and never
+    // The failed derivation IS counted: its reservation is reserved and never
     // released, keyed by a grant identity nobody will retry.
     expect(count()).toBe((before ?? 0) + 1);
     const rows = as.kernel.db
       .prepare("SELECT reservation_id, state FROM derivation_reservations WHERE mission_id = ?")
-      .all(mission.id) as Array<{ reservation_id: string; state: string }>;
+      .all(missionId) as Array<{ reservation_id: string; state: string }>;
     expect(rows).toHaveLength(1);
     expect(rows[0]?.state).toBe("reserved");
 

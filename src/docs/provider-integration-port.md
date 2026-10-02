@@ -605,12 +605,15 @@ provider and Mission stores. Defining one is #250's first acceptance item
   ([control-plane-deployment.md](control-plane-deployment.md); the
   `control-plane derivation reservations > ...` tests in
   `control-plane-faults.test.ts`). They are not on this path.
-  At the token endpoint, an ID-JAG continuation refused after admission (an
-  `invalid_target` when nothing left in the effective set is served by the
-  audience) leaves its reservation `reserved` and the count spent until an
-  authoritative non-acceptance returns it; the reservation is keyed by the
-  grant's own `jti`, so no retry replays it:
-  `a continuation ID-JAG refused after admission (@spec mission#issuance-gating, #914 ruling 1) > residual: an exchange refused invalid_target after admission leaves the derivation counted under an unreleased reservation, until an authoritative non-acceptance returns it`
+  At the token endpoint, the ID-JAG continuation's deterministic refusals
+  run before admission and count nothing (the audience-scoped authority
+  check). A continuation grant that fails after admission, which a state
+  change between that check and the gate can cause, leaves its reservation
+  `reserved` and the count spent until an authoritative non-acceptance
+  returns it; the reservation is keyed by the grant's own `jti`, so no retry
+  replays it. The test drives that failure at `issueCrossDomainGrant`, not
+  through the endpoint:
+  `a continuation ID-JAG that fails after admission (@spec mission#issuance-gating, #914 ruling 1) > residual: a continuation grant that fails after admission leaves the derivation counted under an unreleased reservation, until an authoritative non-acceptance returns it`
   (`continuation-grant.test.ts`).
 - **Rolled back:** the async-delegation creating exchange counts inside the
   transaction that commits the family, so a failure before that commit
