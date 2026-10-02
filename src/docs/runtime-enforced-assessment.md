@@ -7,9 +7,13 @@ Point (PDP), OpenFGA and the Mission kernel, as `composeStack`
 the reference implementation at commit `a90a25c8`, the origin/main commit
 read. The tree read was `a90a25c8` plus this branch's two commits, which
 change only `draft-mcguinness-mission-runtime.md` and
-`src/docs/CONFORMANCE.md`. Before it merged, origin/main moved to
-`8b60e394`; those commits change no implementation file, configuration,
-or runtime ledger row identifier.
+`src/docs/CONFORMANCE.md`. Before it merged, main moved forward again (merged into this branch
+at `aa0253d9`). Those commits change no file this document cites in the
+runtime stack (`src/services/mcp-payments`, `src/services/pdp`,
+`config`) and no runtime, AuthZEN, or Runtime Evidence ledger row. The
+two implementation files they touch, `src/packages/demo-data/src/index.ts`
+and `src/demo/src/exhibit.ts`, add the AAM template builder (#958), not
+the Enforcement Scope Statement or the staleness ceiling cited here.
 
 Every behavioral statement cites the function (file and symbol) or the exact
 test (`file > describe > it`) that shows it. A path with no witnessing test
