@@ -1618,16 +1618,22 @@ Work products:
   With Information" section ({{I-D.draft-mcguinness-oauth-mission}}).
 
 Composition:
-: The invariants bound one Mission's own Authority Set, not the
-  aggregate surface a delegation tree, a cross-domain hop, or a chain
-  of child generations reaches together. Delegation depth resets at
-  each cross-domain hop and child generation, and each Child Mission
-  enforces its own derivation cap independently of its parent's, so
-  the authorized surface a body of work can reach can exceed what any
-  single approval appears to bound. Disclosing the composed bound at
-  the consent surface is the cross-domain and child-delegation
-  profiles' role, and bounding aggregate consumption is the metering
-  profile's ({{I-D.draft-mcguinness-oauth-mission-cross-domain}},
+: An approval bounds the authority each derivation under the Mission
+  carries; it does not bound the aggregate effect of a body of work.
+  The invariants bound one Mission's own Authority Set, not the surface
+  a delegation tree, a cross-domain hop, or a chain of child
+  generations reaches together. The per-Mission figures differ in kind
+  and do not multiply into a lifetime total: in the child-delegation
+  profile, `max_children` limits concurrently non-terminal children,
+  so a completed child frees its slot; `max_child_depth` limits
+  generations; and each Child Mission's derivation cap is its own,
+  independent of its parent's. Delegation depth also resets at each
+  cross-domain hop and child generation. Disclosing what these figures
+  bound at the consent surface is the cross-domain and child-delegation
+  profiles' role. An aggregate bound holds only where a deployment
+  enforces one, the metering profile's lineage budget, and is never
+  rendered as in force otherwise
+  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}},
   {{I-D.draft-mcguinness-oauth-mission-child-delegation}},
   {{I-D.draft-mcguinness-mission-metering}}). The OAuth binding
   states the same property in its "Composition and the Effective
@@ -3714,6 +3720,12 @@ bound profiled by `aauth-mission-expiry`.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Composition states the per-Mission bound model once, with no change
+  to any profile's requirements: an approval bounds the authority each
+  derivation carries; concurrent children, generations, and
+  per-Mission derivations do not multiply into a lifetime total; and
+  an aggregate bound holds only where a deployment enforces one.
 
 - Derivation and narrowing, with no change to any profile's
   requirements. The derivation boundary states the derivation

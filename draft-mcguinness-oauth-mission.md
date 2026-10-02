@@ -4451,18 +4451,24 @@ single approval appears to bound at consent time. This is a composition
 property of independently bounded mechanisms.
 
 For example, a child-delegation deployment allowing `max_children` 3 per
-Mission with `max_child_depth` 2 admits up to 12 descendant Missions (3
-in the first generation, up to 9 in the second) under one root
-Mission.
+Mission with `max_child_depth` 2 admits up to 12 concurrently
+non-terminal descendant Missions (3 in the first generation, up to 9
+in the second) under one root Mission. That limits the Missions live
+at once, not those created over the root's lifetime: a child that
+reaches a terminal state frees its slot
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
 
 Cross-domain projection composes separately: a projected grant preserves
 the Mission's lineage rather than rooting a new one, and the Resource
 AS's local issuance under it is bounded by that grant's own lifetime and
 local policy.
 
-A deployment can disclose the composed bound, not only the immediate
-Mission's, at the consent surface, and can impose a global cap out of
-band where a single approval's apparent bound must hold in practice.
+A deployment can disclose the subtree's figures, not only the
+immediate Mission's, at the consent surface, as distinct values
+rather than one composed total
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), and can
+impose a global cap out of band where a single approval's apparent
+bound must hold in practice.
 Bounding aggregate consumption (calls, spend, or activity over the life
 of a Mission and its descendants) is the metering profile's role
 ({{I-D.draft-mcguinness-mission-metering}}).
@@ -5828,6 +5834,11 @@ Cross-Domain:
   adjudicates commits that policy's content as `{id, version,
   digest}`, with the `mission-activation-policy` digest, and the
   activating issuer verifies it before each activation.
+- Corrected the child-delegation example in Composition and the
+  Effective Ceiling: `max_children` limits concurrently non-terminal
+  children, so the example's 12 descendants are Missions live at
+  once, not a lifetime count; disclosure points at the child-delegation
+  profile's distinct figures rather than one composed total.
 - Separated exact `target_resources` membership, checked for the
   Authority Set and for a proposal at submission, from later token
   narrowing under the subset rule. Made the per-capability
