@@ -2183,7 +2183,13 @@ assertion.
   `consent_principal`.
 
   For `kind: policy`: `policy`, a REQUIRED object with `id` and
-  `version` identifying the deciding policy or workflow.
+  `version` identifying the deciding policy or workflow. It decides
+  deterministically over recorded inputs, so re-evaluating that
+  `version` over them re-checks the decision. A model's output can
+  be one such input, recorded with the model's identifier and
+  version: it can refuse an activation or narrow the authority it
+  activates, and the AS MUST NOT let it supply or widen authority. A
+  model is never itself the deciding policy or workflow.
 
   `governance_record`:
   : OPTIONAL. A boolean. `true` when an Approval Governance Record
