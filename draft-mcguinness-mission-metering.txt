@@ -85,20 +85,21 @@ Table of Contents
      7.1.  Exactness and Topology
      7.2.  Retry, Idempotency, and Reserve/Commit Posture
    8.  Exclusivity and Separation of Duty
-   9.  Aggregate Bounds
-   10. Metering Evidence
-   11. AuthZEN Wire Representation
-     11.1.  Settlement Exchange
-       11.1.1.  Settlement Submission Contract
-       11.1.2.  Settlement by Evidence State
-       11.1.3.  Duration-Lease Renewal
-   12. Conformance
-   13. Security Considerations
-   14. Privacy Considerations
-   15. IANA Considerations
-   16. References
-     16.1.  Normative References
-     16.2.  Informative References
+   9.  Capacity Across Missions
+   10. Aggregate Bounds
+   11. Metering Evidence
+   12. AuthZEN Wire Representation
+     12.1.  Settlement Exchange
+       12.1.1.  Settlement Submission Contract
+       12.1.2.  Settlement by Evidence State
+       12.1.3.  Duration-Lease Renewal
+   13. Conformance
+   14. Security Considerations
+   15. Privacy Considerations
+   16. IANA Considerations
+   17. References
+     17.1.  Normative References
+     17.2.  Informative References
    Appendix A.  Document History
    Acknowledgments
    Author's Address
@@ -200,11 +201,11 @@ Table of Contents
    *Retry, atomicity, settlement, and crash recovery.* For each promoted
    bound class, a reproducible test suite with no skipped cases
    demonstrates exactly-once accounting under Section 7.2 and
-   Section 11.1: a retry under the same idempotency key or decision
+   Section 12.1: a retry under the same idempotency key or decision
    identifier consumes once; a redelivered settlement neither double-
    commits nor double-releases; a conflicting redelivery fails closed; a
    crash between reserve and commit resumes to a consistent balance; and
-   every evidence state of Section 11.1.2 is exercised.  This is the
+   every evidence state of Section 12.1.2 is exercised.  This is the
    decrement-side counterpart of the exactly-once reservation machinery
    the family's Mission-creating surfaces carry for creation.
 
@@ -230,7 +231,7 @@ Table of Contents
    mapping of Section 6 exercised across implementations, the same
    consequential action counted against the same class, and the counting
    point proven: the count consumed at decision, the disposition
-   confirmed at settlement (Section 11.1.1).
+   confirmed at settlement (Section 12.1.1).
 
    *Measurement, renewal, skew, and stop behavior* (max_duration).  The
    duration rules of Section 7 exercised: bounded reservation or lease
@@ -246,17 +247,17 @@ Table of Contents
    dereferenced payload or its action class excluded from a claimed
    bytes bound (Section 7).
 
-   *Cross-Mission counter consistency* (aggregate bounds, Section 9).  A
-   lineage-keyed budget identifier and its authoritative shared counter
-   metering a root Mission and its Child Missions in the counter's own
-   consistency domain: a lineage-wide quota_exceeded refusal from Child
-   Mission consumption, a Child Mission's released reservation returned
-   to the shared counter, and no consent surface or Enforcement Scope
-   Statement rendering an aggregate bound the deployed counter does not
-   back.  Artifacts: the refusal's Decision Evidence carrying a metering
-   entry (Section 10) whose requested, remaining, counter_scope, and
-   counter_id prove the accounting invariant rather than only the
-   asserted refusal.
+   *Cross-Mission counter consistency* (aggregate bounds, Section 10).
+   A lineage-keyed budget identifier and its authoritative shared
+   counter metering a root Mission and its Child Missions in the
+   counter's own consistency domain: a lineage-wide quota_exceeded
+   refusal from Child Mission consumption, a Child Mission's released
+   reservation returned to the shared counter, and no consent surface or
+   Enforcement Scope Statement rendering an aggregate bound the deployed
+   counter does not back.  Artifacts: the refusal's Decision Evidence
+   carrying a metering entry (Section 11) whose requested, remaining,
+   counter_scope, and counter_id prove the accounting invariant rather
+   than only the asserted refusal.
 
    *Atomic latch and release* (exclusive).  Concurrent consequential
    actions matching different selectors of one group latch exactly one
@@ -287,15 +288,15 @@ Table of Contents
    *  Interoperability: an independently implemented PEP and PDP
       exchange the profiled messages, including duplicate delivery and
       failure cases, under the settlement submission contract
-      (Section 11.1.1).
+      (Section 12.1.1).
 
    Across every gate, promotion additionally requires the promoted wire
    surface unchanged in name, shape, and semantics across two
    consecutive published revisions of this document while the evidence
    accumulated: the Mission Intent members of Section 6, quota_exceeded,
    exclusivity_latched, context.prior_evaluation_id, measured_duration,
-   the metering evidence member (Section 10), and the settlement
-   submission contract of Section 11.1.1.  The #636 controls-retirement
+   the metering evidence member (Section 11), and the settlement
+   submission contract of Section 12.1.1.  The #636 controls-retirement
    cut relocated every member of Section 6 from controls.<name> to a
    flat top-level Mission Intent member: that is a wire-shape change to
    this exact surface, so the two-consecutive-revisions window restarts
@@ -326,7 +327,7 @@ Table of Contents
    documented enforcement scope; this document adds metering semantics
    to the runtime profile's decision contract and changes no issuance
    protocol, though it does add consent-surface obligations on the
-   Mission Issuer (Section 6.1).
+   Mission Issuer (Section 6.1) and a child-creation rule (Section 9).
 
 4.  Conventions and Terminology
 
@@ -389,11 +390,12 @@ Table of Contents
    |             |           |that profile's freshness rules, not by this      |
    |             |           |document ([I-D.draft-mcguinness-mission-runtime])|
    +-------------+-----------+-------------------------------------------------+
-   |Monotonic    |not        |A lineage-keyed budget identifier correlates a   |
-   |Derivation   |consumed   |root Mission and its Child Missions to one shared|
-   |             |           |counter (Section 9); lineage counters are        |
-   |             |           |correlation, not narrowing, and this document    |
-   |             |           |defines no no-broader-than comparison            |
+   |Monotonic    |not        |Ancestor charging and escrowed allocations       |
+   |Derivation   |consumed   |(Section 9) and lineage-keyed counters           |
+   |             |           |(Section 10) read a Mission's lineage to choose  |
+   |             |           |its counters; they compare remaining capacity,   |
+   |             |           |not authority, and add nothing to the no-broader-|
+   |             |           |than comparison                                  |
    +-------------+-----------+-------------------------------------------------+
    |Credential-  |not        |This document defines no binding of its own:     |
    |Bound        |consumed   |enforcement composes through the runtime         |
@@ -408,7 +410,7 @@ Table of Contents
    |Portable     |not        |This document defines no evidence artifact of its|
    |Evidence     |consumed   |own; metered refusals and settlement are carried |
    |             |           |in the runtime evidence records through the      |
-   |             |           |coordinated metering member (Section 10,         |
+   |             |           |coordinated metering member (Section 11,         |
    |             |           |[I-D.draft-mcguinness-mission-runtime-evidence]) |
    +-------------+-----------+-------------------------------------------------+
 
@@ -485,6 +487,7 @@ Table of Contents
    The bounds are carried on the Mission and committed by intent_hash.
    They are not enforced by the Authorization Server at issuance; they
    are enforced by the runtime layer at the point of use (Section 7).
+   The one issuance-time step is the child-creation rule of Section 9.
 
    Example Mission Intent carrying three of the four bounds alongside
    the issuance profile's members:
@@ -643,8 +646,14 @@ Table of Contents
       committed after success, or committed before execution.
 
    *  It MUST NOT leave the decrement ambiguous: a reservation settles
-      on the evidence state (Section 11.1.2), never on a generic failure
+      on the evidence state (Section 12.1.2), never on a generic failure
       signal.
+
+   *  For a metered action in the runtime profile's high-consequence
+      classes, the declared idempotency horizon
+      ([I-D.draft-mcguinness-mission-runtime]) MUST extend at least to
+      the Mission's expires_at, so a duplicate the Mission could still
+      admit always resolves against the recorded key.
 
    The reserve/commit posture fixes when consumption is charged; the
    evidence state fixes how the charge settles.
@@ -703,7 +712,58 @@ Table of Contents
    group's latch state fails closed for the actions the group covers,
    per the runtime profile's availability posture.
 
-9.  Aggregate Bounds
+9.  Capacity Across Missions
+
+   A consumption bound limits the delegation it is approved for, not a
+   credential or record derived from it.  Tokens, permits, and instances
+   under one Mission draw on one Mission-keyed counter.  A Mission
+   created from another Mission draws on that Mission's counters and
+   never receives a fresh copy of the bound:
+
+   *  *Child Mission.* A consequential action under a Child Mission
+      ([I-D.draft-mcguinness-oauth-mission-child-delegation]) is charged
+      to the child's own bound, where it carries one, and to the same
+      bound of every ancestor that carries it.  The PDP MUST refuse the
+      action when any of those counters would be exceeded.  Where an
+      ancestor's counter is outside the child's consistency domain, the
+      deployment instead reserves the child's bound against the
+      ancestor's counter when the child is created, as an escrowed
+      allocation that MUST NOT exceed the ancestor's remaining quantity.
+      When the child becomes terminal, the deployment closes the child's
+      allocation so that every later reservation against it fails, even
+      one a PDP permits on a cached active state within its staleness
+      bound ([I-D.draft-mcguinness-mission-runtime]).  The unconsumed
+      remainder MUST NOT return to the ancestor before that closure is
+      confirmed, and quantity held by the child's unsettled reservations
+      stays charged until they settle (Section 12.1.2).  A Mission
+      Issuer whose deployment can do neither MUST refuse to create a
+      Child Mission under a Mission that carries a consumption bound.
+      Two children that each carry a bound of 60,000 under a parent
+      bound of 100,000 together consume at most 100,000.
+
+   *  *Successor and carryover replacement.* An Expansion successor
+      ([I-D.draft-mcguinness-oauth-mission-expansion]) and a Child
+      Delegation carryover replacement continue the counters of the
+      Mission they replace: consumption to date carries forward, and the
+      successor's bound caps the cumulative consumption of the chain.  A
+      successor raises a bound when it carries a larger or incomparable
+      value, or omits a bound, a max_calls class, or a max_egress_volume
+      dimension its predecessor carries.  A successor adjudicated by
+      policy rather than by a fresh human approval MUST NOT raise a
+      bound.  Where a successor raises a bound, its approval rendering
+      MUST include the consumption to date (Section 6.1).
+
+   A Mission dispatched from a Mission Template
+   ([I-D.draft-mcguinness-oauth-mission-template]) is created from a
+   standing consent, not from another Mission, and has its own counters.
+   One template consent therefore admits up to max_active times an
+   instance's bound at once, and more over time at the template's
+   dispatch_rate.  Unless the deployment meters an aggregate bound
+   spanning the template's instances (Section 10), the template's
+   consent rendering MUST present the bound as per instance, together
+   with max_active and dispatch_rate.
+
+10.  Aggregate Bounds
 
    The bounds of this document are Mission-keyed.  A deployment MAY
    additionally meter the same bound classes across Missions, keyed by
@@ -715,21 +775,20 @@ Table of Contents
    postures, and refusal behavior are unchanged; only the key differs.
 
    A lineage-keyed budget identifier and its authoritative shared
-   counter are the only mechanism this document defines for a lineage-
-   wide aggregate consumption bound: they meter across every Mission a
-   derivation lineage contains, not within one Mission alone.  A Child
-   Mission's own derivation counter is independent of its parent's and
-   bounds nothing beyond that Child Mission itself
-   ([I-D.draft-mcguinness-oauth-mission-child-delegation]); absent a
-   deployed lineage-keyed counter, no per-Mission counter, however many
-   Missions in a lineage carry one, adds up to an aggregate bound on the
-   lineage.  This document is experimental (Section 1), so a deployment
-   running only the stable issuance and runtime profiles has no lineage-
-   wide aggregate bound in force at all.  A deployment MUST NOT render,
-   in an Enforcement Scope Statement or at any consent surface, a
-   lineage-wide or subtree aggregate bound as in force unless a lineage-
-   keyed budget identifier and shared counter meeting this section's
-   requirements are actually deployed and metered.
+   counter meter, as deployment policy, across every Mission a
+   derivation lineage contains.  They are distinct from the ancestor
+   charging of Section 9, which enforces the bound an Approver consented
+   to on one Mission across that Mission's descendants.  A Child
+   Mission's derivation counter is independent of its parent's, is not a
+   consumption bound, and bounds nothing beyond that Child Mission
+   itself ([I-D.draft-mcguinness-oauth-mission-child-delegation]).  This
+   document is experimental (Section 1), so a deployment running only
+   the stable issuance and runtime profiles has no lineage-wide
+   aggregate bound in force at all.  A deployment MUST NOT render, in an
+   Enforcement Scope Statement or at any consent surface, a lineage-wide
+   or subtree aggregate bound as in force unless it is enforced under
+   Section 9 or by a lineage-keyed budget identifier and shared counter
+   meeting this section's requirements.
 
    An aggregate bound is deployment policy: it is carried on no single
    Mission Intent, is committed by no intent_hash, and is disclosed
@@ -737,7 +796,7 @@ Table of Contents
    approval event.  A refusal under an aggregate bound is carried as
    quota_exceeded, and its Decision Evidence metering entry records the
    aggregate key class in counter_scope and the counter in counter_id
-   (Section 10).
+   (Section 11).
 
    Aggregate keying crosses the family's per-Mission consistency
    domains: a subject-keyed or lineage-keyed counter is shared by every
@@ -745,7 +804,7 @@ Table of Contents
    and is provisioned as its own consistency domain
    ([I-D.draft-mcguinness-mission-runtime]).
 
-10.  Metering Evidence
+11.  Metering Evidence
 
    A metered decision is auditable only where the evidence exposes the
    counter state the decision asserted.  This document defines one
@@ -759,7 +818,7 @@ Table of Contents
       Decision Evidence record emitted for a metered evaluation, permit
       or refusal, MUST carry it, and an Execution Evidence record MUST
       carry it where the committed quantity is conveyed by consumed
-      (Section 11.1.1).  Each entry has the members:
+      (Section 12.1.1).  Each entry has the members:
 
       bound:  REQUIRED.  A string.  The metered bound: a Mission Intent
          member name this document defines (Section 6) or the applicable
@@ -767,7 +826,8 @@ Table of Contents
 
       counter_scope:  REQUIRED.  A string.  The counter's key class:
          mission for the Mission-keyed bounds of this document, or
-         subject, client, or lineage for an aggregate bound (Section 9).
+         subject, client, or lineage for an aggregate bound
+         (Section 10).
 
       counter_id:  REQUIRED.  A string.  A stable identifier of the
          counter, the same value on every record the counter's decisions
@@ -794,13 +854,13 @@ Table of Contents
 
       consumed:  CONDITIONAL.  The same shape.  Execution Evidence only:
          the actual quantity for the PDP to commit, per the bound-class
-         conveyance rules of Section 11.1.1.
+         conveyance rules of Section 12.1.1.
 
       settlement_state:  CONDITIONAL.  A string.  Decision Evidence of a
          permitted metered action only: the decision-time posture,
          reserved or committed (Section 7.2).  The terminal disposition,
          commit, release, hold, or conflict, is applied under
-         Section 11.1.2 and joined through evaluation_id; it is not
+         Section 12.1.2 and joined through evaluation_id; it is not
          restated in the immutable record.
 
    The member turns a metered refusal into a checkable claim rather than
@@ -822,13 +882,13 @@ Table of Contents
      ]
    }
 
-11.  AuthZEN Wire Representation
+12.  AuthZEN Wire Representation
 
    Where the runtime deployment uses the AuthZEN profile
    ([I-D.draft-mcguinness-mission-authzen]), this section defines the
    wire representation of metering.  It defines no new metering
    semantics and no new constraint.  The requirements of this section
-   and Section 11.1 apply only to a deployment that adopts the AuthZEN
+   and Section 12.1 apply only to a deployment that adopts the AuthZEN
    profile under that profile's conformance; for every other deployment
    the AuthZEN profile remains an informative reference.
 
@@ -845,17 +905,17 @@ Table of Contents
    exactness of the bound is the consistency bound of Section 7.1, not a
    property of this wire binding.
 
-11.1.  Settlement Exchange
+12.1.  Settlement Exchange
 
    The metering rules require the PEP to signal actual use so the PDP
    commits consumption and releases any reservation.  In the AuthZEN
    profile, delivery of the Execution Evidence Object
    ([I-D.draft-mcguinness-mission-runtime-evidence]) to the PDP is that
    commit-or-release signal: on receipt the PDP settles the linked
-   action's consumption per Section 11.1.2, keyed to the Execution
+   action's consumption per Section 12.1.2, keyed to the Execution
    Evidence's evaluation_id.
 
-11.1.1.  Settlement Submission Contract
+12.1.1.  Settlement Submission Contract
 
    The settlement transport is the runtime evidence companion's
    Execution Evidence delivery contract, profiled rather than a second
@@ -869,7 +929,7 @@ Table of Contents
       intake, the PDP evidence-submission path or the event or evidence
       API it profiles, in its Enforcement Scope Statement.  The intake
       MUST feed the consistency domain that holds the counter
-      (Section 7.1, Section 9).
+      (Section 7.1, Section 10).
 
    *  *Authentication.* The intake MUST accept a settlement only as an
       Execution Evidence Object in the evidence companion's integrity
@@ -904,7 +964,7 @@ Table of Contents
    *  max_duration: the Execution Evidence measured_duration member.
 
    *  max_budget: the Execution Evidence metering entry's consumed
-      member, as {amount, currency} (Section 10).
+      member, as {amount, currency} (Section 11).
 
    *  max_egress_volume: the Execution Evidence metering entry's
       consumed member, as bytes and messages, measured per the Operation
@@ -914,7 +974,7 @@ Table of Contents
    Where an action class defines no actual measure for a bound, the
    Operation Profile MUST state that the reserved quantity commits.
 
-11.1.2.  Settlement by Evidence State
+12.1.2.  Settlement by Evidence State
 
    A reservation settles on the evidence state, never on a generic
    failure signal:
@@ -940,16 +1000,17 @@ Table of Contents
       reservation does not consume the budget permanently.  On lease
       expiry without settlement the PDP reconciles the reservation
       through the runtime profile's orphaned-evidence process
-      ([I-D.draft-mcguinness-mission-runtime]).  For an idempotent or
-      reversible action class, expiry releases the reservation and
-      returns the budget; for a non-idempotent action class, expiry
-      forces reconciliation or human review rather than release.  An
-      unsettled reservation remains charged against the bound until it
-      is reconciled, and is released only on affirmative evidence of
-      non-execution; timeout alone never releases a reservation for a
-      non-idempotent action class.
+      ([I-D.draft-mcguinness-mission-runtime]), which queries the
+      resource and matches evidence.  An unsettled reservation remains
+      charged against the bound until it is reconciled, and is released
+      only on affirmative evidence of non-execution; timeout alone never
+      releases a reservation, in any action class.  An idempotent action
+      class makes a retry safe, not the first attempt void, and
+      reversing a reversible action is a compensation action
+      ([I-D.draft-mcguinness-mission-orchestration]), not evidence that
+      the original did not execute.
 
-   *  *Conflicting settlement*: fail closed per Section 11.1.1.  The
+   *  *Conflicting settlement*: fail closed per Section 12.1.1.  The
       applied settlement is unchanged; the conflict is audited, never
       adjudicated by the intake.
 
@@ -967,7 +1028,7 @@ Table of Contents
    cadence sized to its evidence-channel loss rate; the reconciliation
    window it publishes is how long leaked budget stays leaked.
 
-11.1.3.  Duration-Lease Renewal
+12.1.3.  Duration-Lease Renewal
 
    For a duration-metered action the PEP reports the measured duration
    in the Execution Evidence measured_duration member, and the PDP
@@ -1033,7 +1094,7 @@ Table of Contents
      }
    }
 
-12.  Conformance
+13.  Conformance
 
    A runtime deployment that claims this profile MUST:
 
@@ -1047,10 +1108,14 @@ Table of Contents
    *  enforce every consented exclusivity group with a latch atomic with
       the permit (Section 8);
 
-   *  where aggregate bounds are configured, meter and disclose them per
-      Section 9;
+   *  charge a Child Mission's actions to its ancestors' bounds, or
+      settle its escrowed allocation, and continue a successor's
+      counters per Section 9;
 
-   *  emit the metering evidence member on the records Section 10
+   *  where aggregate bounds are configured, meter and disclose them per
+      Section 10;
+
+   *  emit the metering evidence member on the records Section 11
       requires;
 
    *  publish its consistency bound under a multi-PDP topology
@@ -1060,13 +1125,14 @@ Table of Contents
       posture (Section 7.2); and
 
    *  where the AuthZEN profile is in use, implement the settlement
-      exchange of Section 11.1.
+      exchange of Section 12.1.
 
    A Mission Issuer in a deployment claiming this profile MUST carry the
    consented bounds on the Mission record committed by intent_hash.  It
-   MUST render them at the approval event per Section 6.1.
+   MUST render them at the approval event per Section 6.1, and MUST
+   apply the child-creation, successor, and template rules of Section 9.
 
-13.  Security Considerations
+14.  Security Considerations
 
    Consumption bounds limit the blast radius of a compromised or runaway
    agent in a dimension authority narrowing cannot: a Mission whose
@@ -1099,9 +1165,11 @@ Table of Contents
    *  *Reservation starvation.* An attacker who opens reservations and
       never settles them can consume a budget with no executed action,
       denying the Mission its remaining authority.  The bounded
-      reservation lease (Section 11.1) caps this: an unsettled
-      reservation is reconciled on lease expiry rather than held
-      indefinitely, and the idempotent-release path returns the budget.
+      reservation lease (Section 12.1) caps this: an unsettled
+      reservation is reconciled on lease expiry, and reconciliation that
+      finds no effect at the resource returns the budget.  An outcome
+      reconciliation cannot establish stays charged and is escalated,
+      never released by a timer.
 
    *  *Latch burning.* Because the first matching action latches an
       exclusivity group, an injected agent can try to burn a group by
@@ -1110,7 +1178,7 @@ Table of Contents
       (Section 8) keeps an unexecuted attempt from foreclosing the group
       permanently.
 
-14.  Privacy Considerations
+15.  Privacy Considerations
 
    Metering state (spend, call counts, activity durations) is a fine-
    grained record of Mission activity over time.  It SHOULD be retained
@@ -1118,7 +1186,7 @@ Table of Contents
    enforcement evidence ([I-D.draft-mcguinness-mission-runtime]), and
    disclosed in decision responses only as refusals, not as remaining-
    balance oracles.  The metering evidence member records remaining
-   inside those access-controlled records (Section 10), never in a
+   inside those access-controlled records (Section 11), never in a
    decision response.
 
    The refusal boundary is itself a coarse balance oracle: the point at
@@ -1130,7 +1198,7 @@ Table of Contents
    compromised agent mapping a balance by repeated probes is visible to
    the humans adjudicating it.
 
-15.  IANA Considerations
+16.  IANA Considerations
 
    This document registers the following in the issuance profile's
    "Mission Intent Members" registry: max_budget, max_calls,
@@ -1149,9 +1217,9 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-runtime-evidence]), likewise outside
    this registry.
 
-16.  References
+17.  References
 
-16.1.  Normative References
+17.1.  Normative References
 
    [I-D.draft-mcguinness-mission-authzen]
               McGuinness, K., "Mission-Bound Runtime Enforcement:
@@ -1198,7 +1266,7 @@ Table of Contents
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
 
-16.2.  Informative References
+17.2.  Informative References
 
    [I-D.draft-mcguinness-mission-architecture]
               McGuinness, K., "An Architecture for Mission-Bound
@@ -1229,6 +1297,16 @@ Table of Contents
               authorization/draft-mcguinness-oauth-mission-derivation-
               limits.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-expansion]
+              McGuinness, K., "Mission Expansion for OAuth 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-expansion.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-template]
+              McGuinness, K., "Mission Template for OAuth 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-template.html>.
+
    [RFC7942]  Sheffer, Y. and A. Farrel, "Improving Awareness of Running
               Code: The Implementation Status Section", BCP 205,
               RFC 7942, DOI 10.17487/RFC7942, July 2016,
@@ -1237,6 +1315,17 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Capacity Across Missions (Section 9): a Child Mission is charged
+      to every ancestor's bound or holds an escrowed allocation whose
+      remainder returns only after the allocation is closed, a successor
+      or carryover replacement continues its predecessor's counters, a
+      policy successor keeps every bound, and a template consent renders
+      the per-instance bound with max_active and dispatch_rate.  Lease
+      expiry no longer releases an unsettled reservation for an
+      idempotent or reversible action class (Section 12.1.2), and a
+      metered high-consequence idempotency horizon reaches the Mission's
+      expires_at (Section 7.2).
 
    *  Controls taxonomy retirement (#636, #117): max_budget, max_calls,
       max_duration, max_egress_volume, and exclusive move from
@@ -1255,7 +1344,7 @@ Appendix A.  Document History
       the issuance profile.
 
    *  One informative cross-reference in Settlement by Evidence State
-      (Section 11.1.2): a containment overlay's contain transition is
+      (Section 12.1.2): a containment overlay's contain transition is
       not settlement evidence.  An open reservation or duration lease
       still settles unchanged under the existing evidence-state rules,
       and contain narrows only forward draw, a new reservation or a

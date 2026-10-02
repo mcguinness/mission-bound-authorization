@@ -1738,12 +1738,15 @@ this profile unchanged.<a href="#section-4-1" class="pilcrow">¶</a></p>
       <h2 id="name-mission-to-policy-materiali">
 <a href="#section-5" class="section-number selfRef">5. </a><a href="#name-mission-to-policy-materiali" class="section-name selfRef">Mission-to-Policy Materialization</a>
       </h2>
-<p id="section-5-1">The PDP evaluates a Mission against an action through a materialized
-policy view. The materialized policy view, its trusted-compiler and
+<p id="section-5-1">Where the PDP evaluates a Mission against an action through a
+materialized policy view, the view, its trusted-compiler and
 reproducibility rules, its bounded-fidelity property, and the
 content-addressed <code>policy_view_id</code> with its <code>mission-policy-view</code>
 integrity envelope are defined by the runtime profile
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). The trusted compiler
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); a PDP that evaluates the
+Mission's recorded authority directly meets that profile's authority
+input (its Section "Authority") without a view, and its requests omit
+<code>policy_view_id</code>. The trusted compiler
 computes that envelope, and the <code>authority_hash</code> it binds, from its
 own held Mission record; the issuance profile's baseline <code>mission</code>
 claim does not carry <code>authority_hash</code> on the wire
@@ -1760,8 +1763,8 @@ paid per freshness window rather than per action.<a href="#section-5-1" class="p
 <code>policy_view_id</code> appears in <code>context.mission.policy_view_id</code>
 (<a href="#context-mission" class="auto internal xref">Section 6.2</a>), when the requesting PEP holds it, as a
 content-addressed check against the view the PDP has loaded. The PDP
-does not echo <code>policy_view_id</code> on the response; it records the view it
-evaluated against directly in Decision Evidence
+does not echo <code>policy_view_id</code> on the response; where it evaluates
+through a view, it records that view directly in Decision Evidence
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>), so the correlator
 between a permit and its evidence, and between a denial and its
 evidence, is <code>evaluation_id</code> (<a href="#response-context" class="auto internal xref">Section 7.1</a>), not a wire-echoed
@@ -2669,15 +2672,18 @@ source the PDP can itself consult.<a href="#section-6.15-3.1.1" class="pilcrow">
           <li id="section-6.15-3.2">
             <p id="section-6.15-3.2.1">The <code>id</code> and <code>issuer</code> in <code>context.mission</code> equal the <code>mission_id</code>
 and issuer committed in the materialized policy view the PDP has
-loaded for this Mission (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>);
-the PDP returns <code>view_inconsistent</code> on any inequality. When
+loaded for this Mission, or, for a PDP that evaluates the Mission's
+recorded authority directly, those of the trusted Mission record it
+evaluates (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); the PDP
+returns <code>view_inconsistent</code> on any inequality. When
 <code>context.mission.authority_hash</code> is also present, it <span class="bcp14">MUST</span> equal
-the view's committed <code>authority_hash</code>, with the same
+the <code>authority_hash</code> that view or record commits, with the same
 <code>view_inconsistent</code> result on inequality (its omission is covered
 by rule 5 below).<a href="#section-6.15-3.2.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-6.15-3.3">
-            <p id="section-6.15-3.3.1">When <code>context.mission.policy_view_id</code> is present, it <span class="bcp14">MUST</span> equal
+            <p id="section-6.15-3.3.1">Where the PDP evaluates through a view and
+<code>context.mission.policy_view_id</code> is present, it <span class="bcp14">MUST</span> equal
 the loaded view's <code>policy_view_id</code>, and the PDP returns
 <code>view_inconsistent</code> on inequality.<a href="#section-6.15-3.3.1" class="pilcrow">¶</a></p>
 </li>
@@ -2693,7 +2699,8 @@ staleness (<code>stale_state</code>): one side has missed a committed change.<a 
           <li id="section-6.15-3.5">
             <p id="section-6.15-3.5.1">A PDP <span class="bcp14">MUST NOT</span> fail a decision solely because the optional
 <code>policy_view_id</code>, <code>policy_version</code>, or <code>authority_hash</code> was
-omitted; the view the PDP loaded is authoritative.<a href="#section-6.15-3.5.1" class="pilcrow">¶</a></p>
+omitted; the view the PDP loaded, or the Mission record it
+evaluates directly, is authoritative.<a href="#section-6.15-3.5.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-6.15-3.6">
             <p id="section-6.15-3.6.1">When <code>context.credential.expires_at</code> is present, it has not passed;
@@ -3466,9 +3473,10 @@ transient with <code>next_action: retry</code> (<a href="#response-context" clas
           <li class="normal" id="section-7.5-2.6">
             <p id="section-7.5-2.6.1"><code>view_inconsistent</code>: the request's Mission <code>id</code> or <code>issuer</code>, or (when
 carried) <code>authority_hash</code> or <code>policy_view_id</code>, does not equal the
-committed values in the materialized policy view the PDP loaded, so
-the request and the loaded view disagree on which Mission or view is
-in force. This is a view inconsistency, not staleness.<a href="#section-7.5-2.6.1" class="pilcrow">¶</a></p>
+committed values in the materialized policy view the PDP loaded, or
+in the Mission record it evaluates directly, so the request and the
+PDP disagree on which Mission or view is in force. This is a view
+inconsistency, not staleness.<a href="#section-7.5-2.6.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-7.5-2.7">
             <p id="section-7.5-2.7.1"><code>mission_inactive</code>: the Mission state is not <code>active</code>.<a href="#section-7.5-2.7.1" class="pilcrow">¶</a></p>
@@ -3910,7 +3918,7 @@ carrier's extensibility rule.<a href="#section-7.8-1" class="pilcrow">¶</a></p>
 </td>
             </tr>
             <tr>
-              <td class="text-left" rowspan="1" colspan="1">Request Mission <code>id</code> or <code>issuer</code>, or (when carried) <code>authority_hash</code> or <code>policy_view_id</code>, inconsistent with the loaded view</td>
+              <td class="text-left" rowspan="1" colspan="1">Request Mission <code>id</code> or <code>issuer</code>, or (when carried) <code>authority_hash</code> or <code>policy_view_id</code>, inconsistent with the loaded view or the directly evaluated Mission record</td>
               <td class="text-left" rowspan="1" colspan="1">PDP denial</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>view_inconsistent</code>
@@ -4958,17 +4966,26 @@ registered by <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite x
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Defined the input to <code>evaluation_request_digest</code>: the complete
-request body as submitted, extension members included, before any
-default or enrichment, with header fields and transport framing
-excluded; a batch carries the one digest of its body (#971).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.1.1">Mission-to-Policy Materialization describes the materialized policy
+view as one evaluation path: a PDP that evaluates the Mission's
+recorded authority directly meets the runtime profile's authority
+input without a view and omits <code>policy_view_id</code>. The PDP-side
+consistency checks compare the request against the loaded view or
+the directly evaluated Mission record, and the <code>policy_view_id</code>
+check applies only where a view is used.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">The state observation's <code>mission_status_issued_at</code> is the RFC 3339
+          <p id="appendix-A-2.2.1">Defined the input to <code>evaluation_request_digest</code>: the complete
+request body as submitted, extension members included, before any
+default or enrichment, with header fields and transport framing
+excluded; a batch carries the one digest of its body (#971).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">The state observation's <code>mission_status_issued_at</code> is the RFC 3339
 form of a Mission Status Response's <code>iat</code>, which <code>freshness_at</code>
 precedes by no more than the published maximum clock skew, and
 <code>mission_status_expires_at</code> and the state valid-through are its
-<code>mission.fresh_until</code>, not its <code>exp</code>, or a lease's end.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+<code>mission.fresh_until</code>, not its <code>exp</code>, or a lease's end.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

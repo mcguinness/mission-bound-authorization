@@ -2531,8 +2531,8 @@ requesting parent agent, the Parent Mission's <code>client_id</code>, distinct
 from <code>consent_principal</code>; and<a href="#section-6.1-9.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.1-9.3">
-            <p id="section-6.1-9.3.1"><code>root_commitment</code> is the entry's
-<code>child_creation_policy</code> reference where the entry carries one,
+            <p id="section-6.1-9.3.1"><code>root_commitment</code> is the <code>digest</code> of the entry's
+<code>child_creation_policy</code> where the entry carries one,
 otherwise the Parent Mission's own <code>authority_hash</code>, which commits
 the authorizing delegation entry.<a href="#section-6.1-9.3.1" class="pilcrow">¶</a></p>
 </li>
@@ -2542,10 +2542,14 @@ reference a committed value: the anti-laundering guarantee that a
 <code>policy_drawdown</code> basis always traces to something the human's
 approval actually committed.<a href="#section-6.1-10" class="pilcrow">¶</a></p>
 <p id="section-6.1-11">Where the entry carries a
-<code>child_creation_policy</code>, <code>activation</code> carries that policy's <code>id</code> and
-<code>version</code> and this creation's own delegation event identifier (above)
-as <code>activation_event_id</code>. Where it does not, the drawdown is against
-the parent's approved delegation entry itself, not a separate policy
+<code>child_creation_policy</code>, <code>activation</code> carries that policy's <code>id</code>,
+<code>version</code>, and <code>digest</code> and this creation's own delegation event
+identifier (above) as <code>activation_event_id</code>. A policy snapshot that
+does not match <code>digest</code> denies child creation with <code>policy_denied</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Standing-Consent
+Bases"). Where the entry carries no <code>child_creation_policy</code>, the
+drawdown is against the parent's approved delegation entry itself,
+not a separate policy
 artifact: <code>activation</code> omits <code>policy_id</code> and carries only the
 delegation event identifier as <code>activation_event_id</code>. The record's
 <code>approver</code> is <code>consent_principal</code>: the Parent Mission's human
@@ -2771,7 +2775,10 @@ reduced by one, and an entry at depth equal to the limit carries no
 <dt id="section-8-2.2.2.7">
 <code>child_creation_policy</code>:</dt>
             <dd style="margin-left: 1.5em" id="section-8-2.2.2.8">
-              <p id="section-8-2.2.2.8.1"><span class="bcp14">OPTIONAL</span>. A policy reference evaluated before each child creation.<a href="#section-8-2.2.2.8.1" class="pilcrow">¶</a></p>
+              <p id="section-8-2.2.2.8.1"><span class="bcp14">OPTIONAL</span>. An activation policy reference, an object of <code>id</code>,
+<code>version</code>, and <code>digest</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
+Section "Standing-Consent Bases"), identifying the policy
+evaluated before each child creation and committing its content.<a href="#section-8-2.2.2.8.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 </dl>
@@ -4144,27 +4151,35 @@ apply unchanged.<a href="#appendix-A-7" class="pilcrow">¶</a></p>
 <p id="appendix-B-1">[[ To be removed from the final specification ]]<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-2.1">
-          <p id="appendix-B-2.1.1">Approval rendering of child creation shows <code>max_children</code> as a
+          <p id="appendix-B-2.1.1"><code>child_creation_policy</code> is an activation policy reference (<code>id</code>,
+<code>version</code>, <code>digest</code>) under the issuance profile's Standing-Consent
+Bases; <code>root_commitment</code> is its <code>digest</code>, <code>activation</code> carries the
+digest, and a mismatched snapshot denies child creation with
+<code>policy_denied</code>. Creation against the delegation entry itself, with
+no <code>child_creation_policy</code>, is unchanged.<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.2">
+          <p id="appendix-B-2.2.1">Approval rendering of child creation shows <code>max_children</code> as a
 concurrency limit, <code>max_child_depth</code>, and the per-child derivation
 limit as distinct figures, never one composed total, and states
 whether a finite aggregate is enforced. The Parent Mission's
 approval renders them where child creation can be adjudicated by
-policy.<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-B-2.2">
-          <p id="appendix-B-2.2.1">The child's initial grant states how it differs from the Mission
-Issuance Grant: its audience is the Mission Issuer's own token
-endpoint, since that issuer mints and redeems it, not a consuming
-Authorization Server's issuer identifier. No wire change.<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
+policy.<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.3">
-          <p id="appendix-B-2.3.1">The delegated-token versus Child Mission test adds audience: a
-sub-agent that calls a Resource Server that is not Mission-aware
-runs under a Child Mission, where child creation is authorized and
-that Resource Server can enforce the projected authority.<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.3.1">The child's initial grant states how it differs from the Mission
+Issuance Grant: its audience is the Mission Issuer's own token
+endpoint, since that issuer mints and redeems it, not a consuming
+Authorization Server's issuer identifier. No wire change.<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.4">
-          <p id="appendix-B-2.4.1">Client-instance references follow their successors:
+          <p id="appendix-B-2.4.1">The delegated-token versus Child Mission test adds audience: a
+sub-agent that calls a Resource Server that is not Mission-aware
+runs under a Child Mission, where child creation is authorized and
+that Resource Server can enforce the projected authority.<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.5">
+          <p id="appendix-B-2.5.1">Client-instance references follow their successors:
 draft-mcguinness-oauth-client-instance-assertion is replaced by
 {I-D.draft-mcguinness-oauth-client-instance-id}, and the
 deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
@@ -4172,13 +4187,13 @@ cited. An instance-granular
 <code>child_actor</code> no longer carries the instance identifier in <code>sub</code>:
 the successor forbids setting <code>sub</code> or an actor from instance
 evidence alone (Section 5), and <code>client_instance</code> was a value only
-the deprecated draft defined.<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
+the deprecated draft defined.<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.5">
-          <p id="appendix-B-2.5.1">Added the capability-gated Child Mission Carryover foundation, including
+        <li class="normal" id="appendix-B-2.6">
+          <p id="appendix-B-2.6.1">Added the capability-gated Child Mission Carryover foundation, including
 full snapshot and budget checks, committed exclusion semantics, fresh
 direct approvals, and durable observation and recovery. Carryover
-preserves record continuity, not worker continuity (#576).<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
+preserves record continuity, not worker continuity (#576).<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

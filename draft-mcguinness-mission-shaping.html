@@ -2536,7 +2536,10 @@ A model-based shaper inherits its model's failure modes (hallucinated
 resources, fabricated constraints, inconsistent paraphrase, and
 sensitivity to small input perturbations), and <span class="bcp14">SHOULD</span> record the model
 identifier and version in Shaping Evidence so that failures can be
-attributed.<a href="#section-12.1-1" class="pilcrow">¶</a></p>
+attributed. The same bound holds at approval: a model's judgment
+enters adjudication only as a recorded input to a deterministic
+policy, and that input can refuse or narrow, never grant or widen
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-12.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="shaper-compromise">
@@ -3007,63 +3010,69 @@ guessing (<a href="#clarifications" class="auto internal xref">Section 7.1</a>).
 <p id="appendix-B-1">[[ To be removed from the final specification ]]<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-2.1">
-          <p id="appendix-B-2.1.1">Restructured for readability without changing any requirement.
+          <p id="appendix-B-2.1.1">Model Output Is Not Authority points to the OAuth binding's
+issuer-side counterpart: a model enters adjudication only as a
+recorded input to a deterministic policy, without changing any
+requirement of this document.<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.2">
+          <p id="appendix-B-2.2.1">Restructured for readability without changing any requirement.
 Sections follow the processing model, and the shaper's role and the
 Authority Proposal each have one home. The construction table became
 a per-member list, the two examples became one end-to-end appendix
 showing the Intent, the Authority Proposal, and Shaping Evidence,
 and the Conformance section and "What Shaping Adds and Does Not"
 were folded into Conventions, Deployment Considerations, and the
-Introduction.<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+Introduction.<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.2">
-          <p id="appendix-B-2.2.1">Corrected statements against their sources: the derivation-refusal
+        <li class="normal" id="appendix-B-2.3">
+          <p id="appendix-B-2.3.1">Corrected statements against their sources: the derivation-refusal
 codes in Re-Shaping, the AAuth binding's intake (a natural-language
 proposal, not a Mission Intent), the narrowing mode that replaced
 the reproducibility rule, and open-ended invariants, which are
-Authority Proposal constraints rather than <code>task_bounds</code>.<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
+Authority Proposal constraints rather than <code>task_bounds</code>.<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.3">
-          <p id="appendix-B-2.3.1">Reconciled the shaping-ceiling outcomes with Ambiguity Handling and
+        <li class="normal" id="appendix-B-2.4">
+          <p id="appendix-B-2.4.1">Reconciled the shaping-ceiling outcomes with Ambiguity Handling and
 defined a partial proposal; fixed the condition on the broadening
 record; named the parties the keywords bind; limited Shaping
 Evidence to consent disclosure and audit at the Mission Issuer;
 made signing and integrity envelopes consistent; and moved
-staleness to one client-side rule.<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-B-2.4">
-          <p id="appendix-B-2.4.1">Replaced the "sound shaper" idiom with BCP 14 keywords. Member
-guidance covers <code>goal_lang</code> and the <code>target_resources</code> containment
-rule, and <code>purpose</code> is chosen only when the request supports it.<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
+staleness to one client-side rule.<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.5">
-          <p id="appendix-B-2.5.1">Only a re-proposal after an authority refusal narrows; a
+          <p id="appendix-B-2.5.1">Replaced the "sound shaper" idiom with BCP 14 keywords. Member
+guidance covers <code>goal_lang</code> and the <code>target_resources</code> containment
+rule, and <code>purpose</code> is chosen only when the request supports it.<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.6">
+          <p id="appendix-B-2.6.1">Only a re-proposal after an authority refusal narrows; a
 construction error is corrected without broadening. The
 derivation-limit and intent-bound-evidence guidance follow their
 owning drafts, and an ambiguity narrowing that drops necessary
-authority is a partial proposal.<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
+authority is a partial proposal.<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.6">
-          <p id="appendix-B-2.6.1">Renamed the <code>authority_source</code> resolution basis to
+        <li class="normal" id="appendix-B-2.7">
+          <p id="appendix-B-2.7.1">Renamed the <code>authority_source</code> resolution basis to
 <code>capability_projection</code>; retained evidence is not rewritten. The
 recommended evidence members are typed, with their applicability,
 new members for the outcome, the emitted proposal, the ceiling, the
 parent Mission, and the re-proposal chain, and a defined
 <code>source_digest</code>. A shaping ceiling is an <code>authorization_details</code>
 array, and one that must constrain authority requires an Authority
-Proposal.<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-B-2.7">
-          <p id="appendix-B-2.7.1">The evidence hash travels in the <code>mission_shaping_evidence_hash</code>
-pushed authorization request parameter that Consent Evidence
-defines.<a href="#appendix-B-2.7.1" class="pilcrow">¶</a></p>
+Proposal.<a href="#appendix-B-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.8">
-          <p id="appendix-B-2.8.1">Tightened the prose by removing restatement: previews in the
+          <p id="appendix-B-2.8.1">The evidence hash travels in the <code>mission_shaping_evidence_hash</code>
+pushed authorization request parameter that Consent Evidence
+defines.<a href="#appendix-B-2.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.9">
+          <p id="appendix-B-2.9.1">Tightened the prose by removing restatement: previews in the
 Introduction, repeated scope and conformance statements, and
 sentences that restated an adjacent requirement. Two clarification
 requirements that said the same thing are one. No other requirement
-changed.<a href="#appendix-B-2.8.1" class="pilcrow">¶</a></p>
+changed.<a href="#appendix-B-2.9.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

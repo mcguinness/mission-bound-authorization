@@ -266,20 +266,19 @@ Table of Contents
       single resource, under the resource-narrowing semantics the subset
       rule fixes ([I-D.draft-mcguinness-oauth-mission]).
 
-   dispatch_policy:  REQUIRED.  An object carrying id and version,
-      identifying the Dispatch Policy under which the Mission Issuer
-      instantiates from this template.  Its content is deployment-
-      defined.  Committing only id and version leaves the policy body
-      itself uncommitted, so a change to its logic between template
-      consent and a given dispatch is not detectable from the template
-      alone.  A deployment SHOULD additionally commit the Dispatch
-      Policy body under an integrity anchor, computed the way the
-      issuance profile computes authority_hash
-      ([I-D.draft-mcguinness-oauth-mission]), or disclose it under
-      Consent Evidence
-      ([I-D.draft-mcguinness-oauth-mission-consent-evidence]), so a
-      machine-speed dispatch decision stays auditable against the policy
-      content a human actually consented to, not only its identifier.
+   dispatch_policy:  REQUIRED.  An activation policy reference, an
+      object of id, version, and digest
+      ([I-D.draft-mcguinness-oauth-mission], Section "Standing-Consent
+      Bases"), identifying the Dispatch Policy under which the Mission
+      Issuer instantiates from this template and committing its content.
+      The policy's content is deployment-defined, and includes the rule
+      that selects the instance's Agent when allowed_recipients lists
+      more than one (Section 4).  Because template_hash covers this
+      member, the template commits the exact policy the human consented
+      to, and the Mission Issuer verifies its digest before each
+      Dispatch under that section's rule, so a machine-speed dispatch
+      decision stays auditable against the policy content, not only its
+      identifier.
 
    allowed_dispatchers:  REQUIRED.  A non-empty array of strings, each
       the client identifier (client_id) of a principal permitted to
@@ -293,12 +292,17 @@ Table of Contents
       subject does, and agents, each a client_id string.  The Mission
       Issuer establishes the instance's Subject as the issuance profile
       requires, never from Dispatcher input
-      ([I-D.draft-mcguinness-oauth-mission]), and refuses a Dispatch
-      whose established Subject does not equal an entry of subjects in
-      both iss and sub, or whose Agent (the instance's client_id) is not
-      an entry of agents, so a template cannot mint a Mission for a
-      party the human did not consent to.  The two lists are
-      independent: any listed Agent may serve any listed Subject,
+      ([I-D.draft-mcguinness-oauth-mission]).  It selects the instance's
+      Agent (the instance's client_id) from agents under the Dispatch
+      Policy, never from Dispatcher input: with one listed Agent, that
+      Agent; with several, the Agent the Dispatch Policy's selection
+      rule names. agents bounds the selection and is not a selection
+      rule; its order carries no meaning.  The Mission Issuer refuses a
+      Dispatch for which no Agent is selected, whose established Subject
+      does not equal an entry of subjects in both iss and sub, or whose
+      Agent is not an entry of agents, so a template cannot mint a
+      Mission for a party the human did not consent to.  The two lists
+      are independent: any listed Agent may serve any listed Subject,
       subject to the other Dispatch checks (Section 6); a deployment
       that needs restricted pairings uses separate templates.
 
@@ -450,14 +454,20 @@ Table of Contents
        template's allowed_dispatchers.  Refuse a request from any other
        principal.
 
-   3.  *Derive the instance Authority Set.* Derive an Authority Set from
+   3.  *Verify the Dispatch Policy.* Verify the Dispatch Policy snapshot
+       the Mission Issuer will evaluate against dispatch_policy.digest
+       ([I-D.draft-mcguinness-oauth-mission], Section "Standing-Consent
+       Bases").  On a mismatch, refuse the Dispatch with
+       dispatch_policy_changed (Section 8).
+
+   4.  *Derive the instance Authority Set.* Derive an Authority Set from
        the dispatch intent, and from the Dispatcher's authority proposal
        where one was submitted (Section 6.2), and bound it by the
        deployment's derivation policy, exactly as for any Mission
        ([I-D.draft-mcguinness-oauth-mission]).  This document adds no
        authority-derivation rule.
 
-   4.  *Double intersection.* The derived instance Authority Set MUST be
+   5.  *Double intersection.* The derived instance Authority Set MUST be
        a subset, under the issuance profile's subset rule
        ([I-D.draft-mcguinness-oauth-mission]), of *both* the
        deployment's derivation-policy ceiling *and* the Template
@@ -467,17 +477,17 @@ Table of Contents
        with out_of_template_ceiling (Section 8).  Raising the ceiling is
        a new template consent, not a dispatch.
 
-   5.  *Prohibited-class check.* Apply the prohibited-class rule
+   6.  *Prohibited-class check.* Apply the prohibited-class rule
        (Section 7) to the surviving post-intersection set.  If it would
        grant a high-consequence class, refuse the Dispatch with
        dispatch_prohibited_class (Section 8).
 
-   6.  *Enforce the bounds.* Refuse the Dispatch if it would exceed
-       max_active or dispatch_rate, or if the instance's Mission-Issuer-
-       established Subject or its Agent falls outside allowed_recipients
-       (Section 4).
+   7.  *Enforce the bounds.* Refuse the Dispatch if it would exceed
+       max_active or dispatch_rate, if no Agent is selected, or if the
+       instance's Mission-Issuer-established Subject or its selected
+       Agent falls outside allowed_recipients (Section 4).
 
-   7.  *Commit the instance.* Commit an ordinary Mission whose Authority
+   8.  *Commit the instance.* Commit an ordinary Mission whose Authority
        Set is the surviving set and whose:
 
        *  approver is the template's human approver, the accountable
@@ -509,6 +519,12 @@ Table of Contents
           taken from Dispatcher input, and is an entry of
           allowed_recipients subjects
           ([I-D.draft-mcguinness-oauth-mission]);
+
+       *  client_id is the Agent selected from allowed_recipients agents
+          (Section 4), never taken from Dispatcher input.  The selection
+          is part of the committed instance: a retried or recovered
+          Dispatch returns the committed Agent and does not select
+          again;
 
        *  intent_hash and authority_hash are computed over the
           instance's own Intent and final Authority Set, never over the
@@ -615,9 +631,9 @@ Table of Contents
    Template it was dispatched from:
 
    template:  An object carrying id, issuer, template_version,
-      template_hash, and dispatch_policy (the policy id and version).
-      Present on every dispatched Mission and absent on a Mission
-      created by ordinary approval.
+      template_hash, and dispatch_policy (the activation policy
+      reference: id, version, and digest).  Present on every dispatched
+      Mission and absent on a Mission created by ordinary approval.
 
    Consistent with the issuance profile's open-mission-claim rule
    ([I-D.draft-mcguinness-oauth-mission]), the template member is
@@ -654,8 +670,8 @@ Table of Contents
       issuance profile's PAR-only carriage rule; that profile's
       validation, derivation, recording, and hashing semantics apply
       unchanged ([I-D.draft-mcguinness-oauth-mission]).  It is a
-      proposal, never authority: it bounds the derivation of step 3 of
-      Section 6 in narrowing mode, and the double intersection of step 4
+      proposal, never authority: it bounds the derivation of step 4 of
+      Section 6 in narrowing mode, and the double intersection of step 5
       applies to the result unchanged, so a proposal narrows the
       instance and never widens it beyond the Template Ceiling.  Absent
       a proposal, the instance derives from the dispatch intent alone.
@@ -670,12 +686,17 @@ Table of Contents
 
    The Dispatcher authenticates at the token endpoint with its own
    client credential; the Mission Issuer authorizes it against the
-   template's allowed_dispatchers as step 2 of Section 6 requires.  This
-   grant performs exactly one derivation per dispatch_event_id: the
-   adjudication order of Section 6 runs once for a new identifier, and a
-   repeated identifier is gated to the previously committed instance
-   rather than a fresh derivation.  This is the single gated derivation
-   this document permits per dispatch event.
+   template's allowed_dispatchers as step 2 of Section 6 requires.  The
+   request names no Agent.  The Mission Issuer selects the instance's
+   Agent (Section 4), and that selection is separate from the
+   Dispatcher's authentication and from the presenter binding of the
+   returned access token, which is sender-constrained to the
+   Dispatcher's key.  This grant performs exactly one derivation per
+   dispatch_event_id: the adjudication order of Section 6 runs once for
+   a new identifier, and a repeated identifier is gated to the
+   previously committed instance rather than a fresh derivation.  This
+   is the single gated derivation this document permits per dispatch
+   event.
 
    On success the Mission Issuer responds with an access token bound to
    the instance, sender-constrained to the Dispatcher's key:
@@ -728,14 +749,17 @@ Table of Contents
    classification.
 
    The issuance profile's fourth high-risk class, a consumption bound
-   ([I-D.draft-mcguinness-oauth-mission]), is not on this list: it is
-   the containment mechanism a dispatched instance draws down under, not
-   a hazard dispatch amplifies.  The template's approval_basis already
-   carries the trace the issuance profile's approval-authentication
-   floor requires for that class, through consent_principal and
-   approved_at (Section 6); a deployment recording Consent Evidence
-   renders the bound at the same surface under the metering profile's
-   consent-integrity rule ([I-D.draft-mcguinness-mission-metering]).
+   ([I-D.draft-mcguinness-oauth-mission]), is not on this list.  Each
+   instance draws down its own bound, so dispatch multiplies the bound
+   by max_active and dispatch_rate; the template consent renders the
+   bound with those limits, so the Approver consents to that product
+   ([I-D.draft-mcguinness-mission-metering]).  The template's
+   approval_basis already carries the trace the issuance profile's
+   approval-authentication floor requires for that class, through
+   consent_principal and approved_at (Section 6); a deployment recording
+   Consent Evidence renders the bound at the same surface under the
+   metering profile's consent-integrity rule
+   ([I-D.draft-mcguinness-mission-metering]).
 
    Where a deployment adopts Approval Governance
    ([I-D.draft-mcguinness-mission-approval-governance]) and records a
@@ -787,9 +811,14 @@ Table of Contents
       approves.  The authority is available only through a fresh human
       approval.
 
-   A consumer that does not implement this document treats either value
-   as it treats any unrecognized reason code: the Dispatch stays denied,
-   with no further semantics.
+   dispatch_policy_changed:  The Dispatch Policy the Mission Issuer
+      would evaluate no longer matches the digest the template committed
+      (Section 6).  Dispatch under the changed policy requires a fresh
+      human template consent.
+
+   A consumer that does not implement this document treats any of these
+   values as it treats any unrecognized reason code: the Dispatch stays
+   denied, with no further semantics.
 
 9.  Instance Composition
 
@@ -858,8 +887,8 @@ Table of Contents
       at the recorded template_version, so the accountable principal is
       the human who consented to that version of the template.
 
-   Each Dispatch MUST record the Dispatch Policy id and version that
-   instantiated the Mission, and the dispatch event identifier
+   Each Dispatch MUST record the Dispatch Policy id, version, and digest
+   that instantiated the Mission, and the dispatch event identifier
    (Section 6), so the policy chain the architecture's Approve verb
    requires stays re-checkable
    ([I-D.draft-mcguinness-mission-architecture]).  A deployment MUST
@@ -1137,6 +1166,26 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The Mission Issuer selects a dispatched instance's Agent from
+      allowed_recipients agents under the Dispatch Policy, never from
+      Dispatcher input: one listed Agent is selected directly, and
+      several need the Dispatch Policy's selection rule.  The selection
+      is recorded at commit, kept on retries, and separate from
+      Dispatcher authentication and the token's presenter binding
+      (#970).
+
+   *  dispatch_policy is an activation policy reference (id, version,
+      digest) under the issuance profile's Standing-Consent Bases,
+      replacing the SHOULD to commit the policy body.  Dispatch verifies
+      it as a new step 3 and refuses a mismatch with the new
+      dispatch_policy_changed reason; the template lineage member and
+      each Dispatch record carry the digest.
+
+   *  The consumption-bound rationale under Prohibited Classes states
+      that dispatch multiplies an instance's bound by max_active and
+      dispatch_rate, and that the template consent renders that product
+      under the metering profile.
 
    *  allowed_dispatchers lists client_id strings, and
       allowed_recipients is an object of subjects (iss and sub) and

@@ -93,6 +93,7 @@ Table of Contents
    9.  References
      9.1.  Normative References
      9.2.  Informative References
+   Appendix A.  Document History
    Acknowledgments
    Author's Address
 
@@ -287,10 +288,11 @@ Table of Contents
    recorded, the presented catalog_digest MUST equal it likewise;
    otherwise the PDP returns capability_drift (Section 4.3).  Whether an
    action is catalog-sourced, and which digests were recorded, are
-   determined from the materialized policy view the AuthZEN profile
-   defines ([I-D.draft-mcguinness-mission-authzen]), not from the PEP's
-   request; where no source binding was recorded, this check does not
-   apply.
+   determined from the approved entry the Mission Issuer recorded at
+   derivation, read through the materialized policy view the AuthZEN
+   profile defines where the PDP uses one
+   ([I-D.draft-mcguinness-mission-authzen]), not from the PEP's request;
+   where no source binding was recorded, this check does not apply.
 
 4.2.  Per-Capability Extraction
 
@@ -528,6 +530,16 @@ Table of Contents
    [MCP-REGISTRY]
               Model Context Protocol Project, "The MCP Registry", 2026,
               <https://modelcontextprotocol.io/registry/about>.
+
+Appendix A.  Document History
+
+   [[ To be removed from the final specification ]]
+
+   *  Decision-Time Verification reads whether an action is catalog-
+      sourced, and which digests were recorded, from the approved entry
+      the Mission Issuer recorded at derivation, through the
+      materialized policy view where the PDP uses one, never from the
+      PEP's request.
 
 Acknowledgments
 
