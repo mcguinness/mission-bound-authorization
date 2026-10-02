@@ -1755,24 +1755,36 @@ decision and never widens one
 
 ## The Authority Derivation Boundary {#derivation-boundary}
 
-In the authority-bearing bindings, deriving the Authority Set from the
-Mission Intent is the semantic heart of the model and the one step the
-family deliberately does not standardize. The consequence is a trust
+In the authority-bearing bindings, all of which derive under the OAuth
+binding's rules ({{I-D.draft-mcguinness-oauth-mission}}, Section
+"Mission Authority"), the Approver consents to the Authority Set the
+Mission Issuer renders and commits, not to the Mission Intent.
+Derivation is mechanical: the Mission Issuer narrows a submitted
+authority proposal to policy, or looks up candidate entries in a
+configured mapping keyed on structured Intent members and narrows
+those. The prose members (`goal`, `task_bounds`, `success_criteria`)
+never change what is derived; they bound authority through disclosure,
+since the Approver refuses authority the words do not support.
+Translating a user's words into structure is the shaper's job, before
+admission and outside the trust boundary
+({{I-D.draft-mcguinness-mission-shaping}}).
+
+What stays local is derivation policy: what the Mission Issuer narrows
+to, and what its mappings contain. The consequence is a trust
 boundary: interoperability begins at the committed result, not at the
 Intent. A Mission Intent has no portable semantics; two conforming
 Mission Issuers can derive different Authority Sets from the same
-Intent, and audit can establish what was derived (against `intent_hash`
-and `policy_version`), never whether it was the right reading of the
-task.
+submission, and audit can establish what was derived (against
+`intent_hash` and `policy_version`), never whether it was the right
+reading of the task.
 
-A deployment whose partners must reason about its derivations can
-publish a derivation policy identifier and test fixtures that pin
-Intent-to-Authority-Set outcomes, making the local policy reviewable
-even though it does not travel. Narrowing mode
-({{I-D.draft-mcguinness-oauth-mission}}) is the checkable path: where
-the client supplies candidate authority, derivation is a subset of it
-and reproducible, which is the closest the family comes to portable
-derivation.
+Narrowing mode is the interoperable path: each derived entry is a
+subset of a proposed entry, so the result is reproducible and the
+client can check it against its proposal. A deployment whose partners
+must reason about its derivations can publish a derivation policy
+identifier and test fixtures that pin Intent-to-Authority-Set
+outcomes, making the local policy reviewable even though it does not
+travel.
 
 The OAuth binding's informative Derivation Policy appendix
 ({{I-D.draft-mcguinness-oauth-mission}}) illustrates that policy
@@ -1800,14 +1812,14 @@ The derivation modes rank by how portable their result is:
 
 | Derivation mode | Portability status |
 |---|---|
-| Client proposes concrete authority; AS narrows | Interoperable default |
-| AS derives from structured Intent fields | Profile-specific |
-| AS derives from free text | Local, non-portable unless profiled |
-| LLM-assisted derivation | Advisory unless a deterministic policy commits the output |
+| Client proposes concrete authority; Mission Issuer narrows it to policy | Interoperable default |
+| Configured mapping keyed on structured Intent members | Conforming; the mapping is deployment-specific |
+| Model-assisted derivation over the structured inputs | Local-policy extension, bound by the Intent bounds |
+| Derivation from the prose members | Not a mode: prose is disclosure, shaped before admission |
 
-A deployment seeking interoperable authority uses the first; free-text
-and model-assisted derivation are local policy unless a profile pins
-them with a published policy identifier, version, and test fixtures.
+A deployment seeking interoperable authority uses narrowing; a
+model-assisted extension stays local policy unless a profile pins it
+with a published policy identifier, version, and test fixtures.
 
 ## Approval Fidelity {#approval-fidelity}
 
