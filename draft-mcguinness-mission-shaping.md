@@ -1447,6 +1447,21 @@ guessing ({{clarifications}}).
   guidance covers `goal_lang` and the `target_resources` containment
   rule, and `purpose` is chosen only when the request supports it.
 
+- Only a re-proposal after an authority refusal narrows; a
+  construction error is corrected without broadening. The
+  derivation-limit and intent-bound-evidence guidance follow their
+  owning drafts, and an ambiguity narrowing that drops necessary
+  authority is a partial proposal.
+
+- Renamed the `authority_source` resolution basis to
+  `capability_projection`; retained evidence is not rewritten. The
+  recommended evidence members are typed, with their applicability,
+  new members for the outcome, the emitted proposal, the ceiling, the
+  parent Mission, and the re-proposal chain, and a defined
+  `source_digest`. A shaping ceiling is an `authorization_details`
+  array, and one that must constrain authority requires an Authority
+  Proposal.
+
 # Acknowledgments
 {:numbered="false"}
 
