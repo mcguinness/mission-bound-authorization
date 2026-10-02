@@ -370,126 +370,6 @@ Standalone binding:
   Mission family cites this mode by this name; "AS-optional" is its
   informal gloss.
 
-# Mission Substrate Statement {#mission-substrate}
-
-This Statement applies to the standalone MAS binding defined by this
-revision and declares conformance to
-{{I-D.draft-mcguinness-mission-substrate}}.
-
-The contextual-governance kernel maps as follows:
-
-1. **Mission Reference**: the tuple (`issuer`, `mission_id`) names one
-   Mission. The MAS issuer URL is the uniqueness namespace;
-   `mission_id` follows the OAuth binding's comparison, retention,
-   entropy, and non-reassignment rules.
-2. **Controller**: the MAS controls approval, Mission state, and the
-   governance record. Consumers establish its identity and keys from
-   the MAS discovery document ({{discovery}}).
-3. **Actor binding**: the authenticated submitting client is the
-   Actor and is recorded as `client_id`; the MAS separately establishes
-   the Subject during approval. Later action decisions establish the
-   Actor and Subject through the Mission Join, including the mapping
-   assurance and ambiguity declared by the deployment
-   ({{mission-approval}}, {{mission-join}}).
-4. **Approved Context**: the Mission Intent, the recorded authority
-   proposal where one was submitted, and the derived Authority Set
-   in the immutable Mission record are the Approved Context. The
-   OAuth binding's `intent_hash` and `authority_hash`, computed
-   with the MAS issuer URL, plus `proposal_hash` where a proposal
-   was submitted, are this binding's chosen commitments;
-   they are not substrate-kernel requirements.
-5. **Approval ceremony**: the asynchronous MAS approval surface
-   authenticates the Approver, establishes the Subject and Actor,
-   renders the derived authority, computes the commitments, and
-   creates the record `active` atomically with approval
-   ({{mission-approval}}).
-6. **Governance gate**: only `active` permits a positive MAS decision;
-   every other or unrecognized state fails closed. The lifecycle
-   endpoint supplies authenticated transitions, including revocation
-   by the authorized parties ({{lifecycle-and-state}}).
-7. **Reliance bound**: a positive MAS decision requires current
-   `active` state at decision time. Standing artifacts carry their own
-   bounds: a signed Mission Status is relied on within its declared
-   freshness window ({{lifecycle-and-state}}), and a Join Assertion
-   within the introspected token's lifetime ({{join-assertion}}).
-   Tokens of the unchanged Authorization Server are not represented as
-   Mission-governed artifacts.
-8. **Context propagation**: submission status and signed Mission
-   Status responses carry the Mission Reference. A Mission-joining PDP
-   verifies the reference against the acting credential before using
-   Mission authority. That join establishes correlation, not that the
-   unchanged Authorization Server issued the credential under the
-   Mission ({{mission-reference}}, {{mission-join}}).
-9. **Governance record**: the MAS audit log is the ordered governance
-   record. The MAS MUST append approval, positive and negative
-   Mission-dependent decisions, join decisions it makes, and lifecycle
-   transitions in per-Mission append order; MUST protect the log under
-   the same integrity and access controls as the Mission record; and
-   MUST retain both for the declared audit horizon.
-
-The Statement's capability table follows, one row per capability;
-every supplied row states its activation conditions, and its temporal
-and failure elements in its cells or by express inheritance of the
-Bounded Reliance floor ({{I-D.draft-mcguinness-mission-substrate}}):
-
-| Capability | Claim | Activation | Scope and defining sections | Limitations |
-| --- | --- | --- | --- | --- |
-| Lifecycle-Gated Authorization | supplied | always for MAS-native authority operations; a Mission-joining PDP deployment for joined action decisions | MAS-native authority operations check current state unconditionally; joined action decisions do so where a Mission-joining PDP is deployed ({{lifecycle-and-state}}, {{mission-join}}) | The unchanged Authorization Server does not gate token issuance or refresh; the token-layer residual runs to credential expiry |
-| State-Observable | supplied | always | Signed Mission Status responses with the `mission_max_stale_seconds` freshness bound ({{lifecycle-and-state}}, {{discovery}}) | Consumers fail closed when the declared freshness bound is exceeded |
-| Structured Authority | supplied | always | The OAuth binding's Authority Set, including any supported type's own constraint vocabulary (for `mission_resource_access`, the Mission Resource Access Profile's Common Constraints), is held at the MAS and evaluated at the joining PDP | Semantics apply only to the declared authority-detail types and mappings |
-| Monotonic Derivation | supplied | native child creation ({{native-child}}) | The defined no-broader-than relation at the native child-creation derivation point | PDP action evaluation is enforcement, never derivation; a separately approved expansion is a new approval; unchanged AS tokens are outside the claim |
-| Credential-Bound | supplied | the Join Assertion endpoint ({{join-assertion}}) | A signed assertion binds one introspected token digest and `cnf` thumbprint to the Mission; fact semantics: verified party correlation, with the assertion's `exp` bounded by the token's remaining lifetime | Neither the assertion nor the mapping join proves the Authorization Server issued the token under the Mission; a mapping-join-only deployment is outside this row |
-| Authorized Context Correlation | supplied | always | The mapping join and the Join Assertion ({{mission-join}}, {{join-assertion}}): the MAS and its joining PDPs are the joining authority under the enterprise mapping contract, joining the introspected credential, the subject and client mappings, and the Mission; a failed join denies `mission_mismatch`, never falling back | The association proves the credential belongs to the Mission's parties, never that it was issued for the Mission; the bare mapping join carries the (`subject`, `client`) equivalence-class ambiguity, and substitution protection requires the `cnf`-bound assertion ({{join-spoofing}}) |
-| Independently Verifiable | supplied | signed Mission Status ({{lifecycle-and-state}}) | Record and state properties as of the response's freshness window; Join Assertions add token-specific correlation where used | Does not prove AS issuance under the Mission or current state after the observation window |
-| Portable Evidence | supplied | Consent Evidence, a Mission Mandate, or Audit Transparency adopted | The adopted profile's artifact and verification procedure | The base MAS audit log is Controller-local and is not portable evidence |
-{: title="Standalone MAS Mission substrate capabilities"}
-
-Each supplied row's temporal elements inherit the signed Status
-freshness contract unless stated: facts are current as of the
-response's `mission_max_stale_seconds` window, assertion lifetime is
-capped by the introspected token's remaining lifetime, and the
-residual after non-active is bounded by the consumer's declared
-staleness bound. Failure behavior is uniformly fail-closed: an
-unresolvable Mission, a stale or failed Status response, a join
-failure (`mission_mismatch`, never a fallback), an unknown or
-malformed authority-detail type, and an incomparable or invalid
-constraint each refuse the evaluation rather than comparing
-best-effort; a Join Assertion that fails validation is an absent
-assertion, never a downgrade to an unverified join.
-
-The Portable Evidence condition is supplied only when the deployment
-adopts Consent Evidence
-({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), a Mission
-Mandate ({{I-D.draft-mcguinness-mission-mandate}}), or Audit
-Transparency ({{I-D.draft-mcguinness-mission-audit}}); the referenced
-profile defines the portable artifact and verification procedure.
-
-The composition consequences follow from those claims:
-
-- Shaping, consent evidence, audit transparency, the security model,
-  status, and signals compose with the capabilities they name. Where
-  such a profile names the Mission Issuer or issuer AS, the MAS is that
-  party.
-- The runtime profile and its AuthZEN binding, the harness, and
-  orchestration compose through the runtime profile's externally
-  established binding mode
-  ({{I-D.draft-mcguinness-mission-runtime}}), profiled here as the
-  Mission Join ({{mission-join}}).
-- Offline attenuation does not apply in MAS-only mode because no
-  Mission-bound credential or offline-minting chain exists
-  ({{I-D.draft-mcguinness-oauth-mission-attenuation}}). The
-  token-carriage aspects of delegation likewise have no carrier.
-- Mission Expansion ({{I-D.draft-mcguinness-oauth-mission-expansion}})
-  and Mission Child Delegation
-  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) bind their
-  request, on the OAuth wire, to an {{RFC8693}} token exchange whose
-  `subject_token` is the predecessor or parent Mission-bound access
-  token; their MAS-native wire is defined by {{native-surfaces}}, which
-  carries both operations on the mission submission endpoint with an
-  authenticated-client binding in place of that token-exchange
-  possession proof. Their models (supersession, lineage, cascade) apply
-  to MAS-held Missions unchanged.
-
 # Mission Submission {#mission-submission}
 
 A client proposes a Mission by submitting a Mission Intent to the
@@ -825,410 +705,6 @@ The MAS publishes the corresponding metadata members
 signals are supported, `mission_event_stream_endpoint`) in its
 discovery document ({{discovery}}) with the semantics those profiles
 define for the members of the same names.
-
-# Mission Expansion and Child Creation {#native-surfaces}
-
-Mission Expansion ({{I-D.draft-mcguinness-oauth-mission-expansion}})
-and Mission Child Delegation
-({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) each rest on
-one abstract requirement, stated normatively by each of those profiles:
-that the requester prove possession of the predecessor or parent
-Mission's authority through a sender-constrained proof rather than a
-reusable bearer refresh credential. Those profiles bind that
-requirement on the OAuth wire to an {{RFC8693}} token exchange whose
-`subject_token` is the predecessor or parent Mission-bound access token,
-with possession proven against that token's own confirmation key. A MAS
-issues no tokens, so that token-exchange binding has no carrier here.
-This section defines the peer MAS binding of the same requirement, an
-authenticated-client submission on the mission submission endpoint, and
-names it as the other binding of that requirement without restating the
-requirement itself.
-
-This section defines the MAS-native wire for both operations: carriage
-on the mission submission endpoint ({{native-carriage}}) and the
-authenticated-client binding in place of the token-exchange possession
-proof ({{native-binding}}). It defines carriage and binding only; every
-mechanism (supersession, reconciliation, lineage, strict subset,
-fan-out, cascade, and the closed code sets) remains owned by its profile
-and applies here by reference ({{native-expansion}}, {{native-child}}).
-The capability is OPTIONAL ({{conformance}}).
-
-## Submission Carriage {#native-carriage}
-
-The mission submission endpoint carries both operations as intent
-submissions ({{intent-submission}}) with additional top-level members
-of the request body:
-
-`predecessor`:
-: A string. The `mission_id` of the predecessor Mission this
-  submission expands; semantics per the expansion profile. Its
-  presence marks the submission as an expansion request.
-
-`parent`:
-: A string. The `mission_id` of the Parent Mission; semantics per the
-  child-delegation profile.
-
-`child_actor`:
-: An object identifying the child actor, in the form the
-  child-delegation profile defines. The presence of `parent` and
-  `child_actor` together marks the submission as a child-creation
-  request.
-
-These are submission members, not Mission Intent members: a MAS that
-implements this capability MUST remove them before applying the
-OAuth binding's Intent validation, and the remainder of the body
-is the Mission Intent Submission envelope, validated unchanged
-({{intent-submission}}). On a
-MAS that does not implement this capability they are undefined
-top-level members and the submission is refused with
-`invalid_mission_intent`, the correct refusal for an unsupported
-operation.
-
-A submission carrying both `predecessor` and either child member MUST
-be refused with `invalid_mission_intent`: the operations do not
-combine. A submission carrying `parent` without `child_actor`, or
-`child_actor` without `parent`, MUST be refused the same way.
-
-The OAuth wire's token-exchange possession proof, the predecessor or
-parent Mission-bound access token presented as `subject_token`, does
-not exist on this surface; the binding of {{native-binding}} replaces
-it.
-
-The referenced profiles' OAuth error outcomes map onto this endpoint's
-error surface as the OAuth binding's do ({{intent-submission}}):
-`invalid_request` outcomes map to `invalid_mission_intent`, and
-authority-derivation failures to `invalid_authority`. Two rules cover
-the outcomes those profiles express as `invalid_grant`:
-
-- A `predecessor` or `parent` the binding does not resolve, whether
-  the Mission does not exist or is recorded under another client, MUST
-  be refused with `not_found`, with a response identical in both
-  cases, preserving the anti-oracle property of {{submission-status}}.
-- A reference the binding resolves whose state or serialization
-  refuses the operation (the expansion profile's predecessor-active
-  and reconciliation rules; the child-delegation profile's
-  parent-active rule) MUST be refused with `conflict`, returned with
-  HTTP 409. `conflict` extends the error code set of
-  {{submission-errors}} and is used only by this section's operations.
-
-The profile-defined machine-readable code rides the MAS error surface
-in the member its profile defines: a reconciliation status in
-`mission_expansion_status`
-({{I-D.draft-mcguinness-oauth-mission-expansion}}) and an adjudication
-denial reason, for expansion and child creation alike, in the shared
-`mission_denial_reason` member that profile defines
-({{I-D.draft-mcguinness-oauth-mission-expansion}},
-{{I-D.draft-mcguinness-oauth-mission-child-delegation}}), carried as
-a member of the error response body ({{submission-errors}}) or, for a
-denial at adjudication, of the `denied` submission-status response
-({{submission-status}}).
-
-## Request Binding {#native-binding}
-
-The OAuth wire resolves the predecessor or parent from the Mission-bound
-access token presented as the token exchange's `subject_token`, proving
-possession against that token's confirmation key, and treats any named
-identifier only as a cross-check. A MAS holds no such tokens, so the
-named identifier is itself the reference, and the MAS binds the request
-to it as follows:
-
-- The MAS MUST verify that the authenticated submitting client is the
-  client recorded as the predecessor Mission's `client_id` (for
-  expansion) or the Parent Mission's `client_id` (for child creation).
-  Both identifiers live in the MAS's own client namespace
-  ({{mission-submission}}), so the comparison is ordinarily
-  byte-equality; where a deployment maps client identities it MUST
-  document the mapping, exactly as the client join requires
-  ({{mission-join}}).
-- For an expansion, the MAS MUST verify at the approval event that the
-  Subject it establishes ({{mission-approval}}) equals the predecessor
-  Mission's `subject`; a successor MUST NOT be created for a different
-  Subject.
-
-This is an authentication-based binding, not a possession-based one:
-it proves the requester is the same registered client the predecessor
-or parent was recorded for, not that it holds and can prove possession
-of that Mission's access token. The delta from the OAuth wire is
-exactly that: a party able to authenticate as the registered client can
-request these operations for any of that client's Missions, where the
-token-exchange possession proof would limit it to the Missions whose
-Mission-bound access token it holds and can prove control of
-({{sec-native-binding}}).
-
-Where the deployment authenticates client instances
-({{I-D.draft-mcguinness-oauth-client-instance-id}}), the MAS SHOULD bind
-at instance granularity rather than at the bare `client_id`, and a
-Mission Join Assertion for the predecessor or parent
-({{join-assertion}}), presented with the submission, strengthens the
-proof to a named runtime instance holding a sender-constrained
-credential that verifiably joins to that Mission.
-
-## Expansion Semantics {#native-expansion}
-
-An expansion submission is adjudicated under the expansion profile's
-rules ({{I-D.draft-mcguinness-oauth-mission-expansion}}), applied by
-reference:
-
-- **Predecessor active.** The predecessor MUST be `active` when the
-  submission is accepted, per that profile's predecessor-active rule.
-- **Reconciliation.** Concurrent expansions against the same
-  predecessor are serialized under that profile's compare-and-set
-  reconciliation, and its closed reconciliation-status set applies: a
-  refusal at submission carries the code per {{native-carriage}}, and
-  a pending submission overtaken by a concurrent expansion resolves to
-  `denied` with the code in the status response.
-- **Supersession atomicity.** In one atomic operation on the MAS's
-  records, the successor activates with its `predecessor` member set,
-  and the predecessor transitions to `superseded` with its `successor`
-  member set. The `successor` and `related_to` members carry that
-  profile's semantics and surface through the MAS's Mission Status
-  responses; `superseded` enters the state space the MAS reports
-  ({{lifecycle-and-state}}).
-- **Denial reasons.** That profile's closed denial-reason set applies;
-  the code rides in `mission_denial_reason` per
-  {{native-carriage}}.
-
-Approval of the successor is this document's native asynchronous
-approval event ({{mission-approval}}): fresh consent for the
-successor's derived Authority Set, with no authorization-code leg to
-re-sequence. On approval the client's poll delivers the successor's
-`mission_id` and consented authority ({{mission-reference}}). The
-successor-expiry rule and every other expansion rule that does not
-name the OAuth wire apply unchanged. Progressive authorization is out
-of scope here exactly as it is out of the expansion profile's base:
-every expansion on this surface is adjudicated by a fresh approval,
-and the policy-adjudicated variant remains the experimental
-companion's ({{I-D.draft-mcguinness-oauth-mission-progressive}}).
-
-## Child-Creation Semantics {#native-child}
-
-A child-creation submission is adjudicated under the child-delegation
-profile's rules
-({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), applied by
-reference:
-
-- **On-switch.** Child creation is permitted only where the applicable
-  Parent Mission Authority Set entry's `delegation` member carries a
-  `children` object; an entry without one permits no child.
-- **Strict subset.** The child Authority Set MUST satisfy that
-  profile's strict-subset evaluation against the parent, with no
-  relaxation.
-- **Fan-out.** Fan-out accounting and its serialization apply
-  unchanged: the MAS counts non-terminal Child Missions against
-  `max_children` and serializes creation against the same parent entry
-  and fan-out bucket.
-- **Parent member.** The Child Mission record carries the `parent`
-  object constructed per that profile, including `depth`; with no
-  token carrier, it surfaces through the record and the MAS's Mission
-  Status responses.
-- **Cascade.** Cascade applies with one simplification: the MAS owns
-  its state store, so cascade transitions are native lifecycle
-  transitions on its own records. The MAS implements that profile's
-  `immediate` mode, and the `cascaded` state surfaces through Mission
-  Status ({{lifecycle-and-state}}).
-- **Denial reasons.** That profile's closed denial-reason set applies;
-  the code rides in `mission_denial_reason` per {{native-carriage}}.
-  The `parent_mismatch` reason has no analog on this surface: with no
-  `subject_token` to resolve the parent against a cross-check, a binding
-  failure is refused per {{native-carriage}}.
-
-The child client identity rules hold unchanged: the child actor is the
-Child Mission's client, recorded as its `client_id`; it authenticates
-itself to the MAS for its own submissions, status, and lifecycle
-operations; and child credentials MUST NOT transit the parent. The
-creating client learns the Child Mission's `mission_id` from its own
-submission status; `mission_id` is a reference, never a capability, so
-conveying it to the child actor moves no authority. At the point of
-use, the Mission Join ({{mission-join}}) binds the child's ordinary
-OAuth credentials to the Child Mission through the child's own
-`client_id`, never the parent's.
-
-## Expansion Example {#native-example}
-
-Mid-task, the agent behind the Q3 reconciliation Mission finds a
-$1,200 adjustment, outside its approved $500 cap. It submits an
-expansion: a Mission Intent for the broadened task whose body names
-the predecessor:
-
-~~~ http-message
-POST /mas/mission/submit HTTP/1.1
-Host: mas.example.com
-Content-Type: application/json
-Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
-DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
-
-{
-  "intent": {
-    "goal": "Reconcile Q3 invoices and post adjustments under $2,000.",
-    "target_resources": ["https://erp.example.com"],
-    "expires_at": "2026-12-31T23:59:59Z"
-  },
-  "predecessor": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
-}
-~~~
-
-The MAS authenticates the client, verifies it is the predecessor's
-recorded `client_id`, verifies the predecessor is `active`, strips
-`predecessor`, validates the remaining Submission envelope, derives
-the successor's Authority Set, and accepts:
-
-~~~ http-message
-HTTP/1.1 202 Accepted
-Content-Type: application/json
-Cache-Control: no-store
-
-{
-  "submission_id": "sub_7bD1eF4jB0K9wT2xM5nQ8rL3vZ",
-  "status": "pending",
-  "expires_at": "2026-10-16T15:07:42Z"
-}
-~~~
-
-Adjudication proceeds per {{mission-approval}}: the Approver consents
-to the widened cap, the MAS verifies the established Subject equals
-the predecessor's `subject`, and one atomic operation creates the
-successor `active` and supersedes the predecessor. The client's next
-poll returns `approved` with the successor's `mission_id`
-({{mission-reference}}).
-
-# Mission Authority Server Metadata {#discovery}
-
-A MAS publishes a metadata document at the well-known URI {{RFC8615}}
-path `/.well-known/mission-authority-server`, registered in {{iana}}:
-a JSON object served over TLS as `application/json`. The document's
-location is constructed from the `issuer`, following the
-metadata-location rule of {{RFC8414}}:
-
-1. For an `issuer` with no path component, the document is served at
-   the well-known path under the issuer's host.
-2. For an `issuer` that bears a path component, the
-   `mission-authority-server` well-known segment is inserted between
-   the host and the issuer's path (for `issuer`
-   `https://host/tenant`, the document is at
-   `https://host/.well-known/mission-authority-server/tenant`).
-
-Its members
-mirror the Mission suite's Authorization Server metadata members where
-applicable, so a consumer reads the same member names it would read
-from AS metadata {{RFC8414}}, resolved from this document instead:
-
-`issuer`:
-: REQUIRED. A string. The MAS's issuer URL. It equals the `issuer` of
-  every Mission the MAS records and the `iss` of its integrity-anchor
-  envelopes and signed status responses. A consumer MUST verify that
-  applying the location-construction steps above to this `issuer`
-  yields the URL the metadata was resolved from.
-
-`mission_submission_endpoint`:
-: REQUIRED. A string containing a URL. The mission submission endpoint
-  ({{mission-submission}}).
-
-`mission_submission_endpoint_auth_methods_supported`:
-: REQUIRED. A JSON array of strings naming the authentication methods
-  the mission submission endpoint accepts, from the value space of
-  `mission_status_endpoint_auth_methods_supported`
-  ({{I-D.draft-mcguinness-oauth-mission-status}}). Here `access_token`
-  names a sender-constrained access token whose audience, required
-  scope, and sender constraint the MAS publishes in this endpoint's
-  Protected Resource Metadata {{RFC9728}}.
-
-`mission_submission_endpoint_auth_signing_alg_values_supported`:
-: REQUIRED when `mission_submission_endpoint_auth_methods_supported`
-  lists `private_key_jwt`. A JSON array of strings: the client-assertion
-  algorithms this endpoint accepts, with the semantics of
-  `mission_status_endpoint_auth_signing_alg_values_supported`
-  ({{I-D.draft-mcguinness-oauth-mission-status}}).
-
-`mission_status_endpoint`:
-: REQUIRED. A string containing a URL. Semantics per
-  {{I-D.draft-mcguinness-oauth-mission-status}}.
-
-`mission_status_endpoint_auth_methods_supported`:
-: REQUIRED. Semantics per
-  {{I-D.draft-mcguinness-oauth-mission-status}}.
-
-`mission_status_endpoint_auth_signing_alg_values_supported`:
-: REQUIRED when `mission_status_endpoint_auth_methods_supported` lists
-  `private_key_jwt`. Semantics per
-  {{I-D.draft-mcguinness-oauth-mission-status}}.
-
-`mission_status_signing_alg_values_supported`:
-: REQUIRED. A JSON array of strings. Semantics per
-  {{I-D.draft-mcguinness-oauth-mission-status}}.
-
-`mission_lifecycle_endpoint`:
-: REQUIRED. A string containing a URL. Semantics per
-  {{I-D.draft-mcguinness-oauth-mission-status}}.
-
-`mission_lifecycle_endpoint_auth_methods_supported`:
-: REQUIRED. Semantics per
-  {{I-D.draft-mcguinness-oauth-mission-status}}.
-
-`mission_lifecycle_endpoint_auth_signing_alg_values_supported`:
-: REQUIRED when `mission_lifecycle_endpoint_auth_methods_supported`
-  lists `private_key_jwt`. Semantics per
-  {{I-D.draft-mcguinness-oauth-mission-status}}.
-
-`mission_join_assertion_endpoint`:
-: OPTIONAL. A string containing a URL. The join-assertion endpoint
-  ({{join-assertion}}). Present when the MAS mints Mission Join
-  Assertions.
-
-`mission_event_stream_endpoint`:
-: OPTIONAL. A string containing a URL. Present when the MAS supports
-  Mission Lifecycle Signals; semantics per
-  {{I-D.draft-mcguinness-oauth-mission-signals}}.
-
-`mission_max_stale_seconds`:
-: OPTIONAL. An integer. Semantics per
-  {{I-D.draft-mcguinness-oauth-mission-status}}.
-
-`jwks_uri`:
-: REQUIRED. A string containing a URL. The MAS's JSON Web Key Set:
-  the issuer's signing keys, from which consumers resolve the keys
-  for Mission Status responses, consent evidence
-  ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), Mission
-  Mandates ({{I-D.draft-mcguinness-mission-mandate}}), and other
-  issuer-signed artifacts, with the signing-key retention rules of
-  {{I-D.draft-mcguinness-oauth-mission-status}}.
-
-Example:
-
-~~~ json
-{
-  "issuer": "https://mas.example.com",
-  "mission_submission_endpoint":
-    "https://mas.example.com/mas/mission/submit",
-  "mission_submission_endpoint_auth_methods_supported":
-    ["access_token", "private_key_jwt"],
-  "mission_submission_endpoint_auth_signing_alg_values_supported":
-    ["ES256"],
-  "mission_status_endpoint":
-    "https://mas.example.com/mas/mission/status",
-  "mission_status_endpoint_auth_methods_supported":
-    ["access_token", "private_key_jwt"],
-  "mission_status_endpoint_auth_signing_alg_values_supported":
-    ["ES256"],
-  "mission_status_signing_alg_values_supported": ["ES256"],
-  "mission_lifecycle_endpoint":
-    "https://mas.example.com/mas/mission/lifecycle",
-  "mission_lifecycle_endpoint_auth_methods_supported":
-    ["access_token", "private_key_jwt"],
-  "mission_lifecycle_endpoint_auth_signing_alg_values_supported":
-    ["ES256"],
-  "mission_join_assertion_endpoint":
-    "https://mas.example.com/mas/mission/join-assertion",
-  "mission_max_stale_seconds": 60,
-  "jwks_uri": "https://mas.example.com/.well-known/jwks.json"
-}
-~~~
-
-A consumer holding a Mission reference resolves this document from the
-reference's `issuer`; whether a given `issuer` is a MAS or an OAuth AS
-is deployment configuration. The submission and lifecycle surfaces
-follow a reference-plus-continuation shape (a request yields an opaque
-reference the client continues against) that parallels the grant
-continuation pattern of GNAP {{RFC9635}}.
 
 # Mission Join {#mission-join}
 
@@ -1908,6 +1384,410 @@ the conformance floor: a deployment without the endpoint still joins,
 and a PDP MUST NOT treat possession of an assertion as authority,
 per the family rule that references and binding proofs grant nothing.
 
+# Mission Expansion and Child Creation {#native-surfaces}
+
+Mission Expansion ({{I-D.draft-mcguinness-oauth-mission-expansion}})
+and Mission Child Delegation
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) each rest on
+one abstract requirement, stated normatively by each of those profiles:
+that the requester prove possession of the predecessor or parent
+Mission's authority through a sender-constrained proof rather than a
+reusable bearer refresh credential. Those profiles bind that
+requirement on the OAuth wire to an {{RFC8693}} token exchange whose
+`subject_token` is the predecessor or parent Mission-bound access token,
+with possession proven against that token's own confirmation key. A MAS
+issues no tokens, so that token-exchange binding has no carrier here.
+This section defines the peer MAS binding of the same requirement, an
+authenticated-client submission on the mission submission endpoint, and
+names it as the other binding of that requirement without restating the
+requirement itself.
+
+This section defines the MAS-native wire for both operations: carriage
+on the mission submission endpoint ({{native-carriage}}) and the
+authenticated-client binding in place of the token-exchange possession
+proof ({{native-binding}}). It defines carriage and binding only; every
+mechanism (supersession, reconciliation, lineage, strict subset,
+fan-out, cascade, and the closed code sets) remains owned by its profile
+and applies here by reference ({{native-expansion}}, {{native-child}}).
+The capability is OPTIONAL ({{conformance}}).
+
+## Submission Carriage {#native-carriage}
+
+The mission submission endpoint carries both operations as intent
+submissions ({{intent-submission}}) with additional top-level members
+of the request body:
+
+`predecessor`:
+: A string. The `mission_id` of the predecessor Mission this
+  submission expands; semantics per the expansion profile. Its
+  presence marks the submission as an expansion request.
+
+`parent`:
+: A string. The `mission_id` of the Parent Mission; semantics per the
+  child-delegation profile.
+
+`child_actor`:
+: An object identifying the child actor, in the form the
+  child-delegation profile defines. The presence of `parent` and
+  `child_actor` together marks the submission as a child-creation
+  request.
+
+These are submission members, not Mission Intent members: a MAS that
+implements this capability MUST remove them before applying the
+OAuth binding's Intent validation, and the remainder of the body
+is the Mission Intent Submission envelope, validated unchanged
+({{intent-submission}}). On a
+MAS that does not implement this capability they are undefined
+top-level members and the submission is refused with
+`invalid_mission_intent`, the correct refusal for an unsupported
+operation.
+
+A submission carrying both `predecessor` and either child member MUST
+be refused with `invalid_mission_intent`: the operations do not
+combine. A submission carrying `parent` without `child_actor`, or
+`child_actor` without `parent`, MUST be refused the same way.
+
+The OAuth wire's token-exchange possession proof, the predecessor or
+parent Mission-bound access token presented as `subject_token`, does
+not exist on this surface; the binding of {{native-binding}} replaces
+it.
+
+The referenced profiles' OAuth error outcomes map onto this endpoint's
+error surface as the OAuth binding's do ({{intent-submission}}):
+`invalid_request` outcomes map to `invalid_mission_intent`, and
+authority-derivation failures to `invalid_authority`. Two rules cover
+the outcomes those profiles express as `invalid_grant`:
+
+- A `predecessor` or `parent` the binding does not resolve, whether
+  the Mission does not exist or is recorded under another client, MUST
+  be refused with `not_found`, with a response identical in both
+  cases, preserving the anti-oracle property of {{submission-status}}.
+- A reference the binding resolves whose state or serialization
+  refuses the operation (the expansion profile's predecessor-active
+  and reconciliation rules; the child-delegation profile's
+  parent-active rule) MUST be refused with `conflict`, returned with
+  HTTP 409. `conflict` extends the error code set of
+  {{submission-errors}} and is used only by this section's operations.
+
+The profile-defined machine-readable code rides the MAS error surface
+in the member its profile defines: a reconciliation status in
+`mission_expansion_status`
+({{I-D.draft-mcguinness-oauth-mission-expansion}}) and an adjudication
+denial reason, for expansion and child creation alike, in the shared
+`mission_denial_reason` member that profile defines
+({{I-D.draft-mcguinness-oauth-mission-expansion}},
+{{I-D.draft-mcguinness-oauth-mission-child-delegation}}), carried as
+a member of the error response body ({{submission-errors}}) or, for a
+denial at adjudication, of the `denied` submission-status response
+({{submission-status}}).
+
+## Request Binding {#native-binding}
+
+The OAuth wire resolves the predecessor or parent from the Mission-bound
+access token presented as the token exchange's `subject_token`, proving
+possession against that token's confirmation key, and treats any named
+identifier only as a cross-check. A MAS holds no such tokens, so the
+named identifier is itself the reference, and the MAS binds the request
+to it as follows:
+
+- The MAS MUST verify that the authenticated submitting client is the
+  client recorded as the predecessor Mission's `client_id` (for
+  expansion) or the Parent Mission's `client_id` (for child creation).
+  Both identifiers live in the MAS's own client namespace
+  ({{mission-submission}}), so the comparison is ordinarily
+  byte-equality; where a deployment maps client identities it MUST
+  document the mapping, exactly as the client join requires
+  ({{mission-join}}).
+- For an expansion, the MAS MUST verify at the approval event that the
+  Subject it establishes ({{mission-approval}}) equals the predecessor
+  Mission's `subject`; a successor MUST NOT be created for a different
+  Subject.
+
+This is an authentication-based binding, not a possession-based one:
+it proves the requester is the same registered client the predecessor
+or parent was recorded for, not that it holds and can prove possession
+of that Mission's access token. The delta from the OAuth wire is
+exactly that: a party able to authenticate as the registered client can
+request these operations for any of that client's Missions, where the
+token-exchange possession proof would limit it to the Missions whose
+Mission-bound access token it holds and can prove control of
+({{sec-native-binding}}).
+
+Where the deployment authenticates client instances
+({{I-D.draft-mcguinness-oauth-client-instance-id}}), the MAS SHOULD bind
+at instance granularity rather than at the bare `client_id`, and a
+Mission Join Assertion for the predecessor or parent
+({{join-assertion}}), presented with the submission, strengthens the
+proof to a named runtime instance holding a sender-constrained
+credential that verifiably joins to that Mission.
+
+## Expansion Semantics {#native-expansion}
+
+An expansion submission is adjudicated under the expansion profile's
+rules ({{I-D.draft-mcguinness-oauth-mission-expansion}}), applied by
+reference:
+
+- **Predecessor active.** The predecessor MUST be `active` when the
+  submission is accepted, per that profile's predecessor-active rule.
+- **Reconciliation.** Concurrent expansions against the same
+  predecessor are serialized under that profile's compare-and-set
+  reconciliation, and its closed reconciliation-status set applies: a
+  refusal at submission carries the code per {{native-carriage}}, and
+  a pending submission overtaken by a concurrent expansion resolves to
+  `denied` with the code in the status response.
+- **Supersession atomicity.** In one atomic operation on the MAS's
+  records, the successor activates with its `predecessor` member set,
+  and the predecessor transitions to `superseded` with its `successor`
+  member set. The `successor` and `related_to` members carry that
+  profile's semantics and surface through the MAS's Mission Status
+  responses; `superseded` enters the state space the MAS reports
+  ({{lifecycle-and-state}}).
+- **Denial reasons.** That profile's closed denial-reason set applies;
+  the code rides in `mission_denial_reason` per
+  {{native-carriage}}.
+
+Approval of the successor is this document's native asynchronous
+approval event ({{mission-approval}}): fresh consent for the
+successor's derived Authority Set, with no authorization-code leg to
+re-sequence. On approval the client's poll delivers the successor's
+`mission_id` and consented authority ({{mission-reference}}). The
+successor-expiry rule and every other expansion rule that does not
+name the OAuth wire apply unchanged. Progressive authorization is out
+of scope here exactly as it is out of the expansion profile's base:
+every expansion on this surface is adjudicated by a fresh approval,
+and the policy-adjudicated variant remains the experimental
+companion's ({{I-D.draft-mcguinness-oauth-mission-progressive}}).
+
+## Child-Creation Semantics {#native-child}
+
+A child-creation submission is adjudicated under the child-delegation
+profile's rules
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), applied by
+reference:
+
+- **On-switch.** Child creation is permitted only where the applicable
+  Parent Mission Authority Set entry's `delegation` member carries a
+  `children` object; an entry without one permits no child.
+- **Strict subset.** The child Authority Set MUST satisfy that
+  profile's strict-subset evaluation against the parent, with no
+  relaxation.
+- **Fan-out.** Fan-out accounting and its serialization apply
+  unchanged: the MAS counts non-terminal Child Missions against
+  `max_children` and serializes creation against the same parent entry
+  and fan-out bucket.
+- **Parent member.** The Child Mission record carries the `parent`
+  object constructed per that profile, including `depth`; with no
+  token carrier, it surfaces through the record and the MAS's Mission
+  Status responses.
+- **Cascade.** Cascade applies with one simplification: the MAS owns
+  its state store, so cascade transitions are native lifecycle
+  transitions on its own records. The MAS implements that profile's
+  `immediate` mode, and the `cascaded` state surfaces through Mission
+  Status ({{lifecycle-and-state}}).
+- **Denial reasons.** That profile's closed denial-reason set applies;
+  the code rides in `mission_denial_reason` per {{native-carriage}}.
+  The `parent_mismatch` reason has no analog on this surface: with no
+  `subject_token` to resolve the parent against a cross-check, a binding
+  failure is refused per {{native-carriage}}.
+
+The child client identity rules hold unchanged: the child actor is the
+Child Mission's client, recorded as its `client_id`; it authenticates
+itself to the MAS for its own submissions, status, and lifecycle
+operations; and child credentials MUST NOT transit the parent. The
+creating client learns the Child Mission's `mission_id` from its own
+submission status; `mission_id` is a reference, never a capability, so
+conveying it to the child actor moves no authority. At the point of
+use, the Mission Join ({{mission-join}}) binds the child's ordinary
+OAuth credentials to the Child Mission through the child's own
+`client_id`, never the parent's.
+
+## Expansion Example {#native-example}
+
+Mid-task, the agent behind the Q3 reconciliation Mission finds a
+$1,200 adjustment, outside its approved $500 cap. It submits an
+expansion: a Mission Intent for the broadened task whose body names
+the predecessor:
+
+~~~ http-message
+POST /mas/mission/submit HTTP/1.1
+Host: mas.example.com
+Content-Type: application/json
+Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
+DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
+
+{
+  "intent": {
+    "goal": "Reconcile Q3 invoices and post adjustments under $2,000.",
+    "target_resources": ["https://erp.example.com"],
+    "expires_at": "2026-12-31T23:59:59Z"
+  },
+  "predecessor": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
+}
+~~~
+
+The MAS authenticates the client, verifies it is the predecessor's
+recorded `client_id`, verifies the predecessor is `active`, strips
+`predecessor`, validates the remaining Submission envelope, derives
+the successor's Authority Set, and accepts:
+
+~~~ http-message
+HTTP/1.1 202 Accepted
+Content-Type: application/json
+Cache-Control: no-store
+
+{
+  "submission_id": "sub_7bD1eF4jB0K9wT2xM5nQ8rL3vZ",
+  "status": "pending",
+  "expires_at": "2026-10-16T15:07:42Z"
+}
+~~~
+
+Adjudication proceeds per {{mission-approval}}: the Approver consents
+to the widened cap, the MAS verifies the established Subject equals
+the predecessor's `subject`, and one atomic operation creates the
+successor `active` and supersedes the predecessor. The client's next
+poll returns `approved` with the successor's `mission_id`
+({{mission-reference}}).
+
+# Mission Authority Server Metadata {#discovery}
+
+A MAS publishes a metadata document at the well-known URI {{RFC8615}}
+path `/.well-known/mission-authority-server`, registered in {{iana}}:
+a JSON object served over TLS as `application/json`. The document's
+location is constructed from the `issuer`, following the
+metadata-location rule of {{RFC8414}}:
+
+1. For an `issuer` with no path component, the document is served at
+   the well-known path under the issuer's host.
+2. For an `issuer` that bears a path component, the
+   `mission-authority-server` well-known segment is inserted between
+   the host and the issuer's path (for `issuer`
+   `https://host/tenant`, the document is at
+   `https://host/.well-known/mission-authority-server/tenant`).
+
+Its members
+mirror the Mission suite's Authorization Server metadata members where
+applicable, so a consumer reads the same member names it would read
+from AS metadata {{RFC8414}}, resolved from this document instead:
+
+`issuer`:
+: REQUIRED. A string. The MAS's issuer URL. It equals the `issuer` of
+  every Mission the MAS records and the `iss` of its integrity-anchor
+  envelopes and signed status responses. A consumer MUST verify that
+  applying the location-construction steps above to this `issuer`
+  yields the URL the metadata was resolved from.
+
+`mission_submission_endpoint`:
+: REQUIRED. A string containing a URL. The mission submission endpoint
+  ({{mission-submission}}).
+
+`mission_submission_endpoint_auth_methods_supported`:
+: REQUIRED. A JSON array of strings naming the authentication methods
+  the mission submission endpoint accepts, from the value space of
+  `mission_status_endpoint_auth_methods_supported`
+  ({{I-D.draft-mcguinness-oauth-mission-status}}). Here `access_token`
+  names a sender-constrained access token whose audience, required
+  scope, and sender constraint the MAS publishes in this endpoint's
+  Protected Resource Metadata {{RFC9728}}.
+
+`mission_submission_endpoint_auth_signing_alg_values_supported`:
+: REQUIRED when `mission_submission_endpoint_auth_methods_supported`
+  lists `private_key_jwt`. A JSON array of strings: the client-assertion
+  algorithms this endpoint accepts, with the semantics of
+  `mission_status_endpoint_auth_signing_alg_values_supported`
+  ({{I-D.draft-mcguinness-oauth-mission-status}}).
+
+`mission_status_endpoint`:
+: REQUIRED. A string containing a URL. Semantics per
+  {{I-D.draft-mcguinness-oauth-mission-status}}.
+
+`mission_status_endpoint_auth_methods_supported`:
+: REQUIRED. Semantics per
+  {{I-D.draft-mcguinness-oauth-mission-status}}.
+
+`mission_status_endpoint_auth_signing_alg_values_supported`:
+: REQUIRED when `mission_status_endpoint_auth_methods_supported` lists
+  `private_key_jwt`. Semantics per
+  {{I-D.draft-mcguinness-oauth-mission-status}}.
+
+`mission_status_signing_alg_values_supported`:
+: REQUIRED. A JSON array of strings. Semantics per
+  {{I-D.draft-mcguinness-oauth-mission-status}}.
+
+`mission_lifecycle_endpoint`:
+: REQUIRED. A string containing a URL. Semantics per
+  {{I-D.draft-mcguinness-oauth-mission-status}}.
+
+`mission_lifecycle_endpoint_auth_methods_supported`:
+: REQUIRED. Semantics per
+  {{I-D.draft-mcguinness-oauth-mission-status}}.
+
+`mission_lifecycle_endpoint_auth_signing_alg_values_supported`:
+: REQUIRED when `mission_lifecycle_endpoint_auth_methods_supported`
+  lists `private_key_jwt`. Semantics per
+  {{I-D.draft-mcguinness-oauth-mission-status}}.
+
+`mission_join_assertion_endpoint`:
+: OPTIONAL. A string containing a URL. The join-assertion endpoint
+  ({{join-assertion}}). Present when the MAS mints Mission Join
+  Assertions.
+
+`mission_event_stream_endpoint`:
+: OPTIONAL. A string containing a URL. Present when the MAS supports
+  Mission Lifecycle Signals; semantics per
+  {{I-D.draft-mcguinness-oauth-mission-signals}}.
+
+`mission_max_stale_seconds`:
+: OPTIONAL. An integer. Semantics per
+  {{I-D.draft-mcguinness-oauth-mission-status}}.
+
+`jwks_uri`:
+: REQUIRED. A string containing a URL. The MAS's JSON Web Key Set:
+  the issuer's signing keys, from which consumers resolve the keys
+  for Mission Status responses, consent evidence
+  ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), Mission
+  Mandates ({{I-D.draft-mcguinness-mission-mandate}}), and other
+  issuer-signed artifacts, with the signing-key retention rules of
+  {{I-D.draft-mcguinness-oauth-mission-status}}.
+
+Example:
+
+~~~ json
+{
+  "issuer": "https://mas.example.com",
+  "mission_submission_endpoint":
+    "https://mas.example.com/mas/mission/submit",
+  "mission_submission_endpoint_auth_methods_supported":
+    ["access_token", "private_key_jwt"],
+  "mission_submission_endpoint_auth_signing_alg_values_supported":
+    ["ES256"],
+  "mission_status_endpoint":
+    "https://mas.example.com/mas/mission/status",
+  "mission_status_endpoint_auth_methods_supported":
+    ["access_token", "private_key_jwt"],
+  "mission_status_endpoint_auth_signing_alg_values_supported":
+    ["ES256"],
+  "mission_status_signing_alg_values_supported": ["ES256"],
+  "mission_lifecycle_endpoint":
+    "https://mas.example.com/mas/mission/lifecycle",
+  "mission_lifecycle_endpoint_auth_methods_supported":
+    ["access_token", "private_key_jwt"],
+  "mission_lifecycle_endpoint_auth_signing_alg_values_supported":
+    ["ES256"],
+  "mission_join_assertion_endpoint":
+    "https://mas.example.com/mas/mission/join-assertion",
+  "mission_max_stale_seconds": 60,
+  "jwks_uri": "https://mas.example.com/.well-known/jwks.json"
+}
+~~~
+
+A consumer holding a Mission reference resolves this document from the
+reference's `issuer`; whether a given `issuer` is a MAS or an OAuth AS
+is deployment configuration. The submission and lifecycle surfaces
+follow a reference-plus-continuation shape (a request yields an opaque
+reference the client continues against) that parallels the grant
+continuation pattern of GNAP {{RFC9635}}.
+
 # Limitations {#limitations}
 
 This section states what MAS-only deployment does not provide. These
@@ -2377,6 +2257,126 @@ A **Mission-joining PDP**:
 - when the AuthZEN binding is in use, emits Decision Evidence per
   {{I-D.draft-mcguinness-mission-runtime-evidence}}, recording the
   Mission reference the join was verified against.
+
+# Mission Substrate Statement {#mission-substrate}
+
+This Statement applies to the standalone MAS binding defined by this
+revision and declares conformance to
+{{I-D.draft-mcguinness-mission-substrate}}.
+
+The contextual-governance kernel maps as follows:
+
+1. **Mission Reference**: the tuple (`issuer`, `mission_id`) names one
+   Mission. The MAS issuer URL is the uniqueness namespace;
+   `mission_id` follows the OAuth binding's comparison, retention,
+   entropy, and non-reassignment rules.
+2. **Controller**: the MAS controls approval, Mission state, and the
+   governance record. Consumers establish its identity and keys from
+   the MAS discovery document ({{discovery}}).
+3. **Actor binding**: the authenticated submitting client is the
+   Actor and is recorded as `client_id`; the MAS separately establishes
+   the Subject during approval. Later action decisions establish the
+   Actor and Subject through the Mission Join, including the mapping
+   assurance and ambiguity declared by the deployment
+   ({{mission-approval}}, {{mission-join}}).
+4. **Approved Context**: the Mission Intent, the recorded authority
+   proposal where one was submitted, and the derived Authority Set
+   in the immutable Mission record are the Approved Context. The
+   OAuth binding's `intent_hash` and `authority_hash`, computed
+   with the MAS issuer URL, plus `proposal_hash` where a proposal
+   was submitted, are this binding's chosen commitments;
+   they are not substrate-kernel requirements.
+5. **Approval ceremony**: the asynchronous MAS approval surface
+   authenticates the Approver, establishes the Subject and Actor,
+   renders the derived authority, computes the commitments, and
+   creates the record `active` atomically with approval
+   ({{mission-approval}}).
+6. **Governance gate**: only `active` permits a positive MAS decision;
+   every other or unrecognized state fails closed. The lifecycle
+   endpoint supplies authenticated transitions, including revocation
+   by the authorized parties ({{lifecycle-and-state}}).
+7. **Reliance bound**: a positive MAS decision requires current
+   `active` state at decision time. Standing artifacts carry their own
+   bounds: a signed Mission Status is relied on within its declared
+   freshness window ({{lifecycle-and-state}}), and a Join Assertion
+   within the introspected token's lifetime ({{join-assertion}}).
+   Tokens of the unchanged Authorization Server are not represented as
+   Mission-governed artifacts.
+8. **Context propagation**: submission status and signed Mission
+   Status responses carry the Mission Reference. A Mission-joining PDP
+   verifies the reference against the acting credential before using
+   Mission authority. That join establishes correlation, not that the
+   unchanged Authorization Server issued the credential under the
+   Mission ({{mission-reference}}, {{mission-join}}).
+9. **Governance record**: the MAS audit log is the ordered governance
+   record. The MAS MUST append approval, positive and negative
+   Mission-dependent decisions, join decisions it makes, and lifecycle
+   transitions in per-Mission append order; MUST protect the log under
+   the same integrity and access controls as the Mission record; and
+   MUST retain both for the declared audit horizon.
+
+The Statement's capability table follows, one row per capability;
+every supplied row states its activation conditions, and its temporal
+and failure elements in its cells or by express inheritance of the
+Bounded Reliance floor ({{I-D.draft-mcguinness-mission-substrate}}):
+
+| Capability | Claim | Activation | Scope and defining sections | Limitations |
+| --- | --- | --- | --- | --- |
+| Lifecycle-Gated Authorization | supplied | always for MAS-native authority operations; a Mission-joining PDP deployment for joined action decisions | MAS-native authority operations check current state unconditionally; joined action decisions do so where a Mission-joining PDP is deployed ({{lifecycle-and-state}}, {{mission-join}}) | The unchanged Authorization Server does not gate token issuance or refresh; the token-layer residual runs to credential expiry |
+| State-Observable | supplied | always | Signed Mission Status responses with the `mission_max_stale_seconds` freshness bound ({{lifecycle-and-state}}, {{discovery}}) | Consumers fail closed when the declared freshness bound is exceeded |
+| Structured Authority | supplied | always | The OAuth binding's Authority Set, including any supported type's own constraint vocabulary (for `mission_resource_access`, the Mission Resource Access Profile's Common Constraints), is held at the MAS and evaluated at the joining PDP | Semantics apply only to the declared authority-detail types and mappings |
+| Monotonic Derivation | supplied | native child creation ({{native-child}}) | The defined no-broader-than relation at the native child-creation derivation point | PDP action evaluation is enforcement, never derivation; a separately approved expansion is a new approval; unchanged AS tokens are outside the claim |
+| Credential-Bound | supplied | the Join Assertion endpoint ({{join-assertion}}) | A signed assertion binds one introspected token digest and `cnf` thumbprint to the Mission; fact semantics: verified party correlation, with the assertion's `exp` bounded by the token's remaining lifetime | Neither the assertion nor the mapping join proves the Authorization Server issued the token under the Mission; a mapping-join-only deployment is outside this row |
+| Authorized Context Correlation | supplied | always | The mapping join and the Join Assertion ({{mission-join}}, {{join-assertion}}): the MAS and its joining PDPs are the joining authority under the enterprise mapping contract, joining the introspected credential, the subject and client mappings, and the Mission; a failed join denies `mission_mismatch`, never falling back | The association proves the credential belongs to the Mission's parties, never that it was issued for the Mission; the bare mapping join carries the (`subject`, `client`) equivalence-class ambiguity, and substitution protection requires the `cnf`-bound assertion ({{join-spoofing}}) |
+| Independently Verifiable | supplied | signed Mission Status ({{lifecycle-and-state}}) | Record and state properties as of the response's freshness window; Join Assertions add token-specific correlation where used | Does not prove AS issuance under the Mission or current state after the observation window |
+| Portable Evidence | supplied | Consent Evidence, a Mission Mandate, or Audit Transparency adopted | The adopted profile's artifact and verification procedure | The base MAS audit log is Controller-local and is not portable evidence |
+{: title="Standalone MAS Mission substrate capabilities"}
+
+Each supplied row's temporal elements inherit the signed Status
+freshness contract unless stated: facts are current as of the
+response's `mission_max_stale_seconds` window, assertion lifetime is
+capped by the introspected token's remaining lifetime, and the
+residual after non-active is bounded by the consumer's declared
+staleness bound. Failure behavior is uniformly fail-closed: an
+unresolvable Mission, a stale or failed Status response, a join
+failure (`mission_mismatch`, never a fallback), an unknown or
+malformed authority-detail type, and an incomparable or invalid
+constraint each refuse the evaluation rather than comparing
+best-effort; a Join Assertion that fails validation is an absent
+assertion, never a downgrade to an unverified join.
+
+The Portable Evidence condition is supplied only when the deployment
+adopts Consent Evidence
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), a Mission
+Mandate ({{I-D.draft-mcguinness-mission-mandate}}), or Audit
+Transparency ({{I-D.draft-mcguinness-mission-audit}}); the referenced
+profile defines the portable artifact and verification procedure.
+
+The composition consequences follow from those claims:
+
+- Shaping, consent evidence, audit transparency, the security model,
+  status, and signals compose with the capabilities they name. Where
+  such a profile names the Mission Issuer or issuer AS, the MAS is that
+  party.
+- The runtime profile and its AuthZEN binding, the harness, and
+  orchestration compose through the runtime profile's externally
+  established binding mode
+  ({{I-D.draft-mcguinness-mission-runtime}}), profiled here as the
+  Mission Join ({{mission-join}}).
+- Offline attenuation does not apply in MAS-only mode because no
+  Mission-bound credential or offline-minting chain exists
+  ({{I-D.draft-mcguinness-oauth-mission-attenuation}}). The
+  token-carriage aspects of delegation likewise have no carrier.
+- Mission Expansion ({{I-D.draft-mcguinness-oauth-mission-expansion}})
+  and Mission Child Delegation
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) bind their
+  request, on the OAuth wire, to an {{RFC8693}} token exchange whose
+  `subject_token` is the predecessor or parent Mission-bound access
+  token; their MAS-native wire is defined by {{native-surfaces}}, which
+  carries both operations on the mission submission endpoint with an
+  authenticated-client binding in place of that token-exchange
+  possession proof. Their models (supersession, lineage, cascade) apply
+  to MAS-held Missions unchanged.
 
 # Security Considerations
 
