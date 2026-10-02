@@ -324,7 +324,10 @@ plus the integrity `envelope` {{envelope}} defines.
       assertion, the deciding policy's identifier and version, and
       `approved_at`: the family's provenance chain for non-human
       approval, in which the policy approves the instance because a
-      human approved the policy.
+      human approved the policy. For a `service` assertion, the
+      identifier and version of the logic that produced the decision,
+      including the model's identifier and version where a model
+      produced it.
 
       `approved_at` is an RFC 3339 timestamp: the human approval
       instant of that exact policy version, not the assertion
@@ -428,8 +431,11 @@ These rules are the record's security core.
   the approval it claims to govern or it does not commit. A
   policy-authority Approver satisfies this with a `policy` assertion
   carrying its provenance chain, subject to the high-risk-class
-  restriction of {{policy-approval-recency}}. A Mission rooted in a
-  named standing-consent `approval_basis`
+  restriction of {{policy-approval-recency}}. The matching
+  assertion's `kind` MUST be `human` or `policy`: a `service`
+  assertion, including one a model produced, is a contributing
+  governance input, never the accountable approver's assertion. A
+  Mission rooted in a named standing-consent `approval_basis`
   ({{I-D.draft-mcguinness-oauth-mission}}) satisfies this rule
   through that record instead of a contributing assertion:
   `consent_principal` (equal to `approver`), `root_commitment`, and
@@ -1181,7 +1187,10 @@ the audit-horizon retention of {{record}} are the control.
 The accountable-approver assertion rule of
 {{assertion-requirements}} prevents a set of service and policy
 assertions from claiming a Mission whose named Approver never
-asserted anything.
+asserted anything. Because that assertion is never `service`, a
+model-backed service cannot become the accountable approver: no
+human-approved policy stands behind its decision, so it contributes
+only as a governance input.
 
 ## Stale Policy Approval
 
@@ -1310,6 +1319,12 @@ version before treating the evaluation as re-checked
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The accountable approver's assertion is `human` or `policy`, never
+  `service`, and `authority` is defined for a `service` assertion,
+  naming the model's identifier and version where a model produced
+  the decision. A model-backed judge contributes as a governance input
+  and never becomes the accountable approver. This adds a requirement.
 
 - The Approval Context Manifest copies a recorded `ceiling_hash`
   verbatim, so the Progressive profile is an informative reference,
