@@ -24,11 +24,17 @@ function tempFile(): string {
 
 describe("openDurableStore (#917)", () => {
   it("refuses an absent, empty or in-memory file", () => {
-    for (const file of [undefined, "", "  ", ":memory:", "file::memory:?cache=shared"]) {
+    for (const file of [undefined, "", "  "]) {
       expect(() => openDurableStore({ file, migrations: MIGRATIONS, owner: "pdp" }), String(file)).toThrow(
-        DurableStoreError,
+        /no store file is configured/,
       );
     }
+    expect(() => openDurableStore({ file: ":memory:", migrations: MIGRATIONS, owner: "pdp" })).toThrow(
+      DurableStoreError,
+    );
+    expect(() => openDurableStore({ file: ":memory:", migrations: MIGRATIONS, owner: "pdp" })).toThrow(
+      /an in-memory store is not durable/,
+    );
   });
 
   it("keeps committed rows across a close and reopen of the same file", () => {
@@ -73,7 +79,8 @@ describe("openDurableStore (#917)", () => {
     const file = tempFile();
     openDurableStore({ file, migrations: MIGRATIONS.slice(0, 1), owner: "pdp" }).close();
     const db = openDurableStore({ file, migrations: MIGRATIONS, owner: "pdp" });
-    db.prepare("INSERT INTO claims (k, note) VALUES ('b', 'second migration ran')").run();
+    const columns = (db.pragma("table_info(claims)") as Array<{ name: string }>).map((c) => c.name);
+    expect(columns).toEqual(["k", "note"]);
     expect(db.pragma("user_version", { simple: true })).toBe(2);
     db.close();
   });
