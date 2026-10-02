@@ -23270,7 +23270,7 @@
    "id": "progressive.ceiling-review.cadence-versioned-with-policy",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "ceiling-review",
-   "text": "a deployment's drawdown policy document MUST state the cadence effective under a given version, identified by the `policy_id` and `policy_version` the `ceiling_drawdown` activation already carries",
+   "text": "a deployment's drawdown policy document MUST state the cadence effective under a given version, identified by the `policy_id` and `policy_version` the `ceiling_drawdown` activation carries",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -23281,7 +23281,7 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the deployment's drawdown policy document states, for every policy_version it defines, the ceiling review cadence effective under that version, so an auditor can resolve the cadence in force at a past drawdown from the retained policy_id/policy_version alone"
+    "normative": "the deployment's drawdown policy document states, for every policy_version it defines, the ceiling review cadence effective under that version; because ceiling_hash commits the policy's digest, an auditor resolves the cadence in force at a past drawdown from the retained snapshot that digest names"
    },
    "level": "endpoint",
    "coverage": "todo",
