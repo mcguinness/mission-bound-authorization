@@ -122,12 +122,19 @@ prohibited.
 - Credentials: no `mission_s256` anywhere, and no presented or upstream token carrying one.
 - Receiver: the PS.
 - Expected: base AAuth processing. The request is outside the Lifecycle-Gated Authorization and Credential-Bound claims.
-- Prohibited at: not applicable. This is not a fallback from V2-V13.
+- Prohibited at: not applicable. This is not a fallback from V2-V13 or V15.
+
+### V15. Four-party, the AS drops or alters the reference (issue #968)
+
+- Credentials: `RT{M}` passes the AS's presented-token verification (9.1.1). The AS issues an `AT` with no `mission_s256`, or with `M2`.
+- Receiver: the PS, verifying the AS's auth token before delivery (9.1.3).
+- Expected: the PS rejects the token and answers `as_unreachable` (9.1.3). AAuth's own delivery checks pass such a token, because `mission_s256` is an optional auth-token claim (9.4.1). The rejection comes from the binding's local delivery check.
+- Prohibited at: delivery. The agent never receives a token that dropped the Mission, and the PS does not relay it as a missionless grant.
 
 ## What each negative vector shows
 
-V2-V11 and V13 reject before any ordinary authorization: the failure
-is at a validation, verification, or issuance step, in AAuth's order of
+V2-V11, V13 and V15 reject before any ordinary authorization: the failure
+is at a validation, verification, issuance, or delivery step, in AAuth's order of
 checks, and the rule forbids a missionless evaluation or retry of the
 same request. V12 refuses only the decision that depends on state. V14
 is the only missionless outcome, and it is reached by policy, not by a
