@@ -491,6 +491,16 @@ value.
 
 --- back
 
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Decision-Time Verification reads whether an action is
+  catalog-sourced, and which digests were recorded, from the approved
+  entry the Mission Issuer recorded at derivation, through the
+  materialized policy view where the PDP uses one, never from the
+  PEP's request.
+
 # Acknowledgments
 {:numbered="false"}
 
