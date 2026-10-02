@@ -3186,18 +3186,20 @@ what `mission_denial: insufficient_authority` only points at. Each
 grain keeps the wire shape and response status its defining document
 gives it.
 
-A client that decodes `authorization_remediation` and holds a
-refresh token for the active Mission requests the carried entries on
-the standard `authorization_details` parameter of a refresh request
-({{mission-bound-tokens}}), where they derive under this document's
-ordinary rules ({{authorization-derivation}}): of an advertised,
-schema-valid type ({{discovery}}), narrowed same-type ({{subset}},
-{{other-types}}) like any other request. The AS issues only what the
-Authority Set contains. For the rest, more authority requires a new
-approval, proposed as for a new Mission ({{authority-proposal}}), or
-an expansion where that companion is deployed ({{rs-enforcement}}).
-A client without such a refresh token proposes the carried entries as
-for a new Mission.
+A client that decodes `authorization_remediation` can request the
+carried entries on the standard `authorization_details` parameter of
+a refresh request ({{mission-bound-tokens}}), where they derive under
+this document's ordinary rules ({{authorization-derivation}}): of an
+advertised, schema-valid type ({{discovery}}), narrowed same-type
+({{subset}}, {{other-types}}) like any other request. The AS issues
+only what both the presented refresh grant ({{Section 6 of RFC9396}})
+and the Authority Set contain, so a refresh-token family narrower than
+the Mission does not obtain the Mission's wider authority. For entries
+outside the Authority Set, more authority requires a new approval,
+proposed as for a new Mission ({{authority-proposal}}), or an
+expansion where that companion is deployed ({{rs-enforcement}}). A
+client holding no refresh grant that covers the entries proposes them
+as for a new Mission.
 
 A third grain routes the same denial into a governed access request
 rather than a fresh derivation: the AuthZEN Access Request and
@@ -5857,10 +5859,10 @@ Cross-Domain:
 
 -01
 
-- Routed RAR remediation by containment: entries the active
-  Mission's Authority Set contains are requested under that Mission
-  by refresh where the client holds a refresh token, and the rest
-  need a new approval or an expansion. Added
+- Routed RAR remediation by containment: entries that both a
+  presented refresh grant and the active Mission's Authority Set
+  contain are requested by refresh, and entries outside the Authority
+  Set need a new approval or an expansion. Added
   a Non-Goal for joint outcomes and cross-resource effects (the
   `mission` claim does not identify a business transaction), stated
   that an intermediary in the agent's own trust domain presenting the
