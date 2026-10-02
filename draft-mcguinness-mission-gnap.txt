@@ -8,7 +8,8 @@ Intended status: Experimental                             2 October 2026
 Expires: 5 April 2027
 
 
-                  Mission-Bound Authorization for GNAP
+Mission-Bound Authorization for the Grant Negotiation and Authorization
+                            Protocol (GNAP)
                   draft-mcguinness-mission-gnap-latest
 
 Abstract
@@ -1550,9 +1551,10 @@ Table of Contents
               draft-mcguinness-mission-shaping.html>.
 
    [I-D.draft-mcguinness-mission-uma]
-              McGuinness, K., "Mission-Bound Authorization for UMA 2.0",
-              2026, <https://mcguinness.github.io/mission-bound-
-              authorization/draft-mcguinness-mission-uma.html>.
+              McGuinness, K., "Mission-Bound Authorization for User-
+              Managed Access (UMA) 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-uma.html>.
 
    [I-D.draft-mcguinness-oauth-mission-approval]
               McGuinness, K., "Mission Deferred Approval for OAuth 2.0",

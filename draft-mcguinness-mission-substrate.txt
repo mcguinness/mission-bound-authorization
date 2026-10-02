@@ -1332,9 +1332,10 @@ Table of Contents
               draft-mcguinness-mission-authority-server.html>.
 
    [I-D.draft-mcguinness-mission-gnap]
-              McGuinness, K., "Mission-Bound Authorization for GNAP",
-              2026, <https://mcguinness.github.io/mission-bound-
-              authorization/draft-mcguinness-mission-gnap.html>.
+              McGuinness, K., "Mission-Bound Authorization for the Grant
+              Negotiation and Authorization Protocol (GNAP)", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-gnap.html>.
 
    [I-D.draft-mcguinness-mission-mandate]
               McGuinness, K., "Mission Mandate", 2026,
@@ -1352,9 +1353,10 @@ Table of Contents
               draft-mcguinness-mission-security-model.html>.
 
    [I-D.draft-mcguinness-mission-uma]
-              McGuinness, K., "Mission-Bound Authorization for UMA 2.0",
-              2026, <https://mcguinness.github.io/mission-bound-
-              authorization/draft-mcguinness-mission-uma.html>.
+              McGuinness, K., "Mission-Bound Authorization for User-
+              Managed Access (UMA) 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-uma.html>.
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth

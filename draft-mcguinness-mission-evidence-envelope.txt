@@ -1292,9 +1292,10 @@ Table of Contents
               draft-mcguinness-mission-runtime-evidence.html>.
 
    [I-D.draft-mcguinness-oauth-mission-consent-evidence]
-              McGuinness, K., "Mission Consent Evidence", 2026,
-              <https://mcguinness.github.io/mission-bound-authorization/
-              draft-mcguinness-oauth-mission-consent-evidence.html>.
+              McGuinness, K., "Mission Consent Evidence for OAuth 2.0",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-consent-
+              evidence.html>.
 
 Appendix A.  Document History
 

@@ -1555,10 +1555,10 @@ Table of Contents
               revision.html>.
 
    [I-D.draft-mcguinness-oauth-mission-discharge]
-              McGuinness, K., "Mission Completion and Entry Discharge
-              for OAuth 2.0", 2026, <https://mcguinness.github.io/
-              mission-bound-authorization/draft-mcguinness-oauth-
-              mission-discharge.html>.
+              McGuinness, K., "Mission Entry Discharge for OAuth 2.0",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-
+              discharge.html>.
 
    [I-D.draft-mcguinness-oauth-mission-expansion]
               McGuinness, K., "Mission Expansion for OAuth 2.0", 2026,

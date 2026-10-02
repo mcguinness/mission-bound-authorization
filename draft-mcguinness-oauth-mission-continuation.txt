@@ -2,14 +2,13 @@
 
 
 
-Network Working Group                                      K. McGuinness
+Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
 Intended status: Experimental                             2 October 2026
 Expires: 5 April 2027
 
 
-    Mission Continuation: Authorization Continuity for Mission-Bound
-                             Authorization
+                   Mission Continuation for OAuth 2.0
            draft-mcguinness-oauth-mission-continuation-latest
 
 Abstract
@@ -573,24 +572,26 @@ Table of Contents
               architecture.html>.
 
    [I-D.draft-mcguinness-mission-authzen]
-              McGuinness, K., "Mission AuthZEN Binding", 2026,
-              <https://mcguinness.github.io/mission-bound-authorization/
-              draft-mcguinness-mission-authzen.html>.
+              McGuinness, K., "Mission-Bound Runtime Enforcement:
+              AuthZEN Profile", 2026, <https://mcguinness.github.io/
+              mission-bound-authorization/draft-mcguinness-mission-
+              authzen.html>.
 
    [I-D.draft-mcguinness-mission-harness]
-              McGuinness, K., "Mission Harness", 2026,
+              McGuinness, K., "Mission-Aware Agent Harnesses", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-harness.html>.
 
    [I-D.draft-mcguinness-mission-runtime]
-              McGuinness, K., "Mission Runtime Enforcement", 2026,
+              McGuinness, K., "Mission-Bound Runtime Enforcement", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-runtime.html>.
 
    [I-D.draft-mcguinness-mission-uma]
-              McGuinness, K., "Mission-Bound Authorization: UMA 2.0
-              Binding", 2026, <https://mcguinness.github.io/mission-
-              bound-authorization/draft-mcguinness-mission-uma.html>.
+              McGuinness, K., "Mission-Bound Authorization for User-
+              Managed Access (UMA) 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-uma.html>.
 
    [I-D.draft-mcguinness-oauth-id-continuation-assertion]
               McGuinness, K. and A. Parecki, "Identity Continuation

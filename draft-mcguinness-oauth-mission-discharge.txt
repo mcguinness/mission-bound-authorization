@@ -8,7 +8,7 @@ Intended status: Standards Track                          2 October 2026
 Expires: 5 April 2027
 
 
-          Mission Completion and Entry Discharge for OAuth 2.0
+                 Mission Entry Discharge for OAuth 2.0
             draft-mcguinness-oauth-mission-discharge-latest
 
 Abstract
@@ -76,7 +76,7 @@ Table of Contents
 
    1.  Introduction
    2.  Conventions and Terminology
-   3.  Mission Completion and Entry Discharge
+   3.  Mission Entry Discharge
      3.1.  Relationship to the Issuance Profile
      3.2.  Entry Completion Conditions
      3.3.  Discharge and Issuance Gating
@@ -176,7 +176,7 @@ Table of Contents
    All JSON shown in this document is non-normative and illustrative;
    the member definitions in the surrounding text are authoritative.
 
-3.  Mission Completion and Entry Discharge
+3.  Mission Entry Discharge
 
    Without entry discharge, a Mission granted authority to release a
    record "for this enrollment" keeps deriving that authority after the

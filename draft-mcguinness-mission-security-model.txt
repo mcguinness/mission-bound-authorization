@@ -462,7 +462,7 @@ Table of Contents
       keep a discharged entry derivable or falsely discharge one; the
       Authorization Server fails closed when it cannot determine the
       event status ([I-D.draft-mcguinness-oauth-mission-discharge],
-      Section "Mission Completion and Entry Discharge").
+      Section "Mission Entry Discharge").
 
    Instance identity is identity substrate, like agent identity
    generally.  The Client Attester that assigns instance identifiers
@@ -1498,10 +1498,10 @@ Table of Contents
               limits.html>.
 
    [I-D.draft-mcguinness-oauth-mission-discharge]
-              McGuinness, K., "Mission Completion and Entry Discharge
-              for OAuth 2.0", 2026, <https://mcguinness.github.io/
-              mission-bound-authorization/draft-mcguinness-oauth-
-              mission-discharge.html>.
+              McGuinness, K., "Mission Entry Discharge for OAuth 2.0",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-
+              discharge.html>.
 
    [I-D.draft-mcguinness-oauth-mission-expansion]
               McGuinness, K., "Mission Expansion for OAuth 2.0", 2026,
@@ -1543,9 +1543,10 @@ Table of Contents
               mission-transaction-authorization.html>.
 
    [I-D.draft-mcguinness-oauth-mission-work-products]
-              McGuinness, K., "Mission Work Products", 2026,
-              <https://mcguinness.github.io/mission-bound-authorization/
-              draft-mcguinness-oauth-mission-work-products.html>.
+              McGuinness, K., "Mission Work Products for OAuth 2.0",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-work-
+              products.html>.
 
    [OWASP-AGENTIC]
               OWASP GenAI Security Project, Agentic Security Initiative,

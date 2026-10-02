@@ -924,9 +924,10 @@ Table of Contents
               draft-mcguinness-oauth-mission-expansion.html>.
 
    [I-D.draft-mcguinness-oauth-mission-work-products]
-              McGuinness, K., "Mission Work Products", 2026,
-              <https://mcguinness.github.io/mission-bound-authorization/
-              draft-mcguinness-oauth-mission-work-products.html>.
+              McGuinness, K., "Mission Work Products for OAuth 2.0",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-work-
+              products.html>.
 
 Appendix A.  Document History
 

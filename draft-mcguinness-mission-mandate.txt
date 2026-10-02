@@ -1316,9 +1316,10 @@ Table of Contents
               draft-mcguinness-mission-runtime.html>.
 
    [I-D.draft-mcguinness-mission-uma]
-              McGuinness, K., "Mission-Bound Authorization for UMA 2.0",
-              2026, <https://mcguinness.github.io/mission-bound-
-              authorization/draft-mcguinness-mission-uma.html>.
+              McGuinness, K., "Mission-Bound Authorization for User-
+              Managed Access (UMA) 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-uma.html>.
 
    [I-D.draft-mcguinness-oauth-mission-cross-domain]
               McGuinness, K., "Mission Cross-Domain Projection for OAuth

@@ -8,7 +8,7 @@ Intended status: Experimental                             2 October 2026
 Expires: 5 April 2027
 
 
-                         Mission Work Products
+                  Mission Work Products for OAuth 2.0
           draft-mcguinness-oauth-mission-work-products-latest
 
 Abstract
@@ -785,10 +785,9 @@ Informative References
               architecture.html>.
 
    [I-D.draft-mcguinness-mission-audit]
-              McGuinness, K., "Mission Transparency: SCITT Registration
-              of Mission Evidence", 2026, <https://mcguinness.github.io/
-              mission-bound-authorization/draft-mcguinness-mission-
-              audit.html>.
+              McGuinness, K., "Mission Audit Transparency", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-audit.html>.
 
    [I-D.draft-mcguinness-mission-discovery]
               McGuinness, K., "Mission Open-World Discovery", 2026,
@@ -801,8 +800,7 @@ Informative References
               draft-mcguinness-mission-harness.html>.
 
    [I-D.draft-mcguinness-mission-security-model]
-              McGuinness, K., "Mission-Bound Authorization: Security
-              Model and Trusted Base", 2026,
+              McGuinness, K., "Mission Security Model", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-security-model.html>.
 
@@ -813,10 +811,10 @@ Informative References
               delegation.html>.
 
    [I-D.draft-mcguinness-oauth-mission-continuation]
-              McGuinness, K., "Mission Continuation: Authorization
-              Continuity for Mission-Bound Authorization", 2026,
-              <https://mcguinness.github.io/mission-bound-authorization/
-              draft-mcguinness-oauth-mission-continuation.html>.
+              McGuinness, K., "Mission Continuation for OAuth 2.0",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-
+              continuation.html>.
 
    [I-D.draft-mcguinness-oauth-mission-cross-domain]
               McGuinness, K., "Mission Cross-Domain Projection for OAuth
