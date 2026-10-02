@@ -231,11 +231,11 @@ The only protocol states are:
 * `active`: the mission is in progress; and
 * `terminated`: the mission has permanently ended.
 
-Only `active` permits the PS to process a token, permission, audit, or
-interaction request under the mission.  Once the PS commits
-`terminated`, it MUST NOT return the mission to `active`.  A caller that
-needs to continue the work creates and obtains approval for a new
-mission.
+Only `active` permits the PS to process a request that names the
+mission outside this control plane ({{token-consequences}}).  Once the
+PS commits `terminated`, it MUST NOT return the mission to `active`.  A
+caller that needs to continue the work creates and obtains approval
+for a new mission.
 
 This specification defines these termination reasons:
 
@@ -788,11 +788,17 @@ for the maximum relevant replay and audit horizon.
 ## Local Gating
 
 Immediately after the terminal commit, the PS MUST reject every new
-token, permission, audit, and interaction request under the Mission
-Reference with the AAuth `mission_terminated` error.  It MUST stop
-federating resource-token requests under that mission.  This is the
-reliable AAuth management effect because it occurs at the server that
-owns the mission context.
+request that names the mission, at any PS endpoint other than this
+control plane, with the AAuth `mission_terminated` error (Sections 8.6
+and 8.8 of {{I-D.draft-hardt-oauth-aauth-protocol}}).  A request names
+the mission through a `mission_s256` parameter, as a person token
+request can (Section 7.1 of {{I-D.draft-hardt-oauth-aauth-protocol}});
+through a token carrying `mission_s256`, whether a resource token,
+presented token, or upstream token; or through the mission's own URL
+at `mission_endpoint`, for an `update` or `completion`.  The PS MUST
+stop federating resource-token requests under that mission.  This is
+the reliable AAuth management effect because it occurs at the server
+that owns the mission context.
 
 A Resource Token is a signed request artifact, not authority.  It does
 not need revocation; submitting it under the terminated mission fails at
