@@ -521,7 +521,8 @@ On success the consuming AS mints tokens under these rules:
   the `expires_at` member ({{mission-claim}}).
 - **Subset.** Issued `authorization_details` MUST be a subset of the
   grant's. The consuming AS MUST NOT widen, remap, or supplement
-  them from its own policy except to narrow.
+  them from its own policy except to narrow; representing them as
+  `scope` (below) is not a remapping.
 - **Token response.** The token response carries the issued
   `authorization_details` as the issuance profile requires for
   Mission-bound issuance ({{I-D.draft-mcguinness-oauth-mission}},
