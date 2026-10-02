@@ -29,13 +29,13 @@ normative:
   RFC3339:
   I-D.draft-hardt-oauth-aauth-protocol:
     title: "AAuth Protocol"
-    target: https://dickhardt.github.io/AAuth/draft-hardt-oauth-aauth-protocol.html
-    refcontent: "Editor's copy, commit fc5e972c"
     author:
       -
         ins: D. Hardt
         name: Dick Hardt
-    date: 2026
+    date: 2026-09-25
+    seriesinfo:
+      Internet-Draft: draft-hardt-oauth-aauth-protocol-11
 
 informative:
   I-D.draft-mcguinness-mission-aauth:
