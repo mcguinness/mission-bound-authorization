@@ -34,16 +34,31 @@
     "transaction_assurance": [
       {
         "mediated_class_or_scope": "irreversible_action",
-        "idempotency_claim_domain": "resource-enforced by mcp-payments-pep, keyed on (mission, action, action_phase, parameter_digest); this deployment's PDP claims no idempotency-key domain",
+        "idempotency_claim_domain": "pdp-local: mcp-payments-pdp, durable single-writer SQLite (Exact: one serializing PDP)",
+        "idempotency_claim_owner": "mcp-payments-pdp",
+        "idempotency_enforcement_profile": "exact",
+        "idempotency_claim_topology": "local-single-writer",
+        "idempotency_scope": ["mission", "subject", "actor", "audience", "action", "resource", "phase"],
+        "idempotency_horizon_seconds": 604800,
         "execution_lease_max_seconds": 30,
         "execution_lease_consumer": "mcp-payments-pep"
       },
       {
         "mediated_class_or_scope": "external_commitment",
-        "idempotency_claim_domain": "resource-enforced by mcp-payments-pep, keyed on (mission, action, action_phase, parameter_digest); this deployment's PDP claims no idempotency-key domain",
+        "idempotency_claim_domain": "pdp-local: mcp-payments-pdp, durable single-writer SQLite (Exact: one serializing PDP)",
+        "idempotency_claim_owner": "mcp-payments-pdp",
+        "idempotency_enforcement_profile": "exact",
+        "idempotency_claim_topology": "local-single-writer",
+        "idempotency_scope": ["mission", "subject", "actor", "audience", "action", "resource", "phase"],
+        "idempotency_horizon_seconds": 604800,
         "execution_lease_max_seconds": 30,
         "execution_lease_consumer": "mcp-payments-pep"
       }
-    ]
+    ],
+    "outcome_reconciliation": {
+      "window": "PT15M",
+      "responsible_component": "mcp-payments-pep",
+      "alerting": "an operator alert for every idempotency claim that closes indeterminate"
+    }
   }
 }

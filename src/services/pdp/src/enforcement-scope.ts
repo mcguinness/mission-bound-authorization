@@ -87,12 +87,24 @@ export type EnforcementExtensionName =
  * `mediated_scope.pep_locations` entry that reads the bound and caps its own
  * lease by it. `idempotency_claim_domain` says which component holds the
  * claim; it does not assert a PDP-side domain a deployment does not implement.
+ *
+ * @spec runtime#idempotency (#917) — the remaining members name the Exact
+ * claim domain per mediated class, never per key: the PDP that owns it, the
+ * enforcement profile and topology it runs under, the published idempotency
+ * scope, and the horizon a completed key stays refused for. They are
+ * optional here because this module is the structural pass; the claim domain
+ * that relies on them refuses a declaration lacking any of them at startup.
  */
 export interface TransactionAssuranceDeclaration {
   mediated_class_or_scope: string;
   idempotency_claim_domain: string;
   execution_lease_max_seconds: number;
   execution_lease_consumer: string;
+  idempotency_claim_owner?: string;
+  idempotency_enforcement_profile?: "exact" | "bounded";
+  idempotency_claim_topology?: string;
+  idempotency_scope?: readonly string[];
+  idempotency_horizon_seconds?: number;
 }
 
 export interface EnforcementExtensionDeclarations {
@@ -320,7 +332,76 @@ export function validateEnforcementScopeStatement(
             `execution_lease_consumer "${decl.execution_lease_consumer}" is not a declared mediated_scope.pep_locations entry`,
           );
         }
+        // @spec runtime#idempotency (#917): the claim-domain members are
+        // shape-checked wherever they appear. Whether they describe a domain
+        // a PDP can actually run (one owner, Exact, a supported topology, the
+        // required dimensions) is the claim domain's own startup refusal.
+        const pdps = isNonEmptyStringArray(stmt.pdps) ? stmt.pdps : [];
+        if (decl.idempotency_claim_owner !== undefined) {
+          if (!isNonEmptyString(decl.idempotency_claim_owner)) {
+            push(member, "idempotency_claim_owner must name the PDP that owns the claim domain");
+          } else if (!pdps.includes(decl.idempotency_claim_owner)) {
+            push(member, `idempotency_claim_owner "${decl.idempotency_claim_owner}" is not a declared pdps entry`);
+          }
+        }
+        if (
+          decl.idempotency_enforcement_profile !== undefined &&
+          decl.idempotency_enforcement_profile !== "exact" &&
+          decl.idempotency_enforcement_profile !== "bounded"
+        ) {
+          push(member, "idempotency_enforcement_profile must be exact or bounded");
+        }
+        if (decl.idempotency_claim_topology !== undefined && !isNonEmptyString(decl.idempotency_claim_topology)) {
+          push(member, "idempotency_claim_topology must be a non-empty topology name");
+        }
+        if (decl.idempotency_scope !== undefined) {
+          const scopeList = decl.idempotency_scope;
+          if (!isNonEmptyStringArray(scopeList) || new Set(scopeList).size !== scopeList.length) {
+            push(member, "idempotency_scope must be a non-empty list of distinct dimension names");
+          }
+        }
+        if (
+          decl.idempotency_horizon_seconds !== undefined &&
+          (typeof decl.idempotency_horizon_seconds !== "number" ||
+            !Number.isSafeInteger(decl.idempotency_horizon_seconds) ||
+            decl.idempotency_horizon_seconds <= 0)
+        ) {
+          push(member, "idempotency_horizon_seconds must be a positive whole number of seconds");
+        }
       });
+    }
+  }
+
+  // @spec runtime#runtime-conformance, runtime#idempotency (#917): the
+  // outcome-reconciliation declaration names the window an unresolved claim
+  // stays transient for and the component responsible for resolving it. Like
+  // `transaction_assurance`, it is shape-checked wherever it appears: a
+  // window that resolves to no fixed duration, or a component this scope does
+  // not declare, is unresolvable.
+  const reconciliation = object(stmt.extensions) ? stmt.extensions.outcome_reconciliation : undefined;
+  if (reconciliation !== undefined) {
+    const member = "extensions.outcome_reconciliation";
+    if (!object(reconciliation)) {
+      push(member, "declaration must be an object");
+    } else {
+      if (retentionWindowSeconds(reconciliation.window) === undefined) {
+        push(member, "window must be an ISO 8601 duration of days or below");
+      }
+      const components = new Set<string>([
+        ...(isNonEmptyStringArray(stmt.pdps) ? stmt.pdps : []),
+        ...(scopeOk && object(scope) ? (scope.pep_locations as readonly string[]) : []),
+      ]);
+      if (!isNonEmptyString(reconciliation.responsible_component)) {
+        push(member, "missing the component responsible for reconciliation");
+      } else if (!components.has(reconciliation.responsible_component)) {
+        push(
+          member,
+          `responsible_component "${reconciliation.responsible_component}" is not a declared PDP or PEP location of this scope`,
+        );
+      }
+      if (!isNonEmptyString(reconciliation.alerting)) {
+        push(member, "missing the alerting an unresolved outcome raises");
+      }
     }
   }
 
