@@ -119,7 +119,8 @@ Context:
 - the agent names the mission when it requests a person token from its
   PS, and the PS stamps the mission into the person token, from where
   the resource copies it into each resource token and the auth token's
-  issuer (PS or AS) copies it into each auth token issued under it;
+  issuer, the PS or an Access Server (AS), copies it into each auth
+  token issued under it;
 - the PS evaluates requests using the approved context and the ordered
   mission log; and
 - a mission is either `active` or permanently `terminated`.
