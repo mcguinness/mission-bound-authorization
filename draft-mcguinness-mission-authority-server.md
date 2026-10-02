@@ -939,7 +939,7 @@ the action under the Mission's Authority Set and permits:
 ~~~
 
 `join_view_id` accompanies `policy_view_id` because this decision
-rode the join ({{mission-join}} rule 9): the direct-client disposition
+rode the join (rule 9 of {{join-rules}}): the direct-client disposition
 and `client_id` it binds distinguish it from a differently-joined
 decision (a narrowed delegate view) and from a direct Mission-bound
 decision, which never carries `join_view_id` at all.
@@ -975,8 +975,8 @@ match the referenced Mission:
 # Mission Reference Propagation {#reference-propagation}
 
 The Mission Join consumes a Mission reference the PEP supplies, and
-join rule 1 names two sources: the PEP's own recorded Mission binding
-and deployment configuration ({{mission-join}}). When the gateway PEP
+rule 1 of {{join-rules}} names two sources: the PEP's own recorded
+Mission binding and deployment configuration. When the gateway PEP
 is not the process that holds the binding (an MCP gateway, an egress
 proxy), neither source exists at the enforcement boundary, and
 nothing has said how the requesting side names the Mission a given
@@ -1361,7 +1361,7 @@ Example claims:
 ## PDP Consumption {#join-assertion-pdp}
 
 A PDP presented with a Join Assertion verifies, in place of the
-mapping checks of {{mission-join}} steps 3 and 4:
+mapping checks of rules 3 and 4 of {{join-rules}}:
 
 - the signature, under a key from the MAS's `jwks_uri`, and the
   `mission-join+jwt` header `typ`;
@@ -2830,7 +2830,7 @@ re-check.
 ~~~
 
 `join_view_id` marks this decision as reached over the Join
-({{mission-join}} rule 9), distinct from `policy_view_id`.
+(rule 9 of {{join-rules}}), distinct from `policy_view_id`.
 
 # Acknowledgments
 {:numbered="false"}
