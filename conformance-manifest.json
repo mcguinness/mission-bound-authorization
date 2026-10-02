@@ -63,8 +63,8 @@
     "content_sha256": "d68452a457e3a72563ca8ed04ae90f8dc77678ef7456190cffc257abe34d04f9"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "57ba4e9d89ac42524c26f1f42c20cecf8d6f5906",
-    "content_sha256": "42734fbfbc12f0d996f47b0af285540ade694a7b927daed30a87c484b0903fd6"
+    "revision": "35654da2745816f4b3c51ff2c4397d392def9931",
+    "content_sha256": "a0f4aa7bb212ace5eecd6d6cebbd9817585d319dc58644ae781124ee80b261b0"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
@@ -182,6 +182,7 @@
    "runtime.break-glass",
    "control-plane.consistency",
    "core.introspection",
+   "core.introspected-consumption",
    "status.lifecycle",
    "status.discharge",
    "signals.events",
@@ -212,6 +213,7 @@
    "mas.baseline-join",
    "core.standing-consent",
    "core.standing-consent-recency",
+   "core.governance-record",
    "template.dispatch",
    "progressive.ceiling-drawdown",
    "cross-domain.projection",
@@ -3123,12 +3125,10 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "core.governance-record"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
@@ -3137,7 +3137,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "New member (#701, redesigned per #716 review): replaces the earlier kind: agr value, which conflated a decision mechanism with a storage location and lost whether an AGR-backed decision was human- or policy-adjudicated. kind stays semantic (human or policy); governance_record is an independent boolean flag, not a duplicate reference, since the record is already joined by this Mission's own approval_event_id."
+   "notes": "New member (#701, redesigned per #716 review): replaces the earlier kind: agr value, which conflated a decision mechanism with a storage location and lost whether an AGR-backed decision was human- or policy-adjudicated. kind stays semantic (human or policy); governance_record is an independent boolean flag, not a duplicate reference, since the record is already joined by this Mission's own approval_event_id. Scoped to core.governance-record: the clause binds only an approval whose `adjudication.governance_record` is `true`, which requires an Approval Governance Record (the approval-governance companion); no published baseline selects it, matching that companion's own rows."
   },
   {
    "id": "core.approval-basis.adjudication-no-flatten",
@@ -3147,12 +3147,10 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "core.governance-record"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
@@ -3161,7 +3159,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "New member (#701); demonstrates the multi-assertion-AGR-not-collapsed property from the #701 and #716 reviews."
+   "notes": "New member (#701); demonstrates the multi-assertion-AGR-not-collapsed property from the #701 and #716 reviews. Scoped to core.governance-record: the clause binds only an approval whose `adjudication.governance_record` is `true`, which requires an Approval Governance Record (the approval-governance companion); no published baseline selects it, matching that companion's own rows."
   },
   {
    "id": "core.approval-basis.discriminator-unknown-value-rule",
@@ -5666,12 +5664,10 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "introspection",
    "assertion": "output-bound",
    "observation": {
@@ -5680,7 +5676,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Conditional on the deployment issuing opaque Mission-bound tokens; the applicability vocabulary has no deployment-mode condition, so recorded unconditional with the condition stated here."
+   "notes": "Scoped to core.introspected-consumption (#904 option b): the clause binds only a deployment issuing opaque Mission-bound tokens, an optional mode no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed."
   },
   {
    "id": "core.introspection.opaque-active-carriage",
@@ -5690,12 +5686,10 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "introspection",
    "assertion": "output-bound",
    "observation": {
@@ -5704,7 +5698,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Conditional on the deployment issuing opaque Mission-bound tokens; the applicability vocabulary has no deployment-mode condition, so recorded unconditional with the condition stated here."
+   "notes": "Scoped to core.introspected-consumption (#904 option b): the clause binds only a deployment issuing opaque Mission-bound tokens, an optional mode no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed."
   },
   {
    "id": "core.introspection.authority-only-when-active",
@@ -5714,12 +5708,10 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "introspection",
    "assertion": "privacy",
    "observation": {
@@ -5728,7 +5720,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Conditional on the deployment issuing opaque Mission-bound tokens; the applicability vocabulary has no deployment-mode condition, so recorded unconditional with the condition stated here."
+   "notes": "Scoped to core.introspected-consumption (#904 option b): the clause binds only a deployment issuing opaque Mission-bound tokens, an optional mode no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed."
   },
   {
    "id": "core.introspection.opaque-rs-fail-closed",
@@ -5738,12 +5730,10 @@
    "role": "RS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
@@ -5752,7 +5742,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Conditional on the deployment issuing opaque Mission-bound tokens; the applicability vocabulary has no deployment-mode condition, so recorded unconditional with the condition stated here."
+   "notes": "Scoped to core.introspected-consumption (#904 option b): the clause binds only a deployment issuing opaque Mission-bound tokens, an optional mode no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed."
   },
   {
    "id": "core.anchors.entry-commitment",
