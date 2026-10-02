@@ -2099,115 +2099,6 @@ under the Mission Status operation's authentication and anti-oracle
 rules, carries the Mission's `authority_hash` as its consent anchor,
 and does not widen authority beyond the Authority Set.
 
-# Deployment {#deployment}
-
-This section is non-normative. It shows where a MAS lands in a real
-estate and how a deployment adopts it incrementally.
-
-## Topology {#deployment-topology}
-
-A typical MAS deployment runs the MAS beside the existing identity
-provider and Authorization Server, changing neither:
-
-- the MAS records Missions, runs approvals, operates the lifecycle,
-  and signs Mission Status;
-- a PEP at the enforcement boundary (an API gateway, a service-mesh
-  sidecar, an MCP or tool gateway, a SaaS connector, a workflow
-  orchestrator, or a legacy-API wrapper) presents the Mission
-  reference and calls a PDP before each consequential action;
-- the PDP runs the runtime profile's decision contract and its
-  AuthZEN binding, drawing authority from the MAS-served Authority Set
-  or a materialized policy view ({{policy-distribution}});
-- the MAS mints a Join Assertion after introspecting the presented
-  token, so the PDP verifies one signed proof rather than a mapping
-  table; and
-- runtime decision and execution evidence flows to the deployment's
-  audit sink.
-
-Which Mission Issuer governs a given resource is deployment
-configuration the estate makes explicit: where more than one Mission
-Issuer operates, the deployment documents the resource-to-issuer
-mapping alongside its mapping contract, and a PEP treats a resource
-with no mapped issuer as outside this profile's governance rather
-than inventing one.
-
-## Connector Patterns {#deployment-connectors}
-
-The PEP is wherever consequential effects can be refused before they
-happen. Common placements, all non-normative:
-
-- **API gateway PEP**: refuses at the gateway in front of a protected
-  API.
-- **Service-mesh sidecar PEP**: refuses at the sidecar for
-  service-to-service calls.
-- **SaaS connector PEP**: refuses in the connector mediating a SaaS
-  API.
-- **MCP or tool-server PEP**: refuses at the tool boundary an agent
-  invokes.
-- **Workflow or orchestrator PEP**: refuses at the step boundary of a
-  governed workflow.
-- **Legacy-API wrapper PEP**: refuses in a wrapper fronting a system
-  that cannot itself enforce.
-
-Each is credible only to the extent it has no unmediated bypass; the
-runtime profile's Enforcement Scope Statement is where that coverage
-is stated ({{I-D.draft-mcguinness-mission-runtime}}).
-
-## Progressive Adoption {#deployment-adoption}
-
-A MAS deployment adopts the Mission Assurance Levels in the order
-deployments build them ({{I-D.draft-mcguinness-mission-architecture}});
-the levels are adoption bundles, not a ladder, and each phase is
-independently useful. The six phases group into three modes, and a
-deployment's claim is bounded by its mode: **records mode** (phases
-1 and 2) is inventory, approval, lifecycle, and audit, with no
-prevention claim of any kind; **enforced-paths mode** (phases 3 and
-4) prevents on exactly the paths the Enforcement Scope Statement
-enumerates and is records mode everywhere else; **issuance mode**
-(phases 5 and 6) restores the token-layer gate. "No AS code change"
-holds in phases 1 through 5; what changes is the claim, and a
-high-consequence enforcement claim requires issuance mode's
-machinery or the Estate Prerequisites' AS features
-({{enterprise-prerequisites}}), never records alone:
-
-1. The MAS records Missions and approvals: governance and audit of
-   what tasks were approved, with no enforcement change yet
-   (Baseline Issuance under the MAS binding: governance and audit,
-   with no kill switch of any kind).
-2. Mission Status and lifecycle publish Mission state estate-wide:
-   the freshness surface runtime enforcement relies on. Under the MAS
-   binding this alone is no kill switch.
-3. PEP/PDP runtime enforcement gates consequential actions per the
-   runtime profile and, with phase 2's state surface, supplies the
-   kill switch (the Runtime-Enforced level).
-4. Join Assertions harden the join on joined paths outside the
-   high-consequence classes, which the Enterprise profile reserves
-   for Mission-bound issuance, and instance-bound joins narrow it to
-   one workload (the Enterprise profile, {{enterprise-profile}}).
-5. Estate Authorization Servers adopt the issuance join
-   ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}), redeeming
-   MAS-minted grants for Mission-bound, state-gated tokens: the
-   token-layer kill switch returns without moving approval into the
-   AS.
-6. Where a particular AS later becomes natively Mission-aware, it
-   adds the OAuth binding's own issuance for its resources, while the MAS
-   record, lifecycle, and authority model continue to govern the
-   rest of the estate.
-
-A deployment stops at the phase its risk warrants; nothing above the
-floor is required to begin, and the MAS remains the enduring control
-plane of the family's delegated-authority layer
-({{I-D.draft-mcguinness-mission-architecture}}) even as individual
-Authorization Servers become Mission-aware.
-
-The common starting estate runs bots on standing service accounts
-with broad, durable entitlements. The migration is per task, not per
-account: each recurring job becomes a durable Mission whose Authority
-Set is derived from the entitlements the job actually exercises, with
-the deployment's entitlement catalog as the derivation policy's
-input; the service account retains only what no Mission yet governs,
-and that shrinking residue is the adoption metric.
-
 # Conformance {#conformance}
 
 An implementation conforms in one of two roles.
@@ -2653,54 +2544,114 @@ document requests no IANA action for them.
 
 --- back
 
-# Document History {#document-history}
+# Deployment Guidance {#deployment}
 
-\[\[ To be removed from the final specification ]]
+This appendix is non-normative. It shows where a MAS lands in a real
+estate and how a deployment adopts it incrementally.
 
-- Corrections. Cross-references name the right sections (the
-  propagation tuple's state source, a client-instance section);
-  Join Spoofing counts four residuals; IANA names both runtime denial
-  reasons; the error table lists `join_failed` and `conflict`; RFC 8414
-  and RFC 9396 are normative references, and the metadata registry
-  uses the RFC 8414 template; the examples show a DPoP-bound
-  Mission-Reference request and classify reads as
-  `consequential_read`; Estate Prerequisites name local RFC 9068
-  validation; Progressive Adoption follows the architecture's
-  Assurance Levels; and "the issuance profile" becomes "the OAuth
-  binding" throughout.
+## Topology {#deployment-topology}
 
-- Authentication discovery mirrors the Status draft: per-endpoint
-  `*_auth_methods_supported` and `*_auth_signing_alg_values_supported`
-  members for the submission, status, and lifecycle endpoints replace
-  `mission_auth_methods_supported`, and the submission endpoint accepts
-  all three Status mechanisms, including mTLS-bound access tokens. The
-  join-assertion endpoint shares the submission methods but names its
-  own token audience and Protected Resource Metadata.
+A typical MAS deployment runs the MAS beside the existing identity
+provider and Authorization Server, changing neither:
 
-- Specify the PEP/PDP responsibilities for required instance-bound joins
-  and their refusal behavior. Join Assertions continue to carry no
-  instance identifier and do not replace the instance association check;
-  MAS evidence distinguishes participation from presenter attribution.
+- the MAS records Missions, runs approvals, operates the lifecycle,
+  and signs Mission Status;
+- a PEP at the enforcement boundary (an API gateway, a service-mesh
+  sidecar, an MCP or tool gateway, a SaaS connector, a workflow
+  orchestrator, or a legacy-API wrapper) presents the Mission
+  reference and calls a PDP before each consequential action;
+- the PDP runs the runtime profile's decision contract and its
+  AuthZEN binding, drawing authority from the MAS-served Authority Set
+  or a materialized policy view ({{policy-distribution}});
+- the MAS mints a Join Assertion after introspecting the presented
+  token, so the PDP verifies one signed proof rather than a mapping
+  table; and
+- runtime decision and execution evidence flows to the deployment's
+  audit sink.
 
-- Client-instance references follow their successors:
-  draft-mcguinness-oauth-client-instance-assertion is replaced by
-  {I-D.draft-mcguinness-oauth-client-instance-id}, and the
-  deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
-  cited. The Mission Join binds the
-  instance from Instance Context whose association with the presenter is
-  established (an instance-unique key, plus authenticated provenance for
-  context preserved from an input token) rather than from an `act`
-  entry; the Join Assertion carries no
-  instance identifier, so an instance-bound join on that path takes the
-  instance from the Instance Context the PEP validated, and the MAS
-  records the token's Instance Context in its join evidence where it
-  received it;
-  and the Enterprise instance-bound join applies where the acting
-  credential carries validated Instance Context.
+Which Mission Issuer governs a given resource is deployment
+configuration the estate makes explicit: where more than one Mission
+Issuer operates, the deployment documents the resource-to-issuer
+mapping alongside its mapping contract, and a PEP treats a resource
+with no mapped issuer as outside this profile's governance rather
+than inventing one.
 
-- Pointed MAS Availability at the Runtime and Status Operational
-  Considerations sections for the dependency-specific outage, ride-through,
-  and recovery semantics (#310). No MAS requirement changed.
+## Connector Patterns {#deployment-connectors}
+
+The PEP is wherever consequential effects can be refused before they
+happen. Common placements, all non-normative:
+
+- **API gateway PEP**: refuses at the gateway in front of a protected
+  API.
+- **Service-mesh sidecar PEP**: refuses at the sidecar for
+  service-to-service calls.
+- **SaaS connector PEP**: refuses in the connector mediating a SaaS
+  API.
+- **MCP or tool-server PEP**: refuses at the tool boundary an agent
+  invokes.
+- **Workflow or orchestrator PEP**: refuses at the step boundary of a
+  governed workflow.
+- **Legacy-API wrapper PEP**: refuses in a wrapper fronting a system
+  that cannot itself enforce.
+
+Each is credible only to the extent it has no unmediated bypass; the
+runtime profile's Enforcement Scope Statement is where that coverage
+is stated ({{I-D.draft-mcguinness-mission-runtime}}).
+
+## Progressive Adoption {#deployment-adoption}
+
+A MAS deployment adopts the Mission Assurance Levels in the order
+deployments build them ({{I-D.draft-mcguinness-mission-architecture}});
+the levels are adoption bundles, not a ladder, and each phase is
+independently useful. The six phases group into three modes, and a
+deployment's claim is bounded by its mode: **records mode** (phases
+1 and 2) is inventory, approval, lifecycle, and audit, with no
+prevention claim of any kind; **enforced-paths mode** (phases 3 and
+4) prevents on exactly the paths the Enforcement Scope Statement
+enumerates and is records mode everywhere else; **issuance mode**
+(phases 5 and 6) restores the token-layer gate. "No AS code change"
+holds in phases 1 through 5; what changes is the claim, and a
+high-consequence enforcement claim requires issuance mode's
+machinery or the Estate Prerequisites' AS features
+({{enterprise-prerequisites}}), never records alone:
+
+1. The MAS records Missions and approvals: governance and audit of
+   what tasks were approved, with no enforcement change yet
+   (Baseline Issuance under the MAS binding: governance and audit,
+   with no kill switch of any kind).
+2. Mission Status and lifecycle publish Mission state estate-wide:
+   the freshness surface runtime enforcement relies on. Under the MAS
+   binding this alone is no kill switch.
+3. PEP/PDP runtime enforcement gates consequential actions per the
+   runtime profile and, with phase 2's state surface, supplies the
+   kill switch (the Runtime-Enforced level).
+4. Join Assertions harden the join on joined paths outside the
+   high-consequence classes, which the Enterprise profile reserves
+   for Mission-bound issuance, and instance-bound joins narrow it to
+   one workload (the Enterprise profile, {{enterprise-profile}}).
+5. Estate Authorization Servers adopt the issuance join
+   ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}), redeeming
+   MAS-minted grants for Mission-bound, state-gated tokens: the
+   token-layer kill switch returns without moving approval into the
+   AS.
+6. Where a particular AS later becomes natively Mission-aware, it
+   adds the OAuth binding's own issuance for its resources, while the MAS
+   record, lifecycle, and authority model continue to govern the
+   rest of the estate.
+
+A deployment stops at the phase its risk warrants; nothing above the
+floor is required to begin, and the MAS remains the enduring control
+plane of the family's delegated-authority layer
+({{I-D.draft-mcguinness-mission-architecture}}) even as individual
+Authorization Servers become Mission-aware.
+
+The common starting estate runs bots on standing service accounts
+with broad, durable entitlements. The migration is per task, not per
+account: each recurring job becomes a durable Mission whose Authority
+Set is derived from the entitlements the job actually exercises, with
+the deployment's entitlement catalog as the derivation policy's
+input; the service account retains only what no Mission yet governs,
+and that shrinking residue is the adoption metric.
 
 # MAS-Mode End-to-End Example {#e2e-example}
 
@@ -2831,6 +2782,55 @@ re-check.
 
 `join_view_id` marks this decision as reached over the Join
 (rule 9 of {{join-rules}}), distinct from `policy_view_id`.
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Corrections. Cross-references name the right sections (the
+  propagation tuple's state source, a client-instance section);
+  Join Spoofing counts four residuals; IANA names both runtime denial
+  reasons; the error table lists `join_failed` and `conflict`; RFC 8414
+  and RFC 9396 are normative references, and the metadata registry
+  uses the RFC 8414 template; the examples show a DPoP-bound
+  Mission-Reference request and classify reads as
+  `consequential_read`; Estate Prerequisites name local RFC 9068
+  validation; Progressive Adoption follows the architecture's
+  Assurance Levels; and "the issuance profile" becomes "the OAuth
+  binding" throughout.
+
+- Authentication discovery mirrors the Status draft: per-endpoint
+  `*_auth_methods_supported` and `*_auth_signing_alg_values_supported`
+  members for the submission, status, and lifecycle endpoints replace
+  `mission_auth_methods_supported`, and the submission endpoint accepts
+  all three Status mechanisms, including mTLS-bound access tokens. The
+  join-assertion endpoint shares the submission methods but names its
+  own token audience and Protected Resource Metadata.
+
+- Specify the PEP/PDP responsibilities for required instance-bound joins
+  and their refusal behavior. Join Assertions continue to carry no
+  instance identifier and do not replace the instance association check;
+  MAS evidence distinguishes participation from presenter attribution.
+
+- Client-instance references follow their successors:
+  draft-mcguinness-oauth-client-instance-assertion is replaced by
+  {I-D.draft-mcguinness-oauth-client-instance-id}, and the
+  deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
+  cited. The Mission Join binds the
+  instance from Instance Context whose association with the presenter is
+  established (an instance-unique key, plus authenticated provenance for
+  context preserved from an input token) rather than from an `act`
+  entry; the Join Assertion carries no
+  instance identifier, so an instance-bound join on that path takes the
+  instance from the Instance Context the PEP validated, and the MAS
+  records the token's Instance Context in its join evidence where it
+  received it;
+  and the Enterprise instance-bound join applies where the acting
+  credential carries validated Instance Context.
+
+- Pointed MAS Availability at the Runtime and Status Operational
+  Considerations sections for the dependency-specific outage, ride-through,
+  and recovery semantics (#310). No MAS requirement changed.
 
 # Acknowledgments
 {:numbered="false"}
