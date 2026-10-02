@@ -224,15 +224,19 @@ export const REVERSIBLE_WRITE_TOOLS: readonly string[] = Object.keys(REVERSIBLE_
 
 /**
  * @spec runtime-evidence#execution-evidence-object `error`: deployment-
- * defined values for the two refusals a reversible effect makes before it
- * changes anything. Neither is in the closed set, which names permit and
- * consumption failures, so each is a collision-resistant name under a
- * namespace this deployment controls (the RFC 7519 Section 4.2 guidance the
- * member cites). The caller-visible diagnostic is the short name.
+ * defined values for the refusals a keyed reversible write makes before any
+ * effect: the two its effect makes before it changes anything, and
+ * `actor_unkeyable`, an actor with no stable identity to scope the key on
+ * (#1016 review). None is in the closed set, whose values each name a
+ * narrower condition (`consumption_unavailable` is an unreachable store), so
+ * each is a collision-resistant name under a namespace this deployment
+ * controls (the RFC 7519 Section 4.2 guidance the member cites). The
+ * caller-visible diagnostic is the short name.
  */
 export const REVERSIBLE_WRITE_REFUSAL_ERRORS: Readonly<Record<string, string>> = Object.freeze({
   schedule_not_found: "https://payments.demo/execution-errors/schedule_not_found",
   schedule_exists: "https://payments.demo/execution-errors/schedule_exists",
+  actor_unkeyable: "https://payments.demo/execution-errors/actor_unkeyable",
 });
 
 /**
@@ -1092,6 +1096,7 @@ export class McpPaymentsServer {
   ): Promise<WriteToolResult> {
     const attempt = res.attempt;
     if (!attempt) return { ok: false, refusal_reason: "state_unavailable" };
+    if (res.writeReservationUnkeyable) return this.actorUnkeyable(attempt);
     const pair = this.reservationPair(res);
     if (!pair) return this.reservationUnavailable(attempt);
     let found: WriteReservation | undefined;
@@ -1107,10 +1112,11 @@ export class McpPaymentsServer {
   /**
    * @spec runtime#idempotency (#918): the store, the pair and the published
    * retention a keyed reversible write needs. `undefined` when any is
-   * missing, which refuses: a key the PDP let through malformed, an actor
-   * with no stable identity to scope the key on (no pair at all), a store
-   * that is not configured, or a statement that publishes no retention for
-   * this operation all leave exactly-once unestablished.
+   * missing, which refuses: a key the PDP let through malformed, a store that
+   * is not configured, or a statement that publishes no retention for this
+   * operation all leave exactly-once unestablished. An actor with no stable
+   * identity is refused before this, as its own condition
+   * ({@link actorUnkeyable}).
    */
   private reservationPair(
     res: EnforceResult,
@@ -1140,6 +1146,19 @@ export class McpPaymentsServer {
   private async reservationUnavailable(attempt: ExecutionAttempt): Promise<WriteToolResult> {
     await this.deps.pep.suppressExecution(attempt, "consumption_unavailable");
     return { ok: false, refusal_reason: "consumption_unavailable" };
+  }
+
+  /**
+   * @spec runtime#idempotency (#918, #1016 review): the attempt's actor has
+   * no stable identity to scope its key on (an instance-profiled leaf with no
+   * client), so no (scope, key) pair exists to reserve and the write is
+   * refused before any effect, through the one post-permit writer, under this
+   * deployment's own error name: the store was reachable, so this is not
+   * `consumption_unavailable`. Retrying the same request cannot succeed.
+   */
+  private async actorUnkeyable(attempt: ExecutionAttempt): Promise<WriteToolResult> {
+    await this.deps.pep.suppressExecution(attempt, REVERSIBLE_WRITE_REFUSAL_ERRORS.actor_unkeyable as string);
+    return { ok: false, refusal_reason: "actor_unkeyable", next_action: "none" };
   }
 
   /**
@@ -1212,6 +1231,7 @@ export class McpPaymentsServer {
     if (!effect) throw new Error(`no reversible effect is declared for tool ${tool}`);
     const admitted = await this.deps.pep.verifyPermitAtUse(attempt);
     if (!admitted.ok) return { ok: false, refusal_reason: admitted.error };
+    if (res.writeReservationUnkeyable) return this.actorUnkeyable(attempt);
     const pair = this.reservationPair(res);
     if (!pair) return this.reservationUnavailable(attempt);
     beforeReverify?.();

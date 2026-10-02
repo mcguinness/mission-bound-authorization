@@ -786,9 +786,17 @@ export interface EnforceResult {
    * from this PEP's verified credential and governing Mission and never from
    * an agent argument. `idempotencyKey` is the key that request carried, absent
    * when it carried none. Absent as a whole when the actor has no stable
-   * identity to scope the key on, which the write path refuses.
+   * identity to scope the key on, which {@link writeReservationUnkeyable}
+   * then marks.
    */
   writeReservation?: WriteReservationScope;
+  /**
+   * @spec runtime#idempotency (#918, #1016 review): present on a permit for a
+   * keyed reversible write whose actor has no stable identity (an
+   * instance-profiled leaf with no client), so no pair exists to reserve. The
+   * write path refuses it before any effect.
+   */
+  writeReservationUnkeyable?: true;
 }
 
 /** @spec runtime#idempotency (#918): the pair a keyed reversible write reserves. */
@@ -1698,12 +1706,13 @@ export class Pep {
     // reserves, from the request exactly as the PDP received it, through the
     // shared scope projection (its actor is `idempotencyScopeActor`'s stable
     // identity, never the raw leaf). An actor with no stable identity (an
-    // instance-profiled leaf with no client) yields no scope and so no pair:
-    // the write path then refuses before any effect, since a key it cannot
-    // scope cannot be reserved. Nothing here throws after the permit.
+    // instance-profiled leaf with no client) yields no scope and so no pair,
+    // which is marked: the write path then refuses before any effect, since a
+    // key it cannot scope cannot be reserved. Nothing here throws after the
+    // permit.
     let writeReservation: WriteReservationScope | undefined;
-    const scope =
-      mapping.idempotencyKey && mapping.actionClass === "consequential_write" ? idempotencyScopeOf(req) : undefined;
+    const keyedWrite = mapping.idempotencyKey === true && mapping.actionClass === "consequential_write";
+    const scope = keyedWrite ? idempotencyScopeOf(req) : undefined;
     if (scope) {
       const key = req.action.properties?.idempotency_key;
       writeReservation = {
@@ -1719,6 +1728,7 @@ export class Pep {
       decision,
       attempt,
       ...(writeReservation ? { writeReservation } : {}),
+      ...(keyedWrite && !scope ? { writeReservationUnkeyable: true as const } : {}),
       resolvedMission: {
         id: missionAnchor.id,
         issuer: missionAnchor.issuer,
