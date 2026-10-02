@@ -951,9 +951,10 @@ issuer may have preserved from an input token also needs a profile
 that authenticates its provenance, since such a token can carry one
 instance's context while bound to another's key.
 
-Where the PDP has established the instance in this way, the PDP SHOULD
-include that instance in the join, so the client join binds (subject,
-client, instance) rather than (subject, client). This restores
+Where the PDP has validated that Instance Context and established its
+association with the presenter, the PDP SHOULD include that instance
+in the join, so the client join binds (subject, client, instance)
+rather than (subject, client). This restores
 per-instance granularity behind a shared gateway `client_id`: the
 validated instance joins, not every workload in the `client_id`
 equivalence class.
