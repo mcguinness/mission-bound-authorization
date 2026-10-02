@@ -3942,6 +3942,11 @@ constraint-discovery surface; `mission_resource_access`'s is defined
 by the Mission Resource Access Profile
 ({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
 
+A protected resource can list the `authorization_details` types it
+accepts in the `authorization_details_types_supported` parameter
+({{Section 2 of RFC9728}}), so a client can propose entries of a
+type its target accepts.
+
 # Conformance {#conformance}
 
 The smallest useful conforming deployment is a Mission Issuer that
