@@ -279,7 +279,7 @@ Claims:
   MUST reject a grant whose `aud` does not name it.
 
 `iat`, `exp`:
-: REQUIRED. The grant MUST NOT be valid longer than 300 seconds.
+: REQUIRED. `exp` MUST NOT be more than 300 seconds after `iat`.
 
 `jti`:
 : REQUIRED. Unique per grant; single use ({{redemption}}).
@@ -509,10 +509,13 @@ any check fails:
 2. the signature, under a `kid` resolving in the published key
    material of an `iss` its local policy trusts for issuance joins;
    and the `mission` claim's `issuer` equals `iss`;
-3. `aud` names this AS; `exp` and `iat` are within the 300-second
-   bound; the `jti` has not been seen. The record of a seen `jti` is
-   written atomically with successful issuance and retained until
-   `exp` passes (single use, {{effective-set-projection}});
+3. `aud` names this AS; `exp` is no more than 300 seconds after
+   `iat`, `iat` is not in the future, and `exp` has not passed, each
+   within the clock-skew allowance of {{Section 4.1.4 of RFC7519}};
+   and the (`iss`, `jti`) pair has not been seen. The record of a
+   seen pair is written atomically with successful issuance and
+   retained until `exp` plus that allowance passes (single use,
+   {{effective-set-projection}});
 4. the requester is the grant's `client_id` ({{redemption}}), and,
    when `cnf` is present, the request proves possession of the bound
    key ({{grant}});
