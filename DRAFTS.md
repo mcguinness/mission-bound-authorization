@@ -60,10 +60,10 @@ Conformance ledger (`conformance-manifest.json`): 792 requirement rows across 28
 | Document | Role | Spec maturity | Implementation | Maintenance | Verbs | Group | Summary | Pull this in when | Requires |
 |---|---|---|---|---|---|---|---|---|---|
 | [Mission Control-Plane Consistency](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-control-plane.html) | companion | experimental | 12 rows: 2 tested, 4 partial, 6 todo | lab-best-effort | govern | Lifecycle | Topology-neutral issuer serialization, authoritative observation, rollback resistance, durable fan-out, and emergency-authority separation. | A deployment claims testable control-plane consistency across replication, partition, and recovery. | Mission-Bound Runtime Enforcement; Mission-Bound Authorization for OAuth 2.0; Mission Lifecycle Signals for OAuth 2.0; Mission Status and Lifecycle for OAuth 2.0 |
-| [AAuth Mission Expiry](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-aauth-mission-expiry.html) | companion | experimental | not in the ledger | frozen-until-upstream-release | govern | Lifecycle | Profiles AAuth's `expires_at` mission-blob member: an immutable, consent-bound lifetime the base protocol enforces on every Person Server decision path, with lifetime caps on every token carrying `mission_s256`. | A citable profile of AAuth's native `expires_at` is needed (base AAuth enforces it regardless; the profile's own conformance line is OPTIONAL). | nothing beyond its listed references |
+| [AAuth Mission Expiry](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-aauth-mission-expiry.html) | companion | experimental | not in the ledger | frozen-until-upstream-release | govern | Lifecycle | Profiles AAuth's `expires_at` mission-blob member: an immutable, consent-bound lifetime the base protocol enforces on every Person Server decision path, with the PS capping the person tokens and auth tokens it issues at `expires_at`. | A citable profile of AAuth's native `expires_at` is needed (base AAuth enforces it regardless; the profile's own conformance line is OPTIONAL). | nothing beyond its listed references |
 | [Mapping the Agent Access Model to Mission-Bound Authorization](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aam.html) | companion | sketch | not in the ledger | lab-best-effort | analyze | Architecture | Maps Cloudflare's Agent Access Model onto the family, realizing each of its six components with an existing mechanism and declining the grant review loop because Missions are not standing grants. | Adopting Cloudflare's AAM vocabulary and mapping it onto existing mechanisms. | nothing beyond its listed references |
-| [Mission Context Binding for AAuth](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aauth.html) | adapter-binding | experimental | not in the ledger | frozen-until-upstream-release | approve | The substrate and the bindings | The thin AAuth-native binding: it uses AAuth's existing mission blob, `{approver, s256}` reference, propose/clarify/approve flow, and active and terminated states unchanged, and defines no new wire members. | The substrate is AAuth: Mission context on its native propose/approve flow. | Mission Substrate Requirements |
-| [AAuth Mission Management](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aauth-management.html) | companion | experimental | not in the ledger | frozen-until-upstream-release | govern | Lifecycle | The AAuth-native companion promised by the AAuth protocol: authenticated status, permanent termination, optional immutable expiry, and delegation-tree queries at the Person Server `mission_control_endpoint`. | Alongside the AAuth binding: status, termination, delegation-tree queries. | nothing beyond its listed references |
+| [Mission Context Binding for AAuth](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aauth.html) | adapter-binding | experimental | not in the ledger | frozen-until-upstream-release | approve | The substrate and the bindings | The thin AAuth-native binding: it uses AAuth's existing mission blob, Mission Reference (the approving PS and `s256`), propose/clarify/approve flow, and active and terminated states unchanged, and defines no new wire members. | The substrate is AAuth: Mission context on its native propose/approve flow. | Mission Substrate Requirements |
+| [AAuth Mission Management](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aauth-management.html) | companion | experimental | not in the ledger | frozen-until-upstream-release | govern | Lifecycle | The AAuth-native companion anticipated by the AAuth protocol: authenticated status, permanent termination, optional immutable expiry, and delegation-tree queries at the Person Server `mission_control_endpoint`. | Alongside the AAuth binding: status, termination, delegation-tree queries. | nothing beyond its listed references |
 | [Mission Approval Governance](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-approval-governance.html) | companion | experimental | 15 rows: 7 tested, 1 partial, 7 todo | active | approve | Approval time | Extracts approval-authority provenance into the Approval Governance Record: an issuer-retained, issuer-signed record of who approved, under which authority, and why the decision satisfied governance. | Approval authority itself needs authenticated, policy-backed provenance. | Mission Substrate Requirements; conditionally, Mission Progressive Authorization for OAuth 2.0 (when the Approval Context Manifest is computed for a Mission whose record carries a Progressive ceiling) |
 | [An Architecture for Mission-Bound Authorization](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-architecture.html) | guide | not applicable | not in the ledger | active | analyze | Architecture | The single structural view: the delegated-authority-layer thesis, a Mission's life end to end, the seven invariants, the substrate interface, the verb spine, the Mission Assurance Levels, and the Deployment Profile. | Before adopting anything: the Mission model, invariants, and assurance levels the rest cite. | nothing beyond its listed references |
 | [Mission Audit Transparency](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-audit.html) | companion | experimental | not in the ledger | active | prove | Proof and portability | Makes the suite's evidence tamper-evident and independently verifiable by registering it into a SCITT Transparency Service as Signed Statements. | A cross-domain party must verify evidence integrity without trusting issuer logs. | Mission Substrate Requirements; Mission-Bound Authorization for OAuth 2.0; conditionally, Mission Approval Governance (when approval governance records are audited); Mission Open-World Discovery (when discovery evidence is audited); Mission-Aware Agent Harnesses (when harness or egress evidence is audited); Mission Mandate (when the Mandate profile is deployed); Mission Runtime Evidence (when runtime decision or execution evidence is audited); Mission Child Delegation for OAuth 2.0 (when child delegation evidence is audited); Mission Consent Evidence for OAuth 2.0 (when consent evidence is audited); Mission Containment for OAuth 2.0 (when containment evidence is audited); Mission Lifecycle Signals for OAuth 2.0 (when lifecycle transitions arrive as Signals); Mission Work Products for OAuth 2.0 (when work-product bindings are audited) |
@@ -163,9 +163,8 @@ complete set.
 A third pattern distinguishes direction at the AAuth binding.
 `aauth-mission-*` names an AAuth-native extension, a profile of a
 member already inside AAuth's own approved mission blob (as
-`draft-mcguinness-aauth-mission-expiry` profiles `expires_at`),
-consistent with the sibling `draft-mcguinness-aauth-budget`
-repository's own AAuth-native extensions. `mission-aauth-*` names the
+`draft-mcguinness-aauth-mission-expiry` profiles `expires_at`).
+`mission-aauth-*` names the
 Mission family's binding to AAuth and its companions
 (`draft-mcguinness-mission-aauth`,
 `draft-mcguinness-mission-aauth-management`), specified the same way
@@ -397,18 +396,19 @@ family, and documented as such.
 
 #### AAuth Mission Management
 
-The AAuth-native companion promised by the AAuth protocol: authenticated
+The AAuth-native companion anticipated by the AAuth protocol: authenticated
 status, permanent termination, optional immutable expiry, and
 delegation-tree queries at the Person Server
 `mission_control_endpoint`, each an `action` on one Mission's
-control-plane URL. Operations use only AAuth's native
-`{approver, s256}` mission reference and preserve its two protocol states,
+control-plane URL. Operations use only AAuth's native mission
+identity (the approving Person Server and `s256`) and preserve its two
+protocol states,
 `active` and `terminated`; completion, revocation, expiry, supersession,
 and administrative action are separate termination reasons. The Person
-Server closes its local decision and issuance paths atomically, attempts
-revocation of tracked Auth Tokens by `(iss, jti)`, and reports honestly
-where already-issued, opaque, identity-based, or off-path access leaves a
-bounded or unknown residual.
+Server closes its local decision and issuance paths atomically, revokes
+the tokens it issued with AAuth's issuer-signed `{jti, exp}` requests,
+and reports honestly where already-issued, opaque, agent identity, or
+off-path access leaves a bounded or unknown residual.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aauth-management.html)
 
@@ -640,7 +640,8 @@ surfaces.
 #### Mission Context Binding for AAuth
 
 The thin AAuth-native binding. AAuth already defines an immutable
-mission blob, exact-byte `s256` commitment, `{approver, s256}` reference,
+mission blob, exact-byte `s256` commitment, a mission identity of the
+approving Person Server and `s256`,
 propose/clarify/approve flow, native `expires_at`, `active` and
 `terminated` states, and an ordered mission log. The binding uses those
 elements unchanged and defines no new wire members. It treats the
@@ -651,9 +652,10 @@ optionally R3 carry deterministic resource authorization.
 at the Person Server; they are not remote resource authority. A
 mission travels as `mission_s256` in PS-issued person tokens; resources
 must copy it into the resource tokens they issue. Active-state
-issuance gating is structural in PS-asserted and federated access, and
-person-token issuance is itself a PS control point; identity-based and
-resource-managed decisions are not Person-Server-gated. Its Mission
+issuance gating is structural in PS authorization and federated
+authorization access, and person-token issuance is itself a PS control
+point; agent identity and resource-managed decisions are not
+Person-Server-gated. Its Mission
 Substrate Statement declares the kernel mapping and per-mode
 capability claims, including the capabilities it does not supply.
 

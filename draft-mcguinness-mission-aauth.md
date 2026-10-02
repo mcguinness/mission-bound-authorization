@@ -29,13 +29,13 @@ author:
 normative:
   I-D.draft-hardt-oauth-aauth-protocol:
     title: "AAuth Protocol"
-    target: https://dickhardt.github.io/AAuth/draft-hardt-oauth-aauth-protocol.html
-    refcontent: "Editor's copy, commit fc5e972c"
     author:
       -
         ins: D. Hardt
         name: Dick Hardt
-    date: 2026
+    date: 2026-09-25
+    seriesinfo:
+      Internet-Draft: draft-hardt-oauth-aauth-protocol-11
   I-D.draft-mcguinness-mission-substrate:
     title: "Mission Substrate Requirements"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
@@ -56,12 +56,13 @@ informative:
     date: 2026
   I-D.draft-hardt-aauth-r3:
     title: "AAuth Rich Resource Requests (R3)"
-    target: https://dickhardt.github.io/AAuth/draft-hardt-aauth-r3.html
     author:
       -
         ins: D. Hardt
         name: Dick Hardt
-    date: 2026
+    date: 2026-09-28
+    seriesinfo:
+      Internet-Draft: draft-hardt-aauth-r3-00
   I-D.draft-mcguinness-aauth-mission-expiry:
     title: "AAuth Mission Expiry"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-aauth-mission-expiry.html
@@ -84,11 +85,11 @@ informative:
 AAuth defines missions as optional, immutable authorization contexts
 for agent governance at a Person Server.  A mission is approved through
 AAuth's native propose, clarify, and approve interaction, is identified
-by the native `approver` and `s256` reference, and accumulates an
-ordered mission log.  This document describes how those native
-facilities realize a Mission Context binding without adding a second
-mission identifier, a portable authority language, or new AAuth wire
-members.
+by the native pair of the approving Person Server and `s256`, and
+accumulates an ordered mission log.  This document describes how those
+native facilities realize a Mission Context binding without adding a
+second mission identifier, a portable authority language, or new AAuth
+wire members.
 
 This binding preserves AAuth's separation between contextual governance
 at the Person Server and deterministic resource authorization through
@@ -102,9 +103,11 @@ structural and where a mission reference is only advisory context.
 
 The AAuth protocol {{I-D.draft-hardt-oauth-aauth-protocol}} gives agents
 independent cryptographic identities and supports five resource access
-modes: identity-based, resource-managed, person-identity, Person Server
-(PS)-asserted, and federated.  Agent governance is orthogonal to those
-modes.
+modes: agent identity, resource-managed (two-party), person identity,
+Person Server (PS) authorization (three-party), and federated
+authorization (four-party) (Section 4.2 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  Agent governance is
+orthogonal to those modes.
 
 AAuth already defines the protocol elements needed for a durable Mission
 Context:
@@ -112,11 +115,12 @@ Context:
 - the agent proposes a natural-language mission to its PS;
 - the PS and person can clarify and refine the proposal before approval;
 - the approved mission blob is immutable and identified by the native
-  pair of `approver` and `s256`;
+  pair of the approving PS and `s256`;
 - the agent names the mission when it requests a person token from its
   PS, and the PS stamps the mission into the person token, from where
-  the resource and the PS copy it into every resource and auth token
-  issued under it;
+  the resource copies it into each resource token and the auth token's
+  issuer, the PS or an Access Server (AS), copies it into each auth
+  token issued under it;
 - the PS evaluates requests using the approved context and the ordered
   mission log; and
 - a mission is either `active` or permanently `terminated`.
@@ -129,9 +133,8 @@ lifecycle state at all.  It makes AAuth missions' security and
 composition properties explicit and keeps an OAuth-specific authority
 model from being imposed on them.
 
-This binding is written against the AAuth editor's copy at commit
-`fc5e972c` (2026-08-14); the latest published revision is -10
-(2026-08-06).
+This binding is written against draft-hardt-oauth-aauth-protocol-11
+and draft-hardt-aauth-r3-00.
 
 ## Contextual Governance, Not Portable Authority
 
@@ -180,13 +183,13 @@ NOT**, **SHOULD**, **SHOULD NOT**, **RECOMMENDED**, **NOT RECOMMENDED**,
 described in BCP 14 when, and only when, they appear in all capitals as
 shown here.
 
-This binding tracks the AAuth editor's copy as revised by its
-person-token change (the -11 revision in preparation).
-
 This document uses the AAuth terms *agent identifier*, *Person Server*,
-*mission blob*, *mission reference*, *resource token*, *auth token*,
-*approved tools*, *mission log*, *person token*, and the `mission_s256`
-claim as defined by {{I-D.draft-hardt-oauth-aauth-protocol}}.
+*mission blob*, *mission identifier* (Section 8.2.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}), *resource token*,
+*auth token*, *mission log*, *person token*, the `approved_tools`
+member, and the `mission_s256` claim as defined by
+{{I-D.draft-hardt-oauth-aauth-protocol}}.  This binding's Mission
+Reference is defined in {{reference}}.
 
 For this binding:
 
@@ -196,7 +199,7 @@ Mission Context:
   by the PS when governing an agent's work.
 
 Controlling authority:
-: The PS identified by the mission reference's `approver` value.  The PS
+: The approving PS of the Mission Reference ({{reference}}).  The PS
   performs approval, stores the mission context, evaluates governed
   requests, and controls the mission's active state.
 
@@ -221,15 +224,13 @@ formal capability claims are this binding's Mission Substrate
 Statement ({{mission-substrate}}).  In AAuth's own terms:
 
 Stable native reference:
-: The pair `{approver, s256}` remains this binding's Mission Reference,
-  with `s256` compared within the approver's namespace.  On the wire it
-  travels as the flat `mission_s256` claim, with that namespace carried
-  by the person token's `iss` and the resource token's `ps`.  No
-  additional `mission_id` is needed or defined.
+: The pair of the approving PS and `s256` is this binding's Mission
+  Reference ({{reference}}), with `s256` compared within the approving
+  PS's namespace.  No additional `mission_id` is needed or defined.
 
 Controlling authority:
-: `approver` identifies the PS responsible for approval and governance.
-  It is not replaced by a separate Mission issuer field.
+: The approving PS is responsible for approval and governance.  No
+  separate Mission issuer field names it.
 
 Agent binding:
 : The approved mission blob contains the AAuth agent identifier in its
@@ -251,9 +252,11 @@ Lifecycle gate:
   `terminated` mission is permanently non-active.
 
 Bounded reliance:
-: AAuth enforces `expires_at` on every PS decision path and caps every
-  token carrying `mission_s256` to it ({{lifecycle}}); the PS still
-  establishes `active` at decision time.
+: AAuth enforces `expires_at` on every PS decision path and caps the
+  person tokens and auth tokens the PS issues at it ({{lifecycle}}); the
+  PS still establishes `active` at decision time, including when it
+  acts on a resource token, whose lifetime is independent of
+  `expires_at`.
 
 Context propagation:
 : The signed `mission_s256` claim, carried by person, resource, and
@@ -272,14 +275,13 @@ meaning of the AAuth mission blob.
 
 ## Native Reference and Exact-Byte Commitment {#reference}
 
-The mission reference is exactly the AAuth pair:
-
-~~~ json
-{
-  "approver": "https://ps.example",
-  "s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
-}
-~~~
+The pair of the approving PS and `s256` is this binding's Mission
+Reference: AAuth's mission identity (Section 8.2.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  The approving PS is named
+by the `iss` of a person token, the `ps` claim of a resource or auth
+token, or the PS a request is made to; the blob carries no member
+naming it.  On the wire the reference is the `mission_s256` claim or
+parameter.
 
 The PS's approval envelope carries `s256` alongside a `mission` member
 that is the base64url encoding, without padding, of the exact bytes it
@@ -306,8 +308,9 @@ request-context checks before relying on a received reference.
 ## Mission Blob {#blob}
 
 The approved mission blob uses the members defined by AAuth, including
-`approver`, `agent`, `approved_at`, and `description`, and optionally
-`approved_tools` and `approved_resources`.  The blob carries AAuth's
+`agent`, `approved_at`, and `description`, and optionally
+`approved_tools` and `approved_resources` (Section 8.2 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  The blob carries AAuth's
 `expires_at` member, which this binding requires on every mission
 ({{lifecycle}}).  This binding itself defines no additional members.
 AAuth states that these member lists are a floor, not a closed set; a
@@ -349,7 +352,7 @@ The AAuth roles map to the Mission Context model as follows:
 | Agent | Proposes work, verifies and stores the approved blob, names the mission at person-token issuance, supplies justifications, and records actions as AAuth requires. |
 | Person Server | Acts as controlling authority, conducts approval and clarification, stores state and the mission log, and governs requests on PS endpoints. |
 | Person | Reviews, clarifies, approves, and accepts completion through the PS. |
-| Resource | Defines and enforces its resource authorization; when mission-aware, preserves the native reference as AAuth specifies. |
+| Resource | Defines and enforces its resource authorization; copies `mission_s256` unchanged from the presented token into each resource token it issues, as AAuth requires. |
 | Access Server | Evaluates resource policy and issues auth tokens in federated access; it does not evaluate the private mission blob. |
 
 No AAuth party becomes an OAuth client, Authorization Server, or Resource
@@ -375,8 +378,9 @@ member.  Before using the context, the agent MUST:
 1. verify the AAuth response according to the base protocol;
 2. decode `mission` and compute SHA-256 over the exact decoded bytes;
 3. verify that the result equals the envelope's `s256` value;
-4. verify that the blob's `approver` and `agent` members identify the
-   approving PS and requesting agent; and
+4. verify that the blob's `agent` member identifies the requesting
+   agent, and record as the approving PS the PS whose
+   `mission_endpoint` received the proposal; and
 5. store the exact decoded bytes and native reference.
 
 A failed check invalidates the approval response.  The agent MUST NOT
@@ -387,7 +391,7 @@ operate under the resulting reference.
 For every PS request seeking a positive governance decision under a
 mission reference, the PS MUST verify that:
 
-- it is the identified `approver`;
+- it is the PS the reference names;
 - the `s256` identifies a mission blob it approved;
 - the authenticated agent is entitled to act in the referenced context;
   and
@@ -397,8 +401,8 @@ If any of these checks cannot be completed, including establishing the
 mission's current state, the PS MUST fail closed and reject the
 request.
 
-Authenticated status, termination, denial, cleanup, and audit
-operations defined by this binding's companions are not positive
+Authenticated status, termination, denial, cleanup, and control-plane
+audit operations defined by this binding's companions are not positive
 governance decisions; they answer on a non-active mission as their
 specifications define.
 
@@ -410,10 +414,12 @@ not require the PS to approve the request.
 
 The PS MUST maintain the mission log as an ordered record of the AAuth
 interactions defined to belong to the mission, including token requests,
-permission decisions, audit records, interaction requests, and
-clarification chats.  Log records SHOULD preserve sufficient correlation
-data to associate each decision with its authenticated request and any
-issued token without recording raw credentials.
+accepted updates, permission decisions, audit records, interaction
+requests, clarification chats, and the supervision decisions made
+(Section 8.3 of {{I-D.draft-hardt-oauth-aauth-protocol}}).  Log records
+SHOULD preserve sufficient correlation data to associate each decision
+with its authenticated request and any issued token without recording
+raw credentials.
 
 The PS MUST protect the mission log's integrity, MUST restrict read
 access to the person, the PS itself, and parties authorized under its
@@ -432,6 +438,10 @@ a non-bypassable observation point.
 
 The approved blob is immutable.  New facts, decisions, and actions are
 appended to the log; they do not mutate or replace the committed blob.
+An accepted `update` at the mission's own URL is one such entry,
+digested by its own `s256`; it changes neither the blob nor
+`mission_s256` (Section 8.4 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).
 
 ## Deterministic Resource Authorization
 
@@ -439,10 +449,10 @@ A mission approval does not pre-authorize a portable set of remote
 resource operations.  Deterministic resource authorization continues to
 use the AAuth mechanisms appropriate to the access mode:
 
-- the resource's identity-based policy;
+- the resource's own policy in agent identity access;
 - the resource-managed authorization result;
 - scopes in resource and auth tokens;
-- resource policy in PS-asserted access;
+- resource policy in PS authorization access;
 - Access Server policy in federated access; and
 - optionally, resource-owned R3 vocabularies and requests.
 
@@ -465,24 +475,25 @@ the authorization path.
 
 | Resource access mode | Mission Context behavior |
 |---|---|
-| Identity-based | The resource authorizes the signed agent identity directly.  A mission reference can be sent to a mission-aware resource, but the PS does not gate that resource decision and the resource can ignore the reference. |
-| Resource-managed | The resource manages authorization directly.  A mission reference can provide context, but the PS does not gate the resource's issuance or decision and the resource can ignore the reference. |
-| Person-identity | The resource authorizes on the PS-issued person token's identity alone.  Person-token issuance is the PS's control point: mission-scoped via `mission_s256`, capped at one hour and by the mission's `expires_at`; the resource's own decision is not PS-gated. |
-| PS-asserted | The resource token is presented to the PS, which evaluates the active Mission Context before it issues an auth token.  PS issuance gating is structural for a request whose resource token carries the mission's `mission_s256` claim ({{ref-propagation}}).  The resource still applies its own resource policy. |
-| Federated | The PS evaluates the active Mission Context before it federates the request to the resource's Access Server and before returning the resulting auth token.  PS broker gating is structural under the same condition; the Access Server independently applies resource policy. |
+| Agent identity | The resource authorizes the signed agent identity directly.  No AAuth carrier conveys `mission_s256` in this mode (Section 4.5 of {{I-D.draft-hardt-oauth-aauth-protocol}}), and the PS does not gate the resource decision. |
+| Resource-managed (two-party) | The resource manages authorization directly.  No AAuth carrier conveys `mission_s256` in this mode, and the PS does not gate the resource's issuance or decision. |
+| Person identity | The resource authorizes on the PS-issued person token's identity alone.  Person-token issuance is the PS's control point: mission-scoped via `mission_s256`, capped at one hour and by the mission's `expires_at`; the resource's own decision is not PS-gated. |
+| PS authorization (three-party) | The resource token is presented to the PS, which evaluates the active Mission Context before it issues an auth token.  PS issuance gating is structural for a request whose resource token carries the mission's `mission_s256` claim ({{ref-propagation}}).  The resource still applies its own resource policy. |
+| Federated authorization (four-party) | The PS evaluates the active Mission Context before it federates the request to the resource's Access Server and before returning the resulting auth token.  PS broker gating is structural under the same condition; the Access Server independently applies resource policy. |
 
 In every mode, the PS MUST apply the active-state gate to its own
 permission, audit, interaction, mission, and token operations when they
 reference a mission, as required by AAuth, except that an
 authenticated status or termination operation defined by a companion
-returns terminal state instead.  In identity-based and
+returns terminal state instead.  In agent identity and
 resource-managed access, that PS-local gate does not stop an agent from
 making requests directly to a resource.  Deployments MUST NOT claim PS
 issuance gating for those direct resource decisions.
 
 A resource MUST NOT omit `mission_s256` from a resource token it issues
-when the person token it verified carried one; AAuth makes a missing
-claim a protocol violation rather than permitted ignorance.  An
+when the presented token it verified carried one; AAuth makes a missing
+claim a protocol violation rather than permitted ignorance
+(Section 6.7.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}).  An
 implementation MUST NOT infer that a resource evaluated mission context
 merely because a token carried the claim.  Even a mission-aware Resource
 or Access Server receives only the reference and MUST NOT dereference it
@@ -494,44 +505,51 @@ This binding does not claim the transaction authorization capability.
 The Carrier Binding Floor of
 {{I-D.draft-mcguinness-oauth-mission-transaction-authorization}} names
 the slots a binding must provide to host action-bound transaction
-authorization, and several have no native home in AAuth or R3 today.
+authorization, and several have no native home in AAuth or R3.
 Consistent with this document's rule that it adds no new AAuth wire
 members, it defines no extensions to close them.
 
-| Requirement | Native today | Missing home |
+| Requirement | Native | Missing home |
 | --- | --- | --- |
 | Challenge carrier | The AAuth-Requirement challenge with a signed resource token | Members committing to the concrete parameters, the mission reference, and the presenter key |
-| Operation identity | R3 vocabulary definitions, content-addressed | Definition versioning and supersession |
+| Operation identity | R3 vocabulary operations, pinned by the content-addressed R3 document | Definition versioning and supersession |
 | Parameter commitment | The content-addressed R3 per-call document | A defined parameter-commitment member |
 | Workflow handle | None: `r3_s256` is a content address, and intentionally identical calls share it | A transaction-instance identifier with its own lifetime and admission idempotency |
 | Result class | None: the per-call result is an ordinary `aa-auth+jwt` | A class every verifier can distinguish, with single use semantic to the class |
 | At most one result | R3 single-uses one issued token | An issuance guard giving one admitted transaction at most one result |
 | Possession | AAuth proof of possession | An execution proof bound to the presented artifact itself |
 | Current-state source | Conditional: the management status operation where deployed ({{I-D.draft-mcguinness-mission-aauth-management}}) | An unconditional source on the execution path |
-| Failure vocabulary | Proposal pending, denied, and expired states | None |
+| Failure vocabulary | Proposal pending; the `denied`, `abandoned`, `expired`, and `revoked` polling errors (Section 11.9.4 of {{I-D.draft-hardt-oauth-aauth-protocol}}); and `expired_presented_token` when a per-call approval outlives the presented auth token (Section 10.2 of {{I-D.draft-hardt-aauth-r3}}) | None |
 | Fresh decision | PS adjudication under the lifecycle gate ({{lifecycle}}) | None |
 {: title="Transaction authorization requirements: native and missing"}
 
 A deployment could claim the capability only after the missing homes
 exist upstream and this binding additionally claims State-Observable
-unconditionally on the execution path (today conditional), and either
-Structured Authority or an equivalent resource-owned evaluation of the
-operation commitment (today not supported).  Until then the execution
-gate and the authority evaluation the transaction invariants require
-have no source in this binding, and hosting the flow is unsupported.
+unconditionally on the execution path (it is claimed conditionally),
+and either Structured Authority or an equivalent resource-owned
+evaluation of the operation commitment (not supplied).  Until then the
+execution gate and the authority evaluation the transaction invariants
+require have no source in this binding, and hosting the flow is
+unsupported.
 
 ## Reference Propagation {#ref-propagation}
 
 An agent operating in a Mission Context names the mission when it
 requests a person token from its PS, and the PS stamps `mission_s256`
-into the issued person token.  A resource that verifies that person
-token MUST copy `mission_s256` into the resource token it issues.  When
-an auth token is issued in the mission context, it carries the same
-flat `mission_s256` claim, copied onward from the resource token.
+into the issued person token (Section 7.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  A resource that verifies a
+presented token (a person token or an auth token) carrying
+`mission_s256` MUST copy it into the resource token it issues, which
+names that presented token in `presented_jti` (Section 6.7.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  When an auth token is
+issued in the mission context, its issuer (the PS, or the AS in
+four-party access) copies the same flat `mission_s256` claim onward
+from the resource token (Section 9.4.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).
 
-This binding adds no member alongside that claim.  The namespace once
-carried by `approver` is carried by the person token's `iss` and
-the resource token's `ps`.  Receivers MUST NOT require `mission_id`,
+This binding adds no member alongside that claim.  The approving PS
+that scopes it is named as {{reference}} describes.  Receivers MUST NOT
+require `mission_id`,
 `issuer`, `policy_version`, `intent_hash`, `authority_hash`,
 `proposal_hash`, or embedded
 authorization details for conformance to this binding.
@@ -547,15 +565,22 @@ Authorization still depends on the issuer's decision, the token's scopes
 and other claims, proof of possession, resource policy, and, where the PS
 is on path, the PS's current contextual governance decision.
 
-AAuth no longer treats a stripped mission as permitted downgrade: a
+AAuth does not treat a stripped mission as permitted downgrade: a
 resource MUST NOT omit `mission_s256` from a resource token when the
-person token it verified carried one, and a PS MUST resolve
-`presented_jti` against its retained records of the person tokens it
-issued and reject any mismatch or omission against the resolved person
-token's `mission_s256`.  That base rule is what makes stripping detectable;
-comparing claims by agent and resource alone cannot, because an agent
-running concurrent missions holds more than one person token for the
-same resource, and only the named person token resolves to one.
+presented token it verified carried one, and a PS MUST verify the
+`presented_token` the agent forwards against the resource token, its
+`jti` against `presented_jti` and its `mission_s256` against the
+resource token's, and reject any mismatch or omission (Sections 6.7.2
+and 7.2.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}).  In four-party
+access the AS performs the same verification (Section 9.1.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  That base rule is what
+makes stripping detectable; comparing claims by agent and resource
+alone cannot, because an agent running concurrent missions holds more
+than one person token for the same resource, and only the named
+presented token identifies one.  The check uses no retained record on
+the request path; the PS's record of the person tokens it issues
+serves revocation (Section 7.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).
 
 This binding keeps two further local rules on top of it.  An agent operating
 under a mission MUST verify that a returned resource token carries the
@@ -581,27 +606,46 @@ terminated:
   or termination operation defined by a companion returns terminal
   state instead ({{mission-log}}).
 
-Completion follows AAuth's interaction flow: the agent proposes
-completion with a summary, the PS presents it to the person, and the
-mission terminates only if the person accepts.  Other termination causes
-and administrative mechanisms are left to AAuth mission-management work.
-A deployment can record a termination reason in its private log without
-creating another protocol state.
+Completion uses the `completion` action at
+`{mission_endpoint}/{mission_s256}`: the agent proposes completion with
+a summary, the PS presents it to the person, and the mission terminates
+with reason `completed` only if the person accepts (Section 8.5 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  The PS records why a
+mission terminated alongside the mission, from AAuth's open reason set
+of `completed`, `revoked`, `expired`, `superseded`, and
+`administrative`; a reason is never a protocol state (Section 8.6 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  A mission reaches
+`terminated` by accepted completion, by its `expires_at`, by PS
+revocation of the mission (Section 11.12.4 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}), or by a control-plane
+operation at the `mission_control_endpoint`, which AAuth Mission
+Management {{I-D.draft-mcguinness-mission-aauth-management}} defines.
 
 Every mission approved under this binding MUST carry AAuth's
 `expires_at` member, and the PS MUST enforce it on every decision path
-as AAuth requires.  When a proposal omits an expiry, the PS MUST set
-one at approval under deployment policy, and that policy SHOULD prefer
-the shortest expiry consistent with the mission's purpose.
+as AAuth requires.  A proposal can request an expiry under AAuth
+Mission Expiry {{I-D.draft-mcguinness-aauth-mission-expiry}}; when it
+requests none, the PS MUST set one at approval under deployment policy,
+and that policy SHOULD prefer the shortest expiry consistent with the
+mission's purpose.
 
 Expiry transitions the mission to `terminated`; it adds no third
-state, and no token carrying `mission_s256` outlives the mission's
-approved `expires_at`.  AAuth distinguishes an expiry-caused termination with a
-`termination_reason` of `expired`, surfaced where a management
-companion exposes it, rather than with a separate error status.  An
-early completion, revocation, or administrative termination prevents
-new governed issuance; an outstanding token remains usable until
-revocation or its own expiry, inside that approved bound.
+state.  The PS caps the person tokens and auth tokens it issues at
+`expires_at` (Sections 7.1.2 and 9.4.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}), and the presented token
+carries that bound to an AS (Section 9.1.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  A resource token is a
+short-lived request artifact whose lifetime is independent of
+`expires_at`; the PS verifies that the mission is active and unexpired
+whenever it acts on one (Sections 6.7.1 and 6.7.2 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  AAuth distinguishes an
+expiry-caused termination with a `termination_reason` of `expired` in
+the `mission_terminated` error (Section 8.8 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}), rather than with a separate
+error status.  An early completion, revocation, or administrative
+termination prevents new governed issuance; an outstanding person
+token or auth token remains usable until revocation or its own expiry,
+inside that bound.
 
 There is no suspended state in this binding.  A short wait uses AAuth's
 deferred-response mechanism.  A long or materially changed pause is
@@ -611,9 +655,14 @@ scoped mission while retaining the old log for audit.
 Termination prevents new governed issuance and PS operations.  It does
 not retroactively erase a previously issued credential or guarantee that
 all independently authorizing resources learn the state immediately.
-Short token lifetimes bound this residual window in PS-asserted and
-federated modes.  A resource needing stronger termination latency
-requires an additional revocation or event mechanism.
+In the modes that present a person token, short token lifetimes bound
+this residual window: a party that no revocation reaches is bounded
+by token lifetime alone, at most one hour for a person token or an auth
+token (Section 11.12.5 of {{I-D.draft-hardt-oauth-aauth-protocol}}).
+AAuth token revocation shortens the window where the token's recipient
+supports it (Section 11.12 of {{I-D.draft-hardt-oauth-aauth-protocol}});
+a resource needing stronger termination latency requires an additional
+event mechanism.
 
 # Conformance
 
@@ -621,7 +670,7 @@ An implementation conforms as an **AAuth Mission Context Agent** if it:
 
 - implements AAuth mission proposal and approval;
 - verifies and preserves the exact approved blob bytes;
-- uses only the native `{approver, s256}` reference;
+- uses only the native reference of the approving PS and `s256`;
 - names the mission at person-token issuance and verifies that a
   returned resource token carries the exact `mission_s256`;
 - stops using a mission after `mission_terminated`;
@@ -633,7 +682,8 @@ An implementation conforms as an **AAuth Mission Context Agent** if it:
 An implementation conforms as an **AAuth Mission Context Person Server**
 if it:
 
-- implements AAuth proposal, clarification, approval, and completion;
+- implements AAuth proposal, clarification, approval, update, and
+  completion;
 - binds the approved blob to the authenticated agent identifier;
 - maintains the native active or terminated state and ordered mission
   log;
@@ -646,10 +696,13 @@ if it:
   brokers auth tokens; and
 - does not expose the private mission blob to Resources or Access Servers.
 
-An implementation conforms as a **mission-aware Resource or Access
-Server** if it preserves and validates the native reference as required
-by AAuth and does not claim to have evaluated the private mission
-description.  Support by a Resource or Access Server is not required for
+AAuth requires a resource to copy `mission_s256` from the presented
+token into its resource token, and an Access Server to verify the
+presented token against the resource token (Sections 6.7.1 and 9.1.1
+of {{I-D.draft-hardt-oauth-aauth-protocol}}).  An implementation
+conforms as a **mission-aware Resource or Access Server** if it does so
+and does not claim to have evaluated the private mission description.
+Support by a Resource or Access Server is not required for
 agent-and-PS conformance.
 
 This document intentionally makes no "full" or "partial" provision
@@ -663,19 +716,21 @@ properties specific to treating an AAuth mission as a Mission Context.
 
 ## Reference Substitution and Blob Integrity
 
-An attacker can attempt to replace either `approver` or `s256`, attach a
-valid reference to a different agent, or present uncommitted JSON as the
-approved blob.  The decoded-bytes digest check, signed person-token carriage of
-`mission_s256`, signed resource and auth tokens, agent-token
-verification, and proof-of-possession binding are all necessary
-defenses.
+An attacker can attempt to substitute the approving PS or `s256`, attach
+a valid reference to a different agent, or present uncommitted JSON as
+the approved blob.  The decoded-bytes digest check, signed person-token
+carriage of `mission_s256`, signed resource and auth tokens, the
+`presented_jti` binding of each resource token to one presented token
+whose `mission_s256` it matches exactly (Section 6.7.2 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}), agent-token verification,
+and proof-of-possession binding are all necessary defenses.
 
 The agent MUST reject an approval response when the digest of the
 decoded `mission` bytes differs from `s256`.  The PS MUST resolve a
 reference only in its own approved-mission store and MUST verify the
 authenticated agent's right to use it.  Resources and Access Servers
-MUST NOT fetch a blob from an attacker-selected `approver` URL; AAuth
-forbids dereferencing the reference.
+MUST NOT fetch a blob from a location derived from the reference, such
+as one under the approving PS's identifier.
 
 ## Confused-Deputy and Audience Checks
 
@@ -701,7 +756,7 @@ the PS sees the request: the PS can compare justifications and behavior
 with the approved context and log, request clarification, or deny new
 issuance.  It does not make the compromised agent trustworthy.
 
-In identity-based or resource-managed access, the attacker can contact a
+In agent identity or resource-managed access, the attacker can contact a
 resource without passing through the PS.  Mission termination alone
 cannot stop such access.  Agent-token revocation, key rotation, resource
 policy, resource-managed credential invalidation, and incident response
@@ -716,9 +771,9 @@ authorized administrators through applicable AAuth mechanisms.
 The PS is the controlling authority and holds the private mission blob,
 the person relationship, and the PS-observed governance log.  A compromised
 PS can approve false missions, misrepresent state, disclose sensitive
-context, issue PS-asserted auth tokens, or broker requests to Access
-Servers.  AAuth signature verification does not protect against a
-malicious legitimate PS signing key.
+context, issue auth tokens in PS authorization access, or broker
+requests to Access Servers.  AAuth signature verification does not
+protect against a malicious legitimate PS signing key.
 
 Deployments SHOULD protect PS signing keys and mission stores with
 appropriate isolation, access control, backup, monitoring, and recovery
@@ -737,9 +792,11 @@ token identifiers, and make retention behavior clear to the person.
 The log can also be used for denial of service.  PSes SHOULD bound entry
 size, clarification rounds, request rates, and retention while preserving
 the records needed for active governance and incident investigation.
-Availability loss at the PS prevents new PS-asserted and federated
-authorizations; it does not necessarily stop identity-based or
-resource-managed access.
+Availability loss at the PS prevents new person tokens and new PS
+authorization and federated authorization grants; it does not
+necessarily stop agent identity or resource-managed access, or person
+identity access on a person token already issued, which lives at most
+one hour (Section 7.1.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}).
 
 ## Prompt Injection and Untrusted Text
 
@@ -747,7 +804,10 @@ Mission descriptions, tool descriptions, justifications, clarification
 messages, and audit content are untrusted input.  A PS that presents them
 to a person or an AI decision-maker MUST sanitize rendered Markdown and
 SHOULD clearly separate agent-supplied content from trusted policy and
-system instructions.
+system instructions.  On a consent surface, AAuth also requires the PS
+to distinguish resource-asserted from agent-asserted content and to
+attribute the latter to the agent (Section 7.4 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).
 
 An AI-assisted decision-maker MUST NOT treat text in a mission or log as
 authority to alter verification rules, reveal secrets, bypass policy, or
@@ -759,13 +819,18 @@ scopes, and state remain outside the natural-language decision context.
 The exact mission blob can contain sensitive intent, planned actions,
 tool use, organizational context, and person interactions.  AAuth's
 reference-only design keeps the blob between the agent and PS.  Resources
-and Access Servers receive the opaque `{approver, s256}` reference and
-MUST NOT dereference it.
+and Access Servers receive only the opaque reference, which is `s256`
+and the PS that approved it (Section 14.3 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}), and MUST NOT dereference it.
 
 The stable reference is nevertheless a correlation handle.  Reusing it
 across resources reveals that requests belong to the same mission and
 reveals the PS hostname.  Agents SHOULD attach a Mission Context only
 when its governance and correlation benefits justify that disclosure.
+Once attached, the reference also travels where the agent does not
+choose: when a resource acting as an agent obtains a person token for
+a downstream resource, the PS copies `mission_s256` from the upstream
+token into it (Section 7.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}).
 Resources, Access Servers, and logs SHOULD retain the reference only as
 long as needed for authorization, security, dispute resolution, or legal
 obligations.
@@ -786,8 +851,9 @@ visibility into the retained history survive the pairwise boundary.
 
 # Operational Considerations
 
-PS-asserted and federated deployments SHOULD use short-lived auth tokens
-so that a terminated mission stops supporting fresh authorization within
+PS authorization and federated authorization deployments SHOULD use
+short-lived auth tokens so that a terminated mission stops supporting
+fresh authorization within
 a bounded period.  Operators SHOULD document that bound and distinguish
 it from immediate revocation.
 
@@ -812,17 +878,16 @@ capability table.
 
 The contextual-governance kernel maps as follows:
 
-1. **Mission Reference**: the native pair `{approver, s256}` remains
-   this binding's Mission Reference.  `approver` is the uniqueness
+1. **Mission Reference**: the native pair of the approving PS and
+   `s256` is this binding's Mission Reference.  The PS is the uniqueness
    namespace, `s256` is compared as the exact unpadded base64url digest
    of the approved bytes, a changed blob is a different mission, a
    reference is never reassigned, retention follows the mission log's
    declared period, and the reference is unguessable to parties that do
    not hold the private blob.  On the wire it travels as the flat
-   `mission_s256` claim, with that namespace carried by the person
-   token's `iss` and the resource token's `ps` ({{reference}},
-   {{mission-log}}).
-2. **Controller**: the PS identified by `approver` controls approval,
+   `mission_s256` claim or parameter, with the PS named as
+   {{reference}} describes ({{mission-log}}).
+2. **Controller**: the approving PS controls approval,
    governance state, and the mission log ({{roles}}).  Consumers
    establish its identity and keys from AAuth's published PS metadata
    and key set ({{I-D.draft-hardt-oauth-aauth-protocol}}).
@@ -837,24 +902,27 @@ The contextual-governance kernel maps as follows:
    never disclosed to Resources or Access Servers.  Both governance
    parties retain the decoded blob, satisfying the kernel's
    maintained-value branch; `s256` is verification material for
-   holders, and algorithm migration follows AAuth ({{blob}},
-   {{reference}}).
+   holders, and AAuth fixes its algorithm at SHA-256 with no migration
+   path (Section 8.2 of {{I-D.draft-hardt-oauth-aauth-protocol}};
+   {{blob}}, {{reference}}).
 5. **Approval ceremony**: the AAuth propose, clarify, and approve
    interaction creates the approved blob and the `active` mission
    atomically ({{approval}}).
 6. **Governance gate**: only `active` permits governed PS processing;
    `terminated` is permanent, and an unrecognized state is not
-   active.  Person-accepted completion and the mission's `expires_at`
-   are the base transitions; administrative termination is supplied
-   by AAuth Mission Management where deployed ({{lifecycle}}).
+   active.  Person-accepted completion, the mission's `expires_at`, and
+   PS revocation of the mission are the base transitions; control-plane
+   termination at the `mission_control_endpoint` is supplied by AAuth
+   Mission Management where deployed ({{lifecycle}}).
 7. **Reliance bound**: every mission carries AAuth's native
    `expires_at` member, enforced on every PS decision path
    ({{lifecycle}}); PS decisions establish `active` at decision time,
-   no token carrying `mission_s256` exceeds the mission's `expires_at`,
-   and the residual after a transition is bounded by outstanding token
-   lifetime.  AAuth Mission Expiry
-   {{I-D.draft-mcguinness-aauth-mission-expiry}} profiles the member
-   this binding relies on.
+   including on a resource token, whose lifetime is independent of
+   `expires_at`; no person token or auth token carrying `mission_s256`
+   exceeds the mission's `expires_at`; and the residual after a
+   transition is bounded by outstanding token lifetime.  AAuth Mission
+   Expiry {{I-D.draft-mcguinness-aauth-mission-expiry}} profiles the
+   member this binding relies on.
 8. **Context propagation**: the signed `mission_s256` claim, carried
    by person, resource, and auth tokens, carries governance context;
    the blob itself never propagates; coverage varies by access mode
@@ -872,11 +940,11 @@ Bounded Reliance floor ({{I-D.draft-mcguinness-mission-substrate}}):
 
 | Capability | Claim | Activation | Scope and defining sections | Limitations |
 | --- | --- | --- | --- | --- |
-| Lifecycle-Gated Authorization | supplied | always | Mission approval and other positive governance decisions at the mission endpoint, permission decisions, and auth-token issuance the PS performs or brokers for requests carrying the person-token-issued `mission_s256` claim; decisions fail closed when current state cannot be established ({{lifecycle}}, {{access-modes}}, {{mission-log}}) | Independently issued resource credentials and missionless token requests are outside the claim ({{ref-propagation}}); the post-transition residual is bounded by auth-token lifetime and `expires_at` |
+| Lifecycle-Gated Authorization | supplied | always | Mission approval and other positive governance decisions at the mission endpoint, permission decisions, and auth-token issuance the PS performs or brokers for requests carrying the person-token-issued `mission_s256` claim; decisions fail closed when current state cannot be established ({{lifecycle}}, {{access-modes}}, {{mission-log}}) | Independently issued resource credentials and missionless token requests are outside the claim ({{ref-propagation}}); the post-transition residual is bounded by person-token and auth-token lifetime and `expires_at` |
 | State-Observable | supplied | the AAuth Mission Management status operation active ({{I-D.draft-mcguinness-mission-aauth-management}}) | Authenticated per-role callers, the `active` and `terminated` vocabulary, responses stamped `observed_at` with a declared `fresh_until` reliance bound, failing closed on failed, unrecognized, or stale responses, absent and unauthorized references indistinguishable | The base binding exposes no consumer-facing state source; token acceptance is not observation |
 | Structured Authority | not supplied | -- | -- | The mission description is private prose and `approved_tools` is PS-governance input; scopes or a resource-owned policy language can supply structure inside its own boundary |
 | Monotonic Derivation | not supplied | -- | -- | No cross-boundary subset relation is defined; a resource policy language can define monotonicity within its own vocabulary |
-| Credential-Bound | supplied | PS-asserted or federated access mode, for requests whose resource token carries and validates the signed `mission_s256` claim ({{access-modes}}, {{ref-propagation}}) | PS-issued or PS-brokered artifacts carry the claim, a binding established at issuance rather than by an external join; fact semantics: PS issuance or brokering under the mission | Identity-based and resource-managed modes convey no mission binding; federated artifacts are AS-issued under the PS's brokering |
+| Credential-Bound | supplied | PS authorization or federated authorization access mode, for requests whose resource token carries and validates the signed `mission_s256` claim ({{access-modes}}, {{ref-propagation}}) | PS-issued or PS-brokered artifacts carry the claim, a binding established at issuance rather than by an external join; fact semantics: PS issuance or brokering under the mission | Agent identity and resource-managed modes convey no mission binding; federated authorization artifacts are AS-issued under the PS's brokering |
 | Authorized Context Correlation | not supplied | -- | -- | The PS co-establishes the mission, person, agent, and token where it is on the path; no authoritative join of independently established facts is defined |
 | Independently Verifiable | not supplied | -- | -- | `s256` proves byte identity to parties holding the blob; it does not prove record properties or current state to third parties |
 | Portable Evidence | not supplied | -- | -- | The mission log is PS-local; signed receipts or checkpoints would be an extension |
