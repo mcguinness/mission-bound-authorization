@@ -3186,12 +3186,18 @@ what `mission_denial: insufficient_authority` only points at. Each
 grain keeps the wire shape and response status its defining document
 gives it.
 
-A client that decodes `authorization_remediation` proposes the
-carried entries back on the standard `authorization_details`
-parameter ({{authority-proposal}}), where they derive under this
-document's ordinary rules ({{authorization-derivation}}): of an
-advertised, schema-valid type ({{discovery}}), narrowed same-type
-({{subset}}, {{other-types}}) like any other proposal.
+A client that decodes `authorization_remediation` and holds a
+refresh token for the active Mission requests the carried entries on
+the standard `authorization_details` parameter of a refresh request
+({{mission-bound-tokens}}), where they derive under this document's
+ordinary rules ({{authorization-derivation}}): of an advertised,
+schema-valid type ({{discovery}}), narrowed same-type ({{subset}},
+{{other-types}}) like any other request. The AS issues only what the
+Authority Set contains. For the rest, more authority requires a new
+approval, proposed as for a new Mission ({{authority-proposal}}), or
+an expansion where that companion is deployed ({{rs-enforcement}}).
+A client without such a refresh token proposes the carried entries as
+for a new Mission.
 
 A third grain routes the same denial into a governed access request
 rather than a fresh derivation: the AuthZEN Access Request and
