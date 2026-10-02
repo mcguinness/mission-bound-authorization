@@ -431,8 +431,11 @@ These rules are the record's security core.
   the approval it claims to govern or it does not commit. A
   policy-authority Approver satisfies this with a `policy` assertion
   carrying its provenance chain, subject to the high-risk-class
-  restriction of {{policy-approval-recency}}. A Mission rooted in a
-  named standing-consent `approval_basis`
+  restriction of {{policy-approval-recency}}. The matching
+  assertion's `kind` MUST be `human` or `policy`: a `service`
+  assertion, including one a model produced, is a contributing
+  governance input, never the accountable approver's assertion. A
+  Mission rooted in a named standing-consent `approval_basis`
   ({{I-D.draft-mcguinness-oauth-mission}}) satisfies this rule
   through that record instead of a contributing assertion:
   `consent_principal` (equal to `approver`), `root_commitment`, and
