@@ -217,11 +217,15 @@ export type ClaimResolution =
   | { kind: "unredeemed" };
 
 /**
- * An Execution Evidence `error` that marks an attempt which never held the
- * redemption (a duplicate refused at use). Such a record is not a settlement:
- * the redeeming attempt may still be completing.
+ * An Execution Evidence `error` that by definition marks an attempt which
+ * never held the redemption: a re-presentation of an evaluation identifier
+ * already consumed. Such a record is not a settlement, since the redeeming
+ * attempt may still be completing. (`operation_already_claimed` and
+ * `operation_identity_conflict` are not listed: the executing PEP also
+ * records them after a redemption it did hold, and only redeeming attempts
+ * settle at all.)
  */
-const NON_REDEEMING_ERRORS = new Set(["permit_consumed", "operation_already_claimed", "operation_identity_conflict"]);
+const NON_REDEEMING_ERRORS = new Set(["permit_consumed"]);
 
 const MIGRATIONS = [
   `CREATE TABLE claims (
