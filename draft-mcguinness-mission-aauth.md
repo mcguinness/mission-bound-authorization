@@ -118,8 +118,8 @@ Context:
   pair of the approving PS and `s256`;
 - the agent names the mission when it requests a person token from its
   PS, and the PS stamps the mission into the person token, from where
-  the resource and the PS copy it into every resource and auth token
-  issued under it;
+  the resource copies it into each resource token and the auth token's
+  issuer (PS or AS) copies it into each auth token issued under it;
 - the PS evaluates requests using the approved context and the ordered
   mission log; and
 - a mission is either `active` or permanently `terminated`.
@@ -346,7 +346,7 @@ The AAuth roles map to the Mission Context model as follows:
 | Agent | Proposes work, verifies and stores the approved blob, names the mission at person-token issuance, supplies justifications, and records actions as AAuth requires. |
 | Person Server | Acts as controlling authority, conducts approval and clarification, stores state and the mission log, and governs requests on PS endpoints. |
 | Person | Reviews, clarifies, approves, and accepts completion through the PS. |
-| Resource | Defines and enforces its resource authorization; when mission-aware, preserves the native reference as AAuth specifies. |
+| Resource | Defines and enforces its resource authorization; copies `mission_s256` unchanged from the presented token into each resource token it issues, as AAuth requires. |
 | Access Server | Evaluates resource policy and issues auth tokens in federated access; it does not evaluate the private mission blob. |
 
 No AAuth party becomes an OAuth client, Authorization Server, or Resource
@@ -479,8 +479,9 @@ making requests directly to a resource.  Deployments MUST NOT claim PS
 issuance gating for those direct resource decisions.
 
 A resource MUST NOT omit `mission_s256` from a resource token it issues
-when the person token it verified carried one; AAuth makes a missing
-claim a protocol violation rather than permitted ignorance.  An
+when the presented token it verified carried one; AAuth makes a missing
+claim a protocol violation rather than permitted ignorance
+(Section 6.7.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}).  An
 implementation MUST NOT infer that a resource evaluated mission context
 merely because a token carried the claim.  Even a mission-aware Resource
 or Access Server receives only the reference and MUST NOT dereference it
@@ -522,10 +523,16 @@ have no source in this binding, and hosting the flow is unsupported.
 
 An agent operating in a Mission Context names the mission when it
 requests a person token from its PS, and the PS stamps `mission_s256`
-into the issued person token.  A resource that verifies that person
-token MUST copy `mission_s256` into the resource token it issues.  When
-an auth token is issued in the mission context, it carries the same
-flat `mission_s256` claim, copied onward from the resource token.
+into the issued person token (Section 7.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  A resource that verifies a
+presented token (a person token or an auth token) carrying
+`mission_s256` MUST copy it into the resource token it issues, which
+names that presented token in `presented_jti` (Section 6.7.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  When an auth token is
+issued in the mission context, its issuer (the PS, or the AS in
+four-party access) copies the same flat `mission_s256` claim onward
+from the resource token (Section 9.4.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).
 
 This binding adds no member alongside that claim.  The approving PS
 that scopes it is named as {{reference}} describes.  Receivers MUST NOT
@@ -547,13 +554,20 @@ is on path, the PS's current contextual governance decision.
 
 AAuth no longer treats a stripped mission as permitted downgrade: a
 resource MUST NOT omit `mission_s256` from a resource token when the
-person token it verified carried one, and a PS MUST resolve
-`presented_jti` against its retained records of the person tokens it
-issued and reject any mismatch or omission against the resolved person
-token's `mission_s256`.  That base rule is what makes stripping detectable;
-comparing claims by agent and resource alone cannot, because an agent
-running concurrent missions holds more than one person token for the
-same resource, and only the named person token resolves to one.
+presented token it verified carried one, and a PS MUST verify the
+`presented_token` the agent forwards against the resource token, its
+`jti` against `presented_jti` and its `mission_s256` against the
+resource token's, and reject any mismatch or omission (Sections 6.7.2
+and 7.2.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}).  In four-party
+access the AS performs the same verification (Section 9.1.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  That base rule is what
+makes stripping detectable; comparing claims by agent and resource
+alone cannot, because an agent running concurrent missions holds more
+than one person token for the same resource, and only the named
+presented token identifies one.  The check uses no retained record on
+the request path; the PS's record of the person tokens it issues
+serves revocation (Section 7.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).
 
 This binding keeps two further local rules on top of it.  An agent operating
 under a mission MUST verify that a returned resource token carries the
@@ -645,10 +659,13 @@ if it:
   brokers auth tokens; and
 - does not expose the private mission blob to Resources or Access Servers.
 
-An implementation conforms as a **mission-aware Resource or Access
-Server** if it preserves and validates the native reference as required
-by AAuth and does not claim to have evaluated the private mission
-description.  Support by a Resource or Access Server is not required for
+AAuth requires a resource to copy `mission_s256` from the presented
+token into its resource token, and an Access Server to verify the
+presented token against the resource token (Sections 6.7.1 and 9.1.1
+of {{I-D.draft-hardt-oauth-aauth-protocol}}).  An implementation
+conforms as a **mission-aware Resource or Access Server** if it does so
+and does not claim to have evaluated the private mission description.
+Support by a Resource or Access Server is not required for
 agent-and-PS conformance.
 
 This document intentionally makes no "full" or "partial" provision
@@ -664,10 +681,12 @@ properties specific to treating an AAuth mission as a Mission Context.
 
 An attacker can attempt to substitute the approving PS or `s256`, attach
 a valid reference to a different agent, or present uncommitted JSON as
-the approved blob.  The decoded-bytes digest check, signed person-token carriage of
-`mission_s256`, signed resource and auth tokens, agent-token
-verification, and proof-of-possession binding are all necessary
-defenses.
+the approved blob.  The decoded-bytes digest check, signed person-token
+carriage of `mission_s256`, signed resource and auth tokens, the
+`presented_jti` binding of each resource token to one presented token
+whose `mission_s256` it matches exactly (Section 6.7.2 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}), agent-token verification,
+and proof-of-possession binding are all necessary defenses.
 
 The agent MUST reject an approval response when the digest of the
 decoded `mission` bytes differs from `s256`.  The PS MUST resolve a
@@ -768,6 +787,10 @@ The stable reference is nevertheless a correlation handle.  Reusing it
 across resources reveals that requests belong to the same mission and
 reveals the PS hostname.  Agents SHOULD attach a Mission Context only
 when its governance and correlation benefits justify that disclosure.
+Once attached, the reference also travels where the agent does not
+choose: when a resource acting as an agent obtains a person token for
+a downstream resource, the PS copies `mission_s256` from the upstream
+token into it (Section 7.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}).
 Resources, Access Servers, and logs SHOULD retain the reference only as
 long as needed for authorization, security, dispute resolution, or legal
 obligations.
