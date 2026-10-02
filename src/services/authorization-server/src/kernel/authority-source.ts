@@ -311,9 +311,10 @@ function selectingEntries(
  * (the Approver has not authenticated and no `login_hint` names one). Defined
  * only where every source the client could resolve shares one provenance, so
  * the rendering is true for whichever Subject the decision binds; otherwise it
- * refuses. The decision itself always resolves for the actual Subject.
+ * refuses. The decision itself always resolves for the actual Subject. The
+ * catalog resolver's `resolveForRendering`; the kernel never reads it directly.
  */
-export function renderableSourceForClient(
+function renderableSourceForClient(
   catalog: AuthoritySourceCatalog,
   clientId: string,
 ): AuthoritySource {
@@ -390,6 +391,11 @@ export interface AuthoritySourceRequest {
  *   already committed. It never rebinds: a missing root, a changed provenance
  *   or policy, or a root that no longer selects its own Subject and client
  *   refuses.
+ * - `resolveForRendering`: the provenance an approval rendering shows before
+ *   the Subject is known, defined only where every Subject this resolver
+ *   would resolve through `clientId` shares one provenance; otherwise it
+ *   refuses. The rendering and the decision consult the same resolver, so a
+ *   rendering never shows a provenance the decision would not establish.
  */
 export interface AuthoritySourceResolver {
   resolveForApproval(input: {
@@ -398,6 +404,7 @@ export interface AuthoritySourceResolver {
     clientId: string;
     sourceRequest?: AuthoritySourceRequest;
   }): AuthoritySourceResolution;
+  resolveForRendering(input: { deployment: string; clientId: string }): AuthoritySource;
   resolveCommittedRoot(input: {
     deployment: string;
     binding: AuthoritySourceBinding;
@@ -459,6 +466,10 @@ export function catalogAuthoritySourceResolver(
       }
       return resolution(entry, local, clientId);
     },
+    resolveForRendering({ deployment, clientId }) {
+      assertDeployment(deployment);
+      return renderableSourceForClient(catalog, clientId);
+    },
     resolveCommittedRoot({ deployment, binding }) {
       assertDeployment(deployment);
       if (binding.deployment !== catalog.deployment) {
@@ -488,6 +499,30 @@ export function catalogAuthoritySourceResolver(
       return resolution(entry, local, binding.clientId);
     },
   };
+}
+
+/**
+ * @spec mission#approval-event (step 5): the provenance a rendering shows
+ * when no Subject is named, from the SAME resolver the decision consults. An
+ * unavailable resolver, or an answer that is no valid `authority_source`,
+ * refuses `access_denied` rather than rendering an unverified source.
+ */
+export function resolveRenderingSource(
+  resolver: AuthoritySourceResolver,
+  input: { deployment: string; clientId: string },
+): AuthoritySource {
+  let raw: unknown;
+  try {
+    raw = resolver.resolveForRendering({ deployment: input.deployment, clientId: input.clientId });
+  } catch (e) {
+    if (e instanceof IntentError) throw e;
+    throw new IntentError("access_denied", "the authority-source resolver is unavailable");
+  }
+  try {
+    return parseAuthoritySource(raw, "authority-source resolver");
+  } catch {
+    throw new IntentError("access_denied", "the authority-source resolver answered with no valid source");
+  }
 }
 
 /**

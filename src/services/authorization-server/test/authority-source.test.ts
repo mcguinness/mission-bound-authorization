@@ -994,7 +994,10 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
       throw new Error("connect ECONNREFUSED");
     };
     probe(
-      k({ onLifecycleCommit, authoritySourceResolver: { resolveForApproval: down, resolveCommittedRoot: down } }),
+      k({
+        onLifecycleCommit,
+        authoritySourceResolver: { resolveForApproval: down, resolveForRendering: down, resolveCommittedRoot: down },
+      }),
       "alice",
       "ap-agent",
       /resolver is unavailable/,
@@ -1198,6 +1201,44 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
     expect(
       kernel.renderAuthoritySource({ clientId: "mixed-agent", subject: { iss: ISS, sub: "acme-accounts-payable" } }),
     ).toEqual({ type: "organizational", policy: { id: "ap-controls", version: "1", digest: "sha-256:policy-digest" } });
+  });
+
+  it("renders through the configured resolver the decision consults, never the static catalog behind it", () => {
+    // The kernel's own catalog declares governed-agent organizational; the
+    // deployment's resolver serves it as a delegated source. A rendering read
+    // from the catalog would show a provenance the decision never establishes.
+    const served: AuthoritySourceCatalog = {
+      humanPrincipals: ["alice", "bob"],
+      entries: [
+        {
+          id: "governed-delegated",
+          type: "user_delegated",
+          clients: ["governed-agent"],
+          activators: ["bob"],
+          ceiling: DEPLOYMENT_CEILING,
+        },
+      ],
+    };
+    const resolver = catalogAuthoritySourceResolver(bindAuthoritySourceCatalog(served, ISS, ISS));
+    const kernel = makeKernel({ authoritySourceResolver: resolver });
+    const rendered = kernel.renderAuthoritySource({ clientId: "governed-agent" });
+    expect(rendered).toEqual({ type: "user_delegated" });
+    expect(approve(kernel, { clientId: "governed-agent" }).authority_source).toEqual(rendered);
+    // An unavailable resolver, or one answering with no valid source, renders nothing.
+    const down = (): never => {
+      throw new Error("connect ECONNREFUSED");
+    };
+    refusedWith(
+      () => makeKernel({ authoritySourceResolver: { ...resolver, resolveForRendering: down } }).renderAuthoritySource({ clientId: "governed-agent" }),
+      /resolver is unavailable/,
+    );
+    refusedWith(
+      () =>
+        makeKernel({
+          authoritySourceResolver: { ...resolver, resolveForRendering: () => ({ type: "self_asserted" }) as never },
+        }).renderAuthoritySource({ clientId: "governed-agent" }),
+      /answered with no valid source/,
+    );
   });
 
   it("accepts a source request only as confirmation of the root that resolves, never as a choice of root", () => {

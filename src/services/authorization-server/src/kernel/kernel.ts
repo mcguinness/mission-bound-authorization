@@ -48,9 +48,9 @@ import {
   type LocalPrincipal,
   authoritySourceOf,
   parseAuthoritySource,
-  renderableSourceForClient,
   resolveApprovalSource,
   resolveDeclaredSource,
+  resolveRenderingSource,
   validateAuthoritySourceCatalog,
 } from "./authority-source.js";
 import type { DerivationPolicy, ExpiryCeilings } from "./derive.js";
@@ -802,11 +802,14 @@ export class MissionKernel {
    * @spec mission#approval-event (steps 3 and 5), mission#authority-sources:
    * the source an approval RENDERING identifies. With the Subject known, it is
    * that Subject's resolution (#827); without one, it is defined only where
-   * every source the client could resolve shares one provenance. The
-   * decision re-resolves for the actual Subject regardless.
+   * every source the client could resolve shares one provenance. Both come
+   * from the configured resolver the decision consults, never the catalog
+   * behind it, and the decision re-resolves for the actual Subject regardless.
    */
   renderAuthoritySource(input: { clientId: string; subject?: unknown }): AuthoritySource {
-    if (input.subject === undefined) return renderableSourceForClient(this.sourceCatalog, input.clientId);
+    if (input.subject === undefined) {
+      return resolveRenderingSource(this.sourceResolver, { deployment: this.opts.issuer, clientId: input.clientId });
+    }
     return this.resolveAuthoritySource({ clientId: input.clientId, subject: input.subject }).provenance;
   }
 

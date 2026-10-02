@@ -3867,6 +3867,12 @@
      "name": "authority source rendering for a shared agent registration (@spec mission#approval-event, mission#authority-sources, #827) > renders the source of the Subject login_hint names, and refuses to render one that depends on an unnamed Subject",
      "level": "endpoint",
      "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > renders through the configured resolver the decision consults, never the static catalog behind it",
+     "level": "unit",
+     "surface": "derivation"
     }
    ]
   },

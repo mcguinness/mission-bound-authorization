@@ -219,9 +219,9 @@ the store.
   resolver runs, and refuses `access_denied` when the resolver is unavailable
   or answers for a different Subject, client, deployment or source.
   `kernel.approve`, Expansion and template consent each resolve once per
-  completion. The render resolves for the `login_hint` Subject; with none, it
-  renders only a provenance every source of the client shares and otherwise
-  refuses. Drawdowns (child, template dispatch, carryover) re-resolve from
+  completion. The render consults the same resolver: for the `login_hint`
+  Subject, or with none through `resolveForRendering`, which answers only a
+  provenance every Subject of the client shares and otherwise refuses. Drawdowns (child, template dispatch, carryover) re-resolve from
   provenance and refuse when it denotes more than one root; the committed-root
   binding is #827's second part.
 - **Synchronous resolution.** The resolver is synchronous by contract: it runs
