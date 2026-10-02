@@ -8826,7 +8826,7 @@
    "id": "mas.baseline-join.delegate-narrowing",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "mission-join",
-   "text": "When the joined party is a delegate rather than the Mission's `client_id`, the PDP MUST narrow the effective Authority Set to the delegable subset under the issuance profile's per-entry `delegation` rules ({{I-D.draft-mcguinness-oauth-mission}}): entries without a `delegation` member are excluded, `allowed_delegates` is applied, and `max_depth` is evaluated from the deployment's actor records rather than from a Mission-bound token's `act` chain.",
+   "text": "When the joined party is a delegate rather than the Mission's `client_id`, the PDP MUST narrow the effective Authority Set to the delegable subset under the OAuth binding's per-entry `delegation` rules ({{I-D.draft-mcguinness-oauth-mission}}): entries without a `delegation` member are excluded, `allowed_delegates` is applied, and `max_depth` is evaluated from the deployment's actor records rather than from a Mission-bound token's `act` chain.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
