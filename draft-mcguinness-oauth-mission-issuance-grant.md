@@ -186,8 +186,9 @@ that a MAS alone does not provide
 ({{I-D.draft-mcguinness-mission-authority-server}}).
 
 The AS implements none of the issuance profile's intake, approval
-ceremony, derivation, record, or lifecycle surfaces; those stay at the
-MAS. A deployment can adopt the issuance join at some Authorization
+ceremony, authority derivation, record, or lifecycle surfaces; those
+stay at the MAS. A deployment can adopt the issuance join at some
+Authorization
 Servers and keep the Mission Join at others ({{relationships}}).
 
 # Conventions and Terminology {#conventions}
@@ -196,21 +197,20 @@ Servers and keep the Mission Join at others ({{relationships}}).
 
 This document uses Mission, Mission Intent, Authority Set, Mission
 Issuer, the `mission` claim, the subset rule, and the integrity
-anchors (`intent_hash`, `authority_hash`) as the issuance profile defines them,
-Mission Authority Server (MAS), Mission Join, and the Enterprise
-Mapping Contract as {{I-D.draft-mcguinness-mission-authority-server}}
-defines them, and Effective Authority Set as
-{{I-D.draft-mcguinness-oauth-mission-status}} defines it. It
-additionally uses:
+anchor `authority_hash` as the issuance profile defines them; Mission
+Authority Server (MAS), Mission Join, and the Enterprise Mapping
+Contract as {{I-D.draft-mcguinness-mission-authority-server}} defines
+them; and Effective Authority Set as
+{{I-D.draft-mcguinness-oauth-mission-status}} defines it. Under this
+profile the MAS is the Mission Issuer. It additionally uses:
 
 Issuance join:
 : The integration this document defines: a MAS-approved Mission
   consumed at an Authorization Server's token endpoint.
 
 Mission Issuance Grant (grant):
-: The signed assertion of {{grant}}, minted by the Mission Issuer
-  and redeemed for Mission-bound tokens.
-
+: The signed assertion of {{grant}}, issued by the MAS and redeemed
+  for Mission-bound tokens.
 
 Consuming Authorization Server (consuming AS):
 : An OAuth Authorization Server {{RFC6749}} that redeems Mission
@@ -339,9 +339,10 @@ Claims:
 : REQUIRED. Unique per grant; single use ({{single-use}}).
 
 `client_id`:
-: REQUIRED. The Mission's recorded agent client identifier at the
-  consuming AS ({{Section 4.3 of RFC8693}}). Only this client redeems
-  the grant ({{redemption}}).
+: REQUIRED. The Mission's recorded agent client identifier as the
+  consuming AS knows it ({{Section 4.3 of RFC8693}}); the MAS sets it
+  under the deployment's mapping policy ({{trust}}). Only this client
+  can redeem the grant ({{redemption}}).
 
 `mission`:
 : REQUIRED. The issuance profile's `mission` claim object, with the
@@ -568,7 +569,7 @@ client-assertion-type%3Ajwt-bearer
 &client_assertion=eyJhbGciOiJFUzI1NiIsImtpZCI6IjE2In0...
 ~~~
 
-The grant is an authorization, not a client credential: the requester
+The grant is an authorization, not a client credential: the client
 still proves it is the grant's `client_id`. A confidential client
 authenticates to this AS as {{Section 3.2.1 of RFC6749}} requires, and
 possession of a `cnf` key does not replace that authentication. A
@@ -596,10 +597,10 @@ any check fails:
    and the `jti` has not been seen. The record of a seen `jti` is
    written atomically with successful issuance and retained until
    `exp` plus that allowance passes ({{single-use}});
-4. the requester is the grant's `client_id` ({{redemption}}): the
-   authenticated client equals it or, for a public client, the
-   request proves possession of the `cnf` key; and whenever `cnf` is
-   present, the request proves possession of that key ({{grant}});
+4. the client is the grant's `client_id` ({{redemption}}): the
+   authenticated client equals it, or, for a public client, the grant
+   carries `cnf`; and whenever `cnf` is present, the request proves
+   possession of that key ({{grant}});
 5. `sub` maps to a local account under the deployment's mapping
    policy ({{trust}}), and the grant's `authorization_details`
    map to resources this AS serves.
@@ -869,7 +870,7 @@ mint tokens for the wrong resource owner.
 For a service-owned or organizational Mission there is no delegating
 user to authenticate; such a grant is redeemed directly
 ({{redemption}}), not carried through the authorization code flow.
-The requester MUST still be the grant's `client_id`
+The client MUST still be the grant's `client_id`
 ({{grant-validation}}).
 
 # Metadata {#metadata}
@@ -921,7 +922,7 @@ re-approved in migration. Until then, the issuance join gives the
 estate Mission-bound tokens without the issuance profile's intake,
 approval, and record surfaces at each AS.
 
-**The runtime join remains for everything else.** Tokens minted
+**The Mission Join remains for everything else.** Tokens minted
 under this profile compose credential-carried at the Policy Decision
 Point (PDP); ordinary tokens continue to compose through the Mission
 Join. The two joins coexist per resource and per AS.
