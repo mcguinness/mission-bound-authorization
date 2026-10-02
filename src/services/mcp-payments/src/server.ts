@@ -236,12 +236,14 @@ export const REVERSIBLE_WRITE_REFUSAL_ERRORS: Readonly<Record<string, string>> =
 });
 
 /**
- * Test-only failpoints on the keyed reversible-write path (#918), each at a
- * crash boundary the reservation design names: inside the one local
- * transaction (a throw rolls the effect and the reservation back together),
- * and after its commit but before the response.
+ * Test-only failpoints on the keyed reversible-write path (#918): the awaited
+ * reverification, where concurrent in-process attempts interleave after each
+ * found the pair free; inside the one local transaction (a throw rolls the
+ * effect and the reservation back together); and after its commit but before
+ * the response.
  */
 export interface ReversibleWriteFailpoints {
+  atReverification?: () => Promise<void>;
   insideTransaction?: () => void;
   afterCommit?: () => void;
 }
@@ -1213,6 +1215,7 @@ export class McpPaymentsServer {
     const pair = this.reservationPair(res);
     if (!pair) return this.reservationUnavailable(attempt);
     beforeReverify?.();
+    await failpoints?.atReverification?.();
     const capability = await this.deps.pep.reverifyCapability(
       res.capabilitySnapshot,
       token,
