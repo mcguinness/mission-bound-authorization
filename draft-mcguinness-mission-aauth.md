@@ -582,14 +582,46 @@ the request path; the PS's record of the person tokens it issues
 serves revocation (Section 7.1 of
 {{I-D.draft-hardt-oauth-aauth-protocol}}).
 
-This binding keeps two further local rules on top of it.  An agent operating
-under a mission MUST verify that a returned resource token carries the
-exact `mission_s256`, and MUST NOT continue that authorization under
-the mission when it is absent or different.  A PS whose policy places
-an agent under mission governance MUST reject a missionless token
-request from that agent.  The Lifecycle-Gated Authorization and
+This binding keeps further local rules on top of it.  An agent
+operating under a mission MUST verify that a returned resource token
+carries the exact `mission_s256`, and MUST NOT continue that
+authorization under the mission when it is absent or different.  A PS
+whose policy places an agent under mission governance MUST reject a
+missionless token request from that agent.
+
+A request's Mission association is required when that policy applies
+or when the request derives from a presented token or upstream token
+that carries `mission_s256`.  A required association that is missing,
+malformed, invalid, unresolvable, or mismatched fails the request under
+AAuth's own rules, in AAuth's order of checks:
+
+- a malformed `mission_s256` in a person token request receives
+  `invalid_request`, and one naming a mission that does not exist or
+  belongs to another agent is rejected (Section 7.1 of
+  {{I-D.draft-hardt-oauth-aauth-protocol}});
+- a presented token that fails verification receives
+  `invalid_presented_token`, or `expired_presented_token` when only its
+  `exp` fails, which is how a Mission-bound token fails once
+  `expires_at` passes (Sections 6.7.2 and 7.1.2 of
+  {{I-D.draft-hardt-oauth-aauth-protocol}});
+- a resource token that omits or mismatches its presented token's
+  `mission_s256` receives `invalid_resource_token` (Section 6.7.2 of
+  {{I-D.draft-hardt-oauth-aauth-protocol}}); and
+- a request that reaches the mission-state check under a mission that
+  is no longer active receives `mission_terminated` (Section 8.8 of
+  {{I-D.draft-hardt-oauth-aauth-protocol}}).
+
+The PS, or the AS in four-party access, MUST NOT evaluate a failed
+request as missionless authorization, and the agent MUST NOT retry it
+without the reference.
+
+Intentionally missionless authorization is a separate path, admitted by
+explicit deployment policy from the outset for requests with no
+required or inherited Mission association.  It is never a fallback
+after Mission validation fails.  The Lifecycle-Gated Authorization and
 Credential-Bound claims of {{mission-substrate}} cover only requests
-whose resource token carries the protected `mission_s256` claim.
+whose resource token carries the protected `mission_s256` claim, and
+not that path.
 
 ## Lifecycle {#lifecycle}
 
@@ -940,7 +972,7 @@ Bounded Reliance floor ({{I-D.draft-mcguinness-mission-substrate}}):
 
 | Capability | Claim | Activation | Scope and defining sections | Limitations |
 | --- | --- | --- | --- | --- |
-| Lifecycle-Gated Authorization | supplied | always | Mission approval and other positive governance decisions at the mission endpoint, permission decisions, and auth-token issuance the PS performs or brokers for requests carrying the person-token-issued `mission_s256` claim; decisions fail closed when current state cannot be established ({{lifecycle}}, {{access-modes}}, {{mission-log}}) | Independently issued resource credentials and missionless token requests are outside the claim ({{ref-propagation}}); the post-transition residual is bounded by person-token and auth-token lifetime and `expires_at` |
+| Lifecycle-Gated Authorization | supplied | always | Mission approval and other positive governance decisions at the mission endpoint, permission decisions, and auth-token issuance the PS performs or brokers for requests carrying the person-token-issued `mission_s256` claim; decisions fail closed when current state cannot be established ({{lifecycle}}, {{access-modes}}, {{mission-log}}) | Independently issued resource credentials and intentionally missionless requests, admitted by policy with no required or inherited association, are outside the claim; a failed required association is rejected, never treated as missionless ({{ref-propagation}}); the post-transition residual is bounded by person-token and auth-token lifetime and `expires_at` |
 | State-Observable | supplied | the AAuth Mission Management status operation active ({{I-D.draft-mcguinness-mission-aauth-management}}) | Authenticated per-role callers, the `active` and `terminated` vocabulary, responses stamped `observed_at` with a declared `fresh_until` reliance bound, failing closed on failed, unrecognized, or stale responses, absent and unauthorized references indistinguishable | The base binding exposes no consumer-facing state source; token acceptance is not observation |
 | Structured Authority | not supplied | -- | -- | The mission description is private prose and `approved_tools` is PS-governance input; scopes or a resource-owned policy language can supply structure inside its own boundary |
 | Monotonic Derivation | not supplied | -- | -- | No cross-boundary subset relation is defined; a resource policy language can define monotonicity within its own vocabulary |
@@ -954,14 +986,18 @@ Each supplied row's temporal elements inherit the binding's own
 bounds unless stated: decisions establish current state at the PS at
 decision time, artifact lifetime is the auth-token lifetime capped by
 `expires_at`, and the residual after the mission becomes non-active
-is the outstanding auth-token lifetime. Failure behavior is uniformly
-fail-closed: a request whose resource token is missing the
-`mission_s256` claim its mode requires, carries one that fails
-validation, or mismatches the named mission is processed as
-missionless at best and never as mission-bound; a failed,
+is the outstanding person-token and auth-token lifetime. Failure
+behavior is fail-closed. A request whose required Mission association
+is missing, malformed, invalid, unresolvable, or mismatched is rejected
+under AAuth's own failure rules and is never evaluated or retried as
+missionless authorization ({{ref-propagation}}). A failed,
 unrecognized, or stale Management status response, or an unavailable
-status surface, refuses the state-dependent decision; unknown input
-never degrades to a weaker mode silently.
+status surface, refuses the decision that depends on that state, and
+unknown input never silently selects a weaker mode. Intentionally
+missionless authorization is a separate path admitted by deployment
+policy from the outset, outside the Lifecycle-Gated Authorization and
+Credential-Bound claims; it is not a fallback after Mission validation
+fails.
 
 # IANA Considerations
 
