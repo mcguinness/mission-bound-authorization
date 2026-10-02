@@ -358,6 +358,19 @@ describe("the PEP's reservation and retention for keyed reversible writes (@spec
       };
       const heldAtRelease = await schedule(h, k);
       expect(heldAtRelease).toEqual({ ok: false, refusal_reason: "permit_expired" });
+
+      // Nor does it disclose which kind of record the key holds: a changed
+      // operation whose conflict record is held past valid_until is refused
+      // permit_expired, not operation_identity_conflict.
+      h.payments.bumpInvoiceAmount("inv-1", "130.00");
+      h.evidence.holdExecution = async (input) => {
+        if (input.error === "operation_identity_conflict") {
+          h.evidence.holdExecution = undefined;
+          h.advance(PAST_PERMIT_MS);
+        }
+      };
+      const heldConflict = await schedule(h, k);
+      expect(heldConflict).toEqual({ ok: false, refusal_reason: "permit_expired" });
       expect(h.store.schedules()).toHaveLength(1);
       h.store.close();
     });

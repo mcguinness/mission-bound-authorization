@@ -1159,11 +1159,12 @@ export class McpPaymentsServer {
    * fresh Decision, and the expired permit itself admits nothing: an effect
    * needs the current attempt's permit at {@link admitReversibleWrite}.
    *
-   * The disposition record is awaited before the release, so the permit is
-   * compared once more, synchronously, at the release itself: an attempt
-   * whose permit expired during that write discloses nothing. Its one
-   * disposition is already recorded, so that last comparison records nothing
-   * further.
+   * The disposition record is awaited before anything is disclosed, so the
+   * permit is compared once more, synchronously and on a fresh clock read,
+   * after that write: an attempt whose permit expired during it discloses
+   * nothing, not the retained result and not which kind of record the key
+   * holds. Its one disposition is already recorded, so that last comparison
+   * records nothing further.
    */
   private async releaseRetained(
     attempt: ExecutionAttempt,
@@ -1172,18 +1173,16 @@ export class McpPaymentsServer {
   ): Promise<WriteToolResult> {
     const current = await this.deps.pep.verifyPermitAtUse(attempt);
     if (!current.ok) return { ok: false, refusal_reason: current.error };
-    if (retained.operationIdentity !== scope.operationIdentity) {
-      await this.deps.pep.suppressExecution(attempt, "operation_identity_conflict");
-      return { ok: false, refusal_reason: "operation_identity_conflict", next_action: "none" };
-    }
-    await this.deps.pep.suppressExecution(attempt, "operation_already_claimed");
+    const conflict = retained.operationIdentity !== scope.operationIdentity;
+    await this.deps.pep.suppressExecution(attempt, conflict ? "operation_identity_conflict" : "operation_already_claimed");
+    const atRelease = this.deps.pep.permitUseFailure(attempt);
+    if (atRelease !== undefined) return { ok: false, refusal_reason: atRelease };
+    if (conflict) return { ok: false, refusal_reason: "operation_identity_conflict", next_action: "none" };
     if (retained.state === "reserved") {
       // An outcome this PEP cannot establish: never executed again, and only
       // reconciliation resolves it.
       return { ok: false, refusal_reason: "duplicate_suppressed", next_action: "retry" };
     }
-    const atRelease = this.deps.pep.permitUseFailure(attempt);
-    if (atRelease !== undefined) return { ok: false, refusal_reason: atRelease };
     return { ok: true, deduped: true, result: retained.result };
   }
 
