@@ -613,9 +613,9 @@ stays narrow and is approved and revoked separately.
 
 When a deployment or caller supplies a shaping ceiling, the proposal
 MUST be a subset of it. If the task cannot be completed within that
-ceiling, the shaper MUST request clarification or refuse. It MUST NOT
-silently drop necessary authority while emitting a proposal that
-appears complete, unless both of the following hold:
+ceiling, the shaper MUST request clarification, refuse, or emit a
+partial proposal. It MUST NOT silently drop necessary authority: it
+emits a partial proposal only when both of the following hold:
 
 - Shaping Evidence records the excluded authority; and
 - the outcome clearly indicates that the proposal may not satisfy the
