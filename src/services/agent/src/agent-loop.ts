@@ -16,6 +16,7 @@
  * never a concrete provider.
  */
 
+import { randomUUID } from "node:crypto";
 import { generateText, stepCountIs, tool, type LanguageModel, type ToolSet } from "ai";
 import { z } from "zod";
 import type { HarnessToolResult, MediatedHarness } from "./mediated-harness.js";
@@ -34,6 +35,14 @@ const PAYMENTS_TOOLS: Record<string, { description: string; inputSchema: typeof 
   send_remittance_email: { description: "Send a remittance-advice email for an invoice.", inputSchema: INVOICE_INPUT },
   schedule_payment: { description: "Schedule a future payment for an invoice.", inputSchema: INVOICE_INPUT },
 };
+
+/**
+ * @spec runtime#idempotency (#917) — the tools whose Operation Profile defines
+ * an idempotency key. The planner is never asked for one: each planner tool
+ * call is one intended execution, so this loop mints its key when it routes
+ * the call, and a call the planner repeats is a new execution under a new key.
+ */
+const KEYED_TOOLS = new Set(["execute_wire_transfer", "send_remittance_email"]);
 
 const SYSTEM_FRAMING =
   "You are a payments agent operating under a mission-bound authorization harness. " +
@@ -80,7 +89,11 @@ export async function runAgentLoop(opts: RunAgentLoopOptions): Promise<AgentLoop
       inputSchema: spec.inputSchema,
       execute: async (args: { invoice_id: string }): Promise<HarnessToolResult> =>
         // The mediated harness is the ONLY tool path -- never the PEP/store directly.
-        opts.harness.callTool(name, args, opts.missionToken),
+        opts.harness.callTool(
+          name,
+          KEYED_TOOLS.has(name) ? { ...args, idempotency_key: `idem_${randomUUID()}` } : args,
+          opts.missionToken,
+        ),
     });
   }
 

@@ -12,6 +12,7 @@
  * per-app Vite build).
  */
 
+import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { serve } from "@hono/node-server";
@@ -30,7 +31,19 @@ import {
 import { completeMissionApproval, denyMissionApproval, issueMissionToken } from "./approval-console.js";
 import { installConsoleSessionBoundary } from "./console-session-boundary.js";
 
+/** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
+const idem = (): string => `idem_${randomUUID()}`;
+
 const TX_TOOLS = new Set(["execute_wire_transfer", "send_remittance_email"]);
+
+/**
+ * @spec runtime#idempotency (#917): the demo stands in for the agent, so it
+ * mints one `idempotency_key` per intended execution of a keyed tool when the
+ * caller supplied none. A retry of the same execution (the JIT retry) carries
+ * the key its first attempt used, from the args the step reported.
+ */
+const keyed = (tool: string, args: Record<string, unknown>): Record<string, unknown> =>
+  TX_TOOLS.has(tool) && typeof args.idempotency_key !== "string" ? { ...args, idempotency_key: idem() } : args;
 
 /**
  * The seeded payable invoices the deterministic /agent/run planner attempts, in
@@ -225,7 +238,7 @@ async function main() {
   // Seed evidence: one wire on inv-seed (keeps inv-1's single-use permit fresh
   // for the dashboard button), then publish it to the transparency log.
   await stack.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, facts);
-  await stack.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-seed" }, facts);
+  await stack.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-seed", idempotency_key: idem() }, facts);
   for (const ev of stack.evidence.forMission(missionId)) {
     const t = ev.kind === "decision" ? "decision-evidence" : ev.kind === "execution" ? "execution-evidence" : "refusal-record";
     await stack.publishEvidence(missionId, t, ev as unknown as Record<string, unknown>);
@@ -622,7 +635,7 @@ async function main() {
   app.post("/agent/act", async (c) => {
     const body = await readJson(c);
     const tool = String(body.tool);
-    const args = (body.args as Record<string, unknown>) ?? {};
+    const args = keyed(tool, (body.args as Record<string, unknown>) ?? {});
     const r = TX_TOOLS.has(tool)
       ? await stack.server.callTransactionTool(tool, args, active.facts, undefined, ACCEPT_CHALLENGE)
       : await stack.server.callReadTool(tool, args, active.facts);
@@ -695,7 +708,7 @@ async function main() {
   app.post("/agent/run", async (c) => {
     const steps: Array<StepDetail & { taskId?: string | undefined; transaction_authorization_id?: string | undefined }> = [];
     for (const invoice_id of RUN_INVOICES) {
-      const args = { invoice_id };
+      const args = { invoice_id, idempotency_key: idem() };
       const r = await stack.server.callTransactionTool("execute_wire_transfer", args, active.facts, undefined, ACCEPT_CHALLENGE);
       await publishNew();
       steps.push(stepDetail("execute_wire_transfer", args, r, active.missionId));
@@ -703,7 +716,7 @@ async function main() {
     // JIT-gated remittance on inv-1: initiate AROP exactly as /agent/act does and
     // STOP (no auto-approve). The paused step carries taskId + tool + args so the
     // UI can arm the existing retry button against the AROP task.
-    const jitArgs = { invoice_id: "inv-1" };
+    const jitArgs = { invoice_id: "inv-1", idempotency_key: idem() };
     const jr = await stack.server.callTransactionTool("send_remittance_email", jitArgs, active.facts, undefined, ACCEPT_CHALLENGE);
     await publishNew();
     const jitDetail = stepDetail("send_remittance_email", jitArgs, jr, active.missionId);

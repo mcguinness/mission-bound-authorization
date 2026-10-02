@@ -12,6 +12,7 @@
  * against the operation it retained, consuming the `txn` exactly once.
  */
 
+import { randomUUID } from "node:crypto";
 import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 
 import { type Server } from "node:http";
@@ -48,6 +49,9 @@ import {
   type BuiltAs,
   type ChallengeIssuers,
 } from "../src/index.js";
+
+/** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
+const idem = (): string => `idem_${randomUUID()}`;
 
 // @spec runtime-evidence#decision-evidence-object (#741): one bundle per
 // test module. `signing`/`resolver` wire the PEP's store; `decide` is the
@@ -367,7 +371,7 @@ d("transaction authorization end to end (@spec txn-authorization#challenge-redem
     // no challenge -- and never hands one to a client that cannot redeem it.
     for (const signal of ["?0", "sure"]) {
       const client = await connect(accessToken, { "accept-txn-challenge": signal });
-      const denied = await client.client.callTool("send_remittance_email", { invoice_id: "inv-1" });
+      const denied = await client.client.callTool("send_remittance_email", { invoice_id: "inv-1", idempotency_key: idem() });
       expect(denied.ok, signal).toBe(false);
       expect(denied.denial_reason, signal).toBe("action_approval_required");
       expect(denied.error, signal).toBeUndefined();
@@ -386,7 +390,7 @@ d("transaction authorization end to end (@spec txn-authorization#challenge-redem
       // @spec txn-authorization#resource-challenge — an RFC 8941 Boolean.
       "accept-txn-challenge": "?1",
     });
-    const challenged = await agent.client.callTool("send_remittance_email", { invoice_id: "inv-1" });
+    const challenged = await agent.client.callTool("send_remittance_email", { invoice_id: "inv-1", idempotency_key: idem() });
     expect(challenged.ok).toBe(false);
     expect(challenged.error).toBe("transaction_authorization_required");
     const challenge = challenged.transaction_challenge as string;
@@ -429,13 +433,13 @@ d("transaction authorization end to end (@spec txn-authorization#challenge-redem
     //    retained, and the operation executes exactly once.
     await agent.close();
     const retry = await connect(issuedBody.access_token);
-    const executed = await retry.client.callTool("send_remittance_email", { invoice_id: "inv-1" });
+    const executed = await retry.client.callTool("send_remittance_email", { invoice_id: "inv-1", idempotency_key: idem() });
     expect(executed.ok, JSON.stringify(executed)).toBe(true);
     expect(evidence.forMission(missionId).filter((e) => e.kind === "execution")).toHaveLength(1);
 
     // 6. Re-presenting the same credential is the same replay: refused, never a
     //    second execution.
-    const replay = await retry.client.callTool("send_remittance_email", { invoice_id: "inv-1" });
+    const replay = await retry.client.callTool("send_remittance_email", { invoice_id: "inv-1", idempotency_key: idem() });
     expect(replay.ok).toBe(false);
     expect(replay.refusal_reason).toBe("duplicate_suppressed");
     expect(evidence.forMission(missionId).filter((e) => e.kind === "execution")).toHaveLength(1);

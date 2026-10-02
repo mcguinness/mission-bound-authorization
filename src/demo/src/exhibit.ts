@@ -9,6 +9,7 @@
  * request and response below is the real value on the wire. `pnpm exhibit`.
  */
 
+import { randomUUID } from "node:crypto";
 import { createExpansion, DEFERRED_GRANT_TYPE, successorWidensOnly, validateMissionIntent } from "@mission/authorization-server";
 import { buildScopeStatement, EgressGate, type MissionState, scopeDigest } from "@mission/agent";
 import {
@@ -31,6 +32,9 @@ import {
 import { label as humanName } from "./labels.js";
 import { clientAssertionSigner, dpopProofFor, tokenGrantRequest } from "./oauth-client.js";
 import { issueMissionToken } from "./approval-console.js";
+
+/** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
+const idem = (): string => `idem_${randomUUID()}`;
 
 /**
  * The AAM grant-type URNs are NOT re-exported from @mission/authorization-server
@@ -748,7 +752,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
   // this Mission never held remittance.send (step 14), so the PDP denies it
   // out_of_authority even if the reconciler tried it.
   hop("Reconciler", "Payments RS", `tools/call ${gloss("tool", "send_remittance_email")} (never in this mission's authority)`, "in-process MCP · O-33");
-  const noAuthorityCall = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, facts);
+  const noAuthorityCall = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1", idempotency_key: idem() }, facts);
   outcome({
     decision: "DENY",
     reason: gloss("reason", noAuthorityCall.denial_reason ?? noAuthorityCall.refusal_reason ?? ""),
@@ -825,7 +829,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     ok: humanOk,
   });
   hop("Reconciler", "Payments RS", `tools/call ${gloss("tool", "send_remittance_email")} (human-approved mission, base token)`, "in-process MCP · O-33");
-  const humanAttempt = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, humanFacts);
+  const humanAttempt = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1", idempotency_key: idem() }, humanFacts);
   note(
     "deployment policy still gates send_remittance_email behind a per-action approval (AROP) regardless of which Mission " +
       "holds it: the SAME JIT gate demonstrated fully in Act II (steps 7-8) applies here too. This section's claim is " +
@@ -879,7 +883,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
   );
   rail(stack);
   hop("Reconciler", "Payments RS", `tools/call ${gloss("tool", "send_remittance_email")} (contained capability, human-approved mission)`, "in-process MCP · O-33");
-  const containedCall = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, humanFacts);
+  const containedCall = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1", idempotency_key: idem() }, humanFacts);
   outcome({
     decision: "DENY",
     reason: gloss("reason", containedCall.denial_reason ?? containedCall.refusal_reason ?? ""),
@@ -920,7 +924,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
   });
   // The contained Mission never regains it mid-run.
   hop("Reconciler", "Payments RS", `tools/call ${gloss("tool", "send_remittance_email")} (contained mission, re-tried)`, "in-process MCP · O-33");
-  const stillContained = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, humanFacts);
+  const stillContained = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1", idempotency_key: idem() }, humanFacts);
   outcome({
     decision: "DENY",
     reason: gloss("reason", stillContained.denial_reason ?? stillContained.refusal_reason ?? ""),
@@ -1271,7 +1275,7 @@ async function main() {
     "Wire transfer: transaction-assurance tier (execute_wire_transfer)",
     "wire",
     "execute_wire_transfer",
-    { invoice_id: "inv-1" },
+    { invoice_id: "inv-1", idempotency_key: idem() },
     {
       task: "The agent executes a wire transfer for inv-1, a transaction-tier action within cap and vendor bounds.",
       expect: "the PDP permits; the transfer executes.",
@@ -1289,15 +1293,18 @@ async function main() {
   // 7.1 Base token, no transaction token: the RS gates the action and returns
   // the upstream transaction_authorization_required error plus a signed
   // transaction_challenge; the endpoint to redeem it at comes from AS metadata.
+  // @spec runtime#idempotency (#917): one intended execution, one key: the
+  // challenged attempt and its retry under the transaction token carry the same.
+  const remittanceArgs = { invoice_id: "inv-1", idempotency_key: idem() };
   hop("Agent", "Payments RS", "tools/call send_remittance_email (base token, no txn-token)", "in-process MCP · O-33");
   block("MCP tools/call — send_remittance_email (base token, no txn-token)", {
     tool: "send_remittance_email",
-    arguments: { invoice_id: "inv-1" },
+    arguments: remittanceArgs,
     authorization: "DPoP <real mission-bound access token>",
   });
   const challengeAttempt = await stack.server.callTransactionTool(
     "send_remittance_email",
-    { invoice_id: "inv-1" },
+    remittanceArgs,
     facts,
     undefined,
     // @spec txn-authorization#resource-challenge — the client signals that it
@@ -1450,7 +1457,7 @@ async function main() {
   hop("Agent", "Payments RS", "tools/call send_remittance_email (re-present txn-token)", "HTTP MCP · DPoP");
   block("MCP tools/call — send_remittance_email (re-present, carrying the txn-token)", {
     tool: "send_remittance_email",
-    arguments: { invoice_id: "inv-1" },
+    arguments: remittanceArgs,
     authorization: `DPoP ${truncTok(txnToken)} (the transaction token, presented as the request's ONLY credential)`,
     dpop: "<DPoP proof of the txn-token's cnf key: htu=/mcp, htm=POST, ath=hash(txn-token)>",
   });
@@ -1465,7 +1472,7 @@ async function main() {
     txnToken,
     issued.dpopKeys,
     "send_remittance_email",
-    { invoice_id: "inv-1" },
+    remittanceArgs,
   );
   if (captured) block("PDP decision (permit: token-derived approval matched parameter_digest)", captured.decision);
   outcome({
@@ -1663,7 +1670,7 @@ async function main() {
     "both are denied by design (over the 500 cap; vendor not in the mission's allowlist).",
   );
   hop("Agent", "Payments RS", "tools/call execute_wire_transfer (inv-2, over-cap)", "in-process MCP · O-33");
-  const over = await stack.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-2" }, facts);
+  const over = await stack.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-2", idempotency_key: idem() }, facts);
   hop("Payments RS (PEP)", "PDP", "evaluate", "in-process · D28");
   hop("PDP", "OpenFGA", "check", "HTTP https://localhost:8080");
   if (captured) block("PDP decision (over-cap $900)", captured.decision);
@@ -1674,7 +1681,7 @@ async function main() {
     ok: !over.ok && over.denial_reason === "parameter_violation",
   });
   hop("Agent", "Payments RS", "tools/call execute_wire_transfer (inv-3, globex)", "in-process MCP · O-33");
-  const globex = await stack.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-3" }, facts);
+  const globex = await stack.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-3", idempotency_key: idem() }, facts);
   hop("Payments RS (PEP)", "PDP", "evaluate", "in-process · D28");
   hop("PDP", "OpenFGA", "check", "HTTP https://localhost:8080");
   if (captured) block("PDP decision (globex vendor)", captured.decision);
@@ -1778,7 +1785,7 @@ async function main() {
   httpRes(containRes.status, await containRes.json());
   rail(stack);
   hop("Agent", "Payments RS", "tools/call send_remittance_email (contained capability)", "in-process MCP · O-33");
-  const containedCall = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, facts);
+  const containedCall = await stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1", idempotency_key: idem() }, facts);
   if (captured) block("PDP decision (contained capability)", captured.decision);
   outcome({
     decision: "DENY",
