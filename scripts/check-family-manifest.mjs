@@ -102,6 +102,15 @@
 //                                Conformance-titled floor, and examples/vectors or a recorded,
 //                                non-empty waiver reason (see
 //                                scripts/generate-drafts-index.mjs's validateCandidateGate())
+//   (aa) title drift          - a draft's front-matter `title:` != manifest `title`, or an
+//                                in-family reference entry (I-D.<slug>, no revision suffix)
+//                                in any draft's front matter has no `title:` or one that
+//                                differs from the cited draft's manifest `title`
+//   (ab) wire names          - CONTRIBUTING's Wire Names Convention: a name a draft declares in
+//                                its IANA Considerations into a registry the family does not
+//                                create does not contain `mission`, unless it is listed in
+//                                GRANDFATHERED_WIRE_NAMES; or a grandfathered entry is no
+//                                longer declared (remove it)
 
 import fs from "node:fs";
 import path from "node:path";
@@ -179,6 +188,146 @@ export const HAND_TYPED_COUNT = /\b\d+-document\b|\b\d+\s+documents?\b/i;
 // hiding it (see the review's own P2 note).
 export const UNSTABLE_SELF_CLAIM = /\bthis (?:document|profile|specification|binding|draft)\b[^.]{0,80}\bis\s+(?:not\s+(?:yet\s+)?a\s+stable\s+interface|unstable|not\s+yet\s+stable|immature)\b/i;
 
+// Check (ab): CONTRIBUTING's Wire Names Convention. "New Mission-specific
+// names introduced into shared registries outside the family include
+// `mission`." The check reads declarations only (registration entries in
+// IANA Considerations), never prose or JSON members, and classifies a
+// registry as family-owned when any draft's IANA section creates or
+// establishes it. Existing definitions are grandfathered explicitly; a
+// grandfathered entry that is no longer declared is itself a finding, so
+// the list shrinks as names are migrated.
+// Keyed `slug|registry|name`, so an exemption covers one existing
+// registration and never the same name newly registered elsewhere.
+export const GRANDFATHERED_WIRE_NAMES = new Set([
+  // OAuth Parameters, ruled grandfathered in the wire-name audit (#911, F1):
+  "draft-mcguinness-oauth-mission-child-delegation|OAuth Parameters|parent",
+  "draft-mcguinness-oauth-mission-child-delegation|OAuth Parameters|child_actor",
+  "draft-mcguinness-oauth-mission-expansion|OAuth Parameters|predecessor",
+  "draft-mcguinness-oauth-mission-expansion|OAuth Parameters|creation_request_id",
+  "draft-mcguinness-oauth-mission-template|OAuth Parameters|dispatch_event_id",
+]);
+
+// `mission` as a distinct name component: bounded by a non-alphanumeric
+// separator or the name's ends, so `mission_widget`,
+// `invalid_mission_widget`, `mission-dispatch`, `Mission-Reference`, and
+// `.../mission/...` carry it and `permission` does not.
+export const MISSION_COMPONENT = /(?:^|[^a-z0-9])mission(?:[^a-z0-9]|$)/i;
+
+const WIRE_REGISTRY_QUOTE = /"([^"]+)"\s*(?:sub-)?[Rr]egistry/g;
+const WIRE_REGISTRY_CREATE = /(?:create|establish)\w*\s+(?:a\s+|the\s+|an\s+)?(?:new\s+)?"([^"]+)"\s*(?:sub-)?[Rr]egistry/gi;
+const WIRE_DECLARATIONS = [
+  /^\s*[-*]\s+(?:(?:Claim|Metadata|Parameter|Field|Member|Header Parameter|Capability)\s+)?[Nn]ame\s*:\s*`?([^`\s]+)`?/,
+  /^\s*[-*]\s+(?:Value|Error|Event Type|Token Type URI|URN|URI|Capability URN|Subtype name)\s*:\s*`?([^`\s]+)`?/,
+  /^\s*[-*]\s+`([^`]+)`\s*(?:\([^)]*\))?\s*(?::.*)?$/,
+];
+
+// The lines of a draft's top-level IANA Considerations section, with
+// fenced artwork marked so declarations are never read from examples.
+function ianaLines(text) {
+  const out = [];
+  let inIana = false;
+  let fence = false;
+  text.split("\n").forEach((l, i) => {
+    if (/^(~~~|```)/.test(l)) fence = !fence;
+    if (!fence && /^# /.test(l)) inIana = /IANA/.test(l);
+    if (!fence && /^--- back/.test(l)) inIana = false;
+    if (inIana) out.push({ line: i + 1, text: l, fence });
+  });
+  return out;
+}
+
+// drafts: [{ slug, text }]. Returns finding strings.
+export function validateWireNames(drafts, grandfathered = GRANDFATHERED_WIRE_NAMES) {
+  const familyRegistries = new Set();
+  for (const d of drafts) {
+    // Only real IANA prose creates a registry; creation text inside a
+    // fenced example must not exempt later declarations.
+    const joined = ianaLines(d.text).filter((x) => !x.fence).map((x) => x.text).join(" ").replace(/\s+/g, " ");
+    for (const m of joined.matchAll(WIRE_REGISTRY_CREATE)) familyRegistries.add(m[1].toLowerCase());
+  }
+  const declarations = [];
+  for (const d of drafts) {
+    let registry = null;
+    let registryLevel = null;
+    let para = [];
+    const flush = () => {
+      const t = para.map((x) => x.text).join(" ").replace(/\s+/g, " ");
+      const quoted = [...t.matchAll(WIRE_REGISTRY_QUOTE)];
+      if (quoted.length) registry = quoted[quoted.length - 1][1];
+      // A URN in prose is a declaration only where the sentence registers
+      // it ("This document registers `urn:...` in the ... registry"); a URN
+      // merely mentioned (an inherited type, the namespace) is not.
+      for (const m of t.matchAll(/\bregisters\s+`(urn:[^`\s]+)`/g)) declarations.push({ slug: d.slug, line: para[0].line, registry, name: m[1] });
+      para = [];
+    };
+    const lines = ianaLines(d.text);
+    for (let i = 0; i < lines.length; i++) {
+      const { line, text, fence } = lines[i];
+      if (fence) continue;
+      const heading = text.match(/^(#{2,})\s+(.*?)\s*(?:\{#.*\})?$/);
+      if (heading) {
+        flush();
+        const level = heading[1].length;
+        const title = heading[2];
+        // A registry heading sets the context; a sibling or shallower
+        // heading replaces it; an entry heading nested under a registry
+        // heading keeps the enclosing registry.
+        if (/\bRegist(?:ry|ration|rations)\b/i.test(title)) {
+          registry = title.replace(/\s+(?:Registration|Registrations|Registry)$/i, "");
+          registryLevel = level;
+        } else if (registryLevel === null || level <= registryLevel) {
+          registry = title;
+          registryLevel = level;
+        }
+        continue;
+      }
+      // Definition-list form: "URN:" / ": `urn:...`".
+      if (/^(?:URN|URI|Name|Value):\s*$/.test(text) && i + 1 < lines.length) {
+        const dd = lines[i + 1].text.match(/^:\s+`?([^`\s]+)`?/);
+        if (dd) {
+          flush();
+          declarations.push({ slug: d.slug, line: lines[i + 1].line, registry, name: dd[1] });
+          i++;
+          continue;
+        }
+      }
+      let name = null;
+      for (const re of WIRE_DECLARATIONS) {
+        const m = text.match(re);
+        if (m) {
+          name = m[1];
+          break;
+        }
+      }
+      if (name) {
+        flush();
+        declarations.push({ slug: d.slug, line, registry, name });
+        continue;
+      }
+      if (/^\s*$/.test(text)) {
+        flush();
+        continue;
+      }
+      if (/^\s*[-*]\s/.test(text) || /^\s+\S/.test(text)) continue;
+      para.push({ line, text });
+    }
+    flush();
+  }
+  const findings = [];
+  const keyOf = (x) => `${x.slug}|${x.registry ?? ""}|${x.name}`;
+  const declaredKeys = new Set(declarations.map(keyOf));
+  for (const x of declarations) {
+    if (x.registry && familyRegistries.has(x.registry.toLowerCase())) continue;
+    if (MISSION_COMPONENT.test(x.name)) continue;
+    if (grandfathered.has(keyOf(x))) continue;
+    findings.push(`${x.slug}.md:${x.line}: \`${x.name}\` is declared in ${x.registry ? `the "${x.registry}" registry` : "a registry"} outside the family without a \`mission\` name component (CONTRIBUTING, Wire Names Convention); prefix it, or grandfather "${keyOf(x)}" in GRANDFATHERED_WIRE_NAMES with a ruling`);
+  }
+  for (const key of grandfathered) {
+    if (!declaredKeys.has(key)) findings.push(`GRANDFATHERED_WIRE_NAMES lists "${key}", which no draft declares in that registry any more; remove the entry`);
+  }
+  return findings;
+}
+
 const errors = [];
 const fail = (check, msg) => errors.push(`[${check}] ${msg}`);
 
@@ -206,6 +355,37 @@ function parseFrontMatterCategory(text) {
   if (!m) return null;
   const km = m[1].match(/^category:\s*(.*)$/m);
   return km ? km[1].trim() : null;
+}
+
+function unquoteYaml(v) {
+  return v.length >= 2 && v[0] === v[v.length - 1] && (v[0] === '"' || v[0] === "'") ? v.slice(1, -1) : v;
+}
+
+// The front matter's own `title:` value, one layer of matching YAML quotes
+// removed; null when the front matter has no title line.
+export function parseFrontMatterTitle(text) {
+  const m = text.match(/^---\n([\s\S]*?)\n---/);
+  if (!m) return null;
+  const km = m[1].match(/^title:\s*(.*?)\s*$/m);
+  return km ? unquoteYaml(km[1]) : null;
+}
+
+// Every in-family reference entry in a draft's front matter, with the title
+// it renders (null when the entry has none). A key pinned to a numbered
+// revision (I-D.draft-mcguinness-x-03) is not a manifest slug, so a
+// deliberate citation of a historical version keeps that version's title.
+export function parseFamilyRefTitles(text, familySlugs) {
+  const fmEnd = text.indexOf("\n--- abstract");
+  const head = fmEnd > 0 ? text.slice(0, fmEnd) : text.slice(0, 8000);
+  const out = [];
+  const re = /^  I-D\.(draft-mcguinness-[a-z0-9-]+):[ \t]*\r?\n((?:    .*\r?\n|[ \t]*\r?\n)*)/gm;
+  let m;
+  while ((m = re.exec(head))) {
+    if (!familySlugs.has(m[1])) continue;
+    const tm = m[2].match(/^    title:\s*(.*?)\s*$/m);
+    out.push({ slug: m[1], title: tm ? unquoteYaml(tm[1]) : null });
+  }
+  return out;
 }
 
 // The in-family references a draft's own front matter declares, split by
@@ -378,6 +558,26 @@ function main() {
     const actual = parseFrontMatterCategory(text);
     if (actual !== d.category) {
       fail("category", `${d.file}: front-matter category is "${actual}", manifest says "${d.category}"`);
+    }
+  }
+
+  // (aa) Title drift: the manifest's `title` is the one name the family uses
+  // for a draft. The draft's own front matter and every in-family reference
+  // entry citing it must carry that exact title, or a References section
+  // renders a name the family has retired.
+  const titleBySlug = new Map(drafts.map((d) => [d.slug, d.title]));
+  for (const d of drafts) {
+    if (!onDiskSet.has(d.file)) continue;
+    const text = readFile(path.join(ROOT, d.file), d.file);
+    const actual = parseFrontMatterTitle(text);
+    if (actual !== d.title) {
+      fail("title", `${d.file}: front-matter title is ${JSON.stringify(actual)}, manifest says ${JSON.stringify(d.title)}`);
+    }
+    for (const ref of parseFamilyRefTitles(text, manifestSlugs)) {
+      const want = titleBySlug.get(ref.slug);
+      if (ref.title !== want) {
+        fail("title", `${d.file}: reference I-D.${ref.slug} has title ${JSON.stringify(ref.title)}, manifest says ${JSON.stringify(want)}`);
+      }
     }
   }
 
@@ -1046,6 +1246,11 @@ function main() {
   // assurance-level/reference-stack axis as generated content, not leave it
   // absent). Same shape as (l) and (u).
   for (const e of validateReferenceStacks(ROOT)) fail("catalog-stacks", e);
+
+  // (ab) Wire names: CONTRIBUTING's Wire Names Convention, checked on IANA
+  // declarations only, with existing names grandfathered explicitly.
+  const wireDrafts = onDisk.map((f) => ({ slug: f.replace(/\.md$/, ""), text: fs.readFileSync(path.join(ROOT, f), "utf8") }));
+  for (const e of validateWireNames(wireDrafts)) fail("wire-names", e);
 
   if (errors.length > 0) {
     console.error(`family-manifest check FAILED with ${errors.length} finding(s):

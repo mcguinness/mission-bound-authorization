@@ -267,7 +267,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-oauth-mission-work-products:
-    title: "Mission Work Products"
+    title: "Mission Work Products for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-work-products.html
     author:
       -
@@ -283,7 +283,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-oauth-mission-continuation:
-    title: "Mission Continuation: Authorization Continuity for Mission-Bound Authorization"
+    title: "Mission Continuation for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html
     author:
       -
@@ -983,9 +983,9 @@ one, or carried through unchanged where it defines none
 
 `goal` and `task_bounds` then serve as rendering and bounding context
 over the proposed authority. Each proposed entry that carries a
-`resource` member MUST have it among the Intent's `target_resources`;
-the AS refuses a request violating this with the `invalid_request`
-error code.
+`resource` member MUST have it among the Intent's `target_resources`,
+compared as {{authorization-derivation}} states; the AS refuses a
+request violating this with the `invalid_request` error code.
 
 The carriage rules of {{submission-via-par}} apply to the proposal.
 The AS records the submitted array on the Mission exactly as
@@ -1145,9 +1145,17 @@ entries depend on whether an authority proposal was submitted:
   Template profile ({{I-D.draft-mcguinness-oauth-mission-template}}),
   not this mode.
 
-In both modes the AS bounds every derived entry by the Mission
-Intent: each derived entry that carries a `resource` member MUST
-have it among the Intent's `target_resources` values.
+In both modes the AS bounds every Authority Set entry by the Mission
+Intent: each entry that carries a `resource` member MUST have it
+among the Intent's `target_resources` values, by exact string
+equality. This membership check applies to the Authority Set, and to
+a proposal at submission ({{authority-proposal}}). A later token
+issuance is bounded by the subset rule against the Authority Set
+({{subset}}), not by the target list again: a type whose subset
+relation admits a narrower `resource` (for
+`mission_resource_access`, a descendant of a `prefix` entry) can
+yield a token entry that `target_resources` does not name, and a
+candidate outside every Authority Set entry fails that rule.
 
 The Mission records the policy version in force as `policy_version`
 ({{mission-record}}), an opaque audit correlator; the policy itself
@@ -1284,6 +1292,12 @@ rule can provide. Where the comparison relation cannot decide (an
 unrecognized member, an incomparable value), the posture is
 conservative refusal, as each consuming rule of this document states.
 
+An entry equal to its reference entry, byte-identical under the
+canonical form of {{canonicalization}}, is a subset of it for every
+type. This is the one case the subset rule decides without the type's
+own relation, and it is how an AS that has not declared `narrowing`
+for a type establishes a subset ({{other-types}}).
+
 ## Authorization Details Types {#other-types}
 
 The Authority Set MAY include any AS-supported {{RFC9396}}
@@ -1298,15 +1312,10 @@ apparatus is type-agnostic toward every supported type:
 
 - an entry is committed by `authority_hash` and gated on Mission state
   the same way regardless of type;
-- narrowing and delegation use the subset semantics the type defines
-  ({{subset}}, {{delegation-constraints}}). A type whose subset and
-  delegation semantics the AS does not understand MUST NOT be
-  delegated, audience-projected to a Resource AS
-  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), or narrowed,
-  since the AS cannot prove that a transformed copy is still a subset
-  of what was approved. The AS MUST NOT issue such an entry to any
-  audience other than its original approved audience, or in any form
-  other than exactly as approved;
+- narrowing and delegation use the subset and delegation semantics
+  the type defines ({{subset}}, {{delegation-constraints}}), under
+  the transformation capabilities the AS declares for the type
+  (below);
 - evaluating the entry against a concrete request is the runtime
   layer's responsibility ({{runtime-boundary}}), not the AS's.
 
@@ -1324,6 +1333,22 @@ establishes none of the others:
 The AS MUST NOT narrow, delegate, or project to `scope` an entry of
 a type for which it has not declared the corresponding capability;
 on an undeclared capability the entry is carried as approved.
+Issuing an entry to an audience other than its original approved
+audience, including audience projection to a Resource AS
+({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), counts as
+narrowing and needs `narrowing`, not `projection`. Without
+`narrowing`, the AS MUST NOT issue an entry to any audience other
+than its original approved audience, or, except as `scope` under a
+declared `projection`, in any form other than exactly as approved,
+since it cannot prove that a transformed copy is still a subset of
+what was approved. A type that declares `delegation` without
+`narrowing` is delegable only unchanged: the AS MUST NOT include an
+entry of such a type in a delegated token unless it is equal
+({{subset}}) to an entry of the presented delegating token, it keeps
+that entry's approved audience, and the type's delegation policy
+permits the delegate ({{delegation-constraints}}). The reference is
+the presented token, not the Mission Authority Set, so equality never
+restores an entry, or any part of one, that the presented token omits.
 
 The AS declares the capabilities through these carriers, in order of
 preference:
@@ -2991,9 +3016,9 @@ A Resource Server:
    it prevents in {{downgrade-by-omission}}, and the metadata that
    advertises the requirement in {{protected-resource-metadata}}.
 
-A Resource Server can also impose stronger actor-chain requirements
-on a token that carries an `act` chain (for example, requiring and
-recording the chain); log the `mission` claim's `id` and the token
+A Resource Server can also require that a token carry an `act` chain
+and record it, while authorizing only the token's current actor
+({{Section 4.1 of RFC8693}}); log the `mission` claim's `id` and the token
 `jti` with each served request, so its access logs join to Mission
 evidence; or, where the AS offers it, introspect the token
 ({{introspection}}) to observe Mission state per request.
@@ -3005,8 +3030,9 @@ without processing the `act` chain. A Mission-unaware {{RFC9068}}
 Resource Server reads `client_id` as the immediate client, which is
 accurate for that single token, but it cannot see the delegation
 lineage in the `act` chain or look up the originally-approved agent
-in the Mission Record, so it cannot apply actor-chain policy or join
-a delegate's action to the Mission's approval in its audit records.
+in the Mission Record, so it cannot recognize the current actor as a
+delegate, record the delegation lineage, or join a delegate's action
+to the Mission's approval in its audit records.
 
 A resource that requires Mission-bound tokens can advertise that
 through the `mission_bound_authorization_required` protected resource
@@ -3465,10 +3491,12 @@ expansion successor ({{I-D.draft-mcguinness-oauth-mission-expansion}}),
 begins its own delegation basis and chain, and no organizational,
 network, or deployment boundary by itself restarts or extends a
 chain. The chain is attribution, not authority: an `act` entry names
-who acted, for audit and as policy input to the eligibility matching
-of {{delegation-constraints}}; an asserted actor identity grants
-nothing; and the `authorization_details` subset relations
-({{subset}}), not the chain, show that authority narrowed.
+who acted, for audit; the input to the eligibility matching of
+{{delegation-constraints}} is the delegate the AS authenticates and
+asserts at the exchange, not an entry read from the chain; an
+asserted actor identity grants nothing; and the
+`authorization_details` subset relations ({{subset}}), not the chain,
+show that authority narrowed.
 
 ## Instance Context in Delegated Tokens {#delegated-instance-context}
 
@@ -3566,14 +3594,32 @@ they go, including across a cross-domain projection
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
 
 **Delegation depth.** The delegation depth of a token is the number
-of actors in its `act` chain (the nesting depth of the `act` claim),
-counted from the approved agent: the agent's own non-delegated token
-is depth 0, the first delegate is depth 1, and each further delegate
-adds 1. The depth checked against `max_depth` is that of the token
+of delegations between the approved agent and the token's current
+actor: the agent's own non-delegated token is depth 0, the first
+delegate is depth 1, and each further delegate adds 1. The depth
+checked against `max_depth` is that of the token
 being issued, computed after appending the new outermost actor, not
 the depth of the delegating token. A credential projected across a
 trust domain carries no `act` chain and enters the target domain at
 depth 0 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
+
+**Depth accounting.** The AS MUST establish delegation depth from
+accounting it maintains for the tokens it issues under the Mission
+and associates with the credential it validates (for example, recorded
+at issuance against the token), not from the nesting of a presented
+`act` claim. The `act` chain is attribution ({{delegation}}): it
+renders the accounted chain and is not the source of the count. Over
+the exchanges this document defines the accounting is complete: each
+delegated exchange adds exactly one delegate, a self-exchange
+({{self-exchange}}) adds none, and a cross-domain projection is the
+one defined reset. A profile that issues Mission-bound tokens by
+another path specifies how it preserves or reconstructs this
+accounting and any reset it defines. Where the AS cannot establish
+the depth of the token being issued, no entry's delegation policy can
+be evaluated at that depth, so every entry narrows out under the
+per-entry rule below and the exchange is refused as an empty result.
+A Resource Server bases no authorization decision on a prior actor
+({{Section 4.1 of RFC8693}}).
 
 **Per-entry enforcement.** When the AS issues a token to a delegate
 (the actor that becomes the outermost `act`) at delegation depth
@@ -5611,7 +5657,7 @@ resolve before interoperating.
 
 # OAuth Binding Mapping Assessment {#oauth-statement}
 
-<!-- assessed-substrate-digest: 7195da680769b440 -->
+<!-- assessed-substrate-digest: dbcbb50fd1a96f25 -->
 
 This appendix is informative. It is this document's Mapping
 Assessment of itself against the kernel and capabilities of the
@@ -5746,6 +5792,20 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Separated exact `target_resources` membership, checked for the
+  Authority Set and for a proposal at submission, from later token
+  narrowing under the subset rule. Made the per-capability
+  transformation rule the single home: audience projection to a
+  Resource AS needs `narrowing`, and without it a delegated token
+  includes an entry only exactly as approved; a type that declares
+  `delegation` without `narrowing` is delegable only as an entry
+  equal to one in the presented delegating token, under a new
+  equality case of the subset rule. Delegation depth comes from
+  accounting the AS maintains for its own issuance, not from `act`
+  nesting, a depth the AS cannot establish narrows every entry out,
+  and a Resource Server authorizes only the current actor while it
+  may record the chain. These add requirements.
 
 - Stated that approval cannot establish comprehension, with
   non-normative rendering practices for large Authority Sets

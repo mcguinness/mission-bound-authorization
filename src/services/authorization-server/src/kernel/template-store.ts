@@ -24,6 +24,19 @@ import { openStore, UniqueViolationError, withTransaction, type Database } from 
 import { parseAuthoritySource } from "./authority-source.js";
 import type { AuthorityEntry, AuthoritySource } from "./types.js";
 
+/**
+ * @spec mission-template#the-mission-template — `allowed_recipients`: the
+ * Subjects and Agents an instance may be created for. The two lists are
+ * independent: any listed Agent may serve any listed Subject, subject to the
+ * other Dispatch checks; restricted pairings use separate templates.
+ */
+export interface TemplateRecipients {
+  /** Subjects, each `{iss, sub}`; an instance's established Subject must equal one in both. */
+  subjects: Array<{ iss: string; sub: string }>;
+  /** Agents, each a `client_id`; the instance's `client_id` must be one. */
+  agents: string[];
+}
+
 const SCHEMA = `
 CREATE TABLE templates (
   id TEXT PRIMARY KEY,
@@ -82,8 +95,8 @@ export interface MissionTemplate {
   dispatch_policy: string;
   /** Actors permitted to dispatch instances from this template. */
   dispatchers: string[];
-  /** Actors an instance may be dispatched TO; the recipient becomes `client_id`. */
-  recipients: string[];
+  /** `allowed_recipients`: Subjects and Agents (an Agent becomes the instance `client_id`). */
+  recipients: TemplateRecipients;
   /** Per-instance lifetime cap (seconds); clamps each instance's `expires_at`. */
   per_instance_lifetime_s: number;
   /** Max concurrently non-terminal instances dispatched from this template. */
@@ -108,7 +121,7 @@ export interface TemplateCreate {
   ceiling: AuthorityEntry[];
   dispatch_policy: string;
   dispatchers: string[];
-  recipients: string[];
+  recipients: TemplateRecipients;
   per_instance_lifetime_s: number;
   max_active: number;
   rate_per_min: number;
@@ -153,7 +166,7 @@ function rowToTemplate(row: TemplateRow): MissionTemplate {
     ceiling: JSON.parse(row.ceiling_json) as AuthorityEntry[],
     dispatch_policy: row.dispatch_policy,
     dispatchers: JSON.parse(row.dispatchers_json) as string[],
-    recipients: JSON.parse(row.recipients_json) as string[],
+    recipients: JSON.parse(row.recipients_json) as TemplateRecipients,
     per_instance_lifetime_s: row.per_instance_lifetime_s,
     max_active: row.max_active,
     rate_per_min: row.rate_per_min,

@@ -22,7 +22,7 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 import { roleFor, maturityDisplay, CORE_SLUG, BINDING_SLUGS, validateCandidateGate, loadConformanceCounts, validateNoStatusSections } from "./generate-drafts-index.mjs";
-import { HAND_TYPED_COUNT, UNSTABLE_SELF_CLAIM } from "./check-family-manifest.mjs";
+import { HAND_TYPED_COUNT, UNSTABLE_SELF_CLAIM, parseFrontMatterTitle, parseFamilyRefTitles, validateWireNames, GRANDFATHERED_WIRE_NAMES, MISSION_COMPONENT } from "./check-family-manifest.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
@@ -237,6 +237,69 @@ test("HAND_TYPED_COUNT: fires on a spaced document count", () => {
 
 test("HAND_TYPED_COUNT: does NOT fire on a spelled-out count", () => {
   assert.doesNotMatch("the kernel contract first, then its five peer bindings", HAND_TYPED_COUNT);
+});
+
+// ---------------------------------------------------------------------
+// parseFrontMatterTitle() / parseFamilyRefTitles() (check (aa)'s parsers)
+// ---------------------------------------------------------------------
+
+const TITLE_FIXTURE = [
+  "---",
+  'title: "Mission Example for OAuth 2.0"',
+  'abbrev: "OAuth Mission Example"',
+  "normative:",
+  "  I-D.draft-mcguinness-oauth-mission:",
+  '    title: "Mission-Bound Authorization for OAuth 2.0"',
+  "    target: https://example.com/oauth-mission",
+  "informative:",
+  "  I-D.draft-mcguinness-mission-audit:",
+  "    title: Mission Audit",
+  "",
+  "  I-D.draft-mcguinness-mission-audit-03:",
+  '    title: "Mission Transparency"',
+  "  I-D.draft-mcguinness-oauth-actor-profile:",
+  '    title: "Not a family draft"',
+  "  I-D.draft-mcguinness-mission-harness:",
+  "    target: https://example.com/harness",
+  "--- abstract",
+  "",
+  "Body.",
+  "",
+].join("\n");
+const TITLE_SLUGS = new Set(["draft-mcguinness-oauth-mission", "draft-mcguinness-mission-audit", "draft-mcguinness-mission-harness"]);
+
+test("parseFrontMatterTitle: reads the title with its YAML quotes removed", () => {
+  assert.equal(parseFrontMatterTitle(TITLE_FIXTURE), "Mission Example for OAuth 2.0");
+  assert.equal(parseFrontMatterTitle("---\ntitle: Bare Title\n---\n"), "Bare Title");
+  assert.equal(parseFrontMatterTitle("---\nabbrev: x\n---\n"), null);
+});
+
+test("parseFamilyRefTitles: family entries with their titles, quoted or bare, null when absent", () => {
+  assert.deepEqual(parseFamilyRefTitles(TITLE_FIXTURE, TITLE_SLUGS), [
+    { slug: "draft-mcguinness-oauth-mission", title: "Mission-Bound Authorization for OAuth 2.0" },
+    { slug: "draft-mcguinness-mission-audit", title: "Mission Audit" },
+    { slug: "draft-mcguinness-mission-harness", title: null },
+  ]);
+});
+
+test("parseFamilyRefTitles: a revision-pinned key and a non-family I-D are not compared", () => {
+  const slugs = parseFamilyRefTitles(TITLE_FIXTURE, TITLE_SLUGS).map((r) => r.slug);
+  assert.ok(!slugs.includes("draft-mcguinness-mission-audit-03"));
+  assert.ok(!slugs.includes("draft-mcguinness-oauth-actor-profile"));
+});
+
+test("title drift: the real repository's drafts and family references carry manifest titles", () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "family-manifest.json"), "utf8"));
+  const titleBySlug = new Map(manifest.drafts.map((d) => [d.slug, d.title]));
+  const drift = [];
+  for (const d of manifest.drafts) {
+    const text = fs.readFileSync(path.join(REPO_ROOT, d.file), "utf8");
+    if (parseFrontMatterTitle(text) !== d.title) drift.push(`${d.file}: front matter`);
+    for (const ref of parseFamilyRefTitles(text, new Set(titleBySlug.keys()))) {
+      if (ref.title !== titleBySlug.get(ref.slug)) drift.push(`${d.file}: ${ref.slug}`);
+    }
+  }
+  assert.deepEqual(drift, []);
 });
 
 // ---------------------------------------------------------------------
@@ -707,4 +770,93 @@ test("candidate-gate: the real repository's candidate-gate.json is currently gat
 test("loadConformanceCounts: the real repository's ledger parses and is non-empty", () => {
   const counts = loadConformanceCounts(REPO_ROOT);
   assert.ok(counts.size > 0);
+});
+
+// ---------------------------------------------------------------------
+// Check (ab): wire names in registries outside the family carry `mission`
+// (CONTRIBUTING, Wire Names Convention). String fixtures: one draft per
+// case, an IANA Considerations section, and an empty grandfather list
+// unless the case is about grandfathering.
+// ---------------------------------------------------------------------
+
+const wireDraft = (iana, slug = "draft-fixture") => ({ slug, text: `# Intro\n\nBody.\n\n# IANA Considerations {#iana}\n\n${iana}\n--- back\n` });
+const NONE = new Set();
+
+test("wire names: an unprefixed name declared in a shared registry fails", () => {
+  const d = wireDraft('This document registers the following in the "OAuth Parameters" registry:\n\n- Name: `widget_id`\n- Parameter Usage Location: token request\n');
+  const f = validateWireNames([d], NONE);
+  assert.equal(f.length, 1);
+  assert.match(f[0], /`widget_id`.*"OAuth Parameters"/);
+});
+
+test("wire names: a mission-carrying name in a shared registry passes", () => {
+  const d = wireDraft('This document registers the following in the "OAuth Parameters" registry:\n\n- Name: `mission_widget_id`\n\n## OAuth Extensions Error Registration\n\n- Name: `invalid_mission_widget`\n');
+  assert.deepEqual(validateWireNames([d], NONE), []);
+});
+
+test("wire names: a registry some family draft creates is family-owned, from any draft", () => {
+  const creator = wireDraft('IANA is requested to create the "Mission Widget Kinds" registry.\n\n| Value | Semantics |\n|---|---|\n| `plain` | A plain widget. |\n', "draft-creator");
+  const user = wireDraft('This document registers the following in the "Mission Widget Kinds" registry:\n\n- Value: `fancy`\n', "draft-user");
+  assert.deepEqual(validateWireNames([creator, user], NONE), []);
+});
+
+test("wire names: a grandfathered name passes, and a stale grandfather entry is a finding", () => {
+  const d = wireDraft('This document registers the following in the "OAuth Parameters" registry:\n\n- `legacy_param` (token request)\n');
+  assert.deepEqual(validateWireNames([d], new Set(["draft-fixture|OAuth Parameters|legacy_param"])), []);
+  const stale = validateWireNames([d], new Set(["draft-fixture|OAuth Parameters|legacy_param", "draft-fixture|OAuth Parameters|renamed_away"]));
+  assert.equal(stale.length, 1);
+  assert.match(stale[0], /renamed_away.*remove the entry/);
+});
+
+test("wire names (regression): `mission` must be a distinct component, so `permission` fails", () => {
+  const d = wireDraft('This document registers the following in the "OAuth Parameters" registry:\n\n- Name: `permission`\n- Name: `mission_widget`\n- Name: `invalid_mission_widget`\n\n## OAuth URI Registration\n\n- URN: `urn:ietf:params:oauth:grant-type:mission-dispatch`\n');
+  const f = validateWireNames([d], NONE);
+  assert.equal(f.length, 1);
+  assert.match(f[0], /`permission`/);
+  assert.ok(MISSION_COMPONENT.test("Mission-Reference") && MISSION_COMPONENT.test("https://example.com/mission/x") && !MISSION_COMPONENT.test("missions_x"));
+});
+
+test("wire names (regression): a grandfathered exemption covers its registry only, not the same name registered elsewhere", () => {
+  const d = wireDraft('This document registers the following in the "OAuth Parameters" registry:\n\n- `legacy_param` (token request)\n\n## JSON Web Token Claims Registration\n\n- Claim Name: `legacy_param`\n');
+  const f = validateWireNames([d], new Set(["draft-fixture|OAuth Parameters|legacy_param"]));
+  assert.equal(f.length, 1);
+  assert.match(f[0], /`legacy_param`.*"JSON Web Token Claims"/);
+});
+
+test("wire names (regression): an entry heading nested under a family registry heading keeps that registry", () => {
+  const d = wireDraft('## Mission Widget Kinds Registry\n\nIANA is requested to create the "Mission Widget Kinds" registry.\n\n### The plain kind\n\n- Value: `plain`\n');
+  assert.deepEqual(validateWireNames([d], NONE), []);
+});
+
+test("wire names (regression): registry-creation text inside a fenced example does not exempt real declarations", () => {
+  const d = wireDraft('~~~\nIANA is requested to create the "Widget Kinds" registry.\n~~~\n\nThis document registers the following in the "Widget Kinds" registry:\n\n- Value: `plain`\n');
+  const f = validateWireNames([d], NONE);
+  assert.equal(f.length, 1);
+  assert.match(f[0], /`plain`.*"Widget Kinds"/);
+});
+
+test("wire names: a URN in prose counts only where the sentence registers it", () => {
+  const mentioned = wireDraft('Child creation uses `urn:ietf:params:oauth:grant-type:token-exchange` and no new grant type; the "OAuth URI" registry is unchanged.\n');
+  assert.deepEqual(validateWireNames([mentioned], NONE), []);
+  const registered = wireDraft('This document registers `urn:ietf:params:oauth:token-type:widget-chain` in the "OAuth URI" registry.\n');
+  const f = validateWireNames([registered], NONE);
+  assert.equal(f.length, 1);
+  assert.match(f[0], /widget-chain.*"OAuth URI"/);
+});
+
+test("wire names: a definition-list URN registration is read", () => {
+  const d = wireDraft('This document requests registration of the following value in the "OAuth URI" registry:\n\nURN:\n: `urn:ietf:params:oauth:grant-type:widget-dispatch`\n');
+  assert.equal(validateWireNames([d], NONE).length, 1);
+});
+
+test("wire names: names inside fenced examples and outside IANA Considerations are not declarations", () => {
+  const d = { slug: "draft-fixture", text: '# Protocol\n\n- `widget_id`: a member.\n\n# IANA Considerations\n\nIn the "OAuth Parameters" registry:\n\n~~~\n- Name: `example_only`\n~~~\n\n--- back\n' };
+  assert.deepEqual(validateWireNames([d], NONE), []);
+});
+
+test("wire names: the real repository is clean, and every grandfathered entry is still declared", () => {
+  const files = fs.readdirSync(REPO_ROOT).filter((f) => /^draft-.*\.md$/.test(f));
+  const drafts = files.map((f) => ({ slug: f.replace(/\.md$/, ""), text: fs.readFileSync(path.join(REPO_ROOT, f), "utf8") }));
+  assert.deepEqual(validateWireNames(drafts), []);
+  assert.equal(validateWireNames(drafts, NONE).length, GRANDFATHERED_WIRE_NAMES.size);
 });

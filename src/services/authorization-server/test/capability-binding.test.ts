@@ -565,7 +565,7 @@ describe("template dispatch inherits the ceiling's recorded bindings", () => {
       ceiling: CEILING,
       dispatch_policy: "capability-binding-test",
       dispatchers: ["orchestrator"],
-      recipients: ["worker"],
+      recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents: ["worker"] },
       per_instance_lifetime_s: 3600,
       max_active: 10,
       rate_per_min: 20,

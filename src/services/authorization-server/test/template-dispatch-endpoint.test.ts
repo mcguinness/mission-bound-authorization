@@ -20,6 +20,7 @@
 
 import { type Server } from "node:http";
 import {
+  aamReconciliationTemplate,
   CANONICAL_RESOURCE,
   DERIVATION_POLICY,
   demoReconciliationTemplate,
@@ -177,6 +178,13 @@ describe("Mission Template admin plane (@spec mission-template)", () => {
     expect(body.template_hash).toMatch(/^sha-256:/);
   });
 
+  it("accepts the shared AAM reconciliation template body, the terminal exhibit's payload (@spec mission-template#the-mission-template)", async () => {
+    const res = await createTemplateAdmin(aamReconciliationTemplate(ISSUER, `aam-shared-${seq++}`));
+    const body = (await res.json()) as { template_id?: string };
+    expect(res.status, JSON.stringify(body)).toBe(201);
+    expect(body.template_id).toMatch(/^tmpl_/);
+  });
+
   it("rejects an absent or wrong x-service-token with 401", async () => {
     const absent = await createTemplateAdmin(readOnlyTemplateBody(), null);
     expect(absent.status).toBe(401);
@@ -322,7 +330,7 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
       ceiling: DERIVATION_POLICY.ceiling,
       dispatch_policy: "wide-reconciliation",
       dispatchers: ["ap-agent"],
-      recipients: ["subagent-invoice-extractor"],
+      recipients: { subjects: [{ iss: ISSUER, sub: "bob" }], agents: ["subagent-invoice-extractor"] },
       per_instance_lifetime_s: 900,
       max_active: 5,
       rate_per_min: 30,
@@ -351,10 +359,30 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
       dispatchers: ["not-ap-agent"],
     });
     const { template_id } = (await created.json()) as { template_id: string };
+    const missionsBefore = as.kernel.allMissions().length;
     const res = await dispatch({ templateId: template_id, intent: readOnlyIntent(), dispatchEventId: "evt-dispatcher" });
     const body = (await res.json()) as { mission_denial_reason?: string };
     expect(res.status, JSON.stringify(body)).toBe(403);
     expect(body.mission_denial_reason).toBe("dispatcher_not_allowed");
+    // A refused Dispatch commits nothing: no Mission and no dispatch event.
+    expect(as.kernel.allMissions().length).toBe(missionsBefore);
+    expect(as.templateStore.dispatchesSince(template_id, "1970-01-01T00:00:00.000Z")).toBe(0);
+  });
+
+  it("recipient_not_allowed: the established Subject (the template's approver) is not in recipients.subjects (@spec mission-template#the-mission-template)", async () => {
+    const created = await createTemplateAdmin({
+      ...readOnlyTemplateBody(),
+      recipients: { subjects: [{ iss: ISSUER, sub: "carol" }], agents: ["subagent-invoice-extractor"] },
+    });
+    const { template_id } = (await created.json()) as { template_id: string };
+    const missionsBefore = as.kernel.allMissions().length;
+    const res = await dispatch({ templateId: template_id, intent: readOnlyIntent(), dispatchEventId: "evt-subject" });
+    const body = (await res.json()) as { mission_denial_reason?: string };
+    expect(res.status, JSON.stringify(body)).toBe(403);
+    expect(body.mission_denial_reason).toBe("recipient_not_allowed");
+    // A refused Dispatch commits nothing: no Mission and no dispatch event.
+    expect(as.kernel.allMissions().length).toBe(missionsBefore);
+    expect(as.templateStore.dispatchesSince(template_id, "1970-01-01T00:00:00.000Z")).toBe(0);
   });
 
   it("lifecycle revoke: a revoked template refuses a subsequent dispatch with template_not_active", async () => {

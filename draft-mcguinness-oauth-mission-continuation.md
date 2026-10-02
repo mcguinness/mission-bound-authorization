@@ -1,9 +1,10 @@
 ---
-title: "Mission Continuation: Authorization Continuity for Mission-Bound Authorization"
-abbrev: "Mission Continuation"
+title: "Mission Continuation for OAuth 2.0"
+abbrev: "OAuth Mission Continuation"
 docname: draft-mcguinness-oauth-mission-continuation-latest
 category: exp
 submissiontype: IETF
+workgroup: Web Authorization Protocol
 consensus: true
 v: 3
 keyword:
@@ -78,7 +79,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-mission-uma:
-    title: "Mission-Bound Authorization: UMA 2.0 Binding"
+    title: "Mission-Bound Authorization for User-Managed Access (UMA) 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-uma.html
     author:
       -
@@ -86,7 +87,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-mission-harness:
-    title: "Mission Harness"
+    title: "Mission-Aware Agent Harnesses"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html
     author:
       -
@@ -94,7 +95,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-mission-runtime:
-    title: "Mission Runtime Enforcement"
+    title: "Mission-Bound Runtime Enforcement"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
     author:
       -
@@ -102,7 +103,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-mission-authzen:
-    title: "Mission AuthZEN Binding"
+    title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
     author:
       -
@@ -379,6 +380,23 @@ The assertion carries no user subject: the IdP resolves the subject for
 each target from the hop, so continuation preserves the Mission's
 subject rather than projecting it; the actor is rebound per hop.
 
+Mission delegation depth at this exchange, the depth at which the
+issuance profile's per-entry delegation constraints apply
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Delegation
+Constraints"), is counted over the selected hop's ancestry as the IdP's
+hop records hold it, from the root to that hop, followed by the current
+authenticated actor. Only consecutive entries with equal `(iss, sub)`
+merge. The root entry is the Mission's approved client at depth 0, and
+each remaining entry adds 1, so the chain A, B, B has depth 1 and A, B,
+A has depth 2. Sibling branches, the presented assertion, and any
+narrowing of what the onward `act` discloses do not change the depth
+({{Section 5.5.5 of I-D.draft-mcguinness-oauth-id-continuation-assertion}}).
+At depth 0 the approved agent continues for itself and no delegation
+narrowing applies. This transport defines no reset: continuing to
+another Resource Authorization Server, or returning to an earlier
+actor, never restarts the count. Where the IdP cannot read a hop's
+complete ancestry, it issues nothing.
+
 ## Async Delegation Transport {#transport-async}
 
 Async delegation ({{I-D.draft-zhu-oauth-async-delegation}}) is the
@@ -578,3 +596,8 @@ constrains their use and introduces none of its own.
   the issuance profile's `invalid_grant`, as the issuance profile
   permits for a Token Exchange profile that assigns its own code. The
   `mission_error` diagnostic requirements are unchanged (#921).
+- The Identity Continuation Transport states how Mission delegation
+  depth is counted there: over the hop's IdP-held ancestry plus the
+  current actor, merging only consecutive equal actors, from the
+  approved client at depth 0, with no reset, and with nothing issued
+  when the ancestry is incomplete (#960).
