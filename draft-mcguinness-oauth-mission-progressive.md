@@ -519,22 +519,20 @@ The cadence is a recency ceiling on the `ceiling_drawdown` approval
 basis's `approved_at`, the kind of declared maximum standing-consent
 age the issuance profile permits a deployment to declare
 ({{I-D.draft-mcguinness-oauth-mission}}); this profile makes
-publishing one mandatory rather than optional. It is recorded and
-reproducible, not anchored: like the drawdown policy body it bounds,
-it is not folded into `ceiling_hash` ({{progressive-authorization}}),
-so a change to the published cadence is issuer-record trust, not
-detectable from the Mission's own anchors. To stay reproducible in
-audit without a new schema member, the cadence is part of the
-drawdown policy's own versioned content: a deployment's drawdown
+publishing one mandatory rather than optional. The cadence is part of
+the drawdown policy's own versioned content: a deployment's drawdown
 policy document MUST state the cadence effective under a given
 version, identified by the `policy_id` and `policy_version` the
-`ceiling_drawdown` activation already carries
-({{progressive-authorization}}), per the issuance profile's own rule
-that a mutable, unversioned value MUST NOT serve this role. An
-auditor recovers the cadence that governed a given drawdown by
-resolving the retained drawdown policy document at the
-`policy_version` that drawdown's `approval_basis` already records,
-exactly as it resolves the drawdown logic itself.
+`ceiling_drawdown` activation carries ({{progressive-authorization}}),
+per the issuance profile's own rule that a mutable, unversioned value
+MUST NOT serve this role. Because `ceiling_hash` commits that policy's
+`digest`, the cadence is anchored with it: changing the cadence
+changes the policy snapshot, so a drawdown under the changed policy
+no longer matches the committed `digest` and falls back to a fresh
+human approval until a review approval re-consents the ceiling under
+the new policy. An auditor recovers the cadence that governed a given
+drawdown from the retained snapshot that `digest` names, exactly as
+it resolves the drawdown logic itself.
 
 The review approval is an ordinary expansion approval that
 re-consents, or narrows, the ceiling. Its consent disclosure MUST
