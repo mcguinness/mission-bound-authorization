@@ -1189,9 +1189,10 @@ The `goal`, `task_bounds`, and `success_criteria` members are
 human-readable disclosure and audit context. The AS MUST derive the
 same Authority Set, under the same policy, for two submissions that
 differ only in `goal`, `goal_lang`, `task_bounds`, or
-`success_criteria`, and MUST NOT gate issuance on those members;
-translating a user's words into structure is the shaper's job,
-before admission and outside the trust boundary
+`success_criteria`, and MUST NOT gate issuance on those members,
+whether in derivation, in an adjudicating policy, or through a model
+input to either; translating a user's words into structure is the
+shaper's job, before admission and outside the trust boundary
 ({{I-D.draft-mcguinness-mission-shaping}}).
 
 A client-proposed constraint on an individual Authority Set entry
