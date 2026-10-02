@@ -159,17 +159,17 @@ its state.
 {::boilerplate bcp14-tagged}
 
 This document uses Person, Agent, Agent Provider (AP), Person Server
-(PS), Access Server (AS), Resource, Agent Token, Resource Token, Auth
-Token, Mission, mission blob, and mission log as defined by
-{{I-D.draft-hardt-oauth-aauth-protocol}}.
+(PS), Access Server (AS), Resource, Agent Token, Person Token,
+Resource Token, Auth Token, Mission, mission blob, and mission log as
+defined by {{I-D.draft-hardt-oauth-aauth-protocol}}.
 
 The following additional terms are used:
 
 Mission Reference:
 : The pair of the approving PS and `s256`, AAuth's mission identity
   (Section 8.2.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}).  The
-  approving PS is named by the `iss` of a person token, the `ps` claim
-  of a resource or auth token, or the PS a request is made to; the
+  approving PS is named by the `iss` of a Person Token, the `ps` claim
+  of a Resource Token or Auth Token, or the PS a request is made to; the
   mission blob carries no member naming it.  On the wire, the
   reference is the `mission_s256` claim or parameter.
 
@@ -817,18 +817,57 @@ are sensitive and follow {{logging}}.
 
 ## Revocation Attempts
 
-After termination, the PS SHOULD invoke each applicable AAuth
-`revocation_endpoint` with `(iss, jti)` for every unexpired Tracked Auth
-Token.  In PS-asserted access, this normally means the Resource.  In
-federated access, the PS SHOULD notify the Resource and MAY also notify
-the issuing AS as supported by the base AAuth protocol.  Retries MUST be
-bounded, authenticated, rate limited, and recorded.
+After termination, the PS SHOULD revoke every unexpired Tracked Auth
+Token, as Section 11.12.4 of {{I-D.draft-hardt-oauth-aauth-protocol}}
+recommends when a PS revokes a mission.  Each revocation is a signed
+`POST` of `{jti, exp}` to the recipient's `revocation_endpoint`, with
+`exp` taken from the PS's record of that token.  The PS signs as a
+server under the `jwks_uri` scheme, with its issuer as `id` and
+`aauth-person.json` as `dwk`, and the signature covers
+`content-digest` and `content-type` (Sections 11.3.2 and 11.12.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  The recipient takes the
+issuer from the signature, so the PS revokes only tokens it issued.
 
-A `200` response or natural token expiry closes the tracked residual for
-that token.  A timeout, unreachable endpoint, absent endpoint, or
-ambiguous result remains unconfirmed until expiry.  The PS MUST NOT
-report successful mission-wide revocation merely because it marked its
-local state or contacted an AS.
+In PS authorization (three-party), the PS revokes an Auth Token it
+issued at the Resource it was issued for.  In federated authorization
+(four-party), the AS issued the Auth Token, so the PS instead revokes
+the Person Token it presented to that AS, known from the issuance
+record that Section 7.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}
+requires, and the AS revokes the Auth Tokens it issued against that
+Person Token (Sections 11.12.2 and 11.12.4 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  Retries MUST be bounded,
+authenticated, rate limited, and recorded.  A repeated revocation is
+idempotent: the recipient records nothing new, re-attempts each
+downstream revocation that did not succeed, and reports the current
+outcome (Section 11.12.3 of {{I-D.draft-hardt-oauth-aauth-protocol}}).
+
+A revocation is confirmed, for `revocation_confirmed` and `complete`
+({{terminate}}), when the recipient answers `200` with no `downstream`
+entry carrying an `error`.  A `200` says the recipient recorded the
+revocation and finished its cascade, not that it held a record of the
+token: AAuth defines no not-found response (Section 11.12.3 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  Natural expiry also closes
+the tracked residual for a token.
+
+A `202` is pending: the PS polls the pending URL with a signed `GET`
+under the same identity, honoring `Retry-After`, until the terminal
+response (Section 11.12.3 of {{I-D.draft-hardt-oauth-aauth-protocol}}).
+Every other outcome leaves the token unconfirmed until a later attempt
+is confirmed or its `exp` passes:
+
+* a `downstream` entry with `revocation_unsupported` or
+  `revocation_unavailable` leaves the Auth Tokens at its `recipient`
+  honored; after `revocation_unavailable`, the PS can revoke again
+  later;
+* `rate_limited` (`429`) carries a `Retry-After` interval the PS waits
+  before retrying;
+* `unsupported_iss` (`403`) means the recipient does not accept
+  revocations from this PS and honors the token until its `exp`; and
+* a timeout, an unreachable or absent endpoint, a `5xx`, or an
+  unparseable response establishes nothing.
+
+The PS MUST NOT report successful mission-wide revocation merely
+because it marked its local state or contacted an AS.
 
 ## Honest Residual Bounds {#residuals}
 
