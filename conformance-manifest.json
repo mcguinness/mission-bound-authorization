@@ -182,6 +182,7 @@
    "runtime.break-glass",
    "control-plane.consistency",
    "core.introspection",
+   "core.introspected-consumption",
    "status.lifecycle",
    "status.discharge",
    "signals.events",
@@ -5663,12 +5664,10 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "introspection",
    "assertion": "output-bound",
    "observation": {
@@ -5677,7 +5676,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Conditional on the deployment issuing opaque Mission-bound tokens; the applicability vocabulary has no deployment-mode condition, so recorded unconditional with the condition stated here."
+   "notes": "Scoped to core.introspected-consumption (#904 option b): the clause binds only a deployment issuing opaque Mission-bound tokens, an optional mode no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed."
   },
   {
    "id": "core.introspection.opaque-active-carriage",
@@ -5687,12 +5686,10 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "introspection",
    "assertion": "output-bound",
    "observation": {
@@ -5701,7 +5698,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Conditional on the deployment issuing opaque Mission-bound tokens; the applicability vocabulary has no deployment-mode condition, so recorded unconditional with the condition stated here."
+   "notes": "Scoped to core.introspected-consumption (#904 option b): the clause binds only a deployment issuing opaque Mission-bound tokens, an optional mode no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed."
   },
   {
    "id": "core.introspection.authority-only-when-active",
@@ -5711,12 +5708,10 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "introspection",
    "assertion": "privacy",
    "observation": {
@@ -5725,7 +5720,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Conditional on the deployment issuing opaque Mission-bound tokens; the applicability vocabulary has no deployment-mode condition, so recorded unconditional with the condition stated here."
+   "notes": "Scoped to core.introspected-consumption (#904 option b): the clause binds only a deployment issuing opaque Mission-bound tokens, an optional mode no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed."
   },
   {
    "id": "core.introspection.opaque-rs-fail-closed",
@@ -5735,12 +5730,10 @@
    "role": "RS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
@@ -5749,7 +5742,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Conditional on the deployment issuing opaque Mission-bound tokens; the applicability vocabulary has no deployment-mode condition, so recorded unconditional with the condition stated here."
+   "notes": "Scoped to core.introspected-consumption (#904 option b): the clause binds only a deployment issuing opaque Mission-bound tokens, an optional mode no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed."
   },
   {
    "id": "core.anchors.entry-commitment",
