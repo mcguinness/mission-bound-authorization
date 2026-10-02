@@ -3562,7 +3562,7 @@ async function handleMissionDispatchGrant(
     ctx.body = { error: "invalid_request", error_description: "unknown template" };
     return;
   }
-  const recipient = template.recipients[0];
+  const recipient = template.recipients.agents[0];
   if (!recipient) {
     ctx.status = 400;
     ctx.body = { error: "invalid_request", error_description: "template names no recipient" };
