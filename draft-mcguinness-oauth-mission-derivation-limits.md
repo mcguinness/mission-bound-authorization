@@ -41,6 +41,14 @@ normative:
 
 informative:
   RFC8785:
+  I-D.draft-mcguinness-oauth-mission-issuance-grant:
+    title: "Mission Issuance Grant for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-child-delegation:
     title: "Mission Child Delegation for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html
@@ -305,6 +313,18 @@ minting by its policy
 AS's local issuance under a projected grant is bounded by that grant's
 own lifetime and local policy, not counted against the origin
 issuer's per-Mission derivation cap.
+
+## Mission Issuance Grant Minting {#issuance-grant-counting}
+
+Under the Mission Issuance Grant profile
+({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}), the Mission
+Authority Server is the issuer, and minting a grant is the derivation
+it performs: each committed minting counts once. Redeeming the grant
+at a consuming Authorization Server, and every refresh there, is not
+a derivation the issuer performs and does not increment the count. As
+at the cross-domain boundary ({{cross-domain-counting}}), the limit
+therefore bounds the grants the issuer mints, not the number of tokens
+consuming Authorization Servers issue from them.
 
 # Enforcement at Issuance {#enforcement}
 

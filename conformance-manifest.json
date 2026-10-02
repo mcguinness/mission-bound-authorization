@@ -22678,6 +22678,27 @@
    "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with #963 decision D3; todo until that path exists."
   },
   {
+   "id": "issuance-grant.minting-rules.derivation-counting",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "minting-rules",
+   "text": "the MAS MUST count grants against it atomically and refuse beyond it",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "with a derivation_limit established, the MAS counts each committed grant minting once, atomically, and refuses a grant request that would exceed the limit with derivations_exhausted; grant redemption and refresh at a consuming AS never increment the count, and the limit does not cap the tokens consuming Authorization Servers issue"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with #963 decision D5; todo until that path exists."
+  },
+  {
    "id": "txn-authorization.token.txn-scoped-mint-gate",
    "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
    "anchor": "offline-verification",

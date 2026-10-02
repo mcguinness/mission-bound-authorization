@@ -508,7 +508,12 @@ The MAS MUST apply the following rules:
    ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}) is set, the MAS MUST count
    grants against it atomically and refuse beyond
    it, which gives that ceiling a binding locus under the standalone
-   binding.
+   binding. A grant counts when its minting commits. Redemption and
+   refresh at a consuming AS do not increment this counter, so the
+   limit bounds the grants the MAS issues, not the number of tokens
+   consuming Authorization Servers issue from them
+   ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}, Section
+   "Mission Issuance Grant Minting").
 5. **Key binding.** When the MAS includes `cnf`, it MUST take the key
    from a sender constraint it verified on the grant request: the
    public key of the request's DPoP proof, as `jkt`, or the client
