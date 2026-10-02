@@ -1562,7 +1562,10 @@ independently of the generation order used for derivation. Each entry names:
 
 - `child_id`, `issuer`, `created_at`, `child_actor`, and current state and
   version;
-- `authority_hash`, `intent_hash`, `effective_authority_hash`,
+- `authority_hash`, `intent_hash`, `effective_authority_hash` (the
+  issuance profile's `authority_hash` construction applied to the old
+  child's Effective Authority Set at rendering,
+  {{I-D.draft-mcguinness-oauth-mission-status}}),
   `containment_version`, and the exact `parent` reference and `depth`;
 - `derivation_limit`, `derivation_count`, `expires_at`, and every mutable
   discharge, fan-out, meter, or latch input used to decide or transfer
