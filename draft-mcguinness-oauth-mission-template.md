@@ -853,9 +853,9 @@ established for adjudication denials
   matches the `digest` the template committed ({{dispatch}}). Dispatch
   under the changed policy requires a fresh human template consent.
 
-A consumer that does not implement this document treats either value as
-it treats any unrecognized reason code: the Dispatch stays denied, with
-no further semantics.
+A consumer that does not implement this document treats any of these
+values as it treats any unrecognized reason code: the Dispatch stays
+denied, with no further semantics.
 
 # Instance Composition {#instance-composition}
 
