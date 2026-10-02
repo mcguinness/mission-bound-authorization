@@ -569,6 +569,7 @@ describe("template dispatch inherits the ceiling's recorded bindings", () => {
       per_instance_lifetime_s: 3600,
       max_active: 10,
       rate_per_min: 20,
+      review_cadence_s: 86400,
       approval_event_id: "tmpl-cap-consent",
       expires_at: EXP,
     }, kernel.authoritySourceOptions()).id;

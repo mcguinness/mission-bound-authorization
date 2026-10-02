@@ -1122,8 +1122,9 @@ A record MUST contain:
 - the decision or refusal result and, on refusal, the failure condition
   from {{failure-modes}};
 - the request time (RFC 3339 {{RFC3339}}); and
-- the `parameter_digest` for parameter-bound classes, or a
-  privacy-preserving digest of the evaluation request otherwise.
+- the `parameter_digest` for parameter-bound classes, or a digest of
+  the evaluation request otherwise, over the input the runtime evidence
+  companion defines ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 A record MUST also contain the following fields when they are available
 and trusted for the refusal or decision path:
@@ -2280,6 +2281,8 @@ statement, part of the Resource Server runtime profile
 ({{rs-runtime-profile}}), that MUST fix all of the following, so two
 implementers of the same operation bind the same bytes:
 
+**Binding**, the inputs that decide which bytes a decision binds:
+
 - the action identifier and how it maps to a `resource`;
 - the parameter schema: which parameters exist and their types;
 - default insertion and omitted-optional-field rules applied before
@@ -2322,7 +2325,11 @@ implementers of the same operation bind the same bytes:
   operation-specific rule), and at least one conformance case MUST
   present changed parameters that fail the digest match, so
   normalization drift between the PDP and the executing PEP surfaces
-  at profile adoption rather than as a fail-closed outage;
+  at profile adoption rather than as a fail-closed outage.
+
+**Declarations**, stated for every mediated operation even where the
+answer is no:
+
 - whether a single-use decision identifier is required (versus a
   validity window plus idempotency key);
 - whether an execution lease is required; and
@@ -3703,6 +3710,14 @@ worked example shows the concrete record
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The Operation Profile's items are grouped as the operation's binding
+  and its declarations, with no change to any requirement or to which
+  operations it applies to; a declaration is stated even where the
+  answer is no.
+
+- The record minimum's evaluation request digest is over the input
+  the runtime evidence companion defines (#971).
 
 - The Enforcement Scope Statement is what a deployment adopting the
   Runtime-Enforced bundle publishes, not what earns the level; the

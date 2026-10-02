@@ -11,16 +11,16 @@
     "content_sha256": "d00802fb051f408340682374fe233c88477a4005756813f8afcd4cf351307b09"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "b1e2dcc6c89d5c55d33696af3fa76b6898d0a295",
-    "content_sha256": "bfa9bd2c5fd047203807cc2b015b3f060cbf29135682141ce57b257e1713b1f5"
+    "revision": "e4d7216f95e2857335cd4a598eba82b3975a2dea",
+    "content_sha256": "1a8672b2434475403a6606d89eb8c092f6f702d73f8f42e5d3cd54e412b48c86"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "b1e2dcc6c89d5c55d33696af3fa76b6898d0a295",
-    "content_sha256": "20c47603567f29810ac9d6e146f8c30a1c9650009a5253255b3a66c3fe1ab43b"
+    "revision": "e4d7216f95e2857335cd4a598eba82b3975a2dea",
+    "content_sha256": "71b93e5299f66eb8ab272da1eebe4dda84f925569a3a4812834a297b8a96e613"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "b1e2dcc6c89d5c55d33696af3fa76b6898d0a295",
-    "content_sha256": "d3398de58e0f2b195b237834929f42d98fe162839274707d4215562a75e0b192"
+    "revision": "b145c1b303241a6c351083c8a7474ea46fa51ea8",
+    "content_sha256": "9f67aed07fa469580f4d4fce63d989010ab9234d9e788bdf25cfbe6cd7a87eda"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "daadb45f36cd901f0d646ba0aa942dfec95844ee",
@@ -1740,7 +1740,7 @@
     },
     {
      "file": "src/services/pdp/test/decision-evidence.test.ts",
-     "name": "validated capability evidence (#657) > omits malformed capability input (%s) while retaining drift reason and request-summary digest",
+     "name": "validated capability evidence (#657) > omits malformed capability input (%s) while retaining drift reason and the submitted request's digest",
      "level": "unit",
      "surface": "evidence-emission"
     }
@@ -15915,6 +15915,106 @@
    "notes": "evaluation_id is asserted present on both a permit and a deny decision; reason is asserted equal to the denial classification on a deny, and conditions is asserted present (as an object with valid_until/parameter_digest/use_limit) on a permit and absent on a deny. evaluation_id's value is additionally asserted equal to the pre-existing decision_id (same correlation identifier, additive carriage, never a second independent id)."
   },
   {
+   "id": "authzen.evaluation-request-digest-input.body-as-submitted",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "evaluation-request-digest-input",
+   "text": "the input to `evaluation_request_digest` ({{I-D.draft-mcguinness-mission-runtime-evidence}}) is the complete JSON request body the PEP submitted to the evaluation or evaluations endpoint: every member it carried, extension members included, before the PDP applies any default or enrichment. HTTP header fields and transport framing are not part of it.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the PDP's evaluation_request_digest is the canonical-object digest of the request body as submitted, extension members included, computed before any receiver-side default (the PDP's default action class does not enter it); a remote decision channel's envelope and MAC header fields do not enter it"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > digests the evaluation request as submitted without a parameter binding on permit and deny, and omits absent credential",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > covers the whole submitted body: order-independent, extension members and explicit null included, receiver defaults excluded",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pdp-unavailability.test.ts",
+     "name": "configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > over a remote hop, the PDP's Decision Evidence digests the request as submitted, excluding channel framing",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ]
+  },
+  {
+   "id": "authzen.evaluation-request-digest-input.jcs-sha256-encoding",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "evaluation-request-digest-input",
+   "text": "The digest is `sha-256:` followed by the base64url, unpadded, encoding of the SHA-256 of the body's JCS {{RFC8785}} canonical bytes, so member order and whitespace do not change it, while an omitted member and a member set to `null` yield different digests.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the digest reproduces the profile's worked value; member order does not change it; an omitted member and a member set to null yield different digests"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > covers the whole submitted body: order-independent, extension members and explicit null included, receiver defaults excluded",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/mission-core/test/canonical-digest.test.ts",
+     "name": "canonicalDigest: spec vectors (runtime-evidence.md, authzen.md) > reproduces the AuthZEN evaluation request digest worked value, and keeps an explicit null distinct",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Whitespace independence holds by construction: the digest is over JCS bytes of the parsed body, never the raw bytes."
+  },
+  {
+   "id": "authzen.evaluation-request-digest-input.batch-one-digest",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "evaluation-request-digest-input",
+   "text": "For a batch ({{batch-evaluations}}), the input is the batch request body as submitted, before its default members are merged into the items; each item's Decision Evidence carries that one digest.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every item of a batch evaluation carries the one digest of the batch request body as submitted, computed before default members merge into the items"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference PDP has no batch evaluations endpoint."
+  },
+  {
    "id": "authzen.obligations.permit-fulfillment-and-denial-execution",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "obligations",
@@ -18939,7 +19039,7 @@
     "normative": "parameter_digest is REQUIRED for a parameter-bound action; evaluation_request_digest is REQUIRED whenever parameter_digest is absent, so every decision record carries one digest or the other, present whether the decision was a permit or a deny"
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/decision-evidence.test.ts",
@@ -18949,12 +19049,18 @@
     },
     {
      "file": "src/services/pdp/test/decision-evidence.test.ts",
-     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > uses only the documented request-summary digest without a parameter binding on permit and deny, and omits absent credential",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > digests the evaluation request as submitted without a parameter binding on permit and deny, and omits absent credential",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > signs a record without parameter_digest only when it carries the evaluation request digest",
      "level": "unit",
      "surface": "evidence-emission"
     }
    ],
-   "notes": "#594 W4-1: permit/deny digest exclusivity and live-condition equality tested. Partial: the existing no-parameter fallback commits only the documented request summary, not the whole evaluation request. No whole-input binding claim."
+   "notes": "#594 W4-1: permit/deny digest exclusivity and live-condition equality tested. #971: the request digest covers the whole evaluation request as submitted (authzen.evaluation-request-digest-input.*), and the emitter signs no record that carries neither digest."
   },
   {
    "id": "evidence.decision.obligations-recorded-as-returned",
@@ -19445,8 +19551,40 @@
     "normative": "parameter_digest is REQUIRED for a parameter-bound action class; evaluation_request_digest is REQUIRED whenever parameter_digest is absent, so a Refusal Record always carries one of the two digests"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/refusal-request-digest.test.ts",
+     "name": "Refusal Record request digest input (@spec runtime-evidence#request-digest-worked, #971) > a refusal before any request digests the pre-request input, with mission_id exactly when the record carries mission",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/refusal-request-digest.test.ts",
+     "name": "Refusal Record request digest input (@spec runtime-evidence#request-digest-worked, #971) > a refusal after an evaluation request digests that request as submitted and names decision_request",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/refusal-request-digest.test.ts",
+     "name": "Refusal Record request digest input (@spec runtime-evidence#request-digest-worked, #971) > a parameter-bound refusal carries parameter_digest alone, with no request digest and no input name",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pdp-unavailability.test.ts",
+     "name": "configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > refuses a decision function that throws synchronously as pdp_unreachable, with one Refusal Record and no effect",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/approval-resolution-boundary.test.ts",
+     "name": "approval resolution is outside the mediated tool boundary (#759) > approval-resolution tool names refuse unknown_tool and retain one PEP Refusal Record",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#971: evaluation_request_digest is present on both inputs (pre-request and decision request) and absent alongside parameter_digest. Partial: the reference PEP's own Refusal Records never carry parameter_digest, so its refusal of a parameter-bound action class carries the request digest instead."
   },
   {
    "id": "evidence.refusal.mission-present-only-when-established",
@@ -20379,6 +20517,131 @@
     }
    ],
    "notes": "The boundary is the permit the enforcing component accepted, not merely the existence of a decision response."
+  },
+  {
+   "id": "evidence.refusal.request-digest-input-names-input",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "pre-decision-refusal",
+   "text": "A string naming the input `evaluation_request_digest` covers: `decision_request` when the refusal follows an evaluation request, `pre_request` when it precedes one. REQUIRED when `evaluation_request_digest` is present; absent otherwise.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Refusal Record that carries evaluation_request_digest names its input in request_digest_input, decision_request when the refusal follows an evaluation request and pre_request when it precedes one; a record without evaluation_request_digest omits request_digest_input"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/refusal-request-digest.test.ts",
+     "name": "Refusal Record request digest input (@spec runtime-evidence#request-digest-worked, #971) > a refusal before any request digests the pre-request input, with mission_id exactly when the record carries mission",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/refusal-request-digest.test.ts",
+     "name": "Refusal Record request digest input (@spec runtime-evidence#request-digest-worked, #971) > a refusal after an evaluation request digests that request as submitted and names decision_request",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/refusal-request-digest.test.ts",
+     "name": "Refusal Record request digest input (@spec runtime-evidence#request-digest-worked, #971) > a parameter-bound refusal carries parameter_digest alone, with no request digest and no input name",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pdp-unavailability.test.ts",
+     "name": "configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > refuses a decision function that throws synchronously as pdp_unreachable, with one Refusal Record and no effect",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pdp-unavailability.test.ts",
+     "name": "configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > refuses a decision function that rejects asynchronously as pdp_unreachable, with one Refusal Record and no effect",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/approval-resolution-boundary.test.ts",
+     "name": "approval resolution is outside the mediated tool boundary (#759) > approval-resolution tool names refuse unknown_tool and retain one PEP Refusal Record",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pdp-unavailability.test.ts",
+     "name": "configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > refuses a 503 from a reachable PDP as pdp_unreachable, with no PDP decision retained",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pdp-unavailability.test.ts",
+     "name": "configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > refuses an unsigned 200 response as channel_failure, with no PDP decision retained",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/decision-evidence-retention.test.ts",
+     "name": "a permit the PDP did not evidence is refused, never executed (#741) > refuses the action when the decision carries no Decision Evidence",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
+     "name": "one catalog snapshot from discovery to invocation > a capability refusal after the invoice resolves records the resource and digests it in the pre-request input",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ]
+  },
+  {
+   "id": "evidence.request-digest.pre-request-input-members",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "request-digest-worked",
+   "text": "A Refusal Record emitted before any evaluation request exists digests the pre-request input instead, and records `request_digest_input` as `pre_request`.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Refusal Record emitted before any evaluation request digests the pre-request object: action and audience always, mission_id exactly when the record carries mission, resource and subject when known, no member an empty string; it records request_digest_input as pre_request"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/refusal-request-digest.test.ts",
+     "name": "Refusal Record request digest input (@spec runtime-evidence#request-digest-worked, #971) > a refusal before any request digests the pre-request input, with mission_id exactly when the record carries mission",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/approval-resolution-boundary.test.ts",
+     "name": "approval resolution is outside the mediated tool boundary (#759) > approval-resolution tool names refuse unknown_tool and retain one PEP Refusal Record",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
+     "name": "one catalog snapshot from discovery to invocation > a capability refusal after the invoice resolves records the resource and digests it in the pre-request input",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "The PEP witnesses cover both sides of the known-resource clause: an unknown_tool refusal before any resource is established omits it, and a capability-source refusal after the invoice resolved includes it, so refusals for different invoices differ."
   },
   {
    "id": "evidence.retention.audit-window-floor",
@@ -23346,6 +23609,69 @@
      "surface": "token-endpoint"
     }
    ]
+  },
+  {
+   "id": "template.members.review-cadence-shape",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "the-mission-template",
+   "text": "A positive integer number of seconds. The maximum age of the template's most recent human approval",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a template's review_cadence is a positive integer number of seconds; a template without one, or with zero or a fractional value, is refused at template consent"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "createTemplate (@spec mission-template) > refuses an empty ceiling or non-positive bounds (TemplateError)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    }
+   ]
+  },
+  {
+   "id": "template.consent.review-cadence-stops-dispatch",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "template-consent",
+   "text": "The Mission Issuer MUST NOT dispatch from a template whose most recent human approval is older than the published `review_cadence`",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Dispatch from a template whose most recent human approval is more than review_cadence seconds old is refused, commits no Mission and no dispatch event, and issues no token; at exactly the bound the Dispatch proceeds, and a fresh approval re-consents"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > review_overdue: a template dispatches inside its review_cadence and is refused with access_denied once the approval is older",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "dispatch gates (@spec mission-template#dispatch-refusals) > refuses dispatch once the template's approval is older than review_cadence, allows it exactly at the bound, and commits nothing on refusal",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "The reference implementation measures from the template's created_at, which every instance records as approval_basis.approved_at. Its refusal reason review_overdue is implementation-local on access_denied (D205); the draft registers none."
   },
   {
    "id": "progressive.drawdown-policy.body-commitment-should",

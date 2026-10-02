@@ -1,4 +1,4 @@
-import { catalogDigest, capabilitySourceDigest, extractMcpToolDefinition } from "@mission/core";
+import { canonicalDigest, catalogDigest, capabilitySourceDigest, extractMcpToolDefinition } from "@mission/core";
 import { TRUSTED_TOOL_CATALOGS, DERIVATION_POLICY, AUTHORITY_SOURCES } from "@mission/demo-data";
 import { MissionKernel, validateMissionIntent } from "@mission/authorization-server";
 import { trustedCapabilityResolver } from "../../authorization-server/src/adapters/capability-resolver.js";
@@ -94,6 +94,36 @@ describe("one catalog snapshot from discovery to invocation", () => {
     expect(result).toMatchObject({ permitted: false, refusal_reason: "capability_source_unresolvable" });
     expect(f.requests).toHaveLength(0);
     expect(f.evidence.forMission(token.mission.id)).toMatchObject([{ kind: "refusal", content: { denial_reason: "capability_source_unresolvable" } }]);
+  });
+
+  // @spec runtime-evidence#request-digest-worked, #pre-decision-refusal: a
+  // refusal after the invoice resolved but before any request exists records
+  // that resource and digests it in the pre-request input, so refusals for
+  // different invoices are distinct.
+  it("a capability refusal after the invoice resolves records the resource and digests it in the pre-request input", async () => {
+    const f = fixture(() => {
+      throw new Error("offline");
+    });
+    f.payments.seed([], [{ id: "inv-2", vendor_id: "acme", amount: "50.00", currency: "USD", payee_account: "acct", status: "payable" }]);
+    const digests: string[] = [];
+    for (const invoiceId of ["inv-1", "inv-2"]) {
+      expect(await f.pep.enforce("get_invoice", { invoice_id: invoiceId }, token)).toMatchObject({ refusal_reason: "capability_source_unresolvable" });
+      const refusal = f.evidence.forMission(token.mission.id).filter(r => r.kind === "refusal").at(-1)!;
+      expect(refusal.content).toMatchObject({
+        resource: { type: "invoice", id: invoiceId },
+        request_digest_input: "pre_request",
+        evaluation_request_digest: canonicalDigest({
+          action: "payments:invoice.read",
+          audience: CANONICAL_RESOURCE,
+          mission_id: token.mission.id,
+          resource: invoiceId,
+          subject: "alice",
+        }),
+      });
+      digests.push((refusal.content as { evaluation_request_digest: string }).evaluation_request_digest);
+    }
+    expect(new Set(digests).size).toBe(2);
+    expect(f.requests).toHaveLength(0);
   });
 
   it("refuses a changed snapshot before a read executes", async () => {

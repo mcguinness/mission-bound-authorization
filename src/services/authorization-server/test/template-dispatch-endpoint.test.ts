@@ -343,6 +343,7 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
       per_instance_lifetime_s: 900,
       max_active: 5,
       rate_per_min: 30,
+      review_cadence_s: 86400,
       approval_event_id: `tmpl-evt-wide-${seq++}`,
       expires_at: FAR_FUTURE,
     });
@@ -483,4 +484,24 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
     expect(res.status, JSON.stringify(body)).toBe(403);
     expect(body.mission_denial_reason).toBe("template_not_active");
   });
+
+  // @spec mission-template#template-consent — a template whose most recent
+  // human approval is older than its review_cadence dispatches nothing until a
+  // fresh approval re-consents. The refusal reason is implementation-local
+  // (D205) and rides access_denied, as template_not_active does.
+  it("review_overdue: a template dispatches inside its review_cadence and is refused with access_denied once the approval is older", async () => {
+    const created = await createTemplateAdmin({ ...readOnlyTemplateBody(), review_cadence_s: 2 });
+    const createdBody = (await created.json()) as { template_id: string };
+    expect(created.status, JSON.stringify(createdBody)).toBe(201);
+    const fresh = await dispatch({ templateId: createdBody.template_id, intent: readOnlyIntent(), dispatchEventId: `evt-review-${seq++}` });
+    expect(fresh.status, await fresh.clone().text()).toBe(200);
+
+    await new Promise((resolve) => setTimeout(resolve, 2200));
+    const res = await dispatch({ templateId: createdBody.template_id, intent: readOnlyIntent(), dispatchEventId: `evt-review-${seq++}` });
+    const body = (await res.json()) as { error?: string; mission_denial_reason?: string; access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(403);
+    expect(body.error).toBe("access_denied");
+    expect(body.mission_denial_reason).toBe("review_overdue");
+    expect(body.access_token).toBeUndefined();
+  }, 15_000);
 });

@@ -52,6 +52,7 @@ CREATE TABLE templates (
   per_instance_lifetime_s INTEGER NOT NULL,
   max_active INTEGER NOT NULL,
   rate_per_min INTEGER NOT NULL,
+  review_cadence_s INTEGER NOT NULL,
   template_hash TEXT NOT NULL,
   approval_event_id TEXT NOT NULL UNIQUE,
   expires_at TEXT NOT NULL,
@@ -103,6 +104,8 @@ export interface MissionTemplate {
   max_active: number;
   /** Max dispatches per rolling 60s window. */
   rate_per_min: number;
+  /** Max age (seconds) of the template's approval (`created_at`) before Dispatch stops. */
+  review_cadence_s: number;
   template_hash: string;
   approval_event_id: string;
   expires_at: string;
@@ -125,6 +128,7 @@ export interface TemplateCreate {
   per_instance_lifetime_s: number;
   max_active: number;
   rate_per_min: number;
+  review_cadence_s: number;
   template_hash: string;
   approval_event_id: string;
   expires_at: string;
@@ -144,6 +148,7 @@ interface TemplateRow {
   per_instance_lifetime_s: number;
   max_active: number;
   rate_per_min: number;
+  review_cadence_s: number;
   template_hash: string;
   approval_event_id: string;
   expires_at: string;
@@ -170,6 +175,7 @@ function rowToTemplate(row: TemplateRow): MissionTemplate {
     per_instance_lifetime_s: row.per_instance_lifetime_s,
     max_active: row.max_active,
     rate_per_min: row.rate_per_min,
+    review_cadence_s: row.review_cadence_s,
     template_hash: row.template_hash,
     approval_event_id: row.approval_event_id,
     expires_at: row.expires_at,
@@ -204,9 +210,9 @@ export class TemplateStore {
           .prepare(
             `INSERT INTO templates (id, template_version, issuer, approver_iss, approver_sub,
              authority_source_json, ceiling_json, dispatch_policy, dispatchers_json,
-             recipients_json, per_instance_lifetime_s, max_active, rate_per_min, template_hash,
-             approval_event_id, expires_at, state, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)`,
+             recipients_json, per_instance_lifetime_s, max_active, rate_per_min, review_cadence_s,
+             template_hash, approval_event_id, expires_at, state, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)`,
           )
           .run(
             input.id,
@@ -222,6 +228,7 @@ export class TemplateStore {
             input.per_instance_lifetime_s,
             input.max_active,
             input.rate_per_min,
+            input.review_cadence_s,
             input.template_hash,
             input.approval_event_id,
             input.expires_at,

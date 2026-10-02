@@ -27,9 +27,13 @@ equality check against the live permit conditions. All three high-consequence
 classes require `use_limit: 1`. Unknown classes and inconsistent permit
 bindings are refused before signing.
 
-The no-parameter fallback remains the existing documented request-summary
-digest (`requestDigestFallback`), not a commitment to every decision input.
-The broader whole-request digest requirement remains partial. Required
+Without a parameter binding, the record carries `evaluation_request_digest`
+over the evaluation request body as submitted, computed in `evaluate()` on
+receipt (`evaluationRequestDigest`): every member the PEP sent, extension
+members included, and no receiver-side default. A PEP Refusal Record that
+follows an evaluation request digests that request; one that precedes any
+request digests the pre-request input (`preRequestDigest`); the record names
+which in `request_digest_input`. Required
 conditional content such as evaluated constraints and returned obligations
 is tracked in later #594 slices; this PR makes no complete object/profile
 conformance claim. Sequence state remains in memory, now keyed by the
