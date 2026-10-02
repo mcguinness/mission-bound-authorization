@@ -188,8 +188,8 @@ that a MAS alone does not provide
 The AS implements none of the issuance profile's intake, approval
 ceremony, authority derivation, record, or lifecycle surfaces; those
 stay at the MAS. A deployment can adopt the issuance join at some
-Authorization
-Servers and keep the Mission Join at others ({{relationships}}).
+Authorization Servers and keep the Mission Join at others
+({{relationships}}).
 
 # Conventions and Terminology {#conventions}
 
@@ -292,26 +292,27 @@ the grant carries.
 
 ## Issued Tokens {#issued-tokens}
 
-Tokens issued under this profile are Mission-bound in the issuance
-profile's sense: they carry the `mission` claim, their authority is a
-subset of the consented Authority Set, and issuance is gated on
-Mission state: at grant issuance always, and at redemption and every
-refresh where the consuming AS has a Mission-state integration.
-Runtime enforcement ({{I-D.draft-mcguinness-mission-runtime}})
-composes credential-carried for these tokens. The Mission Join's
-limit, that it
-proves a credential belongs to the Mission's parties but never that
-it was issued for the Mission
+Tokens issued under this profile are Mission-bound: they carry the
+`mission` claim, their authority is a subset of the consented
+Authority Set, and their issuance is gated on Mission state, at grant
+issuance always and at redemption and every refresh where the
+consuming AS has a Mission-state integration.
+
+Runtime enforcement reads the Mission from these tokens
+(credential-carried composition,
+{{I-D.draft-mcguinness-mission-runtime}}), so the Mission Join's
+limit does not apply to them: the join proves a credential belongs to
+the Mission's parties, never that it was issued for the Mission
 ({{I-D.draft-mcguinness-mission-authority-server}}, Section "Mission
-Join"), does not apply to them. Tokens the estate issues outside this
-profile are
-unchanged and continue to compose through the Mission Join.
+Join"). Tokens the estate issues outside this profile are unchanged
+and continue to compose through the Mission Join.
 
 # The Mission Issuance Grant {#grant}
 
 A Mission Issuance Grant is a JWT {{RFC7519}} signed as a JWS
-{{RFC7515}} by the Mission Issuer. Its JOSE header MUST carry `typ`
-`mission-issuance-grant+jwt` ({{iana}}), `alg`, and a `kid` that
+{{RFC7515}} by the Mission Issuer. Its JOSE header MUST carry the
+`typ` header parameter with the value `mission-issuance-grant+jwt`
+({{iana}}), `alg`, and a `kid` that
 resolves in the Mission Issuer's published key material. A JWT with
 any other `typ`, a Mission Mandate
 ({{I-D.draft-mcguinness-mission-mandate}}) in particular, is not a
@@ -362,7 +363,7 @@ Claims:
   present, the consuming AS MUST require proof of possession of that
   key at redemption: a DPoP proof in the token request whose public
   key has the `jkt` thumbprint, or a client certificate on the TLS
-  connection whose hash is `x5t#S256`.
+  connection whose SHA-256 thumbprint matches the `x5t#S256` value.
 
 The following is an example of a decoded grant payload; the
 `authority_hash` value is illustrative:
@@ -439,10 +440,13 @@ TLS, authenticated as {{minting-rules}} requires:
   names ({{trust}}).
 
 `authorization_details`:
-: OPTIONAL. An array. A narrower subset the requester asks the grant to
-  carry, under the issuance profile's subset rule. Omitted, the MAS scopes the
-  grant to the entries the named audience serves ({{minting-rules}}); present,
-  it MUST NOT widen beyond that scope.
+: OPTIONAL. An array. A narrower subset the requester asks the grant
+  to carry, under the issuance profile's subset rule. If it is
+  omitted, the MAS scopes the grant to the entries the named audience
+  serves ({{minting-rules}}); if it is present, it MUST NOT widen
+  beyond that scope.
+
+The following is an example of a grant request:
 
 ~~~ http-message
 POST /mas/mission/issuance-grant HTTP/1.1
@@ -480,8 +484,8 @@ The MAS MUST apply the following rules:
    receives `not_found`, which preserves the MAS's anti-oracle
    property.
 2. **State gate.** A grant is minted only while the Mission is
-   `active`, established from the MAS's own record at minting. Any
-   other state refuses.
+   `active`, established from the MAS's own record at minting. In any
+   other state the MAS refuses.
 3. **Subset and audience.** The grant's `authorization_details` MUST
    be a subset, under the issuance profile's subset rule
    ({{I-D.draft-mcguinness-oauth-mission}}, Section "Subset Rule"), of
@@ -511,6 +515,8 @@ object:
 : REQUIRED. A string. The Mission Issuance Grant JWT of {{grant}}. Its
   `exp` bounds redemption ({{grant}}); the requester reads the deadline
   from the decoded grant.
+
+The following is an example of a grant response:
 
 ~~~ http-message
 HTTP/1.1 200 OK
@@ -613,8 +619,8 @@ On success the consuming AS mints tokens under these rules:
   `mission` object verbatim as the issuance profile's `mission` claim, including
   the `expires_at` member ({{mission-claim}}).
 - **Subset.** Issued `authorization_details` MUST be a subset of the
-  grant's. The consuming AS MUST NOT widen, remap, or supplement
-  them from its own policy except to narrow; representing them as
+  grant's. The consuming AS's own policy can only narrow them: it
+  MUST NOT widen, remap, or supplement them. Representing them as
   `scope` (below) is not a remapping.
 - **Token response.** Where the consuming AS issues
   `authorization_details`, the token response carries them as the
@@ -644,8 +650,9 @@ On success the consuming AS mints tokens under these rules:
   token keeps working at the token layer.
 - **Effective Authority Set projection.** A consuming AS with a
   Mission-state integration gates redemption and every refresh on
-  current Mission state and projects them through the Mission's
-  current Effective Authority Set ({{effective-set-projection}}).
+  current Mission state and projects the issued authority through the
+  Mission's current Effective Authority Set
+  ({{effective-set-projection}}).
 - **No re-approval.** The approval event already occurred at the
   Mission Issuer. The consuming AS MUST NOT prompt the Subject or
   any user for consent at redemption.
@@ -676,13 +683,10 @@ Cache-Control: no-store
 }
 ~~~
 
-A grant redeems exactly once, meaning exactly one successful
-issuance: a redemption that fails before issuance leaves the grant
-unconsumed ({{single-use}}); under the authorization code flow
-carriage, PAR validation is the consuming step ({{par-carriage}}).
-Subsequent token needs are met by the issued refresh token
-(state-gated) or a fresh grant (state-gated at minting); either way,
-every path to new authority re-enters a Mission-state gate.
+A grant redeems exactly once ({{single-use}}). Later token needs are
+met by the issued refresh token (state-gated) or a fresh grant
+(state-gated at minting), so every path to new authority re-enters a
+Mission-state gate.
 
 ## Effective Authority Set Projection {#effective-set-projection}
 
@@ -730,13 +734,13 @@ projection precedes scope projection above: an AS that models
 authority as `scope` maps the narrowed remainder, never the grant's
 original set.
 
-An empty intersection is refused by its cause. Where items 1 to 3
+An empty intersection is refused by its cause. If items 1 to 3
 already intersect to nothing, the authorization itself is exhausted
-and the refusal is `invalid_grant` ({{redemption-errors}}); it MAY
-carry the `authority_contained` value in the `mission_denial_reason`
-member where Containment causally removed the authority, and a
-collapse from any other cause MUST NOT be reported as containment
-merely because Containment is composed
+and the AS refuses with `invalid_grant` ({{redemption-errors}}). The
+refusal MAY carry the `authority_contained` value in the
+`mission_denial_reason` member where Containment causally removed the
+authority, and a collapse from any other cause MUST NOT be reported
+as containment merely because Containment is composed
 ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "The
 authority_contained Denial Reason"). Where that authorization
 survives and only the narrowing the client requested fails to
@@ -751,8 +755,8 @@ A source that is unavailable, fails verification, or reports a state
 transient failure, never authority exhaustion, and is refused in a
 machine-readable shape: this profile defines a token-endpoint use of
 the OAuth `temporarily_unavailable` error code {{RFC6749}}, carried
-with HTTP status 503, and the response MAY carry `Retry-After` per the
-deployment's declared state-recovery policy ({{redemption-errors}}).
+with HTTP status 503. The response MAY carry `Retry-After` per the
+deployment's declared state-recovery policy.
 The consuming AS leaves its stored ceiling unchanged. `invalid_grant`
 stays for the permanent classes: an invalid, expired, or replayed
 grant, a Mission that is not established `active`, and a genuinely
@@ -802,8 +806,8 @@ client authentication with `invalid_client`. The other refusals are:
 |---|---|
 | The Mission is not `active` | `invalid_grant` |
 | The authorization is exhausted ({{issued-authority}}) | `invalid_grant` |
-| The requested `scope` does not intersect it | `invalid_scope` |
-| The requested `authorization_details` does not intersect it | `invalid_authorization_details` |
+| The requested `scope` does not intersect the surviving authority | `invalid_scope` |
+| The requested `authorization_details` does not intersect the surviving authority | `invalid_authorization_details` |
 | The state source fails ({{transient-failure}}) | `temporarily_unavailable`, HTTP 503 |
 
 A client tells three cases apart:
@@ -1001,10 +1005,9 @@ depth: 300-second lifetime, single-use `jti`, audience binding to
 one AS, redemption bound to the Mission's `client_id`, and optional
 `cnf` key binding. A stolen grant is useless to any party that cannot
 also authenticate as the recorded client, or prove possession of the
-`cnf` key, at the named AS within the window; deployments whose client
-credentials are
-weak SHOULD require `cnf` (DPoP {{RFC9449}} or mTLS {{RFC8705}}
-bindings serve).
+`cnf` key, at the named AS within the window. Deployments whose
+client credentials are weak SHOULD require `cnf` (DPoP {{RFC9449}} or
+mTLS {{RFC8705}} bindings serve).
 
 **Mission Issuer compromise reaches issuance.** In MAS-only
 deployment, MAS compromise corrupts records and state. Under this
@@ -1025,13 +1028,11 @@ within the window its statement declares; at estate scale,
 reconciliation is the only check on this compromise class.
 
 **Externally derived authority.** The consuming AS accepts authority
-derived elsewhere. Its exposure is bounded by the profile's own rules:
-it
-mints only within the grant's `authorization_details`, only for the
-grant's client, never longer than the Mission's `expires_at`, and
-its local
-policy MAY narrow further. The AS remains free to refuse any grant
-its policy distrusts; nothing obliges issuance.
+derived elsewhere. Its exposure is bounded by the profile's own
+rules: it mints only within the grant's `authorization_details`, only
+for the grant's client, never longer than the Mission's `expires_at`,
+and its local policy MAY narrow further. The AS remains free to
+refuse any grant its policy distrusts; nothing obliges issuance.
 
 **Type confusion.** Three issuer-signed JWT artifacts describe
 Missions: the Mandate (evidence), the cross-domain grant (foreign
