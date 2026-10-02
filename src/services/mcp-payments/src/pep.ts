@@ -918,6 +918,17 @@ function obligationOutcomes(
   return named;
 }
 
+/**
+ * What a refusing PEP had established before it refused: the target object
+ * (@spec runtime-evidence#pre-decision-refusal `resource`, "when the refusing
+ * component established one") and, after the evaluation request was built,
+ * that request (@spec runtime-evidence#request-digest-worked).
+ */
+interface RefusalEstablished {
+  resource?: EvaluationRequest["resource"];
+  evaluationRequest?: EvaluationRequest;
+}
+
 export class Pep {
   readonly capabilityCatalog: CapabilityCatalog;
   private readonly now: () => Date;
@@ -1123,7 +1134,11 @@ export class Pep {
       const invoice = this.deps.payments.getInvoice(invoiceId);
       if (!invoice) return await this.refuse(token, "unknown_invoice", mapping.action, view);
       const vendor = this.deps.payments.getVendor(invoice.vendor_id);
-      if (!vendor) return await this.refuse(token, "unknown_vendor", mapping.action, view);
+      if (!vendor) {
+        return await this.refuse(token, "unknown_vendor", mapping.action, view, undefined, {
+          resource: { type: "invoice", id: invoice.id },
+        });
+      }
       effective = buildEffectiveParams({ action: mapping.action, invoice, vendor, resource: CANONICAL_RESOURCE });
       amount = effective.amount;
       resourceObj = { type: "invoice", id: invoice.id, properties: { vendor_id: vendor.id } };
@@ -1198,7 +1213,9 @@ export class Pep {
 
     let capability: ReturnType<CapabilityCatalog["resolve"]>;
     try { capability = this.capabilityCatalog.resolve(tool); }
-    catch { return this.refuse(token, "capability_source_unresolvable", mapping.action, view); }
+    catch {
+      return this.refuse(token, "capability_source_unresolvable", mapping.action, view, undefined, { resource: resourceObj });
+    }
     const capabilitySnapshot = capability.catalog_sourced ? capability.snapshot : undefined;
     if (effective && capabilitySnapshot) effective.capability_snapshot = capabilitySnapshot;
     if (listEffective && capabilitySnapshot) listEffective.capability_snapshot = capabilitySnapshot;
@@ -1318,7 +1335,7 @@ export class Pep {
     try {
       decision = await (this.deps.decide ?? evaluate)(req, decisionOptions);
     } catch {
-      return this.refuse(token, "pdp_unreachable", mapping.action, view);
+      return this.refuse(token, "pdp_unreachable", mapping.action, view, undefined, { evaluationRequest: req, resource: req.resource });
     }
     // @spec authzen#failure-condition-coverage — a local channel failure is
     // not a PDP decision. It has no PDP evidence/evaluation identifier, and
@@ -1338,7 +1355,7 @@ export class Pep {
         "decision_channel_response_too_large",
       ]);
       const reason = integrityFailures.has(cause) ? "channel_failure" : "pdp_unreachable";
-      return this.refuse(token, reason, mapping.action, view);
+      return this.refuse(token, reason, mapping.action, view, undefined, { evaluationRequest: req, resource: req.resource });
     }
 
     this.deps.observe?.({ tool, args, token, envelope: req, decision, ...(effective ? { effective } : {}) });
@@ -1365,7 +1382,10 @@ export class Pep {
       // Fail closed on a permit: an action whose decision left no verifiable
       // Decision Evidence is refused rather than executed. A denial keeps its
       // own denial reason, which is the more useful one, and denies either way.
-      return this.refuse(token, "decision_evidence_unverifiable", mapping.action, view);
+      return this.refuse(token, "decision_evidence_unverifiable", mapping.action, view, undefined, {
+        evaluationRequest: req,
+        resource: req.resource,
+      });
     }
 
     if (!decision.decision) {
@@ -1847,8 +1867,9 @@ export class Pep {
     action: string,
     view?: MissionView,
     missionIdOverride?: string,
+    established?: RefusalEstablished,
   ): Promise<EnforceResult> {
-    await this.recordRefusal(token, reason, action, view, missionIdOverride);
+    await this.recordRefusal(token, reason, action, view, missionIdOverride, established);
     return { permitted: false, refusal_reason: reason };
   }
 
@@ -1880,6 +1901,7 @@ export class Pep {
     action: string,
     view?: MissionView,
     missionIdOverride?: string,
+    established?: RefusalEstablished,
   ): Promise<void> {
     const missionId = view?.id ?? token.mission?.id ?? missionIdOverride ?? "unknown";
     await this.deps.evidence.recordRefusal(CANONICAL_RESOURCE, "pep", {
@@ -1891,6 +1913,15 @@ export class Pep {
       ...(view !== undefined
         ? { mission: { id: view.id, issuer: view.issuer, authority_hash: view.authority_hash } }
         : {}),
+      // @spec runtime-evidence#pre-decision-refusal: the target object this
+      // PEP established before refusing, reduced to its identity. It also
+      // enters a pre-request digest as `resource`.
+      ...(established?.resource !== undefined
+        ? { resource: { type: established.resource.type, id: established.resource.id } }
+        : {}),
+      // @spec runtime-evidence#request-digest-worked: a refusal after the
+      // request was built digests that request as submitted.
+      ...(established?.evaluationRequest !== undefined ? { evaluation_request: established.evaluationRequest } : {}),
     });
   }
 }
