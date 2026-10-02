@@ -183,14 +183,15 @@ Table of Contents
    model-level entries apply as written.
    [I-D.draft-mcguinness-mission-substrate] consolidates the primitives
    a further binding provides and points at where each is normatively
-   defined; it names the seven optional capabilities the consuming
+   defined; it names the eight optional capabilities the consuming
    profiles declare against (Lifecycle-Gated Authorization, State-
    Observable, Structured Authority, Monotonic Derivation, Credential-
-   Bound, Independently Verifiable, and Portable Evidence), and as an
-   Informational analysis rather than a substrate-neutral profile this
-   document is not bound by the substrate's rule that a consumer declare
-   the capabilities it consumes; each profile's own consumption
-   declaration is authoritative.
+   Bound, Authorized Context Correlation, Independently Verifiable, and
+   Portable Evidence), and as an Informational analysis rather than a
+   substrate-neutral profile this document is not bound by the
+   substrate's rule that a consumer declare the capabilities it
+   consumes; each profile's own consumption declaration is
+   authoritative.
 
 4.  The Untrusted Agent
 

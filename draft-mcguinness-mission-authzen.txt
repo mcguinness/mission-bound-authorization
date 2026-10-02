@@ -115,7 +115,8 @@ Table of Contents
      7.9.  Permit binding in split topologies
      7.10. Evaluation identifier propagation
    8.  Runtime Evidence
-     8.1.  Execution Evidence Requirement
+     8.1.  Evaluation Request Digest Input
+     8.2.  Execution Evidence Requirement
    9.  Mission Status Composition
    10. Conformance
    11. Security Considerations
@@ -2472,7 +2473,57 @@ Table of Contents
    registered media type
    ([I-D.draft-mcguinness-mission-runtime-evidence]).
 
-8.1.  Execution Evidence Requirement
+8.1.  Evaluation Request Digest Input
+
+   Under this profile, the input to evaluation_request_digest
+   ([I-D.draft-mcguinness-mission-runtime-evidence]) is the complete
+   JSON request body the PEP submitted to the evaluation or evaluations
+   endpoint: every member it carried, extension members included, before
+   the PDP applies any default or enrichment.  HTTP header fields and
+   transport framing are not part of it.  The digest is sha-256:
+   followed by the base64url, unpadded, encoding of the SHA-256 of the
+   body's JCS [RFC8785] canonical bytes, so member order and whitespace
+   do not change it, while an omitted member and a member set to null
+   yield different digests.  For a batch (Section 6.17), the input is
+   the batch request body as submitted, before its default members are
+   merged into the items; each item's Decision Evidence carries that one
+   digest.
+
+   The digest commits to its input; it does not hide an input a party
+   can guess.
+
+   For this abbreviated consequential-read request, submitted without a
+   parameter_digest:
+
+   {
+     "subject": {
+       "type": "user",
+       "id": "user_3p2q8mN1a0kV7tR"
+     },
+     "resource": {
+       "type": "journal-entry",
+       "id": "je_2026Q3_inv_8421",
+       "properties": {
+         "audience": "https://erp.example.com"
+       }
+     },
+     "action": {
+       "name": "journal-entries.read"
+     },
+     "context": {
+       "mission": {
+         "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+         "issuer": "https://as.example.com"
+       }
+     }
+   }
+
+   the value is:
+
+   evaluation_request_digest =
+     sha-256:v_QKMU8dffVDdoAnQkBenjWgtp5U_ffH5ORwT39iaoo
+
+8.2.  Execution Evidence Requirement
 
    This requirement is the Runtime Evidence feature profile's own
    (Section 2, Section 8): independent of anything the PDP returns, a
@@ -2576,7 +2627,7 @@ Table of Contents
    refusal, and, for the classes the runtime profile's transaction-
    assurance tier covers, an Execution Evidence Object for the final
    disposition of every consequential permit (completed, failed, or
-   suppressed before release, Section 8.1).  A PEP claiming only the
+   suppressed before release, Section 8.2).  A PEP claiming only the
    Decision Base records a refusal or an execution outcome in its own
    internal form, never represented as this profile's portable schema
    (Section 2).
@@ -2717,7 +2768,7 @@ Table of Contents
    carrying permit-lifecycle enforcement controls; that registration
    request is withdrawn, since those controls are now the conditions
    response member (Section 7.1) and execution evidence is a profile-
-   level PEP requirement (Section 8.1), neither of which is an
+   level PEP requirement (Section 8.2), neither of which is an
    obligation.  This profile's sole obligation type, step-up
    (Section 7.2), is registered by [AUTHZEN-OBL] itself and is not re-
    registered here.
@@ -3040,6 +3091,11 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Defined the input to evaluation_request_digest: the complete
+      request body as submitted, extension members included, before any
+      default or enrichment, with header fields and transport framing
+      excluded; a batch carries the one digest of its body (#971).
 
    *  The state observation's mission_status_issued_at is the RFC 3339
       form of a Mission Status Response's iat, which freshness_at

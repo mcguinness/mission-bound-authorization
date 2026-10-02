@@ -1081,34 +1081,34 @@ Table of Contents
 
 14.3.  OAuth Discharge
 
-       +===============+==========================================+
-       | Requirement   | This document                            |
-       +===============+==========================================+
-       | Challenge     | The signed challenge of Section 4, keys  |
-       | carrier       | via txn_challenge_jwks_uri               |
-       +---------------+------------------------------------------+
-       | Operation     | The authorization_details entry type and |
-       | identity      | Operation Profile rules of Section 4     |
-       +---------------+------------------------------------------+
-       | Parameter     | parameter_digest, carried and verified   |
-       | commitment    | per Section 4 and Section 7              |
-       +---------------+------------------------------------------+
-       | Workflow      | transaction_authorization_id and the     |
-       | handle        | admission rules of Section 5.2           |
-       +---------------+------------------------------------------+
-       | Result class  | mission-txn-token+jwt per Section 6      |
-       +---------------+------------------------------------------+
-       | Possession    | cnf under DPoP or mutual TLS, including  |
-       |               | ath, per Section 5 and Section 7         |
-       +---------------+------------------------------------------+
-       | Current-state | Offline verification step 5 of           |
-       | source        | Section 7: the Mission Status surface,   |
-       |               | the Status List, or issuer introspection |
-       |               | within declared freshness bounds         |
-       +---------------+------------------------------------------+
-       | Failure       | The upstream vocabulary applied          |
-       | vocabulary    | unchanged per Section 9                  |
-       +---------------+------------------------------------------+
+    +===============+================================================+
+    | Requirement   | This document                                  |
+    +===============+================================================+
+    | Challenge     | The signed challenge of Section 4, keys via    |
+    | carrier       | txn_challenge_jwks_uri                         |
+    +---------------+------------------------------------------------+
+    | Operation     | The authorization_details entry type and       |
+    | identity      | Operation Profile rules of Section 4           |
+    +---------------+------------------------------------------------+
+    | Parameter     | parameter_digest, carried and verified per     |
+    | commitment    | Section 4 and Section 7                        |
+    +---------------+------------------------------------------------+
+    | Workflow      | transaction_authorization_id and the admission |
+    | handle        | rules of Section 5.2                           |
+    +---------------+------------------------------------------------+
+    | Result class  | mission-txn-token+jwt per Section 6            |
+    +---------------+------------------------------------------------+
+    | Possession    | cnf under DPoP or mutual TLS, including ath,   |
+    |               | per Section 5 and Section 7                    |
+    +---------------+------------------------------------------------+
+    | Current-state | Offline verification step 5 of Section 7: the  |
+    | source        | Mission Status surface or issuer introspection |
+    |               | within declared freshness bounds, with the     |
+    |               | Status List as a lifecycle prefilter only      |
+    +---------------+------------------------------------------------+
+    | Failure       | The upstream vocabulary applied unchanged per  |
+    | vocabulary    | Section 9                                      |
+    +---------------+------------------------------------------------+
 
            Table 2: OAuth discharge of the carrier requirements
 

@@ -760,6 +760,16 @@ Table of Contents
    whose policy places an agent under mission governance MUST reject a
    missionless token request from that agent.
 
+   AAuth lists an AS-issued auth token's mission_s256 among its optional
+   claims, and the PS's delivery checks do not include it (Sections
+   9.4.1 and 9.1.3 of [I-D.draft-hardt-oauth-aauth-protocol]).  In four-
+   party access, before returning an AS-issued auth token to the agent,
+   a PS MUST verify that the token carries the resource token's
+   mission_s256 exactly whenever the resource token carried one.  A
+   token that fails this check fails the PS's delivery verification, and
+   the PS answers as_unreachable (Section 9.1.3 of
+   [I-D.draft-hardt-oauth-aauth-protocol]).
+
    A request's Mission association is required when that policy applies
    or when the request derives from a presented token or upstream token
    that carries mission_s256.  A required association that is missing,
@@ -792,10 +802,9 @@ Table of Contents
    Intentionally missionless authorization is a separate path, admitted
    by explicit deployment policy from the outset for requests with no
    required or inherited Mission association.  It is never a fallback
-   after Mission validation fails.  The Lifecycle-Gated Authorization
-   and Credential-Bound claims of Section 9 cover only requests whose
-   resource token carries the protected mission_s256 claim, and not that
-   path.
+   after Mission validation fails.  It is outside the Lifecycle-Gated
+   Authorization and Credential-Bound claims.  Each claim's scope and
+   activation conditions are stated in Section 9.
 
 4.8.  Lifecycle
 
@@ -1187,29 +1196,29 @@ Table of Contents
    |             |        |                                                 |decisions at the |and           |
    |             |        |                                                 |mission endpoint,|intentionally |
    |             |        |                                                 |permission       |missionless   |
-   |             |        |                                                 |decisions, and   |requests,     |
-   |             |        |                                                 |auth-token       |admitted by   |
-   |             |        |                                                 |issuance the PS  |policy with no|
-   |             |        |                                                 |performs or      |required or   |
-   |             |        |                                                 |brokers for      |inherited     |
-   |             |        |                                                 |requests carrying|association,  |
-   |             |        |                                                 |the person-token-|are outside   |
-   |             |        |                                                 |issued           |the claim; a  |
-   |             |        |                                                 |mission_s256     |failed        |
-   |             |        |                                                 |claim; decisions |required      |
-   |             |        |                                                 |fail closed when |association is|
-   |             |        |                                                 |current state    |rejected,     |
-   |             |        |                                                 |cannot be        |never treated |
-   |             |        |                                                 |established      |as missionless|
-   |             |        |                                                 |(Section 4.8,    |(Section 4.7);|
-   |             |        |                                                 |Section 4.5,     |the post-     |
-   |             |        |                                                 |Section 4.3)     |transition    |
-   |             |        |                                                 |                 |residual is   |
-   |             |        |                                                 |                 |bounded by    |
-   |             |        |                                                 |                 |person-token  |
-   |             |        |                                                 |                 |and auth-token|
-   |             |        |                                                 |                 |lifetime and  |
-   |             |        |                                                 |                 |expires_at    |
+   |             |        |                                                 |decisions,       |requests,     |
+   |             |        |                                                 |person-token     |admitted by   |
+   |             |        |                                                 |issuance under a |policy with no|
+   |             |        |                                                 |named or         |required or   |
+   |             |        |                                                 |upstream-        |inherited     |
+   |             |        |                                                 |inherited        |association,  |
+   |             |        |                                                 |mission, and     |are outside   |
+   |             |        |                                                 |auth-token       |the claim; a  |
+   |             |        |                                                 |issuance the PS  |failed        |
+   |             |        |                                                 |performs or      |required      |
+   |             |        |                                                 |brokers for      |association is|
+   |             |        |                                                 |requests carrying|rejected,     |
+   |             |        |                                                 |the person-token-|never treated |
+   |             |        |                                                 |issued           |as missionless|
+   |             |        |                                                 |mission_s256     |(Section 4.7);|
+   |             |        |                                                 |claim; decisions |the post-     |
+   |             |        |                                                 |fail closed when |transition    |
+   |             |        |                                                 |current state    |residual is   |
+   |             |        |                                                 |cannot be        |bounded by    |
+   |             |        |                                                 |established      |person-token  |
+   |             |        |                                                 |(Section 4.8,    |and auth-token|
+   |             |        |                                                 |Section 4.5,     |lifetime and  |
+   |             |        |                                                 |Section 4.3)     |expires_at    |
    +-------------+--------+-------------------------------------------------+-----------------+--------------+
    |State-       |supplied|the AAuth Mission Management status operation    |Authenticated    |The base      |
    |Observable   |        |active                                           |per-role callers,|binding       |
@@ -1270,8 +1279,14 @@ Table of Contents
    |             |        |                                                 |external join;   |artifacts are |
    |             |        |                                                 |fact semantics:  |AS-issued     |
    |             |        |                                                 |PS issuance or   |under the PS's|
-   |             |        |                                                 |brokering under  |brokering     |
-   |             |        |                                                 |the mission      |              |
+   |             |        |                                                 |brokering under  |brokering, and|
+   |             |        |                                                 |the mission      |the PS's      |
+   |             |        |                                                 |                 |delivery check|
+   |             |        |                                                 |                 |rejects one   |
+   |             |        |                                                 |                 |that omits or |
+   |             |        |                                                 |                 |alters the    |
+   |             |        |                                                 |                 |claim         |
+   |             |        |                                                 |                 |(Section 4.7) |
    +-------------+--------+-------------------------------------------------+-----------------+--------------+
    |Authorized   |not     |--                                               |--               |The PS co-    |
    |Context      |supplied|                                                 |                 |establishes   |

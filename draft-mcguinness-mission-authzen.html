@@ -1288,7 +1288,10 @@ the capability-binding companion owns.<a href="#section-abstract-1" class="pilcr
             <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-runtime-evidence" class="internal xref">Runtime Evidence</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
-                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-execution-evidence-requirem" class="internal xref">Execution Evidence Requirement</a></p>
+                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-evaluation-request-digest-i" class="internal xref">Evaluation Request Digest Input</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.2">
+                <p id="section-toc.1-1.8.2.2.1"><a href="#section-8.2" class="auto internal xref">8.2</a>.  <a href="#name-execution-evidence-requirem" class="internal xref">Execution Evidence Requirement</a></p>
 </li>
             </ul>
 </li>
@@ -4230,12 +4233,69 @@ format is <code>jws-compact</code>, the protected <code>typ</code> is the one va
 envelope fixes, and the protected <code>cty</code> names the record's own
 registered media type
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-8-3" class="pilcrow">¶</a></p>
-<div id="execution-evidence-requirement">
+<div id="evaluation-request-digest-input">
 <section id="section-8.1">
-        <h3 id="name-execution-evidence-requirem">
-<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-execution-evidence-requirem" class="section-name selfRef">Execution Evidence Requirement</a>
+        <h3 id="name-evaluation-request-digest-i">
+<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-evaluation-request-digest-i" class="section-name selfRef">Evaluation Request Digest Input</a>
         </h3>
-<p id="section-8.1-1">This requirement is the Runtime Evidence feature profile's own
+<p id="section-8.1-1">Under this profile, the input to <code>evaluation_request_digest</code>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>) is the complete
+JSON request body the PEP submitted to the evaluation or evaluations
+endpoint: every member it carried, extension members included, before
+the PDP applies any default or enrichment. HTTP header fields and
+transport framing are not part of it. The digest is <code>sha-256:</code>
+followed by the base64url, unpadded, encoding of the SHA-256 of the
+body's JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> canonical bytes, so member order and whitespace
+do not change it, while an omitted member and a member set to <code>null</code>
+yield different digests. For a batch (<a href="#batch-evaluations" class="auto internal xref">Section 6.17</a>), the
+input is the batch request body as submitted, before its default
+members are merged into the items; each item's Decision Evidence
+carries that one digest.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+<p id="section-8.1-2">The digest commits to its input; it does not hide an input a party
+can guess.<a href="#section-8.1-2" class="pilcrow">¶</a></p>
+<p id="section-8.1-3">For this abbreviated consequential-read request, submitted without a
+<code>parameter_digest</code>:<a href="#section-8.1-3" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-8.1-4">
+<pre>
+{
+  "subject": {
+    "type": "user",
+    "id": "user_3p2q8mN1a0kV7tR"
+  },
+  "resource": {
+    "type": "journal-entry",
+    "id": "je_2026Q3_inv_8421",
+    "properties": {
+      "audience": "https://erp.example.com"
+    }
+  },
+  "action": {
+    "name": "journal-entries.read"
+  },
+  "context": {
+    "mission": {
+      "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+      "issuer": "https://as.example.com"
+    }
+  }
+}
+</pre><a href="#section-8.1-4" class="pilcrow">¶</a>
+</div>
+<p id="section-8.1-5">the value is:<a href="#section-8.1-5" class="pilcrow">¶</a></p>
+<div class="lang-text sourcecode" id="section-8.1-6">
+<pre>
+evaluation_request_digest =
+  sha-256:v_QKMU8dffVDdoAnQkBenjWgtp5U_ffH5ORwT39iaoo
+</pre><a href="#section-8.1-6" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
+<div id="execution-evidence-requirement">
+<section id="section-8.2">
+        <h3 id="name-execution-evidence-requirem">
+<a href="#section-8.2" class="section-number selfRef">8.2. </a><a href="#name-execution-evidence-requirem" class="section-name selfRef">Execution Evidence Requirement</a>
+        </h3>
+<p id="section-8.2-1">This requirement is the Runtime Evidence feature profile's own
 (<a href="#profiles-and-capabilities" class="auto internal xref">Section 2</a>, <a href="#evidence" class="auto internal xref">Section 8</a>): independent of anything
 the PDP returns, a PEP that claims Runtime Evidence <span class="bcp14">MUST</span> emit one
 Execution Evidence Object
@@ -4250,8 +4310,8 @@ companion (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class
 permit whose action is never released still ends in Execution
 Evidence with <code>outcome</code> <code>suppressed</code>; only a refusal before any PDP
 decision is a Refusal Record. This is a profile-level PEP requirement,
-not an obligation.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
-<p id="section-8.1-2">If evidence emission fails after an irreversible effect, the effect
+not an obligation.<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+<p id="section-8.2-2">If evidence emission fails after an irreversible effect, the effect
 stands: nothing retroactively permits or denies it. The PEP <span class="bcp14">MUST</span>
 record the emission failure durably and surface it on its operational
 alarm path, and the deployment's audit posture treats the execution
@@ -4259,7 +4319,7 @@ as unevidenced. Where the deployment's transaction assurance depends
 on that later evidence (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>),
 the PEP <span class="bcp14">MUST</span> durably reserve evidence capacity for the execution, an
 evidence reservation, before acting, and <span class="bcp14">MUST</span> fail closed when the
-reservation cannot be made.<a href="#section-8.1-2" class="pilcrow">¶</a></p>
+reservation cannot be made.<a href="#section-8.2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -4359,7 +4419,7 @@ treat signed Decision Evidence as authorization to act
 refusal, and, for the classes the runtime profile's transaction-assurance
 tier covers, an Execution Evidence Object for the final disposition of
 every consequential permit (<code>completed</code>, <code>failed</code>, or <code>suppressed</code>
-before release, <a href="#execution-evidence-requirement" class="auto internal xref">Section 8.1</a>). A PEP claiming
+before release, <a href="#execution-evidence-requirement" class="auto internal xref">Section 8.2</a>). A PEP claiming
 only the Decision Base records a refusal or an execution outcome in
 its own internal form, never represented as this profile's portable
 schema (<a href="#profiles-and-capabilities" class="auto internal xref">Section 2</a>).<a href="#section-10-5" class="pilcrow">¶</a></p>
@@ -4534,7 +4594,7 @@ this document requested registration of a composite obligation type
 carrying permit-lifecycle enforcement controls; that registration
 request is withdrawn, since those controls are now the <code>conditions</code>
 response member (<a href="#response-context" class="auto internal xref">Section 7.1</a>) and execution evidence is a
-profile-level PEP requirement (<a href="#execution-evidence-requirement" class="auto internal xref">Section 8.1</a>),
+profile-level PEP requirement (<a href="#execution-evidence-requirement" class="auto internal xref">Section 8.2</a>),
 neither of which is an obligation. This profile's sole obligation
 type, <code>step-up</code> (<a href="#obligations" class="auto internal xref">Section 7.2</a>), is registered by <span>[<a href="#AUTHZEN-OBL" class="cite xref">AUTHZEN-OBL</a>]</span>
 itself and is not re-registered here.<a href="#section-13.1-1" class="pilcrow">¶</a></p>
@@ -4895,11 +4955,17 @@ registered by <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite x
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">The state observation's <code>mission_status_issued_at</code> is the RFC 3339
+          <p id="appendix-A-2.1.1">Defined the input to <code>evaluation_request_digest</code>: the complete
+request body as submitted, extension members included, before any
+default or enrichment, with header fields and transport framing
+excluded; a batch carries the one digest of its body (#971).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">The state observation's <code>mission_status_issued_at</code> is the RFC 3339
 form of a Mission Status Response's <code>iat</code>, which <code>freshness_at</code>
 precedes by no more than the published maximum clock skew, and
 <code>mission_status_expires_at</code> and the state valid-through are its
-<code>mission.fresh_until</code>, not its <code>exp</code>, or a lease's end.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+<code>mission.fresh_until</code>, not its <code>exp</code>, or a lease's end.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

@@ -2016,46 +2016,54 @@ carries the exact <code>mission_s256</code>, and MUST NOT continue that
 authorization under the mission when it is absent or different.  A PS
 whose policy places an agent under mission governance MUST reject a
 missionless token request from that agent.<a href="#section-4.7-6" class="pilcrow">¶</a></p>
-<p id="section-4.7-7">A request's Mission association is required when that policy applies
+<p id="section-4.7-7">AAuth lists an AS-issued auth token's <code>mission_s256</code> among its optional
+claims, and the PS's delivery checks do not include it (Sections 9.4.1
+and 9.1.3 of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).  In four-party
+access, before returning an AS-issued auth token to the agent, a PS
+MUST verify that the token carries the resource token's <code>mission_s256</code>
+exactly whenever the resource token carried one.  A token that fails
+this check fails the PS's delivery verification, and the PS answers
+<code>as_unreachable</code> (Section 9.1.3 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).<a href="#section-4.7-7" class="pilcrow">¶</a></p>
+<p id="section-4.7-8">A request's Mission association is required when that policy applies
 or when the request derives from a presented token or upstream token
 that carries <code>mission_s256</code>.  A required association that is missing,
 malformed, invalid, unresolvable, or mismatched fails the request under
-AAuth's own rules, in AAuth's order of checks:<a href="#section-4.7-7" class="pilcrow">¶</a></p>
+AAuth's own rules, in AAuth's order of checks:<a href="#section-4.7-8" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-4.7-8.1">
-            <p id="section-4.7-8.1.1">a malformed <code>mission_s256</code> in a person token request receives
+<li class="normal" id="section-4.7-9.1">
+            <p id="section-4.7-9.1.1">a malformed <code>mission_s256</code> in a person token request receives
 <code>invalid_request</code>, and one naming a mission that does not exist or
 belongs to another agent is rejected (Section 7.1 of
-<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>);<a href="#section-4.7-8.1.1" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>);<a href="#section-4.7-9.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-4.7-8.2">
-            <p id="section-4.7-8.2.1">a presented token that fails verification receives
+          <li class="normal" id="section-4.7-9.2">
+            <p id="section-4.7-9.2.1">a presented token that fails verification receives
 <code>invalid_presented_token</code>, or <code>expired_presented_token</code> when only its
 <code>exp</code> fails, which is how a Mission-bound token fails once
 <code>expires_at</code> passes (Sections 6.7.2 and 7.1.2 of
-<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>);<a href="#section-4.7-8.2.1" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>);<a href="#section-4.7-9.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-4.7-8.3">
-            <p id="section-4.7-8.3.1">a resource token that omits or mismatches its presented token's
+          <li class="normal" id="section-4.7-9.3">
+            <p id="section-4.7-9.3.1">a resource token that omits or mismatches its presented token's
 <code>mission_s256</code> receives <code>invalid_resource_token</code> (Section 6.7.2 of
-<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>); and<a href="#section-4.7-8.3.1" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>); and<a href="#section-4.7-9.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-4.7-8.4">
-            <p id="section-4.7-8.4.1">a request that reaches the mission-state check under a mission that
+          <li class="normal" id="section-4.7-9.4">
+            <p id="section-4.7-9.4.1">a request that reaches the mission-state check under a mission that
 is no longer active receives <code>mission_terminated</code> (Section 8.8 of
-<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).<a href="#section-4.7-8.4.1" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).<a href="#section-4.7-9.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-4.7-9">The PS, or the AS in four-party access, MUST NOT evaluate a failed
+<p id="section-4.7-10">The PS, or the AS in four-party access, MUST NOT evaluate a failed
 request as missionless authorization, and the agent MUST NOT retry it
-without the reference.<a href="#section-4.7-9" class="pilcrow">¶</a></p>
-<p id="section-4.7-10">Intentionally missionless authorization is a separate path, admitted by
+without the reference.<a href="#section-4.7-10" class="pilcrow">¶</a></p>
+<p id="section-4.7-11">Intentionally missionless authorization is a separate path, admitted by
 explicit deployment policy from the outset for requests with no
 required or inherited Mission association.  It is never a fallback
-after Mission validation fails.  The Lifecycle-Gated Authorization and
-Credential-Bound claims of <a href="#mission-substrate" class="auto internal xref">Section 9</a> cover only requests
-whose resource token carries the protected <code>mission_s256</code> claim, and
-not that path.<a href="#section-4.7-10" class="pilcrow">¶</a></p>
+after Mission validation fails.  It is outside the Lifecycle-Gated
+Authorization and Credential-Bound claims.  Each claim's scope and
+activation conditions are stated in <a href="#mission-substrate" class="auto internal xref">Section 9</a>.<a href="#section-4.7-11" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="lifecycle">
@@ -2510,7 +2518,7 @@ Bounded Reliance floor (<span>[<a href="#I-D.draft-mcguinness-mission-substrate"
             <td class="text-left" rowspan="1" colspan="1">Lifecycle-Gated Authorization</td>
             <td class="text-left" rowspan="1" colspan="1">supplied</td>
             <td class="text-left" rowspan="1" colspan="1">always</td>
-            <td class="text-left" rowspan="1" colspan="1">Mission approval and other positive governance decisions at the mission endpoint, permission decisions, and auth-token issuance the PS performs or brokers for requests carrying the person-token-issued <code>mission_s256</code> claim; decisions fail closed when current state cannot be established (<a href="#lifecycle" class="auto internal xref">Section 4.8</a>, <a href="#access-modes" class="auto internal xref">Section 4.5</a>, <a href="#mission-log" class="auto internal xref">Section 4.3</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">Mission approval and other positive governance decisions at the mission endpoint, permission decisions, person-token issuance under a named or upstream-inherited mission, and auth-token issuance the PS performs or brokers for requests carrying the person-token-issued <code>mission_s256</code> claim; decisions fail closed when current state cannot be established (<a href="#lifecycle" class="auto internal xref">Section 4.8</a>, <a href="#access-modes" class="auto internal xref">Section 4.5</a>, <a href="#mission-log" class="auto internal xref">Section 4.3</a>)</td>
             <td class="text-left" rowspan="1" colspan="1">Independently issued resource credentials and intentionally missionless requests, admitted by policy with no required or inherited association, are outside the claim; a failed required association is rejected, never treated as missionless (<a href="#ref-propagation" class="auto internal xref">Section 4.7</a>); the post-transition residual is bounded by person-token and auth-token lifetime and <code>expires_at</code>
 </td>
           </tr>
@@ -2540,7 +2548,7 @@ Bounded Reliance floor (<span>[<a href="#I-D.draft-mcguinness-mission-substrate"
             <td class="text-left" rowspan="1" colspan="1">supplied</td>
             <td class="text-left" rowspan="1" colspan="1">PS authorization or federated authorization access mode, for requests whose resource token carries and validates the signed <code>mission_s256</code> claim (<a href="#access-modes" class="auto internal xref">Section 4.5</a>, <a href="#ref-propagation" class="auto internal xref">Section 4.7</a>)</td>
             <td class="text-left" rowspan="1" colspan="1">PS-issued or PS-brokered artifacts carry the claim, a binding established at issuance rather than by an external join; fact semantics: PS issuance or brokering under the mission</td>
-            <td class="text-left" rowspan="1" colspan="1">Agent identity and resource-managed modes convey no mission binding; federated authorization artifacts are AS-issued under the PS's brokering</td>
+            <td class="text-left" rowspan="1" colspan="1">Agent identity and resource-managed modes convey no mission binding; federated authorization artifacts are AS-issued under the PS's brokering, and the PS's delivery check rejects one that omits or alters the claim (<a href="#ref-propagation" class="auto internal xref">Section 4.7</a>)</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Authorized Context Correlation</td>
