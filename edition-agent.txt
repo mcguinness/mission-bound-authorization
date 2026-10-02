@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-02T16:37:41Z
-Source repository commit: d6910533409889350fccade760135e1f8fd25f12
+Generated: 2026-10-02T16:51:18Z
+Source repository commit: 3ebb7b815ef3fc5556d5ef089c477e866d37b46f
 Member count: 9
 
 Reading order:
@@ -1350,15 +1350,19 @@ Table of Contents
       widening exists only as an approved successor: a fresh approval
       ([I-D.draft-mcguinness-oauth-mission-expansion]), or policy
       drawdown within a ceiling a human pre-consented
-      ([I-D.draft-mcguinness-oauth-mission-progressive]).  The relation
-      is typed: it is defined where a structured-authority vocabulary
-      defines it (on the OAuth binding, mission_resource_access and its
-      Common Constraints, defined by the OAuth binding's Mission
-      Resource Access Profile).  Authority carried in a type with no
-      defined subset relation is carried as approved, neither narrowed,
-      delegated, nor projected.  Moving authority into expressive
-      policy-language entries weakens this guarantee exactly there, a
-      trade to make knowingly
+      ([I-D.draft-mcguinness-oauth-mission-progressive]).  Within a live
+      Mission, issuer-held narrowing such as containment or discharge
+      only subtracts: each mechanism feeds a single Effective Authority
+      Set, every derivation reads it, and none restores authority
+      ([I-D.draft-mcguinness-oauth-mission-status]).  The relation is
+      typed: a type's specification defines its subset relation, and an
+      issuer narrows, delegates, or projects an entry only under a
+      capability it declares for that type (for example, on the OAuth
+      binding, mission_resource_access and its Common Constraints,
+      [I-D.draft-mcguinness-oauth-mission-resource-access]).  Without
+      that capability the entry is carried exactly as approved.  Moving
+      authority into expressive policy-language entries weakens this
+      guarantee exactly there, a trade to make knowingly
       ([I-D.draft-mcguinness-mission-security-model]).
 
    *Revocation is possession-independent*:  A Mission ends by a state
@@ -1572,24 +1576,36 @@ Table of Contents
 
 9.2.  The Authority Derivation Boundary
 
-   In the authority-bearing bindings, deriving the Authority Set from
-   the Mission Intent is the semantic heart of the model and the one
-   step the family deliberately does not standardize.  The consequence
-   is a trust boundary: interoperability begins at the committed result,
-   not at the Intent.  A Mission Intent has no portable semantics; two
-   conforming Mission Issuers can derive different Authority Sets from
-   the same Intent, and audit can establish what was derived (against
-   intent_hash and policy_version), never whether it was the right
-   reading of the task.
+   In the authority-bearing bindings, all of which derive under the
+   OAuth binding's rules ([I-D.draft-mcguinness-oauth-mission],
+   Section "Mission Authority"), the Approver consents to the Authority
+   Set the Mission Issuer renders and commits, not to the Mission
+   Intent.  Derivation is mechanical: the Mission Issuer narrows a
+   submitted authority proposal to policy, or looks up candidate entries
+   in a configured mapping keyed on structured Intent members and
+   narrows those.  The prose members (goal, task_bounds,
+   success_criteria) never change what is derived; they bound authority
+   through disclosure, since the Approver refuses authority the words do
+   not support.  Translating a user's words into structure is the
+   shaper's job, before admission and outside the trust boundary
+   ([I-D.draft-mcguinness-mission-shaping]).
 
-   A deployment whose partners must reason about its derivations can
-   publish a derivation policy identifier and test fixtures that pin
-   Intent-to-Authority-Set outcomes, making the local policy reviewable
-   even though it does not travel.  Narrowing mode
-   ([I-D.draft-mcguinness-oauth-mission]) is the checkable path: where
-   the client supplies candidate authority, derivation is a subset of it
-   and reproducible, which is the closest the family comes to portable
-   derivation.
+   What stays local is derivation policy: what the Mission Issuer
+   narrows to, and what its mappings contain.  The consequence is a
+   trust boundary: interoperability begins at the committed result, not
+   at the Intent.  A Mission Intent has no portable semantics; two
+   conforming Mission Issuers can derive different Authority Sets from
+   the same submission, and audit can establish what was derived
+   (against intent_hash and policy_version), never whether it was the
+   right reading of the task.
+
+   Narrowing mode is the interoperable path: each derived entry is a
+   subset of a proposed entry, so the result is reproducible and the
+   client can check it against its proposal.  A deployment whose
+   partners must reason about its derivations can publish a derivation
+   policy identifier and test fixtures that pin Intent-to-Authority-Set
+   outcomes, making the local policy reviewable even though it does not
+   travel.
 
    The OAuth binding's informative Derivation Policy appendix
    ([I-D.draft-mcguinness-oauth-mission]) illustrates that policy
@@ -1616,28 +1632,28 @@ Table of Contents
 
    The derivation modes rank by how portable their result is:
 
-      +==========================+=================================+
-      | Derivation mode          | Portability status              |
-      +==========================+=================================+
-      | Client proposes concrete | Interoperable default           |
-      | authority; AS narrows    |                                 |
-      +--------------------------+---------------------------------+
-      | AS derives from          | Profile-specific                |
-      | structured Intent fields |                                 |
-      +--------------------------+---------------------------------+
-      | AS derives from free     | Local, non-portable unless      |
-      | text                     | profiled                        |
-      +--------------------------+---------------------------------+
-      | LLM-assisted derivation  | Advisory unless a deterministic |
-      |                          | policy commits the output       |
-      +--------------------------+---------------------------------+
+   +=====================================+============================+
+   | Derivation mode                     | Portability status         |
+   +=====================================+============================+
+   | Client proposes concrete authority; | Interoperable default      |
+   | Mission Issuer narrows it to policy |                            |
+   +-------------------------------------+----------------------------+
+   | Configured mapping keyed on         | Conforming; the mapping is |
+   | structured Intent members           | deployment-specific        |
+   +-------------------------------------+----------------------------+
+   | Model-assisted derivation over the  | Local-policy extension,    |
+   | structured inputs                   | bound by the Intent bounds |
+   +-------------------------------------+----------------------------+
+   | Derivation from the prose members   | Not a mode: prose is       |
+   |                                     | disclosure, shaped before  |
+   |                                     | admission                  |
+   +-------------------------------------+----------------------------+
 
                                  Table 2
 
-   A deployment seeking interoperable authority uses the first; free-
-   text and model-assisted derivation are local policy unless a profile
-   pins them with a published policy identifier, version, and test
-   fixtures.
+   A deployment seeking interoperable authority uses narrowing; a model-
+   assisted extension stays local policy unless a profile pins it with a
+   published policy identifier, version, and test fixtures.
 
 9.3.  Approval Fidelity
 
@@ -4644,6 +4660,14 @@ Appendix G.  Mission Document Map
 Appendix H.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Derivation and narrowing, with no change to any profile's
+      requirements.  The derivation boundary states the derivation
+      procedure the authority-bearing bindings share (narrowing or a
+      configured mapping, with prose members as disclosure) and that
+      only derivation policy stays local; Authority only narrows covers
+      the Effective Authority Set and the per-type transformation
+      capabilities.
 
    *  The issuance-join row of the composed kill-switch table and its
       note follow the Mission Issuance Grant's two consuming-AS modes:

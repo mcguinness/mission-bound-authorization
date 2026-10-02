@@ -318,6 +318,32 @@ Table of Contents
    possession, and request-context checks before relying on a received
    reference.
 
+   The reference is an integrity commitment, not a secret.  It is a
+   deterministic digest of the blob bytes, so a party that can predict
+   the blob's content can confirm a guess; the digest's length says
+   nothing about the entropy of its input.  This binding confines the
+   reference instead: every PS surface keyed by it authenticates the
+   caller and does not disclose whether a mission exists.  The mission
+   endpoint does so natively (Section 8.7 of
+   [I-D.draft-hardt-oauth-aauth-protocol]), the management control plane
+   by its anti-oracle rules
+   ([I-D.draft-mcguinness-mission-aauth-management]), and the auth token
+   endpoint because a resource token's reference is checked against the
+   agent's own presented token before any state check (Section 6.7.2 of
+   [I-D.draft-hardt-oauth-aauth-protocol]).  AAuth's mission status
+   error carries no ownership condition (Section 8.8 of
+   [I-D.draft-hardt-oauth-aauth-protocol]), so at a PS endpoint that
+   takes a mission_s256 parameter, a PS MUST establish that the mission
+   belongs to the requesting agent before reporting its state.  For an
+   absent mission and a mission belonging to another agent, the PS MUST
+   return the same status, error, body, and header set, with observably
+   equivalent timing.
+
+   Possession of the reference, or a correct guess, conveys no authority
+   over status, logs, or management.  A deployment that claims stronger
+   unpredictability documents its added entropy construction and its
+   retention consequences; this binding defines no member for it.
+
 3.3.  Mission Blob
 
    The approved mission blob uses the members defined by AAuth,
@@ -1018,18 +1044,22 @@ Table of Contents
    The exact mission blob can contain sensitive intent, planned actions,
    tool use, organizational context, and person interactions.  AAuth's
    reference-only design keeps the blob between the agent and PS.
-   Resources and Access Servers receive only the opaque reference, which
-   is s256 and the PS that approved it (Section 14.3 of
+   Resources and Access Servers receive only the reference, which is
+   s256 and the PS that approved it (Section 14.3 of
    [I-D.draft-hardt-oauth-aauth-protocol]), and MUST NOT dereference it.
 
    The stable reference is nevertheless a correlation handle.  Reusing
    it across resources reveals that requests belong to the same mission
-   and reveals the PS hostname.  Agents SHOULD attach a Mission Context
-   only when its governance and correlation benefits justify that
-   disclosure.  Once attached, the reference also travels where the
-   agent does not choose: when a resource acting as an agent obtains a
-   person token for a downstream resource, the PS copies mission_s256
-   from the upstream token into it (Section 7.1 of
+   and reveals the PS hostname.  Because it is a deterministic digest, a
+   party that can predict a blob's content can also test a guess against
+   an observed reference; the PS's confinement of the reference and its
+   data minimization hold whether or not the reference stays secret
+   (Section 3.2).  Agents SHOULD attach a Mission Context only when its
+   governance and correlation benefits justify that disclosure.  Once
+   attached, the reference also travels where the agent does not choose:
+   when a resource acting as an agent obtains a person token for a
+   downstream resource, the PS copies mission_s256 from the upstream
+   token into it (Section 7.1 of
    [I-D.draft-hardt-oauth-aauth-protocol]).  Resources, Access Servers,
    and logs SHOULD retain the reference only as long as needed for
    authorization, security, dispute resolution, or legal obligations.
@@ -1082,10 +1112,11 @@ Table of Contents
        namespace, s256 is compared as the exact unpadded base64url
        digest of the approved bytes, a changed blob is a different
        mission, a reference is never reassigned, retention follows the
-       mission log's declared period, and the reference is unguessable
-       to parties that do not hold the private blob.  On the wire it
-       travels as the flat mission_s256 claim or parameter, with the PS
-       named as Section 3.2 describes (Section 4.3).
+       mission log's declared period, and the reference, a content
+       digest rather than a secret, meets the unguessability requirement
+       by namespace confinement (Section 3.2).  On the wire it travels
+       as the flat mission_s256 claim or parameter, with the PS named as
+       Section 3.2 describes (Section 4.3).
 
    2.  *Controller*: the approving PS controls approval, governance
        state, and the mission log (Section 4.1).  Consumers establish

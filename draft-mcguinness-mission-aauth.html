@@ -1560,6 +1560,30 @@ protected AAuth message.  It gains protocol integrity from the AAuth
 message signature or signed token that carries it.  Implementations MUST
 apply all AAuth signature, issuer, audience, proof-of-possession, and
 request-context checks before relying on a received reference.<a href="#section-3.2-4" class="pilcrow">¶</a></p>
+<p id="section-3.2-5">The reference is an integrity commitment, not a secret.  It is a
+deterministic digest of the blob bytes, so a party that can predict
+the blob's content can confirm a guess; the digest's length says
+nothing about the entropy of its input.  This binding confines the
+reference instead: every PS surface keyed by it authenticates the
+caller and does not disclose whether a mission exists.  The mission
+endpoint does so natively (Section 8.7 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>), the management control plane
+by its anti-oracle rules
+(<span>[<a href="#I-D.draft-mcguinness-mission-aauth-management" class="cite xref">I-D.draft-mcguinness-mission-aauth-management</a>]</span>), and the auth token
+endpoint because a resource token's reference is checked against the
+agent's own presented token before any state check (Section 6.7.2 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).  AAuth's mission status
+error carries no ownership condition (Section 8.8 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>), so at a PS endpoint that
+takes a <code>mission_s256</code> parameter, a PS MUST establish that the mission
+belongs to the requesting agent before reporting its state.  For an
+absent mission and a mission belonging to another agent, the PS MUST
+return the same status, error, body, and header set, with observably
+equivalent timing.<a href="#section-3.2-5" class="pilcrow">¶</a></p>
+<p id="section-3.2-6">Possession of the reference, or a correct guess, conveys no authority
+over status, logs, or management.  A deployment that claims stronger
+unpredictability documents its added entropy construction and its
+retention consequences; this binding defines no member for it.<a href="#section-3.2-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="blob">
@@ -2324,13 +2348,17 @@ scopes, and state remain outside the natural-language decision context.<a href="
 <p id="section-7-1">The exact mission blob can contain sensitive intent, planned actions,
 tool use, organizational context, and person interactions.  AAuth's
 reference-only design keeps the blob between the agent and PS.  Resources
-and Access Servers receive only the opaque reference, which is <code>s256</code>
-and the PS that approved it (Section 14.3 of
+and Access Servers receive only the reference, which is <code>s256</code> and the
+PS that approved it (Section 14.3 of
 <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>), and MUST NOT dereference it.<a href="#section-7-1" class="pilcrow">¶</a></p>
 <p id="section-7-2">The stable reference is nevertheless a correlation handle.  Reusing it
 across resources reveals that requests belong to the same mission and
-reveals the PS hostname.  Agents SHOULD attach a Mission Context only
-when its governance and correlation benefits justify that disclosure.
+reveals the PS hostname.  Because it is a deterministic digest, a
+party that can predict a blob's content can also test a guess against
+an observed reference; the PS's confinement of the reference and its
+data minimization hold whether or not the reference stays secret
+(<a href="#reference" class="auto internal xref">Section 3.2</a>).  Agents SHOULD attach a Mission Context only when its
+governance and correlation benefits justify that disclosure.
 Once attached, the reference also travels where the agent does not
 choose: when a resource acting as an agent obtains a person token for
 a downstream resource, the PS copies <code>mission_s256</code> from the upstream
@@ -2391,8 +2419,9 @@ capability table.<a href="#section-9-1" class="pilcrow">¶</a></p>
 namespace, <code>s256</code> is compared as the exact unpadded base64url digest
 of the approved bytes, a changed blob is a different mission, a
 reference is never reassigned, retention follows the mission log's
-declared period, and the reference is unguessable to parties that do
-not hold the private blob.  On the wire it travels as the flat
+declared period, and the reference, a content digest rather than a
+secret, meets the unguessability requirement by namespace
+confinement (<a href="#reference" class="auto internal xref">Section 3.2</a>).  On the wire it travels as the flat
 <code>mission_s256</code> claim or parameter, with the PS named as
 <a href="#reference" class="auto internal xref">Section 3.2</a> describes (<a href="#mission-log" class="auto internal xref">Section 4.3</a>).<a href="#section-9-3.1.1" class="pilcrow">¶</a></p>
 </li>
