@@ -713,8 +713,10 @@ A client tells three cases apart:
   unmappable subject or authority) are configuration faults that a
   fresh grant does not cure.
 - **Stop.** A refusal because the Mission is not `active` is final.
-  The AS SHOULD make the response distinguishable with an
-  `error_description` stating the Mission is not active, and a client
+  The AS SHOULD include the issuance profile's `mission_error`
+  member with the value naming the Mission's state
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Issuance
+  Gating"), and a client
   that requests a fresh grant is in any case refused at the MAS
   `active` gate with `mission_not_active` ({{minting-errors}}), which
   is the authoritative signal to stop rather than retry.
