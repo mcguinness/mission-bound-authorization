@@ -888,9 +888,10 @@ Mission Issuer to trust the shaper.
 
 ## Mission Issuer Handling {#issuer-handling}
 
-A Mission Issuer that receives a shaped Mission Intent MAY use a
-`shaping_evidence_hash` and Shaping Evidence as input to approval and
-audit. Under the issuance profile, it:
+A Mission Issuer MAY use a `shaping_evidence_hash`, and any Shaping
+Evidence available to it, as input to the consent disclosure and to
+audit, never to derivation ({{authority-proposal}}). Whatever a shaper
+produced, the Mission Issuer, under the issuance profile:
 
 - validates the Mission Intent independently;
 - does not approve a Mission solely because a shaper produced it;
