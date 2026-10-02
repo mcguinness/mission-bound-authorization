@@ -730,7 +730,10 @@ convention, none of which require registration.
   `version`, `digest`) under the issuance profile's Standing-Consent
   Bases, replacing the string or URI and the SHOULD to commit the
   policy body; `ceiling_hash` covers the object, and a snapshot that
-  does not match falls back to a fresh human approval.
+  does not match falls back to a fresh human approval. The
+  `ceiling_drawdown` activation maps to `drawdown_policy.id` and
+  `.version`, and the review cadence, part of the policy content, is
+  anchored with it.
 - Editorial: disambiguated `authority_ceiling` from the template
   profile's Template Ceiling and the shaping companion's shaping
   ceiling at its first definition ({{conventions-and-terminology}}), no
