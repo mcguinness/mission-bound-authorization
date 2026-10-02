@@ -4,7 +4,8 @@ certs/
 .env
 *.tsbuildinfo
 evals/fixtures/redteam-latest.json
-# The PDP idempotency claim domain's durable file (topology.json `stores`).
+# The durable store files named in topology.json `stores`: the PDP's idempotency
+# claim domain and the PEP's write reservations.
 /var/
 
 # The demo dashboard is hand-authored (the runnable UI, served by demo:serve),

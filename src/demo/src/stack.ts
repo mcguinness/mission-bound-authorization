@@ -65,6 +65,8 @@ import {
   startResourceMetadataServer,
   type TokenFacts,
   TransactionEngine,
+  openWriteReservationStore,
+  type WriteReservationStore,
 } from "@mission/mcp-payments";
 import { ResourceAuthorizationServer } from "@mission/ras";
 import { SaasMcpServer } from "@mission/mcp-saas";
@@ -168,6 +170,12 @@ export interface DemoStack {
    * unreachable, so the PDP issues no high-consequence permit after it).
    */
   pdpClaims: IdempotencyClaimDomain;
+  /**
+   * @spec runtime#idempotency (#918): the PEP's reservation and retention
+   * store for keyed reversible writes, open single-writer on its configured
+   * file for this stack's lifetime, beside (never inside) the PDP's claims.
+   */
+  writeReservations: WriteReservationStore;
   /** The issuer this stack's kernel/tokens use (ISS, or the AS URL). */
   issuer: string;
   viewFor: (missionId: string) => MissionView | undefined;
@@ -199,6 +207,12 @@ export async function composeStack(opts: {
    * so concurrent stacks never contend for one single-writer file.
    */
   claimsFile?: string;
+  /**
+   * @spec runtime#idempotency (#918): the PEP's write-reservation file.
+   * Defaults to `topology.json` `stores.pepWriteReservations.file`; a test
+   * passes its own, as for `claimsFile`.
+   */
+  writeReservationsFile?: string;
 }): Promise<DemoStack> {
   const mode = opts.pdpMode ?? process.env.MISSION_PDP_MODE ?? "co-resident";
   if (mode !== "co-resident" && mode !== "remote") throw new Error("MISSION_PDP_MODE must be co-resident or remote");
@@ -530,6 +544,17 @@ export async function composeStack(opts: {
     },
     claims: pdpClaims,
   });
+  // @spec runtime#idempotency (#918, D223): the PEP's own durable,
+  // single-writer reservation store for keyed reversible writes, named in
+  // configuration and owned by the statement's PEP location. The server
+  // refuses it at construction unless the statement publishes it as the
+  // domain of every keyed reversible write.
+  const writeReservationsFile = opts.writeReservationsFile ?? TOPOLOGY.stores.pepWriteReservations.file;
+  mkdirSync(dirname(writeReservationsFile), { recursive: true });
+  const writeReservations = openWriteReservationStore({
+    file: writeReservationsFile,
+    owner: RUNTIME_POSTURE.mediated_scope.pep_locations[0] as string,
+  });
   // @spec runtime-evidence#execution-evidence-object (Retention),
   // #evidence-integrity-signing-keys (#594 W4-8): this deployment's durable
   // retention store, and the key sets it publishes at its own key-set
@@ -732,6 +757,7 @@ export async function composeStack(opts: {
     jwks: serverJwks,
     issuer,
     transaction: { engine, connectors, evidence },
+    writeReservations,
     // AROP (RS side): validate a presented txn-token against the AS txn public
     // JWKS (published on /jwks under the as-txn kid) and issuer.
     ...(txnTokenJwks ? { txnTokenJwks } : {}),
@@ -790,6 +816,7 @@ export async function composeStack(opts: {
     kernel,
     decisionChannel,
     pdpClaims,
+    writeReservations,
     fga,
     modelId,
     payments,

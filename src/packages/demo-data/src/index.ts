@@ -239,8 +239,11 @@ export interface Topology {
    * `pdpIdempotencyClaims.file` is the PDP's Exact claim domain: one SQLite
    * file one PDP process opens single-writer. A relative path resolves against
    * the directory holding `config/`, so the loaded value is always absolute.
+   * `pepWriteReservations.file` (#918) is the enforcing PEP's reservation and
+   * retention store for keyed reversible writes: a separate file, opened
+   * single-writer by that PEP alone, never shared with the PDP's.
    */
-  stores: { pdpIdempotencyClaims: { file: string } };
+  stores: { pdpIdempotencyClaims: { file: string }; pepWriteReservations: { file: string } };
 }
 
 function reqTxnChallenge(
@@ -285,6 +288,27 @@ function loadTopology(): Topology {
   const openfga = asObject(file, root.openfga, "openfga");
   const stores = asObject(file, root.stores, "stores");
   const claimStore = asObject(file, stores.pdpIdempotencyClaims, "stores.pdpIdempotencyClaims");
+  const reservationStore = asObject(
+    file,
+    stores.pepWriteReservations,
+    "stores.pepWriteReservations",
+  );
+  const claimFile = resolvePath(
+    dirname(CONFIG_DIR),
+    reqString(file, claimStore, "file", "stores.pdpIdempotencyClaims"),
+  );
+  const reservationFile = resolvePath(
+    dirname(CONFIG_DIR),
+    reqString(file, reservationStore, "file", "stores.pepWriteReservations"),
+  );
+  // @spec runtime#idempotency (#918, D223): the PEP's reservations are
+  // separate from the PDP's claims; one file for both is refused here.
+  if (claimFile === reservationFile) {
+    throw new ConfigError(
+      file,
+      "stores.pepWriteReservations.file must differ from stores.pdpIdempotencyClaims.file",
+    );
+  }
   return {
     resources: {
       payments: reqString(file, resources, "payments", "resources"),
@@ -334,12 +358,8 @@ function loadTopology(): Topology {
       presharedKey: reqString(file, openfga, "presharedKey", "openfga"),
     },
     stores: {
-      pdpIdempotencyClaims: {
-        file: resolvePath(
-          dirname(CONFIG_DIR),
-          reqString(file, claimStore, "file", "stores.pdpIdempotencyClaims"),
-        ),
-      },
+      pdpIdempotencyClaims: { file: claimFile },
+      pepWriteReservations: { file: reservationFile },
     },
   };
 }

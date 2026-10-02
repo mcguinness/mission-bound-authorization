@@ -28,6 +28,7 @@ import { createHttpMediatedClient, type DpopKeys } from "@mission/mcp-payments";
 import { composeStack, type DemoStack } from "../src/stack.js";
 /** @spec runtime#idempotency (#917): each stack gets its own single-writer claim file. */
 const tempClaimsFile = (): string => join(mkdtempSync(join(tmpdir(), "demo-claims-")), "claims.sqlite");
+const tempReservationsFile = (): string => join(mkdtempSync(join(tmpdir(), "demo-reservations-")), "write-reservations.sqlite");
 
 
 const API_URL = process.env.OPENFGA_HTTP_URL ?? TOPOLOGY.openfga.url;
@@ -62,7 +63,7 @@ d("composed stack: the MAS-governed channel joins an ordinary credential (#557)"
       ...(CA ? { caCertPath: CA } : {}),
       withAuthServer: true,
       asPort: AS_PORT,
-      claimsFile: tempClaimsFile(),
+      claimsFile: tempClaimsFile(), writeReservationsFile: tempReservationsFile(),
     });
     if (stack.masGovernedChannel) cleanups.push(stack.masGovernedChannel.close);
     if (stack.authServer) cleanups.push(stack.authServer.closeAuthServer);
