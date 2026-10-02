@@ -728,6 +728,11 @@ convention, none of which require registration.
 
 -01
 
+- `drawdown_policy` is an activation policy reference (`id`,
+  `version`, `digest`) under the issuance profile's Standing-Consent
+  Bases, replacing the string or URI and the SHOULD to commit the
+  policy body; `ceiling_hash` covers the object, and a snapshot that
+  does not match falls back to a fresh human approval.
 - Editorial: disambiguated `authority_ceiling` from the template
   profile's Template Ceiling and the shaping companion's shaping
   ceiling at its first definition ({{conventions-and-terminology}}), no
