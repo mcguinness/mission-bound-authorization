@@ -769,6 +769,10 @@ convention, none of which require registration.
 
 -01
 
+- In-ceiling expansion: the discharge guard tests the complete successor
+  Authority Set against the chain's discharge restrictions, from any
+  later Mission, and the ceiling review discloses outstanding discharge
+  restrictions.
 - In-ceiling expansion: a policy-adjudicated drawdown whose complete
   Authority Set overlaps capability under a containment restriction of
   its chain falls back to a fresh human approval naming the contained

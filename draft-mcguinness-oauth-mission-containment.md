@@ -1159,6 +1159,9 @@ This document registers two media types per {{RFC6838}}.
 
 \[\[ To be removed from the final specification ]]
 
+- Visibility ({{visibility}}): current-authority surfaces omit
+  contained capability at action grain, keeping an entry's uncontained
+  remainder; an annotation no longer substitutes for exclusion.
 - Restoration Through Expansion ({{restoration}}): containing
   capability places a restriction on the Mission's expansion chain,
   retained across later successors and surfaced in any later

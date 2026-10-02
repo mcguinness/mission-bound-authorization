@@ -1279,6 +1279,19 @@ A consumer claiming the completion capability MUST fail closed for an
 entry carrying a `terminal_when` constraint it does not understand
 ({{forward-compat}}).
 
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Discharge Commit ({{discharge-commit}}): a committed discharge places
+  a restriction on the Mission's expansion chain, retained across later
+  successors and cleared only for the authority a fresh human approval
+  explicitly restores with the discharged entry and its condition
+  disclosed. The discharge itself never reverts.
+- Relationship to Runtime Enforcement ({{runtime}}): issuance-only
+  discharge stays conforming; where the runtime profile runs, its PDP
+  refuses a discharged entry.
+
 # Acknowledgments
 {:numbered="false"}
 

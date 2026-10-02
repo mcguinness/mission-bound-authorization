@@ -1949,5 +1949,9 @@ composition with the issuance flow.
 
 \[\[ To be removed from the final specification ]]
 
+- A fresh-consent restoration of authority under a discharge
+  restriction authorizes that authority explicitly and discloses the
+  discharged entry and its condition; the consent also surfaces the
+  chain's outstanding containment restrictions.
 - Added explicitly approved carryover hooks for disclosure, atomic completion,
   and the carried child's unchanged expiry ceiling (#576).

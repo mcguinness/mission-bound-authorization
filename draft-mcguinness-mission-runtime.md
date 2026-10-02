@@ -3740,6 +3740,11 @@ worked example shows the concrete record
 
 \[\[ To be removed from the final specification ]]
 
+- Authority input: for every issuer-held narrowing mechanism the
+  deployment runs, the PDP establishes current effective authority from
+  a source reporting it and refuses when it cannot; the PDP refuses an
+  action within a discharged entry (formerly SHOULD).
+
 - A materialized policy view is one way to evaluate the authority
   input, not the only one: the Materialized Policy View section
   governs a PDP that uses one, and the authority input requires
