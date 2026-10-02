@@ -1434,6 +1434,11 @@ guessing ({{clarifications}}).
 
 \[\[ To be removed from the final specification ]]
 
+- Model Output Is Not Authority points to the OAuth binding's
+  issuer-side counterpart: a model enters adjudication only as a
+  recorded input to a deterministic policy, without changing any
+  requirement of this document.
+
 - Restructured for readability without changing any requirement.
   Sections follow the processing model, and the shaper's role and the
   Authority Proposal each have one home. The construction table became
