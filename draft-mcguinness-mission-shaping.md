@@ -261,13 +261,18 @@ host these practices unchanged.
 {::boilerplate bcp14-tagged}
 
 This document is Informational and defines no conformance class. Its
-BCP 14 keywords state recommended behavior for three parties: the
-shaper, expressed where possible on the observable shaping artifacts
-(the Mission Intent proposal and Shaping Evidence); a deployment that
-operates a shaper; and any party that receives shaper output or
-Shaping Evidence, which never treats either as authority. None of
-them is a conformance obligation. Mission Issuer behavior is cited
-from the issuance profile, not specified here.
+BCP 14 keywords state recommended behavior for three parties:
+
+- the shaper, expressed where possible on the observable shaping
+  artifacts (the Mission Intent proposal and Shaping Evidence);
+- a deployment that operates a shaper, including its client; and
+- any party that receives shaper output or Shaping Evidence,
+  including the Mission Issuer, which never treats either as
+  authority.
+
+None of these is a conformance obligation. The Mission Issuer's
+processing of a submission is specified by the issuance profile; this
+document cites it and does not restate it as its own requirement.
 
 All JSON in this document is non-normative and illustrative; the
 surrounding prose is authoritative. This document uses JSON {{RFC8259}}
@@ -548,7 +553,7 @@ appear in the Intent; it belongs in the Authority Proposal
 : The earliest expiry that lets the task complete; if the request names
   no bound, a conservative deployment default. The shaper does not
   request the maximum the Mission Issuer allows, and the Mission Issuer
-  MAY narrow the value further.
+  can narrow the value further.
 
 `requested_derivation_limit`:
 : Proposed only where the Mission Issuer implements
@@ -562,7 +567,7 @@ appear in the Intent; it belongs in the Authority Proposal
   a high guess only misleads the Approver about what was requested.
 
 Other companion members:
-: A companion profile MAY define further top-level Mission Intent
+: A companion profile can define further top-level Mission Intent
   members (for example, the consumption bounds of
   {{I-D.draft-mcguinness-mission-metering}}). The shaper emits the ones
   the deployment's adopted companions recognize. It SHOULD NOT emit a
