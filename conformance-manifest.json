@@ -63,8 +63,8 @@
     "content_sha256": "d68452a457e3a72563ca8ed04ae90f8dc77678ef7456190cffc257abe34d04f9"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "35654da2745816f4b3c51ff2c4397d392def9931",
-    "content_sha256": "a0f4aa7bb212ace5eecd6d6cebbd9817585d319dc58644ae781124ee80b261b0"
+    "revision": "e3f269a35e757fe0e3ce9c137744619c6fa5f8c9",
+    "content_sha256": "15c1be8e30e03e73ee35737eb22865a845ee4385d3b1915eb3a03d238d3b1313"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
@@ -99,12 +99,12 @@
     "content_sha256": "adb2e8708f616b7504425b3134c2376ad3422d9c947b380645f54fb3e8db8f1d"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "5aea3fd6a701003a4c9f6142ed62c0112f910bc6",
-    "content_sha256": "d524e95efd87cf7cec2e72d41677cc2f41a0afa866716ba8bcfeda227dc81d2c"
+    "revision": "f0993145ee7022e33e9c2358c1b547448f7b78c0",
+    "content_sha256": "1d5be7cfeab3060e7438c369c588cf45bc4b394d87639eeb5b00d1b20c55ca97"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
-    "revision": "0eb61bec966fef8cfc5efbb20b42c78057b3d05c",
-    "content_sha256": "209bd4edd5a8f50c9d4693af0627eaed50e5c4d29214a412641532d43b39ddd5"
+    "revision": "ac8730fb1b80af8ebef270a40b42779f1e90da48",
+    "content_sha256": "d177d6f622140ba57c5d5cb4ed2a792eab6ba54f86e154ff0551a4b38436ccfc"
    },
    "draft-mcguinness-oauth-mission-approved-set-verification.md": {
     "revision": "48b7abcdacfb66289c29c5312e5d6c6e683b5141",
@@ -224,6 +224,7 @@
    "authzen.batch",
    "approval-context.manifest",
    "child-delegation.carryover",
+   "child-delegation.subtree-rendering",
    "core.instance-context",
    "core.delegation",
    "runtime.instance-context",
@@ -25696,6 +25697,72 @@
     }
    ],
    "notes": "A consumer that received the cascade before any creation event does not infer absence of a replacement: it resynchronizes through the retained, signature-verified map, pairing by issuer-qualified identity. The map, not `related_to`, is the normative record of replacement."
+  },
+  {
+   "id": "child-delegation.subtree-rendering.displayed-control",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "derivation-budget",
+   "text": "Where an approval interface displays `derivation_limit`, or any per-Mission derivation control, as a limit on child creation, that interface MUST render the subtree figures below alongside it",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.subtree-rendering"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an approval interface that displays a per-Mission derivation control as a limit on child creation renders max_children (as a concurrency limit), max_child_depth, and the per-child derivation limit as distinct values beside it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#987 (D219 ruling). No implementation witness: the reference consent rendering shows no child-delegation figures yet."
+  },
+  {
+   "id": "child-delegation.subtree-rendering.policy-created",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "derivation-budget",
+   "text": "no approval interface exists for those children, so the Parent Mission's approval MUST render the subtree figures for that entry",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.subtree-rendering"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where child creation under an entry can be adjudicated by policy (policy_drawdown), the Parent Mission's approval rendering for that entry carries the three subtree figures as distinct values"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#987 (D219 ruling). No implementation witness: the reference consent rendering shows no child-delegation figures yet."
+  },
+  {
+   "id": "child-delegation.subtree-rendering.aggregate-statement",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "derivation-budget",
+   "text": "The rendering MUST also state whether a finite aggregate bound on the subtree is enforced.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.subtree-rendering"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the subtree rendering states whether a finite aggregate bound is enforced, and states that none is unless a lineage-keyed budget is deployed"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#987 (D219 ruling). No implementation witness: the reference consent rendering shows no child-delegation figures yet."
   },
   {
    "id": "child-delegation.carryover.expansion-disclosure",
