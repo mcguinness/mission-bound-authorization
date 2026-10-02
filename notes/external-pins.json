@@ -3,16 +3,42 @@
   "pins": [
     {
       "id": "AAUTH",
-      "kind": "git",
-      "repo": "dickhardt/AAuth",
-      "ref": "dickhardt/AAuth draft-hardt-oauth-aauth-protocol.md, content verified at the 2026-09-03 editor's-copy head 055b7a47a3f00b6b0dcf24fd06fefbe4aa76d1dd; registry commit pinned to fc5e972c58d42a4f899d43acba39995081b87712 (2026-08-14), the last commit touching the pinned path; refreshed at #445 (A19)",
-      "commit": "fc5e972c58d42a4f899d43acba39995081b87712",
-      "path": "draft-hardt-oauth-aauth-protocol.md",
-      "sha256": "c984278f21e3931f0cc272d6768b84bcc471f8ab4a1a1922dd92940a91df7e19",
+      "kind": "datatracker",
+      "doc": "draft-hardt-oauth-aauth-protocol",
+      "rev": "11",
+      "url": "https://www.ietf.org/archive/id/draft-hardt-oauth-aauth-protocol-11.txt",
+      "sha256": "2b70ff5fd19f7a57bc305334943568137de78d92c3c37a87e3fefa10115651cb",
+      "ref": "IETF Internet-Draft, rev 11 (2026-09-25)",
       "status": "established",
-      "note": "Refreshes the family's AAuth pin from f1569261d0b9d179324f1665db1597f81cd0a851 (\"PR #73 merged\") for issue #445 (A19). Two commits are distinguished on purpose: 055b7a47 is the 2026-09-03 editor's-copy head whose tree was verified (it is a publishing-workflow commit and did not touch this file), and fc5e972c (2026-08-14, the August issue batch that carried the presented_jti rename) is the last commit touching the pinned path and is the value stored in commit, per this registry's convention against naming a commit that never touched the file. The digest is identical at both. The datatracker's latest published revision is -10 (2026-08-06), divergent (pre-person-token); disclosed, not the pin.",
+      "note": "Rebases the family from the editor's-copy pin fc5e972c58d42a4f899d43acba39995081b87712 (issue #915 option B; archived below). Revision -10 (2026-08-06) is the pre-person-token revision and was never the pin. Digest is of the published .txt; the prior git digest hashed the markdown source and is not comparable. i-d-template tag commit 178e9e68b6578e4d6f7d0bf30f33b4c38833e3a1; last commit touching the source afeaa3357c1ab2ae384acc8cfdc063e93a5671c5.",
       "reference_keys": ["I-D.draft-hardt-oauth-aauth-protocol"],
-      "pin_id": "AAUTH@c984278f21e3"
+      "pin_id": "AAUTH@2b70ff5fd19f"
+    },
+    {
+      "id": "R3",
+      "kind": "datatracker",
+      "doc": "draft-hardt-aauth-r3",
+      "rev": "00",
+      "url": "https://www.ietf.org/archive/id/draft-hardt-aauth-r3-00.txt",
+      "sha256": "00e3845046683eb7d1c3e35862f9acf8e503586969e65f356f896a76f5ae5a24",
+      "ref": "IETF Internet-Draft, rev 00 (2026-09-28)",
+      "status": "established",
+      "note": "AAuth Rich Resource Requests (R3). i-d-template tag commit 8b7adb0ce10b60fb604f024cb10631d1eb573b74.",
+      "reference_keys": ["I-D.draft-hardt-aauth-r3"],
+      "pin_id": "R3@00e384504668"
+    },
+    {
+      "id": "SIGKEY",
+      "kind": "datatracker",
+      "doc": "draft-hardt-httpbis-signature-key",
+      "rev": "09",
+      "url": "https://www.ietf.org/archive/id/draft-hardt-httpbis-signature-key-09.txt",
+      "sha256": "b5e8602e217bbccd254b93419d0b54ec2b2a6cdce38351983624718029528a5d",
+      "ref": "IETF Internet-Draft, rev 09 (2026-09-13)",
+      "status": "established",
+      "note": "HTTP Signature Keys. Cited by the AAuth management companion for the jwks_uri scheme (Section 3.6).",
+      "reference_keys": ["I-D.draft-hardt-httpbis-signature-key"],
+      "pin_id": "SIGKEY@b5e8602e217b"
     },
     {
       "id": "ARAP",
@@ -118,5 +144,19 @@
       "pin_id": "MCP-META@ce6b16e0b225"
     }
   ],
-  "archive": []
+  "archive": [
+    {
+      "id": "AAUTH",
+      "kind": "git",
+      "repo": "dickhardt/AAuth",
+      "ref": "dickhardt/AAuth draft-hardt-oauth-aauth-protocol.md, content verified at the 2026-09-03 editor's-copy head 055b7a47a3f00b6b0dcf24fd06fefbe4aa76d1dd; registry commit pinned to fc5e972c58d42a4f899d43acba39995081b87712 (2026-08-14), the last commit touching the pinned path; refreshed at #445 (A19)",
+      "commit": "fc5e972c58d42a4f899d43acba39995081b87712",
+      "path": "draft-hardt-oauth-aauth-protocol.md",
+      "sha256": "c984278f21e3931f0cc272d6768b84bcc471f8ab4a1a1922dd92940a91df7e19",
+      "status": "established",
+      "note": "Refreshes the family's AAuth pin from f1569261d0b9d179324f1665db1597f81cd0a851 (\"PR #73 merged\") for issue #445 (A19). Two commits are distinguished on purpose: 055b7a47 is the 2026-09-03 editor's-copy head whose tree was verified (it is a publishing-workflow commit and did not touch this file), and fc5e972c (2026-08-14, the August issue batch that carried the presented_jti rename) is the last commit touching the pinned path and is the value stored in commit, per this registry's convention against naming a commit that never touched the file. The digest is identical at both. The datatracker's latest published revision is -10 (2026-08-06), divergent (pre-person-token); disclosed, not the pin.",
+      "reference_keys": ["I-D.draft-hardt-oauth-aauth-protocol"],
+      "pin_id": "AAUTH@c984278f21e3"
+    }
+  ]
 }

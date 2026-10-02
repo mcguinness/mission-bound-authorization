@@ -7,20 +7,20 @@
     "content_sha256": "ec57264fec92ea2dd3c42ba1067c70d72195f251bc5c416ccad856cb1beac3a1"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "175c6252b65d8fdca0347d3f214dd0282d6615fc",
-    "content_sha256": "db9cda93f2b24c80f9dd723fa996aea3168a1f2b8644058ee381f8f70ef61465"
+    "revision": "7c880d1d30804ccc5af18b96df43ec3b576cd307",
+    "content_sha256": "d00802fb051f408340682374fe233c88477a4005756813f8afcd4cf351307b09"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "daadb45f36cd901f0d646ba0aa942dfec95844ee",
-    "content_sha256": "ebf576dba51fbdbd81bf06ba5e49245d1dcbc96bb043b13d3753655ca8b4c8d7"
+    "revision": "b1e2dcc6c89d5c55d33696af3fa76b6898d0a295",
+    "content_sha256": "bfa9bd2c5fd047203807cc2b015b3f060cbf29135682141ce57b257e1713b1f5"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "daadb45f36cd901f0d646ba0aa942dfec95844ee",
-    "content_sha256": "48089d4087adbe0db92ce1e4b55e99ad3521a18893aca0c2660748431129df72"
+    "revision": "b1e2dcc6c89d5c55d33696af3fa76b6898d0a295",
+    "content_sha256": "20c47603567f29810ac9d6e146f8c30a1c9650009a5253255b3a66c3fe1ab43b"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "09afbbb2258f10011c8332119bb65fe98f634ea7",
-    "content_sha256": "4b882c2bd8e662a0944806916c4069e447a6d8aed39ae185c9f954774695eb51"
+    "revision": "b1e2dcc6c89d5c55d33696af3fa76b6898d0a295",
+    "content_sha256": "d3398de58e0f2b195b237834929f42d98fe162839274707d4215562a75e0b192"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "daadb45f36cd901f0d646ba0aa942dfec95844ee",
@@ -39,8 +39,8 @@
     "content_sha256": "e681f15fe23ebf3b0bb8d32f1aed70eef88c140331a5f10216492d3669d045ae"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
-    "revision": "79ede5a9bff31f6b7953456bacda583acf33b003",
-    "content_sha256": "2ad488a60aa23eab82693e82a53ad82877e4864d881ffdb5f6449a47622f404c"
+    "revision": "0a93cdc3a8c5598bf85b1b693c5985a477929131",
+    "content_sha256": "3d4ebfad6d323a7e4626bab4caf52d474647cdc0e6b74fc6179b9e800ff636e6"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
@@ -51,28 +51,28 @@
     "content_sha256": "e59ae5e78c3580b5736616705e0dd28acf25d0ae8a6123b057562b6fbc21674a"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "175c6252b65d8fdca0347d3f214dd0282d6615fc",
-    "content_sha256": "4a20b5f3a03473ca4d9c0003e7e569322adcc565414ae261056e89af1dde1eac"
+    "revision": "0eb61bec966fef8cfc5efbb20b42c78057b3d05c",
+    "content_sha256": "b5bb6abb6737b1fc3c4571380e89cc4d23e960b849450089f0e38b13462f32d7"
    },
    "draft-mcguinness-oauth-mission-template.md": {
     "revision": "2ee1e63b01ca99ccfeffb3e8b062025fb771f84e",
     "content_sha256": "35473d1457186e9561cead9b7f33b37fcf39e8327a342bf1ee55fd2cf4947cb7"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
-    "revision": "175c6252b65d8fdca0347d3f214dd0282d6615fc",
-    "content_sha256": "d68452a457e3a72563ca8ed04ae90f8dc77678ef7456190cffc257abe34d04f9"
+    "revision": "1ea788e00f84b3804c447cb8bbb143c7b803901d",
+    "content_sha256": "873b64d56c1813874239d7c4e07d5e1cbc777809c05d725efbf79439038750f9"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "57ba4e9d89ac42524c26f1f42c20cecf8d6f5906",
-    "content_sha256": "42734fbfbc12f0d996f47b0af285540ade694a7b927daed30a87c484b0903fd6"
+    "revision": "35654da2745816f4b3c51ff2c4397d392def9931",
+    "content_sha256": "a0f4aa7bb212ace5eecd6d6cebbd9817585d319dc58644ae781124ee80b261b0"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
     "content_sha256": "bf4b09b73adfdbf647f9740ef2451862b87212aaa7424496aa865b99d2a2a46d"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
-    "revision": "6a3c451eff8b0568e16817fbb84be343f8e8e485",
-    "content_sha256": "73deb3473bca62b2eeef325b317707f6d14753e3bfc5e312be7848304d37ea0d"
+    "revision": "de4634bf6921d79368625d57b79911f31547dabe",
+    "content_sha256": "055d460354f9c98d981f74ce661daa606685695bedd42d04a31981158f8389d7"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
@@ -87,8 +87,8 @@
     "content_sha256": "0ca8901a662c12afc19ed590685652dfe3604d0907364ccfe819a88d584499f9"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
-    "content_sha256": "d758428378924495e5d05e9b8b913bd743326b53198ff3d4d7b9879d428e4d49"
+    "revision": "1ea788e00f84b3804c447cb8bbb143c7b803901d",
+    "content_sha256": "c9ed7e78d3821f796ce8d53f76bb5402bf8d599f83a12f650e6c1a1689dc9c5d"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "175c6252b65d8fdca0347d3f214dd0282d6615fc",
@@ -99,12 +99,12 @@
     "content_sha256": "adb2e8708f616b7504425b3134c2376ad3422d9c947b380645f54fb3e8db8f1d"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
-    "content_sha256": "f167be17415c38e6047b7ea9ea3f5464cf70cc1d4789a0316c4d9d89f9dacea4"
+    "revision": "1ea788e00f84b3804c447cb8bbb143c7b803901d",
+    "content_sha256": "1c4adaecf6fa1d626d7ff9bd57a71384ba1f307bf09f115a32460e0ea347a1ee"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
-    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
-    "content_sha256": "b27c8935ea126e885d0ec3377d2d6bb0e2e2ca98ac7ff99d5a1c42c6f59b8e3c"
+    "revision": "0eb61bec966fef8cfc5efbb20b42c78057b3d05c",
+    "content_sha256": "209bd4edd5a8f50c9d4693af0627eaed50e5c4d29214a412641532d43b39ddd5"
    },
    "draft-mcguinness-oauth-mission-approved-set-verification.md": {
     "revision": "48b7abcdacfb66289c29c5312e5d6c6e683b5141",
@@ -182,6 +182,7 @@
    "runtime.break-glass",
    "control-plane.consistency",
    "core.introspection",
+   "core.introspected-consumption",
    "status.lifecycle",
    "status.discharge",
    "signals.events",
@@ -212,6 +213,7 @@
    "mas.baseline-join",
    "core.standing-consent",
    "core.standing-consent-recency",
+   "core.governance-record",
    "template.dispatch",
    "progressive.ceiling-drawdown",
    "cross-domain.projection",
@@ -3123,12 +3125,10 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "core.governance-record"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
@@ -3137,7 +3137,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "New member (#701, redesigned per #716 review): replaces the earlier kind: agr value, which conflated a decision mechanism with a storage location and lost whether an AGR-backed decision was human- or policy-adjudicated. kind stays semantic (human or policy); governance_record is an independent boolean flag, not a duplicate reference, since the record is already joined by this Mission's own approval_event_id."
+   "notes": "New member (#701, redesigned per #716 review): replaces the earlier kind: agr value, which conflated a decision mechanism with a storage location and lost whether an AGR-backed decision was human- or policy-adjudicated. kind stays semantic (human or policy); governance_record is an independent boolean flag, not a duplicate reference, since the record is already joined by this Mission's own approval_event_id. Scoped to core.governance-record: the clause binds only an approval whose `adjudication.governance_record` is `true`, which requires an Approval Governance Record (the approval-governance companion); no published baseline selects it, matching that companion's own rows."
   },
   {
    "id": "core.approval-basis.adjudication-no-flatten",
@@ -3147,12 +3147,10 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "core.governance-record"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
@@ -3161,7 +3159,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "New member (#701); demonstrates the multi-assertion-AGR-not-collapsed property from the #701 and #716 reviews."
+   "notes": "New member (#701); demonstrates the multi-assertion-AGR-not-collapsed property from the #701 and #716 reviews. Scoped to core.governance-record: the clause binds only an approval whose `adjudication.governance_record` is `true`, which requires an Approval Governance Record (the approval-governance companion); no published baseline selects it, matching that companion's own rows."
   },
   {
    "id": "core.approval-basis.discriminator-unknown-value-rule",
@@ -4022,6 +4020,29 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#885 ruling (2026-10-01). No implementation witness yet."
+  },
+  {
+   "id": "derivation-limits.rendering.issuance-grant-disclosure",
+   "spec": "draft-mcguinness-oauth-mission-derivation-limits.md",
+   "anchor": "approval-rendering",
+   "text": "Where the Mission Issuer is a Mission Authority Server issuing grants under the Mission Issuance Grant profile, the rendering MUST also state that the limit bounds the grants it issues, not the tokens consuming Authorization Servers issue from them",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "derivation-limits.limit"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where a Mission Authority Server issues Mission Issuance Grants, the approval rendering of an established derivation_limit states that the limit bounds the grants the MAS issues, not the tokens consuming Authorization Servers issue from them",
+    "local": "requires a Mission Authority Server that issues Mission Issuance Grants; the reference implementation has no MAS grant endpoint"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#963 ruling (2026-10-01), parallel to the #885 async-family disclosure. No implementation witness yet."
   },
   {
    "id": "core.lifecycle.mission-error-diagnostic",
@@ -5643,12 +5664,10 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "introspection",
    "assertion": "output-bound",
    "observation": {
@@ -5657,7 +5676,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Conditional on the deployment issuing opaque Mission-bound tokens; the applicability vocabulary has no deployment-mode condition, so recorded unconditional with the condition stated here."
+   "notes": "Scoped to core.introspected-consumption (#904 option b): the clause binds only a deployment issuing opaque Mission-bound tokens, an optional mode no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed."
   },
   {
    "id": "core.introspection.opaque-active-carriage",
@@ -5667,12 +5686,10 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "introspection",
    "assertion": "output-bound",
    "observation": {
@@ -5681,7 +5698,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Conditional on the deployment issuing opaque Mission-bound tokens; the applicability vocabulary has no deployment-mode condition, so recorded unconditional with the condition stated here."
+   "notes": "Scoped to core.introspected-consumption (#904 option b): the clause binds only a deployment issuing opaque Mission-bound tokens, an optional mode no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed."
   },
   {
    "id": "core.introspection.authority-only-when-active",
@@ -5691,12 +5708,10 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "introspection",
    "assertion": "privacy",
    "observation": {
@@ -5705,7 +5720,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Conditional on the deployment issuing opaque Mission-bound tokens; the applicability vocabulary has no deployment-mode condition, so recorded unconditional with the condition stated here."
+   "notes": "Scoped to core.introspected-consumption (#904 option b): the clause binds only a deployment issuing opaque Mission-bound tokens, an optional mode no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed."
   },
   {
    "id": "core.introspection.opaque-rs-fail-closed",
@@ -5715,12 +5730,10 @@
    "role": "RS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
@@ -5729,7 +5742,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Conditional on the deployment issuing opaque Mission-bound tokens; the applicability vocabulary has no deployment-mode condition, so recorded unconditional with the condition stated here."
+   "notes": "Scoped to core.introspected-consumption (#904 option b): the clause binds only a deployment issuing opaque Mission-bound tokens, an optional mode no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed."
   },
   {
    "id": "core.anchors.entry-commitment",
@@ -7647,6 +7660,48 @@
    ]
   },
   {
+   "id": "status.request.served-audience-authorization",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-request",
+   "text": "The Mission Issuer MUST honor a request naming an audience other than the caller's own only where its configuration authorizes the authenticated caller for that audience",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Mission Status request naming an audience other than the caller's own (for example a Mission Issuance Grant consuming Authorization Server's per-resource request) is honored only where the Mission Issuer's configuration authorizes that caller for the audience, and is otherwise refused with the not-found response, indistinguishable from an unknown Mission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference Status endpoint has no consuming-Authorization-Server caller class or per-audience caller configuration, and no issuance-grant redemption path exists in src. Added with #963 decision D1; todo until a consuming-AS caller exists."
+  },
+  {
+   "id": "status.response.served-audience-aud",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-response",
+   "text": "`aud` equals the `audience` the request named",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer rejects a Mission Status response whose aud is not the audience its request named (or, for a state-only response, the requester's identifier); a consuming Authorization Server's per-resource response is checked against the resource audience it requested"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference Status endpoint has no consuming-Authorization-Server caller class or per-audience caller configuration, and no issuance-grant redemption path exists in src. Added with #963 decision D1; todo until a consuming-AS caller exists."
+  },
+  {
    "id": "signals.discharge.authority-changed-rematerialize",
    "spec": "draft-mcguinness-oauth-mission-signals.md",
    "anchor": "consumer-behavior",
@@ -8832,7 +8887,7 @@
    "id": "mas.baseline-join.delegate-narrowing",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "mission-join",
-   "text": "When the joined party is a delegate rather than the Mission's `client_id`, the PDP MUST narrow the effective Authority Set to the delegable subset under the issuance profile's per-entry `delegation` rules ({{I-D.draft-mcguinness-oauth-mission}}): entries without a `delegation` member are excluded, `allowed_delegates` is applied, and `max_depth` is evaluated from the deployment's actor records rather than from a Mission-bound token's `act` chain.",
+   "text": "When the joined party is a delegate rather than the Mission's `client_id`, the PDP MUST narrow the effective Authority Set to the delegable subset under the OAuth binding's per-entry `delegation` rules ({{I-D.draft-mcguinness-oauth-mission}}): entries without a `delegation` member are excluded, `allowed_delegates` is applied, and `max_depth` is evaluated from the deployment's actor records rather than from a Mission-bound token's `act` chain.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -21889,7 +21944,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "No issuance-grant redemption endpoint exists in src (inventoried #589): the profile's Grant Minter / Consuming AS redemption flow is spec-only here, so the redemption-time duty (which #617 review 4 states unconditionally for every state-integrated consuming AS, split in the conformance section from the refresh-time duty) has no code to observe. The sibling refresh facet is implemented and tested; this row stays todo until a redemption path is built."
+   "notes": "No issuance-grant redemption endpoint exists in src (inventoried #589): the profile's Mission Authority Server / Consuming AS redemption flow is spec-only here, so the redemption-time duty (which #617 review 4 states unconditionally for every state-integrated consuming AS, split in the conformance section from the refresh-time duty) has no code to observe. The sibling refresh facet is implemented and tested; this row stays todo until a redemption path is built."
   },
   {
    "id": "issuance-grant.effective-set-projection.refresh",
@@ -22222,7 +22277,7 @@
    "id": "issuance-grant.effective-set-projection.equivalent-source-properties",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
    "anchor": "effective-set-projection",
-   "text": "An equivalent source MUST be authenticated, MUST be audience-scoped to this AS, MUST carry the Mission's current `authorization_details` and a monotonic state `version`, and MUST answer within a staleness bound the deployment publishes",
+   "text": "An equivalent source MUST be authenticated, MUST be audience-scoped to the resources this AS serves, MUST carry the Mission's current `authorization_details` and a monotonic state `version`, and MUST answer within a staleness bound the deployment publishes",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -22304,6 +22359,426 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Added by #617 review 1, which extended the atomic-consumption contract to the PAR carriage. The sibling rule on the refresh path (refresh-token-not-consumed) IS implemented and tested; this one is disclosed as unmet rather than softened, since the requirement is right for a consuming AS that controls its own code-exchange ordering."
+  },
+  {
+   "id": "issuance-grant.grant-validation.issuer-match",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "grant-validation",
+   "text": "and the `mission` claim's `issuer` equals `iss`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a grant whose `mission` claim's `issuer` differs from its `iss` is refused invalid_grant at redemption, even when its signature verifies under a trusted issuer's key"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added by the #963 editorial review for a requirement that review introduced or made explicit; todo until a redemption path exists."
+  },
+  {
+   "id": "issuance-grant.grant-validation.lifetime-exact",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "grant-validation",
+   "text": "`exp` is no more than 300 seconds after `iat`, compared exactly",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a grant whose exp minus iat exceeds 300 seconds is refused invalid_grant even when it is otherwise unexpired; the clock-skew leeway applies only to comparing iat and exp with the verifier's current time and never extends the 300-second duration"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added by the #963 editorial review for a requirement that review introduced or made explicit; todo until a redemption path exists."
+  },
+  {
+   "id": "issuance-grant.grant-validation.replay-retention",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "grant-validation",
+   "text": "retained until `exp` plus that leeway passes",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a grant whose jti was already recorded by a successful issuance is refused invalid_grant as a replay for as long as exp plus the clock-skew leeway has not passed"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added by the #963 editorial review for a requirement that review introduced or made explicit; todo until a redemption path exists."
+  },
+  {
+   "id": "issuance-grant.grant-validation.client-binding",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "grant-validation",
+   "text": "the authenticated client equals it, or, for a public client, the grant carries `cnf`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a redemption whose authenticated client is not the grant's client_id is refused invalid_grant, and a public client presenting a grant without cnf is refused invalid_grant"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added by the #963 editorial review for a requirement that review introduced or made explicit; todo until a redemption path exists."
+  },
+  {
+   "id": "issuance-grant.redemption.confidential-client-authentication",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "redemption",
+   "text": "possession of a `cnf` key does not replace that authentication",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a confidential client that presents a cnf-bound grant with a valid DPoP proof or client certificate but without client authentication is refused invalid_client"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added by the #963 editorial review for a requirement that review introduced or made explicit; todo until a redemption path exists."
+  },
+  {
+   "id": "issuance-grant.grant.cnf-possession",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "grant",
+   "text": "When it is present, the consuming AS MUST require proof of possession of that key at redemption",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a cnf-bound grant redeemed without a DPoP proof whose key's JWK SHA-256 thumbprint equals cnf.jkt, or without a client certificate whose SHA-256 thumbprint equals cnf.x5t#S256, is refused invalid_grant"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added by the #963 editorial review for a requirement that review introduced or made explicit; todo until a redemption path exists."
+  },
+  {
+   "id": "issuance-grant.token-issuance.lifetime-cap",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "token-issuance",
+   "text": "The consuming AS MUST NOT issue an access or refresh token under the grant with an expiry later than the `mission` object's `expires_at`.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every access and refresh token issued under a grant, at redemption and at every refresh, expires no later than the grant's mission.expires_at"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added by the #963 editorial review for a requirement that review introduced or made explicit; todo until a redemption path exists."
+  },
+  {
+   "id": "issuance-grant.token-issuance.token-response",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "token-issuance",
+   "text": "The token response carries the issued `authorization_details`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every successful redemption and refresh response carries the exact issued authorization_details, with any projected scope beside them; a consuming AS whose targets consume only scope still returns the authorization_details"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added by the #963 editorial review for a requirement that review introduced or made explicit; todo until a redemption path exists."
+  },
+  {
+   "id": "issuance-grant.mission-claim.authority-hash",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "mission-claim",
+   "text": "The `mission` object MUST carry `authority_hash`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every grant the MAS mints carries mission.authority_hash, the integrity anchor of the approved Authority Set the grant derives from; this row covers the grant only, since access tokens issued under the grant need not carry it (#963 D7) and the consuming AS records it with each issuance instead"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with #963 decision review round 1, narrowed by D7 to grant carriage; todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.minting-rules.effective-set-bound",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "minting-rules",
+   "text": "The MAS MUST refuse a request for a wider one.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a grant request whose authorization_details are wider than the Mission's current Effective Authority Set (the consented authority less any contained or discharged authority) is refused invalid_authorization_details, and no grant is minted or counted"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added by the #963 editorial review for a requirement that review introduced or made explicit; todo until a redemption path exists."
+  },
+  {
+   "id": "issuance-grant.redemption-errors.mission-error",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "redemption-errors",
+   "text": "The AS SHOULD include the issuance profile's `mission_error` member",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a redemption or refresh refused because the Mission is revoked, expired, or superseded carries mission_error (mission_revoked, mission_expired, or mission_superseded) beside error invalid_grant"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added by the #963 editorial review for a requirement that review introduced or made explicit; todo until a redemption path exists."
+  },
+  {
+   "id": "issuance-grant.mission-state-source.consistent-version",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "mission-state-source",
+   "text": "MUST combine only responses whose `mission.issuer`, `mission.id`, and `mission.version` are identical",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a consuming AS issues authority from per-resource Mission Status responses only when every combined response carries the same mission.issuer, mission.id, and mission.version; versions collected within one resolution that differ are reconciled by re-querying each audience below the highest collected version, a response below the version the AS retained before the resolution began is a rollback and is never accepted, and the agreed version becomes the retained one"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with #963 decision D1; todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.mission-state-source.version-mismatch-refusal",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "mission-state-source",
+   "text": "If it still cannot obtain responses at one version within the bound, the state source has failed",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "when bounded re-queries within one per-resource resolution do not bring every response to one Mission version, or a response is below the version retained before the resolution began, the redemption or refresh is refused temporarily_unavailable with HTTP 503 and neither the grant nor the presented refresh token or authorization code is consumed"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with #963 decision D1; todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.minting-rules.cnf-from-verified-constraint",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "minting-rules",
+   "text": "When the MAS includes `cnf`, it MUST take the key from a sender constraint it verified on the grant request",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a grant's cnf names the key of a sender constraint the MAS verified on the grant request: the DPoP proof key's JWK SHA-256 thumbprint as jkt, or the mutual-TLS client certificate's SHA-256 thumbprint as x5t#S256; a grant request with no verified sender constraint yields a grant without cnf"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with #963 decision D2; todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.minting-rules.no-assertion-key-cnf",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "minting-rules",
+   "text": "The MAS MUST NOT derive `cnf` solely from client-assertion authentication",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a grant request authenticated by a private-key-JWT client assertion yields a cnf only from an independent sender-constraint verification on that request (a DPoP proof or the mutual-TLS handshake), never from the assertion alone; where that verification proves the same key the assertion was signed with, the binding is valid"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with #963 decision D2; todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.par-carriage.par-only",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "par-carriage",
+   "text": "The AS MUST accept the `mission_issuance_grant` parameter only in a pushed authorization request",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an authorization request carrying mission_issuance_grant other than in a pushed authorization request (directly or in a Request Object pushed there), including in a Request Object passed to the authorization endpoint outside PAR, is refused invalid_request without validating or consuming the grant; direct redemption at the token endpoint is unaffected"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with #963 decision D3; todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.minting-rules.derivation-counting",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "minting-rules",
+   "text": "the MAS MUST count grants against it atomically and refuse beyond it",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "with a derivation_limit established, the MAS counts each committed grant minting once, atomically, and refuses a grant request that would exceed the limit with derivations_exhausted; grant redemption and refresh at a consuming AS never increment the count, and the limit does not cap the tokens consuming Authorization Servers issue"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with #963 decision D5; todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.minting-response.expires-in",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "minting-response",
+   "text": "The number of whole seconds from the generation of the response until the grant's `exp`, rounded down",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every successful grant response carries expires_in as a JSON integer equal to the whole seconds from response generation to the grant's exp, rounded down, never indicating a time after exp"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with #963 decision D6; todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.token-issuance.mission-claim-carriage",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "token-issuance",
+   "text": "Issued tokens carry the grant's `mission` object as the issuance profile's `mission` claim, unchanged except that they need not carry `authority_hash`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every token issued under a grant carries the grant's mission object as its mission claim, unchanged except that authority_hash may be absent; id, issuer, and expires_at always equal the grant's, and the consuming AS records authority_hash with the issuance"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with #963 decision D7; todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.minting-rules.audience-scoping",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "minting-rules",
+   "text": "The grant MUST carry only the entries the named consuming AS serves.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every grant's authorization_details are limited to the entries the named consuming AS serves, whether or not the request narrowed them; no entry for a resource another AS serves is carried"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with #963 decision D8; todo until that path exists."
   },
   {
    "id": "txn-authorization.token.txn-scoped-mint-gate",
