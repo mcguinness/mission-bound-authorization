@@ -389,11 +389,13 @@ finalized" is a completion condition.
 ## Relationship to Runtime Enforcement {#runtime}
 
 Discharge is an issuance-gating signal and is fully meaningful at the
-issuance profile alone. It is also a natural input to the runtime layer
-({{I-D.draft-mcguinness-mission-runtime}}): a runtime Policy
-Enforcement Point that recognizes `terminal_when` SHOULD deny a
-discharged entry at the point of use, closing the window between
-discharge and token expiry the same way it denies a revoked Mission. A
+issuance profile alone: issuance-only discharge is a conforming
+posture, with the residual that a credential issued before a discharge
+stays valid until it expires ({{discharge}}). Where the deployment also
+runs the runtime profile, that profile requires its PDP to refuse a
+discharged entry at the point of use
+({{I-D.draft-mcguinness-mission-runtime}}), closing the window between
+discharge and token expiry the same way it refuses a revoked Mission. A
 Policy Enforcement Point learns that an entry is discharged from the
 Status profile's Mission Status operation or the token introspection
 projection ({{visibility}}), the same way it learns a Mission is
