@@ -122,13 +122,46 @@ prohibited.
 - Credentials: no `mission_s256` anywhere, and no presented or upstream token carrying one.
 - Receiver: the PS.
 - Expected: base AAuth processing. The request is outside the Lifecycle-Gated Authorization and Credential-Bound claims.
-- Prohibited at: not applicable. This is not a fallback from V2-V13.
+- Prohibited at: not applicable. This is not a fallback from V2-V13 or V15.
+
+### V15. Four-party, the AS drops or alters the reference (issue #968)
+
+- Credentials: `RT{M}` passes the AS's presented-token verification (9.1.1). The AS issues an `AT` with no `mission_s256`, or with `M2`.
+- Receiver: the PS, verifying the AS's auth token before delivery (9.1.3).
+- Expected: the PS rejects the token and answers `as_unreachable` (9.1.3). AAuth's own delivery checks pass such a token, because `mission_s256` is an optional auth-token claim (9.4.1). The rejection comes from the binding's local delivery check.
+- Prohibited at: delivery. The agent never receives a token that dropped the Mission, and the PS does not relay it as a missionless grant.
 
 ## What each negative vector shows
 
-V2-V11 and V13 reject before any ordinary authorization: the failure
-is at a validation, verification, or issuance step, in AAuth's order of
+V2-V11, V13 and V15 reject before any ordinary authorization: the failure
+is at a validation, verification, issuance, or delivery step, in AAuth's order of
 checks, and the rule forbids a missionless evaluation or retry of the
 same request. V12 refuses only the decision that depends on state. V14
 is the only missionless outcome, and it is reached by policy, not by a
 failed validation.
+
+## Reference confinement fixture (issue #840)
+
+The reference is a deterministic digest, not a secret. This fixture
+checks the binding's namespace confinement instead: every PS surface
+keyed by the reference authenticates the caller and does not disclose
+existence (the binding's Native Reference section).
+
+Fixture: a low-entropy synthetic blob built from a predictable template.
+Its `agent` is known, its `description` comes from a short list, and
+its `approved_at` falls in a one-minute window. A tester can therefore
+enumerate the candidate blobs and their `s256` values. Never treat the
+digest's length as evidence of input entropy.
+
+### P1. Guessed reference from a non-owner agent
+
+- Credentials: an authenticated agent that does not own the mission names a correctly guessed `s256`. It does so at each endpoint that takes a `mission_s256` parameter (person token, permission, audit, interaction) and at `{mission_endpoint}/{mission_s256}`. The mission may be active or terminated.
+- Receiver: the PS.
+- Expected: the same response as for a mission that does not exist. That means the same status, error, body, header set, and observably equivalent timing (8.7 at the mission endpoint; the binding's ownership-first rule elsewhere). Never `mission_terminated`, which -11 Section 8.8 would otherwise report without an ownership condition.
+- Shows: possession or a correct guess discloses nothing and authorizes nothing.
+
+### P2. Guessed reference at the control plane
+
+- Credentials: a caller without authorization for the mission names the guessed `s256` at `mission_control_endpoint`.
+- Receiver: the PS (management companion).
+- Expected: `mission_not_found`, identical for absent and unauthorized (the management companion's anti-oracle rules).

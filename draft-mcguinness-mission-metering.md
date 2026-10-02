@@ -1061,24 +1061,26 @@ prior permit expires; the action is not parameter-bound, so no
   },
   "resource": {
     "type": "ledger",
-    "id": "ledger_main"
+    "id": "ledger_main",
+    "properties": {
+      "audience": "https://erp.example.com"
+    }
   },
   "action": { "name": "reconciliation.run" },
   "context": {
     "mission": {
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-      "issuer": "https://as.example.com",
-      "state": "active"
+      "issuer": "https://as.example.com"
+    },
+    "mission_state_observation": {
+      "state": "active",
+      "mode": "fresh",
+      "freshness_at": "2026-11-02T08:44:00Z"
     },
     "actor": { "client_id": "s6BhdRkqt3" },
     "credential": {
       "issuer": "https://as.example.com",
       "expires_at": "2026-11-02T09:14:00Z"
-    },
-    "audience": "https://erp.example.com",
-    "freshness": {
-      "mode": "fresh",
-      "freshness_at": "2026-11-02T08:44:00Z"
     },
     "prior_evaluation_id": "dec_0Rt5nB8xW2qK7mJ4vS1pL9eYc"
   }

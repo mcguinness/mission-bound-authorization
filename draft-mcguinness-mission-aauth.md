@@ -305,6 +305,32 @@ message signature or signed token that carries it.  Implementations MUST
 apply all AAuth signature, issuer, audience, proof-of-possession, and
 request-context checks before relying on a received reference.
 
+The reference is an integrity commitment, not a secret.  It is a
+deterministic digest of the blob bytes, so a party that can predict
+the blob's content can confirm a guess; the digest's length says
+nothing about the entropy of its input.  This binding confines the
+reference instead: every PS surface keyed by it authenticates the
+caller and does not disclose whether a mission exists.  The mission
+endpoint does so natively (Section 8.7 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}), the management control plane
+by its anti-oracle rules
+({{I-D.draft-mcguinness-mission-aauth-management}}), and the auth token
+endpoint because a resource token's reference is checked against the
+agent's own presented token before any state check (Section 6.7.2 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  AAuth's mission status
+error carries no ownership condition (Section 8.8 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}), so at a PS endpoint that
+takes a `mission_s256` parameter, a PS MUST establish that the mission
+belongs to the requesting agent before reporting its state.  For an
+absent mission and a mission belonging to another agent, the PS MUST
+return the same status, error, body, and header set, with observably
+equivalent timing.
+
+Possession of the reference, or a correct guess, conveys no authority
+over status, logs, or management.  A deployment that claims stronger
+unpredictability documents its added entropy construction and its
+retention consequences; this binding defines no member for it.
+
 ## Mission Blob {#blob}
 
 The approved mission blob uses the members defined by AAuth, including
@@ -589,6 +615,16 @@ authorization under the mission when it is absent or different.  A PS
 whose policy places an agent under mission governance MUST reject a
 missionless token request from that agent.
 
+AAuth lists an AS-issued auth token's `mission_s256` among its optional
+claims, and the PS's delivery checks do not include it (Sections 9.4.1
+and 9.1.3 of {{I-D.draft-hardt-oauth-aauth-protocol}}).  In four-party
+access, before returning an AS-issued auth token to the agent, a PS
+MUST verify that the token carries the resource token's `mission_s256`
+exactly whenever the resource token carried one.  A token that fails
+this check fails the PS's delivery verification, and the PS answers
+`as_unreachable` (Section 9.1.3 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).
+
 A request's Mission association is required when that policy applies
 or when the request derives from a presented token or upstream token
 that carries `mission_s256`.  A required association that is missing,
@@ -618,10 +654,9 @@ without the reference.
 Intentionally missionless authorization is a separate path, admitted by
 explicit deployment policy from the outset for requests with no
 required or inherited Mission association.  It is never a fallback
-after Mission validation fails.  The Lifecycle-Gated Authorization and
-Credential-Bound claims of {{mission-substrate}} cover only requests
-whose resource token carries the protected `mission_s256` claim, and
-not that path.
+after Mission validation fails.  It is outside the Lifecycle-Gated
+Authorization and Credential-Bound claims.  Each claim's scope and
+activation conditions are stated in {{mission-substrate}}.
 
 ## Lifecycle {#lifecycle}
 
@@ -851,14 +886,18 @@ scopes, and state remain outside the natural-language decision context.
 The exact mission blob can contain sensitive intent, planned actions,
 tool use, organizational context, and person interactions.  AAuth's
 reference-only design keeps the blob between the agent and PS.  Resources
-and Access Servers receive only the opaque reference, which is `s256`
-and the PS that approved it (Section 14.3 of
+and Access Servers receive only the reference, which is `s256` and the
+PS that approved it (Section 14.3 of
 {{I-D.draft-hardt-oauth-aauth-protocol}}), and MUST NOT dereference it.
 
 The stable reference is nevertheless a correlation handle.  Reusing it
 across resources reveals that requests belong to the same mission and
-reveals the PS hostname.  Agents SHOULD attach a Mission Context only
-when its governance and correlation benefits justify that disclosure.
+reveals the PS hostname.  Because it is a deterministic digest, a
+party that can predict a blob's content can also test a guess against
+an observed reference; the PS's confinement of the reference and its
+data minimization hold whether or not the reference stays secret
+({{reference}}).  Agents SHOULD attach a Mission Context only when its
+governance and correlation benefits justify that disclosure.
 Once attached, the reference also travels where the agent does not
 choose: when a resource acting as an agent obtains a person token for
 a downstream resource, the PS copies `mission_s256` from the upstream
@@ -915,8 +954,9 @@ The contextual-governance kernel maps as follows:
    namespace, `s256` is compared as the exact unpadded base64url digest
    of the approved bytes, a changed blob is a different mission, a
    reference is never reassigned, retention follows the mission log's
-   declared period, and the reference is unguessable to parties that do
-   not hold the private blob.  On the wire it travels as the flat
+   declared period, and the reference, a content digest rather than a
+   secret, meets the unguessability requirement by namespace
+   confinement ({{reference}}).  On the wire it travels as the flat
    `mission_s256` claim or parameter, with the PS named as
    {{reference}} describes ({{mission-log}}).
 2. **Controller**: the approving PS controls approval,
@@ -972,11 +1012,11 @@ Bounded Reliance floor ({{I-D.draft-mcguinness-mission-substrate}}):
 
 | Capability | Claim | Activation | Scope and defining sections | Limitations |
 | --- | --- | --- | --- | --- |
-| Lifecycle-Gated Authorization | supplied | always | Mission approval and other positive governance decisions at the mission endpoint, permission decisions, and auth-token issuance the PS performs or brokers for requests carrying the person-token-issued `mission_s256` claim; decisions fail closed when current state cannot be established ({{lifecycle}}, {{access-modes}}, {{mission-log}}) | Independently issued resource credentials and intentionally missionless requests, admitted by policy with no required or inherited association, are outside the claim; a failed required association is rejected, never treated as missionless ({{ref-propagation}}); the post-transition residual is bounded by person-token and auth-token lifetime and `expires_at` |
+| Lifecycle-Gated Authorization | supplied | always | Mission approval and other positive governance decisions at the mission endpoint, permission decisions, person-token issuance under a named or upstream-inherited mission, and auth-token issuance the PS performs or brokers for requests carrying the person-token-issued `mission_s256` claim; decisions fail closed when current state cannot be established ({{lifecycle}}, {{access-modes}}, {{mission-log}}) | Independently issued resource credentials and intentionally missionless requests, admitted by policy with no required or inherited association, are outside the claim; a failed required association is rejected, never treated as missionless ({{ref-propagation}}); the post-transition residual is bounded by person-token and auth-token lifetime and `expires_at` |
 | State-Observable | supplied | the AAuth Mission Management status operation active ({{I-D.draft-mcguinness-mission-aauth-management}}) | Authenticated per-role callers, the `active` and `terminated` vocabulary, responses stamped `observed_at` with a declared `fresh_until` reliance bound, failing closed on failed, unrecognized, or stale responses, absent and unauthorized references indistinguishable | The base binding exposes no consumer-facing state source; token acceptance is not observation |
 | Structured Authority | not supplied | -- | -- | The mission description is private prose and `approved_tools` is PS-governance input; scopes or a resource-owned policy language can supply structure inside its own boundary |
 | Monotonic Derivation | not supplied | -- | -- | No cross-boundary subset relation is defined; a resource policy language can define monotonicity within its own vocabulary |
-| Credential-Bound | supplied | PS authorization or federated authorization access mode, for requests whose resource token carries and validates the signed `mission_s256` claim ({{access-modes}}, {{ref-propagation}}) | PS-issued or PS-brokered artifacts carry the claim, a binding established at issuance rather than by an external join; fact semantics: PS issuance or brokering under the mission | Agent identity and resource-managed modes convey no mission binding; federated authorization artifacts are AS-issued under the PS's brokering |
+| Credential-Bound | supplied | PS authorization or federated authorization access mode, for requests whose resource token carries and validates the signed `mission_s256` claim ({{access-modes}}, {{ref-propagation}}) | PS-issued or PS-brokered artifacts carry the claim, a binding established at issuance rather than by an external join; fact semantics: PS issuance or brokering under the mission | Agent identity and resource-managed modes convey no mission binding; federated authorization artifacts are AS-issued under the PS's brokering, and the PS's delivery check rejects one that omits or alters the claim ({{ref-propagation}}) |
 | Authorized Context Correlation | not supplied | -- | -- | The PS co-establishes the mission, person, agent, and token where it is on the path; no authoritative join of independently established facts is defined |
 | Independently Verifiable | not supplied | -- | -- | `s256` proves byte identity to parties holding the blob; it does not prove record properties or current state to third parties |
 | Portable Evidence | not supplied | -- | -- | The mission log is PS-local; signed receipts or checkpoints would be an extension |
