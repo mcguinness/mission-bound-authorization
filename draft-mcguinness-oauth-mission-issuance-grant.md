@@ -345,7 +345,51 @@ elevation: no token issued under the grant may expire later than the
 
 A MAS implementing this profile serves a Mission Issuance Grant
 endpoint, published as `mission_issuance_grant_endpoint` in its
-discovery metadata ({{iana}}). The Grant Minter MUST observe:
+discovery metadata ({{iana}}).
+
+## Grant Request {#minting-request}
+
+The requester POSTs an `application/json` object to the endpoint over
+TLS, authenticated as {{minting-rules}} requires:
+
+`mission_id`:
+: REQUIRED. A string. The Mission the grant is minted for; its
+  `issuer` is this MAS.
+
+`audience`:
+: REQUIRED. A string. The consuming AS the grant is for, becoming the
+  grant's `aud`. The MAS mints only for audiences its configuration
+  names ({{issuance-join}}).
+
+`authorization_details`:
+: OPTIONAL. An array. A narrower subset the requester asks the grant to
+  carry, under the issuance profile's subset rule. Omitted, the MAS scopes the
+  grant to the entries the named audience serves ({{minting-rules}}); present,
+  it MUST NOT widen beyond that scope.
+
+~~~ http-message
+POST /mas/mission/issuance-grant HTTP/1.1
+Host: mas.example.com
+Content-Type: application/json
+Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
+DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
+
+{
+  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "audience": "https://as.example.com",
+  "authorization_details": [
+    {
+      "type": "mission_resource_access",
+      "resource": "https://api.example.com/invoices",
+      "actions": ["read"]
+    }
+  ]
+}
+~~~
+
+## Grant Processing {#minting-rules}
+
+The Grant Minter MUST observe:
 
 1. **Requester.** The endpoint requires authentication. The
    requester MUST be the Mission's recorded client; any other caller
@@ -369,25 +413,7 @@ discovery metadata ({{iana}}). The Grant Minter MUST observe:
 5. **Evidence.** Each minting is recorded with the Mission record:
    the `jti`, audience, requested and granted entries, and time.
 
-## Grant Request {#minting-request}
-
-The requester POSTs an `application/json` object to the endpoint over
-TLS, authenticated as {{minting}} requires:
-
-`mission_id`:
-: REQUIRED. A string. The Mission the grant is minted for; its
-  `issuer` is this MAS.
-
-`audience`:
-: REQUIRED. A string. The consuming AS the grant is for, becoming the
-  grant's `aud`. The MAS mints only for audiences its configuration
-  names ({{issuance-join}}).
-
-`authorization_details`:
-: OPTIONAL. An array. A narrower subset the requester asks the grant to
-  carry, under the issuance profile's subset rule. Omitted, the MAS scopes the
-  grant to the entries the named audience serves ({{minting}}); present,
-  it MUST NOT widen beyond that scope.
+## Grant Response {#minting-response}
 
 On success the endpoint returns HTTP 200 with an `application/json`
 object:
@@ -396,26 +422,6 @@ object:
 : REQUIRED. A string. The Mission Issuance Grant JWT of {{grant}}. Its
   `exp` bounds redemption ({{grant}}); the requester reads the deadline
   from the decoded grant.
-
-~~~ http-message
-POST /mas/mission/issuance-grant HTTP/1.1
-Host: mas.example.com
-Content-Type: application/json
-Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
-DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
-
-{
-  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-  "audience": "https://as.example.com",
-  "authorization_details": [
-    {
-      "type": "mission_resource_access",
-      "resource": "https://api.example.com/invoices",
-      "actions": ["read"]
-    }
-  ]
-}
-~~~
 
 ~~~ http-message
 HTTP/1.1 200 OK
@@ -440,9 +446,9 @@ endpoint uses:
 | `unauthorized` | 401 | Request not authenticated. |
 | `not_found` | 404 | The `mission_id` is unknown, or the requester is not the Mission's recorded client. |
 | `invalid_audience` | 400 | `audience` names no AS this MAS mints for. |
-| `mission_not_active` | 409 | The Mission is not `active` ({{minting}}). |
+| `mission_not_active` | 409 | The Mission is not `active` ({{minting-rules}}). |
 | `invalid_authorization_details` | 400 | The requested subset is not a subset of the consented Authority Set, or exceeds the audience scope. |
-| `derivations_exhausted` | 409 | The Mission's established `derivation_limit` is reached ({{minting}}): the condition the OAuth binding's `mission_error` value `derivations_exhausted` reports ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}). |
+| `derivations_exhausted` | 409 | The Mission's established `derivation_limit` is reached ({{minting-rules}}): the condition the OAuth binding's `mission_error` value `derivations_exhausted` reports ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}). |
 
 `not_found` covers both an unknown Mission and a requester that is not
 the recorded client, so the split never becomes a membership oracle;
@@ -468,7 +474,11 @@ still requires the requester to prove it is the grant's `client_id`,
 either by authenticating to this AS as it ordinarily does or, where the
 grant carries `cnf`, by proving possession of the bound key. A public
 client that can do neither cannot redeem, since nothing then binds the
-redemption to the grant's `client_id`. The consuming AS MUST validate,
+redemption to the grant's `client_id`.
+
+## Grant Validation {#grant-validation}
+
+The consuming AS MUST validate,
 in an order that fails closed:
 
 1. the JOSE `typ` is `mission-issuance-grant+jwt`; any other type is
@@ -487,6 +497,8 @@ in an order that fails closed:
    step 5 binds the redemption to the key the grant was minted for;
 5. when `cnf` is present, proof of possession of the bound key with
    DPoP {{RFC9449}} or mutual TLS {{RFC8705}}.
+
+## Token Issuance {#token-issuance}
 
 On success the consuming AS mints tokens under these rules:
 
@@ -532,6 +544,10 @@ switch this profile restores.
 
 ## Effective Authority Set Projection {#effective-set-projection}
 
+This section applies at redemption and at every refresh.
+
+### Mission State Source {#mission-state-source}
+
 A consuming AS with a Mission-state integration MUST, at redemption
 and at every refresh, resolve the Mission's current state and
 Effective Authority Set through the Mission Status operation
@@ -542,6 +558,18 @@ audience-scoped to this AS, MUST carry the Mission's current
 `authorization_details` and a monotonic state `version`, and MUST
 answer within a staleness bound the deployment publishes
 ({{conformance}}).
+
+The Mission Status operation discharges the source properties above
+directly: an authenticated, audience-scoped Mission Status Response,
+queried with this AS's own audience, carries current
+`authorization_details` and the Mission's state `version`
+({{I-D.draft-mcguinness-oauth-mission-status}}). Whatever the source,
+an active Mission state, or a Status List VALID bit, does not alone
+satisfy this: containment and discharge narrow an active Mission
+without moving its lifecycle state, and the Status List's bit carries
+no `authorization_details` at all.
+
+### Issued Authority {#issued-authority}
 
 Where the Mission is `active`, the consuming AS
 projects issued authority through the current Effective Authority
@@ -569,15 +597,7 @@ fails to intersect it, the request is at fault: the refusal is
 `invalid_authorization_details` {{RFC9396}} where it carried
 `authorization_details`.
 
-The Mission Status operation discharges the source properties above
-directly: an authenticated, audience-scoped Mission Status Response,
-queried with this AS's own audience, carries current
-`authorization_details` and the Mission's state `version`
-({{I-D.draft-mcguinness-oauth-mission-status}}). Whatever the source,
-an active Mission state, or a Status List VALID bit, does not alone
-satisfy this: containment and discharge narrow an active Mission
-without moving its lifecycle state, and the Status List's bit carries
-no `authorization_details` at all.
+### Transient Source Failure {#transient-failure}
 
 A source that is unavailable, fails verification, or reports a state
 `version` older than one already observed for this Mission is a
@@ -591,6 +611,8 @@ stays for the permanent classes: an invalid, expired, or replayed
 grant, a Mission that is not established `active`, and a genuinely
 empty current intersection.
 
+### Single Use {#single-use}
+
 Consumption is atomic with issuance. The single-use `jti` check of
 {{redemption}} refuses a grant already recorded; the record itself is
 written atomically with successful issuance, after the state gate and
@@ -602,11 +624,15 @@ the refresh path a transient source failure MUST NOT consume or rotate
 the presented refresh token, so the client retries with the credential
 it already holds.
 
+### Refresh {#refresh}
+
 A refresh family's issued authority MUST NOT widen across refreshes
 within the same Mission: the consuming AS atomically narrows its own
 stored ceiling on every refresh, or retains the highest Mission state
 `version` it has observed and rejects a source reporting a lower one
 as a rollback.
+
+### Without a Mission-State Integration {#no-state-integration}
 
 A consuming AS without a Mission-state integration MUST NOT issue
 refresh tokens under a grant, and relies instead on the grant's
@@ -660,7 +686,7 @@ and the Mission is dead:
 `invalid_scope` and `invalid_authorization_details` name a request the
 client can narrow and re-send under the same grant.
 
-## Authorization Code Flow Carriage {#par-carriage}
+# Authorization Code Flow Carriage {#par-carriage}
 
 Deployments whose clients must traverse the authorization code flow
 MAY carry the grant in a Pushed Authorization Request {{RFC9126}} as
@@ -734,7 +760,7 @@ under this profile compose credential-carried at the PDP; ordinary
 tokens continue to compose through the Mission Join. The two joins
 coexist per resource and per AS.
 
-# Composite Provision {#composite}
+## Composite Provision {#composite}
 
 In the substrate's terms ({{I-D.draft-mcguinness-mission-substrate}})
 the MAS alone claims neither Credential-Bound nor Lifecycle-Gated
