@@ -35,13 +35,25 @@ normative:
   RFC9457:
   I-D.draft-hardt-oauth-aauth-protocol:
     title: "AAuth Protocol"
-    target: https://dickhardt.github.io/AAuth/draft-hardt-oauth-aauth-protocol.html
     author:
       -
         ins: D. Hardt
         name: Dick Hardt
-    date: 2026
-    refcontent: "Editor's copy, commit fc5e972c"
+    date: 2026-09-25
+    seriesinfo:
+      Internet-Draft: draft-hardt-oauth-aauth-protocol-11
+  I-D.draft-hardt-httpbis-signature-key:
+    title: "HTTP Signature Keys"
+    author:
+      -
+        ins: D. Hardt
+        name: Dick Hardt
+      -
+        ins: T. Meunier
+        name: Thibault Meunier
+    date: 2026-09-13
+    seriesinfo:
+      Internet-Draft: draft-hardt-httpbis-signature-key-09
 
 informative:
   I-D.draft-mcguinness-aauth-mission-expiry:
@@ -381,10 +393,11 @@ define fleet enumeration or bulk termination.
 A management service authenticates with the AAuth HTTP Message
 Signatures profile {{RFC9421}}, presenting its key with
 `Signature-Key: sig=jwks_uri`, the scheme the base protocol uses for
-PS-to-AS token requests.  The PS resolves the key as the
-`Signature-Key` profile specifies and MUST hold a deployment-local
-registration of that `jwks_uri` as a management identity; this
-specification adds no discovery surface for management identities.  An
+PS-to-AS token requests.  The PS resolves the key as HTTP Signature
+Keys {{I-D.draft-hardt-httpbis-signature-key}} specifies and MUST hold
+a deployment-local registration of that `jwks_uri` as a management
+identity; this specification adds no discovery surface for management
+identities.  An
 Agent MUST NOT use this scheme; the base protocol already forbids it
 to agents.
 
