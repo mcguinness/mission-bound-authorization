@@ -83,11 +83,11 @@ informative:
 
 --- abstract
 
-AAuth defines an immutable mission blob, identifies it by the native
-`{approver, s256}` mission reference, and gives a mission two states:
-`active` and `terminated`.  It leaves revocation, delegation-tree
-queries, and administrative interfaces to a companion specification.
-This document defines that companion.
+AAuth defines an immutable mission blob, identifies it by the
+approving Person Server and the blob's `s256` digest, and gives a
+mission two states: `active` and `terminated`.  It leaves revocation,
+delegation-tree queries, and administrative interfaces to a companion
+specification.  This document defines that companion.
 
 An authenticated caller can read status, permanently terminate an
 authorized mission, and inspect the AAuth agent and token delegation
@@ -112,8 +112,10 @@ to report and bound the residual window honestly.
 The AAuth Protocol {{I-D.draft-hardt-oauth-aauth-protocol}} makes agent
 governance orthogonal to its five resource-access modes.  An agent and
 its Person Server (PS) hold the exact bytes of an approved mission blob.
-The SHA-256 digest of those bytes, paired with the approving PS URL,
-forms the native Mission Reference.
+The SHA-256 digest of those bytes, `s256`, paired with the approving
+PS, is the mission's identity (Section 8.2.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}), which this document calls
+the Mission Reference.
 
 Resources and Access Servers see that reference, not the mission
 body.  The PS retains the context and ordered mission log needed to
@@ -129,7 +131,7 @@ This document supplies those management functions without replacing
 AAuth's mission model with an OAuth authorization object.  In
 particular, it introduces no `mission_id`, Authority Set, scope-subset
 rule, status signal, or additional lifecycle state.  Every operation is
-keyed by the exact native `{approver, s256}` pair.  Authorization to a
+keyed by the exact Mission Reference.  Authorization to a
 remote resource remains a decision of that resource, its Access Server,
 and, where involved, the PS; this endpoint manages the contextual
 governance envelope held by the PS.
@@ -158,10 +160,18 @@ its state.
 
 This document uses Person, Agent, Agent Provider (AP), Person Server
 (PS), Access Server (AS), Resource, Agent Token, Resource Token, Auth
-Token, Mission, Mission Reference, mission blob, and mission log as
-defined by {{I-D.draft-hardt-oauth-aauth-protocol}}.
+Token, Mission, mission blob, and mission log as defined by
+{{I-D.draft-hardt-oauth-aauth-protocol}}.
 
 The following additional terms are used:
+
+Mission Reference:
+: The pair of the approving PS and `s256`, AAuth's mission identity
+  (Section 8.2.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}).  The
+  approving PS is named by the `iss` of a person token, the `ps` claim
+  of a resource or auth token, or the PS a request is made to; the
+  mission blob carries no member naming it.  On the wire, the
+  reference is the `mission_s256` claim or parameter.
 
 Management Principal:
 : An authenticated person, administrator, or service acting under an
@@ -190,21 +200,21 @@ Residual Window:
 
 ## Mission Identity
 
-The Mission Reference `{approver, s256}` remains the management key
-for every mission this specification governs.  On the wire, a request
+The Mission Reference remains the management key for every mission
+this specification governs.  On the wire, a request
 identifies its target with the `{mission_s256}` path segment of the
 mission's own control-plane URL,
 `{mission_control_endpoint}/{mission_s256}`, following the per-mission
 URL convention the base protocol defines at `mission_endpoint`.
 
-The syntax, comparison, and digest rules are those of the AAuth Mission
-Reference.  `approver` is neither a request member nor a path segment:
-it is fixed to the identity of the PS endpoint that receives the
-request, so no part of the request can name another approver.  A PS
-MUST resolve the `{mission_s256}` segment only among the missions it
-itself approved, MUST NOT forward a management operation to another
-approver, and MUST NOT accept an alias for either half of the
-reference.
+The syntax, comparison, and digest rules are those of AAuth's mission
+identifier (Section 8.2.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}).
+The approving PS is neither a request member nor a path segment: it is
+fixed to the identity of the PS endpoint that receives the request, so
+no part of the request can name another PS.  A PS MUST resolve the
+`{mission_s256}` segment only among the missions it itself approved,
+MUST NOT forward a management operation to another PS, and MUST NOT
+accept an alias for either half of the reference.
 
 The pair is the sole protocol key.  Implementations MAY use internal
 database keys, but those keys MUST NOT appear in this protocol.  The PS
@@ -994,7 +1004,7 @@ it:
    `mission_control_actions_supported`;
 2. keys every action solely by the `{mission_s256}` path segment of
    the mission's control-plane URL, resolving it only among missions
-   for which it is itself the `approver`;
+   it itself approved;
 3. preserves exactly the `active` and `terminated` states, makes
    termination permanent, and records reasons separately;
 4. authenticates and authorizes every request according to caller role,
