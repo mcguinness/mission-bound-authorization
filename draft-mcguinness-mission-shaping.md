@@ -225,7 +225,7 @@ require, so no two transform a request into a Mission Intent the same
 way. The interoperable surface is the result of that transformation,
 the Mission Intent and Authority Proposal, which the issuance profile
 defines and validates. This document therefore describes the shaper's
-role in the trust model and the behavior of a sound implementation. It
+role in the trust model and recommended shaper behavior. It
 defines no shaping protocol, media type, claim name, or conformance
 class. A deployment can expose shaping as a network service; that
 interface is a local implementation detail
@@ -267,9 +267,7 @@ shaper, expressed where possible on the observable shaping artifacts
 operates a shaper; and any party that receives shaper output or
 Shaping Evidence, which never treats either as authority. None of
 them is a conformance obligation. Mission Issuer behavior is cited
-from the issuance profile, not specified here. "Sound shaper" names a
-shaper that follows the recommendations of this document; it is not a
-conformance target.
+from the issuance profile, not specified here.
 
 All JSON in this document is non-normative and illustrative; the
 surrounding prose is authoritative. This document uses JSON {{RFC8259}}
@@ -354,7 +352,7 @@ narrows it and binds authority at the approval event
 Nothing in this document changes that treatment, and a shaper SHOULD
 NOT structure its output to imply otherwise.
 
-Three consequences follow, and a sound shaper observes all three:
+Three consequences follow:
 
 1. It does not act as a credential issuer. A shaper that signs its
    output as a statement of authority, attaches an authority
@@ -415,7 +413,7 @@ approved Mission, and runtime enforcement permits or denies actions.
 
 # Processing Model {#processing-model}
 
-A sound shaper processes a request in the following order, which the
+A shaper processes a request in the following order, which the
 remaining sections follow:
 
 1. Normalize and classify the task input.
@@ -440,8 +438,8 @@ customer" does not identify which mailbox, sender, recipient, template,
 or data source is allowed unless the deployment's capability sources or
 policy resolve those details.
 
-Before proposing a resource, a sound shaper establishes its resolution
-basis, which is one of the following:
+Before proposing a resource, the shaper SHOULD establish its
+resolution basis, which is one of the following:
 
 `catalog`:
 : Resolved from a catalog, metadata endpoint, API description, tool
@@ -458,9 +456,8 @@ basis, which is one of the following:
 : A resource-owning system or Authorization Server supplied an allowed
   resource and action projection for this task.
 
-A sound shaper records the resolution basis in Shaping Evidence. A
-model-generated capability name with none of these bases is
-unresolved, and a sound shaper treats it as unresolved ({{refusal}}).
+A model-generated capability name with none of these bases is
+unresolved ({{refusal}}).
 
 For each resolved capability, Shaping Evidence SHOULD record:
 
@@ -485,7 +482,7 @@ Section "Mission Intent"); {{construction-guidance}} covers each member.
 The proposal MUST be bounded enough for the Mission Issuer to derive an
 Authority Set without interpreting natural language as authority.
 
-A sound shaper does not include a resource merely because the task text
+The shaper SHOULD NOT include a resource merely because the task text
 implies it might be useful: each resource has a resolution basis
 ({{capability-resolution}}), or the shaper produces a clarification
 request or a refusal.
@@ -606,14 +603,14 @@ Evidence is never an input to derivation.
 
 ## Shaping Ceiling and Default Deny {#authority-ceiling}
 
-A sound shaper applies a default-deny posture. Its proposal contains
+The shaper SHOULD apply a default-deny posture: its proposal contains
 only resources that have a positive basis in the request, context,
 capability sources, and shaping policy, and only the `task_bounds` and
 `success_criteria` the shaper can defend. It does not include a broad
 resource class as a fallback for unresolved detail.
 
 When the concrete objects of an open-ended task are not known at
-shaping time, a sound shaper expresses the bound as `task_bounds` that
+shaping time, the shaper SHOULD express the bound as `task_bounds` that
 hold as invariants over those objects (the owning customer, the
 tenant, an amount ceiling, read-only except named writes, a time
 window), instead of reaching for a broad resource class to anticipate
@@ -622,7 +619,7 @@ constraints, and runtime enforcement applies them per object at the
 point of use ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
 Authority").
 
-A sound shaper proposes a Mission Intent scoped to one concrete task,
+The shaper SHOULD propose a Mission Intent scoped to one concrete task,
 not to an agent's whole session or standing role. When a request spans
 several distinct tasks, it proposes several task-scoped Mission
 Intents instead of one broad proposal, so that each resulting Mission
@@ -650,7 +647,7 @@ execution, the shaper SHOULD propose that fact in the Authority
 Proposal, recording the same fact in Shaping Evidence for audit only;
 the Mission Issuer narrows it when deriving `delegation`, or refuses.
 The shaper MAY also describe the desired delegation bound in
-`task_bounds` or `success_criteria`. A sound shaper does not infer
+`task_bounds` or `success_criteria`. The shaper SHOULD NOT infer
 delegated execution from the existence of a task graph or an agent
 harness: a child actor needs explicit authority derived by the Mission
 Issuer, not session ancestry.
@@ -661,24 +658,24 @@ sub-task into the proposed Child Mission Intent is a shaping act, and
 this document applies to it unchanged. The Parent Mission's Authority
 Set is the shaping ceiling. The child-delegation profile refuses a
 child that is not a strict subset of its parent, so a proposal that
-exceeds the parent cannot be approved; a sound shaper narrows,
+exceeds the parent cannot be approved, and the shaper narrows,
 clarifies, or refuses instead of emitting one. Shaping Evidence for a
 child proposal SHOULD record the parent Mission identifier and the
 parent-derived ceiling it shaped under.
 
 # Ambiguity Handling {#ambiguity}
 
-A sound shaper classifies material ambiguity. Ambiguity is material
+The shaper SHOULD classify material ambiguity. Ambiguity is material
 when choosing one interpretation over another would change the
 Authority Set, the action class, the actor allowed to exercise it, the
 expiry, or the risk posture.
 
-For material ambiguity, a sound shaper does one of the following:
+For material ambiguity, the shaper SHOULD do one of the following:
 
-1. requests clarification ({{clarifications}});
-2. emits a narrower proposal that excludes the ambiguous authority and
-   records the exclusion in Shaping Evidence; or
-3. refuses with a reason ({{refusal}}).
+1. request clarification ({{clarifications}});
+2. emit a narrower proposal that excludes the ambiguous authority and
+   record the exclusion in Shaping Evidence; or
+3. refuse with a reason ({{refusal}}).
 
 When a shaper resolves an ambiguity in the broadening direction,
 Shaping Evidence MUST record the resolution and, where deployment
@@ -686,9 +683,9 @@ policy permits that default resolution, the policy rule that
 authorized it. The requirement is stated on the observable artifact
 because the Mission Issuer cannot observe the shaper's internal
 reasoning. A proposal that broadens authority on an ambiguity without
-a corresponding Shaping Evidence record is unsound. The Mission Issuer
-enforces its own ceiling and consent regardless of what the shaper
-recorded.
+a corresponding Shaping Evidence record does not follow this document.
+The Mission Issuer enforces its own ceiling and consent regardless of
+what the shaper recorded.
 
 Requesting clarification is not approval. The requester's answer is
 incorporated into the Mission Intent, and the Mission Issuer still
@@ -785,7 +782,7 @@ The following members are RECOMMENDED content:
   ruleset marks as not retained. To make the digest recomputable by a
   later auditor, the evidence MUST also record
   `input_exclusion_ruleset`. A digest whose exclusion ruleset is not
-  recorded cannot be reproduced and is not a sound `input_digest`.
+  recorded cannot be reproduced.
 
 `input_exclusion_ruleset`:
 : An identifier, with version, of the exclusion ruleset applied to
