@@ -860,7 +860,9 @@ under that issuer's `issuer`.
 
 A deployment MAY instead, or in addition, carry an integrity envelope
 over the Shaping Evidence, for example a JWS {{RFC7515}} Compact
-Serialization over the JCS canonical bytes of the evidence.
+Serialization over the JCS canonical bytes of the evidence. When the
+JWS is embedded in the evidence, the signing input omits the member
+that carries it.
 
 Where the deployment records Consent Evidence, the consent-disclosure
 object defines an OPTIONAL `shaping_evidence_hash` member, which is the
