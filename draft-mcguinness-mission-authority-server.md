@@ -758,9 +758,9 @@ consent-disclosure commitment.
 
 # Mission Lifecycle and State {#lifecycle-and-state}
 
-In MAS mode, there are no Mission-bound tokens and no token
-introspection. The Mission Status profile's surfaces are therefore
-the only way a consumer observes or changes Mission state. A MAS
+In MAS mode, there are no Mission-bound tokens, so no token
+introspection reports Mission state. The Mission Status profile's
+surfaces are how a consumer observes or changes Mission state. A MAS
 implements them as its state surface, by reference:
 
 - The MAS MUST serve the Mission Status operation of
