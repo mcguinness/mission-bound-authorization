@@ -142,6 +142,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-containment:
+    title: "Mission Containment for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -480,6 +488,22 @@ overlaps a discharged predecessor entry in authority falls back to a
 fresh human approval. Completion-discharged authority therefore
 cannot be resurrected by policy.
 
+The drawdown policy MUST NOT policy-adjudicate a successor whose
+complete Authority Set, including authority carried forward from its
+predecessor, overlaps in authority capability under a containment
+restriction of its expansion chain
+({{I-D.draft-mcguinness-oauth-mission-containment}}). Such a request
+falls back to a fresh human approval whose consent disclosure names
+the contained capability and the event class that caused its
+containment. The Mission Issuer MUST apply this test to every
+drawdown in the chain after the containment, not only to one from
+the Mission that holds the overlay, and neither an approval of
+unrelated authority nor a ceiling review clears the restriction
+({{ceiling-review}}). A drawdown whose authority overlaps no
+restricted capability remains eligible for policy adjudication under
+the other guards of this section. Contained authority therefore
+cannot be restored by policy.
+
 ## What it bounds, and what it does not {#progressive-limits}
 
 The ceiling is broad by construction, since it must cover the
@@ -545,7 +569,11 @@ render the chain's record since the prior review:
 - the guard exceptions escalated to human approval;
 - the `out_of_ceiling` refusals;
 - the entries discharged under the Entry Discharge companion's
-  completion machinery ({{I-D.draft-mcguinness-oauth-mission-discharge}}); and
+  completion machinery ({{I-D.draft-mcguinness-oauth-mission-discharge}});
+- the chain's outstanding containment restrictions, each with its
+  contained capability and the event class that caused it
+  ({{I-D.draft-mcguinness-oauth-mission-containment}}), which
+  re-consenting the ceiling does not clear; and
 - where the metering profile runs, consumption against its bounds
   ({{I-D.draft-mcguinness-mission-metering}}).
 
@@ -658,6 +686,9 @@ Authorization** is a conforming expansion-capable Mission Issuer
   Deployment Profile ({{in-ceiling-expansion}});
 - require a fresh human approval for an in-ceiling drawdown while the
   predecessor has non-terminal Child Missions ({{in-ceiling-expansion}});
+- require a fresh human approval for a drawdown whose complete
+  Authority Set overlaps capability under a containment restriction
+  of its chain, from any Mission in the chain ({{in-ceiling-expansion}});
 - rate-bound policy-adjudicated drawdowns per expansion chain, keyed by
   the chain's root Mission and counted across `predecessor` links,
   publish the concrete rate bound in the Mission Deployment Profile, and
