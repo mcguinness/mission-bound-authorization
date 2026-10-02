@@ -524,9 +524,13 @@ The MAS MUST apply the following rules:
    public key of the request's DPoP proof, as `jkt`, or the client
    certificate of the mutual-TLS connection, as `x5t#S256` (the TLS
    handshake proves possession of its key whether or not the
-   certificate also authenticated the client). A
-   private-key-JWT client assertion's signing key authenticates the
-   client and MUST NOT become `cnf`. A grant request with no verified
+   certificate also authenticated the client). The MAS MUST NOT
+   derive `cnf` solely from client-assertion authentication: a
+   private-key-JWT client assertion authenticates the client, and DPoP
+   is not client authentication ({{Section 3 of RFC9449}}), so only an
+   independent sender-constraint verification on the request supplies
+   the binding, even where it proves the same key. A grant request with
+   no verified
    sender constraint yields a grant without `cnf`. The redemption
    rules for client authentication and public clients
    ({{redemption}}) apply unchanged, so a public client cannot redeem

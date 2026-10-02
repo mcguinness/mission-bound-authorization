@@ -22668,7 +22668,7 @@
    "id": "issuance-grant.minting-rules.no-assertion-key-cnf",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
    "anchor": "minting-rules",
-   "text": "A private-key-JWT client assertion's signing key authenticates the client and MUST NOT become `cnf`.",
+   "text": "The MAS MUST NOT derive `cnf` solely from client-assertion authentication",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -22678,7 +22678,7 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a grant request authenticated only by a private-key-JWT client assertion yields a grant whose cnf, if any, never names the assertion's signing key"
+    "normative": "a grant request authenticated by a private-key-JWT client assertion yields a cnf only from an independent sender-constraint verification on that request (a DPoP proof or the mutual-TLS handshake), never from the assertion alone; where that verification proves the same key the assertion was signed with, the binding is valid"
    },
    "level": "endpoint",
    "coverage": "todo",
