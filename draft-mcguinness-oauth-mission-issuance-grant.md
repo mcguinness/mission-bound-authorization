@@ -630,11 +630,12 @@ original set.
 An empty intersection is refused by its cause. Where items 1 to 3
 already intersect to nothing, the authorization itself is exhausted
 and the refusal is `invalid_grant` ({{redemption-errors}}); it MAY
-carry Containment's
-`authority_contained` denial reason where Containment causally removed
-the authority, and a collapse from any other cause MUST NOT be
-reported as containment merely because Containment is composed
-({{I-D.draft-mcguinness-oauth-mission-containment}}). Where that
+carry the `authority_contained` value in the `mission_denial_reason`
+member where Containment causally removed the authority, and a
+collapse from any other cause MUST NOT be reported as containment
+merely because Containment is composed
+({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "The
+authority_contained Denial Reason"). Where that
 authorization survives and only the narrowing the client requested
 fails to intersect it, the request is at fault: the refusal is
 `invalid_scope` where the request carried `scope`, or
