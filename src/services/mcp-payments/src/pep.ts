@@ -1318,7 +1318,7 @@ export class Pep {
     try {
       decision = await (this.deps.decide ?? evaluate)(req, decisionOptions);
     } catch {
-      return this.refuse(token, "pdp_unreachable", mapping.action, view);
+      return this.refuse(token, "pdp_unreachable", mapping.action, view, undefined, req);
     }
     // @spec authzen#failure-condition-coverage — a local channel failure is
     // not a PDP decision. It has no PDP evidence/evaluation identifier, and
@@ -1338,7 +1338,7 @@ export class Pep {
         "decision_channel_response_too_large",
       ]);
       const reason = integrityFailures.has(cause) ? "channel_failure" : "pdp_unreachable";
-      return this.refuse(token, reason, mapping.action, view);
+      return this.refuse(token, reason, mapping.action, view, undefined, req);
     }
 
     this.deps.observe?.({ tool, args, token, envelope: req, decision, ...(effective ? { effective } : {}) });
@@ -1365,7 +1365,7 @@ export class Pep {
       // Fail closed on a permit: an action whose decision left no verifiable
       // Decision Evidence is refused rather than executed. A denial keeps its
       // own denial reason, which is the more useful one, and denies either way.
-      return this.refuse(token, "decision_evidence_unverifiable", mapping.action, view);
+      return this.refuse(token, "decision_evidence_unverifiable", mapping.action, view, undefined, req);
     }
 
     if (!decision.decision) {
@@ -1847,8 +1847,9 @@ export class Pep {
     action: string,
     view?: MissionView,
     missionIdOverride?: string,
+    evaluationRequest?: EvaluationRequest,
   ): Promise<EnforceResult> {
-    await this.recordRefusal(token, reason, action, view, missionIdOverride);
+    await this.recordRefusal(token, reason, action, view, missionIdOverride, evaluationRequest);
     return { permitted: false, refusal_reason: reason };
   }
 
@@ -1880,6 +1881,7 @@ export class Pep {
     action: string,
     view?: MissionView,
     missionIdOverride?: string,
+    evaluationRequest?: EvaluationRequest,
   ): Promise<void> {
     const missionId = view?.id ?? token.mission?.id ?? missionIdOverride ?? "unknown";
     await this.deps.evidence.recordRefusal(CANONICAL_RESOURCE, "pep", {
@@ -1891,6 +1893,9 @@ export class Pep {
       ...(view !== undefined
         ? { mission: { id: view.id, issuer: view.issuer, authority_hash: view.authority_hash } }
         : {}),
+      // @spec runtime-evidence#request-digest-worked: a refusal after the
+      // request was built digests that request as submitted.
+      ...(evaluationRequest !== undefined ? { evaluation_request: evaluationRequest } : {}),
     });
   }
 }

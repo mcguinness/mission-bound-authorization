@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { canonicalDigest } from "@mission/core";
 import { createDecisionChannel, createEphemeralDecisionPoint, type DecisionFn, evaluateRemote, type Fga, isDecisionChannelRefusal, type MissionView, RUNTIME_POSTURE, loadRuntimePosture, relationForAction, stalenessBound } from "@mission/pdp";
 import { CANONICAL_RESOURCE, createEphemeralEvidenceKeys, EvidenceStore, McpPaymentsServer, PaymentsStore, Pep, type TokenFacts } from "../src/index.js";
 import { PaymentsToolCatalog } from "../src/tool-catalog.js";
@@ -81,7 +82,12 @@ describe("configured PDP unavailability (@spec runtime#ride-through, authzen#fai
   // Refusal Record, no attributed PDP decision, and nothing executed. It is
   // still not disguised as an ordinary policy denial, which would carry a
   // `denial_reason` and a retained Decision Evidence record.
-  const refusesAThrow = async (decide: DecisionFn) => {
+  const refusesAThrow = async (fail: DecisionFn) => {
+    let submitted: string | undefined;
+    const decide: DecisionFn = (req, opts) => {
+      submitted = canonicalDigest(JSON.parse(JSON.stringify(req)));
+      return fail(req, opts);
+    };
     const x = await build("co-resident", decide);
     try {
       const refused = await x.server.callReadTool("get_invoice", { invoice_id: "one" }, x.token);
@@ -98,6 +104,10 @@ describe("configured PDP unavailability (@spec runtime#ride-through, authzen#fai
       expect(refusals).toHaveLength(1);
       expect(refusals[0]!.content).toMatchObject({ emitter: { role: "pep" }, denial_reason: "pdp_unreachable", decision: "deny" });
       expect(refusals[0]!.content).not.toHaveProperty("evaluation_id");
+      // @spec runtime-evidence#request-digest-worked: the refusal follows an
+      // evaluation request, so it digests that request as submitted.
+      expect(submitted).toMatch(/^sha-256:/);
+      expect(refusals[0]!.content).toMatchObject({ request_digest_input: "decision_request", evaluation_request_digest: submitted });
     } finally { await x.channel.close(); x.payments.db.close(); }
   };
   it("refuses a decision function that throws synchronously as pdp_unreachable, with one Refusal Record and no effect", async () => {

@@ -69,6 +69,10 @@ import {
   verifyMissionReceipt,
 } from "../src/index.js";
 
+// @spec authzen#evaluation-request-digest-input: a fixture digest of a submitted
+// request (the AuthZEN profile's worked value), for emitter inputs that model one.
+const FIXTURE_REQUEST_DIGEST = "sha-256:v_QKMU8dffVDdoAnQkBenjWgtp5U_ffH5ORwT39iaoo";
+
 const ISSUER = "https://as.test";
 const NOW = new Date("2026-07-22T12:00:00Z");
 const alwaysAllowFga = { checkWithContext: async () => true } as unknown as Fga;
@@ -205,6 +209,7 @@ describe("retainDecision verifies before it retains (@spec runtime-evidence#deci
       action: { name: "payments:invoice.read" },
       audience: CANONICAL_RESOURCE,
       evaluation_id: "dec_impostor",
+      evaluation_request_digest: FIXTURE_REQUEST_DIGEST,
       decision: "permit",
       entry_digest: "sha-256:fixture-entry",
       conditions: { valid_until: NOW.toISOString() },
@@ -232,6 +237,7 @@ describe("retainDecision verifies before it retains (@spec runtime-evidence#deci
       action: { name: "payments:invoice.read" },
       audience: "https://other-scope.example.com",
       evaluation_id: "dec_scope",
+      evaluation_request_digest: FIXTURE_REQUEST_DIGEST,
       decision: "permit",
       entry_digest: "sha-256:fixture-entry",
       conditions: { valid_until: NOW.toISOString() },
@@ -253,6 +259,7 @@ describe("retainDecision verifies before it retains (@spec runtime-evidence#deci
       action: { name: "payments:invoice.read" },
       audience: CANONICAL_RESOURCE,
       evaluation_id: "dec_nokeys",
+      evaluation_request_digest: FIXTURE_REQUEST_DIGEST,
       decision: "permit",
       entry_digest: "sha-256:fixture-entry",
       conditions: { valid_until: NOW.toISOString() },
@@ -274,6 +281,7 @@ describe("retainDecision verifies before it retains (@spec runtime-evidence#deci
       action: { name: "payments:invoice.read" },
       audience: CANONICAL_RESOURCE,
       evaluation_id: "dec_verbatim",
+      evaluation_request_digest: FIXTURE_REQUEST_DIGEST,
       decision: "permit",
       entry_digest: "sha-256:fixture-entry",
       conditions: { valid_until: NOW.toISOString() },
@@ -447,6 +455,7 @@ const decisionInput = (evaluation_id: string) => ({
   action: { name: "payments:invoice.read" },
   audience: CANONICAL_RESOURCE,
   evaluation_id,
+  evaluation_request_digest: FIXTURE_REQUEST_DIGEST,
   decision: "permit" as const,
   entry_digest: "sha-256:fixture-entry",
   conditions: { valid_until: NOW.toISOString() },

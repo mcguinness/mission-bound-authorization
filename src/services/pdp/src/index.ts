@@ -37,7 +37,8 @@ export {
 export {
   createDecisionEvidenceEmitter,
   newRecordId,
-  requestDigestFallback,
+  evaluationRequestDigest,
+  preRequestDigest,
   type DecisionEvidenceEmissionInput,
   type DecisionEvidenceEmitter,
   type DecisionEvidenceEmitterConfig,
