@@ -358,8 +358,8 @@ kind. It produces a shaped proposal, which is untrusted client input
 under the issuance profile until the Mission Issuer validates and
 narrows it and binds authority at the approval event
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Submission via PAR").
-Nothing in this document changes that treatment, and a shaper SHOULD
-NOT structure its output to imply otherwise.
+Nothing in this document changes that treatment, and a shaper
+SHOULD NOT structure its output to imply otherwise.
 
 Three consequences follow:
 
@@ -370,8 +370,8 @@ Three consequences follow:
    deployment MAY integrity-protect shaper output for client-internal
    reasons, for example to detect tampering between the shaper and the
    submission step in a multi-process client ({{multi-process}}). Such
-   protection has no authority semantics at the Mission Issuer and MUST
-   NOT be relied upon beyond the client.
+   protection has no authority semantics at the Mission Issuer and
+   MUST NOT be relied upon beyond the client.
 
 2. It does not mimic Mission Issuer output. The Mission Intent proposal
    MUST NOT carry `mission.id`, `intent_hash`, `authority_hash`, an
@@ -972,12 +972,12 @@ rejected dimensions) and MAY reference the predecessor proposal's
 evidence, so that an auditor can read the narrowing chain end to end.
 
 Each re-proposal narrows. A refusal is a signal to propose less, not
-to propose the same authority under different names. A shaper SHOULD
-NOT re-encode refused authority in new vocabulary. It MUST NOT use
-iterative resubmission to probe the Mission Issuer's policy boundary
-({{silent-broadening}}). When a narrower proposal can no longer
-complete the task, the shaper requests clarification, refuses, or
-emits a partial proposal ({{authority-ceiling}}). A task that needs
+to propose the same authority under different names. A shaper
+SHOULD NOT re-encode refused authority in new vocabulary. It MUST NOT
+use iterative resubmission to probe the Mission Issuer's policy
+boundary ({{silent-broadening}}). When a narrower proposal can no
+longer complete the task, the shaper requests clarification, refuses,
+or emits a partial proposal ({{authority-ceiling}}). A task that needs
 more than was refused is a new proposal through the normal flow, not a
 widened retry.
 
