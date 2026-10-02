@@ -50,7 +50,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-mission-orchestration:
-    title: "Mission Orchestration"
+    title: "Mission Orchestration and Unwinding"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-orchestration.html
     author:
       - ins: K. McGuinness
