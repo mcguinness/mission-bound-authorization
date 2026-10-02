@@ -453,6 +453,42 @@ describe("the PEP's reservation and retention for keyed reversible writes (@spec
     });
   });
 
+  describe("the reservation scope keys on a stable actor (@spec runtime#idempotency, #1016 review)", () => {
+    const instanceLeaf = (sub: string) => ({ iss: ISSUER, sub, sub_profile: "client_instance" });
+
+    it("another instance of the same client, carried as an instance-profiled leaf, retries into the same scope and executes nothing new", async () => {
+      const h = harness();
+      const k = key();
+      const first = await schedule(h, k, { ...TOKEN_A, act: instanceLeaf("instance-1") } as TokenFacts);
+      expect(first.ok, JSON.stringify(first)).toBe(true);
+      const other = await schedule(h, k, { ...TOKEN_A, act: instanceLeaf("instance-2") } as TokenFacts);
+      expect(other).toEqual({ ok: true, deduped: true, result: first.result });
+      expect(h.store.schedules()).toHaveLength(1);
+      expect(h.store.reservations()).toHaveLength(1);
+      h.store.close();
+    });
+
+    it("an instance-profiled leaf with no client to key it on has no stable actor: the write is refused after its permit, executes nothing, and leaves no reservation", async () => {
+      const h = harness();
+      const { clientId: _client, ...noClient } = TOKEN_A;
+      const token = { ...noClient, act: instanceLeaf("instance-1") } as TokenFacts;
+      const refused = await schedule(h, key(), token);
+      expect(refused).toEqual({ ok: false, refusal_reason: "consumption_unavailable" });
+      expect(h.store.schedules()).toHaveLength(0);
+      expect(h.store.reservations()).toHaveLength(0);
+      // A post-permit disposition through the one writer: the PDP permitted
+      // (it makes no claim for this key), and the PEP suppressed.
+      const permits = h.evidence
+        .forMission("msn_918a")
+        .filter((e) => e.kind === "decision" && (e.content as { decision?: string }).decision === "permit");
+      expect(permits).toHaveLength(1);
+      expect(h.executions().map((r) => [r.content.outcome, r.content.error])).toEqual([
+        ["suppressed", "consumption_unavailable"],
+      ]);
+      h.store.close();
+    });
+  });
+
   describe("the schedule is a real, cancellable state that cannot pay", () => {
     it("cancel moves the Mission's active schedule to cancelled, idempotently per key, and the connector ledger stays empty", async () => {
       const h = harness();
