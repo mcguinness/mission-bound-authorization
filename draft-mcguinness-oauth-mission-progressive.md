@@ -508,7 +508,11 @@ unrelated authority nor a ceiling review clears the restriction
 ({{ceiling-review}}). A drawdown whose authority overlaps no
 restricted capability remains eligible for policy adjudication under
 the other guards of this section. Contained authority therefore
-cannot be restored by policy.
+cannot be restored by policy. Both tests are re-applied at successor
+activation, so a containment or discharge that lands after
+adjudication is caught there
+({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "Concurrent
+Expansion Reconciliation").
 
 ## What it bounds, and what it does not {#progressive-limits}
 
