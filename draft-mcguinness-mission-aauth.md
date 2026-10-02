@@ -29,13 +29,13 @@ author:
 normative:
   I-D.draft-hardt-oauth-aauth-protocol:
     title: "AAuth Protocol"
-    target: https://dickhardt.github.io/AAuth/draft-hardt-oauth-aauth-protocol.html
-    refcontent: "Editor's copy, commit fc5e972c"
     author:
       -
         ins: D. Hardt
         name: Dick Hardt
-    date: 2026
+    date: 2026-09-25
+    seriesinfo:
+      Internet-Draft: draft-hardt-oauth-aauth-protocol-11
   I-D.draft-mcguinness-mission-substrate:
     title: "Mission Substrate Requirements"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
@@ -56,12 +56,13 @@ informative:
     date: 2026
   I-D.draft-hardt-aauth-r3:
     title: "AAuth Rich Resource Requests (R3)"
-    target: https://dickhardt.github.io/AAuth/draft-hardt-aauth-r3.html
     author:
       -
         ins: D. Hardt
         name: Dick Hardt
-    date: 2026
+    date: 2026-09-28
+    seriesinfo:
+      Internet-Draft: draft-hardt-aauth-r3-00
   I-D.draft-mcguinness-aauth-mission-expiry:
     title: "AAuth Mission Expiry"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-aauth-mission-expiry.html
@@ -129,9 +130,8 @@ lifecycle state at all.  It makes AAuth missions' security and
 composition properties explicit and keeps an OAuth-specific authority
 model from being imposed on them.
 
-This binding is written against the AAuth editor's copy at commit
-`fc5e972c` (2026-08-14); the latest published revision is -10
-(2026-08-06).
+This binding is written against draft-hardt-oauth-aauth-protocol-11
+and draft-hardt-aauth-r3-00.
 
 ## Contextual Governance, Not Portable Authority
 
@@ -179,9 +179,6 @@ NOT**, **SHOULD**, **SHOULD NOT**, **RECOMMENDED**, **NOT RECOMMENDED**,
 **MAY**, and **OPTIONAL** in this document are to be interpreted as
 described in BCP 14 when, and only when, they appear in all capitals as
 shown here.
-
-This binding tracks the AAuth editor's copy as revised by its
-person-token change (the -11 revision in preparation).
 
 This document uses the AAuth terms *agent identifier*, *Person Server*,
 *mission blob*, *mission reference*, *resource token*, *auth token*,
