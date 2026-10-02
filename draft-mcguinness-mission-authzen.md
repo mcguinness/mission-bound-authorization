@@ -524,12 +524,15 @@ this profile unchanged.
 
 # Mission-to-Policy Materialization {#mission-to-policy-materialization}
 
-The PDP evaluates a Mission against an action through a materialized
-policy view. The materialized policy view, its trusted-compiler and
+Where the PDP evaluates a Mission against an action through a
+materialized policy view, the view, its trusted-compiler and
 reproducibility rules, its bounded-fidelity property, and the
 content-addressed `policy_view_id` with its `mission-policy-view`
 integrity envelope are defined by the runtime profile
-({{I-D.draft-mcguinness-mission-runtime}}). The trusted compiler
+({{I-D.draft-mcguinness-mission-runtime}}); a PDP that evaluates the
+Mission's recorded authority directly meets that profile's authority
+input (its Section "Authority") without a view, and its requests omit
+`policy_view_id`. The trusted compiler
 computes that envelope, and the `authority_hash` it binds, from its
 own held Mission record; the issuance profile's baseline `mission`
 claim does not carry `authority_hash` on the wire
@@ -547,8 +550,8 @@ This profile carries only the wire member, and only in the request:
 `policy_view_id` appears in `context.mission.policy_view_id`
 ({{context-mission}}), when the requesting PEP holds it, as a
 content-addressed check against the view the PDP has loaded. The PDP
-does not echo `policy_view_id` on the response; it records the view it
-evaluated against directly in Decision Evidence
+does not echo `policy_view_id` on the response; where it evaluates
+through a view, it records that view directly in Decision Evidence
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}), so the correlator
 between a permit and its evidence, and between a denial and its
 evidence, is `evaluation_id` ({{response-context}}), not a wire-echoed
@@ -1266,13 +1269,16 @@ self-consistent:
    source the PDP can itself consult.
 2. The `id` and `issuer` in `context.mission` equal the `mission_id`
    and issuer committed in the materialized policy view the PDP has
-   loaded for this Mission ({{I-D.draft-mcguinness-mission-runtime}});
-   the PDP returns `view_inconsistent` on any inequality. When
+   loaded for this Mission, or, for a PDP that evaluates the Mission's
+   recorded authority directly, those of the trusted Mission record it
+   evaluates ({{I-D.draft-mcguinness-mission-runtime}}); the PDP
+   returns `view_inconsistent` on any inequality. When
    `context.mission.authority_hash` is also present, it MUST equal
-   the view's committed `authority_hash`, with the same
+   the `authority_hash` that view or record commits, with the same
    `view_inconsistent` result on inequality (its omission is covered
    by rule 5 below).
-3. When `context.mission.policy_view_id` is present, it MUST equal
+3. Where the PDP evaluates through a view and
+   `context.mission.policy_view_id` is present, it MUST equal
    the loaded view's `policy_view_id`, and the PDP returns
    `view_inconsistent` on inequality.
 4. When `context.mission_state_observation.version` is present, the
@@ -1284,7 +1290,8 @@ self-consistent:
    staleness (`stale_state`): one side has missed a committed change.
 5. A PDP MUST NOT fail a decision solely because the optional
    `policy_view_id`, `policy_version`, or `authority_hash` was
-   omitted; the view the PDP loaded is authoritative.
+   omitted; the view the PDP loaded, or the Mission record it
+   evaluates directly, is authoritative.
 6. When `context.credential.expires_at` is present, it has not passed;
    otherwise the PDP returns `credential_invalid`.
 7. The freshness conveyed in `context.mission_state_observation` the
@@ -1951,9 +1958,10 @@ carried in Decision Evidence:
   transient with `next_action: retry` ({{response-context}}).
 - `view_inconsistent`: the request's Mission `id` or `issuer`, or (when
   carried) `authority_hash` or `policy_view_id`, does not equal the
-  committed values in the materialized policy view the PDP loaded, so
-  the request and the loaded view disagree on which Mission or view is
-  in force. This is a view inconsistency, not staleness.
+  committed values in the materialized policy view the PDP loaded, or
+  in the Mission record it evaluates directly, so the request and the
+  PDP disagree on which Mission or view is in force. This is a view
+  inconsistency, not staleness.
 - `mission_inactive`: the Mission state is not `active`.
 - `mission_binding_failed`: in externally-established Mission binding
   mode ({{I-D.draft-mcguinness-mission-runtime}}), the PDP could not
@@ -2241,7 +2249,7 @@ carrier's extensibility rule.
 | Required action-bound approval absent (first evaluation) | PDP denial | `approval_required` |
 | Re-evaluation's presented approval fails a Mission or ARAP check | PDP denial | ARAP's `approval_expired`, `out_of_scope`, `grant_pending`, `policy_denied`, or `approval_unverifiable` ({{ARAP}}) |
 | Mission state stale (freshness-window violation) | PDP denial | `stale_state` |
-| Request Mission `id` or `issuer`, or (when carried) `authority_hash` or `policy_view_id`, inconsistent with the loaded view | PDP denial | `view_inconsistent` |
+| Request Mission `id` or `issuer`, or (when carried) `authority_hash` or `policy_view_id`, inconsistent with the loaded view or the directly evaluated Mission record | PDP denial | `view_inconsistent` |
 | Mission not `active`, including a passed `expires_at` | PDP denial | `mission_inactive` |
 | External Mission-binding join verification fails | PDP denial | `mission_binding_failed` |
 | Required `act` chain missing or malformed | PDP denial | `actor_invalid` |
@@ -2834,6 +2842,14 @@ registered by {{I-D.draft-mcguinness-oauth-mission}}.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Mission-to-Policy Materialization describes the materialized policy
+  view as one evaluation path: a PDP that evaluates the Mission's
+  recorded authority directly meets the runtime profile's authority
+  input without a view and omits `policy_view_id`. The PDP-side
+  consistency checks compare the request against the loaded view or
+  the directly evaluated Mission record, and the `policy_view_id`
+  check applies only where a view is used.
 
 - Defined the input to `evaluation_request_digest`: the complete
   request body as submitted, extension members included, before any
