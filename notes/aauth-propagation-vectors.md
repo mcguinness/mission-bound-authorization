@@ -66,14 +66,21 @@ prohibited.
 - Expected: the AS rejects. The PS relays the AS's terminal error (9.1.3).
 - Prohibited at: the AS check. Neither the AS nor the PS issues missionless.
 
-### V7. Malformed, unknown, or foreign reference at person-token issuance
+### V7. Malformed reference at person-token issuance
 
-- Credentials: a person token request with `mission_s256` naming no mission, or a mission of another agent.
+- Credentials: a person token request whose `mission_s256` is not a well-formed value (for example, not an unpadded base64url SHA-256 digest).
+- Receiver: the PS (person token endpoint).
+- Expected: `invalid_request`, which "covers a missing or malformed resource or mission_s256" (7.1).
+- Prohibited at: request validation. The agent MUST NOT retry without the reference.
+
+### V8. Unknown or foreign reference at person-token issuance
+
+- Credentials: a person token request whose well-formed `mission_s256` names no mission, or a mission of another agent.
 - Receiver: the PS (person token endpoint).
 - Expected: rejected; the PS "MUST reject the request otherwise" (7.1).
 - Prohibited at: issuance. The agent MUST NOT retry without the reference.
 
-### V8. Mission-governed agent sends a missionless request
+### V9. Mission-governed agent sends a missionless request
 
 - Policy: the PS places the agent under mission governance.
 - Credentials: a person token or auth token request with no `mission_s256` and no presented token carrying one.
@@ -81,39 +88,47 @@ prohibited.
 - Expected: rejected. This is the binding's local rule; AAuth defines no dedicated error.
 - Prohibited at: the request.
 
-### V9. Mission no longer active
+### V10. Mission no longer active, at the state check
 
-- Credentials: any request naming `M` after `M` terminated, including by `expires_at`.
+- Credentials: a request naming `M` after `M` terminated (completed, revoked, superseded, or administrative), whose presented token, if any, still verifies.
 - Receiver: the PS.
-- Expected: `mission_terminated` with `termination_reason` (8.8). After expiry, 6.7.2 step 4 fails.
+- Expected: `mission_terminated` (8.8; 6.7.2 step 4). `termination_reason` is OPTIONAL in the response.
 - Prohibited at: the state check. There is no missionless continuation.
 
-### V10. Required state unavailable
+### V11. Mission past `expires_at`
+
+- Credentials: a request naming `M` after `M.expires_at`, presenting a Mission-bound person token or auth token. The PS capped that token's `exp` at `expires_at` (7.1.2, 9.4.1), so the token has expired.
+- Receiver: the PS.
+- Expected: `expired_presented_token` at presented-token verification (6.7.2 step 3), before the state check at step 4 is reached.
+- Prohibited at: presented-token verification. The PS MUST NOT evaluate the request as missionless, and the agent MUST NOT retry it without the reference.
+
+### V12. Required state unavailable
 
 - Credentials: a decision that depends on Management status, where status failed, is stale, or the status surface is unavailable.
 - Receiver: the consumer of the status.
 - Expected: the state-dependent decision is refused (Statement failure paragraph).
 - Prohibited at: the decision.
 
-### V11. Chained, with the upstream token invalid
+### V13. Chained, with the upstream token invalid
 
 - Credentials: an intermediary requests a person token for a downstream resource with `upstream_token = PT{M}` that fails verification.
 - Receiver: the PS.
 - Expected: `invalid_upstream_token`, `expired_upstream_token`, or `revoked_upstream_token` (9.4.5 step 1).
 - Prohibited at: issuance. The PS issues no missionless downstream person token; on success it would copy `M` itself (7.1).
 
-### V12. Intentionally missionless path
+### V14. Intentionally missionless path
 
 - Policy: deployment policy admits the agent's missionless access from the outset, and the agent is not under mission governance.
 - Credentials: no `mission_s256` anywhere, and no presented or upstream token carrying one.
 - Receiver: the PS.
 - Expected: base AAuth processing. The request is outside the Lifecycle-Gated Authorization and Credential-Bound claims.
-- Prohibited at: not applicable. This is not a fallback from V2-V11.
+- Prohibited at: not applicable. This is not a fallback from V2-V13.
 
 ## What each negative vector shows
 
-V2-V9 and V11 reject before any ordinary authorization: the failure is
-at a verification or issuance step, and the rule forbids a missionless
-evaluation or retry of the same request. V10 refuses only the decision
-that depends on state. V12 is the only missionless outcome, and it is
-reached by policy, not by a failed validation.
+V2-V11 and V13 reject before any ordinary authorization: the failure
+is at a validation, verification, or issuance step, in AAuth's order of
+checks, and the rule forbids a missionless evaluation or retry of the
+same request. V12 refuses only the decision that depends on state. V14
+is the only missionless outcome, and it is reached by policy, not by a
+failed validation.
