@@ -925,6 +925,10 @@ carriage with `mission_issuance_grant_par_supported` ({{metadata}}).
 
 # Security Considerations {#security-considerations}
 
+The security considerations of {{RFC7523}}, {{RFC7519}}, and
+{{RFC8725}} apply. This section adds those specific to the issuance
+join.
+
 **Grant theft.** The grant authorizes issuance, so it is defended in
 depth: 300-second lifetime, single-use `jti`, audience binding to
 one AS, redemption bound to the Mission's authenticated `client_id`,
