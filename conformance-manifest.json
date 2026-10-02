@@ -22741,6 +22741,27 @@
    "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with #963 decision D7; todo until that path exists."
   },
   {
+   "id": "issuance-grant.minting-rules.audience-scoping",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "minting-rules",
+   "text": "The grant MUST carry only the entries the named consuming AS serves.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every grant's authorization_details are limited to the entries the named consuming AS serves, whether or not the request narrowed them; no entry for a resource another AS serves is carried"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with #963 decision D8; todo until that path exists."
+  },
+  {
    "id": "txn-authorization.token.txn-scoped-mint-gate",
    "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
    "anchor": "offline-verification",

@@ -501,7 +501,7 @@ The MAS MUST apply the following rules:
    consented Authority Set less what any composed narrowing companion
    has removed; a grant is a derivation, so a contained capability is
    absent from it ({{I-D.draft-mcguinness-oauth-mission-containment}},
-   Section "Derivation Gating"). The grant SHOULD carry only the
+   Section "Derivation Gating"). The grant MUST carry only the
    entries the named consuming AS serves. The requester MAY request a
    narrower subset. The MAS MUST refuse a request for a wider one.
 4. **Derivation event.** Each grant minted is a derivation event.
