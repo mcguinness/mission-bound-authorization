@@ -593,17 +593,27 @@ A request's Mission association is required when that policy applies
 or when the request derives from a presented token or upstream token
 that carries `mission_s256`.  A required association that is missing,
 malformed, invalid, unresolvable, or mismatched fails the request under
-AAuth's own rules: a person token request naming a mission that does
-not exist, is not active, or belongs to another agent is rejected
-(Section 7.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}); a resource
-token that omits or mismatches its presented token's `mission_s256` is
-rejected with `invalid_resource_token` (Section 6.7.2 of
-{{I-D.draft-hardt-oauth-aauth-protocol}}); and a request under a
-mission that is no longer active receives `mission_terminated`
-(Section 8.8 of {{I-D.draft-hardt-oauth-aauth-protocol}}).  The PS, or
-the AS in four-party access, MUST NOT evaluate a failed request as
-missionless authorization, and the agent MUST NOT retry it without the
-reference.
+AAuth's own rules, in AAuth's order of checks:
+
+- a malformed `mission_s256` in a person token request receives
+  `invalid_request`, and one naming a mission that does not exist or
+  belongs to another agent is rejected (Section 7.1 of
+  {{I-D.draft-hardt-oauth-aauth-protocol}});
+- a presented token that fails verification receives
+  `invalid_presented_token`, or `expired_presented_token` when only its
+  `exp` fails, which is how a Mission-bound token fails once
+  `expires_at` passes (Sections 6.7.2 and 7.1.2 of
+  {{I-D.draft-hardt-oauth-aauth-protocol}});
+- a resource token that omits or mismatches its presented token's
+  `mission_s256` receives `invalid_resource_token` (Section 6.7.2 of
+  {{I-D.draft-hardt-oauth-aauth-protocol}}); and
+- a request that reaches the mission-state check under a mission that
+  is no longer active receives `mission_terminated` (Section 8.8 of
+  {{I-D.draft-hardt-oauth-aauth-protocol}}).
+
+The PS, or the AS in four-party access, MUST NOT evaluate a failed
+request as missionless authorization, and the agent MUST NOT retry it
+without the reference.
 
 Intentionally missionless authorization is a separate path, admitted by
 explicit deployment policy from the outset for requests with no
