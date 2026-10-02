@@ -1050,12 +1050,11 @@ that failed validation has no subset relation to narrow against.
 
 ## Exposing Shaping as a Service {#exposing-shaping-as-a-service}
 
-This document requires no shaping endpoint. A deployment that factors
-shaping into a network service for engineering reasons MAY expose it
-over HTTPS. The request and response formats of such a service are a
-local implementation detail, not an interoperability contract, and
-their description here is non-normative; the authentication
-requirement below is normative.
+A deployment that factors shaping into a network service for
+engineering reasons MAY expose it over HTTPS. The request and response
+formats of such a service are a local implementation detail, not an
+interoperability contract, and their description here is
+non-normative; the authentication requirement below is normative.
 
 A request typically conveys the task (free text, structured fields, or
 both), the subject and agent on whose behalf the Mission would run,
@@ -1070,8 +1069,7 @@ and `mission_shaping_profiles_supported`.
 Such an endpoint MUST be authenticated when it can reveal sensitive
 task, tenant, or resource information; an anonymous shaping endpoint is
 appropriate only for public, non-sensitive tasks. The service remains
-client-side machinery that produces an untrusted proposal, and it is
-not a principal to the Mission Issuer ({{client-side}}).
+client-side and is not a principal ({{client-side}}).
 
 ## Declaring the Shaping Posture {#adds-and-does-not}
 
@@ -1090,10 +1088,9 @@ deployment's other claims, and its absence is visible.
 Shaping is not part of any Mission Assurance Level, and no level
 requires it: the levels are built from issuer-side and runtime-side
 guarantees, and the shaper is client-side
-({{I-D.draft-mcguinness-mission-architecture}}). What shaping improves
-at every level is the input: better proposals yield narrower Missions,
-clearer consent disclosures, and a reviewable trail from request to
-authority.
+({{I-D.draft-mcguinness-mission-architecture}}). Shaping improves the
+input at every level: narrower Missions, clearer consent disclosures,
+and a reviewable trail from request to authority.
 
 # Security Considerations {#security-considerations}
 
