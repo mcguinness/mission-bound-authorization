@@ -533,8 +533,9 @@ On success the consuming AS mints tokens under these rules:
   every issued scope value corresponds to authority the grant
   conveys, and none conveys authority, or relaxes a constraint, that
   the grant does not.
-- **Lifetime.** No access or refresh token issued under the grant may
-  have an expiry later than the `mission` object's `expires_at`. That
+- **Lifetime.** The consuming AS MUST NOT issue an access or refresh
+  token under the grant with an expiry later than the `mission`
+  object's `expires_at`. That
   ceiling is the Mission horizon, not a liveness bound, so access
   tokens issued under a grant SHOULD be short-lived: absent a
   redemption-time state check, an issued access token's own lifetime is
