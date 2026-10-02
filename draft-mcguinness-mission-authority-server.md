@@ -1402,7 +1402,7 @@ the action under the Mission's Authority Set and permits:
       "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t",
     "join_view_id":
       "sha-256:dV7wM3sK9nQ2vL5tR8bY1eG4jF6xH0pC3nT9kV2mZ5t",
-    "action_class": "irreversible_action",
+    "action_class": "consequential_read",
     "class_source": "resource_floor",
     "permit_expires_at": "2026-11-02T08:15:30Z"
   }
@@ -1435,7 +1435,7 @@ match the referenced Mission:
   "context": {
     "decision_id": "dec_2nP4qV9rL3tY6sB1zN0eF7jB8K",
     "denial_reason": "mission_mismatch",
-    "action_class": "irreversible_action",
+    "action_class": "consequential_read",
     "class_source": "resource_floor",
     "policy_view_id":
       "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"
@@ -2794,7 +2794,7 @@ re-check.
       "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t",
     "join_view_id":
       "sha-256:dV7wM3sK9nQ2vL5tR8bY1eG4jF6xH0pC3nT9kV2mZ5t",
-    "action_class": "irreversible_action",
+    "action_class": "consequential_read",
     "class_source": "resource_floor",
     "permit_expires_at": "2026-11-02T08:15:30Z"
   }
