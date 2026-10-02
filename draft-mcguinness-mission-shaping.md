@@ -167,17 +167,16 @@ informative:
 
 Mission-Bound Authorization for OAuth 2.0 (the "issuance profile")
 defines the Mission Intent a client submits and the Authority Set an
-Authorization Server derives from it. It leaves to deployment policy
-how an open-ended task request becomes a Mission Intent. This document
-describes the Mission Shaper, a client-side component that turns a
-user request or upstream trigger into a candidate Mission Intent and,
-optionally, an Authority Proposal. It describes the shaper's trust
-boundary; recommended behavior for capability resolution, ambiguity,
-and refusal; Shaping Evidence, an audit record of how a proposal was
-produced; and re-shaping after a refusal, denial, or required
-revision. It defines no protocol. The shaper only proposes: authority
-is created by the issuance profile's validation and approval, never by
-the shaper.
+Authorization Server derives from it, but not how an open-ended task
+request becomes a Mission Intent. This document describes the Mission
+Shaper, a client-side component that turns a user request or upstream
+trigger into a candidate Mission Intent and, optionally, an Authority
+Proposal: its trust boundary; recommended capability resolution,
+ambiguity handling, and refusal; Shaping Evidence, an audit record of
+how a proposal was produced; and re-shaping after a refusal, denial,
+or required revision. It defines no protocol. The shaper only
+proposes; authority is created by the issuance profile's validation
+and approval.
 
 --- middle
 
