@@ -223,7 +223,7 @@ const REVERSIBLE_WRITE_EFFECTS: Record<
 export const REVERSIBLE_WRITE_TOOLS: readonly string[] = Object.keys(REVERSIBLE_WRITE_EFFECTS);
 
 /**
- * @spec runtime-evidence#execution-evidence-object `error` — deployment-
+ * @spec runtime-evidence#execution-evidence-object `error`: deployment-
  * defined values for the two refusals a reversible effect makes before it
  * changes anything. Neither is in the closed set, which names permit and
  * consumption failures, so each is a collision-resistant name under a
