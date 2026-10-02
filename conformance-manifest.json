@@ -71,8 +71,8 @@
     "content_sha256": "bf4b09b73adfdbf647f9740ef2451862b87212aaa7424496aa865b99d2a2a46d"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
-    "revision": "8aa3189cd507dafd3e730043e4236459a0c6b318",
-    "content_sha256": "bbf42aad647ccfa893cc4c8a7bde29b1c7a9e6fc87403218b547ecea2b9b9e80"
+    "revision": "2a5b5ab3fe1fa4e483aac970782440cc7310b82e",
+    "content_sha256": "2d15cb725f7be7d984eba5459b733ea067dc3acba58be7e6b68336214208d572"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
@@ -22298,6 +22298,237 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Added by #617 review 1, which extended the atomic-consumption contract to the PAR carriage. The sibling rule on the refresh path (refresh-token-not-consumed) IS implemented and tested; this one is disclosed as unmet rather than softened, since the requirement is right for a consuming AS that controls its own code-exchange ordering."
+  },
+  {
+   "id": "issuance-grant.grant-validation.issuer-match",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "grant-validation",
+   "text": "and the `mission` claim's `issuer` equals `iss`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a grant whose `mission` claim's `issuer` differs from its `iss` is refused invalid_grant at redemption, even when its signature verifies under a trusted issuer's key"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added by the #963 editorial review for a requirement that review introduced or made explicit; todo until a redemption path exists."
+  },
+  {
+   "id": "issuance-grant.grant-validation.lifetime-exact",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "grant-validation",
+   "text": "`exp` is no more than 300 seconds after `iat`, compared exactly",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a grant whose exp minus iat exceeds 300 seconds is refused invalid_grant even when it is otherwise unexpired; the clock-skew leeway applies only to comparing iat and exp with the verifier's current time and never extends the 300-second duration"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added by the #963 editorial review for a requirement that review introduced or made explicit; todo until a redemption path exists."
+  },
+  {
+   "id": "issuance-grant.grant-validation.replay-retention",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "grant-validation",
+   "text": "retained until `exp` plus that leeway passes",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a grant whose jti was already recorded by a successful issuance is refused invalid_grant as a replay for as long as exp plus the clock-skew leeway has not passed"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added by the #963 editorial review for a requirement that review introduced or made explicit; todo until a redemption path exists."
+  },
+  {
+   "id": "issuance-grant.grant-validation.client-binding",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "grant-validation",
+   "text": "the authenticated client equals it, or, for a public client, the grant carries `cnf`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a redemption whose authenticated client is not the grant's client_id is refused invalid_grant, and a public client presenting a grant without cnf is refused invalid_grant"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added by the #963 editorial review for a requirement that review introduced or made explicit; todo until a redemption path exists."
+  },
+  {
+   "id": "issuance-grant.redemption.confidential-client-authentication",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "redemption",
+   "text": "possession of a `cnf` key does not replace that authentication",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a confidential client that presents a cnf-bound grant with a valid DPoP proof or client certificate but without client authentication is refused invalid_client"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added by the #963 editorial review for a requirement that review introduced or made explicit; todo until a redemption path exists."
+  },
+  {
+   "id": "issuance-grant.grant.cnf-possession",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "grant",
+   "text": "When it is present, the consuming AS MUST require proof of possession of that key at redemption",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a cnf-bound grant redeemed without a DPoP proof whose key's JWK SHA-256 thumbprint equals cnf.jkt, or without a client certificate whose SHA-256 thumbprint equals cnf.x5t#S256, is refused invalid_grant"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added by the #963 editorial review for a requirement that review introduced or made explicit; todo until a redemption path exists."
+  },
+  {
+   "id": "issuance-grant.token-issuance.lifetime-cap",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "token-issuance",
+   "text": "The consuming AS MUST NOT issue an access or refresh token under the grant with an expiry later than the `mission` object's `expires_at`.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every access and refresh token issued under a grant, at redemption and at every refresh, expires no later than the grant's mission.expires_at"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added by the #963 editorial review for a requirement that review introduced or made explicit; todo until a redemption path exists."
+  },
+  {
+   "id": "issuance-grant.token-issuance.token-response",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "token-issuance",
+   "text": "The token response carries the issued `authorization_details`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every successful redemption and refresh response carries the exact issued authorization_details, with any projected scope beside them; a consuming AS whose targets consume only scope still returns the authorization_details"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added by the #963 editorial review for a requirement that review introduced or made explicit; todo until a redemption path exists."
+  },
+  {
+   "id": "issuance-grant.mission-claim.authority-hash",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "mission-claim",
+   "text": "The `mission` object MUST carry `authority_hash`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every grant the MAS mints carries mission.authority_hash, the integrity anchor of the approved Authority Set the grant derives from"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added by the #963 editorial review for a requirement that review introduced or made explicit; todo until a redemption path exists."
+  },
+  {
+   "id": "issuance-grant.minting-rules.effective-set-bound",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "minting-rules",
+   "text": "The MAS MUST refuse a request for a wider one.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a grant request whose authorization_details are wider than the Mission's current Effective Authority Set (the consented authority less any contained or discharged authority) is refused invalid_authorization_details, and no grant is minted or counted"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added by the #963 editorial review for a requirement that review introduced or made explicit; todo until a redemption path exists."
+  },
+  {
+   "id": "issuance-grant.redemption-errors.mission-error",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "redemption-errors",
+   "text": "The AS SHOULD include the issuance profile's `mission_error` member",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a redemption or refresh refused because the Mission is revoked, expired, or superseded carries mission_error (mission_revoked, mission_expired, or mission_superseded) beside error invalid_grant"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added by the #963 editorial review for a requirement that review introduced or made explicit; todo until a redemption path exists."
   },
   {
    "id": "txn-authorization.token.txn-scoped-mint-gate",
