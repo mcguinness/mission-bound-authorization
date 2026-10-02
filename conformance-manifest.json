@@ -4024,6 +4024,29 @@
    "notes": "#885 ruling (2026-10-01). No implementation witness yet."
   },
   {
+   "id": "derivation-limits.rendering.issuance-grant-disclosure",
+   "spec": "draft-mcguinness-oauth-mission-derivation-limits.md",
+   "anchor": "approval-rendering",
+   "text": "Where the Mission Issuer is a Mission Authority Server issuing grants under the Mission Issuance Grant profile, the rendering MUST also state that the limit bounds the grants it issues, not the tokens consuming Authorization Servers issue from them",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "derivation-limits.limit"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where a Mission Authority Server issues Mission Issuance Grants, the approval rendering of an established derivation_limit states that the limit bounds the grants the MAS issues, not the tokens consuming Authorization Servers issue from them",
+    "local": "requires a Mission Authority Server that issues Mission Issuance Grants; the reference implementation has no MAS grant endpoint"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#963 ruling (2026-10-01), parallel to the #885 async-family disclosure. No implementation witness yet."
+  },
+  {
    "id": "core.lifecycle.mission-error-diagnostic",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "lifecycle",

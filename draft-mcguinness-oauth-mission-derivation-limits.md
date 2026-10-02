@@ -127,7 +127,9 @@ operations at the token endpoint, or at the Mission Authority
 Server's grant endpoint under the Mission Issuance Grant profile
 ({{issuance-grant-counting}}), not the authority any derived token
 carries or how often a token already issued is used. The refreshes of
-an async delegation family are not counted ({{refresh-and-exchange}}).
+an async delegation family are not counted ({{refresh-and-exchange}}),
+nor are redemption and refresh at a consuming Authorization Server
+under the Mission Issuance Grant profile ({{issuance-grant-counting}}).
 
 The limit uses these extension seams of the OAuth binding and changes
 none of its rules:
@@ -440,7 +442,11 @@ approval sequence ({{I-D.draft-mcguinness-oauth-mission}}, Section
 only the requested one. Where the AS supports the Continuation
 profile's async delegation transport, the rendering MUST also state
 that the refreshes of an async delegation family are not counted
-against the limit ({{refresh-and-exchange}}).
+against the limit ({{refresh-and-exchange}}). Where the Mission Issuer
+is a Mission Authority Server issuing grants under the Mission
+Issuance Grant profile, the rendering MUST also state that the limit
+bounds the grants it issues, not the tokens consuming Authorization
+Servers issue from them ({{issuance-grant-counting}}).
 
 The rendered limit is one Mission's local bound ({{sec-composition}}).
 Where a deployment runs child delegation, that profile states what an
@@ -471,8 +477,10 @@ apply. This section covers what the derivation limit adds.
 ## Issuance, Not Authority {#sec-not-authority}
 
 The derivation limit bounds how many counted issuance operations the
-issuer performs; the refreshes of an async delegation family are not
-counted ({{sec-async-family}}). It does not narrow the Authority Set,
+issuer performs; the refreshes of an async delegation family, and
+redemption and refresh at a Mission Issuance Grant consuming
+Authorization Server, are not counted ({{sec-async-family}},
+{{issuance-grant-counting}}). It does not narrow the Authority Set,
 shorten a token's lifetime, or bound the requests a Resource Server
 honors under a token already issued: a derived token remains usable
 until its `exp`. A deployment that needs to bound use, rather than
@@ -520,7 +528,9 @@ the Approver saw exceeds 10.
 
 Cross-domain projection composes separately: local issuance at a
 Resource AS is not counted against the origin issuer's cap
-({{cross-domain-counting}}). The OAuth binding's composition guidance
+({{cross-domain-counting}}), and neither are the tokens a consuming
+Authorization Server issues under the Mission Issuance Grant profile
+({{issuance-grant-counting}}). The OAuth binding's composition guidance
 applies to the derivation limit as to its other bounds
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Composition and the
 Effective Ceiling").
@@ -627,4 +637,5 @@ intent_hash = sha-256:r--mF07yZfWRGV6N28A2u_8rUzIG-bNhpvFSS5FhoBk
 - Under the Mission Issuance Grant profile, the Mission Authority
   Server's committed grant minting is a counted derivation; redemption
   and refresh at a consuming Authorization Server are not, and the
-  limit does not cap the tokens they issue (#963).
+  limit does not cap the tokens they issue; the approval rendering
+  states that bound (#963).
