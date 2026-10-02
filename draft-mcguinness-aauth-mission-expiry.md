@@ -187,8 +187,8 @@ blob member it profiles.
 
 AAuth judges a token's `exp` by the verifier's own clock with no
 tolerance for clock skew (Section 11.5.2 of
-{{I-D.draft-hardt-oauth-aauth-protocol}}), and states no tolerance for
-the `expires_at` comparison (Section 8.2 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}), and says nothing about
+tolerance for the `expires_at` comparison (Section 8.2 of
 {{I-D.draft-hardt-oauth-aauth-protocol}}). Clock synchronization,
 comparison precision, and tolerated clock skew MUST be documented by
 the deployment. An Agent SHOULD NOT schedule work that depends on
