@@ -163,9 +163,8 @@ complete set.
 A third pattern distinguishes direction at the AAuth binding.
 `aauth-mission-*` names an AAuth-native extension, a profile of a
 member already inside AAuth's own approved mission blob (as
-`draft-mcguinness-aauth-mission-expiry` profiles `expires_at`),
-consistent with the sibling `draft-mcguinness-aauth-budget`
-repository's own AAuth-native extensions. `mission-aauth-*` names the
+`draft-mcguinness-aauth-mission-expiry` profiles `expires_at`).
+`mission-aauth-*` names the
 Mission family's binding to AAuth and its companions
 (`draft-mcguinness-mission-aauth`,
 `draft-mcguinness-mission-aauth-management`), specified the same way
