@@ -22615,7 +22615,7 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a consuming AS issues authority from per-resource Mission Status responses only when every combined response carries the same mission.issuer, mission.id, and mission.version; responses at different versions are never merged, so authority from before and after a containment never mixes"
+    "normative": "a consuming AS issues authority from per-resource Mission Status responses only when every combined response carries the same mission.issuer, mission.id, and mission.version; versions collected within one resolution that differ are reconciled by re-querying each audience below the highest collected version, a response below the version the AS retained before the resolution began is a rollback and is never accepted, and the agreed version becomes the retained one"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -22626,7 +22626,7 @@
    "id": "issuance-grant.mission-state-source.version-mismatch-refusal",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
    "anchor": "mission-state-source",
-   "text": "If it still cannot obtain responses at one version, the state source has failed",
+   "text": "If it still cannot obtain responses at one version within the bound, the state source has failed",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -22636,7 +22636,7 @@
    "surface": "token-endpoint",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "when the deployment's bounded re-queries do not yield per-resource responses at one Mission version, the redemption or refresh is refused temporarily_unavailable with HTTP 503 and neither the grant nor the presented refresh token is consumed"
+    "normative": "when bounded re-queries within one per-resource resolution do not bring every response to one Mission version, or a response is below the version retained before the resolution began, the redemption or refresh is refused temporarily_unavailable with HTTP 503 and neither the grant nor the presented refresh token or authorization code is consumed"
    },
    "level": "endpoint",
    "coverage": "todo",

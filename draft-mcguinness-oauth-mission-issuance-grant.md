@@ -754,12 +754,17 @@ Mission Issuer authorizes it separately for each audience it requests
 ({{I-D.draft-mcguinness-oauth-mission-status}}, Section "Request").
 The consuming AS validates each response against the audience it
 requested, and MUST combine only responses whose `mission.issuer`,
-`mission.id`, and `mission.version` are identical. When the versions
-differ and none is older than one already observed, it re-queries the
-lagging audiences without using a cached response, up to a bound the
-deployment configures; a version older than one already observed is a
-rollback ({{transient-failure}}) and is not re-queried. If it still
-cannot obtain responses at one version, the state source has failed
+`mission.id`, and `mission.version` are identical. The rollback test
+compares each response with the version the AS retained for the
+Mission before this resolution began: a response below that retained
+version is a rollback ({{transient-failure}}). Versions collected
+within the resolution may differ from one another. The AS re-queries
+each audience whose response is below the highest version collected,
+without using a cached response, up to a bound the deployment
+configures, and never accepts a version below the retained one. Once
+all responses report one version, the AS combines them and retains
+that version. If it still cannot obtain responses at one version
+within the bound, the state source has failed
 ({{transient-failure}}): the AS refuses with
 `temporarily_unavailable`, and the presented grant, refresh token, or
 authorization code stays unconsumed ({{single-use}},
@@ -814,9 +819,11 @@ machine-readable shape: this profile defines a token-endpoint use of
 the OAuth `temporarily_unavailable` error code {{RFC6749}}
 ({{oauth-error-registration}}), carried with HTTP status 503. The
 response MAY carry `Retry-After` per the
-deployment's declared state-recovery policy. Per-resource responses
-that cannot be brought to one version ({{mission-state-source}}) are
-the same transient failure.
+deployment's declared state-recovery policy. For a per-resource
+resolution, the version already observed is the one the AS retained
+before the resolution began; versions collected within it are
+reconciled as {{mission-state-source}} describes, and responses that
+cannot be brought to one version are the same transient failure.
 The consuming AS leaves its stored ceiling unchanged. `invalid_grant`
 stays for the permanent classes: an invalid, expired, or replayed
 grant, a Mission that is not established `active`, and a genuinely
