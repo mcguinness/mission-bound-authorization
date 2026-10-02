@@ -686,46 +686,38 @@ discharge-aware issuance.
 
 ## Redemption Errors {#redemption-errors}
 
-The consuming AS reports redemption failures with the token endpoint's
-OAuth error codes {{RFC6749}}, so a client can tell a retryable grant
-problem from a dead Mission:
+The consuming AS responds to a failed redemption or refresh with an
+error response as defined in {{Section 5.2 of RFC6749}}. A grant that
+fails any check of {{grant-validation}} is refused with the
+`invalid_grant` error code ({{Section 3.1 of RFC7523}}), and failed
+client authentication with `invalid_client`. The other refusals are:
 
-| Failure | `error` |
+| Condition | Response |
 |---|---|
-| `typ` is not `mission-issuance-grant+jwt` | `invalid_grant` |
-| `iss` is not trusted for issuance joins | `invalid_grant` |
-| `aud` does not name this AS | `invalid_grant` |
-| grant expired, or `jti` already seen (replay) | `invalid_grant` |
-| grant authority unmappable to this AS's resources | `invalid_grant` |
-| grant `sub` unmappable to a local account | `invalid_grant` |
-| client authentication fails | `invalid_client` |
-| authenticated client is not the grant's `client_id` | `invalid_grant` |
-| `cnf` proof of possession fails | `invalid_grant` |
-| refresh refused because the Mission is not `active` | `invalid_grant` |
-| the surviving authorization is exhausted: the intersection is empty before the request's own narrowing ({{effective-set-projection}}) | `invalid_grant` |
-| the client's requested narrowing does not intersect surviving authority, `scope` form ({{effective-set-projection}}) | `invalid_scope` |
-| the same, `authorization_details` form ({{effective-set-projection}}) | `invalid_authorization_details` |
-| the Effective Authority Set source is unavailable, unverifiable, or reports a rolled-back state version ({{effective-set-projection}}) | `temporarily_unavailable`, HTTP 503 |
+| The Mission is not `active` | `invalid_grant` |
+| The authorization is exhausted ({{issued-authority}}) | `invalid_grant` |
+| The requested `scope` does not intersect it | `invalid_scope` |
+| The requested `authorization_details` does not intersect it | `invalid_authorization_details` |
+| The state source fails ({{transient-failure}}) | `temporarily_unavailable`, HTTP 503 |
 
-The distinctions the client needs are retry as is, get a fresh grant,
-and the Mission is dead:
+A client tells three cases apart:
 
-- **Retry as is.** `temporarily_unavailable` with HTTP 503 is
-  machine-readable: the authorization is intact and the same
-  credential may be presented again, without parsing
-  `error_description`.
-- **Get a fresh grant.** Most `invalid_grant` cases fall here: the
-  client mints a fresh grant ({{minting}}) and retries.
-- **The Mission is dead.** The dead-Mission case is a refresh refused
-  on a non-active Mission; there the AS SHOULD make the response
-  distinguishable with an `error_description` stating the Mission is
-  not active, and a client that re-mints will in any case be refused
-  at the MAS `active` gate with `mission_not_active`
-  ({{minting-errors}}), which is the authoritative signal to stop
-  rather than retry.
-
-`invalid_scope` and `invalid_authorization_details` name a request the
-client can narrow and re-send under the same grant.
+- **Retry.** `temporarily_unavailable` with HTTP 503 means the
+  authorization is intact and the same credential can be presented
+  again, without parsing `error_description`. `invalid_scope` and
+  `invalid_authorization_details` name a request the client can
+  narrow and re-send under the same grant.
+- **Get a fresh grant.** An expired or already redeemed grant is
+  cured by obtaining a fresh one ({{minting}}). The other grant
+  validation failures (an untrusted issuer, a wrong audience, an
+  unmappable subject or authority) are configuration faults that a
+  fresh grant does not cure.
+- **Stop.** A refusal because the Mission is not `active` is final.
+  The AS SHOULD make the response distinguishable with an
+  `error_description` stating the Mission is not active, and a client
+  that requests a fresh grant is in any case refused at the MAS
+  `active` gate with `mission_not_active` ({{minting-errors}}), which
+  is the authoritative signal to stop rather than retry.
 
 # Authorization Code Flow Carriage {#par-carriage}
 
