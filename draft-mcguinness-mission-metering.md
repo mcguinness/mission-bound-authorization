@@ -718,10 +718,14 @@ receives a fresh copy of the bound:
   deployment instead reserves the child's bound against the
   ancestor's counter when the child is created, as an escrowed
   allocation that MUST NOT exceed the ancestor's remaining quantity.
-  When the child becomes terminal, its unconsumed allocation returns
-  to the ancestor; quantity held by the child's unsettled
-  reservations stays charged until they settle
-  ({{settlement-states}}). A Mission Issuer whose deployment can do
+  When the child becomes terminal, the deployment closes the child's
+  allocation so that every later reservation against it fails, even
+  one a PDP permits on a cached `active` state within its staleness
+  bound ({{I-D.draft-mcguinness-mission-runtime}}). The unconsumed
+  remainder MUST NOT return to the ancestor before that closure is
+  confirmed, and quantity held by the child's unsettled reservations
+  stays charged until they settle ({{settlement-states}}). A Mission
+  Issuer whose deployment can do
   neither MUST refuse to create a Child Mission under a Mission that
   carries a consumption bound. Two children that each carry a bound
   of 60,000 under a parent bound of 100,000 together consume at most
@@ -1200,7 +1204,8 @@ this registry.
 
 - Capacity Across Missions ({{capacity-across-missions}}): a Child
   Mission is charged to every ancestor's bound or holds an escrowed
-  allocation, a successor or carryover replacement continues its
+  allocation whose remainder returns only after the allocation is
+  closed, a successor or carryover replacement continues its
   predecessor's counters, and a template consent renders the
   per-instance bound with `max_active` and `dispatch_rate`. Lease
   expiry no longer releases an unsettled reservation for an
