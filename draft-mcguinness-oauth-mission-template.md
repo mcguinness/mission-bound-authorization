@@ -506,14 +506,19 @@ The Mission Issuer adjudicates a Dispatch in this order:
 2. **Authorize the Dispatcher.** Verify the Dispatcher is in the
    template's `allowed_dispatchers`. Refuse a request from any other
    principal.
-3. **Derive the instance Authority Set.** Derive an Authority Set from
+3. **Verify the Dispatch Policy.** Verify the Dispatch Policy snapshot
+   the Mission Issuer will evaluate against `dispatch_policy.digest`
+   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Standing-Consent
+   Bases"). On a mismatch, refuse the Dispatch with
+   `dispatch_policy_changed` ({{denial-reasons}}).
+4. **Derive the instance Authority Set.** Derive an Authority Set from
    the dispatch intent, and from the Dispatcher's authority proposal
    where one was submitted ({{grant-type}}), and bound it by the
    deployment's derivation
    policy, exactly as for any Mission
    ({{I-D.draft-mcguinness-oauth-mission}}). This document adds no
    authority-derivation rule.
-4. **Double intersection.** The derived instance Authority Set MUST be a
+5. **Double intersection.** The derived instance Authority Set MUST be a
    subset, under the issuance profile's subset rule
    ({{I-D.draft-mcguinness-oauth-mission}}), of **both** the
    deployment's derivation-policy ceiling **and** the Template Ceiling.
@@ -522,15 +527,15 @@ The Mission Issuer adjudicates a Dispatch in this order:
    Ceiling, the Mission Issuer MUST refuse the Dispatch with
    `out_of_template_ceiling` ({{denial-reasons}}). Raising the ceiling
    is a new template consent, not a dispatch.
-5. **Prohibited-class check.** Apply the prohibited-class rule
+6. **Prohibited-class check.** Apply the prohibited-class rule
    ({{prohibited-classes}}) to the surviving post-intersection set. If
    it would grant a high-consequence class, refuse the Dispatch with
    `dispatch_prohibited_class` ({{denial-reasons}}).
-6. **Enforce the bounds.** Refuse the Dispatch if it would exceed
+7. **Enforce the bounds.** Refuse the Dispatch if it would exceed
    `max_active` or `dispatch_rate`, or if the instance's
    Mission-Issuer-established Subject or its Agent falls outside
    `allowed_recipients` ({{the-mission-template}}).
-7. **Commit the instance.** Commit an ordinary Mission whose Authority
+8. **Commit the instance.** Commit an ordinary Mission whose Authority
    Set is the surviving set and whose:
 
    - `approver` is the template's human approver, the accountable
@@ -708,8 +713,8 @@ instance with:
   PAR-only carriage rule; that profile's validation, derivation,
   recording, and hashing semantics apply unchanged
   ({{I-D.draft-mcguinness-oauth-mission}}). It is a proposal, never
-  authority: it bounds the derivation of step 3 of {{dispatch}} in
-  narrowing mode, and the double intersection of step 4 applies to
+  authority: it bounds the derivation of step 4 of {{dispatch}} in
+  narrowing mode, and the double intersection of step 5 applies to
   the result unchanged, so a proposal narrows the instance and never
   widens it beyond the Template Ceiling. Absent a proposal, the
   instance derives from the dispatch intent alone. An instance
@@ -842,6 +847,11 @@ established for adjudication denials
 : The dispatched instance would grant a high-consequence class
   ({{prohibited-classes}}), which a Dispatch never auto-approves. The
   authority is available only through a fresh human approval.
+
+`dispatch_policy_changed`:
+: The Dispatch Policy the Mission Issuer would evaluate no longer
+  matches the `digest` the template committed ({{dispatch}}). Dispatch
+  under the changed policy requires a fresh human template consent.
 
 A consumer that does not implement this document treats either value as
 it treats any unrecognized reason code: the Dispatch stays denied, with
