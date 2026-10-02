@@ -145,7 +145,12 @@ describe("configured PDP unavailability (@spec runtime#ride-through, authzen#fai
   const remoteWith = (fetchImpl: typeof fetch): DecisionFn =>
     (request) => evaluateRemote(request, { url: "http://pdp.unused.test/evaluate", pepId: "payments-pep", secret: "test-only", fetchImpl });
   const refusesAs = async (fetchImpl: typeof fetch, expected: string) => {
-    const x = await build("co-resident", remoteWith(fetchImpl));
+    let submitted: string | undefined;
+    const capture = (async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
+      submitted = canonicalDigest(JSON.parse(String(init?.body)).request);
+      return fetchImpl(input, init);
+    }) as typeof fetch;
+    const x = await build("co-resident", remoteWith(capture));
     try {
       const refused = await x.server.callReadTool("get_invoice", { invoice_id: "one" }, x.token);
       expect(refused.ok).toBe(false);
@@ -155,6 +160,10 @@ describe("configured PDP unavailability (@spec runtime#ride-through, authzen#fai
       expect(records.filter(e => e.kind === "decision")).toHaveLength(0);
       expect(records.filter(e => e.kind === "refusal")).toHaveLength(1);
       expect(records.find(e => e.kind === "refusal")!.content).toMatchObject({ denial_reason: expected });
+      // @spec runtime-evidence#request-digest-worked: the refusal follows the
+      // request on the wire, so it digests that request, not its envelope.
+      expect(submitted).toMatch(/^sha-256:/);
+      expect(records.find(e => e.kind === "refusal")!.content).toMatchObject({ request_digest_input: "decision_request", evaluation_request_digest: submitted });
     } finally { await x.channel.close(); x.payments.db.close(); }
   };
   it("refuses a 503 from a reachable PDP as pdp_unreachable, with no PDP decision retained", async () => {

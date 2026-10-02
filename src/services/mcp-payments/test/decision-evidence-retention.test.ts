@@ -333,6 +333,12 @@ describe("a permit the PDP did not evidence is refused, never executed (#741)", 
     // Record carrying the enumerated value, not a disposition of a permit
     // that was never accepted.
     expect(refusal?.kind === "refusal" && refusal.content.denial_reason).toBe("decision_evidence_unverifiable");
+    // @spec runtime-evidence#request-digest-worked: the refusal follows an
+    // evaluation request, so it digests that request, not the pre-request input.
+    expect(refusal?.kind === "refusal" && refusal.content).toMatchObject({
+      request_digest_input: "decision_request",
+      evaluation_request_digest: expect.stringMatching(/^sha-256:/),
+    });
     expect(evidence.all().some((e) => e.kind === "execution")).toBe(false);
   });
 
