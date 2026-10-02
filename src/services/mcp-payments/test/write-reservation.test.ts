@@ -473,7 +473,7 @@ describe("the PEP's reservation and retention for keyed reversible writes (@spec
       const { clientId: _client, ...noClient } = TOKEN_A;
       const token = { ...noClient, act: instanceLeaf("instance-1") } as TokenFacts;
       const refused = await schedule(h, key(), token);
-      expect(refused).toEqual({ ok: false, refusal_reason: "consumption_unavailable" });
+      expect(refused).toEqual({ ok: false, refusal_reason: "actor_unkeyable", next_action: "none" });
       expect(h.store.schedules()).toHaveLength(0);
       expect(h.store.reservations()).toHaveLength(0);
       // A post-permit disposition through the one writer: the PDP permitted
@@ -483,7 +483,7 @@ describe("the PEP's reservation and retention for keyed reversible writes (@spec
         .filter((e) => e.kind === "decision" && (e.content as { decision?: string }).decision === "permit");
       expect(permits).toHaveLength(1);
       expect(h.executions().map((r) => [r.content.outcome, r.content.error])).toEqual([
-        ["suppressed", "consumption_unavailable"],
+        ["suppressed", REVERSIBLE_WRITE_REFUSAL_ERRORS.actor_unkeyable],
       ]);
       h.store.close();
     });
