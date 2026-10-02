@@ -1089,6 +1089,13 @@ IANA action. Following the restraint of the sibling profiles:
 
 \[\[ To be removed from the final specification ]]
 
+- `dispatch_policy` is an activation policy reference (`id`,
+  `version`, `digest`) under the issuance profile's Standing-Consent
+  Bases, replacing the SHOULD to commit the policy body. Dispatch
+  verifies it as a new step 3 and refuses a mismatch with the new
+  `dispatch_policy_changed` reason; the `template` lineage member and
+  each Dispatch record carry the digest.
+
 - `allowed_dispatchers` lists `client_id` strings, and
   `allowed_recipients` is an object of `subjects` (`iss` and `sub`)
   and `agents` (`client_id`), each checked separately at Dispatch, so
