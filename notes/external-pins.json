@@ -10,7 +10,7 @@
       "sha256": "2b70ff5fd19f7a57bc305334943568137de78d92c3c37a87e3fefa10115651cb",
       "ref": "IETF Internet-Draft, rev 11 (2026-09-25)",
       "status": "established",
-      "note": "Rebases the family from the editor's-copy pin fc5e972c58d42a4f899d43acba39995081b87712 (issue #915 option B). Digest is of the published .txt; the prior git digest hashed the markdown source and is not comparable. i-d-template tag commit 178e9e68b6578e4d6f7d0bf30f33b4c38833e3a1; last commit touching the source afeaa3357c1ab2ae384acc8cfdc063e93a5671c5.",
+      "note": "Rebases the family from the editor's-copy pin fc5e972c58d42a4f899d43acba39995081b87712 (issue #915 option B; archived below). Revision -10 (2026-08-06) is the pre-person-token revision and was never the pin. Digest is of the published .txt; the prior git digest hashed the markdown source and is not comparable. i-d-template tag commit 178e9e68b6578e4d6f7d0bf30f33b4c38833e3a1; last commit touching the source afeaa3357c1ab2ae384acc8cfdc063e93a5671c5.",
       "reference_keys": ["I-D.draft-hardt-oauth-aauth-protocol"],
       "pin_id": "AAUTH@2b70ff5fd19f"
     },

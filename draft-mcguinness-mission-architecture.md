@@ -3250,17 +3250,15 @@ defined (the Mission Deployment Profile's schema remains reserved
 future work, {{deployment-profile}}), and the declaration is ordinary
 deployment documentation.
 
-The deployment runs PS authorization (three-party) and federated
-authorization (four-party) access. Every auth token the gateway
-accepts is issued by the PS (three-party) or by an Access Server
-(four-party) and carries the signed `mission_s256` reference, copied
-from the resource token, the protected propagation path; agent
-identity and resource-managed access are out of scope here, because
-those paths are not PS-gated and may ignore the reference.
+The deployment runs PS authorization (three-party) access. Every auth
+token the gateway accepts is PS-issued and carries the signed
+`mission_s256` reference copied from the resource token, the
+protected propagation path; agent identity, person identity,
+resource-managed, and federated access are out of scope here.
 
 Before joining the PS evidence, the Actor proof, the request, and the
 adapter's output, the gateway's join validates the carrying
-artifact's issuer (the PS or Access Server), its audience (the payment
+artifact's issuer (the Person Server), its audience (the payment
 API), the actor binding (the agent's key, proven on the request), and
 the request binding. The join is scoped to the two named routes with
 a lifetime no longer than the state observation's declared freshness,
