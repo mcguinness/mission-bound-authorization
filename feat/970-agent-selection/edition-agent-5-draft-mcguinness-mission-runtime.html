@@ -21,7 +21,7 @@ point-of-use check, an active Mission becomes ambient authority for
 the actions an agent takes within a token's lifetime. This document
 is that check. It defines where enforcement sits, how a permit is
 bound to concrete parameters to close the time-of-check to
-time-of-use gap, the materialized policy view a decision evaluates
+time-of-use gap, the materialized policy view a decision can evaluate
 against, the fail-closed posture for constraints and consumption
 bounds, and the runtime evidence every decision and refusal path
 produces. For the high-consequence classes it further defines
@@ -1119,7 +1119,7 @@ point-of-use check, an active Mission becomes ambient authority for
 the actions an agent takes within a token's lifetime. This document
 is that check. It defines where enforcement sits, how a permit is
 bound to concrete parameters to close the time-of-check to
-time-of-use gap, the materialized policy view a decision evaluates
+time-of-use gap, the materialized policy view a decision can evaluate
 against, the fail-closed posture for constraints and consumption
 bounds, and the runtime evidence every decision and refusal path
 produces. For the high-consequence classes it further defines
@@ -1556,8 +1556,8 @@ issuance-and-derivation layer; it reads only the credential's
 established Mission reference, effective authority, subject and actor
 context, and sender-constraint confirmation, each realized concretely by
 the binding's credential profile. It obtains any value the credential
-does not carry (the current Mission lifecycle state, or a materialized
-policy-view version) at runtime as described below, never by requiring
+does not carry (the current Mission lifecycle state, or a policy-view
+version) at runtime as described below, never by requiring
 the issuance-and-derivation layer to add a field.<a href="#section-1.2-4" class="pilcrow">¶</a></p>
 <p id="section-1.2-5">For the OAuth binding, that issuance-and-derivation layer is
 Mission-Bound Authorization for OAuth 2.0
@@ -1770,7 +1770,7 @@ trust rules, from which the PDP establishes the Mission's lifecycle
 state and the freshness of that observation. Examples include a query
 to the Mission issuer, a local Mission database, an authenticated
 status or event feed, or a short-lived derived credential whose
-lifetime is the deployment's accepted state lease. The materialized
+lifetime is the deployment's accepted state lease. A materialized
 policy view (<a href="#policy-view" class="auto internal xref">Section 7.1</a>) is not a state source: it commits the
 compiled authority, never the mutable lifecycle state a decision
 consults.<a href="#section-2.5-1" class="pilcrow">¶</a></p>
@@ -2078,13 +2078,22 @@ credential narrowed below its Mission's approved set is evaluated at
 its own narrower authority. The OAuth realization of both bounds is
 <span>[<a href="#I-D.draft-mcguinness-mission-runtime-oauth" class="cite xref">I-D.draft-mcguinness-mission-runtime-oauth</a>]</span>, Section "Credential
 Authority and Current Effective Authority".<a href="#section-2.7.1-3" class="pilcrow">¶</a></p>
-<p id="section-2.7.1-4">Where the deployment enforces a narrowing mechanism at action time,
+<p id="section-2.7.1-4">A PDP evaluates these bounds either through a materialized policy
+view (<a href="#policy-view" class="auto internal xref">Section 7.1</a>) or directly against the Mission's recorded
+authority. Whichever representation it evaluates <span class="bcp14">MUST NOT</span> be broader
+than the current effective authority, and <span class="bcp14">MUST</span> be bound to the
+Mission it represents by the Mission's identifier and
+<code>authority_hash</code>. Mutable Mission state, including the narrowing the
+current effective authority reflects, comes from a state source
+within the staleness bound (<a href="#state-freshness" class="auto internal xref">Section 2.5</a>), never from that
+representation.<a href="#section-2.7.1-4" class="pilcrow">¶</a></p>
+<p id="section-2.7.1-5">Where the deployment enforces a narrowing mechanism at action time,
 the PDP <span class="bcp14">MUST</span> establish the current effective authority from a source
 that reports that mechanism's narrowing, within the staleness bound
 that governs the <code>active</code> check (<a href="#state-freshness" class="auto internal xref">Section 2.5</a>). A source that
 reports only lifecycle state does not qualify: a narrowed Mission
-stays <code>active</code>.<a href="#section-2.7.1-4" class="pilcrow">¶</a></p>
-<p id="section-2.7.1-5">Where the deployment runs the Entry Discharge companion's discharge
+stays <code>active</code>.<a href="#section-2.7.1-5" class="pilcrow">¶</a></p>
+<p id="section-2.7.1-6">Where the deployment runs the Entry Discharge companion's discharge
 mechanism (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-discharge" class="cite xref">I-D.draft-mcguinness-oauth-mission-discharge</a>]</span>), the
 current effective authority excludes a discharged entry once the PDP
 can establish discharge state from its Mission state source. A PDP
@@ -2092,8 +2101,8 @@ that recognizes an entry's discharge condition <span class="bcp14">SHOULD</span>
 within a discharged entry at the point of use, learning discharge
 state from the surfaces that report it
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-discharge" class="cite xref">I-D.draft-mcguinness-oauth-mission-discharge</a>]</span>, Section
-"Relationship to Runtime Enforcement").<a href="#section-2.7.1-5" class="pilcrow">¶</a></p>
-<p id="section-2.7.1-6">Where a Mission participates in the Containment profile
+"Relationship to Runtime Enforcement").<a href="#section-2.7.1-6" class="pilcrow">¶</a></p>
+<p id="section-2.7.1-7">Where a Mission participates in the Containment profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>), the current
 effective authority excludes contained capability as well. The PDP
 <span class="bcp14">MUST</span> refuse an action within an entry that is currently contained
@@ -2102,25 +2111,25 @@ carries it, established
 from the same Mission state source and freshness bound that governs
 the <code>active</code> check (<a href="#state-freshness" class="auto internal xref">Section 2.5</a>); a Mission stays <code>active</code>
 while contained, so this check, not the state check, is what a
-containment-aware PDP adds.<a href="#section-2.7.1-6" class="pilcrow">¶</a></p>
-<p id="section-2.7.1-7">The decision-API binding provides the
+containment-aware PDP adds.<a href="#section-2.7.1-7" class="pilcrow">¶</a></p>
+<p id="section-2.7.1-8">The decision-API binding provides the
 extension point through which a companion profile carries which
-evaluated set the PDP used (<a href="#authzen" class="auto internal xref">Section 15</a>).<a href="#section-2.7.1-7" class="pilcrow">¶</a></p>
-<p id="section-2.7.1-8">The PEP asserts the capability identity (for example, the tool or
+evaluated set the PDP used (<a href="#authzen" class="auto internal xref">Section 15</a>).<a href="#section-2.7.1-8" class="pilcrow">¶</a></p>
+<p id="section-2.7.1-9">The PEP asserts the capability identity (for example, the tool or
 function name) it will invoke, and the PDP <span class="bcp14">MUST</span> refuse an identity
 outside the entry's approved actions. The OAuth binding's realization
 of an authority entry, including the <code>mission_resource_access</code> entry
 type's <code>resource</code> and <code>actions</code> subset rule, is defined by
-<span>[<a href="#I-D.draft-mcguinness-mission-runtime-oauth" class="cite xref">I-D.draft-mcguinness-mission-runtime-oauth</a>]</span>.<a href="#section-2.7.1-8" class="pilcrow">¶</a></p>
-<p id="section-2.7.1-9">For any other authority-entry type, the PDP <span class="bcp14">MUST</span> evaluate the action
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime-oauth" class="cite xref">I-D.draft-mcguinness-mission-runtime-oauth</a>]</span>.<a href="#section-2.7.1-9" class="pilcrow">¶</a></p>
+<p id="section-2.7.1-10">For any other authority-entry type, the PDP <span class="bcp14">MUST</span> evaluate the action
 under that type's documented runtime semantics and <span class="bcp14">MUST</span> refuse if it
-does not understand or cannot enforce those semantics.<a href="#section-2.7.1-9" class="pilcrow">¶</a></p>
-<p id="section-2.7.1-10">The identity of the executing component that serves a capability
+does not understand or cannot enforce those semantics.<a href="#section-2.7.1-10" class="pilcrow">¶</a></p>
+<p id="section-2.7.1-11">The identity of the executing component that serves a capability
 (for example, an MCP server instance) is a request-time fact the
 decision-API binding <span class="bcp14">MAY</span> carry (<a href="#authzen" class="auto internal xref">Section 15</a>); Resource policy <span class="bcp14">MAY</span>
-refuse an executor outside the deployment's trusted set.<a href="#section-2.7.1-10" class="pilcrow">¶</a></p>
-<p id="section-2.7.1-11">A capability sourced from a discovered catalog is additionally
-subject to the capability-drift rule of <a href="#capability-drift" class="auto internal xref">Section 2.7.2</a>.<a href="#section-2.7.1-11" class="pilcrow">¶</a></p>
+refuse an executor outside the deployment's trusted set.<a href="#section-2.7.1-11" class="pilcrow">¶</a></p>
+<p id="section-2.7.1-12">A capability sourced from a discovered catalog is additionally
+subject to the capability-drift rule of <a href="#capability-drift" class="auto internal xref">Section 2.7.2</a>.<a href="#section-2.7.1-12" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="capability-drift">
@@ -2754,9 +2763,12 @@ from the credential's own Mission reference or externally
         <dd class="break"></dd>
 <dt id="section-3-3.17">Policy-view version:</dt>
         <dd style="margin-left: 1.5em" id="section-3-3.18">
-          <p id="section-3-3.18.1">A deployment-opaque identifier the PDP emits for the materialized
-policy and Mission view it evaluated against, so a permit and its
-evidence record tie to a reproducible decision basis. It need not
+          <p id="section-3-3.18.1">A deployment-opaque identifier the PDP emits for the decision basis
+it evaluated against, so a permit and its evidence record tie to a
+reproducible decision basis: the materialized policy and Mission
+view where the PDP uses one (<a href="#policy-view" class="auto internal xref">Section 7.1</a>), or the Mission's
+<code>authority_hash</code> and the PDP's local policy version where it
+evaluates the Mission's recorded authority directly. It need not
 reveal policy content; it is a correlator that lets an operator
 determine which materialized policy, Mission state view, and
 constraint interpretation a decision used. It is local to
@@ -2764,8 +2776,8 @@ the runtime layer and is distinct from the issuance profile's
 <code>policy_version</code> Mission-record field
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); this document does not
 interpret it beyond correlation, and defines no portable policy-version
-registry. The materialized policy view and its content-addressed
-<code>policy_view_id</code> are defined in <a href="#policy-view" class="auto internal xref">Section 7.1</a>.<a href="#section-3-3.18.1" class="pilcrow">¶</a></p>
+registry. Where a view is used, the materialized policy view and its
+content-addressed <code>policy_view_id</code> are defined in <a href="#policy-view" class="auto internal xref">Section 7.1</a>.<a href="#section-3-3.18.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-3-3.19">Runtime enforcement evidence:</dt>
@@ -2861,7 +2873,7 @@ kernel.<a href="#section-4-2" class="pilcrow">¶</a></p>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Structured Authority</td>
             <td class="text-left" rowspan="1" colspan="1">required</td>
-            <td class="text-left" rowspan="1" colspan="1">The decision contract materializes and evaluates the effective Authority Set, with its subset rule and Common Constraints (<a href="#input-authority" class="auto internal xref">Section 2.7.1</a>, <a href="#policy-view" class="auto internal xref">Section 7.1</a>); as the substrate's composition rule warns, a Mission reference alone is not structured authority</td>
+            <td class="text-left" rowspan="1" colspan="1">The decision contract evaluates the effective Authority Set, directly or through a materialized policy view, with its subset rule and Common Constraints (<a href="#input-authority" class="auto internal xref">Section 2.7.1</a>, <a href="#policy-view" class="auto internal xref">Section 7.1</a>); as the substrate's composition rule warns, a Mission reference alone is not structured authority</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Lifecycle-Gated Authorization</td>
@@ -3902,11 +3914,15 @@ grants, widens, or restores another.<a href="#section-7-7" class="pilcrow">¶</a
         <h3 id="name-materialized-policy-view">
 <a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-materialized-policy-view" class="section-name selfRef">Materialized Policy View</a>
         </h3>
-<p id="section-7.1-1">A PDP evaluates a Mission against an action through a <strong>materialized
-policy view</strong>: the reproducible, evaluable form of the Mission's
-approved authority, produced by the Mission Issuer or a trusted compiler
-and loaded by the PDP. A <strong>trusted compiler</strong> is a component the
-deployment trusts to materialize the Mission's approved authority
+<p id="section-7.1-1">This section governs a PDP that evaluates a Mission against an action
+through a <strong>materialized policy view</strong>: the reproducible, evaluable
+form of the Mission's approved authority, produced by the Mission
+Issuer or a trusted compiler and loaded by the PDP. A PDP can instead
+evaluate the Mission's recorded authority directly; the authority
+bounds, the state-source rule, and capability-source provenance apply
+either way (<a href="#input-authority" class="auto internal xref">Section 2.7.1</a>). A <strong>trusted compiler</strong> is a
+component the deployment trusts to materialize the Mission's approved
+authority
 faithfully and reproducibly; it is in the deployment's trust domain and
 its output is bound by the content-addressed <code>policy_view_id</code> below. The
 view is substrate-independent runtime machinery; a decision-API binding
@@ -6193,34 +6209,43 @@ worked example shows the concrete record
 <p id="appendix-D-1">[[ To be removed from the final specification ]]<a href="#appendix-D-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-D-2.1">
-          <p id="appendix-D-2.1.1">The Operation Profile's items are grouped as the operation's binding
-and its declarations, with no change to any requirement or to which
-operations it applies to; a declaration is stated even where the
-answer is no.<a href="#appendix-D-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-2.1.1">A materialized policy view is one way to evaluate the authority
+input, not the only one: the Materialized Policy View section
+governs a PDP that uses one, and the authority input requires
+whatever the PDP evaluates to be no broader than the current
+effective authority and bound to the Mission, with mutable state
+from a state source; the policy-view version names whichever basis
+the PDP evaluated.<a href="#appendix-D-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.2">
-          <p id="appendix-D-2.2.1">The record minimum's evaluation request digest is over the input
-the runtime evidence companion defines (#971).<a href="#appendix-D-2.2.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-2.2.1">The Operation Profile's items are grouped as the operation's binding
+and its declarations, with no change to any requirement or to which
+operations it applies to; a declaration is stated even where the
+answer is no.<a href="#appendix-D-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.3">
-          <p id="appendix-D-2.3.1">Security Considerations notes that an idempotency key identifies a
-request, not the business event it carries out, and that the
-Operation Profile and the resource own event-level deduplication.<a href="#appendix-D-2.3.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-2.3.1">The record minimum's evaluation request digest is over the input
+the runtime evidence companion defines (#971).<a href="#appendix-D-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.4">
-          <p id="appendix-D-2.4.1">The Enforcement Scope Statement is what a deployment adopting the
-Runtime-Enforced bundle publishes, not what earns the level; the
-level stays guidance, matching the architecture's assurance levels,
-and the statement's named claims are what a relying party compares.<a href="#appendix-D-2.4.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-2.4.1">Security Considerations notes that an idempotency key identifies a
+request, not the business event it carries out, and that the
+Operation Profile and the resource own event-level deduplication.<a href="#appendix-D-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.5">
-          <p id="appendix-D-2.5.1">The Introduction states this profile as the per-action decision for
-the action classes it covers, composed over the issuance profile's
-bounds, and Deployment Considerations names introspection as a
-cutoff on the issuance-only path.<a href="#appendix-D-2.5.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-2.5.1">The Enforcement Scope Statement is what a deployment adopting the
+Runtime-Enforced bundle publishes, not what earns the level; the
+level stays guidance, matching the architecture's assurance levels,
+and the statement's named claims are what a relying party compares.<a href="#appendix-D-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.6">
-          <p id="appendix-D-2.6.1">Client-instance references follow their successors:
+          <p id="appendix-D-2.6.1">The Introduction states this profile as the per-action decision for
+the action classes it covers, composed over the issuance profile's
+bounds, and Deployment Considerations names introspection as a
+cutoff on the issuance-only path.<a href="#appendix-D-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.7">
+          <p id="appendix-D-2.7.1">Client-instance references follow their successors:
 draft-mcguinness-oauth-client-instance-assertion is replaced by
 {I-D.draft-mcguinness-oauth-client-instance-id}, and the
 deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
@@ -6228,37 +6253,37 @@ cited. Attester-verified
 context is instance identity that grants no authority, custody's
 per-instance key follows the successor's instance-unique key for
 attribution, and EAT evidence is no longer tied to a carrier
-profile. No requirement changed.<a href="#appendix-D-2.6.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-D-2.7">
-          <p id="appendix-D-2.7.1">Added approval-resolution rule 5, the agent-invokable approval bypass,
-and its negative-conformance case (#759). Observing or requesting an
-independent approval is distinct from resolving it.<a href="#appendix-D-2.7.1" class="pilcrow">¶</a></p>
+profile. No requirement changed.<a href="#appendix-D-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.8">
-          <p id="appendix-D-2.8.1">Defined compound-action phases, one Decision per consequential
+          <p id="appendix-D-2.8.1">Added approval-resolution rule 5, the agent-invokable approval bypass,
+and its negative-conformance case (#759). Observing or requesting an
+independent approval is distinct from resolving it.<a href="#appendix-D-2.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.9">
+          <p id="appendix-D-2.9.1">Defined compound-action phases, one Decision per consequential
 phase, a PEP-derived phase binding verified at permit use,
 phase-scoped idempotency where phases share an action identifier,
 and compensation correlation (#252). Strength change:
 <code>compensates_evaluation_id</code> on Decision Evidence moves from <span class="bcp14">OPTIONAL</span>
 to <span class="bcp14">REQUIRED</span> for a compensate-phase decision, <span class="bcp14">OPTIONAL</span> otherwise. The
 AuthZEN condition, the evidence member, and conformance coverage are
-specified separately.<a href="#appendix-D-2.8.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-D-2.9">
-          <p id="appendix-D-2.9.1">Added per-entry perimeter dispositions inside the existing
-mediated-scope declaration, its compatibility rule, and the
-prohibition on claiming reconstruction as mediation (#758).<a href="#appendix-D-2.9.1" class="pilcrow">¶</a></p>
+specified separately.<a href="#appendix-D-2.9.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.10">
-          <p id="appendix-D-2.10.1">Operational Considerations added (#310): a dependency-conditional outage
+          <p id="appendix-D-2.10.1">Added per-entry perimeter dispositions inside the existing
+mediated-scope declaration, its compatibility rule, and the
+prohibition on claiming reconstruction as mediation (#758).<a href="#appendix-D-2.10.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.11">
+          <p id="appendix-D-2.11.1">Operational Considerations added (#310): a dependency-conditional outage
 blast-radius table indexed by action class, the remaining-window
 ride-through, the declared positive break-glass mode with truthful
 emergency evidence, and the replication disclosure. The three operator
-declarations carry no implementation coverage.<a href="#appendix-D-2.10.1" class="pilcrow">¶</a></p>
+declarations carry no implementation coverage.<a href="#appendix-D-2.11.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-2.11">
-          <p id="appendix-D-2.11.1">Added the Evaluation-Context Binding named assurance extension (#773),
+        <li class="normal" id="appendix-D-2.12">
+          <p id="appendix-D-2.12.1">Added the Evaluation-Context Binding named assurance extension (#773),
 claimed per mediated action class: a versioned descriptor of
 decision-relevant resource-resolved facts, a salted PEP-computed
 context digest committed with that descriptor, reverification at use,
@@ -6266,7 +6291,7 @@ and the declared verified and enforced properties. The deferred
 evaluation-context bullet is struck and the TOCTOU considerations point
 at the extension, keeping the residual for uncovered facts and
 non-adopters. The wire condition, the evidence members, and conformance
-coverage are specified separately.<a href="#appendix-D-2.11.1" class="pilcrow">¶</a></p>
+coverage are specified separately.<a href="#appendix-D-2.12.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

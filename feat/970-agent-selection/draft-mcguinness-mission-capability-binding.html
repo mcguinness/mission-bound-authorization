@@ -1232,10 +1232,13 @@ deployments.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
-            <p id="section-toc.1-1.10.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+            <p id="section-toc.1-1.10.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-document-history" class="internal xref">Document History</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
-            <p id="section-toc.1-1.11.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+            <p id="section-toc.1-1.11.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -1484,9 +1487,10 @@ computed over the capability's current extracted definition
 where a <code>catalog_digest</code> was recorded, the presented <code>catalog_digest</code>
           <span class="bcp14">MUST</span> equal it likewise; otherwise the PDP returns <code>capability_drift</code>
 (<a href="#capability-drift-reason" class="auto internal xref">Section 4.3</a>). Whether an action is catalog-sourced,
-and which digests were recorded, are determined from the
-materialized policy view the AuthZEN profile defines
-(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), not from the PEP's
+and which digests were recorded, are determined from the approved
+entry the Mission Issuer recorded at derivation, read through the
+materialized policy view the AuthZEN profile defines where the PDP
+uses one (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), not from the PEP's
 request; where no source binding was recorded, this check does not
 apply.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
 </section>
@@ -1781,20 +1785,37 @@ value.<a href="#section-8-1" class="pilcrow">¶</a></p>
 </div>
 </section>
 </div>
-<div id="acknowledgments">
+<div id="document-history">
 <section id="appendix-A">
+      <h2 id="name-document-history">
+<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
+      </h2>
+<p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="appendix-A-2.1">
+          <p id="appendix-A-2.1.1">Decision-Time Verification reads whether an action is
+catalog-sourced, and which digests were recorded, from the approved
+entry the Mission Issuer recorded at derivation, through the
+materialized policy view where the PDP uses one, never from the
+PEP's request.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-B">
       <h2 id="name-acknowledgments">
 <a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
       </h2>
-<p id="appendix-A-1">This document extracts the capability-source binding from
+<p id="appendix-B-1">This document extracts the capability-source binding from
 Mission-Bound Runtime Enforcement: AuthZEN Profile and builds on the
 OpenID AuthZEN Profile for Model Context Protocol Tool Authorization.
 The author thanks the OpenID AuthZEN community and the Mission-Bound
-Authorization implementer community for feedback.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+Authorization implementer community for feedback.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authors-addresses">
-<section id="appendix-B">
+<section id="appendix-C">
       <h2 id="name-authors-address">
 <a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
       </h2>

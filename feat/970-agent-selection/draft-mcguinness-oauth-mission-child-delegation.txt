@@ -1006,7 +1006,7 @@ Table of Contents
    *  activation_actor is the requesting parent agent, the Parent
       Mission's client_id, distinct from consent_principal; and
 
-   *  root_commitment is the entry's child_creation_policy reference
+   *  root_commitment is the digest of the entry's child_creation_policy
       where the entry carries one, otherwise the Parent Mission's own
       authority_hash, which commits the authorizing delegation entry.
 
@@ -1015,13 +1015,17 @@ Table of Contents
    to something the human's approval actually committed.
 
    Where the entry carries a child_creation_policy, activation carries
-   that policy's id and version and this creation's own delegation event
-   identifier (above) as activation_event_id.  Where it does not, the
-   drawdown is against the parent's approved delegation entry itself,
-   not a separate policy artifact: activation omits policy_id and
-   carries only the delegation event identifier as activation_event_id.
-   The record's approver is consent_principal: the Parent Mission's
-   human Approver, never the policy and never the requesting agent.
+   that policy's id, version, and digest and this creation's own
+   delegation event identifier (above) as activation_event_id.  A policy
+   snapshot that does not match digest denies child creation with
+   policy_denied ([I-D.draft-mcguinness-oauth-mission], Section 
+   "Standing-Consent Bases").  Where the entry carries no
+   child_creation_policy, the drawdown is against the parent's approved
+   delegation entry itself, not a separate policy artifact: activation
+   omits policy_id and carries only the delegation event identifier as
+   activation_event_id.  The record's approver is consent_principal: the
+   Parent Mission's human Approver, never the policy and never the
+   requesting agent.
 
    approved_at (the issuance profile's standing-consent requirement) is
    the human approval instant of the consented root that root_commitment
@@ -1198,8 +1202,11 @@ Table of Contents
          with max_child_depth reduced by one, and an entry at depth
          equal to the limit carries no children, ending the lineage.
 
-      child_creation_policy:  OPTIONAL.  A policy reference evaluated
-         before each child creation.
+      child_creation_policy:  OPTIONAL.  An activation policy reference,
+         an object of id, version, and digest
+         ([I-D.draft-mcguinness-oauth-mission], Section "Standing-
+         Consent Bases"), identifying the policy evaluated before each
+         child creation and committing its content.
 
    Example parent Authority Set entry whose delegation carries children,
    so the entry permits Child Missions to depth 2, at most 5
@@ -2355,6 +2362,13 @@ Appendix A.  Experimental Consumer-Verified Cascade Modes
 Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  child_creation_policy is an activation policy reference (id,
+      version, digest) under the issuance profile's Standing-Consent
+      Bases; root_commitment is its digest, activation carries the
+      digest, and a mismatched snapshot denies child creation with
+      policy_denied.  Creation against the delegation entry itself, with
+      no child_creation_policy, is unchanged.
 
    *  Approval rendering of child creation shows max_children as a
       concurrency limit, max_child_depth, and the per-child derivation
