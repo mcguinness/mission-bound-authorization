@@ -34,7 +34,6 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  RFC7515:
   RFC8259:
   RFC8785:
   I-D.draft-mcguinness-oauth-mission:
@@ -48,6 +47,7 @@ normative:
 
 informative:
   RFC6749:
+  RFC7515:
   RFC9126:
   RFC9396:
   I-D.draft-mcguinness-mission-aauth:
@@ -357,10 +357,11 @@ NOT structure its output to imply otherwise.
 Three consequences follow, and a sound shaper observes all three:
 
 1. It does not act as a credential issuer. A shaper that signs its
-   output, attaches an authority assertion, emits a credential, or
-   otherwise behaves as a credential issuer is acting outside this
-   role and is NOT RECOMMENDED. A deployment MAY integrity-protect
-   shaper output for client-internal reasons, for example to detect
+   output as a statement of authority, attaches an authority
+   assertion, emits a credential, or otherwise behaves as a credential
+   issuer is acting outside this role and is NOT RECOMMENDED. A
+   deployment MAY integrity-protect shaper output for client-internal
+   reasons, for example to detect
    tampering between the shaper and the submission step in a
    multi-process client ({{multi-process}}). Such protection has no
    authority semantics at the Mission Issuer and MUST NOT be relied
@@ -851,8 +852,7 @@ under that issuer's `issuer`.
 
 A deployment MAY instead, or in addition, carry an integrity envelope
 over the Shaping Evidence, for example a JWS {{RFC7515}} Compact
-Serialization over the JCS canonical bytes of the evidence with the
-envelope member removed.
+Serialization over the JCS canonical bytes of the evidence.
 
 Where the deployment records Consent Evidence, the consent-disclosure
 object defines an OPTIONAL `shaping_evidence_hash` member, which is the
