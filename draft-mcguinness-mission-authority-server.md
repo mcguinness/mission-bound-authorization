@@ -363,8 +363,10 @@ under the Mission Join.
   signed Mission Status ({{lifecycle-and-state}}), joins the presented
   credential to the Mission, and evaluates the action under the
   runtime profile ({{mission-join}}).
-- Step 10: the PEP enforces the decision. A revocation at the MAS
-  stops the next such action at step 8.
+- Step 10: the PEP enforces the decision. After a revocation at the
+  MAS, the PDP refuses the next such action once its state check at
+  step 8 observes the revocation, which happens within the published
+  staleness bound ({{lifecycle-and-state}}).
 
 A Join Assertion moves the join's verification to the MAS
 ({{join-assertion}}). Mission Expansion and Child Creation use the
@@ -2294,10 +2296,14 @@ A **Mission-joining PEP**:
   request from it ({{join-scope}}), validating the presenter's
   Instance Context where the mapping contract requires an
   instance-bound join ({{join-instance}});
-- parses `Mission-Reference` and the MCP `_meta` key under
-  {{mission-reference-field}} and {{mcp-reference}}, and surfaces a
-  reference conflict with `mission_reference_conflict`
-  ({{reference-verification}});
+- where a propagated reference is used, parses it under the rules for
+  its HTTP ({{mission-reference-field}}) or MCP ({{mcp-reference}})
+  carriage and surfaces a reference conflict with
+  `mission_reference_conflict` ({{reference-verification}});
+- refuses governed work with no establishable Mission reference,
+  including a Mission-required MCP tool call without negotiated or
+  configured propagation support ({{mission-reference-field}},
+  {{mcp-reference}});
 - never treats a Mission permit as overriding what the credential or
   the resource would refuse (rule 8 of {{join-rules}}); and
 - does not copy the reference onto a request to an unrelated
@@ -2890,18 +2896,20 @@ client joins ({{mission-join}}). The first example in
 The join holds and the action is within the Mission's Authority Set,
 so the PDP permits. The PEP executes the call to
 `https://erp.example.com`, and both record their evidence
-({{I-D.draft-mcguinness-mission-runtime-evidence}}). A revocation at
-the MAS stops the next such action at the PDP's state check (step 8
-of {{overview}}). The permit example in {{join-authzen}} shows the
-decision.
+({{I-D.draft-mcguinness-mission-runtime-evidence}}). After a
+revocation at the MAS, the PDP's state check (step 8 of {{overview}})
+refuses the next such action once it observes the revocation, within
+the published staleness bound. The permit example in {{join-authzen}}
+shows the decision.
 
 ## Revoke
 
 An authorized party revokes the Mission at the Mission Lifecycle
 endpoint ({{lifecycle-and-state}}). The agent's token remains valid
-OAuth ({{limitations}}). On the agent's next consequential action,
-the PDP's state check reports `revoked`, and the PDP denies with the
-AuthZEN profile's `mission_inactive` reason
+OAuth ({{limitations}}). Once the PDP's state check observes the
+revocation, within the published staleness bound, it reports
+`revoked`, and the PDP denies the agent's next consequential action
+with the AuthZEN profile's `mission_inactive` reason
 ({{I-D.draft-mcguinness-mission-authzen}}). The following example
 shows the denial:
 
