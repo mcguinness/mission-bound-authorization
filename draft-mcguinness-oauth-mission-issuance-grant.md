@@ -903,7 +903,8 @@ Request Object {{RFC9101}} pushed there. It MUST reject, with the
 `invalid_request` error code ({{Section 4.1.2.1 of RFC6749}}), an
 authorization request that carries the parameter any other way,
 including in a Request Object passed to the authorization endpoint
-outside PAR. The front channel then carries only the `request_uri`.
+outside PAR. The front channel then carries only `client_id` and the
+`request_uri` ({{Section 4 of RFC9126}}).
 This restriction concerns the authorization-request parameter; direct
 redemption at the token endpoint ({{redemption}}) is unaffected.
 
