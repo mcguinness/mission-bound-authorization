@@ -8,7 +8,7 @@ the reference implementation at commit `a90a25c8`, the origin/main commit
 read. The tree read was `a90a25c8` plus this branch's two commits, which
 change only `draft-mcguinness-mission-runtime.md` and
 `src/docs/CONFORMANCE.md`. Before it merged, main moved forward again (merged into this branch
-at `aa0253d9`). Those commits change no file this document cites in the
+at `aa0253d9` and `09afbbb2`). Those commits change no file this document cites in the
 runtime stack (`src/services/mcp-payments`, `src/services/pdp`,
 `config`) and no runtime, AuthZEN, or Runtime Evidence ledger row. The
 two implementation files they touch, `src/packages/demo-data/src/index.ts`
