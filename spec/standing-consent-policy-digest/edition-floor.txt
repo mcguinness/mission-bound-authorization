@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-02T17:50:11Z
-Source repository commit: 413d0833e290be91f99c6ae222a6c6f7c36383ad
+Generated: 2026-10-02T19:40:53Z
+Source repository commit: 9c2fcfaf67441dafe87b4813a9c0af3ee761dc3d
 Member count: 7
 
 Reading order:
@@ -1414,16 +1414,22 @@ Table of Contents
       OAuth binding states the rule in its "Authority Does Not Propagate
       With Information" section ([I-D.draft-mcguinness-oauth-mission]).
 
-   Composition:  The invariants bound one Mission's own Authority Set,
-      not the aggregate surface a delegation tree, a cross-domain hop,
-      or a chain of child generations reaches together.  Delegation
-      depth resets at each cross-domain hop and child generation, and
-      each Child Mission enforces its own derivation cap independently
-      of its parent's, so the authorized surface a body of work can
-      reach can exceed what any single approval appears to bound.
-      Disclosing the composed bound at the consent surface is the cross-
-      domain and child-delegation profiles' role, and bounding aggregate
-      consumption is the metering profile's
+   Composition:  An approval bounds the authority each derivation under
+      the Mission carries; it does not bound the aggregate effect of a
+      body of work.  The invariants bound one Mission's own Authority
+      Set, not the surface a delegation tree, a cross-domain hop, or a
+      chain of child generations reaches together.  The per-Mission
+      figures differ in kind and do not multiply into a lifetime total:
+      in the child-delegation profile, max_children limits concurrently
+      non-terminal children, so a completed child frees its slot;
+      max_child_depth limits generations; and each Child Mission's
+      derivation cap is its own, independent of its parent's.
+      Delegation depth also resets at each cross-domain hop and child
+      generation.  Disclosing what these figures bound at the consent
+      surface is the cross-domain and child-delegation profiles' role.
+      An aggregate bound holds only where a deployment enforces one, the
+      metering profile's lineage budget, and is never rendered as in
+      force otherwise
       ([I-D.draft-mcguinness-oauth-mission-cross-domain],
       [I-D.draft-mcguinness-oauth-mission-child-delegation],
       [I-D.draft-mcguinness-mission-metering]).  The OAuth binding
@@ -4658,6 +4664,13 @@ Appendix G.  Mission Document Map
 Appendix H.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Composition states the per-Mission bound model once, with no
+      change to any profile's requirements: an approval bounds the
+      authority each derivation carries; concurrent children,
+      generations, and per-Mission derivations do not multiply into a
+      lifetime total; and an aggregate bound holds only where a
+      deployment enforces one.
 
    *  Derivation and narrowing, with no change to any profile's
       requirements.  The derivation boundary states the derivation
@@ -10810,20 +10823,26 @@ Table of Contents
    composition property of independently bounded mechanisms.
 
    For example, a child-delegation deployment allowing max_children 3
-   per Mission with max_child_depth 2 admits up to 12 descendant
-   Missions (3 in the first generation, up to 9 in the second) under one
-   root Mission.
+   per Mission with max_child_depth 2 admits up to 12 concurrently non-
+   terminal descendant Missions (3 in the first generation, up to 9 in
+   the second) under one root Mission.  That limits the Missions live at
+   once, not those created over the root's lifetime: a child that
+   reaches a terminal state frees its slot
+   ([I-D.draft-mcguinness-oauth-mission-child-delegation]).
 
    Cross-domain projection composes separately: a projected grant
    preserves the Mission's lineage rather than rooting a new one, and
    the Resource AS's local issuance under it is bounded by that grant's
    own lifetime and local policy.
 
-   A deployment can disclose the composed bound, not only the immediate
-   Mission's, at the consent surface, and can impose a global cap out of
-   band where a single approval's apparent bound must hold in practice.
-   Bounding aggregate consumption (calls, spend, or activity over the
-   life of a Mission and its descendants) is the metering profile's role
+   A deployment can disclose the subtree's figures, not only the
+   immediate Mission's, at the consent surface, as distinct values
+   rather than one composed total
+   ([I-D.draft-mcguinness-oauth-mission-child-delegation]), and can
+   impose a global cap out of band where a single approval's apparent
+   bound must hold in practice.  Bounding aggregate consumption (calls,
+   spend, or activity over the life of a Mission and its descendants) is
+   the metering profile's role
    ([I-D.draft-mcguinness-mission-metering]).
 
 19.5.4.  The Containment Materialized-Capability Residual
@@ -12768,6 +12787,13 @@ Appendix G.  Document History
       adjudicates commits that policy's content as {id, version,
       digest}, with the mission-activation-policy digest, and the
       activating issuer verifies it before each activation.
+
+   *  Corrected the child-delegation example in Composition and the
+      Effective Ceiling: max_children limits concurrently non-terminal
+      children, so the example's 12 descendants are Missions live at
+      once, not a lifetime count; disclosure points at the child-
+      delegation profile's distinct figures rather than one composed
+      total.
 
    *  Separated exact target_resources membership, checked for the
       Authority Set and for a proposal at submission, from later token
@@ -16542,8 +16568,10 @@ Table of Contents
 
    *  the request time (RFC 3339 [RFC3339]); and
 
-   *  the parameter_digest for parameter-bound classes, or a privacy-
-      preserving digest of the evaluation request otherwise.
+   *  the parameter_digest for parameter-bound classes, or a digest of
+      the evaluation request otherwise, over the input the runtime
+      evidence companion defines
+      ([I-D.draft-mcguinness-mission-runtime-evidence]).
 
    A record MUST also contain the following fields when they are
    available and trusted for the refusal or decision path:
@@ -17798,6 +17826,8 @@ Table of Contents
    that MUST fix all of the following, so two implementers of the same
    operation bind the same bytes:
 
+   *Binding*, the inputs that decide which bytes a decision binds:
+
    *  the action identifier and how it maps to a resource;
 
    *  the parameter schema: which parameters exist and their types;
@@ -17847,7 +17877,10 @@ Table of Contents
       operation-specific rule), and at least one conformance case MUST
       present changed parameters that fail the digest match, so
       normalization drift between the PDP and the executing PEP surfaces
-      at profile adoption rather than as a fail-closed outage;
+      at profile adoption rather than as a fail-closed outage.
+
+   *Declarations*, stated for every mediated operation even where the
+   answer is no:
 
    *  whether a single-use decision identifier is required (versus a
       validity window plus idempotency key);
@@ -19754,6 +19787,14 @@ Appendix D.  Document History
 
    [[ To be removed from the final specification ]]
 
+   *  The Operation Profile's items are grouped as the operation's
+      binding and its declarations, with no change to any requirement or
+      to which operations it applies to; a declaration is stated even
+      where the answer is no.
+
+   *  The record minimum's evaluation request digest is over the input
+      the runtime evidence companion defines (#971).
+
    *  The Enforcement Scope Statement is what a deployment adopting the
       Runtime-Enforced bundle publishes, not what earns the level; the
       level stays guidance, matching the architecture's assurance
@@ -19903,7 +19944,7 @@ Table of Contents
      4.2.  Refusal Record
      4.3.  Integrity
      4.4.  Worked example
-     4.5.  Evaluation request digest worked value
+     4.5.  Evaluation request digest inputs
    5.  Execution Evidence Object
      5.1.  Members
      5.2.  Worked example
@@ -19943,6 +19984,7 @@ Table of Contents
    13. References
      13.1.  Normative References
      13.2.  Informative References
+   Appendix A.  Document History
    Acknowledgments
    Author's Address
 
@@ -20298,10 +20340,11 @@ Table of Contents
       this form (for example the AuthZEN profile's conditions response
       member, [I-D.draft-mcguinness-mission-authzen]).
 
-   evaluation_request_digest:  CONDITIONAL.  A string.  A privacy-
-      preserving digest of the whole evaluation request, in the
-      integrity-anchor encoded form
-      ([I-D.draft-mcguinness-oauth-mission]).  REQUIRED when
+   evaluation_request_digest:  CONDITIONAL.  A string.  A canonical-
+      object digest of the whole evaluation request, over the input the
+      decision-API profile defines: under the AuthZEN profile, the
+      request body as submitted ([I-D.draft-mcguinness-mission-authzen],
+      Section "Evaluation Request Digest Input").  REQUIRED when
       parameter_digest is absent for a consequential action, so the
       closed object still carries the request digest the runtime profile
       requires of every decision record
@@ -20309,7 +20352,8 @@ Table of Contents
       parameter_digest: that member records the parameter binding the
       decision was bound to; evaluation_request_digest is this record's
       fallback digest of the whole evaluation request, present whether
-      the decision was a permit or a deny.
+      the decision was a permit or a deny.  It commits to its input; it
+      does not hide an input a party can guess.
 
    compensates_evaluation_id:  CONDITIONAL.  A string; REQUIRED for a
       compensate-phase decision.  The evaluation_id of the committed
@@ -20491,13 +20535,21 @@ Table of Contents
    parameter_digest:  CONDITIONAL.  A string.  REQUIRED for a parameter-
       bound action class.
 
-   evaluation_request_digest:  CONDITIONAL.  A string.  A privacy-
-      preserving digest of the whole refused request, in the form of
-      Section 4.5.  REQUIRED when parameter_digest is absent, so the
-      record meets the runtime profile's record minimum
+   evaluation_request_digest:  CONDITIONAL.  A string.  A canonical-
+      object digest of the refused request: over the evaluation request,
+      as the decision-API profile defines it, when the refusal follows
+      one, and otherwise over the pre-request input of Section 4.5.
+      REQUIRED when parameter_digest is absent, so the record meets the
+      runtime profile's record minimum
       ([I-D.draft-mcguinness-mission-runtime]).  Distinct from a granted
       permit's parameter_digest condition (Section 4): a Refusal Record
       has no PDP decision and no permit.
+
+   request_digest_input:  CONDITIONAL.  A string naming the input
+      evaluation_request_digest covers: decision_request when the
+      refusal follows an evaluation request, pre_request when it
+      precedes one.  REQUIRED when evaluation_request_digest is present;
+      absent otherwise.
 
    mission:  OPTIONAL.  An object.  The Mission reference (id, issuer,
       and authority_hash where the refusing component holds it), present
@@ -20780,14 +20832,33 @@ Table of Contents
    authoritative record of what the PDP evaluated, not proof that the
    action occurred.
 
-4.5.  Evaluation request digest worked value
+4.5.  Evaluation request digest inputs
 
-   For a consequential action that is not parameter-bound (here a
-   consequential read), the record carries evaluation_request_digest in
-   place of parameter_digest.  The runtime profile does not standardize
-   the digested request form, so the emitting deployment states the
-   exact input; this non-normative example digests exactly the following
-   evaluation-request summary object:
+   For a consequential action that is not parameter-bound, a record
+   carries evaluation_request_digest in place of parameter_digest.
+   Decision Evidence, and a Refusal Record that follows an evaluation
+   request, digest that request as the decision-API profile defines it;
+   under the AuthZEN profile it is the request body as submitted
+   ([I-D.draft-mcguinness-mission-authzen], Section "Evaluation Request
+   Digest Input").
+
+   A Refusal Record emitted before any evaluation request exists digests
+   the pre-request input instead, and records request_digest_input as
+   pre_request.  The pre-request input is a JSON object with exactly
+   these members:
+
+   *  action: REQUIRED.  The refused action's name.
+
+   *  audience: REQUIRED.  The audience the refusing component enforces.
+
+   *  mission_id: the established Mission identifier, present exactly
+      when the record carries mission.
+
+   *  resource, subject: the resource and subject identifiers, each
+      present when the refusing component knows it.
+
+   No member is ever present as an empty string.  For a refused
+   consequential read that established all five members, the input is:
 
    {
      "action": "journal-entries.read",
@@ -22363,6 +22434,17 @@ Table of Contents
               authorization/draft-mcguinness-oauth-mission-
               continuation.html>.
 
+Appendix A.  Document History
+
+   [[ To be removed from the final specification ]]
+
+   *  evaluation_request_digest covers the evaluation request as the
+      decision-API profile defines it or, for a Refusal Record emitted
+      before any request, a defined pre-request input; the Refusal
+      Record member request_digest_input names which.  The digest is no
+      longer described as privacy-preserving: it commits to its input
+      and does not hide an input a party can guess (#971).
+
 Acknowledgments
 
    This document extracts the Decision Evidence, Execution Evidence, and
@@ -22493,7 +22575,8 @@ Table of Contents
      7.9.  Permit binding in split topologies
      7.10. Evaluation identifier propagation
    8.  Runtime Evidence
-     8.1.  Execution Evidence Requirement
+     8.1.  Evaluation Request Digest Input
+     8.2.  Execution Evidence Requirement
    9.  Mission Status Composition
    10. Conformance
    11. Security Considerations
@@ -24850,7 +24933,57 @@ Table of Contents
    registered media type
    ([I-D.draft-mcguinness-mission-runtime-evidence]).
 
-8.1.  Execution Evidence Requirement
+8.1.  Evaluation Request Digest Input
+
+   Under this profile, the input to evaluation_request_digest
+   ([I-D.draft-mcguinness-mission-runtime-evidence]) is the complete
+   JSON request body the PEP submitted to the evaluation or evaluations
+   endpoint: every member it carried, extension members included, before
+   the PDP applies any default or enrichment.  HTTP header fields and
+   transport framing are not part of it.  The digest is sha-256:
+   followed by the base64url, unpadded, encoding of the SHA-256 of the
+   body's JCS [RFC8785] canonical bytes, so member order and whitespace
+   do not change it, while an omitted member and a member set to null
+   yield different digests.  For a batch (Section 6.17), the input is
+   the batch request body as submitted, before its default members are
+   merged into the items; each item's Decision Evidence carries that one
+   digest.
+
+   The digest commits to its input; it does not hide an input a party
+   can guess.
+
+   For this abbreviated consequential-read request, submitted without a
+   parameter_digest:
+
+   {
+     "subject": {
+       "type": "user",
+       "id": "user_3p2q8mN1a0kV7tR"
+     },
+     "resource": {
+       "type": "journal-entry",
+       "id": "je_2026Q3_inv_8421",
+       "properties": {
+         "audience": "https://erp.example.com"
+       }
+     },
+     "action": {
+       "name": "journal-entries.read"
+     },
+     "context": {
+       "mission": {
+         "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+         "issuer": "https://as.example.com"
+       }
+     }
+   }
+
+   the value is:
+
+   evaluation_request_digest =
+     sha-256:v_QKMU8dffVDdoAnQkBenjWgtp5U_ffH5ORwT39iaoo
+
+8.2.  Execution Evidence Requirement
 
    This requirement is the Runtime Evidence feature profile's own
    (Section 2, Section 8): independent of anything the PDP returns, a
@@ -24954,7 +25087,7 @@ Table of Contents
    refusal, and, for the classes the runtime profile's transaction-
    assurance tier covers, an Execution Evidence Object for the final
    disposition of every consequential permit (completed, failed, or
-   suppressed before release, Section 8.1).  A PEP claiming only the
+   suppressed before release, Section 8.2).  A PEP claiming only the
    Decision Base records a refusal or an execution outcome in its own
    internal form, never represented as this profile's portable schema
    (Section 2).
@@ -25095,7 +25228,7 @@ Table of Contents
    carrying permit-lifecycle enforcement controls; that registration
    request is withdrawn, since those controls are now the conditions
    response member (Section 7.1) and execution evidence is a profile-
-   level PEP requirement (Section 8.1), neither of which is an
+   level PEP requirement (Section 8.2), neither of which is an
    obligation.  This profile's sole obligation type, step-up
    (Section 7.2), is registered by [AUTHZEN-OBL] itself and is not re-
    registered here.
@@ -25418,6 +25551,11 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Defined the input to evaluation_request_digest: the complete
+      request body as submitted, extension members included, before any
+      default or enrichment, with header fields and transport framing
+      excluded; a batch carries the one digest of its body (#971).
 
    *  The state observation's mission_status_issued_at is the RFC 3339
       form of a Mission Status Response's iat, which freshness_at

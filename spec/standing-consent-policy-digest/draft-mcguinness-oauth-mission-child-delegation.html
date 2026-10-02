@@ -2675,10 +2675,39 @@ bound how many derivations the child subtree performs in aggregate,
 and a deep or wide subtree can derive far more than the parent's own
 cap suggests. Where an approval interface displays <code>derivation_limit</code>,
 or any per-Mission derivation control, as a limit on child creation,
-that interface <span class="bcp14">MUST</span> disclose the composed bound reachable through the
-subtree alongside it, so the Approver sees the real reachable surface
-rather than one Mission's local counter alone.<a href="#section-7.2-2" class="pilcrow">¶</a></p>
-<p id="section-7.2-3">Bounding the aggregate
+that interface <span class="bcp14">MUST</span> render the subtree figures below alongside it, so
+the Approver sees what each figure bounds rather than one Mission's
+local counter alone.<a href="#section-7.2-2" class="pilcrow">¶</a></p>
+<p id="section-7.2-3">Where child creation under an entry can be adjudicated by policy,
+with no human interaction (a <code>policy_drawdown</code> basis,
+<a href="#record-requirements" class="auto internal xref">Section 6.1</a>), no approval interface exists for those
+children, so the Parent Mission's approval <span class="bcp14">MUST</span> render the subtree
+figures for that entry.<a href="#section-7.2-3" class="pilcrow">¶</a></p>
+<p id="section-7.2-4">The subtree figures are distinct values, never multiplied into one
+total. Each is rendered at its effective value: the value the entry
+or the deployment sets, otherwise its default (<code>max_child_depth</code>
+defaults to 1, <a href="#fanout" class="auto internal xref">Section 8</a>). Only a figure with neither a set value nor
+a default is rendered as unlimited:<a href="#section-7.2-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-7.2-5.1">
+            <p id="section-7.2-5.1.1"><code>max_children</code>, stated as a limit on concurrently non-terminal
+children (<a href="#fanout-accounting" class="auto internal xref">Section 8.1</a>), not on children created over the
+Mission's lifetime;<a href="#section-7.2-5.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.2-5.2">
+            <p id="section-7.2-5.2.1"><code>max_child_depth</code>; and<a href="#section-7.2-5.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.2-5.3">
+            <p id="section-7.2-5.3.1">the per-child derivation limit: the deployment's policy ceiling for
+a Child Mission's <code>derivation_limit</code>.<a href="#section-7.2-5.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-7.2-6">The rendering <span class="bcp14">MUST</span> also state whether a finite aggregate bound on the
+subtree is enforced. One is enforced only where a lineage-keyed
+budget is deployed (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>);
+otherwise the rendering states that no finite lifetime aggregate is
+enforced.<a href="#section-7.2-6" class="pilcrow">¶</a></p>
+<p id="section-7.2-7">Bounding the aggregate
 across a subtree is the role of consumption metering, not this
 profile's attenuation rules
 (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>). This warning is about the
@@ -2687,7 +2716,7 @@ counts derivations within a single Mission's own continued grants,
 where a delegated refresh-token family's successive refreshes are one
 derivation, not one per refresh
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-continuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-continuation</a>]</span>, Section
-"Authorization Continuity and the Mission").<a href="#section-7.2-3" class="pilcrow">¶</a></p>
+"Authorization Continuity and the Mission").<a href="#section-7.2-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -4130,19 +4159,27 @@ digest, and a mismatched snapshot denies child creation with
 no <code>child_creation_policy</code>, is unchanged.<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.2">
-          <p id="appendix-B-2.2.1">The child's initial grant states how it differs from the Mission
-Issuance Grant: its audience is the Mission Issuer's own token
-endpoint, since that issuer mints and redeems it, not a consuming
-Authorization Server's issuer identifier. No wire change.<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.2.1">Approval rendering of child creation shows <code>max_children</code> as a
+concurrency limit, <code>max_child_depth</code>, and the per-child derivation
+limit as distinct figures, never one composed total, and states
+whether a finite aggregate is enforced. The Parent Mission's
+approval renders them where child creation can be adjudicated by
+policy.<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.3">
-          <p id="appendix-B-2.3.1">The delegated-token versus Child Mission test adds audience: a
-sub-agent that calls a Resource Server that is not Mission-aware
-runs under a Child Mission, where child creation is authorized and
-that Resource Server can enforce the projected authority.<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.3.1">The child's initial grant states how it differs from the Mission
+Issuance Grant: its audience is the Mission Issuer's own token
+endpoint, since that issuer mints and redeems it, not a consuming
+Authorization Server's issuer identifier. No wire change.<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.4">
-          <p id="appendix-B-2.4.1">Client-instance references follow their successors:
+          <p id="appendix-B-2.4.1">The delegated-token versus Child Mission test adds audience: a
+sub-agent that calls a Resource Server that is not Mission-aware
+runs under a Child Mission, where child creation is authorized and
+that Resource Server can enforce the projected authority.<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.5">
+          <p id="appendix-B-2.5.1">Client-instance references follow their successors:
 draft-mcguinness-oauth-client-instance-assertion is replaced by
 {I-D.draft-mcguinness-oauth-client-instance-id}, and the
 deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
@@ -4150,13 +4187,13 @@ cited. An instance-granular
 <code>child_actor</code> no longer carries the instance identifier in <code>sub</code>:
 the successor forbids setting <code>sub</code> or an actor from instance
 evidence alone (Section 5), and <code>client_instance</code> was a value only
-the deprecated draft defined.<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
+the deprecated draft defined.<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.5">
-          <p id="appendix-B-2.5.1">Added the capability-gated Child Mission Carryover foundation, including
+        <li class="normal" id="appendix-B-2.6">
+          <p id="appendix-B-2.6.1">Added the capability-gated Child Mission Carryover foundation, including
 full snapshot and budget checks, committed exclusion semantics, fresh
 direct approvals, and durable observation and recovery. Carryover
-preserves record continuity, not worker continuity (#576).<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
+preserves record continuity, not worker continuity (#576).<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

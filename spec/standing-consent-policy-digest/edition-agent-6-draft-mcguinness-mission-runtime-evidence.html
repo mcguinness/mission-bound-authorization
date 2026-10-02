@@ -1194,7 +1194,7 @@ records; the OpenID AuthZEN profile is one such producer.<a href="#section-abstr
                 <p id="section-toc.1-1.4.2.4.1"><a href="#section-4.4" class="auto internal xref">4.4</a>.  <a href="#name-worked-example" class="internal xref">Worked example</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.5">
-                <p id="section-toc.1-1.4.2.5.1"><a href="#section-4.5" class="auto internal xref">4.5</a>.  <a href="#name-evaluation-request-digest-w" class="internal xref">Evaluation request digest worked value</a></p>
+                <p id="section-toc.1-1.4.2.5.1"><a href="#section-4.5" class="auto internal xref">4.5</a>.  <a href="#name-evaluation-request-digest-i" class="internal xref">Evaluation request digest inputs</a></p>
 </li>
             </ul>
 </li>
@@ -1332,10 +1332,13 @@ records; the OpenID AuthZEN profile is one such producer.<a href="#section-abstr
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
-            <p id="section-toc.1-1.14.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+            <p id="section-toc.1-1.14.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-document-history" class="internal xref">Document History</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
-            <p id="section-toc.1-1.15.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+            <p id="section-toc.1-1.15.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
+            <p id="section-toc.1-1.16.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -1814,9 +1817,11 @@ example the AuthZEN profile's <code>conditions</code> response member,
 <dt id="section-4.1-1.35">
 <code>evaluation_request_digest</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-4.1-1.36">
-            <p id="section-4.1-1.36.1">CONDITIONAL. A string. A privacy-preserving digest of the whole
-evaluation request, in the integrity-anchor encoded form
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). <span class="bcp14">REQUIRED</span> when
+            <p id="section-4.1-1.36.1">CONDITIONAL. A string. A canonical-object digest of the whole
+evaluation request, over the input the decision-API profile defines:
+under the AuthZEN profile, the request body as submitted
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>, Section "Evaluation
+Request Digest Input"). <span class="bcp14">REQUIRED</span> when
 <code>parameter_digest</code> is absent for a consequential action, so the closed
 object still carries the request digest the runtime profile requires
 of every decision record (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).
@@ -1824,7 +1829,8 @@ Distinct from <code>parameter_digest</code>: that member records the parameter
 binding the decision was bound to;
 <code>evaluation_request_digest</code> is this record's fallback digest of the
 whole evaluation request, present whether the decision was a permit
-or a deny.<a href="#section-4.1-1.36.1" class="pilcrow">¶</a></p>
+or a deny. It commits to its input; it does not hide an input a
+party can guess.<a href="#section-4.1-1.36.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-4.1-1.37">
@@ -2080,8 +2086,10 @@ Evidence for a permit it never accepted.<a href="#section-4.2-4.12.3" class="pil
 <dt id="section-4.2-4.17">
 <code>evaluation_request_digest</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-4.2-4.18">
-            <p id="section-4.2-4.18.1">CONDITIONAL. A string. A privacy-preserving digest of the whole
-refused request, in the form of <a href="#request-digest-worked" class="auto internal xref">Section 4.5</a>. <span class="bcp14">REQUIRED</span>
+            <p id="section-4.2-4.18.1">CONDITIONAL. A string. A canonical-object digest of the refused
+request: over the evaluation request, as the decision-API profile
+defines it, when the refusal follows one, and otherwise over the
+pre-request input of <a href="#request-digest-worked" class="auto internal xref">Section 4.5</a>. <span class="bcp14">REQUIRED</span>
 when <code>parameter_digest</code> is absent, so the record meets the runtime
 profile's record minimum
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). Distinct from a granted
@@ -2091,67 +2099,76 @@ and no permit.<a href="#section-4.2-4.18.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-4.2-4.19">
-<code>mission</code>:</dt>
+<code>request_digest_input</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-4.2-4.20">
-            <p id="section-4.2-4.20.1"><span class="bcp14">OPTIONAL</span>. An object. The Mission reference (<code>id</code>, <code>issuer</code>, and
+            <p id="section-4.2-4.20.1">CONDITIONAL. A string naming the input <code>evaluation_request_digest</code>
+covers: <code>decision_request</code> when the refusal follows an evaluation
+request, <code>pre_request</code> when it precedes one. <span class="bcp14">REQUIRED</span> when
+<code>evaluation_request_digest</code> is present; absent otherwise.<a href="#section-4.2-4.20.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.2-4.21">
+<code>mission</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.2-4.22">
+            <p id="section-4.2-4.22.1"><span class="bcp14">OPTIONAL</span>. An object. The Mission reference (<code>id</code>, <code>issuer</code>, and
 <code>authority_hash</code> where the refusing component holds it), present
 only when the refusing component established it before the failure:
 for a PEP, for example, on
 <code>pdp_unreachable</code>; for a PDP refusing on
 <code>mission_context_missing</code>, the reference is typically absent,
-since that is exactly what the request lacked.<a href="#section-4.2-4.20.1" class="pilcrow">¶</a></p>
+since that is exactly what the request lacked.<a href="#section-4.2-4.22.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-4.2-4.21">
+<dt id="section-4.2-4.23">
 <code>subject</code>, <code>actor</code>, <code>credential</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-4.2-4.22">
-            <p id="section-4.2-4.22.1"><span class="bcp14">OPTIONAL</span>. Objects. Verified facts only, in the projected forms
+          <dd style="margin-left: 1.5em" id="section-4.2-4.24">
+            <p id="section-4.2-4.24.1"><span class="bcp14">OPTIONAL</span>. Objects. Verified facts only, in the projected forms
 <a href="#decision-evidence-object" class="auto internal xref">Section 4</a> defines (for example, as carried in the
 AuthZEN profile's decision-API request,
 <span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). A PEP populates them from
 its own credential validation; a PDP populates them from the request
 context it received, never asserting a check only the other role
 can perform. For a credential-validation failure, the record <span class="bcp14">MUST NOT</span> describe unverified credential claims as authenticated facts
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-4.2-4.22.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-4.2-4.23">
-<code>sequence</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-4.2-4.24">
-            <p id="section-4.2-4.24.1">CONDITIONAL. An integer. <span class="bcp14">REQUIRED</span> when the record carries a verified
-<code>mission</code> reference, continuing that emitter's per-Mission sequence
-for that Mission (<a href="#decision-evidence-object" class="auto internal xref">Section 4</a>); absent when no
-Mission was established.<a href="#section-4.2-4.24.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-4.2-4.24.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-4.2-4.25">
-<code>emitter</code>:</dt>
+<code>sequence</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-4.2-4.26">
-            <p id="section-4.2-4.26.1"><span class="bcp14">REQUIRED</span>. An object. The identity of the refusing component that
+            <p id="section-4.2-4.26.1">CONDITIONAL. An integer. <span class="bcp14">REQUIRED</span> when the record carries a verified
+<code>mission</code> reference, continuing that emitter's per-Mission sequence
+for that Mission (<a href="#decision-evidence-object" class="auto internal xref">Section 4</a>); absent when no
+Mission was established.<a href="#section-4.2-4.26.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.2-4.27">
+<code>emitter</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.2-4.28">
+            <p id="section-4.2-4.28.1"><span class="bcp14">REQUIRED</span>. An object. The identity of the refusing component that
 emitted and signed this record, in the form Decision Evidence
 defines (<a href="#decision-evidence-object" class="auto internal xref">Section 4</a>), with <code>role</code> <code>pep</code> or <code>pdp</code>.
 A verifier <span class="bcp14">MUST</span> bind the emitter's signing key to the enforcement
 scope and audience the record serves
-(<a href="#decision-evidence-integrity" class="auto internal xref">Section 4.3</a>).<a href="#section-4.2-4.26.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-4.2-4.27">
-<code>hop_reference</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-4.2-4.28">
-            <p id="section-4.2-4.28.1"><span class="bcp14">OPTIONAL</span>. An object, in the coordinated extension form
-<a href="#evidence-extensions" class="auto internal xref">Section 8</a> defines. Present only when the refusing
-component verified enough of the presented credential, before the
-failure, to establish it was a continued credential.<a href="#section-4.2-4.28.1" class="pilcrow">¶</a></p>
+(<a href="#decision-evidence-integrity" class="auto internal xref">Section 4.3</a>).<a href="#section-4.2-4.28.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-4.2-4.29">
-<code>evidence_envelope</code>:</dt>
+<code>hop_reference</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-4.2-4.30">
-            <p id="section-4.2-4.30.1"><span class="bcp14">REQUIRED</span>. An object. Integrity protection in the form of
+            <p id="section-4.2-4.30.1"><span class="bcp14">OPTIONAL</span>. An object, in the coordinated extension form
+<a href="#evidence-extensions" class="auto internal xref">Section 8</a> defines. Present only when the refusing
+component verified enough of the presented credential, before the
+failure, to establish it was a continued credential.<a href="#section-4.2-4.30.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-4.2-4.31">
+<code>evidence_envelope</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.2-4.32">
+            <p id="section-4.2-4.32.1"><span class="bcp14">REQUIRED</span>. An object. Integrity protection in the form of
 <a href="#decision-evidence-integrity" class="auto internal xref">Section 4.3</a>, emitted by the refusing component,
 whose JWS protected <code>cty</code> is <code>application/mission-refusal-record+json</code>
 under the protected <code>typ</code> of <a href="#decision-evidence-integrity" class="auto internal xref">Section 4.3</a>
-(<a href="#iana" class="auto internal xref">Section 12</a>).<a href="#section-4.2-4.30.1" class="pilcrow">¶</a></p>
+(<a href="#iana" class="auto internal xref">Section 12</a>).<a href="#section-4.2-4.32.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -2424,16 +2441,39 @@ action occurred.<a href="#section-4.4-2" class="pilcrow">¶</a></p>
 </div>
 <div id="request-digest-worked">
 <section id="section-4.5">
-        <h3 id="name-evaluation-request-digest-w">
-<a href="#section-4.5" class="section-number selfRef">4.5. </a><a href="#name-evaluation-request-digest-w" class="section-name selfRef">Evaluation request digest worked value</a>
+        <h3 id="name-evaluation-request-digest-i">
+<a href="#section-4.5" class="section-number selfRef">4.5. </a><a href="#name-evaluation-request-digest-i" class="section-name selfRef">Evaluation request digest inputs</a>
         </h3>
-<p id="section-4.5-1">For a consequential action that is not parameter-bound (here a
-consequential read), the record carries <code>evaluation_request_digest</code>
-in place of <code>parameter_digest</code>. The runtime profile does not
-standardize the digested request form, so the emitting deployment
-states the exact input; this non-normative example digests exactly
-the following evaluation-request summary object:<a href="#section-4.5-1" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-4.5-2">
+<p id="section-4.5-1">For a consequential action that is not parameter-bound, a record
+carries <code>evaluation_request_digest</code> in place of <code>parameter_digest</code>.
+Decision Evidence, and a Refusal Record that follows an evaluation
+request, digest that request as the decision-API profile defines it;
+under the AuthZEN profile it is the request body as submitted
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>, Section "Evaluation Request
+Digest Input").<a href="#section-4.5-1" class="pilcrow">¶</a></p>
+<p id="section-4.5-2">A Refusal Record emitted before any evaluation request exists digests
+the pre-request input instead, and records <code>request_digest_input</code> as
+<code>pre_request</code>. The pre-request input is a JSON object with exactly
+these members:<a href="#section-4.5-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4.5-3.1">
+            <p id="section-4.5-3.1.1"><code>action</code>: <span class="bcp14">REQUIRED</span>. The refused action's name.<a href="#section-4.5-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.5-3.2">
+            <p id="section-4.5-3.2.1"><code>audience</code>: <span class="bcp14">REQUIRED</span>. The audience the refusing component enforces.<a href="#section-4.5-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.5-3.3">
+            <p id="section-4.5-3.3.1"><code>mission_id</code>: the established Mission identifier, present exactly
+when the record carries <code>mission</code>.<a href="#section-4.5-3.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.5-3.4">
+            <p id="section-4.5-3.4.1"><code>resource</code>, <code>subject</code>: the resource and subject identifiers, each
+present when the refusing component knows it.<a href="#section-4.5-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-4.5-4">No member is ever present as an empty string. For a refused
+consequential read that established all five members, the input is:<a href="#section-4.5-4" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-4.5-5">
 <pre>
 {
   "action": "journal-entries.read",
@@ -2442,25 +2482,25 @@ the following evaluation-request summary object:<a href="#section-4.5-1" class="
   "resource": "je_2026Q3_inv_8421",
   "subject": "user_3p2q8mN1a0kV7tR"
 }
-</pre><a href="#section-4.5-2" class="pilcrow">¶</a>
+</pre><a href="#section-4.5-5" class="pilcrow">¶</a>
 </div>
-<p id="section-4.5-3">The value is the integrity-anchor encoded form of the SHA-256 of the
+<p id="section-4.5-6">The value is the integrity-anchor encoded form of the SHA-256 of the
 JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> canonical bytes of that object (one line, sorted
 member names, no whitespace, shown here wrapped for layout only;
 remove the layout line breaks, adding no characters, to recover the
-canonical form):<a href="#section-4.5-3" class="pilcrow">¶</a></p>
-<div class="lang-text sourcecode" id="section-4.5-4">
+canonical form):<a href="#section-4.5-6" class="pilcrow">¶</a></p>
+<div class="lang-text sourcecode" id="section-4.5-7">
 <pre>
 {"action":"journal-entries.read","audience":"https://erp.example.com
 ","mission_id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-","resource":
 "je_2026Q3_inv_8421","subject":"user_3p2q8mN1a0kV7tR"}
-</pre><a href="#section-4.5-4" class="pilcrow">¶</a>
+</pre><a href="#section-4.5-7" class="pilcrow">¶</a>
 </div>
-<div class="lang-text sourcecode" id="section-4.5-5">
+<div class="lang-text sourcecode" id="section-4.5-8">
 <pre>
 evaluation_request_digest =
   sha-256:sK12VE_g01AHD2v-O1vsf1Gf_xT_htjX0UN0Oe0dDRU
-</pre><a href="#section-4.5-5" class="pilcrow">¶</a>
+</pre><a href="#section-4.5-8" class="pilcrow">¶</a>
 </div>
 </section>
 </div>
@@ -4432,20 +4472,38 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 </div>
 </section>
 </div>
-<div id="acknowledgments">
+<div id="document-history">
 <section id="appendix-A">
+      <h2 id="name-document-history">
+<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
+      </h2>
+<p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="appendix-A-2.1">
+          <p id="appendix-A-2.1.1"><code>evaluation_request_digest</code> covers the evaluation request as the
+decision-API profile defines it or, for a Refusal Record emitted
+before any request, a defined pre-request input; the Refusal Record
+member <code>request_digest_input</code> names which. The digest is no longer
+described as privacy-preserving: it commits to its input and does
+not hide an input a party can guess (#971).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-B">
       <h2 id="name-acknowledgments">
 <a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
       </h2>
-<p id="appendix-A-1">This document extracts the Decision Evidence, Execution Evidence, and
+<p id="appendix-B-1">This document extracts the Decision Evidence, Execution Evidence, and
 Refusal Record objects that Mission-Bound Runtime Enforcement's
 AuthZEN profile first defined, so any decision-API binding can
 produce them. The author thanks the Mission-Bound Authorization
-implementer community for feedback.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+implementer community for feedback.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authors-addresses">
-<section id="appendix-B">
+<section id="appendix-C">
       <h2 id="name-authors-address">
 <a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
       </h2>

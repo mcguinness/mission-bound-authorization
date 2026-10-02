@@ -2252,13 +2252,17 @@ each child generation
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>,
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-derivation-limits" class="cite xref">I-D.draft-mcguinness-oauth-mission-derivation-limits</a>]</span>,
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>). Residual:
-the composed bound across all active dimensions, depth times
-domains times child generations, plus the aggregate derivations a
-child subtree can draw, can exceed what a single approval appears
-to authorize; disclosing the composed bound at the consent surface
-is a deployment's to add, and an aggregate consumption cap is the
-metering profile's role
-(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-9-3.42.1" class="pilcrow">¶</a></p>
+the reach across all active dimensions (depth times domains times
+child generations) and the derivations a child subtree can draw
+exceed what any single approval bounds. The per-Mission figures do
+not compose into a lifetime total: a completed child frees its
+<code>max_children</code> slot and its replacement brings its own
+<code>derivation_limit</code>, so absent a lineage-wide bound no count limits
+what a subtree derives over its lifetime. The child-delegation
+profile's approval rendering states concurrency, depth, and
+derivation limits distinctly and whether a finite aggregate is
+enforced; an aggregate consumption cap is the metering profile's
+role (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-9-3.42.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-9-3.43">Approval surface exposed to the agent as a tool (self-approval):</dt>
@@ -3062,48 +3066,54 @@ model and pipeline layers, and saying so is the point:<a href="#appendix-A-5" cl
 <p id="appendix-B-1">[[ To be removed from the final specification ]]<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-2.1">
-          <p id="appendix-B-2.1.1">The issuance-only residuals state issuance-time bounding and
-per-request introspection rather than audit only.<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.1.1">The effective-ceiling composition residual states that the
+per-Mission figures do not compose into a lifetime total, and
+points at the child-delegation profile's distinct-figures
+rendering.<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.2">
-          <p id="appendix-B-2.2.1">Client-instance references follow their successors:
+          <p id="appendix-B-2.2.1">The issuance-only residuals state issuance-time bounding and
+per-request introspection rather than audit only.<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.3">
+          <p id="appendix-B-2.3.1">Client-instance references follow their successors:
 draft-mcguinness-oauth-client-instance-assertion is replaced by
 {I-D.draft-mcguinness-oauth-client-instance-id} and
 <span>[<a href="#I-D.draft-mcguinness-oauth-client-attesters" class="cite xref">I-D.draft-mcguinness-oauth-client-attesters</a>]</span>, and the
 deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
 cited. The trusted-base note
-names the Client Attester and its endorsement.<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-B-2.3">
-          <p id="appendix-B-2.3.1">Named agent-invokable approval resolution as a bypass distinct from
-evidence forgery or nominal principal equality (#759).<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
+names the Client Attester and its endorsement.<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.4">
-          <p id="appendix-B-2.4.1">Added the three-ring Enforcement Perimeter, its arbitrary-code
-adversary entry, and the explicit unrecorded-compute residual (#758).<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.4.1">Named agent-invokable approval resolution as a bypass distinct from
+evidence forgery or nominal principal equality (#759).<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.5">
-          <p id="appendix-B-2.5.1">Pointed the Availability limit at Runtime's Operational Considerations
-for the dependency-conditional outage and ride-through semantics (#310).<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.5.1">Added the three-ring Enforcement Perimeter, its arbitrary-code
+adversary entry, and the explicit unrecorded-compute residual (#758).<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.6">
-          <p id="appendix-B-2.6.1">Failure taxonomy crosswalk (#671): an informative subsection added
+          <p id="appendix-B-2.6.1">Pointed the Availability limit at Runtime's Operational Considerations
+for the dependency-conditional outage and ride-through semantics (#310).<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.7">
+          <p id="appendix-B-2.7.1">Failure taxonomy crosswalk (#671): an informative subsection added
 to <a href="#cross-cutting" class="auto internal xref">Section 7</a>, mapping the Mandate, Audit, Consent Evidence,
 and Transaction Authorization failure classes onto the
 fail-closed/fail-safe axis, and stating that the axis depends on how
 the artifact is used rather than on the class label alone. Every
 source document's terms are preserved. No normative content,
-guarantee, adversary-model row, mitigation, or residual changed.<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
+guarantee, adversary-model row, mitigation, or residual changed.<a href="#appendix-B-2.7.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.7">
-          <p id="appendix-B-2.7.1">Controls taxonomy retirement (#636): the Approver-compromise row's
+        <li class="normal" id="appendix-B-2.8">
+          <p id="appendix-B-2.8.1">Controls taxonomy retirement (#636): the Approver-compromise row's
 <code>controls.acr</code> reference updated to the standard <code>acr_values</code>/<code>max_age</code>
 step-up request carriage; the effective-ceiling-composition row's
 <code>max_derivations</code> renamed <code>derivation_limit</code>. No adversary-model
-change.<a href="#appendix-B-2.7.1" class="pilcrow">¶</a></p>
+change.<a href="#appendix-B-2.8.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.8">
-          <p id="appendix-B-2.8.1">Editorial density pass on this Informational document: the
+        <li class="normal" id="appendix-B-2.9">
+          <p id="appendix-B-2.9.1">Editorial density pass on this Informational document: the
 Transparency Service entry of <a href="#trusted-base" class="auto internal xref">Section 6</a> kept as the one
 full statement of the single-service-equivocation point, with the
 Ten Residuals restatement compressed to a pointer at it; the
@@ -3114,7 +3124,7 @@ explicit citation to the Mission Mandate document it shares the
 issuer-key-compromise concern with. Several over-long paragraphs in
 <a href="#guarantees" class="auto internal xref">Section 8</a> split for one idea per paragraph. No normative
 content, anchor, or adversary-model row, mitigation, or residual
-changed.<a href="#appendix-B-2.8.1" class="pilcrow">¶</a></p>
+changed.<a href="#appendix-B-2.9.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

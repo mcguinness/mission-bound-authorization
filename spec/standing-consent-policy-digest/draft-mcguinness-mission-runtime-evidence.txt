@@ -81,7 +81,7 @@ Table of Contents
      4.2.  Refusal Record
      4.3.  Integrity
      4.4.  Worked example
-     4.5.  Evaluation request digest worked value
+     4.5.  Evaluation request digest inputs
    5.  Execution Evidence Object
      5.1.  Members
      5.2.  Worked example
@@ -121,6 +121,7 @@ Table of Contents
    13. References
      13.1.  Normative References
      13.2.  Informative References
+   Appendix A.  Document History
    Acknowledgments
    Author's Address
 
@@ -476,10 +477,11 @@ Table of Contents
       this form (for example the AuthZEN profile's conditions response
       member, [I-D.draft-mcguinness-mission-authzen]).
 
-   evaluation_request_digest:  CONDITIONAL.  A string.  A privacy-
-      preserving digest of the whole evaluation request, in the
-      integrity-anchor encoded form
-      ([I-D.draft-mcguinness-oauth-mission]).  REQUIRED when
+   evaluation_request_digest:  CONDITIONAL.  A string.  A canonical-
+      object digest of the whole evaluation request, over the input the
+      decision-API profile defines: under the AuthZEN profile, the
+      request body as submitted ([I-D.draft-mcguinness-mission-authzen],
+      Section "Evaluation Request Digest Input").  REQUIRED when
       parameter_digest is absent for a consequential action, so the
       closed object still carries the request digest the runtime profile
       requires of every decision record
@@ -487,7 +489,8 @@ Table of Contents
       parameter_digest: that member records the parameter binding the
       decision was bound to; evaluation_request_digest is this record's
       fallback digest of the whole evaluation request, present whether
-      the decision was a permit or a deny.
+      the decision was a permit or a deny.  It commits to its input; it
+      does not hide an input a party can guess.
 
    compensates_evaluation_id:  CONDITIONAL.  A string; REQUIRED for a
       compensate-phase decision.  The evaluation_id of the committed
@@ -669,13 +672,21 @@ Table of Contents
    parameter_digest:  CONDITIONAL.  A string.  REQUIRED for a parameter-
       bound action class.
 
-   evaluation_request_digest:  CONDITIONAL.  A string.  A privacy-
-      preserving digest of the whole refused request, in the form of
-      Section 4.5.  REQUIRED when parameter_digest is absent, so the
-      record meets the runtime profile's record minimum
+   evaluation_request_digest:  CONDITIONAL.  A string.  A canonical-
+      object digest of the refused request: over the evaluation request,
+      as the decision-API profile defines it, when the refusal follows
+      one, and otherwise over the pre-request input of Section 4.5.
+      REQUIRED when parameter_digest is absent, so the record meets the
+      runtime profile's record minimum
       ([I-D.draft-mcguinness-mission-runtime]).  Distinct from a granted
       permit's parameter_digest condition (Section 4): a Refusal Record
       has no PDP decision and no permit.
+
+   request_digest_input:  CONDITIONAL.  A string naming the input
+      evaluation_request_digest covers: decision_request when the
+      refusal follows an evaluation request, pre_request when it
+      precedes one.  REQUIRED when evaluation_request_digest is present;
+      absent otherwise.
 
    mission:  OPTIONAL.  An object.  The Mission reference (id, issuer,
       and authority_hash where the refusing component holds it), present
@@ -958,14 +969,33 @@ Table of Contents
    authoritative record of what the PDP evaluated, not proof that the
    action occurred.
 
-4.5.  Evaluation request digest worked value
+4.5.  Evaluation request digest inputs
 
-   For a consequential action that is not parameter-bound (here a
-   consequential read), the record carries evaluation_request_digest in
-   place of parameter_digest.  The runtime profile does not standardize
-   the digested request form, so the emitting deployment states the
-   exact input; this non-normative example digests exactly the following
-   evaluation-request summary object:
+   For a consequential action that is not parameter-bound, a record
+   carries evaluation_request_digest in place of parameter_digest.
+   Decision Evidence, and a Refusal Record that follows an evaluation
+   request, digest that request as the decision-API profile defines it;
+   under the AuthZEN profile it is the request body as submitted
+   ([I-D.draft-mcguinness-mission-authzen], Section "Evaluation Request
+   Digest Input").
+
+   A Refusal Record emitted before any evaluation request exists digests
+   the pre-request input instead, and records request_digest_input as
+   pre_request.  The pre-request input is a JSON object with exactly
+   these members:
+
+   *  action: REQUIRED.  The refused action's name.
+
+   *  audience: REQUIRED.  The audience the refusing component enforces.
+
+   *  mission_id: the established Mission identifier, present exactly
+      when the record carries mission.
+
+   *  resource, subject: the resource and subject identifiers, each
+      present when the refusing component knows it.
+
+   No member is ever present as an empty string.  For a refused
+   consequential read that established all five members, the input is:
 
    {
      "action": "journal-entries.read",
@@ -2540,6 +2570,17 @@ Table of Contents
               2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-
               continuation.html>.
+
+Appendix A.  Document History
+
+   [[ To be removed from the final specification ]]
+
+   *  evaluation_request_digest covers the evaluation request as the
+      decision-API profile defines it or, for a Refusal Record emitted
+      before any request, a defined pre-request input; the Refusal
+      Record member request_digest_input names which.  The digest is no
+      longer described as privacy-preserving: it commits to its input
+      and does not hide an input a party can guess (#971).
 
 Acknowledgments
 
