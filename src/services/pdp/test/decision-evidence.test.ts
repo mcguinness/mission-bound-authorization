@@ -125,10 +125,11 @@ describe("validated capability evidence (#657)", () => {
     const fixture = emitterFixture();
     const v = view(); v.authority_set[0]!.capability_sources = [recorded];
     const request = req(); request.context.capability_source = value as never;
+    const submitted = submittedDigest(request);
     const decision = await evaluate(request, opts({ view: v, evidence: fixture.emitter }));
     const record = decision.context.decision_evidence as DecisionEvidenceObject;
     expect(await verifyEvidenceEnvelope(record, DECISION_EVIDENCE_MEDIA_TYPE, fixture.resolve)).toEqual({ valid: true });
-    return { decision, record };
+    return { decision, record, submitted };
   }
 
   it("records the compared binding on a permit", async () => {
@@ -154,12 +155,14 @@ describe("validated capability evidence (#657)", () => {
     ["a non-canonical source_digest", { ...presented, source_digest: `sha-256:${"A".repeat(42)}B` }],
     ["an empty catalog_digest", { ...presented, catalog_digest: "sha-256:" }],
     ["a non-canonical catalog_digest", { ...presented, catalog_digest: `sha-256:${"A".repeat(42)}B` }],
-  ] as const)("omits malformed capability input (%s) while retaining drift reason and request-summary digest", async (_label, malformed) => {
-    const { record } = await decisionFor(malformed);
+  ] as const)("omits malformed capability input (%s) while retaining drift reason and the submitted request's digest", async (_label, malformed) => {
+    const { record, submitted } = await decisionFor(malformed);
     expect(record.denial_reason).toBe("capability_drift");
     expect(record).not.toHaveProperty("capability_source");
-    expect(record.evaluation_request_digest).toMatch(/^sha-256:/);
-    // This digest identifies the documented request summary, NOT omitted bytes.
+    // @spec authzen#evaluation-request-digest-input: the digest covers the
+    // body as submitted, the malformed member included, though the signed
+    // record omits that member.
+    expect(record.evaluation_request_digest).toBe(submitted);
   });
 
   it("carries catalog_digest and executor when present and signs only the closed normalized shape", async () => {
@@ -199,6 +202,9 @@ const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => ({
   },
   ...over,
 });
+
+/** The canonical-object digest of a request's JSON bytes, taken before the PDP sees it. */
+const submittedDigest = (request: EvaluationRequest): string => canonicalDigest(JSON.parse(JSON.stringify(request)));
 
 /** One emitter plus the public half a verifier resolves, bound to emitter id, role, and audience. */
 function emitterFixture(options: { emitterId?: string; audience?: string } = {}) {
@@ -281,15 +287,43 @@ describe("evaluate() emits the Decision Evidence it decided (@spec runtime-evide
     }
   });
 
-  it("uses only the documented request-summary digest without a parameter binding on permit and deny, and omits absent credential", async () => {
+  it("digests the evaluation request as submitted without a parameter binding on permit and deny, and omits absent credential", async () => {
     const { emitter } = emitterFixture();
     for (const authority_set of [view().authority_set, []]) {
-      const decision = await evaluate(req(), opts({ view: view({ authority_set }), evidence: emitter }));
+      const request = req();
+      const submitted = submittedDigest(request);
+      const decision = await evaluate(request, opts({ view: view({ authority_set }), evidence: emitter }));
       const record = decision.context.decision_evidence as DecisionEvidenceObject;
       expect(record).not.toHaveProperty("parameter_digest");
-      expect(record.evaluation_request_digest).toMatch(/^sha-256:/);
+      expect(record.evaluation_request_digest).toBe(submitted);
       expect(record).not.toHaveProperty("credential");
     }
+  });
+
+  // @spec authzen#evaluation-request-digest-input: the whole body as
+  // submitted, before any receiver-side default. Member order does not change
+  // the digest; an extension member and an explicit null each do.
+  it("covers the whole submitted body: order-independent, extension members and explicit null included, receiver defaults excluded", async () => {
+    const { emitter } = emitterFixture();
+    const recordFor = async (request: EvaluationRequest) =>
+      (await evaluate(request, opts({ evidence: emitter }))).context.decision_evidence as DecisionEvidenceObject;
+    const base = await recordFor(req());
+    // The PDP applied its default action class, and the digest is still over
+    // the body without it.
+    expect(base.class_source).toBe("default");
+    expect(base.evaluation_request_digest).toBe(submittedDigest(req()));
+    const r = req();
+    const reordered = { context: r.context, action: r.action, resource: r.resource, subject: r.subject } as EvaluationRequest;
+    expect((await recordFor(reordered)).evaluation_request_digest).toBe(base.evaluation_request_digest);
+    const extended = req(); Object.assign(extended.context, { deployment_extension: "v1" });
+    const extendedSubmitted = submittedDigest(extended);
+    const withExtension = await recordFor(extended);
+    expect(withExtension.evaluation_request_digest).toBe(extendedSubmitted);
+    expect(withExtension.evaluation_request_digest).not.toBe(base.evaluation_request_digest);
+    const nulled = req(); Object.assign(nulled.context, { deployment_extension: null });
+    const withNull = await recordFor(nulled);
+    expect(withNull.evaluation_request_digest).toBe(submittedDigest(nulled));
+    expect(new Set([base.evaluation_request_digest, withExtension.evaluation_request_digest, withNull.evaluation_request_digest]).size).toBe(3);
   });
 
   it("a view-mismatch denial names the request Mission and the PDP view separately, never another Mission's authority anchor", async () => {
@@ -316,6 +350,25 @@ describe("evaluate() emits the Decision Evidence it decided (@spec runtime-evide
     await expect(emitter.emit({ ...input, action_class: "privileged_administration" })).rejects.toThrow("use_limit 1");
     await expect(emitter.emit({ ...input, entry_digest: undefined })).rejects.toThrow("entry digest and conditions");
     await expect(emitter.emit({ ...input, action_class: "unregistered" as never })).rejects.toThrow("unknown action class");
+  });
+
+  // @spec runtime-evidence#decision-evidence-object: without
+  // `parameter_digest`, the record carries `evaluation_request_digest`; the
+  // emitter signs no record that carries neither.
+  it("signs a record without parameter_digest only when it carries the evaluation request digest", async () => {
+    const { emitter } = emitterFixture();
+    const input = {
+      mission: { id: "msn", issuer: "https://as.test", policy_view_id: "pv" }, subject: { id: "alice" },
+      resource: { type: "invoice", id: "inv-1" }, action: { name: "payments:invoice.read" }, audience: RESOURCE,
+      evaluation_id: "evaluation", decision: "permit" as const, evaluated_at: NOW.toISOString(),
+      entry_digest: canonicalDigest({ entry: true }), conditions: { valid_until: NOW.toISOString() },
+    };
+    await expect(emitter.emit(input)).rejects.toThrow("evaluation request digest");
+    await expect(emitter.emit({ ...input, evaluation_request_digest: "" })).rejects.toThrow("evaluation request digest");
+    const digest = canonicalDigest({ request: "as submitted" });
+    const record = await emitter.emit({ ...input, evaluation_request_digest: digest });
+    expect(record.evaluation_request_digest).toBe(digest);
+    expect(record).not.toHaveProperty("parameter_digest");
   });
 
   it("evidence_id matches 1*64(ALPHA/DIGIT/-/_) and its random segment decodes to at least 128 bits", async () => {

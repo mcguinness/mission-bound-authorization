@@ -39,7 +39,8 @@ import {
   MISSION_RECEIPT_MEDIA_TYPE,
   newRecordId,
   REFUSAL_RECORD_MEDIA_TYPE,
-  requestDigestFallback,
+  evaluationRequestDigest,
+  preRequestDigest,
   RUNTIME_EVIDENCE_JWS_TYP,
   type RuntimeActionClass,
   type RuntimeActionRef,
@@ -189,6 +190,8 @@ export interface RefusalRecordObject {
   evaluated_at: string;
   parameter_digest?: string;
   evaluation_request_digest?: string;
+  /** @spec runtime-evidence#pre-decision-refusal: which input `evaluation_request_digest` covers. */
+  request_digest_input?: "decision_request" | "pre_request";
   mission?: RuntimeMissionRefBasic;
   subject?: RuntimeSubjectRef;
   actor?: ContextActor;
@@ -712,6 +715,13 @@ export interface RefusalRecordInput {
   resource?: RuntimeResourceRef;
   denial_reason: string;
   parameter_digest?: string;
+  /**
+   * @spec runtime-evidence#request-digest-worked: the evaluation request as
+   * submitted, when this refusal follows one (a PDP outage, an unverifiable
+   * decision). Absent, the refusal precedes any request and the record
+   * digests the pre-request input instead.
+   */
+  evaluation_request?: unknown;
   mission?: RuntimeMissionRefBasic;
   subject?: RuntimeSubjectRef;
   actor?: ContextActor;
@@ -971,16 +981,27 @@ export class EvidenceStore {
   ): Promise<RefusalRecord> {
     const signer = this.requireSigner(role);
     const sequence = input.mission !== undefined ? this.nextSequence(input.mission.id, emitterId, role) : undefined;
+    // @spec runtime-evidence#request-digest-worked: a refusal that follows an
+    // evaluation request digests that request as submitted; one that precedes
+    // any request digests the pre-request input, unknown members omitted.
+    const request_digest_input =
+      input.parameter_digest !== undefined
+        ? undefined
+        : input.evaluation_request !== undefined
+          ? ("decision_request" as const)
+          : ("pre_request" as const);
     const evaluation_request_digest =
-      input.parameter_digest === undefined
-        ? requestDigestFallback({
-            action: input.action.name,
-            audience: input.audience,
-            mission_id: input.mission?.id ?? "",
-            resource: input.resource?.id ?? "",
-            subject: input.subject?.id ?? "",
-          })
-        : undefined;
+      request_digest_input === "decision_request"
+        ? evaluationRequestDigest(input.evaluation_request)
+        : request_digest_input === "pre_request"
+          ? preRequestDigest({
+              action: input.action.name,
+              audience: input.audience,
+              ...(input.mission?.id !== undefined ? { mission_id: input.mission.id } : {}),
+              ...(input.resource?.id !== undefined ? { resource: input.resource.id } : {}),
+              ...(input.subject?.id !== undefined ? { subject: input.subject.id } : {}),
+            })
+          : undefined;
     const evaluated_at = new Date().toISOString();
     const unsigned = {
       refusal_id: newRecordId("ref"),
@@ -992,6 +1013,7 @@ export class EvidenceStore {
       evaluated_at,
       ...(input.parameter_digest !== undefined ? { parameter_digest: input.parameter_digest } : {}),
       ...(evaluation_request_digest !== undefined ? { evaluation_request_digest } : {}),
+      ...(request_digest_input !== undefined ? { request_digest_input } : {}),
       ...(input.mission !== undefined ? { mission: input.mission } : {}),
       ...(input.subject !== undefined ? { subject: input.subject } : {}),
       ...(input.actor !== undefined ? { actor: input.actor } : {}),
