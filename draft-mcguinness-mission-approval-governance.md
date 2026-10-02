@@ -1187,7 +1187,10 @@ the audit-horizon retention of {{record}} are the control.
 The accountable-approver assertion rule of
 {{assertion-requirements}} prevents a set of service and policy
 assertions from claiming a Mission whose named Approver never
-asserted anything.
+asserted anything. Because that assertion is never `service`, a
+model-backed service cannot become the accountable approver: no
+human-approved policy stands behind its decision, so it contributes
+only as a governance input.
 
 ## Stale Policy Approval
 
