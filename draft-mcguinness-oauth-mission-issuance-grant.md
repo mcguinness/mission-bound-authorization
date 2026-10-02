@@ -543,8 +543,10 @@ that name reports at a token endpoint
 ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}).
 `not_found` covers both an unknown Mission and a requester that is not
 the recorded client, so the split never becomes a membership oracle;
-the other codes are returned only to the authenticated recorded client,
-to which Mission state is already visible.
+`invalid_audience`, `mission_not_active`,
+`invalid_authorization_details`, and `derivations_exhausted` are
+returned only to the authenticated recorded client, to which Mission
+state is already visible.
 
 # Redemption {#redemption}
 
@@ -613,11 +615,14 @@ On success the consuming AS mints tokens under these rules:
   grant's. The consuming AS MUST NOT widen, remap, or supplement
   them from its own policy except to narrow; representing them as
   `scope` (below) is not a remapping.
-- **Token response.** The token response carries the issued
-  `authorization_details` as the issuance profile requires for
-  Mission-bound issuance ({{I-D.draft-mcguinness-oauth-mission}},
-  Section "Mission-Bound Access Tokens", and {{Section 7 of RFC9396}}),
-  and the `mission_id` and `mission_expires_at` parameters as it
+- **Token response.** Where the consuming AS issues
+  `authorization_details`, the token response carries them as the
+  issuance profile requires for Mission-bound issuance
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission-Bound
+  Access Tokens", and {{Section 7 of RFC9396}}); where it projects
+  them to `scope`, the response carries `scope`
+  ({{Section 5.1 of RFC6749}}). Either way it carries the `mission_id`
+  and `mission_expires_at` parameters as the issuance profile
   recommends ({{I-D.draft-mcguinness-oauth-mission}}, Section "Binding
   the Mission to the Grant").
 - **Scope projection.** Carrying `authorization_details` at all
@@ -812,14 +817,14 @@ A client tells three cases apart:
   validation failures (an untrusted issuer, a wrong audience, an
   unmappable subject or authority) are configuration faults that a
   fresh grant does not cure.
-- **Stop.** A refusal because the Mission is not `active` is final.
-  The AS SHOULD include the issuance profile's `mission_error`
-  member with the value naming the Mission's state
-  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Issuance
-  Gating"), and a client that requests a fresh grant is in any case
-  refused at the MAS `active` gate with `mission_not_active`
-  ({{minting-errors}}), which is the authoritative signal to stop
-  rather than retry.
+- **Stop.** Neither a retry nor a fresh grant cures a refusal because
+  the Mission is not `active`. The AS SHOULD include the issuance
+  profile's `mission_error` member (`mission_revoked`,
+  `mission_expired`, or `mission_superseded`;
+  {{I-D.draft-mcguinness-oauth-mission}}, Section "Issuance Gating").
+  A client that requests a fresh grant is refused at the MAS with
+  `mission_not_active` ({{minting-errors}}), the authoritative signal
+  to stop.
 
 # Authorization Code Flow Carriage {#par-carriage}
 
@@ -957,23 +962,32 @@ full:
   state-integrated consuming AS unconditionally
   ({{effective-set-projection}});
 - Effective Authority Set projection at every refresh, which binds a
-  consuming AS that issues refresh tokens; a no-refresh deployment
-  discharges this duty by absence ({{effective-set-projection}});
+  consuming AS that issues refresh tokens; a deployment that issues
+  none meets this duty by issuing none ({{effective-set-projection}});
+- no refresh tokens without a Mission-state integration
+  ({{no-state-integration}});
 - no re-approval; and
 - the redemption error mapping of {{redemption-errors}}.
 
 The PAR carriage of {{par-carriage}} is OPTIONAL.
 
-A deployment claiming this profile states, alongside its
+A deployment claiming this profile states the following alongside its
 Enforcement Scope Statement ({{I-D.draft-mcguinness-mission-runtime}},
-Section "Enforcement Scope and Conformance"), which Authorization
-Servers consume grants, the staleness bound of each one's state
-gating, and its
-reconciliation posture ({{security-considerations}}): the window
-within which minting and redemption logs are reconciled, or that
-they are not. A consuming AS advertises its support with the
-`mission_issuance_grant_supported` metadata member, and its PAR
-carriage with `mission_issuance_grant_par_supported` ({{metadata}}).
+Section "Enforcement Scope and Conformance"):
+
+- which Authorization Servers consume grants, and which of them have
+  a Mission-state integration;
+- the staleness bound of each one's state gating;
+- whether each claims containment- or discharge-aware issuance
+  ({{no-state-integration}}); and
+- its reconciliation posture ({{security-considerations}}): the
+  window within which minting and redemption logs are reconciled, or
+  that they are not.
+
+A consuming AS that supports this profile publishes
+`mission_issuance_grant_supported`, and one that supports the PAR
+carriage publishes `mission_issuance_grant_par_supported`
+({{metadata}}).
 
 # Security Considerations {#security-considerations}
 
@@ -1026,23 +1040,25 @@ exclusive validation rules ({{Section 3.11 of RFC8725}} and
 `typ` first, and none accepts another's type.
 
 **Revocation latency.** New grants stop at the MAS `active` gate at
-the moment of state commit. Outstanding tokens end at the earlier of
-their own expiry and the consuming AS's next state-gated refresh;
-where the runtime layer is deployed, the PDP's re-check bounds
-outstanding-token use independently. A refresh re-projects through
+the moment of state commit. A grant already issued can still be
+redeemed within its 300 seconds at a consuming AS without a
+Mission-state integration. Issued access tokens run to their own
+expiry, and refresh tokens stop at the consuming AS's next
+state-gated refresh; where the runtime layer is deployed, the PDP's
+re-check bounds outstanding-token use independently. A refresh
+re-projects through
 the Effective Authority Set ({{effective-set-projection}}), so a
 Mission contained or discharged between issuance and refresh does
 not renew its original, now-narrowed authority. A deployment states
 the refresh staleness bound it publishes ({{conformance}}).
 
 **Consent integrity.** The approval the grant rests on was rendered
-and committed at the Mission Issuer under the issuance profile's rules and,
-where deployed, Consent Evidence
+and committed at the Mission Issuer under the issuance profile's
+rules and, where deployed, Consent Evidence
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}). The
-consuming AS relies on that
-event; it MUST NOT substitute a weaker consent of its own, and its
-non-prompting duty ({{redemption}}) prevents consent-surface
-confusion where the Subject holds accounts at both.
+consuming AS relies on that event and does not substitute a consent
+of its own: its non-prompting duty ({{token-issuance}}) prevents
+consent-surface confusion where the Subject holds accounts at both.
 
 # Privacy Considerations {#privacy-considerations}
 
