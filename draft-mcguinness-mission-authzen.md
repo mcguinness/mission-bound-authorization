@@ -550,8 +550,8 @@ This profile carries only the wire member, and only in the request:
 `policy_view_id` appears in `context.mission.policy_view_id`
 ({{context-mission}}), when the requesting PEP holds it, as a
 content-addressed check against the view the PDP has loaded. The PDP
-does not echo `policy_view_id` on the response; it records the view it
-evaluated against directly in Decision Evidence
+does not echo `policy_view_id` on the response; where it evaluates
+through a view, it records that view directly in Decision Evidence
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}), so the correlator
 between a permit and its evidence, and between a denial and its
 evidence, is `evaluation_id` ({{response-context}}), not a wire-echoed
