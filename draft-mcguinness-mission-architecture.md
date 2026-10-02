@@ -3689,6 +3689,14 @@ bound profiled by `aauth-mission-expiry`.
 
 \[\[ To be removed from the final specification ]]
 
+- Derivation and narrowing, with no change to any profile's
+  requirements. The derivation boundary states the derivation
+  procedure the authority-bearing bindings share (narrowing or a
+  configured mapping, with prose members as disclosure) and that only
+  derivation policy stays local; Authority only narrows covers the
+  Effective Authority Set and the per-type transformation
+  capabilities.
+
 - Density, with no change to any profile's requirements. Long
   paragraphs are split to one idea each and long sentences shortened;
   Continue lists the three continuities and keeps the residual for
