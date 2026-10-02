@@ -915,19 +915,25 @@ propose, learn what was refused, and propose again. Three refusal
 signals feed the loop:
 
 Derivation refusal:
-: At submission, the Mission Issuer refuses a well-formed Intent from
-  which it cannot derive a valid Authority Set: with
-  `invalid_authorization_details` when the shaper submitted an
-  Authority Proposal alongside the Intent, or with `access_denied`
-  when it did not (a bare Intent relying entirely on the Mission
-  Issuer's configured mapping), distinguishing both from a syntax
-  error ({{I-D.draft-mcguinness-oauth-mission}}).
+: The Mission Issuer refuses a well-formed request that its policy
+  will not grant with the `access_denied` error code, including a bare
+  Intent that matches no configured mapping or whose mapped candidates
+  policy narrows to nothing; the same code reports an Approver who
+  declines ({{I-D.draft-mcguinness-oauth-mission}}, Section "Error and
+  Challenge Mapping"). An Authority Proposal entry of an unsupported
+  type, or one that fails its type's definition, is refused with the
+  `invalid_authorization_details` error code; that is a construction
+  error to correct, not a signal to narrow. Narrowing or omitting a
+  valid proposed entry is not a refusal: the granted
+  `authorization_details` reports it
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Authority
+  Proposal").
 
 Deferred denial:
-: Under deferred approval, a reviewer resolution of `access_denied`
-  ends the request. The shaper constructs the fresh, narrower Mission
-  Intent that the client resubmits
-  ({{I-D.draft-mcguinness-oauth-mission-approval}}).
+: Under deferred approval, a reviewer that will grant only a narrowed
+  subset of the proposal resolves the deferral to `access_denied`, and
+  the client submits a fresh, narrower Mission Intent, which the
+  shaper constructs ({{I-D.draft-mcguinness-oauth-mission-approval}}).
 
 Required revision:
 : Under approval revision, the `mission_rejected_scope` and
