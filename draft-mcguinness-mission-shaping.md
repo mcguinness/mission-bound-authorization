@@ -1304,6 +1304,15 @@ of guessing ({{clarifications}}).
   were folded into Conventions, Deployment Considerations, and the
   Introduction.
 
+- Corrected statements against their sources: the derivation-refusal
+  codes in Re-Shaping, the AAuth binding's intake (a natural-language
+  proposal, not a Mission Intent), and the narrowing mode that replaced
+  the reproducibility rule. Reconciled the shaping-ceiling outcomes
+  with Ambiguity Handling, named the parties the keywords bind, and
+  replaced the "sound shaper" idiom with BCP 14 keywords. Member
+  guidance adds `goal_lang` and the `target_resources` containment
+  rule, and `purpose` is chosen only when the request supports it.
+
 # Acknowledgments
 {:numbered="false"}
 
