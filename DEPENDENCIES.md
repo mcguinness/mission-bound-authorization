@@ -12,6 +12,7 @@ separately in [notes/oauth-wg-submission-set.md](notes/oauth-wg-submission-set.m
 
 <!-- external-normative-ids: BEGIN (generated; validated by scripts/check-family-manifest.mjs) -->
 - I-D.draft-gerber-oauth-deferred-token-response (cited normatively by: oauth-mission-approval, oauth-mission-approval-revision)
+- I-D.draft-hardt-httpbis-signature-key (cited normatively by: mission-aauth-management)
 - I-D.draft-hardt-oauth-aauth-protocol (cited normatively by: aauth-mission-expiry, mission-aauth, mission-aauth-management)
 - I-D.draft-ietf-cose-hash-envelope (cited normatively by: mission-audit)
 - I-D.draft-ietf-oauth-identity-assertion-authz-grant (cited normatively by: oauth-mission-cross-domain)
@@ -42,8 +43,9 @@ working-group document); **audit**'s COSE hash envelope is approved
 and in the RFC Editor queue; **approval**, **attenuation**,
 **cross-org-delegation**, **aauth**, **aauth-expiry**, and
 **aauth-management** track unratified individual drafts (OAuth
-Deferred Token Response, Attenuating Agent Tokens, and the AAuth
-protocol); **authority-server** confines its Internet-Draft
+Deferred Token Response, Attenuating Agent Tokens, the AAuth protocol,
+and, for **aauth-management**, HTTP Signature Keys);
+**authority-server** confines its Internet-Draft
 references (client instance assertion and the AI agent instance
 profile) to the
 Enterprise Mission Authority Profile's instance-bound joins, an

@@ -133,7 +133,7 @@ an exclusivity control (`exclusive`, separation of duty),
 the runtime metering
 semantics that enforce them (atomic check-and-decrement, reserve and
 commit postures, duration leases, and settlement), and the AuthZEN wire
-binding for lease renewal and settlement. A consumption bound is
+representation for lease renewal and settlement. A consumption bound is
 consented at approval and enforced only by a runtime deployment that
 implements this profile; a deployment that does not meter a bound must
 refuse rather than silently ignore it.
@@ -157,7 +157,7 @@ This document defines that metering layer:
 
 - the consumption-bounds vocabulary a Mission Intent carries,
 - the metering semantics a runtime deployment enforces, and
-- the AuthZEN wire binding
+- the AuthZEN wire representation
   ({{I-D.draft-mcguinness-mission-authzen}}) for settlement and
   duration-lease renewal.
 
@@ -669,7 +669,7 @@ The groups are consented at the approval event, committed by
 defines, and rendered in the consent disclosure ({{consent}} applies
 unchanged).
 
-In the AuthZEN binding, a refusal under a latched group is denied
+In the AuthZEN profile, a refusal under a latched group is denied
 with `exclusivity_latched`, an extension of the runtime denial set
 under the AuthZEN profile's coordinated-extension conventions
 ({{I-D.draft-mcguinness-mission-authzen}}), and recorded as the
@@ -807,14 +807,14 @@ refusal under an aggregate bound reads:
 }
 ~~~
 
-# AuthZEN Binding {#authzen-binding}
+# AuthZEN Wire Representation {#authzen-binding}
 
-Where the runtime deployment uses the AuthZEN binding
+Where the runtime deployment uses the AuthZEN profile
 ({{I-D.draft-mcguinness-mission-authzen}}), this section defines the
 wire representation of metering. It defines no new metering semantics
 and no new constraint. The requirements of this section and
 {{settlement-exchange}} apply only to a deployment that adopts the
-AuthZEN binding under that profile's conformance; for every other
+AuthZEN profile under that profile's conformance; for every other
 deployment the AuthZEN profile remains an informative reference.
 
 When metering a bound would exceed it, the PDP MUST deny with
@@ -824,7 +824,7 @@ returning a permit. The PDP MUST record `quota_exceeded` as the
 
 Whether a metered permit is reserved at decision time and committed on
 settlement, or committed at decision time, follows the deployment's
-documented reserve/commit posture ({{retry}}); this binding fixes
+documented reserve/commit posture ({{retry}}); this representation fixes
 neither. In a batch (boxcar) evaluation, consumption metering applies
 per item in request order. The exactness of the bound is the
 consistency bound of {{topology}}, not a property of this wire
@@ -834,7 +834,7 @@ binding.
 
 The metering rules require the PEP to signal actual use so the PDP
 commits consumption and releases any reservation. In the AuthZEN
-binding, delivery of the Execution Evidence Object
+profile, delivery of the Execution Evidence Object
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}) to the PDP is
 that commit-or-release signal: on receipt the PDP settles the linked
 action's consumption per {{settlement-states}}, keyed to the
@@ -1029,7 +1029,7 @@ A runtime deployment that claims this profile MUST:
   ({{topology}});
 - define and document its retry, idempotency, and reserve/commit
   posture ({{retry}}); and
-- where the AuthZEN binding is in use, implement the settlement
+- where the AuthZEN profile is in use, implement the settlement
   exchange of {{settlement-exchange}}.
 
 A Mission Issuer in a deployment claiming this profile MUST carry the

@@ -133,21 +133,22 @@ informative:
     date: 2026
   I-D.draft-hardt-oauth-aauth-protocol:
     title: "AAuth Protocol"
-    target: https://dickhardt.github.io/AAuth/draft-hardt-oauth-aauth-protocol.html
-    refcontent: "Editor's copy, commit fc5e972c"
     author:
       -
         ins: D. Hardt
         name: Dick Hardt
-    date: 2026
+    date: 2026-09-25
+    seriesinfo:
+      Internet-Draft: draft-hardt-oauth-aauth-protocol-11
   I-D.draft-hardt-aauth-r3:
     title: "AAuth Rich Resource Requests (R3)"
-    target: https://dickhardt.github.io/AAuth/draft-hardt-aauth-r3.html
     author:
       -
         ins: D. Hardt
         name: Dick Hardt
-    date: 2026
+    date: 2026-09-28
+    seriesinfo:
+      Internet-Draft: draft-hardt-aauth-r3-00
   I-D.draft-mcguinness-mission-aauth:
     title: "Mission Context Binding for AAuth"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth.html
@@ -698,10 +699,15 @@ does not recognize, as non-active, so an unrecognized state fails safe
 (the OAuth binding's Mission Lifecycle and Gating section).
 
 AAuth realizes the separation differently. Its exact-byte `s256`
-commits the private approved mission blob, and `{approver, s256}` is
-the stable reference. The PS applies contextual governance using that
-blob and the ordered mission log; scopes, resource tokens, Resource and
-Access Server policy, and optionally AAuth Rich Resource Requests
+commits the private approved mission blob. The approving PS and `s256`
+are the Mission Reference, AAuth's mission identity (Section 8.2.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}). The blob carries no member
+naming the PS: a person token names it by `iss`, a resource or auth
+token by `ps`, and a request by its destination. On the wire the
+reference is the `mission_s256` claim or parameter. The PS applies
+contextual governance using that blob and the ordered mission log;
+scopes, resource tokens, Resource and Access Server policy, and
+optionally AAuth Rich Resource Requests
 (R3, {{I-D.draft-hardt-aauth-r3}}) carry deterministic resource
 authorization. AAuth does not add the OAuth Authority Set or its two
 anchors, and its native lifecycle remains exactly `active` or
@@ -918,9 +924,9 @@ Subject:
 Approver:
 : The single accountable principal who approves the Mission; equal
   to the Subject for self-approval (the OAuth binding's Single
-  Accountable Approver section). In AAuth, the wire `approver` value
-  names the PS, not a portable person identifier; the person reviews
-  and approves through that PS.
+  Accountable Approver section). In AAuth the approver is always the
+  PS, not a portable person identifier, and the blob carries no member
+  naming it; the person reviews and approves through that PS.
 
 Mission Issuer:
 : Validates the Mission Intent, runs the approval event, records the
@@ -955,9 +961,12 @@ Mission Issuer:
 AAuth Person Server:
 : The controlling authority for the native Mission Context rather than
   an OAuth-style Mission Issuer. The mission blob is committed by
-  AAuth's `s256`, and the PS gates PS-asserted issuance and federated
-  brokering. It does not gate direct identity-based or resource-managed
-  decisions ({{I-D.draft-mcguinness-mission-aauth}}).
+  AAuth's `s256`. In person identity the PS gates person-token
+  issuance but does not decide at the resource; it gates PS
+  authorization (three-party) and federated authorization
+  (four-party). It does not gate agent identity or resource-managed
+  access (Section 4.2 of {{I-D.draft-hardt-oauth-aauth-protocol}},
+  {{I-D.draft-mcguinness-mission-aauth}}).
 
 Resource Server:
 : The protected resource. In the OAuth binding it enforces
@@ -1281,9 +1290,10 @@ Who holds the deciding side is a spectrum, not a species: the approval
 event requires an accountable principal deciding against committed
 inputs before any authority exists, and the proposer is never the
 approver. A deterministic, versioned policy can approve at machine
-speed within a ceiling a human consented to (the `policy_drawdown`
-and `template` authorization bases that companion profiles define on
-the OAuth binding's extension point, {{invariants}}). Policy approves
+speed within a ceiling a human consented to (the `template`,
+`policy_drawdown`, and `ceiling_drawdown` authorization bases that
+companion profiles define on the OAuth binding's extension point,
+{{invariants}}). Policy approves
 the instance because a human approved the policy or the template, with
 `policy_version` keeping that chain re-checkable. A model's generated
 judgment is never the sole authority for granting or widening: a
@@ -1520,12 +1530,15 @@ capability, so they are not baseline AAuth Mission Context properties.
   section). A state-aware consumer relies only while it observes
   `active`; a state-unaware consumer retains the bounded
   materialized-credential residual ({{validity-model}}). In AAuth, only
-  PS operations and the PS-asserted and federated authorization paths
-  are structurally gated; identity-based and resource-managed decisions
-  do not pass through the PS. On the gated paths the gate covers
-  requests whose resource token carries the validated Mission Reference;
-  a stripped reference yields a missionless request, bounded by the
-  binding's downgrade rules ({{I-D.draft-mcguinness-mission-aauth}}).
+  PS operations are structurally gated, and agent identity and
+  resource-managed access do not pass through the PS. In person
+  identity access the gate is person-token issuance (Section 7.1 of
+  {{I-D.draft-hardt-oauth-aauth-protocol}}). In PS authorization and
+  federated authorization access it covers auth-token issuance and
+  federated brokering for requests whose resource token carries the
+  validated Mission Reference; a stripped or mismatched reference
+  fails the request, which is never evaluated as missionless
+  ({{I-D.draft-mcguinness-mission-aauth}}).
 
 **Authority only narrows**:
 : Derived tokens, delegated child Missions, attenuated tokens, and
@@ -1579,9 +1592,12 @@ Authorization bases:
   binding fully defines one, `direct`, a human's own approval. It also
   provides the extension point, an authorization-basis `type` string,
   that companion profiles use to define others: `template`, a
-  dispatch drawing on a ceiling the human consented to once, and
+  dispatch drawing on a ceiling the human consented to once;
   `policy_drawdown`, a child instance a policy adjudicates within a
-  bound the parent's human already consented to. Every basis fixes
+  bound the parent's human already consented to; and
+  `ceiling_drawdown`, a successor a policy adjudicates within an
+  authority ceiling the Approver consented to at the initial
+  approval. Every basis fixes
   the same accountable human as `consent_principal`; the bases differ
   only in what activated this instance and what root that activation
   traces to (the OAuth binding).
@@ -1939,7 +1955,7 @@ split on it. The OAuth binding provides it. The standalone binding does
 not: the MAS's Mission Substrate section states that a MAS provides
 neither this credential nor issuance gating
 ({{I-D.draft-mcguinness-mission-authority-server}}). An AAuth auth token
-can carry the native `{approver, s256}` mission reference, but it does
+can carry the native Mission Reference (`mission_s256`), but it does
 not carry Mission-derived authorization details and therefore is
 Mission-referenced, not a Mission-bound credential in the strong sense
 ({{I-D.draft-mcguinness-mission-aauth}}).
@@ -1980,8 +1996,9 @@ Mission state, and `expires_at` where defined:
 : set by the controlling authority and checked at the binding's declared
   control points. In OAuth, the issuance gate, PDP, and state consumers
   enforce it. In AAuth, the PS enforces `active` or `terminated` at PS
-  endpoints and on PS-asserted and federated paths; direct
-  identity-based and resource-managed decisions have no PS state gate.
+  endpoints and on the person identity, PS authorization, and
+  federated authorization modes; agent identity and resource-managed
+  access have no PS state gate.
 
 `fresh_until`:
 : set by the status responder; checked by status consumers. Past it a
@@ -2007,8 +2024,9 @@ by construction. Where every fresh credential crosses a Mission-state
 decision point, this posture realizes the **lifecycle-gated** capability
 with reliance bounded by credential lifetime alone
 ({{I-D.draft-mcguinness-mission-substrate}}). That holds only for access
-modes with such a gate: AAuth's PS-asserted and federated paths have it,
-while its direct modes do not.
+modes with such a gate: AAuth's person identity, PS authorization, and
+federated authorization modes have it, while agent identity and
+resource-managed access do not.
 
 TTL-only is appropriate where the artifact's lifetime meets the
 tolerated exposure bound and no required state check would shorten that
@@ -2079,20 +2097,21 @@ architecture, not only its binding. Three patterns cover the bindings:
   UMA AS, and GNAP AS);
 - **PDP-joined**: credentials are ordinary and a join establishes
   the association at the decision point (the standalone MAS); and
-- **context-carried**: AAuth carries its native `{approver, s256}`
-  reference while authority remains in resource scopes and policy.
-  The PS gates PS-asserted and federated authorization, while direct
-  identity-based and resource-managed decisions bypass the PS.
+- **context-carried**: AAuth carries its native Mission Reference
+  (`mission_s256`) while authority remains in resource scopes and
+  policy. The PS gates person identity, PS authorization, and
+  federated authorization, while agent identity and resource-managed
+  access bypass the PS.
 
 The differences that decide a design:
 
 | Property | OAuth AS | MAS | AAuth PS | UMA AS (sketch) | GNAP AS (sketch) |
 |---|---|---|---|---|---|
 | Credential carries the Mission | yes (`mission` claim) | no | native reference where supported | yes (claim or introspection) | yes (protected `mission` claim or introspection assertion) |
-| Issuance gated on state | yes | no (the issuance grant restores it per consuming AS) | PS-asserted and federated only | yes | yes (issuance, grant modification, and rotation) |
-| Runtime PDP required for a kill switch | no (issuance gate exists; runtime tightens) | yes (runtime is the only cutoff) | none from the binding for direct modes; PS-path issuance has a bounded cutoff | no (per-use introspection cuts off) | no (issuance gate exists; per-use introspection cuts off where deployed) |
-| Join ambiguity possible | no | yes (bounded by join assurance) | no when the native reference is preserved; it can be ignored in direct modes | no | no (native binding; no cross-authority join) |
-| Revocation latency source | token lifetime, status, or runtime | runtime and status only | auth-token lifetime on PS paths; no Mission cutoff on direct paths | next introspection | token lifetime, or the declared introspection cache bound |
+| Issuance gated on state | yes | no (the issuance grant restores it per consuming AS) | person identity, PS authorization, and federated authorization only | yes | yes (issuance, grant modification, and rotation) |
+| Runtime PDP required for a kill switch | no (issuance gate exists; runtime tightens) | yes (runtime is the only cutoff) | none from the binding for agent identity and resource-managed access; PS-path issuance has a bounded cutoff | no (per-use introspection cuts off) | no (issuance gate exists; per-use introspection cuts off where deployed) |
+| Join ambiguity possible | no | yes (bounded by join assurance) | no when the native reference is preserved; it can be ignored in agent identity and resource-managed access | no | no (native binding; no cross-authority join) |
+| Revocation latency source | token lifetime, status, or runtime | runtime and status only | auth-token lifetime on PS paths; no Mission cutoff on agent identity and resource-managed paths | next introspection | token lifetime, or the declared introspection cache bound |
 | Offline Mission verification | partial (claims verify; state does not) | limited (join assertion) | reference integrity only; blob is private | JWT RPTs partial; opaque RPTs none | partial with a structured token or signed Mission Status |
 
 A MAS deployment does not provide AS-native semantics just because both
@@ -2111,9 +2130,10 @@ token is still stopped at the action layer on mediated paths.
 AAuth supplies the Mission Context capabilities in its own idiom but not
 a portable Authority Set or universal subset rule. The AAuth binding
 also has a narrower structural chokepoint. The Person Server refuses new
-PS-asserted issuance or federated brokering for a terminated Mission
-Context, bounding those paths by auth-token lifetime. Identity-based and
-resource-managed decisions do not cross that chokepoint. The AAuth
+person-token issuance, PS authorization, or federated brokering for a
+terminated Mission Context, bounding those paths by token lifetime.
+Agent identity and resource-managed access do not cross that
+chokepoint. The AAuth
 binding defines no generic family runtime composition or independently
 resource-verifiable Authority Set
 ({{I-D.draft-mcguinness-mission-aauth}}).
@@ -2199,8 +2219,9 @@ An AAuth deployment reports the Mission Context capabilities and
 resource access modes it actually uses instead of a level. Selecting
 the AAuth binding does not by itself satisfy structured-authority,
 subset, portable-evidence, or runtime proof obligations. Its
-lifecycle gate covers PS-asserted and federated access but not
-identity-based or resource-managed access, and its native auth token
+lifecycle gate covers person identity, PS authorization, and federated
+authorization but not agent identity or resource-managed access, and
+its native auth token
 is Mission-referenced, not Mission-bound ({{token-classes}}).
 
 The levels, cumulative:
@@ -2240,8 +2261,9 @@ The levels, cumulative:
   The nearest AAuth comparison, stated as capabilities rather than a
   level: native approval, exact-byte commitment, active or terminated
   state, and the ordered mission log. The possession-independent
-  issuance cutoff applies only to PS-asserted and federated requests
-  whose resource token carries the validated Mission Reference; no
+  issuance cutoff applies only to person-token issuance and to PS
+  authorization and federated requests whose resource token carries the
+  validated Mission Reference; no
   Authority Set or subset proof is implied.
 
   Proof obligations: the anchored approval and, where credentials are
@@ -2672,7 +2694,7 @@ residual the transition does not reach.
 | Baseline Issuance | OAuth binding, structured-authority | Baseline, a new-derivation kill ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Containment Properties") | New derivation, delegation, and cross-domain projection minted after the transition ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Derivation Gating") | Tokens already issued, to `exp`, and a consequential read under the token-lifetime default, the same bound ({{I-D.draft-mcguinness-mission-runtime}}); pre-transition projection grants (note 1) |
 | Baseline Issuance | Standalone MAS, no credential-carried authority | Neither; the runtime layer is the only cutoff, and it is absent at this rung | Nothing at the resource; the transition commits and is visible on the Mission Status Response and the introspection projection ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Visibility") | Every action, to the resource's own bound, if any (note 2) |
 | Runtime-Enforced | Any binding, a class using a containment-aware state source within its published bound (note 3) | Runtime-Enforced for that class ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Containment Properties"); Baseline only for the classes in note 4 | The contained capability, denied at the class's next gated action once the source reflects the overlay, within the staleness bound plus the permit window plus the class's execution bound ({{I-D.draft-mcguinness-mission-runtime}}) | Paths no action-time gate reaches: token lifetime where issuance is gated, otherwise no bound |
-| Baseline Issuance | MAS as estate control plane, issuance join at each consuming AS | Baseline, from Derivation Gating at the Mission Issuer ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Derivation Gating"); the consuming AS's checks are not containment-aware on their own (note 5) | New grant minting only: the Mission Issuer's Derivation Gating evaluates the Effective Authority Set, so a grant minted after the transition excludes contained authority ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Derivation Gating") | An outstanding grant redeems once, to its own maximum lifetime of 300 seconds, at any consuming AS whose redemption check is active-only rather than containment-aware ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}, Section "Redemption") |
+| Baseline Issuance | MAS as estate control plane, issuance join at each consuming AS | Baseline, from Derivation Gating at the Mission Issuer ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Derivation Gating") and, at a consuming AS with a Mission-state integration, from projecting each redemption and refresh through the Effective Authority Set (note 5) | New grant minting: the Mission Issuer's Derivation Gating evaluates the Effective Authority Set, so a grant minted after the transition excludes contained authority ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Derivation Gating"); and, at a consuming AS with a Mission-state integration, each redemption and refresh once its state source reflects the transition ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}, Section "Effective Authority Set Projection") | An outstanding grant redeems once, within its 300-second lifetime, at a consuming AS without a Mission-state integration, which checks no Mission state at redemption and issues no refresh tokens; tokens already issued run to their own `exp` ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}, Section "Redemption") |
 | Runtime-Enforced | OAuth binding with offline attenuation, a consumer whose check is active-state only (note 6) | Baseline ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Containment Properties"): a contained Mission stays `active` | New attenuation roots, which exclude contained authority ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Derivation Gating") | Roots minted before the transition, to their own lifetime (note 6) |
 
 Notes:
@@ -2700,14 +2722,18 @@ Notes:
    Baseline property, not the Runtime-Enforced one
    ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section
    "Containment Properties").
-5. Under the MAS as estate control plane, the consuming AS's redemption
-   and refresh checks are the issuance profile's ordinary `active` gate,
-   and a contained Mission stays `active`. Those checks are therefore
-   not containment-aware on their own, unless the consuming AS
-   separately retrieves and applies the containment overlay or current
-   Effective Authority Set
+5. Under the MAS as estate control plane, a consuming AS either has a
+   Mission-state integration or has none
    ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}, Section
-   "Redemption").
+   "Effective Authority Set Projection"). One that has it projects
+   every redemption and refresh through the Mission's current
+   Effective Authority Set, so its issuance excludes contained
+   authority within its published staleness bound; a lifecycle-state
+   check alone, under which a contained Mission still reads `active`,
+   is not such an integration. One that has none checks no Mission
+   state at redemption, issues no refresh tokens, and relies on the
+   Mission Issuer's minting gate, so a grant minted before the
+   transition can still redeem within its 300-second lifetime.
 6. Under the OAuth binding with offline attenuation, a consumer accepts
    a chain only under runtime enforcement, with a fresh active-state
    check on every presentation regardless of action class
@@ -3012,10 +3038,10 @@ reference, decide who reads the concentrated view.
 The AAuth binding's privacy posture is its own
 ({{I-D.draft-mcguinness-mission-aauth}}). The private mission blob
 never leaves the agent and the Person Server, and the stable
-`{approver, s256}` reference is a correlation handle across every
-resource that sees it. The mission log concentrates a detailed
-activity history at the Person Server, where the binding's
-minimization and retention duties apply.
+Mission Reference (`mission_s256` with the approving PS) is a
+correlation handle across every resource that sees it. The mission log
+concentrates a detailed activity history at the Person Server, where
+the binding's minimization and retention duties apply.
 
 # IANA Considerations {#iana}
 
@@ -3234,11 +3260,11 @@ defined (the Mission Deployment Profile's schema remains reserved
 future work, {{deployment-profile}}), and the declaration is ordinary
 deployment documentation.
 
-The deployment runs PS-asserted access. Every resource token the
-gateway accepts is PS-issued or PS-brokered and carries the signed
-`mission_s256` reference, the protected propagation path;
-identity-based and resource-managed access are out of scope here,
-because those paths are not PS-gated and may ignore the reference.
+The deployment runs PS authorization (three-party) access. Every auth
+token the gateway accepts is PS-issued and carries the signed
+`mission_s256` reference copied from the resource token, the
+protected propagation path; agent identity, person identity,
+resource-managed, and federated access are out of scope here.
 
 Before joining the PS evidence, the Actor proof, the request, and the
 adapter's output, the gateway's join validates the carrying
@@ -3276,7 +3302,7 @@ the payment-vocabulary claim is generalized to another resource's
 vocabulary. It fails when a direct route bypasses the gateway, when
 the gateway accepts a Mission reference from the agent without
 validated provenance (context splicing), or when the gateway accepts
-the reference on an identity-based or resource-managed request.
+the reference on an agent identity or resource-managed request.
 
 # Error Surfaces {#error-surfaces}
 
@@ -3671,6 +3697,18 @@ bound profiled by `aauth-mission-expiry`.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The issuance-join row of the composed kill-switch table and its note
+  follow the Mission Issuance Grant's two consuming-AS modes: with a
+  Mission-state integration, redemption and refresh are projected
+  through the Effective Authority Set; without one, nothing is checked
+  at redemption and no refresh tokens are issued. The earlier
+  "active-only" redemption check no longer exists there.
+- AAuth alignment, with no change to any profile's requirements. The
+  AAuth and R3 references cite the published revisions -11 and -00;
+  the Mission Reference is the approving PS and `s256`; the access
+  modes carry AAuth's names; and the gateway walkthrough names the
+  issuers of the auth tokens it accepts.
 
 - Density, with no change to any profile's requirements. Long
   paragraphs are split to one idea each and long sentences shortened;
