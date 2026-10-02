@@ -576,10 +576,9 @@ The Mission Intent carries no authority members. Where a task calls for
 concrete authority (actions, structured constraints such as
 `max_amount`, or delegation facts), the shaper produces an Authority
 Proposal: an `authorization_details` array {{RFC9396}} that the client
-submits alongside the Intent ({{I-D.draft-mcguinness-oauth-mission}},
-Section "Authority Proposal"). The Mission Issuer treats it as
-untrusted input and derives each Authority Set entry as a narrowing of
-a proposed entry.
+submits alongside the Intent and that the Mission Issuer treats as
+untrusted input ({{I-D.draft-mcguinness-oauth-mission}}, Section
+"Authority Proposal").
 
 Where cross-vendor interoperability matters, the shaper SHOULD carry
 the concrete candidate authority it proposes (the resources, actions,
@@ -588,19 +587,15 @@ Authority Proposal in Shaping Evidence. The Mission Issuer then
 derives the Authority Set in narrowing mode, each derived entry a
 subset of a proposed entry, rather than from a configured mapping
 keyed on the Intent ({{I-D.draft-mcguinness-oauth-mission}}, Section
-"Mission Authority"). Narrowing is the portable derivation path. The
+"Mission Authority"). Narrowing is the portable derivation path: the
 proposal format and the narrowing rule are interoperable, so the
-resulting Authority Set is enforceable and auditable across domains;
-only the Mission Issuer's policy choice of what to narrow to stays
-local.
+result is enforceable and auditable across domains, and only the
+Mission Issuer's choice of what to narrow to stays local.
 
 The proposal MUST NOT present issuer outputs as approved authority: the
 derived Authority Set is the Mission Issuer's product
-({{proposes-only}}). A shaper that has resolved concrete facts (for
-example, the actions a resource supports, or that the task implies
-delegated execution) proposes them in the Authority Proposal and
-records the same facts in Shaping Evidence for audit only. Shaping
-Evidence is never an input to derivation.
+({{proposes-only}}). Shaping Evidence that records the same facts is
+for audit only and is never an input to derivation.
 
 ## Shaping Ceiling and Default Deny {#authority-ceiling}
 
