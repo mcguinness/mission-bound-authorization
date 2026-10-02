@@ -1102,12 +1102,11 @@ security properties follow from its role ({{proposes-only}}).
 
 A model-based shaper can draft a Mission Intent, but a deployment
 MUST NOT let model output grant or widen access ({{proposes-only}}).
-A deployment that lets a model's proposal become active without
-validation and approval is not following this document. A model-based
-shaper inherits its model's failure modes (hallucinated resources,
-fabricated constraints, inconsistent paraphrase, and sensitivity to
-small input perturbations), and SHOULD record the model identifier and
-version in Shaping Evidence so that failures can be attributed.
+A model-based shaper inherits its model's failure modes (hallucinated
+resources, fabricated constraints, inconsistent paraphrase, and
+sensitivity to small input perturbations), and SHOULD record the model
+identifier and version in Shaping Evidence so that failures can be
+attributed.
 
 ## Shaper Compromise Does Not Directly Grant Authority {#shaper-compromise}
 
