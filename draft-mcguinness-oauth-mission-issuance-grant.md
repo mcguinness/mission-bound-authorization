@@ -698,15 +698,14 @@ audience-scoped to this AS, MUST carry the Mission's current
 answer within a staleness bound the deployment publishes
 ({{conformance}}).
 
-The Mission Status operation discharges the source properties above
-directly: an authenticated, audience-scoped Mission Status Response,
-queried with this AS's own audience, carries current
-`authorization_details` and the Mission's state `version`
-({{I-D.draft-mcguinness-oauth-mission-status}}). Whatever the source,
-an active Mission state, or a Status List VALID bit, does not alone
-satisfy this: containment and discharge narrow an active Mission
-without moving its lifecycle state, and the Status List's bit carries
-no `authorization_details` at all.
+The Mission Status operation has these properties: its response,
+queried with this AS's own audience, is authenticated and
+audience-scoped and carries current `authorization_details` and the
+Mission's state `version` ({{I-D.draft-mcguinness-oauth-mission-status}}).
+Lifecycle state alone, such as an `active` state or a Status List
+VALID bit, is not enough from any source: containment and discharge
+narrow an active Mission without changing its lifecycle state, and a
+Status List bit carries no `authorization_details`.
 
 ### Issued Authority {#issued-authority}
 
@@ -931,10 +930,9 @@ Authorization for the tokens its unchanged Authorization Servers
 issue. A MAS composed with its consuming Authorization Servers under
 this profile supplies both capabilities, jointly, for the resources
 those ASs serve. In the Mission Assurance Levels
-({{I-D.draft-mcguinness-mission-architecture}}), Baseline Issuance
-and its issuance-gate kill switch become reachable under the
-standalone binding through this profile, and the state-aware
-half-step arrives with the consuming AS's refresh gating.
+({{I-D.draft-mcguinness-mission-architecture}}), this profile makes
+Baseline Issuance reachable under the standalone binding, and a
+consuming AS's refresh gating adds the state-aware half-step.
 
 # Conformance {#conformance}
 
