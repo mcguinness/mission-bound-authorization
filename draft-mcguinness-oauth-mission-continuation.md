@@ -493,11 +493,11 @@ substrate row. Two non-OAuth bindings dispose of continuation as a
 composition consequence.
 
 AAuth ({{I-D.draft-mcguinness-mission-aauth}}): over-time continuation is
-native and needs no new transport. The `(approver, s256)` mission
-reference is a handle that grants nothing, and the Person Server's
-state-gated, one-hour auth-token issuance and federation is the
-continuation point, with revocation latency bounded by the auth-token
-lifetime.
+native and needs no new transport. The mission reference (the
+approving Person Server and `s256`) is a handle that grants nothing,
+and the Person Server's state-gated, one-hour auth-token issuance and
+federation is the continuation point, with revocation latency bounded
+by the auth-token lifetime.
 
 The cross-workload transports of this profile have no AAuth
 substrate (AAuth has no token exchange, no `act` chain, and no ID-JAG),
