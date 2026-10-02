@@ -1535,8 +1535,8 @@ capability, so they are not baseline AAuth Mission Context properties.
   {{I-D.draft-hardt-oauth-aauth-protocol}}). In PS authorization and
   federated authorization access it covers auth-token issuance and
   federated brokering for requests whose resource token carries the
-  validated Mission Reference; a stripped reference yields a
-  missionless request, bounded by the binding's downgrade rules
+  validated Mission Reference; a stripped or mismatched reference
+  fails the request, which is never evaluated as missionless
   ({{I-D.draft-mcguinness-mission-aauth}}).
 
 **Authority only narrows**:
