@@ -315,6 +315,68 @@ operates are the OAuth binding's own, so moving issuance into
 that AS carries them over unchanged, while the MAS continues to
 govern the rest of the estate.
 
+## Protocol Overview {#overview}
+
+This section is non-normative. The following figure shows the flow
+for one Mission: submission, approval, polling, and an action decided
+under the Mission Join.
+
+~~~
+ Client               MAS                Approver     PEP/PDP
+   |                    |                  |            |
+   | 1 submit Intent    |                  |            |
+   |------------------->|                  |            |
+   | 2 202 pending      |                  |            |
+   |<-------------------|                  |            |
+   |                    | 3 disclose       |            |
+   |                    |----------------->|            |
+   |                    | 4 approve        |            |
+   |                    |<-----------------|            |
+   |                    | Mission active   |            |
+   | 5 poll             |                  |            |
+   |------------------->|                  |            |
+   | 6 approved,        |                  |            |
+   |   mission_id       |                  |            |
+   |<-------------------|                  |            |
+   | 7 action, token,   |                  |            |
+   |   Mission ref      |                  |            |
+   |--------------------------------------------------->|
+   |                    | 8 signed status: |            |
+   |                    |   active         |            |
+   |                    |<------------------------------|
+   |                    |------------------------------>|
+   |                    |                  | 9 join;    |
+   |                    |                  |   evaluate |
+   | 10 permit          |                  |            |
+   |<---------------------------------------------------|
+~~~
+{: title="MAS-mode flow"}
+
+- Steps 1 and 2: the client submits a Mission Intent to the mission
+  submission endpoint and receives a pending-submission reference
+  ({{intent-submission}}).
+- Steps 3 and 4: the MAS routes the submission to its approval
+  surface; on approval it records the Mission, `active`
+  ({{mission-approval}}).
+- Steps 5 and 6: the client polls submission status and receives the
+  `mission_id` and the consented authority ({{mission-reference}}).
+- Step 7: the client acts with an ordinary access token from the
+  deployment's unchanged authorization server, and the PEP supplies
+  the Mission reference from its Mission binding, deployment
+  configuration, or a propagated reference ({{join-rules}},
+  {{reference-propagation}}).
+- Steps 8 and 9: the PDP resolves the Mission through the MAS's
+  signed Mission Status ({{lifecycle-and-state}}), joins the presented
+  credential to the Mission, and evaluates the action under the
+  runtime profile ({{mission-join}}).
+- Step 10: the PEP enforces the decision. A revocation at the MAS
+  stops the next such action at step 8.
+
+A Join Assertion moves the join's verification to the MAS
+({{join-assertion}}), and Mission Expansion and Child Creation ride
+the submission endpoint ({{native-surfaces}}). {{e2e-example}} walks
+the same flow with concrete messages.
+
 ## Applicability
 
 This profile targets deployments that need governed, approvable,
