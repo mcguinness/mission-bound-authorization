@@ -704,12 +704,11 @@ consent step: the shaper is not the Approver's agent for consent.
 
 ## Clarifications {#clarifications}
 
-A clarification SHOULD be phrased so that the requester can understand
-the authority consequence of each answer. "Need more scope?" is not
-sufficient; "May this Mission read invoices for customer 5678 in
-addition to customer 1234?" is. A clarification SHOULD identify the
-authority consequence of each offered choice. It SHOULD state what the
-shaper will do if it is left unanswered (refuse, narrow, or wait).
+A clarification SHOULD identify, in terms the requester can understand,
+the authority consequence of each offered answer. "Need more scope?" is
+not sufficient; "May this Mission read invoices for customer 5678 in
+addition to customer 1234?" is. It SHOULD state what the shaper will do
+if it is left unanswered (refuse, narrow, or wait).
 
 Clarification runs from the shaper to the requester and resolves task
 ambiguity before a proposal exists. The reverse channel, in which the
