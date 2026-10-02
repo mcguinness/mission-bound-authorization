@@ -2718,44 +2718,16 @@ and that shrinking residue is the adoption metric.
 # MAS-Mode End-to-End Example {#e2e-example}
 
 This appendix is non-normative. It stages the standalone binding end
-to end on one Mission; the architecture's MAS-mode sequence diagram
-shows the same stages in temporal order
-({{I-D.draft-mcguinness-mission-architecture}}).
+to end on one Mission, in the order of {{overview}}. Each stage points
+to the example that defines its messages.
 
 ## Submit
 
 The client proposes the Mission by POSTing its Mission Intent to the
 submission endpoint; the MAS validates it, derives the Authority Set
 under policy, and returns a pending-submission reference
-({{mission-submission}}).
-
-~~~ http-message
-POST /mas/mission/submit HTTP/1.1
-Host: mas.example.com
-Content-Type: application/json
-Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
-DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
-
-{
-  "intent": {
-    "goal": "Reconcile Q3 invoices and post adjustments under $500.",
-    "target_resources": ["https://erp.example.com"],
-    "expires_at": "2026-12-31T23:59:59Z"
-  }
-}
-~~~
-
-~~~ http-message
-HTTP/1.1 202 Accepted
-Content-Type: application/json
-Cache-Control: no-store
-
-{
-  "submission_id": "sub_4qV9rL3tY6sB1zN0eF7jB8K2nP",
-  "status": "pending",
-  "expires_at": "2026-10-16T14:32:11Z"
-}
-~~~
+({{mission-submission}}). The request and response are the examples
+in {{intent-submission}}.
 
 ## Poll to Approved
 
@@ -2763,28 +2735,8 @@ The MAS routes the submission to its approval surface; the Approver
 authenticates, reviews the rendered Authority Set, and approves, and
 the MAS creates the Mission `active` atomically with the decision
 ({{mission-approval}}). The client's next poll returns the Mission
-reference and its consented authority ({{mission-reference}}).
-
-~~~ http-message
-HTTP/1.1 200 OK
-Content-Type: application/json
-Cache-Control: no-store
-
-{
-  "submission_id": "sub_4qV9rL3tY6sB1zN0eF7jB8K2nP",
-  "status": "approved",
-  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-  "mission_expires_at": "2026-12-31T23:59:59Z",
-  "authorization_details": [
-    { "type": "mission_resource_access",
-      "resource": "https://erp.example.com",
-      "actions": ["invoices.read", "journal-entries.write"],
-      "constraints": {
-        "max_amount": { "amount": "500.00", "currency": "USD" }
-      } }
-  ]
-}
-~~~
+reference and its consented authority ({{mission-reference}}). The
+response is the example in {{mission-reference}}.
 
 ## Join
 
@@ -2793,28 +2745,8 @@ which carries no Mission signal. For the first consequential action,
 the PEP supplies the Mission reference, with `state` (and
 `authority_hash` where the response discloses it) from the MAS's
 signed Mission Status response, and the PDP verifies the subject and
-client joins ({{mission-join}}).
-
-~~~ json
-{
-  "subject": {
-    "type": "user",
-    "id": "user_3p2q8mN1a0kV7tR",
-    "properties": { "iss": "https://idp.example.com" }
-  },
-  "resource": { "type": "invoice", "id": "inv_2026Q3_842" },
-  "action": { "name": "invoices.read" },
-  "context": {
-    "mission": {
-      "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-      "issuer": "https://mas.example.com",
-      "authority_hash":
-        "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
-      "state": "active"
-    }
-  }
-}
-~~~
+client joins ({{mission-join}}). The decision request is the first
+example in {{join-authzen}}.
 
 ## Permit
 
@@ -2824,26 +2756,30 @@ so the PDP permits; the PEP executes the call to
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}). A revocation at
 the MAS
 stops the next such action at this step, through the runtime state
-re-check.
+re-check. The decision is the permit example in {{join-authzen}}.
+
+## Revoke
+
+An authorized party revokes the Mission at the Mission Lifecycle
+endpoint ({{lifecycle-and-state}}). The agent's token remains valid
+OAuth ({{limitations}}). On the agent's next consequential action the
+PDP's state check reports `revoked`, and the PDP denies with the
+AuthZEN profile's `mission_inactive` reason
+({{I-D.draft-mcguinness-mission-authzen}}):
 
 ~~~ json
 {
-  "decision": true,
+  "decision": false,
   "context": {
-    "decision_id": "dec_7mQ2sV5rL9tY3sB8zN1eF4jB0K",
-    "policy_view_id":
-      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t",
-    "join_view_id":
-      "sha-256:dV7wM3sK9nQ2vL5tR8bY1eG4jF6xH0pC3nT9kV2mZ5t",
+    "decision_id": "dec_9tY3sB8zN1eF4jB0K7mQ2sV5rL",
+    "denial_reason": "mission_inactive",
     "action_class": "consequential_read",
     "class_source": "resource_floor",
-    "permit_expires_at": "2026-11-02T08:15:30Z"
+    "policy_view_id":
+      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"
   }
 }
 ~~~
-
-`join_view_id` marks this decision as reached over the Join
-(rule 9 of {{join-rules}}), distinct from `policy_view_id`.
 
 # Document History {#document-history}
 
