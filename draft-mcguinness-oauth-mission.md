@@ -5808,7 +5808,8 @@ Cross-Domain:
 - Corrected the child-delegation example in Composition and the
   Effective Ceiling: `max_children` limits concurrently non-terminal
   children, so the example's 12 descendants are Missions live at
-  once, not a lifetime count.
+  once, not a lifetime count; disclosure points at the child-delegation
+  profile's distinct figures rather than one composed total.
 - Separated exact `target_resources` membership, checked for the
   Authority Set and for a proposal at submission, from later token
   narrowing under the subset rule. Made the per-capability
