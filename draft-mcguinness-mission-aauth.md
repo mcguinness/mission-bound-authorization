@@ -183,9 +183,12 @@ described in BCP 14 when, and only when, they appear in all capitals as
 shown here.
 
 This document uses the AAuth terms *agent identifier*, *Person Server*,
-*mission blob*, *mission reference*, *resource token*, *auth token*,
-*approved tools*, *mission log*, *person token*, and the `mission_s256`
-claim as defined by {{I-D.draft-hardt-oauth-aauth-protocol}}.
+*mission blob*, *mission identifier* (Section 8.2.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}), *resource token*,
+*auth token*, *mission log*, *person token*, the `approved_tools`
+member, and the `mission_s256` claim as defined by
+{{I-D.draft-hardt-oauth-aauth-protocol}}.  This binding's Mission
+Reference is defined in {{reference}}.
 
 For this binding:
 
@@ -397,8 +400,8 @@ If any of these checks cannot be completed, including establishing the
 mission's current state, the PS MUST fail closed and reject the
 request.
 
-Authenticated status, termination, denial, cleanup, and audit
-operations defined by this binding's companions are not positive
+Authenticated status, termination, denial, cleanup, and control-plane
+audit operations defined by this binding's companions are not positive
 governance decisions; they answer on a non-active mission as their
 specifications define.
 
@@ -501,31 +504,32 @@ This binding does not claim the transaction authorization capability.
 The Carrier Binding Floor of
 {{I-D.draft-mcguinness-oauth-mission-transaction-authorization}} names
 the slots a binding must provide to host action-bound transaction
-authorization, and several have no native home in AAuth or R3 today.
+authorization, and several have no native home in AAuth or R3.
 Consistent with this document's rule that it adds no new AAuth wire
 members, it defines no extensions to close them.
 
-| Requirement | Native today | Missing home |
+| Requirement | Native | Missing home |
 | --- | --- | --- |
 | Challenge carrier | The AAuth-Requirement challenge with a signed resource token | Members committing to the concrete parameters, the mission reference, and the presenter key |
-| Operation identity | R3 vocabulary definitions, content-addressed | Definition versioning and supersession |
+| Operation identity | R3 vocabulary operations, pinned by the content-addressed R3 document | Definition versioning and supersession |
 | Parameter commitment | The content-addressed R3 per-call document | A defined parameter-commitment member |
 | Workflow handle | None: `r3_s256` is a content address, and intentionally identical calls share it | A transaction-instance identifier with its own lifetime and admission idempotency |
 | Result class | None: the per-call result is an ordinary `aa-auth+jwt` | A class every verifier can distinguish, with single use semantic to the class |
 | At most one result | R3 single-uses one issued token | An issuance guard giving one admitted transaction at most one result |
 | Possession | AAuth proof of possession | An execution proof bound to the presented artifact itself |
 | Current-state source | Conditional: the management status operation where deployed ({{I-D.draft-mcguinness-mission-aauth-management}}) | An unconditional source on the execution path |
-| Failure vocabulary | Proposal pending, denied, and expired states | None |
+| Failure vocabulary | Proposal pending; the `denied`, `abandoned`, `expired`, and `revoked` polling errors (Section 11.9.4 of {{I-D.draft-hardt-oauth-aauth-protocol}}); and `expired_presented_token` when a per-call approval outlives the presented auth token (Section 10.2 of {{I-D.draft-hardt-aauth-r3}}) | None |
 | Fresh decision | PS adjudication under the lifecycle gate ({{lifecycle}}) | None |
 {: title="Transaction authorization requirements: native and missing"}
 
 A deployment could claim the capability only after the missing homes
 exist upstream and this binding additionally claims State-Observable
-unconditionally on the execution path (today conditional), and either
-Structured Authority or an equivalent resource-owned evaluation of the
-operation commitment (today not supported).  Until then the execution
-gate and the authority evaluation the transaction invariants require
-have no source in this binding, and hosting the flow is unsupported.
+unconditionally on the execution path (it is claimed conditionally),
+and either Structured Authority or an equivalent resource-owned
+evaluation of the operation commitment (not supplied).  Until then the
+execution gate and the authority evaluation the transaction invariants
+require have no source in this binding, and hosting the flow is
+unsupported.
 
 ## Reference Propagation {#ref-propagation}
 
@@ -560,7 +564,7 @@ Authorization still depends on the issuer's decision, the token's scopes
 and other claims, proof of possession, resource policy, and, where the PS
 is on path, the PS's current contextual governance decision.
 
-AAuth no longer treats a stripped mission as permitted downgrade: a
+AAuth does not treat a stripped mission as permitted downgrade: a
 resource MUST NOT omit `mission_s256` from a resource token when the
 presented token it verified carried one, and a PS MUST verify the
 `presented_token` the agent forwards against the resource token, its
@@ -799,7 +803,10 @@ Mission descriptions, tool descriptions, justifications, clarification
 messages, and audit content are untrusted input.  A PS that presents them
 to a person or an AI decision-maker MUST sanitize rendered Markdown and
 SHOULD clearly separate agent-supplied content from trusted policy and
-system instructions.
+system instructions.  On a consent surface, AAuth also requires the PS
+to distinguish resource-asserted from agent-asserted content and to
+attribute the latter to the agent (Section 7.4 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).
 
 An AI-assisted decision-maker MUST NOT treat text in a mission or log as
 authority to alter verification rules, reveal secrets, bypass policy, or
