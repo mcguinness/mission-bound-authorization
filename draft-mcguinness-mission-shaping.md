@@ -971,15 +971,21 @@ refusal input that motivated it (the error, the resolution, or the
 rejected dimensions) and MAY reference the predecessor proposal's
 evidence, so that an auditor can read the narrowing chain end to end.
 
-Each re-proposal narrows. A refusal is a signal to propose less, not
-to propose the same authority under different names. A shaper
-SHOULD NOT re-encode refused authority in new vocabulary. It MUST NOT
-use iterative resubmission to probe the Mission Issuer's policy
-boundary ({{silent-broadening}}). When a narrower proposal can no
-longer complete the task, the shaper requests clarification, refuses,
-or emits a partial proposal ({{authority-ceiling}}). A task that needs
-more than was refused is a new proposal through the normal flow, not a
-widened retry.
+A re-proposal after an authority refusal (a policy `access_denied`, a
+deferred denial, or a required revision) narrows. A refusal is a
+signal to propose less, not to propose the same authority under
+different names. A shaper SHOULD NOT re-encode refused authority in
+new vocabulary. It MUST NOT use iterative resubmission to probe the
+Mission Issuer's policy boundary ({{silent-broadening}}). When a
+narrower proposal can no longer complete the task, the shaper requests
+clarification, refuses, or emits a partial proposal
+({{authority-ceiling}}). A task that needs more than was refused is a
+new proposal through the normal flow, not a widened retry.
+
+A re-proposal after a construction error (`invalid_request` or
+`invalid_authorization_details`) corrects the encoding instead. It
+carries the same intended authority and does not broaden it; an entry
+that failed validation has no subset relation to narrow against.
 
 # Deployment Considerations {#deployment-considerations}
 
