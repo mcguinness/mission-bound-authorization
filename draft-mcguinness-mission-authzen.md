@@ -2784,6 +2784,11 @@ registered by {{I-D.draft-mcguinness-oauth-mission}}.
 
 \[\[ To be removed from the final specification ]]
 
+- Mission-to-Policy Materialization describes the materialized policy
+  view as one evaluation path: a PDP that evaluates the Mission's
+  recorded authority directly meets the runtime profile's authority
+  input without a view and omits `policy_view_id`.
+
 - The state observation's `mission_status_issued_at` is the RFC 3339
   form of a Mission Status Response's `iat`, which `freshness_at`
   precedes by no more than the published maximum clock skew, and
