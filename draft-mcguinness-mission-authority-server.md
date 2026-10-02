@@ -2259,10 +2259,14 @@ A **Mission-joining PEP**:
   request from it ({{join-scope}}), validating the presenter's
   Instance Context where the mapping contract requires an
   instance-bound join ({{join-instance}});
-- parses `Mission-Reference` and the MCP `_meta` key under
-  {{mission-reference-field}} and {{mcp-reference}}, and surfaces a
-  reference conflict with `mission_reference_conflict`
-  ({{reference-verification}});
+- where a propagated reference is used, parses it under the rules for
+  its HTTP ({{mission-reference-field}}) or MCP ({{mcp-reference}})
+  carriage and surfaces a reference conflict with
+  `mission_reference_conflict` ({{reference-verification}});
+- refuses governed work with no establishable Mission reference,
+  including a Mission-required MCP tool call without negotiated or
+  configured propagation support ({{mission-reference-field}},
+  {{mcp-reference}});
 - never treats a Mission permit as overriding what the credential or
   the resource would refuse (rule 8 of {{join-rules}}); and
 - does not copy the reference onto a request to an unrelated
