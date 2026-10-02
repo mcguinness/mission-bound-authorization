@@ -124,8 +124,11 @@ make governance decisions.
 AAuth also deliberately gives a mission only two states.  An `active`
 mission can be used; a `terminated` mission has ended permanently.
 There is no pause or resume operation.  The base protocol defines
-completion through the interaction endpoint and defers other
-transitions, administrative access, and delegation-tree queries.
+completion as the owning agent's `completion` action at the mission's
+own URL, which terminates the mission only on the Person's acceptance
+(Section 8.5 of {{I-D.draft-hardt-oauth-aauth-protocol}}), and defers
+other transitions, administrative access, and delegation-tree
+queries.
 
 This document supplies those management functions without replacing
 AAuth's mission model with an OAuth authorization object.  In
@@ -241,7 +244,7 @@ This specification defines these termination reasons:
 
 | Reason | Meaning |
 | --- | --- |
-| `completed` | The Person accepted completion of the work. |
+| `completed` | The Person accepted the Owning Agent's completion proposal (Section 8.5 of {{I-D.draft-hardt-oauth-aauth-protocol}}). |
 | `revoked` | The Person, Owning Agent, or an authorized administrator withdrew the mission. |
 | `expired` | The mission reached its approved `expires_at` time. |
 | `superseded` | The Person or an authorized administrator replaced the mission with another approved mission. |
@@ -359,11 +362,15 @@ action strings.  The array MUST contain `status` and `terminate` for
 conformance to this specification.  It contains `delegation_tree` when
 the PS implements {{delegation-tree}}.  Unknown values MUST be ignored.
 
-`mission_control_endpoint` is OPTIONAL in the base protocol.  A PS
-that does not publish it implements no operation of this
-specification, whatever `mission_control_actions_supported` would
-advertise.  A caller MUST resolve the endpoint from the metadata and
-MUST NOT construct it from `mission_endpoint`.
+`mission_control_endpoint` is OPTIONAL in the base protocol and adds
+nothing to AAuth PS conformance, which rests on the four REQUIRED
+metadata fields alone (Section 11.2.2 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}); the conformance it carries
+is to this document ({{conformance}}).  A PS that does not publish it
+implements no operation of this specification, whatever
+`mission_control_actions_supported` would advertise.  A caller MUST
+resolve the endpoint from the metadata and MUST NOT construct it from
+`mission_endpoint`.
 
 # Authentication and Authorization {#authorization}
 
@@ -638,11 +645,16 @@ termination obey the same rule.
 
 AAuth does not create child Mission objects for sub-agents or chained
 calls.  It records agent relationships in `parent_agent` and in the
-Auth Tokens issued or provided under the same Mission Reference; auth
-and resource tokens carry no chain claim, so the PS itself holds the
-call-chain state.  The tree operation reports those native
-relationships; it MUST NOT invent a second child mission identifier or
-imply algebraic scope inheritance.
+Auth Tokens issued or provided under the same Mission Reference
+(Section 10.2.3 of {{I-D.draft-hardt-oauth-aauth-protocol}}).  A call
+chain is recorded on the Person Token the PS issues to an
+intermediary: the PS copies the upstream token's `mission_s256` into
+it (Section 7.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}) and
+records it with the upstream token's `(iss, jti)` (Section 11.12.4 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  No token carries a chain
+claim, so the PS itself holds the call-chain state.  The tree
+operation reports those native relationships; it MUST NOT invent a
+second child mission identifier or imply algebraic scope inheritance.
 
 An authorized caller sends:
 
