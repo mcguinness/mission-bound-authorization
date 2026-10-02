@@ -2548,8 +2548,8 @@ tokens. Within their lifetime and scope they work wherever PEP
 coverage is absent, and Mission revocation does not touch them.
 Mitigations are short token lifetimes at the AS, narrow scope hygiene
 for agent clients, and complete PEP coverage of consequential paths.
-None eliminates the residual; only the OAuth binding's gating removes
-it ({{limitations}}).
+None eliminates the residual; only Mission-bound issuance removes it,
+through the OAuth binding or the issuance join ({{limitations}}).
 
 ## MAS Availability
 
