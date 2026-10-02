@@ -694,17 +694,13 @@ Shaping Evidence MUST record the resolution and, where deployment
 policy permits that default resolution, the policy rule that
 authorized it. The requirement is stated on the observable artifact
 because the Mission Issuer cannot observe the shaper's internal
-reasoning. A proposal that broadens authority on an ambiguity without
-a corresponding Shaping Evidence record does not follow this document.
-The Mission Issuer enforces its own ceiling and consent regardless of
-what the shaper recorded.
+reasoning.
 
-Requesting clarification is not approval. The requester's answer is
-incorporated into the Mission Intent, and the Mission Issuer still
-validates, narrows, and renders the consent disclosure for binding
-approval. A shaper MUST NOT treat answered clarifications as a reason
-to skip the Mission Issuer's consent step: the shaper is not the
-Approver's agent for consent.
+Requesting clarification is not approval: the requester's answer
+shapes the Mission Intent, and the Approver still consents to the
+disclosure the Mission Issuer renders. A shaper MUST NOT treat
+answered clarifications as a reason to skip the Mission Issuer's
+consent step: the shaper is not the Approver's agent for consent.
 
 ## Clarifications {#clarifications}
 
