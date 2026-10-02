@@ -699,6 +699,10 @@ A consumer MUST ignore members it does not recognize.
 | `unavailable` | 503 | submission, join assertion | MAS temporarily cannot serve the request. |
 {: title="MAS error codes"}
 
+A companion profile's machine-readable codes ride in the members
+{{native-carriage}} names (`mission_expansion_status` and
+`mission_denial_reason`), not as new `error` values.
+
 This aligns with the OAuth-shaped surfaces' shared error idiom
 {{I-D.draft-mcguinness-oauth-mission-status}}: an `error`/
 `error_description` JSON object body, `application/json` with
