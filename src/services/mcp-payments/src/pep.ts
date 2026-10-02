@@ -14,6 +14,8 @@ import { randomUUID } from "node:crypto";
 import { type ActObject, buildContextActor, flattenActChain } from "@mission/actor-chain";
 import {
   type ActionPhase,
+  type IdempotencyScope,
+  idempotencyScopeDigest,
   isActionPhase,
   type JsonValue,
   type PropagatedMissionReference,
@@ -35,8 +37,10 @@ import {
   type EvaluationRequest,
   type Fga,
   type Freshness,
+  idempotencyScopeOf,
   type MissionView,
   newRecordId,
+  operationIdentity,
   type OriginPrincipal,
   type PrincipalMappingResolver,
   relationForAction,
@@ -774,6 +778,24 @@ export interface EnforceResult {
    * never assembles a record of its own.
    */
   attempt?: ExecutionAttempt;
+  /**
+   * @spec runtime#idempotency (#918): present on a permit for a keyed
+   * reversible write. The (idempotency scope, `idempotency_key`) pair this
+   * PEP reserves, and the operation identity it is reserved under, projected
+   * from the same evaluation request the PDP decided, so the scope is built
+   * from this PEP's verified credential and governing Mission and never from
+   * an agent argument. `idempotencyKey` is the key that request carried, absent
+   * when it carried none.
+   */
+  writeReservation?: WriteReservationScope;
+}
+
+/** @spec runtime#idempotency (#918): the pair a keyed reversible write reserves. */
+export interface WriteReservationScope {
+  scope: IdempotencyScope;
+  scopeDigest: string;
+  operationIdentity: string;
+  idempotencyKey?: string;
 }
 
 /**
@@ -1671,10 +1693,25 @@ export class Pep {
       return { permitted: false, refusal_reason: "unfulfillable_obligation" };
     }
 
+    // @spec runtime#idempotency (#918): the pair a keyed reversible write
+    // reserves, from the request exactly as the PDP received it.
+    let writeReservation: WriteReservationScope | undefined;
+    if (mapping.idempotencyKey && mapping.actionClass === "consequential_write") {
+      const scope = idempotencyScopeOf(req);
+      const key = req.action.properties?.idempotency_key;
+      writeReservation = {
+        scope,
+        scopeDigest: idempotencyScopeDigest(scope),
+        operationIdentity: operationIdentity(req),
+        ...(typeof key === "string" ? { idempotencyKey: key } : {}),
+      };
+    }
+
     return {
       permitted: true,
       decision,
       attempt,
+      ...(writeReservation ? { writeReservation } : {}),
       resolvedMission: {
         id: missionAnchor.id,
         issuer: missionAnchor.issuer,
@@ -1815,14 +1852,28 @@ export class Pep {
    * another row rather than a competing check on another path.
    */
   async verifyPermitAtUse(attempt: ExecutionAttempt): Promise<ReverifyOutcome> {
-    for (const check of PERMIT_USE_CHECKS) {
-      const error = check.failure(attempt, { now: this.now(), profile: this.toolAction(attempt.tool) });
-      if (error !== undefined) {
-        const disposition = await this.suppressExecution(attempt, error);
-        return { ok: false, error, disposition };
-      }
+    const error = this.permitUseFailure(attempt);
+    if (error !== undefined) {
+      const disposition = await this.suppressExecution(attempt, error);
+      return { ok: false, error, disposition };
     }
     return { ok: true };
+  }
+
+  /**
+   * The same table {@link verifyPermitAtUse} runs, in the same order, with
+   * nothing recorded: the first failing comparison's error, or `undefined`
+   * when every row holds. For a boundary whose attempt already holds its one
+   * disposition (#918's release of a retained result, after its
+   * `operation_already_claimed` record was written), where a second record
+   * under the same execution identity would be refused.
+   */
+  permitUseFailure(attempt: ExecutionAttempt): string | undefined {
+    for (const check of PERMIT_USE_CHECKS) {
+      const error = check.failure(attempt, { now: this.now(), profile: this.toolAction(attempt.tool) });
+      if (error !== undefined) return error;
+    }
+    return undefined;
   }
 
   /**

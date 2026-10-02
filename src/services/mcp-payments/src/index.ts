@@ -46,6 +46,7 @@ export {
   type TxnCredential,
   type EnforceResult,
   type ExecutionAttempt,
+  type WriteReservationScope,
   type ReverifyOutcome,
   type SuppressOutcome,
   PRE_DECISION_DENIAL_REASON,
