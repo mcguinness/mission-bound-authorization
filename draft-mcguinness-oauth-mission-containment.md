@@ -178,6 +178,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-progressive:
+    title: "Mission Progressive Authorization for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -732,7 +740,7 @@ comes only from its own approval event. An `authority_contained`
 denial is the expansion-eligible signal for that path
 ({{denial-reason}}).
 
-Two rules close the laundering gap between containment and
+Three rules close the laundering gap between containment and
 expansion:
 
 - Containment MUST NOT propagate to a successor: the successor's
@@ -743,10 +751,24 @@ expansion:
   MUST surface the predecessor's containment history in the expansion
   consent disclosure: at minimum the contained capability and the
   event class that contained each entry.
+- Containing capability places a containment restriction on the
+  Mission's expansion chain, the successors linked to it through
+  `predecessor`. The Mission Issuer MUST retain each restriction,
+  with its contained capability and event class, across every later
+  successor in the chain, and MUST surface it in the consent
+  disclosure of any later expansion whose authority overlaps that
+  capability. A restriction clears only when a fresh human approval
+  explicitly authorizes restoring the affected authority with its
+  cause disclosed; an approval of unrelated authority does not clear
+  it.
 
 Together they keep the successor clean without letting it launder:
 capability removed for cause can return, but only past an Approver
-who saw the cause.
+who saw the cause, however many successors intervene. A restriction
+governs what a later approval discloses and, under the progressive
+authorization profile, whether a drawdown may be adjudicated by
+policy ({{I-D.draft-mcguinness-oauth-mission-progressive}}); it never
+places a successor's approved authority under an inherited overlay.
 
 That guarantee is only as strong as the disclosure's own integrity
 reaching the Approver unaltered, and the issuance profile does not
@@ -1028,7 +1050,8 @@ only through an approval that sees the containment history
 The disclosure rule of {{restoration}} is load-bearing: without it,
 expansion is a laundering path in which capability removed for cause
 returns through a successor the Approver believes is clean. An
-implementation that omits the predecessor's containment history from
+implementation that omits the predecessor's containment history, or
+an outstanding restriction carried from earlier in the chain, from
 the expansion consent defeats containment for any adversary patient
 enough to ask again.
 
@@ -1124,6 +1147,17 @@ This document registers two media types per {{RFC6838}}.
 - Restrictions on usage: none
 - Author: IETF
 - Change controller: IETF
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Restoration Through Expansion ({{restoration}}): containing
+  capability places a restriction on the Mission's expansion chain,
+  retained across later successors and surfaced in any later
+  expansion consent whose authority overlaps it, until a fresh human
+  approval explicitly restores that authority with its cause
+  disclosed. A successor's overlay still starts empty.
 
 # Acknowledgments
 {:numbered="false"}

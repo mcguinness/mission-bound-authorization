@@ -158,7 +158,16 @@ async function dispatch(params: {
 }
 
 beforeAll(async () => {
-  as = await buildAuthorizationServer({ issuer: ISSUER, allowHeadlessAdjudication: true });
+  as = await buildAuthorizationServer({
+    issuer: ISSUER,
+    allowHeadlessAdjudication: true,
+    // @spec mission-template#the-mission-template — deployment Dispatch
+    // Policies naming an Agent selection rule for multi-Agent templates.
+    dispatchPolicies: {
+      "test-route-a1": { selectAgent: ({ agents }) => (agents.includes("agent-A1") ? "agent-A1" : undefined) },
+      "test-route-unlisted": { selectAgent: () => "governed-agent" },
+    },
+  });
   asServer = as.provider.listen(PORT);
   clientKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
   dpopKeys = await generateKeyPair("ES256", { extractable: true });
@@ -384,6 +393,81 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
     // A refused Dispatch commits nothing: no Mission and no dispatch event.
     expect(as.kernel.allMissions().length).toBe(missionsBefore);
     expect(as.templateStore.dispatchesSince(template_id, "1970-01-01T00:00:00.000Z")).toBe(0);
+  });
+
+  // @spec mission-template#the-mission-template — the Mission Issuer selects
+  // the Agent; the request names none, and a parameter that tries is ignored.
+  it("the Agent is never taken from the request: a Dispatch naming an Agent commits the template's Agent", async () => {
+    const created = await createTemplateAdmin(readOnlyTemplateBody());
+    const { template_id } = (await created.json()) as { template_id: string };
+    const res = await tokenRequest({
+      grant_type: MISSION_DISPATCH_GRANT_TYPE,
+      template_id,
+      mission_intent: readOnlyIntent(),
+      dispatch_event_id: `evt-agent-param-${seq++}`,
+      recipient: "agent-A1",
+      agent: "agent-A1",
+    });
+    const body = (await res.json()) as { mission_id?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    expect(as.kernel.get(body.mission_id as string)?.client_id).toBe("subagent-invoice-extractor");
+  });
+
+  // @spec mission-template#the-mission-template, mission-template#grant-type —
+  // with several listed Agents the Dispatch Policy selects one; the selection
+  // is committed and kept on retry, and the token stays the Dispatcher's.
+  it("with several listed Agents, the Dispatch Policy selects the Agent, a retry keeps it, and the token is bound to the Dispatcher", async () => {
+    const created = await createTemplateAdmin({
+      ...readOnlyTemplateBody(),
+      dispatch_policy: "test-route-a1",
+      recipients: { subjects: [{ iss: ISSUER, sub: "bob" }], agents: ["subagent-invoice-extractor", "agent-A1"] },
+    });
+    const createdBody = (await created.json()) as { template_id: string };
+    expect(created.status, JSON.stringify(createdBody)).toBe(201);
+    const eventId = `evt-agent-policy-${seq++}`;
+    const res = await dispatch({ templateId: createdBody.template_id, intent: readOnlyIntent(), dispatchEventId: eventId });
+    const body = (await res.json()) as { mission_id?: string; access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    expect(as.kernel.get(body.mission_id as string)?.client_id).toBe("agent-A1");
+    const { payload } = await jwtVerify(body.access_token as string, createRemoteJWKSet(new URL(`${ISSUER}/jwks`)), { issuer: ISSUER, audience: RESOURCE });
+    expect(payload.client_id).toBe("ap-agent");
+    expect((payload.cnf as { jkt?: string } | undefined)?.jkt).toBe(await calculateJwkThumbprint(await exportJWK(dpopKeys.publicKey)));
+
+    const retry = await dispatch({ templateId: createdBody.template_id, intent: readOnlyIntent(), dispatchEventId: eventId });
+    const retryBody = (await retry.json()) as { mission_id?: string };
+    expect(retry.status, JSON.stringify(retryBody)).toBe(200);
+    expect(retryBody.mission_id).toBe(body.mission_id);
+    expect(as.kernel.get(retryBody.mission_id as string)?.client_id).toBe("agent-A1");
+  });
+
+  it("agent_not_selected: several listed Agents and no Dispatch Policy rule refuses the Dispatch with access_denied", async () => {
+    const created = await createTemplateAdmin({
+      ...readOnlyTemplateBody(),
+      dispatch_policy: "no-such-policy",
+      recipients: { subjects: [{ iss: ISSUER, sub: "bob" }], agents: ["subagent-invoice-extractor", "agent-A1"] },
+    });
+    const { template_id } = (await created.json()) as { template_id: string };
+    const res = await dispatch({ templateId: template_id, intent: readOnlyIntent(), dispatchEventId: `evt-agent-none-${seq++}` });
+    const body = (await res.json()) as { error?: string; mission_denial_reason?: string; access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(403);
+    expect(body.error).toBe("access_denied");
+    expect(body.mission_denial_reason).toBe("agent_not_selected");
+    expect(body.access_token).toBeUndefined();
+  });
+
+  it("recipient_not_allowed: a Dispatch Policy that selects an unlisted Agent is refused", async () => {
+    const created = await createTemplateAdmin({
+      ...readOnlyTemplateBody(),
+      dispatch_policy: "test-route-unlisted",
+      recipients: { subjects: [{ iss: ISSUER, sub: "bob" }], agents: ["subagent-invoice-extractor", "agent-A1"] },
+    });
+    const { template_id } = (await created.json()) as { template_id: string };
+    const before = as.kernel.allMissions().length;
+    const res = await dispatch({ templateId: template_id, intent: readOnlyIntent(), dispatchEventId: `evt-agent-unlisted-${seq++}` });
+    const body = (await res.json()) as { error?: string; mission_denial_reason?: string };
+    expect(res.status, JSON.stringify(body)).toBe(403);
+    expect(body.mission_denial_reason).toBe("recipient_not_allowed");
+    expect(as.kernel.allMissions().length).toBe(before);
   });
 
   it("lifecycle revoke: a revoked template refuses a subsequent dispatch with template_not_active", async () => {

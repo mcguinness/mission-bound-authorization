@@ -3,8 +3,10 @@ import { DERIVATION_POLICY } from "@mission/demo-data";
 import { generateKeyPair } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
+  assertLocalPrincipal,
   type AuthorityEntry,
   type AuthoritySourceCatalog,
+  bindAuthoritySourceCatalog,
   createChildMission,
   createTemplate,
   dispatchFromTemplate,
@@ -457,7 +459,6 @@ describe("authority source drawdown (@spec mission#authority-sources, child-dele
       templateId: template.id,
       dispatchEventId: `dsp-${seq++}`,
       dispatcher: "ap-agent",
-      recipient: "ap-agent",
       intent: intent({ expires_at: "2026-11-01T00:00:00Z" }),
       subject: { iss: ISS, sub: "alice" },
       policyVersion: DERIVATION_POLICY.policy_version,
@@ -533,5 +534,235 @@ describe("authority source in the Approval Context Manifest (@spec approval-gove
     const record = approve(kernel);
     const manifest = approvalContextManifest(kernel.approvalContextInput(record));
     expect(manifest.authority_source).toEqual(record.authority_source);
+  });
+});
+
+describe("issuer-qualified principals at the source gates (@spec mission#authority-sources, mission#approval-event, #829)", () => {
+  const FOREIGN = "https://untrusted.example";
+
+  const approveTuple = (
+    kernel: MissionKernel,
+    subject: unknown,
+    approver: unknown,
+    clientId = "ap-agent",
+    approvalEventId = `apev-829-${seq++}`,
+  ): MissionRecord =>
+    kernel.approve({
+      intent: intent(),
+      subject: subject as { iss: string; sub: string },
+      approver: approver as { iss: string; sub: string },
+      clientId,
+      approvalEventId,
+    });
+
+  const refused = (run: () => unknown, pattern: RegExp): void => {
+    try {
+      run();
+      expect.unreachable("a principal outside the deployment's issuer namespace must be refused");
+    } catch (e) {
+      expect(e).toBeInstanceOf(IntentError);
+      expect((e as IntentError).code).toBe("access_denied");
+      expect((e as Error).message).toMatch(pattern);
+    }
+  };
+
+  it("refuses a direct approval whose Approver is a foreign-issuer bob against local bob's activator, creating no Mission and publishing nothing", () => {
+    const commits: unknown[] = [];
+    const kernel = makeKernel({ onLifecycleCommit: (c: unknown) => commits.push(c) });
+    const before = kernel.allMissions().length;
+    const eventId = `apev-829-foreign-bob-${seq++}`;
+    refused(
+      () => approveTuple(kernel, { iss: ISS, sub: "alice" }, { iss: FOREIGN, sub: "bob" }, "ap-agent", eventId),
+      /approver is not a principal of this deployment's issuer namespace/,
+    );
+    expect(kernel.allMissions().length).toBe(before);
+    expect(kernel.findByApprovalEvent(eventId)).toBeUndefined();
+    expect(commits).toHaveLength(0);
+    // Control: the same approval with local bob succeeds.
+    expect(approveTuple(kernel, { iss: ISS, sub: "alice" }, { iss: ISS, sub: "bob" }).approver).toEqual({ iss: ISS, sub: "bob" });
+  });
+
+  it("refuses a foreign principal before derivation runs: an approval whose derivation would also fail reports the namespace refusal", () => {
+    const kernel = makeKernel();
+    const bogus = [{ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:bogus.action"] }] as AuthorityEntry[];
+    // Control: with local principals the same request fails in derivation.
+    expect(() =>
+      kernel.approve({ intent: intent(), proposedAuthority: bogus, subject: { iss: ISS, sub: "alice" }, approver: { iss: ISS, sub: "bob" }, clientId: "ap-agent", approvalEventId: `apev-829-${seq++}` }),
+    ).toThrow(IntentError);
+    refused(
+      () =>
+        kernel.approve({ intent: intent(), proposedAuthority: bogus, subject: { iss: ISS, sub: "alice" }, approver: { iss: FOREIGN, sub: "bob" }, clientId: "ap-agent", approvalEventId: `apev-829-${seq++}` }),
+      /approver is not a principal of this deployment's issuer namespace/,
+    );
+  });
+
+  it("refuses a foreign-issuer Subject in every source mode, including user_delegated", () => {
+    const kernel = makeKernel();
+    for (const [clientId, sub] of [
+      ["ap-agent", "alice"],
+      ["svc-agent", "svc-reconciler"],
+      ["governed-agent", "acme-accounts-payable"],
+    ] as const) {
+      refused(
+        () => approveTuple(kernel, { iss: FOREIGN, sub }, { iss: ISS, sub: "bob" }, clientId),
+        /subject is not a principal of this deployment's issuer namespace/,
+      );
+      // Control: the local tuple for the same mode is admitted.
+      expect(approveTuple(kernel, { iss: ISS, sub }, { iss: ISS, sub: "bob" }, clientId).subject).toEqual({ iss: ISS, sub });
+    }
+  });
+
+  it("refuses a missing, malformed, or byte-distinct issuer, never normalizing it into the local namespace", () => {
+    const kernel = makeKernel();
+    const variants: unknown[] = [
+      { sub: "bob" },
+      { iss: "", sub: "bob" },
+      { iss: 123, sub: "bob" },
+      { iss: ISS, sub: "" },
+      { iss: `${ISS}/`, sub: "bob" },
+      { iss: ISS.toUpperCase(), sub: "bob" },
+      { iss: ` ${ISS}`, sub: "bob" },
+      null,
+      "bob",
+    ];
+    for (const approver of variants) {
+      refused(() => approveTuple(kernel, { iss: ISS, sub: "alice" }, approver), /approver/);
+    }
+    for (const subject of variants) {
+      refused(() => approveTuple(kernel, subject, { iss: ISS, sub: "bob" }), /subject/);
+    }
+  });
+
+  it("holds the exported kernel gates to the namespace on their own, not only through approve", () => {
+    const kernel = makeKernel();
+    refused(
+      () => kernel.establishAuthoritySource({ clientId: "ap-agent", subject: { iss: ISS, sub: "alice" }, approver: { iss: FOREIGN, sub: "bob" } }),
+      /approver is not a principal/,
+    );
+    refused(
+      () => kernel.establishAuthoritySource({ clientId: "ap-agent", subject: { iss: FOREIGN, sub: "alice" }, approver: { iss: ISS, sub: "bob" } }),
+      /subject is not a principal/,
+    );
+    refused(
+      () => kernel.assertSubjectDisciplineForSource({ type: "user_delegated" }, { iss: FOREIGN, sub: "alice" }),
+      /subject is not a principal/,
+    );
+    const record = approve(kernel);
+    refused(
+      () =>
+        kernel.assertRenderedAuthoritySource({
+          source: record.authority_source,
+          subject: { iss: ISS, sub: "alice" },
+          approver: { iss: FOREIGN, sub: "bob" },
+          authoritySet: record.authority_set,
+        }),
+      /approver is not a principal/,
+    );
+    const bound = bindAuthoritySourceCatalog(catalog(), ISS);
+    expect(assertLocalPrincipal(bound, { iss: ISS, sub: "bob" }, "approver")).toEqual({ iss: ISS, sub: "bob" });
+    refused(() => assertLocalPrincipal(bound, { iss: FOREIGN, sub: "bob" }, "approver"), /approver is not a principal/);
+  });
+
+  it("keeps two kernels with equal local subject names isolated: neither accepts the other's qualified principal or catalog", () => {
+    const ISS_B = "https://as-b.test";
+    const a = makeKernel();
+    const b = makeKernel({ issuer: ISS_B });
+    refused(() => approveTuple(a, { iss: ISS_B, sub: "alice" }, { iss: ISS_B, sub: "bob" }), /not a principal/);
+    refused(() => approveTuple(b, { iss: ISS, sub: "alice" }, { iss: ISS, sub: "bob" }), /not a principal/);
+    expect(approveTuple(a, { iss: ISS, sub: "alice" }, { iss: ISS, sub: "bob" }).issuer).toBe(ISS);
+    expect(approveTuple(b, { iss: ISS_B, sub: "alice" }, { iss: ISS_B, sub: "bob" }).issuer).toBe(ISS_B);
+    // A catalog bound to B's namespace never becomes A's.
+    const boundB = bindAuthoritySourceCatalog(catalog(), ISS_B);
+    expect(() => bindAuthoritySourceCatalog(boundB, ISS)).toThrow(/bound to issuer 'https:\/\/as-b\.test'/);
+    expect(() => makeKernel({ authoritySourceCatalog: boundB })).toThrow(/bound to issuer/);
+  });
+
+  it("binds a configured principalIssuer distinct from the Mission issuer, admitting its principals and refusing the Mission issuer's", () => {
+    const IDP = "https://id.test";
+    const kernel = makeKernel({ principalIssuer: IDP });
+    const record = approveTuple(kernel, { iss: IDP, sub: "alice" }, { iss: IDP, sub: "bob" });
+    expect(record.issuer).toBe(ISS);
+    expect(record.approver).toEqual({ iss: IDP, sub: "bob" });
+    refused(() => approveTuple(kernel, { iss: ISS, sub: "alice" }, { iss: ISS, sub: "bob" }), /not a principal/);
+    expect(() => makeKernel({ principalIssuer: "" })).toThrow(/principal issuer must be a non-empty string/);
+  });
+
+  it("admits an upstream identity only after an explicit trusted mapping to a local principal; rewriting its issuer is not a mapping", () => {
+    const PARTNER = "https://id.partner.example";
+    // The deployment's separately trusted, injective mapping: upstream tuple to
+    // canonical local principal. Nothing maps by equal `sub`.
+    const TRUSTED_MAPPING = new Map([[`${PARTNER}|p-bob`, "bob"]]);
+    const mapToLocal = (upstream: { iss: string; sub: string }) => {
+      const local = TRUSTED_MAPPING.get(`${upstream.iss}|${upstream.sub}`);
+      if (!local) throw new Error("no trusted mapping");
+      return { iss: ISS, sub: local };
+    };
+    const kernel = makeKernel();
+    const upstream = { iss: PARTNER, sub: "p-bob" };
+    const mapped = approveTuple(kernel, { iss: ISS, sub: "alice" }, mapToLocal(upstream));
+    expect(mapped.approver).toEqual({ iss: ISS, sub: "bob" });
+    refused(() => approveTuple(kernel, { iss: ISS, sub: "alice" }, upstream), /approver is not a principal/);
+    // Changing only the issuer does not authenticate a mapping: the upstream
+    // `sub` is not a local activator.
+    refused(() => approveTuple(kernel, { iss: ISS, sub: "alice" }, { iss: ISS, sub: "p-bob" }), /not authorized to activate/);
+  });
+
+  const templateInput = (approvalEventId: string, approver: unknown) =>
+    ({
+      template_version: "t829",
+      issuer: ISS,
+      approver,
+      ceiling: [entry(READ_ACTIONS)],
+      dispatch_policy: "read-only",
+      dispatchers: ["ap-agent"],
+      recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents: ["ap-agent"] },
+      per_instance_lifetime_s: 900,
+      max_active: 5,
+      rate_per_min: 30,
+      review_cadence_s: 86400,
+      approval_event_id: approvalEventId,
+      expires_at: "2099-01-01T00:00:00Z",
+    }) as never;
+
+  it("refuses a template-consent retry whose approver is foreign or malformed before returning the template its event created, and still returns it for a legitimate retry after revocation", () => {
+    const kernel = makeKernel();
+    const store = new TemplateStore();
+    const eventId = `tmpl-829-${seq++}`;
+    const original = createTemplate(store, templateInput(eventId, { iss: ISS, sub: "bob" }), kernel.authoritySourceOptions());
+    for (const approver of [{ iss: FOREIGN, sub: "bob" }, { iss: "", sub: "bob" }, { sub: "bob" }]) {
+      try {
+        createTemplate(store, templateInput(eventId, approver), kernel.authoritySourceOptions());
+        expect.unreachable("a retry with a foreign or malformed approver must be refused");
+      } catch (e) {
+        expect(e).toBeInstanceOf(TemplateError);
+        expect((e as Error).message).toMatch(/approver/);
+      }
+    }
+    store.revoke(original.id);
+    const retried = createTemplate(store, templateInput(eventId, { iss: ISS, sub: "bob" }), kernel.authoritySourceOptions());
+    expect(retried.id).toBe(original.id);
+  });
+
+  it("refuses a dispatch retry whose Subject is foreign or malformed before returning the instance its dispatch id created, and still returns it for a legitimate retry after revocation", () => {
+    const kernel = makeKernel();
+    const store = new TemplateStore();
+    const template = createTemplate(store, templateInput(`tmpl-829-${seq++}`, { iss: ISS, sub: "bob" }), kernel.authoritySourceOptions());
+    const dispatchEventId = `dsp-829-${seq++}`;
+    const dispatchWith = (subject: unknown) =>
+      dispatchFromTemplate(kernel, store, {
+        templateId: template.id,
+        dispatchEventId,
+        dispatcher: "ap-agent",
+        recipient: "ap-agent",
+        intent: intent({ expires_at: "2026-11-01T00:00:00Z" }),
+        subject,
+        policyVersion: DERIVATION_POLICY.policy_version,
+      } as never);
+    const first = dispatchWith({ iss: ISS, sub: "alice" });
+    for (const subject of [{ iss: FOREIGN, sub: "alice" }, { iss: ISS, sub: "" }, { sub: "alice" }]) {
+      refused(() => dispatchWith(subject), /subject/);
+    }
+    store.revoke(template.id);
+    expect(dispatchWith({ iss: ISS, sub: "alice" }).mission.id).toBe(first.mission.id);
   });
 });

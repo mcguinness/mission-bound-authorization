@@ -34,11 +34,15 @@ import {
 } from "./containment.js";
 import {
   assertApproverMayActivate,
+  assertLocalPrincipal,
   assertPolicyDigestMatches,
   assertSubjectDiscipline,
   assertWithinSourceCeiling,
+  bindAuthoritySourceCatalog,
   type AuthoritySourceCatalog,
   type AuthoritySourceCatalogEntry,
+  type BoundAuthoritySourceCatalog,
+  type LocalPrincipal,
   authoritySourceOf,
   parseAuthoritySource,
   resolveDeclaredSource,
@@ -426,6 +430,18 @@ export interface KernelOptions {
    */
   authoritySourceCatalog: AuthoritySourceCatalog;
   /**
+   * @spec mission#authority-sources (#829): the one issuer namespace this
+   * kernel's Subjects and Approvers belong to: the catalog's subject strings
+   * denote principals of this namespace, and a principal from any other
+   * issuer is refused. Defaults to {@link issuer}, the namespace the shipped
+   * adapters build principals in. Set it when the deployment's principals are
+   * issued by its own identity provider rather than by the AS. It is
+   * configuration, never taken from a request; a deployment accepting another
+   * namespace's identities maps them to this one first, through its own
+   * separately trusted mapping.
+   */
+  principalIssuer?: string;
+  /**
    * @spec control-plane#deployment-declaration (D27) — the kernel store. The
    * default stays in-memory and single-process; a `file` names the OPT-IN
    * file-backed SINGLE-WRITER store that makes restart recovery of the durable
@@ -532,6 +548,13 @@ export class MissionKernel {
   private readonly derivationsInFlight = new Map<string, Promise<unknown>>();
   private readonly now: () => Date;
   private readonly allocateStatusIndex: () => number;
+  /**
+   * @spec mission#authority-sources (#829): the trusted catalog BOUND to this
+   * kernel's issuer namespace. Every source gate reads this, never the
+   * unbound `opts.authoritySourceCatalog`, so a Subject or Approver from
+   * another namespace cannot match a local catalog entry by `sub` alone.
+   */
+  private readonly sourceCatalog: BoundAuthoritySourceCatalog;
 
   constructor(private readonly opts: KernelOptions) {
     // @spec mission#authority-sources — the catalog's own invariants are
@@ -548,6 +571,15 @@ export class MissionKernel {
       );
     }
     validateAuthoritySourceCatalog(opts.authoritySourceCatalog);
+    // @spec mission#authority-sources (#829): bind the catalog to THIS
+    // kernel's configured principal namespace (`principalIssuer`, else the
+    // kernel's issuer): its subject strings denote principals of that one
+    // namespace. A catalog already bound to another issuer refuses
+    // construction, so two kernels never share a principal namespace.
+    this.sourceCatalog = bindAuthoritySourceCatalog(
+      opts.authoritySourceCatalog,
+      opts.principalIssuer ?? opts.issuer,
+    );
     this.db = openStore(SCHEMA, opts.store ?? {});
     migrateMissions(this.db);
     this.missionBoundGrants = new MissionBoundGrantStore(opts.now ?? (() => new Date()));
@@ -736,8 +768,8 @@ export class MissionKernel {
    * ({@link createTemplate}). Exposed rather than duplicated as an adapter
    * option so a deployment has exactly one catalog.
    */
-  authoritySourceOptions(): { authoritySourceCatalog: AuthoritySourceCatalog; capabilityResolver?: CapabilitySourceResolver } {
-    return { authoritySourceCatalog: this.opts.authoritySourceCatalog,
+  authoritySourceOptions(): { authoritySourceCatalog: BoundAuthoritySourceCatalog; capabilityResolver?: CapabilitySourceResolver } {
+    return { authoritySourceCatalog: this.sourceCatalog,
       ...(this.opts.capabilityResolver ? { capabilityResolver: this.opts.capabilityResolver } : {}) };
   }
 
@@ -751,7 +783,17 @@ export class MissionKernel {
    * is deployment configuration; nothing a client sends reaches it.
    */
   authoritySourceEntry(clientId: string): AuthoritySourceCatalogEntry {
-    return resolveSourceForClient(this.opts.authoritySourceCatalog, clientId);
+    return resolveSourceForClient(this.sourceCatalog, clientId);
+  }
+
+  /**
+   * @spec mission#authority-sources (#829): hold a supplied principal to this
+   * kernel's issuer namespace without running any source gate. For a path
+   * that must refuse a foreign principal BEFORE an idempotent return, where
+   * the full gates run only for a new result (template dispatch).
+   */
+  assertDeploymentPrincipal(principal: unknown, role: "approver" | "subject"): LocalPrincipal {
+    return assertLocalPrincipal(this.sourceCatalog, principal, role);
   }
 
   /**
@@ -769,8 +811,8 @@ export class MissionKernel {
   }): AuthoritySource {
     const entry = this.authoritySourceEntry(input.clientId);
     const source = authoritySourceOf(entry);
-    assertApproverMayActivate(entry, input.approver);
-    assertSubjectDiscipline(this.opts.authoritySourceCatalog, entry, input.subject);
+    assertApproverMayActivate(this.sourceCatalog, entry, input.approver);
+    assertSubjectDiscipline(this.sourceCatalog, entry, input.subject);
     assertPolicyDigestMatches(entry, source);
     return source;
   }
@@ -805,8 +847,8 @@ export class MissionKernel {
     subject: { iss: string; sub: string },
   ): void {
     assertSubjectDiscipline(
-      this.opts.authoritySourceCatalog,
-      resolveDeclaredSource(this.opts.authoritySourceCatalog, source),
+      this.sourceCatalog,
+      resolveDeclaredSource(this.sourceCatalog, source),
       subject,
     );
   }
@@ -815,7 +857,7 @@ export class MissionKernel {
     inherited: AuthoritySource,
     authoritySet: readonly AuthorityEntry[],
   ): void {
-    const entry = resolveDeclaredSource(this.opts.authoritySourceCatalog, inherited);
+    const entry = resolveDeclaredSource(this.sourceCatalog, inherited);
     assertWithinSourceCeiling(entry, authoritySet);
   }
 
@@ -831,6 +873,14 @@ export class MissionKernel {
     if (this.opts.capabilityResolver && input.capabilityResolution?.length) {
       throw new Error("capabilityResolution cannot be supplied when capabilityResolver is configured");
     }
+    // @spec mission#approval-event (step 3), mission#authority-sources (#829)
+    //: the Subject and Approver are principals of THIS kernel's issuer
+    // namespace. Checked first, before derivation and before any resolver
+    // side effect: a foreign or malformed tuple refuses `access_denied`
+    // before anything else runs. The source gates below repeat the check on
+    // the same tuples.
+    this.assertDeploymentPrincipal(input.subject, "subject");
+    this.assertDeploymentPrincipal(input.approver, "approver");
     // @spec mission#authority-proposal — normalize: an empty proposal is no
     // proposal (matches the wire, where an empty authorization_details array
     // is treated as absent). Present iff submitted: template-mode Missions
@@ -1403,9 +1453,9 @@ export class MissionKernel {
     approver: { iss: string; sub: string };
     authoritySet: readonly AuthorityEntry[];
   }): void {
-    const entry = resolveDeclaredSource(this.opts.authoritySourceCatalog, input.source);
-    assertApproverMayActivate(entry, input.approver);
-    assertSubjectDiscipline(this.opts.authoritySourceCatalog, entry, input.subject);
+    const entry = resolveDeclaredSource(this.sourceCatalog, input.source);
+    assertApproverMayActivate(this.sourceCatalog, entry, input.approver);
+    assertSubjectDiscipline(this.sourceCatalog, entry, input.subject);
     assertPolicyDigestMatches(entry, authoritySourceOf(entry));
     assertWithinSourceCeiling(entry, input.authoritySet);
   }
