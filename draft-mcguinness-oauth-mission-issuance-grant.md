@@ -534,8 +534,12 @@ object:
 
 `grant`:
 : REQUIRED. A string. The Mission Issuance Grant JWT of {{grant}}. Its
-  `exp` bounds redemption ({{grant}}); the requester reads the deadline
-  from the decoded grant.
+  `exp` bounds redemption ({{grant-validation}}).
+
+`expires_in`:
+: REQUIRED. A JSON integer. The number of whole seconds from the
+  generation of the response until the grant's `exp`, rounded down so
+  that it never indicates a time after `exp`.
 
 The following is an example of a grant response:
 
@@ -545,7 +549,8 @@ Content-Type: application/json
 Cache-Control: no-store
 
 {
-  "grant": "eyJ0eXAiOiJtaXNzaW9uLWlzc3VhbmNlLWdyYW50K2p3dCIs..."
+  "grant": "eyJ0eXAiOiJtaXNzaW9uLWlzc3VhbmNlLWdyYW50K2p3dCIs...",
+  "expires_in": 180
 }
 ~~~
 

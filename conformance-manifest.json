@@ -22699,6 +22699,27 @@
    "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with #963 decision D5; todo until that path exists."
   },
   {
+   "id": "issuance-grant.minting-response.expires-in",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "minting-response",
+   "text": "The number of whole seconds from the generation of the response until the grant's `exp`, rounded down",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every successful grant response carries expires_in as a JSON integer equal to the whole seconds from response generation to the grant's exp, rounded down, never indicating a time after exp"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with #963 decision D6; todo until that path exists."
+  },
+  {
    "id": "txn-authorization.token.txn-scoped-mint-gate",
    "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
    "anchor": "offline-verification",
