@@ -24,9 +24,18 @@
  * ceiling MUST NOT be intersected into `deriveAuthoritySet`, which would
  * silently narrow where the core says the AS "MUST refuse when either
  * relationship cannot be established".
+ *
+ * Gate 1 resolves for the actual principal (#827): a source is selected by the
+ * authenticated client AND the issuer-qualified Subject, through one
+ * {@link AuthoritySourceResolver} call per approval completion, so two Subjects
+ * sharing one agent registration carry distinct ceilings. Gates 2 to 5 then run
+ * on that one resolution. Missing, ambiguous, unavailable or inconsistent
+ * resolution refuses; ceilings never union and catalog order is never
+ * precedence.
  */
 
-import { entryWithinCeiling } from "@mission/core";
+import { createHash } from "node:crypto";
+import { canonicalize, entryWithinCeiling, type JsonValue } from "@mission/core";
 import { IntentError } from "./intent.js";
 import type { AuthorityEntry, AuthoritySource, AuthoritySourceType } from "./types.js";
 
@@ -54,11 +63,23 @@ export function isAuthoritySourceType(value: unknown): value is AuthoritySourceT
  * discipline.
  */
 export interface AuthoritySourceCatalogEntry {
-  /** Config-local identifier, used in refusal messages only. */
+  /**
+   * The stable internal root key: unique within the catalog, issuer-local, and
+   * never on the wire (no `authority_source` member carries it).
+   */
   id: string;
   type: AuthoritySourceType;
   /** The Agents (OAuth clients) whose Missions draw on this source. */
   clients: readonly string[];
+  /**
+   * @spec mission#authority-sources (#827): the Subjects this source applies
+   * to, among those its clients present. Absent, it applies to every Subject of
+   * its clients. Two entries sharing a client MUST both declare `subjects`, and
+   * those lists MUST be disjoint, so exactly one root resolves for any
+   * (client, Subject). Selection only: gate 4 still holds a workload Subject to
+   * `principals`, so being selected is never being recognized.
+   */
+  subjects?: readonly string[];
   /**
    * Approver subjects authorized under local policy to ACTIVATE this source.
    * REQUIRED and non-empty: a source nobody may activate is a configuration
@@ -118,31 +139,51 @@ export interface AuthoritySourceCatalog {
  * missing issuer restores a bare-`sub` comparison. A deployment that accepts
  * identities from another namespace maps them first, through its own
  * separately trusted mapping, to a canonical local principal.
+ *
+ * The catalog is also bound to one `deployment` (#827): the trusted tenant
+ * discriminator, the kernel's issuer, set by assembly. Two Authorization
+ * Servers that share an identity provider share a principal namespace but
+ * never a catalog. `revision` commits to the catalog content a resolution
+ * was made against.
  */
 export interface BoundAuthoritySourceCatalog extends AuthoritySourceCatalog {
   readonly principalIssuer: string;
+  readonly deployment: string;
+  readonly revision: string;
 }
 
 /**
- * Bind a catalog to the kernel's configured issuer. Refuses an empty issuer,
- * and refuses a catalog already bound to a different issuer rather than
- * rebinding it, so one kernel's catalog never authorizes another kernel's
- * principals.
+ * Bind a catalog to the kernel's configured principal issuer and deployment.
+ * Refuses an empty value, and refuses a catalog already bound to a different
+ * issuer or deployment rather than rebinding it, so one kernel's catalog never
+ * authorizes another kernel's principals or serves another kernel's tenant.
  */
 export function bindAuthoritySourceCatalog(
   catalog: AuthoritySourceCatalog,
   principalIssuer: string,
+  deployment: string,
 ): BoundAuthoritySourceCatalog {
   if (typeof principalIssuer !== "string" || principalIssuer.length === 0) {
     throw new Error("authority-source catalog: the trusted principal issuer must be a non-empty string");
   }
-  const bound = (catalog as Partial<BoundAuthoritySourceCatalog>).principalIssuer;
-  if (bound !== undefined && bound !== principalIssuer) {
+  if (typeof deployment !== "string" || deployment.length === 0) {
+    throw new Error("authority-source catalog: the trusted deployment must be a non-empty string");
+  }
+  const prior = catalog as Partial<BoundAuthoritySourceCatalog>;
+  if (prior.principalIssuer !== undefined && prior.principalIssuer !== principalIssuer) {
     throw new Error(
-      `authority-source catalog is bound to issuer '${bound}', not this kernel's issuer '${principalIssuer}'`,
+      `authority-source catalog is bound to issuer '${prior.principalIssuer}', not this kernel's issuer '${principalIssuer}'`,
     );
   }
-  return Object.freeze({ ...catalog, principalIssuer });
+  if (prior.deployment !== undefined && prior.deployment !== deployment) {
+    throw new Error(
+      `authority-source catalog is bound to deployment '${prior.deployment}', not this kernel's deployment '${deployment}'`,
+    );
+  }
+  const content = { entries: catalog.entries, humanPrincipals: catalog.humanPrincipals };
+  const bytes = canonicalize(JSON.parse(JSON.stringify(content)) as JsonValue);
+  const revision = `sha-256:${createHash("sha256").update(bytes).digest("base64url")}`;
+  return Object.freeze({ ...content, principalIssuer, deployment, revision });
 }
 
 /** A principal of the catalog's trusted issuer namespace, validated. */
@@ -180,25 +221,34 @@ export function assertLocalPrincipal(
   return { iss, sub };
 }
 
-/** The identity a record's immutable `authority_source` denotes: the tuple a
- *  drawdown re-resolves its source by. */
-function sourceIdentity(source: {
-  type: AuthoritySourceType;
-  policy?: { id: string; version: string };
-}): string {
-  return source.policy ? `${source.type}:${source.policy.id}:${source.policy.version}` : source.type;
+/** The provenance identity a record's immutable `authority_source` denotes,
+ *  compared member by member (type, policy id, policy version), never as a
+ *  delimiter-joined string. */
+function sameSourceIdentity(
+  a: { type: AuthoritySourceType; policy?: { id: string; version: string } },
+  b: { type: AuthoritySourceType; policy?: { id: string; version: string } },
+): boolean {
+  return a.type === b.type && a.policy?.id === b.policy?.id && a.policy?.version === b.policy?.version;
 }
 
 /**
- * @spec mission#approval-event (step 3) — validate a catalog at load. Two
- * source declarations that share a source IDENTITY would make a drawdown's
- * re-resolution ambiguous, and one client declared twice would make
- * establishment ambiguous; both refuse rather than picking a winner.
+ * @spec mission#approval-event (step 3): validate a catalog at load. Repeated
+ * modes and shared clients are admitted across disjoint Subjects (#827); what
+ * refuses is anything that would let one (client, Subject) select two roots:
+ * a duplicate root id, or two entries sharing a client whose `subjects` are
+ * absent or intersect. Each comparison is over the structured tuple, so a
+ * client or subject string containing a delimiter cannot collide.
  */
 export function validateAuthoritySourceCatalog(catalog: AuthoritySourceCatalog): void {
-  const identities = new Set<string>();
-  const clients = new Set<string>();
+  const ids = new Set<string>();
   for (const entry of catalog.entries) {
+    if (typeof entry.id !== "string" || entry.id.length === 0) {
+      throw new Error("authority source: id must be a non-empty string");
+    }
+    if (ids.has(entry.id)) {
+      throw new Error(`authority source '${entry.id}': duplicate root id`);
+    }
+    ids.add(entry.id);
     if (!isAuthoritySourceType(entry.type)) {
       throw new Error(`authority source '${entry.id}': unrecognized type '${String(entry.type)}'`);
     }
@@ -217,37 +267,291 @@ export function validateAuthoritySourceCatalog(catalog: AuthoritySourceCatalog):
     if (entry.ceiling.length === 0) {
       throw new Error(`authority source '${entry.id}': ceiling must be non-empty`);
     }
-    const identity = sourceIdentity(entry);
-    if (identities.has(identity)) {
-      throw new Error(`authority source '${entry.id}': duplicate source identity '${identity}'`);
+    // A selector that selects no one is a root nobody can draw on: refused at
+    // load, like an empty activators list, never read as "every Subject".
+    if (entry.subjects !== undefined && (!Array.isArray(entry.subjects) || entry.subjects.length === 0)) {
+      throw new Error(`authority source '${entry.id}': subjects, when present, must be non-empty`);
     }
-    identities.add(identity);
-    for (const client of entry.clients) {
-      if (clients.has(client)) {
-        throw new Error(`authority source '${entry.id}': client '${client}' is declared twice`);
+  }
+  const entries = catalog.entries;
+  for (let i = 0; i < entries.length; i++) {
+    for (let j = i + 1; j < entries.length; j++) {
+      const a = entries[i] as AuthoritySourceCatalogEntry;
+      const b = entries[j] as AuthoritySourceCatalogEntry;
+      const client = a.clients.find((c) => b.clients.includes(c));
+      if (client === undefined) continue;
+      if (a.subjects === undefined || b.subjects === undefined) {
+        throw new Error(
+          `authority sources '${a.id}' and '${b.id}' both select client '${client}': entries sharing a client must each declare disjoint subjects`,
+        );
       }
-      clients.add(client);
+      const subject = a.subjects.find((s) => b.subjects?.includes(s));
+      if (subject !== undefined) {
+        throw new Error(
+          `authority sources '${a.id}' and '${b.id}' both select subject '${subject}' of client '${client}'`,
+        );
+      }
     }
   }
 }
 
-/**
- * GATE 1 — a trusted source resolves for this Agent. Fail closed: a catalog
- * that declares no entry for the presenting client refuses, rather than
- * falling back to a permissive default.
- */
-export function resolveSourceForClient(
+/** The entries that select a (client, Subject): at most one in a valid catalog. */
+function selectingEntries(
   catalog: AuthoritySourceCatalog,
   clientId: string,
-): AuthoritySourceCatalogEntry {
-  const entry = catalog.entries.find((e) => e.clients.includes(clientId));
-  if (!entry) {
+  sub: string,
+): AuthoritySourceCatalogEntry[] {
+  return catalog.entries.filter(
+    (e) => e.clients.includes(clientId) && (e.subjects === undefined || e.subjects.includes(sub)),
+  );
+}
+
+/**
+ * The provenance an approval RENDERING shows when the Subject is not yet known
+ * (the Approver has not authenticated and no `login_hint` names one). Defined
+ * only where every source the client could resolve shares one provenance, so
+ * the rendering is true for whichever Subject the decision binds; otherwise it
+ * refuses. The decision itself always resolves for the actual Subject.
+ */
+export function renderableSourceForClient(
+  catalog: AuthoritySourceCatalog,
+  clientId: string,
+): AuthoritySource {
+  const candidates = catalog.entries.filter((e) => e.clients.includes(clientId));
+  const first = candidates[0];
+  if (!first) {
     throw new IntentError(
       "access_denied",
       `no trusted authority source is declared for client '${clientId}'`,
     );
   }
-  return entry;
+  const provenance = authoritySourceOf(first);
+  const bytes = canonicalize(provenance as unknown as JsonValue);
+  if (candidates.some((e) => canonicalize(authoritySourceOf(e) as unknown as JsonValue) !== bytes)) {
+    throw new IntentError(
+      "access_denied",
+      `the authority source for client '${clientId}' depends on the Subject, which this rendering does not identify`,
+    );
+  }
+  return provenance;
+}
+
+/**
+ * @spec mission#authority-sources, mission#approval-event (step 3), #827: the
+ * ONE source an approval completion draws on. `rootId` is the stable internal
+ * root key; `provenance` is the immutable wire `authority_source`; `principal`
+ * is the issuer-qualified Subject whose authority is activated; `entry` is the
+ * declaration gates 2 to 5 run on (ceiling, activators, principals, policy);
+ * `catalogRevision` is the catalog content it was resolved against.
+ */
+export interface AuthoritySourceResolution {
+  readonly rootId: string;
+  readonly deployment: string;
+  readonly provenance: AuthoritySource;
+  readonly principal: LocalPrincipal;
+  readonly clientId: string;
+  readonly entry: AuthoritySourceCatalogEntry;
+  readonly catalogRevision: string;
+}
+
+/**
+ * The private, issuer-local record of the root a Mission committed: its root
+ * id, deployment, root context (Subject and client) and provenance. Never on
+ * the wire and outside every anchor.
+ */
+export interface AuthoritySourceBinding {
+  readonly rootId: string;
+  readonly deployment: string;
+  readonly principal: LocalPrincipal;
+  readonly clientId: string;
+  readonly provenance: AuthoritySource;
+}
+
+/**
+ * A proposed mode or governed policy. It can only CONFIRM the root that
+ * resolves for the Subject and client, or refuse; it never selects a root.
+ */
+export interface AuthoritySourceRequest {
+  readonly type: AuthoritySourceType;
+  readonly policy?: { readonly id: string; readonly version: string };
+}
+
+/**
+ * @spec mission#authority-sources (#827): the trusted resolver that replaces a
+ * catalog lookup. Synchronous by contract: resolution runs inside the approval
+ * completion, which commits in one synchronous store transaction, so a remote
+ * resolver needs a snapshot it can answer from and revalidation at commit,
+ * never network I/O inside the transaction.
+ *
+ * - `resolveForApproval`: the root for an approval completion. `deployment`
+ *   comes from assembly, `subject` is already held to the bound namespace, and
+ *   `clientId` is authenticated.
+ * - `resolveCommittedRoot`: the CURRENT declaration of a root a Mission
+ *   already committed. It never rebinds: a missing root, a changed provenance
+ *   or policy, or a root that no longer selects its own Subject and client
+ *   refuses.
+ */
+export interface AuthoritySourceResolver {
+  resolveForApproval(input: {
+    deployment: string;
+    subject: LocalPrincipal;
+    clientId: string;
+    sourceRequest?: AuthoritySourceRequest;
+  }): AuthoritySourceResolution;
+  resolveCommittedRoot(input: {
+    deployment: string;
+    binding: AuthoritySourceBinding;
+  }): AuthoritySourceResolution;
+}
+
+/** The resolver over the deployment's trusted JSON catalog. */
+export function catalogAuthoritySourceResolver(
+  catalog: BoundAuthoritySourceCatalog,
+): AuthoritySourceResolver {
+  const resolution = (
+    entry: AuthoritySourceCatalogEntry,
+    principal: LocalPrincipal,
+    clientId: string,
+  ): AuthoritySourceResolution =>
+    Object.freeze({
+      rootId: entry.id,
+      deployment: catalog.deployment,
+      provenance: authoritySourceOf(entry),
+      principal,
+      clientId,
+      entry,
+      catalogRevision: catalog.revision,
+    });
+  const assertDeployment = (deployment: string): void => {
+    if (deployment !== catalog.deployment) {
+      throw new IntentError("access_denied", "the authority-source catalog serves another deployment");
+    }
+  };
+  return {
+    resolveForApproval({ deployment, subject, clientId, sourceRequest }) {
+      assertDeployment(deployment);
+      const local = assertLocalPrincipal(catalog, subject, "subject");
+      if (!catalog.entries.some((e) => e.clients.includes(clientId))) {
+        throw new IntentError(
+          "access_denied",
+          `no trusted authority source is declared for client '${clientId}'`,
+        );
+      }
+      const candidates = selectingEntries(catalog, clientId, local.sub);
+      const entry = candidates[0];
+      if (!entry) {
+        throw new IntentError(
+          "access_denied",
+          `no trusted authority source is declared for '${local.sub}' through client '${clientId}'`,
+        );
+      }
+      if (candidates.length > 1) {
+        throw new IntentError(
+          "access_denied",
+          `the authority source for '${local.sub}' through client '${clientId}' is ambiguous`,
+        );
+      }
+      if (sourceRequest && !sameSourceIdentity(sourceRequest, entry)) {
+        throw new IntentError(
+          "access_denied",
+          `the requested ${sourceRequest.type} authority source is not the one declared for '${local.sub}'`,
+        );
+      }
+      return resolution(entry, local, clientId);
+    },
+    resolveCommittedRoot({ deployment, binding }) {
+      assertDeployment(deployment);
+      if (binding.deployment !== catalog.deployment) {
+        throw new IntentError("access_denied", "the committed authority source belongs to another deployment");
+      }
+      const local = assertLocalPrincipal(catalog, binding.principal, "subject");
+      const entry = catalog.entries.find((e) => e.id === binding.rootId);
+      if (!entry) {
+        throw new IntentError(
+          "access_denied",
+          `the ${binding.provenance.type} authority source this Mission committed is no longer declared`,
+        );
+      }
+      if (!sameSourceIdentity(entry, binding.provenance)) {
+        throw new IntentError(
+          "access_denied",
+          `the authority source this Mission committed has changed provenance`,
+        );
+      }
+      assertPolicyDigestMatches(entry, binding.provenance);
+      if (!selectingEntries(catalog, binding.clientId, local.sub).includes(entry)) {
+        throw new IntentError(
+          "access_denied",
+          `the committed authority source no longer applies to '${local.sub}' through client '${binding.clientId}'`,
+        );
+      }
+      return resolution(entry, local, binding.clientId);
+    },
+  };
+}
+
+/**
+ * GATE 1 at an approval completion, behind any resolver: hold the Subject to
+ * the bound namespace FIRST (#829), call the resolver once, and accept its
+ * answer only when it is consistent with what was asked. A resolver that
+ * throws anything other than a refusal is unavailable, and an unavailable or
+ * inconsistent resolver refuses `access_denied`: the AS refuses when the
+ * source relationship cannot be established.
+ */
+export function resolveApprovalSource(
+  catalog: BoundAuthoritySourceCatalog,
+  resolver: AuthoritySourceResolver,
+  input: { deployment: string; subject: unknown; clientId: string },
+): AuthoritySourceResolution {
+  const local = assertLocalPrincipal(catalog, input.subject, "subject");
+  let r: AuthoritySourceResolution;
+  try {
+    r = resolver.resolveForApproval({ deployment: input.deployment, subject: local, clientId: input.clientId });
+  } catch (e) {
+    if (e instanceof IntentError) throw e;
+    throw new IntentError("access_denied", "the authority-source resolver is unavailable");
+  }
+  const consistent =
+    r !== null &&
+    typeof r === "object" &&
+    typeof r.rootId === "string" &&
+    r.rootId === r.entry?.id &&
+    r.deployment === input.deployment &&
+    r.clientId === input.clientId &&
+    r.principal?.iss === local.iss &&
+    r.principal?.sub === local.sub &&
+    typeof r.catalogRevision === "string" &&
+    r.catalogRevision.length > 0 &&
+    r.entry.clients.includes(input.clientId) &&
+    (r.entry.subjects === undefined || r.entry.subjects.includes(local.sub)) &&
+    canonicalize(r.provenance as unknown as JsonValue) ===
+      canonicalize(authoritySourceOf(r.entry) as unknown as JsonValue);
+  if (!consistent) {
+    throw new IntentError(
+      "access_denied",
+      "the authority-source resolver answered for a different Subject, client, deployment or source",
+    );
+  }
+  return r;
+}
+
+/**
+ * The funnel backstop for a FRESH approval: the record carries exactly the
+ * provenance its one resolution established, byte for byte.
+ */
+export function assertRecordedSourceResolved(
+  recorded: AuthoritySource,
+  resolved: AuthoritySourceResolution,
+): void {
+  if (
+    canonicalize(recorded as unknown as JsonValue) !==
+    canonicalize(resolved.provenance as unknown as JsonValue)
+  ) {
+    throw new IntentError(
+      "access_denied",
+      "the record's authority_source is not the source its approval resolved",
+    );
+  }
 }
 
 /**
@@ -257,6 +561,11 @@ export function resolveSourceForClient(
  * resolves; it never rewrites the record's member from a fresh lookup, which
  * would let a drawdown change provenance with no approval event.
  *
+ * Refuses, too, when the identity denotes MORE than one root (#827: repeated
+ * modes across disjoint Subjects): provenance alone cannot say which root a
+ * Mission committed, and the first match is never the answer. An inherited
+ * source in such a catalog draws on its committed root instead.
+ *
  * GATE 5 lives here too: an `organizational` record's committed policy
  * `digest` must equal the digest of the governed policy currently loaded, so
  * drift refuses.
@@ -265,12 +574,18 @@ export function resolveDeclaredSource(
   catalog: AuthoritySourceCatalog,
   source: AuthoritySource,
 ): AuthoritySourceCatalogEntry {
-  const identity = sourceIdentity(source);
-  const entry = catalog.entries.find((e) => sourceIdentity(e) === identity);
+  const matches = catalog.entries.filter((e) => sameSourceIdentity(e, source));
+  const entry = matches[0];
   if (!entry) {
     throw new IntentError(
       "access_denied",
       `the ${source.type} authority source this Mission draws on is no longer declared`,
+    );
+  }
+  if (matches.length > 1) {
+    throw new IntentError(
+      "access_denied",
+      `the ${source.type} authority source this Mission draws on denotes more than one root, so it cannot be re-resolved from provenance alone`,
     );
   }
   assertPolicyDigestMatches(entry, source);

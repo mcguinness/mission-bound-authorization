@@ -27,9 +27,11 @@ import {
   assertApproverMayActivate,
   assertLocalPrincipal,
   assertSubjectDiscipline,
+  type AuthoritySourceResolution,
+  type AuthoritySourceResolver,
   type BoundAuthoritySourceCatalog,
-  authoritySourceOf,
-  resolveSourceForClient,
+  catalogAuthoritySourceResolver,
+  resolveApprovalSource,
 } from "./authority-source.js";
 import { inheritCapabilitySources, resolveFreshCapabilitySources, type CapabilitySourceResolver } from "./capability-binding.js";
 import { deriveAuthoritySet, isSubsetSet } from "./derive.js";
@@ -159,17 +161,21 @@ function assertDispatchersAndRecipients(input: CreateTemplateInput): void {
  * @spec mission#approval-event (step 3), mission#authority-sources — template
  * consent IS an approval event, so it establishes the template's
  * `authority_source` from the injected trusted catalog, keyed on the
- * `recipients` (the Agents that will run the dispatched instances) and never
- * from the request body. Every recipient MUST resolve to the SAME declared
- * source, or the template is refused: a template whose instances would draw on
- * two different authorities has no single provenance to inherit. The
+ * `recipients` (each recipient Subject through each recipient Agent, #827)
+ * and never from the request body. Every pair MUST resolve to the SAME root,
+ * or the template is refused: a template whose instances would draw on two
+ * different authorities has no single provenance to inherit. The
  * established source is provenance and stays OUTSIDE `template_hash`, exactly
  * as `authority_source` stays outside both Mission anchors.
  */
 export function createTemplate(
   store: TemplateStore,
   input: CreateTemplateInput,
-  options: { authoritySourceCatalog: BoundAuthoritySourceCatalog; capabilityResolver?: CapabilitySourceResolver },
+  options: {
+    authoritySourceCatalog: BoundAuthoritySourceCatalog;
+    authoritySourceResolver?: AuthoritySourceResolver;
+    capabilityResolver?: CapabilitySourceResolver;
+  },
 ): MissionTemplate {
   if (input.ceiling.length === 0) {
     throw new TemplateError("template ceiling must be non-empty");
@@ -243,34 +249,45 @@ export function createTemplate(
  */
 function establishTemplateAuthoritySource(
   input: CreateTemplateInput,
-  options: { authoritySourceCatalog: BoundAuthoritySourceCatalog },
+  options: { authoritySourceCatalog: BoundAuthoritySourceCatalog; authoritySourceResolver?: AuthoritySourceResolver },
 ): AuthoritySource {
   const catalog = options.authoritySourceCatalog;
+  const resolver = options.authoritySourceResolver ?? catalogAuthoritySourceResolver(catalog);
   if (input.recipients.agents.length === 0) {
     throw new TemplateError("template recipients.agents must be non-empty");
   }
-  let entry: ReturnType<typeof resolveSourceForClient> | undefined;
-  for (const recipient of input.recipients.agents) {
-    let resolved: ReturnType<typeof resolveSourceForClient>;
-    try {
-      resolved = resolveSourceForClient(catalog, recipient);
-    } catch (e) {
-      throw new TemplateError((e as Error).message);
+  // @spec mission#authority-sources (#827): resolve for every recipient
+  // Subject through every recipient Agent, through the same resolver an
+  // approval uses. One root for all of them, or no template: a shared agent
+  // registration never lets one recipient's instances draw on another's root.
+  let root: AuthoritySourceResolution | undefined;
+  for (const subject of input.recipients.subjects) {
+    for (const agent of input.recipients.agents) {
+      let resolved: AuthoritySourceResolution;
+      try {
+        resolved = resolveApprovalSource(catalog, resolver, {
+          deployment: catalog.deployment,
+          subject,
+          clientId: agent,
+        });
+      } catch (e) {
+        throw new TemplateError((e as Error).message);
+      }
+      if (root && resolved.rootId !== root.rootId) {
+        throw new TemplateError(
+          "template recipients draw on more than one authority source; a template has one source",
+        );
+      }
+      root = resolved;
     }
-    if (entry && resolved.id !== entry.id) {
-      throw new TemplateError(
-        "template recipients draw on more than one authority source; a template has one source",
-      );
-    }
-    entry = resolved;
   }
-  const resolvedEntry = entry as NonNullable<typeof entry>;
+  const resolvedRoot = root as AuthoritySourceResolution;
   try {
-    assertApproverMayActivate(catalog, resolvedEntry, input.approver);
+    assertApproverMayActivate(catalog, resolvedRoot.entry, input.approver);
   } catch (e) {
     throw new TemplateError((e as Error).message);
   }
-  return authoritySourceOf(resolvedEntry);
+  return resolvedRoot.provenance;
 }
 
 export interface DispatchInput {

@@ -36,17 +36,21 @@ import {
   assertApproverMayActivate,
   assertLocalPrincipal,
   assertPolicyDigestMatches,
+  assertRecordedSourceResolved,
   assertSubjectDiscipline,
   assertWithinSourceCeiling,
   bindAuthoritySourceCatalog,
+  catalogAuthoritySourceResolver,
   type AuthoritySourceCatalog,
-  type AuthoritySourceCatalogEntry,
+  type AuthoritySourceResolution,
+  type AuthoritySourceResolver,
   type BoundAuthoritySourceCatalog,
   type LocalPrincipal,
   authoritySourceOf,
   parseAuthoritySource,
+  renderableSourceForClient,
+  resolveApprovalSource,
   resolveDeclaredSource,
-  resolveSourceForClient,
   validateAuthoritySourceCatalog,
 } from "./authority-source.js";
 import type { DerivationPolicy, ExpiryCeilings } from "./derive.js";
@@ -442,6 +446,14 @@ export interface KernelOptions {
    */
   principalIssuer?: string;
   /**
+   * @spec mission#authority-sources (#827): the trusted resolver that selects
+   * the one source an approval completion draws on, for the authenticated
+   * client and the issuer-qualified Subject. Defaults to the resolver over
+   * {@link authoritySourceCatalog}. Deployment configuration, never taken
+   * from a request; the kernel verifies each answer against what it asked.
+   */
+  authoritySourceResolver?: AuthoritySourceResolver;
+  /**
    * @spec control-plane#deployment-declaration (D27) — the kernel store. The
    * default stays in-memory and single-process; a `file` names the OPT-IN
    * file-backed SINGLE-WRITER store that makes restart recovery of the durable
@@ -555,13 +567,16 @@ export class MissionKernel {
    * another namespace cannot match a local catalog entry by `sub` alone.
    */
   private readonly sourceCatalog: BoundAuthoritySourceCatalog;
+  /** @spec mission#authority-sources (#827): the one resolver every approval
+   *  completion consults; see {@link KernelOptions.authoritySourceResolver}. */
+  private readonly sourceResolver: AuthoritySourceResolver;
 
   constructor(private readonly opts: KernelOptions) {
     // @spec mission#authority-sources — the catalog's own invariants are
-    // enforced HERE, not only over the shipped file: two declarations sharing a
-    // source identity would make a drawdown's re-resolution ambiguous, and one
-    // client declared twice would make establishment ambiguous. Both refuse
-    // construction rather than letting a lookup silently pick a winner.
+    // enforced HERE, not only over the shipped file: a duplicate root id, or
+    // two declarations that select the same (client, Subject), would make
+    // establishment ambiguous (#827). Both refuse construction rather than
+    // letting a lookup silently pick a winner.
     // A plain Error, not an IntentError: a missing catalog is deployment
     // misconfiguration, never a request refusal, so it must not reach a client
     // as `access_denied`. The five gates stay the only `access_denied` source.
@@ -579,7 +594,9 @@ export class MissionKernel {
     this.sourceCatalog = bindAuthoritySourceCatalog(
       opts.authoritySourceCatalog,
       opts.principalIssuer ?? opts.issuer,
+      opts.issuer,
     );
+    this.sourceResolver = opts.authoritySourceResolver ?? catalogAuthoritySourceResolver(this.sourceCatalog);
     this.db = openStore(SCHEMA, opts.store ?? {});
     migrateMissions(this.db);
     this.missionBoundGrants = new MissionBoundGrantStore(opts.now ?? (() => new Date()));
@@ -768,8 +785,12 @@ export class MissionKernel {
    * ({@link createTemplate}). Exposed rather than duplicated as an adapter
    * option so a deployment has exactly one catalog.
    */
-  authoritySourceOptions(): { authoritySourceCatalog: BoundAuthoritySourceCatalog; capabilityResolver?: CapabilitySourceResolver } {
-    return { authoritySourceCatalog: this.sourceCatalog,
+  authoritySourceOptions(): {
+    authoritySourceCatalog: BoundAuthoritySourceCatalog;
+    authoritySourceResolver: AuthoritySourceResolver;
+    capabilityResolver?: CapabilitySourceResolver;
+  } {
+    return { authoritySourceCatalog: this.sourceCatalog, authoritySourceResolver: this.sourceResolver,
       ...(this.opts.capabilityResolver ? { capabilityResolver: this.opts.capabilityResolver } : {}) };
   }
 
@@ -778,12 +799,30 @@ export class MissionKernel {
   }
 
   /**
-   * @spec mission#approval-event (step 3), mission#authority-sources — GATE 1:
-   * resolve the trusted authority-source declaration for an Agent. The catalog
-   * is deployment configuration; nothing a client sends reaches it.
+   * @spec mission#approval-event (steps 3 and 5), mission#authority-sources:
+   * the source an approval RENDERING identifies. With the Subject known, it is
+   * that Subject's resolution (#827); without one, it is defined only where
+   * every source the client could resolve shares one provenance. The
+   * decision re-resolves for the actual Subject regardless.
    */
-  authoritySourceEntry(clientId: string): AuthoritySourceCatalogEntry {
-    return resolveSourceForClient(this.sourceCatalog, clientId);
+  renderAuthoritySource(input: { clientId: string; subject?: unknown }): AuthoritySource {
+    if (input.subject === undefined) return renderableSourceForClient(this.sourceCatalog, input.clientId);
+    return this.resolveAuthoritySource({ clientId: input.clientId, subject: input.subject }).provenance;
+  }
+
+  /**
+   * @spec mission#approval-event (step 3), mission#authority-sources (#827):
+   * GATE 1, resolve the one trusted source for this Subject through this
+   * client. The Subject is held to this kernel's namespace before the
+   * resolver runs; the catalog is deployment configuration and nothing a
+   * client sends reaches it.
+   */
+  resolveAuthoritySource(input: { clientId: string; subject: unknown }): AuthoritySourceResolution {
+    return resolveApprovalSource(this.sourceCatalog, this.sourceResolver, {
+      deployment: this.opts.issuer,
+      subject: input.subject,
+      clientId: input.clientId,
+    });
   }
 
   /**
@@ -802,19 +841,19 @@ export class MissionKernel {
    * and 5; gate 3 is {@link assertAuthorityWithinSource}, kept separate so
    * activation authority is never read as possession. Every refusal is
    * `access_denied`, raised BEFORE any integrity anchor is computed and before
-   * the record is created.
+   * the record is created. Returns the one resolution (#827) the caller hands
+   * to gate 3, so no gate resolves again by different inputs.
    */
   establishAuthoritySource(input: {
     clientId: string;
     subject: { iss: string; sub: string };
     approver: { iss: string; sub: string };
-  }): AuthoritySource {
-    const entry = this.authoritySourceEntry(input.clientId);
-    const source = authoritySourceOf(entry);
-    assertApproverMayActivate(this.sourceCatalog, entry, input.approver);
-    assertSubjectDiscipline(this.sourceCatalog, entry, input.subject);
-    assertPolicyDigestMatches(entry, source);
-    return source;
+  }): AuthoritySourceResolution {
+    const resolved = this.resolveAuthoritySource({ clientId: input.clientId, subject: input.subject });
+    assertApproverMayActivate(this.sourceCatalog, resolved.entry, input.approver);
+    assertSubjectDiscipline(this.sourceCatalog, resolved.entry, input.subject);
+    assertPolicyDigestMatches(resolved.entry, resolved.provenance);
+    return resolved;
   }
 
   /**
@@ -824,8 +863,11 @@ export class MissionKernel {
    * `deriveAuthoritySet` would silently narrow where the core says the AS MUST
    * refuse.
    */
-  assertAuthorityWithinSource(clientId: string, authoritySet: readonly AuthorityEntry[]): void {
-    assertWithinSourceCeiling(this.authoritySourceEntry(clientId), authoritySet);
+  assertAuthorityWithinSource(
+    resolved: AuthoritySourceResolution,
+    authoritySet: readonly AuthorityEntry[],
+  ): void {
+    assertWithinSourceCeiling(resolved.entry, authoritySet);
   }
 
   /**
@@ -901,12 +943,13 @@ export class MissionKernel {
     // `ApproveInput` carries no source member by design; establishment is
     // kernel-side from injected trusted configuration, which is what "never
     // from client assertion" requires.
-    const authoritySource = this.establishAuthoritySource({
+    const resolvedSource = this.establishAuthoritySource({
       clientId: input.clientId,
       subject: input.subject,
       approver: input.approver,
     });
-    this.assertAuthorityWithinSource(input.clientId, authoritySet);
+    this.assertAuthorityWithinSource(resolvedSource, authoritySet);
+    const authoritySource = resolvedSource.provenance;
     // @spec mission#mission-identifier: opaque URL-safe, >=128 bits entropy,
     // drawn from the single mission-id.ts minting helper.
     const id = newMissionId();
@@ -979,7 +1022,7 @@ export class MissionKernel {
       status_list_idx: null,
     };
     try {
-      this.insertRecord(record);
+      this.insertRecord(record, undefined, { source: resolvedSource });
     } catch (e) {
       if (e instanceof UniqueViolationError) {
         // Idempotent approval: return the record this event already created.
@@ -1006,6 +1049,13 @@ export class MissionKernel {
        * not resolved again; an absent old pin stays absent (fail closed).
        */
       inheritPinsFrom?: { missionId: string; pairs: readonly CarryoverEntryPair[] };
+      /**
+       * @spec mission#authority-sources (#827): the one resolution a FRESH
+       * approval (direct, Expansion) established its source from. Present,
+       * the funnel re-asserts against it rather than resolving again from
+       * provenance; absent (a drawdown), it re-resolves from provenance.
+       */
+      source?: AuthoritySourceResolution;
     } = {},
   ): void {
     // @spec control-plane#isolation — one issuer owns a kernel store.
@@ -1028,8 +1078,15 @@ export class MissionKernel {
     // child creation): the declared source still agrees with the immutable
     // member the record carries, and the set being committed still lies within
     // that source's authority. A drawdown against a source narrowed since its
-    // predecessor was approved refuses here.
-    this.assertInheritedAuthoritySource(record.authority_source, record.authority_set);
+    // predecessor was approved refuses here. A fresh approval hands over the
+    // one resolution its gates ran on (#827), so the funnel never resolves
+    // again by different inputs.
+    if (options.source) {
+      assertRecordedSourceResolved(record.authority_source, options.source);
+      this.assertAuthorityWithinSource(options.source, record.authority_set);
+    } else {
+      this.assertInheritedAuthoritySource(record.authority_source, record.authority_set);
+    }
     withTransaction(this.db, () => {
       // @spec mission#mission-record, mission#approval-event (step 4) — the
       // creation-transaction expiry invariant, checked INDEPENDENTLY of whatever
