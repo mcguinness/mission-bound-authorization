@@ -61,12 +61,17 @@ export {
 } from "./pep.js";
 export {
   CONNECTOR_TOOLS,
+  dispatchPathFor,
   McpPaymentsServer,
+  REVERSIBLE_WRITE_REFUSAL_ERRORS,
+  REVERSIBLE_WRITE_TOOLS,
+  type ReversibleWriteFailpoints,
   TOOLS,
   type ToolDef,
   type McpServerDeps,
   type TransactionToolResult,
   type VerifiedTxnCredential,
+  type WriteToolResult,
 } from "./server.js";
 export {
   createMcpChannel,
