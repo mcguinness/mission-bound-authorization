@@ -2329,6 +2329,16 @@ evidence representation their shared envelope carries (using the
 
 --- back
 
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Decision Evidence's `mission.policy_view_id` is REQUIRED where the
+  PDP evaluates through a materialized policy view; a PDP that
+  evaluates the Mission's recorded authority directly omits it and
+  records `authority_hash`, following the runtime profile's two
+  evaluation paths.
+
 # Acknowledgments
 {:numbered="false"}
 
