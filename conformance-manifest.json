@@ -71,8 +71,8 @@
     "content_sha256": "bf4b09b73adfdbf647f9740ef2451862b87212aaa7424496aa865b99d2a2a46d"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
-    "revision": "6a3c451eff8b0568e16817fbb84be343f8e8e485",
-    "content_sha256": "73deb3473bca62b2eeef325b317707f6d14753e3bfc5e312be7848304d37ea0d"
+    "revision": "6709a195c9fbd34ad065ebfdea3a4015f56a0a48",
+    "content_sha256": "e5df3ed63df08516a9044b766e2d560cad7bbbabe4630bc8aa5decf8eb6b8ff4"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
@@ -21883,7 +21883,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "No issuance-grant redemption endpoint exists in src (inventoried #589): the profile's Grant Minter / Consuming AS redemption flow is spec-only here, so the redemption-time duty (which #617 review 4 states unconditionally for every state-integrated consuming AS, split in the conformance section from the refresh-time duty) has no code to observe. The sibling refresh facet is implemented and tested; this row stays todo until a redemption path is built."
+   "notes": "No issuance-grant redemption endpoint exists in src (inventoried #589): the profile's Mission Authority Server / Consuming AS redemption flow is spec-only here, so the redemption-time duty (which #617 review 4 states unconditionally for every state-integrated consuming AS, split in the conformance section from the refresh-time duty) has no code to observe. The sibling refresh facet is implemented and tested; this row stays todo until a redemption path is built."
   },
   {
    "id": "issuance-grant.effective-set-projection.refresh",
