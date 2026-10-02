@@ -261,12 +261,15 @@ host these practices unchanged.
 {::boilerplate bcp14-tagged}
 
 This document is Informational and defines no conformance class. Its
-BCP 14 keywords describe recommended shaper-side behavior that an
-auditor can observe in the shaping artifacts, the Mission Intent
-proposal and Shaping Evidence; they are not a conformance obligation
-on any party. Mission Issuer behavior is cited from the issuance
-profile, not specified here. "Sound shaper" names a shaper that follows
-the recommendations of this document; it is not a conformance target.
+BCP 14 keywords state recommended behavior for three parties: the
+shaper, expressed where possible on the observable shaping artifacts
+(the Mission Intent proposal and Shaping Evidence); a deployment that
+operates a shaper; and any party that receives shaper output or
+Shaping Evidence, which never treats either as authority. None of
+them is a conformance obligation. Mission Issuer behavior is cited
+from the issuance profile, not specified here. "Sound shaper" names a
+shaper that follows the recommendations of this document; it is not a
+conformance target.
 
 All JSON in this document is non-normative and illustrative; the
 surrounding prose is authoritative. This document uses JSON {{RFC8259}}
@@ -467,8 +470,8 @@ For each resolved capability, Shaping Evidence SHOULD record:
 - where available, a digest over the source representation, so that
   approval and runtime enforcement can detect drift.
 
-A confidence value, if recorded, is audit evidence only and MUST NOT be
-treated as authority.
+A confidence value, if recorded, is audit evidence only, and a party
+that receives it MUST NOT treat it as authority.
 
 # Mission Intent Construction {#mission-intent-proposal}
 
@@ -1016,9 +1019,9 @@ security properties follow from its role ({{proposes-only}}).
 
 ## Model Output Is Not Authority {#model-output}
 
-A model-based shaper can draft a Mission Intent, but the model MUST NOT
-be the authority that grants or widens access ({{proposes-only}}). A
-deployment that lets a model's proposal become active without
+A model-based shaper can draft a Mission Intent, but a deployment
+MUST NOT let model output grant or widen access ({{proposes-only}}).
+A deployment that lets a model's proposal become active without
 validation and approval is not following this document. A model-based
 shaper inherits its model's failure modes (hallucinated resources,
 fabricated constraints, inconsistent paraphrase, and sensitivity to
@@ -1044,8 +1047,10 @@ It cannot:
 - cause a Resource Server to act without authority issued by the
   Mission Issuer.
 
-The Mission Issuer remains the enforcement point for approval and MUST
-validate and narrow the proposal. Deployments SHOULD monitor shaper
+The Mission Issuer remains the enforcement point for approval: the
+issuance profile requires it to validate and narrow the proposal
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Authority").
+Deployments SHOULD monitor shaper
 versions and evidence for anomalous broadening.
 
 ## Prompt Injection and Untrusted Content {#prompt-injection}
