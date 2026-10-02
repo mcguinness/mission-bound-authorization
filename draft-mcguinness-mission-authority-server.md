@@ -2542,8 +2542,8 @@ retained materially longer without a documented basis.
 
 ## HTTP Field Name Registration
 
-This document registers the following in the "Hypertext Transfer
-Protocol (HTTP) Field Name" registry ({{RFC9110}}):
+IANA is requested to register the following in the "Hypertext
+Transfer Protocol (HTTP) Field Name" registry ({{RFC9110}}):
 
 - Field Name: Mission-Reference
 - Status: permanent
@@ -2596,7 +2596,7 @@ for each, Change Controller IETF and Reference this document:
 
 ## Media Type Registration
 
-This document registers one media type per {{RFC6838}}.
+IANA is requested to register one media type per {{RFC6838}}.
 
 ### Mission Join Assertion Media Type
 
