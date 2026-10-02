@@ -11,16 +11,16 @@
     "content_sha256": "d00802fb051f408340682374fe233c88477a4005756813f8afcd4cf351307b09"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "b1e2dcc6c89d5c55d33696af3fa76b6898d0a295",
-    "content_sha256": "bfa9bd2c5fd047203807cc2b015b3f060cbf29135682141ce57b257e1713b1f5"
+    "revision": "b0290640a7a1c067c5a9bbb7b750e427674b4d98",
+    "content_sha256": "6ce7c0051693c267dd34b3e195a10be2e4171383fb1fa3dac85a4d1bcaad3376"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
     "revision": "b1e2dcc6c89d5c55d33696af3fa76b6898d0a295",
     "content_sha256": "20c47603567f29810ac9d6e146f8c30a1c9650009a5253255b3a66c3fe1ab43b"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "b1e2dcc6c89d5c55d33696af3fa76b6898d0a295",
-    "content_sha256": "d3398de58e0f2b195b237834929f42d98fe162839274707d4215562a75e0b192"
+    "revision": "15d9ebb2d611bbc41779a673215c2cf357d890eb",
+    "content_sha256": "d53a5a91ef5f10105985d1ca069ff709732bbc5b55277433249d14b70026d3eb"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "daadb45f36cd901f0d646ba0aa942dfec95844ee",
@@ -91,8 +91,8 @@
     "content_sha256": "c9ed7e78d3821f796ce8d53f76bb5402bf8d599f83a12f650e6c1a1689dc9c5d"
    },
    "draft-mcguinness-mission-capability-binding.md": {
-    "revision": "175c6252b65d8fdca0347d3f214dd0282d6615fc",
-    "content_sha256": "5cbae2ac50393b51ea1fbaf2ce6a55f2df2213904a82fbaacf61088eeadb6b32"
+    "revision": "2dc6ca1d93658b0b9ad55de66da07aa0a30ce4a2",
+    "content_sha256": "7747cec83e69020dce2611fd99172fbe14034d776ba68c9b64cdca9fd410d94f"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
@@ -197,6 +197,7 @@
    "runtime.history-input",
    "runtime.evaluation-context-binding",
    "runtime.discovered-catalog",
+   "runtime.materialized-policy-view",
    "containment.narrowing",
    "cross-domain.origin-principal",
    "runtime.taint-enforcement",
@@ -12504,10 +12505,10 @@
    "tests": []
   },
   {
-   "id": "runtime.policy-view.three-properties",
+   "id": "runtime.input-authority.evaluated-representation-bound",
    "spec": "draft-mcguinness-mission-runtime.md",
-   "anchor": "policy-view",
-   "text": "The materialized policy view MUST satisfy three properties:",
+   "anchor": "input-authority",
+   "text": "Whichever representation it evaluates MUST NOT be broader than the current effective authority, and MUST be bound to the Mission it represents by the Mission's identifier and `authority_hash`.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -12517,13 +12518,36 @@
     "runtime-enforced"
    ],
    "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "whether the PDP evaluates a materialized policy view or the Mission's recorded authority directly, an action outside the current effective authority is refused, and the evaluated representation is tied to the Mission's id and authority_hash; mutable state comes from a state source, never from the representation"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#986 (D219 ruling). The reference PDP evaluates through a view; no direct-evaluation witness yet."
+  },
+  {
+   "id": "runtime.policy-view.three-properties",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "policy-view",
+   "text": "The materialized policy view MUST satisfy three properties:",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.materialized-policy-view"
+   },
+   "profiles": [],
+   "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
     "normative": "a materialized policy view is reproducible from identical manifest inputs, carries an identifying policy_view_id, and never enlarges the Authority Set's semantic bounds"
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#986 (D219): a materialized policy view is one evaluation path, so these rows bind a PDP that uses one and leave both baselines."
   },
   {
    "id": "runtime.policy-view.manifest-must-carry-fields",
@@ -12533,11 +12557,10 @@
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "runtime.materialized-policy-view"
    },
-   "profiles": [
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
@@ -12545,7 +12568,8 @@
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#986 (D219): a materialized policy view is one evaluation path, so these rows bind a PDP that uses one and leave both baselines."
   },
   {
    "id": "runtime.policy-view.no-embedded-lifecycle-state",
@@ -12555,11 +12579,10 @@
    "role": "PDP",
    "strength": "MUST NOT",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "runtime.materialized-policy-view"
    },
-   "profiles": [
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
@@ -12575,7 +12598,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "Tested that policy_view_id equality gates reliance and does not silently track a post-issuance containment change; not tested that the manifest object itself omits a lifecycle-state field."
+   "notes": "Tested that policy_view_id equality gates reliance and does not silently track a post-issuance containment change; not tested that the manifest object itself omits a lifecycle-state field. #986 (D219): a materialized policy view is one evaluation path, so these rows bind a PDP that uses one and leave both baselines."
   },
   {
    "id": "runtime.semantic-evaluators.no-widen-or-substitute",
