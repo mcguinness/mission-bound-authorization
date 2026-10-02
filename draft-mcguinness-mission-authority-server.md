@@ -132,6 +132,14 @@ normative:
 
 informative:
   RFC8725:
+  I-D.draft-mcguinness-oauth-mission-management:
+    title: "Mission Management for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-management.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-issuance-grant:
     title: "Mission Issuance Grant for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
@@ -705,7 +713,9 @@ authorization input. On this surface, `error_description` and
 `error_reason` are OPTIONAL, and `error_reason` is MAS-specific. The
 MAS does not carry `nonce`: that member's requiredness on the status
 and lifecycle surfaces ({{I-D.draft-mcguinness-oauth-mission-status}})
-and on Mission Management does not extend here.
+and on Mission Management
+({{I-D.draft-mcguinness-oauth-mission-management}}) does not extend
+here.
 
 # Mission Approval {#mission-approval}
 
