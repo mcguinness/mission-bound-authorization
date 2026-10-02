@@ -2837,6 +2837,20 @@ AuthZEN profile's `mission_inactive` reason
 
 \[\[ To be removed from the final specification ]]
 
+- Reading order. A Protocol Overview with the MAS-mode flow figure
+  opens the document. The Mission Join, Reference Propagation, and the
+  Join Assertion follow Lifecycle and State; Expansion and Child
+  Creation follow them; Metadata follows every endpoint it lists; and
+  the Mission Substrate Statement follows Conformance. The Mission Join
+  has subsections for its rules, what a join establishes, acting
+  credentials, instance-bound joins, and the AuthZEN encoding. Mission
+  Reference Delivery is a subsection of Mission Submission; the error
+  table names the endpoints that return each code; Terminology defines
+  the join vocabulary; Conformance adds the PEP role, the Join
+  Assertion capability, and the Enterprise profile; Deployment is an
+  appendix; and the end-to-end walkthrough points to the in-body
+  examples and adds revocation.
+
 - Corrections. Cross-references name the right sections (the
   propagation tuple's state source, a client-instance section);
   Join Spoofing counts four residuals; IANA names both runtime denial
