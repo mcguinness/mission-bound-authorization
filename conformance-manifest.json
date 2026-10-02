@@ -13161,9 +13161,21 @@
      "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the idempotency scope is the published namespace > a new client_instance_id does not split the scope",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the idempotency scope is the published namespace > another instance of the same client under the same key, carried as an instance-profiled leaf, never obtains a second permit",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the idempotency scope is the published namespace > an instance-profiled leaf with no client to key it on has no stable actor and is refused actor_invalid",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "Witnessed (#917): the statement publishes idempotency_scope [mission, subject, actor, audience, action, resource, phase] per high-consequence class; a statement adding a volatile member (client_instance_id, the act chain above the leaf, freshness, approvals, timestamps) or omitting a dimension is refused at load; and the scope the PDP encodes is exactly the published one: pairs differing in any one dimension never collide under the fixed-member JCS encoding, and a new client_instance_id does not split it."
+   "notes": "Witnessed (#917): the statement publishes idempotency_scope [mission, subject, actor, audience, action, resource, phase] per high-consequence class; a statement adding a volatile member (client_instance_id, the act chain above the leaf, freshness, approvals, timestamps) or omitting a dimension is refused at load; and the scope the PDP encodes is exactly the published one: pairs differing in any one dimension, a different delegate leaf included, never collide under the fixed-member JCS encoding, and a new client_instance_id does not split it. The actor dimension is a stable identity (@mission/core idempotencyScopeActor, #1016 review): a leaf act entry whose sub_profile carries client_instance names a volatile instance, so the scope keys on its client instead and another instance of the same client gets no second permit; an instance-profiled leaf with no client to key on is refused actor_invalid."
   },
   {
    "id": "runtime.idempotency.tombstone-retention-and-refusal",
@@ -14620,7 +14632,7 @@
    "assertion": "replay",
    "observation": {
     "normative": "a re-presentation whose decision cache key equals the prior decision's and whose claim matches (same idempotency scope, key and operation identity), while the prior permit is unexpired and its evaluation_id unconsumed, returns the prior decision rather than a fresh evaluation or an error",
-    "local": "the reference PDP establishes unconsumed only from the executing PEP's explicit unconsumed answer for that evaluation_id, read from its D28 redemption store and asked of the PEP and epoch the permit was issued to; consumed, unknown, a failed or timed-out query, another epoch, a settled claim or a PDP restart suppresses with duplicate_suppressed (next_action retry), and the stored decision is returned byte for byte with its stored Decision Evidence, never re-emitted"
+    "local": "the reference PDP establishes unconsumed only from the executing PEP's explicit unconsumed answer for that evaluation_id, read from its D28 redemption store and asked of the PEP and epoch the permit was issued to; consumed, unknown, a failed or timed-out query, another epoch, a settled claim or a PDP restart suppresses with duplicate_suppressed (next_action retry); unexpired is judged on a clock read after that answer arrives, inside the transaction that returns the decision; and the stored decision is returned byte for byte with its stored Decision Evidence, never re-emitted"
    },
    "level": "concurrency",
    "coverage": "tested",
@@ -14652,6 +14664,12 @@
     {
      "file": "src/services/pdp/test/idempotency-claim.test.ts",
      "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > retransmission returns the prior decision only when every condition holds > does not return it once the permit expired",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > retransmission returns the prior decision only when every condition holds > does not return a permit that expires while the PEP is answering",
      "level": "unit",
      "surface": "decision-request"
     },
