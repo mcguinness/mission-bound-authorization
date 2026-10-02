@@ -2966,8 +2966,9 @@ The following requirements apply to every record:
   runtime evidence companion
   ({{I-D.draft-mcguinness-mission-runtime-evidence}}) is the
   suite's one signing convention for evidence objects and SHOULD be
-  used, with a `typ` that names the record's own media type, rather
-  than a record-specific signing scheme.
+  used, with the protected `typ` that convention fixes and a `cty`
+  that names the record's own media type, rather than a
+  record-specific signing scheme.
 - Raw parameters MUST NOT appear in the record; when retained for
   forensics they MUST be in separately access-controlled storage
   referenced by an opaque identifier, with only the

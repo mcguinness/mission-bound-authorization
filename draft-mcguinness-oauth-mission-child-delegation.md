@@ -543,12 +543,16 @@ the parent, and the parent MUST NOT hold child tokens.
 
 The child's initial grant MUST be an audience-bound JWT authorization
 grant that the child actor redeems as itself under the {{RFC7523}}
-JWT-bearer grant, of the shape the Mission Issuance Grant profile
-defines ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}): on
-creating the Child Mission the Mission Issuer mints an assertion that
-names the child actor as the authorized redeemer and the Mission
-Issuer's token endpoint as the audience, and the child actor presents it
-there authenticating with its own client credential.
+JWT-bearer grant: on creating the Child Mission the Mission Issuer
+mints an assertion that names the child actor as the authorized
+redeemer and the Mission Issuer's token endpoint as the audience, and
+the child actor presents it there authenticating with its own client
+credential. The grant follows the Mission Issuance Grant's pattern
+({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) except for its
+audience: the Mission Issuer mints and redeems it itself, so the
+audience is its own token endpoint, which {{Section 3 of RFC7523}}
+permits, rather than a consuming Authorization Server's issuer
+identifier.
 
 An authorization code MUST NOT be used to convey the child's grant: an
 authorization code is redeemable by the client that obtained it, which
@@ -1535,7 +1539,10 @@ independently of the generation order used for derivation. Each entry names:
 
 - `child_id`, `issuer`, `created_at`, `child_actor`, and current state and
   version;
-- `authority_hash`, `intent_hash`, `effective_authority_hash`,
+- `authority_hash`, `intent_hash`, `effective_authority_hash` (the
+  issuance profile's `authority_hash` construction applied to the old
+  child's Effective Authority Set at rendering,
+  {{I-D.draft-mcguinness-oauth-mission-status}}),
   `containment_version`, and the exact `parent` reference and `depth`;
 - `derivation_limit`, `derivation_count`, `expires_at`, and every mutable
   discharge, fan-out, meter, or latch input used to decide or transfer
@@ -2140,6 +2147,11 @@ apply unchanged.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The child's initial grant states how it differs from the Mission
+  Issuance Grant: its audience is the Mission Issuer's own token
+  endpoint, since that issuer mints and redeems it, not a consuming
+  Authorization Server's issuer identifier. No wire change.
 
 - The delegated-token versus Child Mission test adds audience: a
   sub-agent that calls a Resource Server that is not Mission-aware
