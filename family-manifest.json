@@ -956,7 +956,7 @@
    "verbs": [
     "govern"
    ],
-   "summary": "Defines the cumulative consumption bounds a Mission Intent may carry (`max_budget`, `max_calls`, `max_duration`, `max_egress_volume`), the `exclusive` latch, and the runtime metering and AuthZEN wire binding that enforce them.",
+   "summary": "Defines the cumulative consumption bounds a Mission Intent may carry (`max_budget`, `max_calls`, `max_duration`, `max_egress_volume`), the `exclusive` latch, and the runtime metering and AuthZEN wire representation that enforce them.",
    "pull_when": "A Mission needs cumulative caps (budget, calls, duration, egress), not just scope.",
    "normative_references": [
     "draft-mcguinness-mission-authzen",

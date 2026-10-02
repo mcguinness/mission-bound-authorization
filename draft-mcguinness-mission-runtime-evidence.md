@@ -277,7 +277,7 @@ Decision-API binding:
   any one binding's wire.
 
 HTTP and JSON message examples in this document follow the wire
-shape of the OpenID AuthZEN Authorization API binding
+shape of the AuthZEN profile
 {{I-D.draft-mcguinness-mission-authzen}}, the family's reference
 producer; a deployment using a different decision-API binding
 produces the same records from its own wire inputs.

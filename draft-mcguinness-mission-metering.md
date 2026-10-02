@@ -133,7 +133,7 @@ an exclusivity control (`exclusive`, separation of duty),
 the runtime metering
 semantics that enforce them (atomic check-and-decrement, reserve and
 commit postures, duration leases, and settlement), and the AuthZEN wire
-binding for lease renewal and settlement. A consumption bound is
+representation for lease renewal and settlement. A consumption bound is
 consented at approval and enforced only by a runtime deployment that
 implements this profile; a deployment that does not meter a bound must
 refuse rather than silently ignore it.
@@ -824,7 +824,7 @@ returning a permit. The PDP MUST record `quota_exceeded` as the
 
 Whether a metered permit is reserved at decision time and committed on
 settlement, or committed at decision time, follows the deployment's
-documented reserve/commit posture ({{retry}}); this binding fixes
+documented reserve/commit posture ({{retry}}); this representation fixes
 neither. In a batch (boxcar) evaluation, consumption metering applies
 per item in request order. The exactness of the bound is the
 consistency bound of {{topology}}, not a property of this wire
