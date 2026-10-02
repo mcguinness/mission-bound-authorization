@@ -1084,8 +1084,8 @@ Where creation is adjudicated by policy with no human interaction
 - `activation_actor` is the
   requesting parent agent, the Parent Mission's `client_id`, distinct
   from `consent_principal`; and
-- `root_commitment` is the entry's
-  `child_creation_policy` reference where the entry carries one,
+- `root_commitment` is the `digest` of the entry's
+  `child_creation_policy` where the entry carries one,
   otherwise the Parent Mission's own `authority_hash`, which commits
   the authorizing delegation entry.
 
@@ -1095,10 +1095,14 @@ reference a committed value: the anti-laundering guarantee that a
 approval actually committed.
 
 Where the entry carries a
-`child_creation_policy`, `activation` carries that policy's `id` and
-`version` and this creation's own delegation event identifier (above)
-as `activation_event_id`. Where it does not, the drawdown is against
-the parent's approved delegation entry itself, not a separate policy
+`child_creation_policy`, `activation` carries that policy's `id`,
+`version`, and `digest` and this creation's own delegation event
+identifier (above) as `activation_event_id`. A policy snapshot that
+does not match `digest` denies child creation with `policy_denied`
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Standing-Consent
+Bases"). Where the entry carries no `child_creation_policy`, the
+drawdown is against the parent's approved delegation entry itself,
+not a separate policy
 artifact: `activation` omits `policy_id` and carries only the
 delegation event identifier as `activation_event_id`. The record's
 `approver` is `consent_principal`: the Parent Mission's human
@@ -1196,9 +1200,34 @@ bound how many derivations the child subtree performs in aggregate,
 and a deep or wide subtree can derive far more than the parent's own
 cap suggests. Where an approval interface displays `derivation_limit`,
 or any per-Mission derivation control, as a limit on child creation,
-that interface MUST disclose the composed bound reachable through the
-subtree alongside it, so the Approver sees the real reachable surface
-rather than one Mission's local counter alone.
+that interface MUST render the subtree figures below alongside it, so
+the Approver sees what each figure bounds rather than one Mission's
+local counter alone.
+
+Where child creation under an entry can be adjudicated by policy,
+with no human interaction (a `policy_drawdown` basis,
+{{record-requirements}}), no approval interface exists for those
+children, so the Parent Mission's approval MUST render the subtree
+figures for that entry.
+
+The subtree figures are distinct values, never multiplied into one
+total. Each is rendered at its effective value: the value the entry
+or the deployment sets, otherwise its default (`max_child_depth`
+defaults to 1, {{fanout}}). Only a figure with neither a set value nor
+a default is rendered as unlimited:
+
+- `max_children`, stated as a limit on concurrently non-terminal
+  children ({{fanout-accounting}}), not on children created over the
+  Mission's lifetime;
+- `max_child_depth`; and
+- the per-child derivation limit: the deployment's policy ceiling for
+  a Child Mission's `derivation_limit`.
+
+The rendering MUST also state whether a finite aggregate bound on the
+subtree is enforced. One is enforced only where a lineage-keyed
+budget is deployed ({{I-D.draft-mcguinness-mission-metering}});
+otherwise the rendering states that no finite lifetime aggregate is
+enforced.
 
 Bounding the aggregate
 across a subtree is the role of consumption metering, not this
@@ -1249,7 +1278,10 @@ profile's `children` member is such a member.
     `children`, ending the lineage.
 
   `child_creation_policy`:
-  : OPTIONAL. A policy reference evaluated before each child creation.
+  : OPTIONAL. An activation policy reference, an object of `id`,
+    `version`, and `digest` ({{I-D.draft-mcguinness-oauth-mission}},
+    Section "Standing-Consent Bases"), identifying the policy
+    evaluated before each child creation and committing its content.
 
 Example parent Authority Set entry whose `delegation` carries `children`,
 so the entry permits Child Missions to depth 2, at most 5 concurrently,
@@ -2147,6 +2179,20 @@ apply unchanged.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- `child_creation_policy` is an activation policy reference (`id`,
+  `version`, `digest`) under the issuance profile's Standing-Consent
+  Bases; `root_commitment` is its `digest`, `activation` carries the
+  digest, and a mismatched snapshot denies child creation with
+  `policy_denied`. Creation against the delegation entry itself, with
+  no `child_creation_policy`, is unchanged.
+
+- Approval rendering of child creation shows `max_children` as a
+  concurrency limit, `max_child_depth`, and the per-child derivation
+  limit as distinct figures, never one composed total, and states
+  whether a finite aggregate is enforced. The Parent Mission's
+  approval renders them where child creation can be adjudicated by
+  policy.
 
 - The child's initial grant states how it differs from the Mission
   Issuance Grant: its audience is the Mission Issuer's own token

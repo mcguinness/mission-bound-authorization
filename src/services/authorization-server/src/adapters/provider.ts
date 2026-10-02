@@ -3482,7 +3482,8 @@ export function childErrorCode(reason: ChildDenialReason): string {
 /**
  * @spec mission-template#dispatch-refusals — map a symbolic dispatch denial
  * reason to its layered OAuth error code: `dispatcher_not_allowed`/
- * `recipient_not_allowed`/`template_not_active` ride `access_denied`;
+ * `recipient_not_allowed`/`template_not_active`/`review_overdue` ride
+ * `access_denied` (`review_overdue` is implementation-local, D205);
  * `out_of_template_ceiling`/`dispatch_prohibited_class`/`max_active_exceeded`/
  * `rate_exceeded` ride `invalid_request`.
  */
@@ -3491,6 +3492,7 @@ function dispatchErrorCode(reason: DispatchReason): "invalid_request" | "access_
     case "dispatcher_not_allowed":
     case "recipient_not_allowed":
     case "template_not_active":
+    case "review_overdue":
       return "access_denied";
     default: // out_of_template_ceiling, dispatch_prohibited_class, max_active_exceeded, rate_exceeded
       return "invalid_request";

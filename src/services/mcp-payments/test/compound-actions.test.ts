@@ -657,7 +657,7 @@ describe("the Operation Profile is the trusted source of a crossing's phase (@sp
     // the compound action would have mis-executed. The mapping is exhaustive
     // over the tools that route to a connector.
     const committing = Object.entries(TOOL_ACTIONS)
-      .filter(([, mapping]) => mapping.actionClass !== undefined)
+      .filter(([, mapping]) => mapping.tier === "transaction-assurance")
       .map(([tool]) => tool);
     expect([...CONNECTOR_TOOLS].sort()).toEqual(committing.sort());
   });

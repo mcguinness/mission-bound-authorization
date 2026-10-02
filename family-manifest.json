@@ -998,7 +998,9 @@
     "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-consent-evidence",
     "draft-mcguinness-oauth-mission-containment",
-    "draft-mcguinness-oauth-mission-derivation-limits"
+    "draft-mcguinness-oauth-mission-derivation-limits",
+    "draft-mcguinness-oauth-mission-expansion",
+    "draft-mcguinness-oauth-mission-template"
    ]
   },
   {
@@ -1714,7 +1716,6 @@
     "draft-mcguinness-mission-security-model",
     "draft-mcguinness-mission-shaping",
     "draft-mcguinness-oauth-mission",
-    "draft-mcguinness-oauth-mission-approval",
     "draft-mcguinness-oauth-mission-approval-revision",
     "draft-mcguinness-oauth-mission-discharge",
     "draft-mcguinness-oauth-mission-expansion",

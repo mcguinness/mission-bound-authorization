@@ -167,17 +167,16 @@ informative:
 
 Mission-Bound Authorization for OAuth 2.0 (the "issuance profile")
 defines the Mission Intent a client submits and the Authority Set an
-Authorization Server derives from it. It leaves to deployment policy
-how an open-ended task request becomes a Mission Intent. This document
-describes the Mission Shaper, a client-side component that turns a
-user request or upstream trigger into a candidate Mission Intent and,
-optionally, an Authority Proposal. It describes the shaper's trust
-boundary; recommended behavior for capability resolution, ambiguity,
-and refusal; Shaping Evidence, an audit record of how a proposal was
-produced; and re-shaping after a refusal, denial, or required
-revision. It defines no protocol. The shaper only proposes: authority
-is created by the issuance profile's validation and approval, never by
-the shaper.
+Authorization Server derives from it, but not how an open-ended task
+request becomes a Mission Intent. This document describes the Mission
+Shaper, a client-side component that turns a user request or upstream
+trigger into a candidate Mission Intent and, optionally, an Authority
+Proposal: its trust boundary; recommended capability resolution,
+ambiguity handling, and refusal; Shaping Evidence, an audit record of
+how a proposal was produced; and re-shaping after a refusal, denial,
+or required revision. It defines no protocol. The shaper only
+proposes; authority is created by the issuance profile's validation
+and approval.
 
 --- middle
 
@@ -195,48 +194,37 @@ request, such as "resolve this billing dispute", into a Mission Intent
 with a goal, target resources, task bounds, success criteria, purpose,
 and expiry.
 
-This document describes that step. A Mission Shaper is a client-side
-component that produces a candidate Mission Intent, and any Authority
-Proposal submitted with it, before the issuance profile's approval
-flow begins. The shaper can be a rules engine, a form, a workflow, or a
-function that uses a language model. Whatever its implementation, its
+This document describes that step, performed by a client-side Mission
+Shaper. The shaper can be a rules engine, a form, a workflow, or a
+function that uses a language model; whatever its implementation, its
 output is untrusted input to the Mission Issuer ({{proposes-only}}).
 
 The practices in this document make shaping auditable and fail closed.
-When a request is ambiguous, the shaper narrows, asks for
-clarification, or refuses ({{ambiguity}}). When a capability or
-resource is unknown, the shaper records that fact instead of treating
-natural language as authority to create it ({{capability-resolution}}).
-Shaping Evidence records how each proposal was produced
-({{shaping-evidence}}), and model output is evidence for review, not
-an entitlement decision ({{model-output}}). Every later guarantee (the
+An ambiguous request is narrowed, clarified, or refused
+({{ambiguity}}); an unresolved capability is recorded, not treated as
+authority to create it ({{capability-resolution}}); Shaping Evidence
+records how each proposal was produced ({{shaping-evidence}}); and
+after a refusal, denial, or required revision, the shaper constructs
+a narrower next proposal ({{re-shaping}}). Every later guarantee (the
 derived Authority Set, the approval, per-action decisions, and the
 evidence trail) operates on what the shaper proposed.
-
-Shaping is not a single pass. When the Mission Issuer refuses a
-derivation, a deferred review denies, or a reviewer requires revision,
-the shaper constructs the narrower next proposal ({{re-shaping}}).
 
 ## Scope {#scope}
 
 This document is Informational. Deployments differ in how they process
 prompts, which language models they use, and what their products
 require, so no two transform a request into a Mission Intent the same
-way. The interoperable surface is the result of that transformation,
-the Mission Intent and Authority Proposal, which the issuance profile
-defines and validates. This document therefore describes the shaper's
-role in the trust model and recommended shaper behavior. It
-defines no shaping protocol, media type, claim name, or conformance
-class. A deployment can expose shaping as a network service; that
-interface is a local implementation detail
-({{exposing-shaping-as-a-service}}).
+way. The interoperable surface is the result, the Mission Intent and
+Authority Proposal, which the issuance profile defines and validates.
+This document therefore describes the shaper's role in the trust model
+and recommended shaper behavior. It defines no shaping protocol, media
+type, claim name, conformance class, grant type, token format, policy
+language, runtime decision API, or required endpoint; the approved
+Mission and its tokens remain those of the issuance profile.
 
 This document is optional. A deployment that accepts only
 hand-authored Mission Intents conforms to the issuance profile and is
-unaffected by this document. This document defines no OAuth grant
-type, access token format, policy language, runtime decision API, or
-required endpoint; the approved Mission and its tokens remain those of
-the issuance profile.
+unaffected by this document.
 
 ## Mission Substrate {#mission-substrate}
 
@@ -260,8 +248,8 @@ host these practices unchanged.
 
 {::boilerplate bcp14-tagged}
 
-This document is Informational and defines no conformance class. Its
-BCP 14 keywords state recommended behavior for three parties:
+The BCP 14 keywords in this document state recommended behavior for
+three parties:
 
 - the shaper, expressed where possible on the observable shaping
   artifacts (the Mission Intent proposal and Shaping Evidence);
@@ -274,19 +262,19 @@ None of these is a conformance obligation. The Mission Issuer's
 processing of a submission is specified by the issuance profile; this
 document cites it and does not restate it as its own requirement.
 
-All JSON in this document is non-normative and illustrative; the
-surrounding prose is authoritative. This document uses JSON {{RFC8259}}
-as the data model for illustrative objects, and the JSON
-Canonicalization Scheme (JCS) {{RFC8785}} where a digest is computed
-over Shaping Evidence ({{shaping-evidence}}).
+JSON {{RFC8259}} is the data model for the illustrative objects in
+this document; the surrounding prose is authoritative. Digests over
+Shaping Evidence use the JSON Canonicalization Scheme (JCS)
+{{RFC8785}} ({{shaping-evidence}}).
 
 This document uses the following terms defined by the issuance
 profile: Mission, Mission Intent, Mission Intent Submission (Submission
 envelope), Authority Proposal, Authority Set, Mission Issuer, Approver,
 and Agent (Client). "Client" and "client-side" refer to that Agent
 (Client), the OAuth client that submits the Mission Intent. The
-issuance profile's Mission Issuer is an Authorization Server; this
-document calls it the Mission Issuer throughout. "The issuance profile"
+issuance profile's Mission Issuer is an Authorization Server
+{{RFC6749}}; this document calls it the Mission Issuer throughout.
+"The issuance profile"
 without a section reference means that document as a whole.
 
 This document defines the following terms:
@@ -336,8 +324,7 @@ The roles Mission requester and capability source are defined in
 
 The trust boundary separates the client, where the shaper runs, from
 the Mission Issuer, where the Mission Intent is validated and the
-Authority Set is created. This section defines the shaper's role on the
-client side of that boundary; it is the stable core of this document.
+Authority Set is created.
 
 ## Client-Side Placement {#client-side}
 
@@ -391,9 +378,7 @@ Three consequences follow:
    the submission, call the pushed authorization request endpoint or
    the authorization endpoint, handle the authorization response,
    select the recipient Mission Issuer on its own authority, or attest
-   to the submission on the Mission Issuer's behalf. It produces an
-   input; the client transmits it; the Mission Issuer decides what to
-   do with it.
+   to the submission on the Mission Issuer's behalf.
 
 ## Deployment Roles {#roles}
 
@@ -569,13 +554,12 @@ appear in the Intent; it belongs in the Authority Proposal
   Issuer without it refuses the member as an unknown Intent member.
   Where the task implies a natural issuance count (a one-shot read, a
   fixed number of scheduled runs), the shaper proposes that count.
-  Otherwise it omits the member, which leaves the limit to deployment
-  policy alone, and that policy can impose none
+  Otherwise it omits the member, leaving the limit to deployment policy
+  alone, which can impose none
   ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}, Section
-  "Effective Limit"). A proposed count can only lower the effective
-  limit. The shaper does not propose a large round number "to be
-  safe": a high guess adds no bound that policy does not already set,
-  and it misleads the Approver about what was requested.
+  "Effective Limit"). The shaper does not propose a large round number
+  "to be safe": a proposed count only lowers the effective limit, so a
+  high guess adds no bound and misleads the Approver.
 
 Other companion members:
 : A companion profile can define further top-level Mission Intent
@@ -591,10 +575,9 @@ The Mission Intent carries no authority members. Where a task calls for
 concrete authority (actions, structured constraints such as
 `max_amount`, or delegation facts), the shaper produces an Authority
 Proposal: an `authorization_details` array {{RFC9396}} that the client
-submits alongside the Intent ({{I-D.draft-mcguinness-oauth-mission}},
-Section "Authority Proposal"). The Mission Issuer treats it as
-untrusted input and derives each Authority Set entry as a narrowing of
-a proposed entry.
+submits alongside the Intent and that the Mission Issuer treats as
+untrusted input ({{I-D.draft-mcguinness-oauth-mission}}, Section
+"Authority Proposal").
 
 Where cross-vendor interoperability matters, the shaper SHOULD carry
 the concrete candidate authority it proposes (the resources, actions,
@@ -603,19 +586,15 @@ Authority Proposal in Shaping Evidence. The Mission Issuer then
 derives the Authority Set in narrowing mode, each derived entry a
 subset of a proposed entry, rather than from a configured mapping
 keyed on the Intent ({{I-D.draft-mcguinness-oauth-mission}}, Section
-"Mission Authority"). Narrowing is the portable derivation path. The
+"Mission Authority"). Narrowing is the portable derivation path: the
 proposal format and the narrowing rule are interoperable, so the
-resulting Authority Set is enforceable and auditable across domains;
-only the Mission Issuer's policy choice of what to narrow to stays
-local.
+result is enforceable and auditable across domains, and only the
+Mission Issuer's choice of what to narrow to stays local.
 
 The proposal MUST NOT present issuer outputs as approved authority: the
 derived Authority Set is the Mission Issuer's product
-({{proposes-only}}). A shaper that has resolved concrete facts (for
-example, the actions a resource supports, or that the task implies
-delegated execution) proposes them in the Authority Proposal and
-records the same facts in Shaping Evidence for audit only. Shaping
-Evidence is never an input to derivation.
+({{proposes-only}}). Shaping Evidence that records the same facts is
+for audit only and is never an input to derivation.
 
 ## Shaping Ceiling and Default Deny {#authority-ceiling}
 
@@ -715,26 +694,21 @@ Shaping Evidence MUST record the resolution and, where deployment
 policy permits that default resolution, the policy rule that
 authorized it. The requirement is stated on the observable artifact
 because the Mission Issuer cannot observe the shaper's internal
-reasoning. A proposal that broadens authority on an ambiguity without
-a corresponding Shaping Evidence record does not follow this document.
-The Mission Issuer enforces its own ceiling and consent regardless of
-what the shaper recorded.
+reasoning.
 
-Requesting clarification is not approval. The requester's answer is
-incorporated into the Mission Intent, and the Mission Issuer still
-validates, narrows, and renders the consent disclosure for binding
-approval. A shaper MUST NOT treat answered clarifications as a reason
-to skip the Mission Issuer's consent step: the shaper is not the
-Approver's agent for consent.
+Requesting clarification is not approval: the requester's answer
+shapes the Mission Intent, and the Approver still consents to the
+disclosure the Mission Issuer renders. A shaper MUST NOT treat
+answered clarifications as a reason to skip the Mission Issuer's
+consent step: the shaper is not the Approver's agent for consent.
 
 ## Clarifications {#clarifications}
 
-A clarification SHOULD be phrased so that the requester can understand
-the authority consequence of each answer. "Need more scope?" is not
-sufficient; "May this Mission read invoices for customer 5678 in
-addition to customer 1234?" is. A clarification SHOULD identify the
-authority consequence of each offered choice. It SHOULD state what the
-shaper will do if it is left unanswered (refuse, narrow, or wait).
+A clarification SHOULD identify, in terms the requester can understand,
+the authority consequence of each offered answer. "Need more scope?" is
+not sufficient; "May this Mission read invoices for customer 5678 in
+addition to customer 1234?" is. It SHOULD state what the shaper will do
+if it is left unanswered (refuse, narrow, or wait).
 
 Clarification runs from the shaper to the requester and resolves task
 ambiguity before a proposal exists. The reverse channel, in which the
@@ -787,16 +761,14 @@ substitutes the shaper's judgment for the Approver's.
 Shaping Evidence records how a proposal was produced. It is audit
 material: it does not grant authority and MUST NOT be used by a
 Resource Server or Policy Decision Point (PDP) to permit an action. It
-keeps the intent generator a distinct, attributable role: a record of
-what the shaper emitted, separate from the requester who asked, the
-Approver who consented, and the agent that executes
+makes the intent generator an attributable role, distinct from the
+requester, the Approver, and the executing agent
 ({{I-D.draft-mcguinness-mission-architecture}}). This document defines
-no required schema, media type, or transport for Shaping Evidence. The
-digests in this section are canonical-object digests and envelope
-anchors under the substrate's Default Commitment Construction, which
-this document imports normatively
-({{I-D.draft-mcguinness-mission-substrate}}, Section "Default
-Commitment Construction").
+no required schema, media type, or transport for Shaping Evidence. Its
+digests are canonical-object digests and envelope anchors under the
+substrate's Default Commitment Construction, which this document
+imports normatively ({{I-D.draft-mcguinness-mission-substrate}},
+Section "Default Commitment Construction").
 
 The following members are RECOMMENDED content. They are not a required
 schema: a deployment can omit a member that does not apply and can add
@@ -844,8 +816,7 @@ to every outcome.
   of the request after removing the fields that the named exclusion
   ruleset marks as not retained. To make the digest recomputable by a
   later auditor, the evidence MUST also record
-  `input_exclusion_ruleset`. A digest whose exclusion ruleset is not
-  recorded cannot be reproduced.
+  `input_exclusion_ruleset`.
 
 `input_exclusion_ruleset`:
 : String. An identifier, with version, of the exclusion ruleset
@@ -975,11 +946,8 @@ The issuance profile defines a `mission_intent` parameter carried in a
 Pushed Authorization Request (PAR) {{RFC9126}}, whose value is the
 Submission envelope ({{I-D.draft-mcguinness-oauth-mission}}, Section
 "Submission via PAR"). The Mission Intent proposal is the envelope's
-`intent` member. An Authority Proposal is the value of the
-`authorization_details` parameter in the same request. The
-Authorization Server {{RFC6749}}, acting as Mission Issuer, validates
-and narrows the submission, renders the consent disclosure, records
-the approval event, and derives the Authority Set.
+`intent` member, and an Authority Proposal is the value of the
+`authorization_details` parameter in the same request.
 
 Intent-bound evidence in the envelope's `evidence` array names the
 exact `intent_hash` of the submitted Intent. Intent-bound evidence
@@ -994,17 +962,15 @@ actually submits
 The shaper hands its output to the client, which performs the OAuth
 flow ({{proposes-only}}) and MAY also convey a `shaping_evidence_hash`
 so that the Mission record can cite the evidence ({{evidence-hash}}).
-Because the issuance profile rejects an unrecognized top-level member
-of both the Submission envelope and the Mission Intent, the hash is
-not carried inside `mission_intent`. The client conveys it in the
-`mission_shaping_evidence_hash` request parameter of the same pushed
-authorization request, which Consent Evidence defines
+The issuance profile rejects an unrecognized top-level member of the
+Submission envelope or the Mission Intent, so the client sends the
+hash in the `mission_shaping_evidence_hash` request parameter of the
+same pushed authorization request
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}, Section
-"Shaping Evidence Hash Parameter"). A Mission Issuer that does not
-implement Consent Evidence ignores the parameter, as it does any
-unrecognized request parameter. Conveying it does not require the
-Mission Issuer to trust the shaper: the value is a client-supplied
-audit commitment, not verified provenance.
+"Shaping Evidence Hash Parameter"), which a Mission Issuer without
+Consent Evidence ignores. The value is a client-supplied audit
+commitment, not verified provenance, so conveying it requires no trust
+in the shaper.
 
 ## Mission Issuer Handling {#issuer-handling}
 
@@ -1018,14 +984,10 @@ produced, the Mission Issuer, under the issuance profile:
 - derives the Authority Set under its own policy; and
 - refuses, narrows, or requires approval as that profile requires.
 
-A `shaping_evidence_hash` that the Mission Issuer records on the
-Mission record is an audit commitment only.
-
-Runtime enforcement does not consume shaper output either. Mission-Bound
-Runtime Enforcement {{I-D.draft-mcguinness-mission-runtime}} consumes
+Runtime enforcement {{I-D.draft-mcguinness-mission-runtime}} consumes
 the Mission Intent and the Authority Set on the Mission record, both
-produced by the Mission Issuer, not by the shaper. A runtime that reads
-Shaping Evidence for an authorization decision is misusing it.
+produced by the Mission Issuer, not shaper output. A runtime that
+reads Shaping Evidence for an authorization decision is misusing it.
 
 # Re-Shaping {#re-shaping}
 
@@ -1070,15 +1032,14 @@ predecessor proposal's evidence (`predecessor_evidence`), so that an
 auditor can read the narrowing chain end to end.
 
 A re-proposal after an authority refusal (a policy `access_denied`, a
-deferred denial, or a required revision) narrows. A refusal is a
-signal to propose less, not to propose the same authority under
-different names. A shaper SHOULD NOT re-encode refused authority in
-new vocabulary. It MUST NOT use iterative resubmission to probe the
-Mission Issuer's policy boundary ({{silent-broadening}}). When a
-narrower proposal can no longer complete the task, the shaper requests
-clarification, refuses, or emits a partial proposal
-({{authority-ceiling}}). A task that needs more than was refused is a
-new proposal through the normal flow, not a widened retry.
+deferred denial, or a required revision) narrows. A shaper SHOULD NOT
+re-encode refused authority in new vocabulary. It MUST NOT use
+iterative resubmission to probe the Mission Issuer's policy boundary
+({{silent-broadening}}). When a narrower proposal can no longer
+complete the task, the shaper requests clarification, refuses, or
+emits a partial proposal ({{authority-ceiling}}). A task that needs
+more than was refused is a new proposal through the normal flow, not a
+widened retry.
 
 A re-proposal after a construction error (`invalid_request` or
 `invalid_authorization_details`) corrects the encoding instead. It
@@ -1089,12 +1050,11 @@ that failed validation has no subset relation to narrow against.
 
 ## Exposing Shaping as a Service {#exposing-shaping-as-a-service}
 
-This document requires no shaping endpoint. A deployment that factors
-shaping into a network service for engineering reasons MAY expose it
-over HTTPS. The request and response formats of such a service are a
-local implementation detail, not an interoperability contract, and
-their description here is non-normative; the authentication
-requirement below is normative.
+A deployment that factors shaping into a network service for
+engineering reasons MAY expose it over HTTPS. The request and response
+formats of such a service are a local implementation detail, not an
+interoperability contract, and their description here is
+non-normative; the authentication requirement below is normative.
 
 A request typically conveys the task (free text, structured fields, or
 both), the subject and agent on whose behalf the Mission would run,
@@ -1109,8 +1069,7 @@ and `mission_shaping_profiles_supported`.
 Such an endpoint MUST be authenticated when it can reveal sensitive
 task, tenant, or resource information; an anonymous shaping endpoint is
 appropriate only for public, non-sensitive tasks. The service remains
-client-side machinery that produces an untrusted proposal, and it is
-not a principal to the Mission Issuer ({{client-side}}).
+client-side and is not a principal ({{client-side}}).
 
 ## Declaring the Shaping Posture {#adds-and-does-not}
 
@@ -1129,10 +1088,9 @@ deployment's other claims, and its absence is visible.
 Shaping is not part of any Mission Assurance Level, and no level
 requires it: the levels are built from issuer-side and runtime-side
 guarantees, and the shaper is client-side
-({{I-D.draft-mcguinness-mission-architecture}}). What shaping improves
-at every level is the input: better proposals yield narrower Missions,
-clearer consent disclosures, and a reviewable trail from request to
-authority.
+({{I-D.draft-mcguinness-mission-architecture}}). Shaping improves the
+input at every level: narrower Missions, clearer consent disclosures,
+and a reviewable trail from request to authority.
 
 # Security Considerations {#security-considerations}
 
@@ -1144,12 +1102,14 @@ security properties follow from its role ({{proposes-only}}).
 
 A model-based shaper can draft a Mission Intent, but a deployment
 MUST NOT let model output grant or widen access ({{proposes-only}}).
-A deployment that lets a model's proposal become active without
-validation and approval is not following this document. A model-based
-shaper inherits its model's failure modes (hallucinated resources,
-fabricated constraints, inconsistent paraphrase, and sensitivity to
-small input perturbations), and SHOULD record the model identifier and
-version in Shaping Evidence so that failures can be attributed.
+A model-based shaper inherits its model's failure modes (hallucinated
+resources, fabricated constraints, inconsistent paraphrase, and
+sensitivity to small input perturbations), and SHOULD record the model
+identifier and version in Shaping Evidence so that failures can be
+attributed. The same bound holds at approval: a model's judgment
+enters adjudication only as a recorded input to a deterministic
+policy, and that input can refuse or narrow, never grant or widen
+({{I-D.draft-mcguinness-oauth-mission}}).
 
 ## Shaper Compromise Does Not Directly Grant Authority {#shaper-compromise}
 
@@ -1430,6 +1390,11 @@ guessing ({{clarifications}}).
 
 \[\[ To be removed from the final specification ]]
 
+- Model Output Is Not Authority points to the OAuth binding's
+  issuer-side counterpart: a model enters adjudication only as a
+  recorded input to a deterministic policy, without changing any
+  requirement of this document.
+
 - Restructured for readability without changing any requirement.
   Sections follow the processing model, and the shaper's role and the
   Authority Proposal each have one home. The construction table became
@@ -1474,6 +1439,12 @@ guessing ({{clarifications}}).
 - The evidence hash travels in the `mission_shaping_evidence_hash`
   pushed authorization request parameter that Consent Evidence
   defines.
+
+- Tightened the prose by removing restatement: previews in the
+  Introduction, repeated scope and conformance statements, and
+  sentences that restated an adjacent requirement. Two clarification
+  requirements that said the same thing are one. No other requirement
+  changed.
 
 # Acknowledgments
 {:numbered="false"}

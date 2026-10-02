@@ -1295,10 +1295,16 @@ speed within a ceiling a human consented to (the `template`,
 companion profiles define on the OAuth binding's extension point,
 {{invariants}}). Policy approves
 the instance because a human approved the policy or the template, with
-`policy_version` keeping that chain re-checkable. A model's generated
-judgment is never the sole authority for granting or widening: a
-generated approver reading attacker-influenced proposals is itself an
-injection surface. The high-consequence classes stay on a fresh human
+`policy_version` keeping that chain re-checkable. Derivation fixes the
+authority, the adjudicator (a human or such a policy) decides
+activation, and a human is accountable. A model's judgment, over risk
+signals or enterprise context, enters adjudication only as a recorded
+input to the policy: it can refuse or narrow, never grant or widen.
+Neither the policy nor a model input to it gates on the Intent's
+prose members, which stay the human Approver's check
+({{I-D.draft-mcguinness-oauth-mission}}). A generated approver
+reading attacker-influenced proposals is itself an injection surface.
+The high-consequence classes stay on a fresh human
 decision, per the progressive profile's prohibited set
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}).
 
@@ -1618,16 +1624,22 @@ Work products:
   With Information" section ({{I-D.draft-mcguinness-oauth-mission}}).
 
 Composition:
-: The invariants bound one Mission's own Authority Set, not the
-  aggregate surface a delegation tree, a cross-domain hop, or a chain
-  of child generations reaches together. Delegation depth resets at
-  each cross-domain hop and child generation, and each Child Mission
-  enforces its own derivation cap independently of its parent's, so
-  the authorized surface a body of work can reach can exceed what any
-  single approval appears to bound. Disclosing the composed bound at
-  the consent surface is the cross-domain and child-delegation
-  profiles' role, and bounding aggregate consumption is the metering
-  profile's ({{I-D.draft-mcguinness-oauth-mission-cross-domain}},
+: An approval bounds the authority each derivation under the Mission
+  carries; it does not bound the aggregate effect of a body of work.
+  The invariants bound one Mission's own Authority Set, not the surface
+  a delegation tree, a cross-domain hop, or a chain of child
+  generations reaches together. The per-Mission figures differ in kind
+  and do not multiply into a lifetime total: in the child-delegation
+  profile, `max_children` limits concurrently non-terminal children,
+  so a completed child frees its slot; `max_child_depth` limits
+  generations; and each Child Mission's derivation cap is its own,
+  independent of its parent's. Delegation depth also resets at each
+  cross-domain hop and child generation. Disclosing what these figures
+  bound at the consent surface is the cross-domain and child-delegation
+  profiles' role. An aggregate bound holds only where a deployment
+  enforces one, the metering profile's lineage budget, and is never
+  rendered as in force otherwise
+  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}},
   {{I-D.draft-mcguinness-oauth-mission-child-delegation}},
   {{I-D.draft-mcguinness-mission-metering}}). The OAuth binding
   states the same property in its "Composition and the Effective
@@ -3714,6 +3726,19 @@ bound profiled by `aauth-mission-expiry`.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Approve and Record names the three approval roles (derivation,
+  adjudication, accountability) and summarizes the OAuth binding's
+  rule that a model's judgment enters adjudication only as a recorded
+  input to a deterministic policy, an input that can refuse or narrow
+  and never grant or widen; the prose members stay the human
+  Approver's check.
+
+- Composition states the per-Mission bound model once, with no change
+  to any profile's requirements: an approval bounds the authority each
+  derivation carries; concurrent children, generations, and
+  per-Mission derivations do not multiply into a lifetime total; and
+  an aggregate bound holds only where a deployment enforces one.
 
 - Derivation and narrowing, with no change to any profile's
   requirements. The derivation boundary states the derivation
