@@ -529,8 +529,14 @@ appear in the Intent; it belongs in the Authority Proposal
   which carries no machine semantics in the issuance profile.
 
 `purpose`:
-: If the client has registered purposes, the closest registered
-  purpose URI. The shaper SHOULD NOT invent a new `purpose` URI.
+: If the client has registered purposes, the registered purpose URI
+  that matches the task. If none matches, the shaper omits `purpose`
+  or requests clarification instead of choosing the nearest one:
+  `purpose` can key the Mission Issuer's configured mapping
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
+  Authority"), so a wrong choice changes the derived authority
+  ({{prompt-injection}}). The shaper SHOULD NOT invent a new `purpose`
+  URI.
 
 `expires_at`:
 : The earliest expiry that lets the task complete; if the request names
