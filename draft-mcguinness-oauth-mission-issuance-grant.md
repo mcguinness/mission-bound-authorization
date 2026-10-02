@@ -203,9 +203,6 @@ Mission Issuance Grant (grant):
 : The signed assertion of {{grant}}, minted by the Mission Issuer
   and redeemed for Mission-bound tokens.
 
-Grant Minter:
-: The standalone Mission Issuer minting grants; conformance role of
-  {{conformance}}.
 
 Consuming Authorization Server (consuming AS):
 : An OAuth Authorization Server {{RFC6749}} that redeems Mission
@@ -233,7 +230,7 @@ the deployment's mapping policy; where the Enterprise Mission
 Authority Profile is claimed, its mapping contract governs
 ({{I-D.draft-mcguinness-mission-authority-server}}).
 
-The division of duties is fixed. The MAS holds the approval event,
+The duties divide as follows. The MAS holds the approval event,
 the record and its anchors, the lifecycle, and grant minting. The
 consuming AS holds client authentication, token minting bounded by
 the grant, refresh, and its ordinary token-plane obligations. An
@@ -347,7 +344,7 @@ The following is an example of a decoded grant payload; the
 ## The `mission` Claim {#mission-claim}
 
 The grant's `mission` claim is the issuance profile's `mission` claim
-object, whose `id` and `issuer` members are REQUIRED there
+object, whose `id` and `issuer` members the issuance profile defines
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "The Mission Claim").
 This profile adds two members:
 
@@ -415,7 +412,7 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
 ## Grant Processing {#minting-rules}
 
-The Grant Minter MUST observe:
+The MAS MUST apply the following rules:
 
 1. **Requester.** The MAS authenticates the requester as its Mission
    submission endpoint does
@@ -554,7 +551,7 @@ any check fails:
 
 On success the consuming AS mints tokens under these rules:
 
-- **The claim rides unchanged.** Issued tokens carry the grant's
+- **Verbatim `mission` claim.** Issued tokens carry the grant's
   `mission` object verbatim as the issuance profile's `mission` claim, including
   the `expires_at` member ({{mission-claim}}).
 - **Subset.** Issued `authorization_details` MUST be a subset of the
@@ -626,8 +623,7 @@ carriage, PAR validation is the consuming step ({{par-carriage}}).
 Subsequent token needs are
 met by the issued refresh token (state-gated) or a fresh grant
 (state-gated at minting); either way, every path to new authority
-re-enters a Mission-state gate, which is the issuance-gate kill
-switch this profile restores.
+re-enters a Mission-state gate.
 
 ## Effective Authority Set Projection {#effective-set-projection}
 
@@ -859,17 +855,17 @@ and its own Authorization Servers, no identity-chaining substrate
 required. A deployment does not use this profile across domains;
 projection exists for that.
 
-**Native Mission-aware issuance retires this grant; it does not rank
-the architectures.** An AS that
+**Native Mission-aware issuance replaces this grant.** An AS that
 becomes natively Mission-aware implements the issuance profile and mints without
 grants for its own resources; the record, anchors, and lifecycle it
 consumes are the same ones the MAS already operates, so nothing is
 re-approved in migration. Until then, the issuance join gives the
-estate Mission-bound tokens at a fraction of the issuance profile's
-implementation surface.
+estate Mission-bound tokens without the issuance profile's intake,
+approval, and record surfaces at each AS.
 
 **The runtime join remains for everything else.** Tokens minted
-under this profile compose credential-carried at the PDP; ordinary
+under this profile compose credential-carried at the Policy Decision
+Point (PDP); ordinary
 tokens continue to compose through the Mission Join. The two joins
 coexist per resource and per AS.
 
@@ -888,7 +884,7 @@ half-step arrives with the consuming AS's refresh gating.
 
 # Conformance {#conformance}
 
-**Grant Minter** (the MAS) implements {{minting}} in full:
+**Mission Authority Server** implements {{minting}} in full:
 
 - the authenticated, visibility-guarded endpoint;
 - the `active`-only gate;
@@ -956,8 +952,9 @@ Mission Authority Profile
 within the window its statement declares; at estate scale,
 reconciliation is the only check on this compromise class.
 
-**Trust inversion.** The consuming AS accepts externally derived
-authority. Its exposure is bounded by the profile's own rules: it
+**Externally derived authority.** The consuming AS accepts authority
+derived elsewhere. Its exposure is bounded by the profile's own rules:
+it
 mints only within the grant's `authorization_details`, only for the
 grant's client, never longer than the Mission's `expires_at`, and
 its local
