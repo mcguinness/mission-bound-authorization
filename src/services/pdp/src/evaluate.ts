@@ -3,9 +3,13 @@
  * @spec authzen#denial-response, authzen#runtime-denial-classification
  * @spec runtime (abstract decision contract)
  *
- * The stateless PDP decision function (D28): a pure function of the envelope,
- * the loaded MissionView, the FGA authority check, the clock, and freshness
- * inputs. Permit properties are declared; the PEP owns redemption state.
+ * The PDP decision function (D28): a function of the envelope, the loaded
+ * MissionView, the FGA authority check, the clock, and freshness inputs.
+ * Permit properties are declared; the PEP owns redemption state, execution
+ * leases and effects. The one state the PDP holds is the Exact idempotency
+ * claim for keyed high-consequence actions (@spec runtime#idempotency, #917,
+ * D223), which settles from authenticated Execution Evidence the executing PEP
+ * sends (the owner's 2026-10-02 ruling); see ./idempotency-claims.ts.
  */
 
 import { type ContextActor, validateContextActor } from "@mission/actor-chain";
