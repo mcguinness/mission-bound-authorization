@@ -599,7 +599,7 @@ describe("PDP idempotency claim (@spec runtime#idempotency, #917)", () => {
     });
   });
 
-  describe("crash boundaries and restart (section 5 of the design)", () => {
+  describe("crash boundaries and restart", () => {
     it("a claim inserted with no persisted decision is adopted after restart and issues once; a different operation conflicts", async () => {
       const c = clock();
       const { file, open } = domainOnFile(c);
