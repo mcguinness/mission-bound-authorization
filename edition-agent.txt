@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-02T14:48:17Z
-Source repository commit: dc3db5f0f2c95aa34c3f931fdf3096def26518cc
+Generated: 2026-10-02T16:24:47Z
+Source repository commit: d5b45304a47459af9790fd972c6e9d9d8080d142
 Member count: 9
 
 Reading order:
@@ -1092,16 +1092,17 @@ Table of Contents
    approval event requires an accountable principal deciding against
    committed inputs before any authority exists, and the proposer is
    never the approver.  A deterministic, versioned policy can approve at
-   machine speed within a ceiling a human consented to (the
-   policy_drawdown and template authorization bases that companion
-   profiles define on the OAuth binding's extension point, Section 8).
-   Policy approves the instance because a human approved the policy or
-   the template, with policy_version keeping that chain re-checkable.  A
-   model's generated judgment is never the sole authority for granting
-   or widening: a generated approver reading attacker-influenced
-   proposals is itself an injection surface.  The high-consequence
-   classes stay on a fresh human decision, per the progressive profile's
-   prohibited set ([I-D.draft-mcguinness-oauth-mission-progressive]).
+   machine speed within a ceiling a human consented to (the template,
+   policy_drawdown, and ceiling_drawdown authorization bases that
+   companion profiles define on the OAuth binding's extension point,
+   Section 8).  Policy approves the instance because a human approved
+   the policy or the template, with policy_version keeping that chain
+   re-checkable.  A model's generated judgment is never the sole
+   authority for granting or widening: a generated approver reading
+   attacker-influenced proposals is itself an injection surface.  The
+   high-consequence classes stay on a fresh human decision, per the
+   progressive profile's prohibited set
+   ([I-D.draft-mcguinness-oauth-mission-progressive]).
 
 7.3.  Govern
 
@@ -1393,9 +1394,11 @@ Table of Contents
       own approval.  It also provides the extension point, an
       authorization-basis type string, that companion profiles use to
       define others: template, a dispatch drawing on a ceiling the human
-      consented to once, and policy_drawdown, a child instance a policy
+      consented to once; policy_drawdown, a child instance a policy
       adjudicates within a bound the parent's human already consented
-      to.  Every basis fixes the same accountable human as
+      to; and ceiling_drawdown, a successor a policy adjudicates within
+      an authority ceiling the Approver consented to at the initial
+      approval.  Every basis fixes the same accountable human as
       consent_principal; the bases differ only in what activated this
       instance and what root that activation traces to (the OAuth
       binding).
@@ -8325,11 +8328,12 @@ Table of Contents
    consent basis, under which a template or policy activates Mission
    instances against an accountable human's earlier approval, with no
    fresh approval event per instance.  The type values template
-   ([I-D.draft-mcguinness-oauth-mission-template]) and policy_drawdown
-   ([I-D.draft-mcguinness-oauth-mission-child-delegation]) are such
-   bases.  For a standing-consent type, activation takes the shape that
-   its companion profile defines, and activation_actor names a
-   dispatching or requesting party distinct from the consenting human.
+   ([I-D.draft-mcguinness-oauth-mission-template]), policy_drawdown
+   ([I-D.draft-mcguinness-oauth-mission-child-delegation]), and
+   ceiling_drawdown ([I-D.draft-mcguinness-oauth-mission-progressive])
+   are such bases.  For a standing-consent type, activation takes the
+   shape that its companion profile defines, and activation_actor names
+   a dispatching or requesting party distinct from the consenting human.
 
    An unrecognized type, and likewise an unrecognized adjudication.kind
    (below), is preserved unchanged as opaque provenance on an otherwise
@@ -18600,8 +18604,9 @@ Table of Contents
       runtime evidence companion
       ([I-D.draft-mcguinness-mission-runtime-evidence]) is the suite's
       one signing convention for evidence objects and SHOULD be used,
-      with a typ that names the record's own media type, rather than a
-      record-specific signing scheme.
+      with the protected typ that convention fixes and a cty that names
+      the record's own media type, rather than a record-specific signing
+      scheme.
 
    *  Raw parameters MUST NOT appear in the record; when retained for
       forensics they MUST be in separately access-controlled storage
@@ -21684,8 +21689,8 @@ Table of Contents
       ([I-D.draft-mcguinness-mission-runtime]) (Section 5); and
 
    *  sign every record with the integrity envelope of Section 4.3, with
-      a kid resolvable in its published key set and a typ matching the
-      record's own media type.
+      a kid resolvable in its published key set, the protected typ that
+      envelope fixes, and a cty matching the record's own media type.
 
    A CONSUMER or VERIFIER conforming to this document MUST perform the
    byte-equality verification procedure and key checks of Section 4.3
@@ -24788,7 +24793,8 @@ Table of Contents
 
    The runtime evidence companion's integrity envelope is this profile's
    one signing convention for evidence objects: the default envelope
-   format is jws-compact, and the protected typ names the record's own
+   format is jws-compact, the protected typ is the one value that
+   envelope fixes, and the protected cty names the record's own
    registered media type
    ([I-D.draft-mcguinness-mission-runtime-evidence]).
 

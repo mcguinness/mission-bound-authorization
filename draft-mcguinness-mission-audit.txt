@@ -321,13 +321,15 @@ Table of Contents
    artifact itself for a +jwt, +sd-jwt, or SET form.  The protected typ
    of an operational signature envelope, where the defining profile
    fixes one, names the signed object as that profile scopes it: either
-   the payload, as the runtime evidence types do, or the secured
-   representation itself, as Consent Evidence's mission-consent-
-   evidence+jws names the JWS over the application/mission-consent-
-   evidence+json payload.  The payload-preimage-content-type identifies
-   the media type of the preimage committed at the transparency
-   boundary; the exact bytes are what the canonical-bytes column fixes
-   (Section 5.3, Section 5.1).
+   the payload, as Discovery Evidence's mission-discovery-evidence+json
+   does, or the secured representation itself, as Consent Evidence's
+   mission-consent-evidence+jws names the JWS over the application/
+   mission-consent-evidence+json payload.  The runtime evidence types
+   and the Approval Governance Record name the secured representation in
+   typ and carry the payload's media type in the protected cty.  The
+   payload-preimage-content-type identifies the media type of the
+   preimage committed at the transparency boundary; the exact bytes are
+   what the canonical-bytes column fixes (Section 5.3, Section 5.1).
 
    The evidence-type table fixes each type's operational typ explicitly;
    the identifiers are not derivable from one another in every case, and
@@ -361,11 +363,11 @@ Table of Contents
 
    The anti-cross-use rule above depends on keeping the identifiers'
    roles and checks distinct, not their string values: the runtime
-   evidence rows deliberately carry the same media type string as
-   operational typ and as payload-preimage-content-type.  Collapsing the
-   types into one envelope, one media type, or a shared typ list would
-   relocate domain separation from the registered identifier into a
-   payload member.
+   evidence rows carry the same media type string as the protected cty
+   and as payload-preimage-content-type, under one secured typ.  Naming
+   the record kind only in a payload member, rather than in a registered
+   identifier the signature protects, would relocate domain separation
+   from the registered identifier into that member.
 
 5.3.  Evidence Types
 
@@ -390,113 +392,114 @@ Table of Contents
    before treating the record as part of the Mission's feed; a row
    registers nothing on its own.
 
-   +===========+=================+===============+===============+=========+
-   |Evidence   |Canonical bytes  |payload-       |Operational typ|Producer |
-   |type       |(hashed)         |preimage-      |               |         |
-   |           |                 |content-type   |               |         |
-   +===========+=================+===============+===============+=========+
-   |Approval   |Mission record at|application/   |none           |issuer   |
-   |event      |creation, state  |mission-       |               |         |
-   |           |excluded,        |approval-      |               |         |
-   |           |canonicalized    |record+json    |               |         |
-   +-----------+-----------------+---------------+---------------+---------+
-   |Lifecycle  |Signals SET as   |application/   |secevent+jwt,  |issuer   |
-   |transition |issued, as the   |secevent+jwt,  |else none      |         |
-   |           |signals profile  |else           |               |         |
-   |           |fixes; else      |application/   |               |         |
-   |           |Section 5.3.1    |mission-       |               |         |
-   |           |(JCS)            |lifecycle-     |               |         |
-   |           |                 |transition+json|               |         |
-   +-----------+-----------------+---------------+---------------+---------+
-   |Derivation |Section 5.3.2    |application/   |none           |issuer   |
-   |record     |(JCS)            |mission-       |               |         |
-   |           |                 |derivation-    |               |         |
-   |           |                 |record+json    |               |         |
-   +-----------+-----------------+---------------+---------------+---------+
-   |Consent    |complete retained|application/   |mission-       |issuer   |
-   |evidence   |object,          |mission-       |consent-       |         |
-   |           |evidence_envelope|consent-       |evidence+jws   |         |
-   |           |included (JCS)   |evidence+json  |               |         |
-   +-----------+-----------------+---------------+---------------+---------+
-   |Approval   |complete record  |application/   |application/   |issuer   |
-   |governance |including        |mission-       |mission-       |         |
-   |           |envelope (JCS),  |approval-      |approval-      |         |
-   |           |the record-digest|governance+json|governance+json|         |
-   |           |preimage         |               |               |         |
-   +-----------+-----------------+---------------+---------------+---------+
-   |Decision   |complete object, |application/   |application/   |PDP key  |
-   |evidence   |evidence_envelope|mission-       |mission-       |         |
-   |           |included (JCS)   |decision-      |decision-      |         |
-   |           |                 |evidence+json  |evidence+json  |         |
-   +-----------+-----------------+---------------+---------------+---------+
-   |Execution  |complete object, |application/   |application/   |PEP key  |
-   |evidence   |evidence_envelope|mission-       |mission-       |         |
-   |           |included (JCS)   |execution-     |execution-     |         |
-   |           |                 |evidence+json  |evidence+json  |         |
-   +-----------+-----------------+---------------+---------------+---------+
-   |Refusal    |complete object, |application/   |application/   |PEP key  |
-   |Record     |evidence_envelope|mission-       |mission-       |         |
-   |           |included (JCS)   |refusal-       |refusal-       |         |
-   |           |                 |record+json    |record+json    |         |
-   +-----------+-----------------+---------------+---------------+---------+
-   |Mission    |complete object, |application/   |application/   |receipt  |
-   |Receipt    |evidence_envelope|mission-       |mission-       |issuer   |
-   |           |included (JCS)   |receipt+json   |receipt+json   |key      |
-   +-----------+-----------------+---------------+---------------+---------+
-   |Mission    |plain form: JWS  |application/   |mission-       |issuer   |
-   |Mandate    |Compact          |mission-       |mandate+jwt,   |         |
-   |           |Serialization, as|mandate+jwt,   |else mission-  |         |
-   |           |issued; SD-JWT   |else           |mandate+sd-jwt |         |
-   |           |form: issuer-    |application/   |               |         |
-   |           |signed JWT       |mission-       |               |         |
-   |           |component, as    |mandate+sd-jwt |               |         |
-   |           |issued           |               |               |         |
-   +-----------+-----------------+---------------+---------------+---------+
-   |Work       |JWS Compact      |application/   |mission-work-  |signing  |
-   |Product    |Serialization, as|mission-work-  |product-       |mediator |
-   |Binding    |issued           |product-       |binding+jwt    |principal|
-   |           |                 |binding+jwt    |               |         |
-   +-----------+-----------------+---------------+---------------+---------+
-   |Child      |Child Evidence   |application/   |none           |issuer   |
-   |Evidence   |object (JCS), as |mission-child- |               |         |
-   |           |the child-       |evidence+json  |               |         |
-   |           |delegation       |               |               |         |
-   |           |profile fixes    |               |               |         |
-   +-----------+-----------------+---------------+---------------+---------+
-   |Discovery  |Discovery        |application/   |mission-       |issuer   |
-   |Evidence   |Evidence object  |mission-       |discovery-     |         |
-   |           |(JCS), as the    |discovery-     |evidence+json  |         |
-   |           |discovery profile|evidence+json  |               |         |
-   |           |fixes            |               |               |         |
-   +-----------+-----------------+---------------+---------------+---------+
-   |Harness    |Harness Evidence |application/   |none fixed     |harness  |
-   |Evidence   |object (JCS), as |mission-       |               |key      |
-   |           |the harness      |harness-       |               |         |
-   |           |profile fixes    |evidence+json  |               |         |
-   +-----------+-----------------+---------------+---------------+---------+
-   |Egress     |Egress Evidence  |application/   |none fixed     |egress   |
-   |evidence   |object (JCS), as |mission-egress-|               |key      |
-   |           |the harness      |evidence+json  |               |         |
-   |           |profile fixes    |               |               |         |
-   +-----------+-----------------+---------------+---------------+---------+
-   |Containment|Containment      |application/   |none           |issuer   |
-   |evidence   |Evidence object  |mission-       |               |         |
-   |           |(JCS), as the    |containment-   |               |         |
-   |           |containment      |evidence+json  |               |         |
-   |           |profile fixes    |               |               |         |
-   +-----------+-----------------+---------------+---------------+---------+
-   |Protected  |Protected Event  |application/   |none           |issuer   |
-   |event      |Receipt object   |mission-       |               |         |
-   |receipt    |(JCS), as the    |protected-     |               |         |
-   |           |containment      |event-         |               |         |
-   |           |profile fixes    |receipt+json   |               |         |
-   +-----------+-----------------+---------------+---------------+---------+
-   |Erasure    |Section 5.3.3    |application/   |none           |producer |
-   |record     |(JCS)            |mission-       |               |of the   |
-   |           |                 |erasure-       |               |erased   |
-   |           |                 |record+json    |               |record's |
-   |           |                 |               |               |type     |
-   +-----------+-----------------+---------------+---------------+---------+
+   +===========+=================+===============+==============+=========+
+   |Evidence   |Canonical bytes  |payload-       |Operational   |Producer |
+   |type       |(hashed)         |preimage-      |typ           |         |
+   |           |                 |content-type   |              |         |
+   +===========+=================+===============+==============+=========+
+   |Approval   |Mission record at|application/   |none          |issuer   |
+   |event      |creation, state  |mission-       |              |         |
+   |           |excluded,        |approval-      |              |         |
+   |           |canonicalized    |record+json    |              |         |
+   +-----------+-----------------+---------------+--------------+---------+
+   |Lifecycle  |Signals SET as   |application/   |secevent+jwt, |issuer   |
+   |transition |issued, as the   |secevent+jwt,  |else none     |         |
+   |           |signals profile  |else           |              |         |
+   |           |fixes; else      |application/   |              |         |
+   |           |Section 5.3.1    |mission-       |              |         |
+   |           |(JCS)            |lifecycle-     |              |         |
+   |           |                 |transition+json|              |         |
+   +-----------+-----------------+---------------+--------------+---------+
+   |Derivation |Section 5.3.2    |application/   |none          |issuer   |
+   |record     |(JCS)            |mission-       |              |         |
+   |           |                 |derivation-    |              |         |
+   |           |                 |record+json    |              |         |
+   +-----------+-----------------+---------------+--------------+---------+
+   |Consent    |complete retained|application/   |mission-      |issuer   |
+   |evidence   |object,          |mission-       |consent-      |         |
+   |           |evidence_envelope|consent-       |evidence+jws  |         |
+   |           |included (JCS)   |evidence+json  |              |         |
+   +-----------+-----------------+---------------+--------------+---------+
+   |Approval   |complete record  |application/   |application/  |issuer   |
+   |governance |including        |mission-       |mission-      |         |
+   |           |envelope (JCS),  |approval-      |approval-     |         |
+   |           |the record-digest|governance+json|governance+jws|         |
+   |           |preimage         |               |              |         |
+   +-----------+-----------------+---------------+--------------+---------+
+   |Decision   |complete object, |application/   |application/  |PDP key  |
+   |evidence   |evidence_envelope|mission-       |mission-      |         |
+   |           |included (JCS)   |decision-      |runtime-      |         |
+   |           |                 |evidence+json  |evidence+jws  |         |
+   +-----------+-----------------+---------------+--------------+---------+
+   |Execution  |complete object, |application/   |application/  |PEP key  |
+   |evidence   |evidence_envelope|mission-       |mission-      |         |
+   |           |included (JCS)   |execution-     |runtime-      |         |
+   |           |                 |evidence+json  |evidence+jws  |         |
+   +-----------+-----------------+---------------+--------------+---------+
+   |Refusal    |complete object, |application/   |application/  |PEP key  |
+   |Record     |evidence_envelope|mission-       |mission-      |         |
+   |           |included (JCS)   |refusal-       |runtime-      |         |
+   |           |                 |record+json    |evidence+jws  |         |
+   +-----------+-----------------+---------------+--------------+---------+
+   |Mission    |complete object, |application/   |application/  |receipt  |
+   |Receipt    |evidence_envelope|mission-       |mission-      |issuer   |
+   |           |included (JCS)   |receipt+json   |runtime-      |key      |
+   |           |                 |               |evidence+jws  |         |
+   +-----------+-----------------+---------------+--------------+---------+
+   |Mission    |plain form: JWS  |application/   |mission-      |issuer   |
+   |Mandate    |Compact          |mission-       |mandate+jwt,  |         |
+   |           |Serialization, as|mandate+jwt,   |else mission- |         |
+   |           |issued; SD-JWT   |else           |mandate+sd-jwt|         |
+   |           |form: issuer-    |application/   |              |         |
+   |           |signed JWT       |mission-       |              |         |
+   |           |component, as    |mandate+sd-jwt |              |         |
+   |           |issued           |               |              |         |
+   +-----------+-----------------+---------------+--------------+---------+
+   |Work       |JWS Compact      |application/   |mission-work- |signing  |
+   |Product    |Serialization, as|mission-work-  |product-      |mediator |
+   |Binding    |issued           |product-       |binding+jwt   |principal|
+   |           |                 |binding+jwt    |              |         |
+   +-----------+-----------------+---------------+--------------+---------+
+   |Child      |Child Evidence   |application/   |none          |issuer   |
+   |Evidence   |object (JCS), as |mission-child- |              |         |
+   |           |the child-       |evidence+json  |              |         |
+   |           |delegation       |               |              |         |
+   |           |profile fixes    |               |              |         |
+   +-----------+-----------------+---------------+--------------+---------+
+   |Discovery  |Discovery        |application/   |mission-      |issuer   |
+   |Evidence   |Evidence object  |mission-       |discovery-    |         |
+   |           |(JCS), as the    |discovery-     |evidence+json |         |
+   |           |discovery profile|evidence+json  |              |         |
+   |           |fixes            |               |              |         |
+   +-----------+-----------------+---------------+--------------+---------+
+   |Harness    |Harness Evidence |application/   |none fixed    |harness  |
+   |Evidence   |object (JCS), as |mission-       |              |key      |
+   |           |the harness      |harness-       |              |         |
+   |           |profile fixes    |evidence+json  |              |         |
+   +-----------+-----------------+---------------+--------------+---------+
+   |Egress     |Egress Evidence  |application/   |none fixed    |egress   |
+   |evidence   |object (JCS), as |mission-egress-|              |key      |
+   |           |the harness      |evidence+json  |              |         |
+   |           |profile fixes    |               |              |         |
+   +-----------+-----------------+---------------+--------------+---------+
+   |Containment|Containment      |application/   |none          |issuer   |
+   |evidence   |Evidence object  |mission-       |              |         |
+   |           |(JCS), as the    |containment-   |              |         |
+   |           |containment      |evidence+json  |              |         |
+   |           |profile fixes    |               |              |         |
+   +-----------+-----------------+---------------+--------------+---------+
+   |Protected  |Protected Event  |application/   |none          |issuer   |
+   |event      |Receipt object   |mission-       |              |         |
+   |receipt    |(JCS), as the    |protected-     |              |         |
+   |           |containment      |event-         |              |         |
+   |           |profile fixes    |receipt+json   |              |         |
+   +-----------+-----------------+---------------+--------------+---------+
+   |Erasure    |Section 5.3.3    |application/   |none          |producer |
+   |record     |(JCS)            |mission-       |              |of the   |
+   |           |                 |erasure-       |              |erased   |
+   |           |                 |record+json    |              |record's |
+   |           |                 |               |              |type     |
+   +-----------+-----------------+---------------+--------------+---------+
 
                                   Table 1
 
@@ -551,16 +554,20 @@ Table of Contents
 
    The operational typ column records the protected typ of the signature
    envelope a type's retained form carries, none where the type is
-   retained unsigned.  It is the per-type mapping named in Section 5.2,
-   checked when verifying the operational signature, never in place of
-   payload-preimage-content-type.  Harness and Egress Evidence fix none:
-   their defining profile fixes the raw object's JCS bytes under
-   integrity protection by a named mechanism, not a JWS envelope, and a
-   deployment-local signature creates no portable mapping in this
-   catalog.  A harness revision that defines a JWS representation fixes,
-   in that profile, the envelope and retained form, the protected typ,
-   byte-equality verification, and whether transparency commits the JSON
-   payload, the complete nested object, or the compact JWS.
+   retained unsigned.  Where the defining profile pairs that typ with a
+   protected cty, as the runtime evidence types and the Approval
+   Governance Record do, the cty is the row's payload-preimage-content-
+   type, and a verifier checks the pair.  It is the per-type mapping
+   named in Section 5.2, checked when verifying the operational
+   signature, never in place of payload-preimage-content-type.  Harness
+   and Egress Evidence fix none: their defining profile fixes the raw
+   object's JCS bytes under integrity protection by a named mechanism,
+   not a JWS envelope, and a deployment-local signature creates no
+   portable mapping in this catalog.  A harness revision that defines a
+   JWS representation fixes, in that profile, the envelope and retained
+   form, the protected typ, byte-equality verification, and whether
+   transparency commits the JSON payload, the complete nested object, or
+   the compact JWS.
 
    The media types and type identifiers are defined as follows:
 
@@ -869,30 +876,31 @@ Table of Contents
        "format": "jws-compact",
        "value":
          "eyJhbGciOiJFUzI1NiIsImtpZCI6InBkcC1rZXktMjAyNiIsInR5cCI6ImFw
-         cGxpY2F0aW9uL21pc3Npb24tZGVjaXNpb24tZXZpZGVuY2UranNvbiJ9.eyJ
-         hY3Rpb24iOnsibmFtZSI6ImpvdXJuYWwtZW50cmllcy53cml0ZSJ9LCJhY3R
-         pb25fY2xhc3MiOiJpcnJldmVyc2libGVfYWN0aW9uIiwiYXVkaWVuY2UiOiJ
-         odHRwczovL2VycC5leGFtcGxlLmNvbSIsImNsYXNzX3NvdXJjZSI6ImRlcGx
-         veW1lbnQiLCJjb25kaXRpb25zIjp7InVzZV9saW1pdCI6MSwidmFsaWRfdW5
-         0aWwiOiIyMDI2LTExLTAyVDA4OjE1OjAwWiJ9LCJjb250cmlidXRpbmdfY29
-         uc3RyYWludHMiOlsibWlzc2lvbl9yZXNvdXJjZV9hY2Nlc3MiLCJtYXhfYW1
-         vdW50Il0sImRlY2lzaW9uIjoicGVybWl0IiwiZW1pdHRlciI6eyJpZCI6InB
-         kcC5leGFtcGxlLmNvbSIsInJvbGUiOiJwZHAifSwiZW50cnlfZGlnZXN0Ijo
-         ic2hhLTI1NjpkUENOTEhzWnV6UFh1aGNvX3MyMVZUdkRJNGNhZ0lfTE1oUFF
-         zcWZOSktRIiwiZXZhbHVhdGVkX2F0IjoiMjAyNi0xMS0wMlQwODoxNDowM1o
-         iLCJldmFsdWF0aW9uX2lkIjoiZGVjXzhLMm5QNHFWOXJMM3RZNnNCMXpOMGV
-         GN2pCIiwiZXZpZGVuY2VfaWQiOiJldmRfOU5xM1RtUjZ4TDJ2UDhrWTRzRDF
-         lQjdqSDB3QzV1QSIsIm1pc3Npb24iOnsiYXV0aG9yaXR5X2hhc2giOiJzaGE
-         tMjU2OmwzS3ZaNG1QNXgwd1FyUjZ0WTJuRDliTTdzWDFjRjhnSDJ2SjRrRTV
-         wTlEiLCJpZCI6Im1zbl84UmZYMkxxdjlUcU12NHo3c0EyYk4xazBZcEVkSGM
-         5LSIsImlzc3VlciI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJwb2xpY3l
-         fdmlld19pZCI6InNoYS0yNTY6a1AzeFI5c1E3bk0ydkw0dFk2YkQxZUY4akM
-         1d0gwcFYyblIza1E0bVo3dCJ9LCJwYXJhbWV0ZXJfZGlnZXN0Ijoic2hhLTI
-         1NjpXUFZpNkVuUTdIOUZoLXFrOUFEeG1UZzh6cnVPZFZVWDFlc2wtdjNUZkN
-         JIiwicmVzb3VyY2UiOnsiaWQiOiJqZV8yMDI2UTNfaW52Xzg0MjEiLCJ0eXB
-         lIjoiam91cm5hbC1lbnRyeSJ9LCJzZXF1ZW5jZSI6NDIsInN1YmplY3QiOns
-         iaWQiOiJ1c2VyXzNwMnE4bU4xYTBrVjd0UiIsInR5cGUiOiJ1c2VyIn19.fo
-         eBPar5Zq5LGp7rFVQB5YBYaIJ3HeV0Mysvhkwe9Lx-
+         cGxpY2F0aW9uL21pc3Npb24tcnVudGltZS1ldmlkZW5jZStqd3MiLCJjdHki
+         OiJhcHBsaWNhdGlvbi9taXNzaW9uLWRlY2lzaW9uLWV2aWRlbmNlK2pzb24i
+         fQ.eyJhY3Rpb24iOnsibmFtZSI6ImpvdXJuYWwtZW50cmllcy53cml0ZSJ9L
+         CJhY3Rpb25fY2xhc3MiOiJpcnJldmVyc2libGVfYWN0aW9uIiwiYXVkaWVuY
+         2UiOiJodHRwczovL2VycC5leGFtcGxlLmNvbSIsImNsYXNzX3NvdXJjZSI6I
+         mRlcGxveW1lbnQiLCJjb25kaXRpb25zIjp7InVzZV9saW1pdCI6MSwidmFsa
+         WRfdW50aWwiOiIyMDI2LTExLTAyVDA4OjE1OjAwWiJ9LCJjb250cmlidXRpb
+         mdfY29uc3RyYWludHMiOlsibWlzc2lvbl9yZXNvdXJjZV9hY2Nlc3MiLCJtY
+         XhfYW1vdW50Il0sImRlY2lzaW9uIjoicGVybWl0IiwiZW1pdHRlciI6eyJpZ
+         CI6InBkcC5leGFtcGxlLmNvbSIsInJvbGUiOiJwZHAifSwiZW50cnlfZGlnZ
+         XN0Ijoic2hhLTI1NjpkUENOTEhzWnV6UFh1aGNvX3MyMVZUdkRJNGNhZ0lfT
+         E1oUFFzcWZOSktRIiwiZXZhbHVhdGVkX2F0IjoiMjAyNi0xMS0wMlQwODoxN
+         DowM1oiLCJldmFsdWF0aW9uX2lkIjoiZGVjXzhLMm5QNHFWOXJMM3RZNnNCM
+         XpOMGVGN2pCIiwiZXZpZGVuY2VfaWQiOiJldmRfOU5xM1RtUjZ4TDJ2UDhrW
+         TRzRDFlQjdqSDB3QzV1QSIsIm1pc3Npb24iOnsiYXV0aG9yaXR5X2hhc2giO
+         iJzaGEtMjU2OmwzS3ZaNG1QNXgwd1FyUjZ0WTJuRDliTTdzWDFjRjhnSDJ2S
+         jRrRTVwTlEiLCJpZCI6Im1zbl84UmZYMkxxdjlUcU12NHo3c0EyYk4xazBZc
+         EVkSGM5LSIsImlzc3VlciI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJwb
+         2xpY3lfdmlld19pZCI6InNoYS0yNTY6a1AzeFI5c1E3bk0ydkw0dFk2YkQxZ
+         UY4akM1d0gwcFYyblIza1E0bVo3dCJ9LCJwYXJhbWV0ZXJfZGlnZXN0Ijoic
+         2hhLTI1NjpXUFZpNkVuUTdIOUZoLXFrOUFEeG1UZzh6cnVPZFZVWDFlc2wtd
+         jNUZkNJIiwicmVzb3VyY2UiOnsiaWQiOiJqZV8yMDI2UTNfaW52Xzg0MjEiL
+         CJ0eXBlIjoiam91cm5hbC1lbnRyeSJ9LCJzZXF1ZW5jZSI6NDIsInN1YmplY
+         3QiOnsiaWQiOiJ1c2VyXzNwMnE4bU4xYTBrVjd0UiIsInR5cGUiOiJ1c2VyI
+         n19.foeBPar5Zq5LGp7rFVQB5YBYaIJ3HeV0Mysvhkwe9Lx-
          4z5KuH6nIgB9chzIMoCu1IBtmPq0eCi5YKa5OfccHg"
      }
    }
@@ -921,7 +929,8 @@ Table of Contents
    02T08:14:03Z","evaluation_id":"dec_8K2nP4qV9rL3tY6sB1zN0eF7jB","ev
    idence_envelope":{"format":"jws-compact","value":"eyJhbGciOiJFUzI1
    NiIsImtpZCI6InBkcC1rZXktMjAyNiIsInR5cCI6ImFwcGxpY2F0aW9uL21pc3Npb2
-   4tZGVjaXNpb24tZXZpZGVuY2UranNvbiJ9.eyJhY3Rpb24iOnsibmFtZSI6ImpvdXJ
+   4tcnVudGltZS1ldmlkZW5jZStqd3MiLCJjdHkiOiJhcHBsaWNhdGlvbi9taXNzaW9u
+   LWRlY2lzaW9uLWV2aWRlbmNlK2pzb24ifQ.eyJhY3Rpb24iOnsibmFtZSI6ImpvdXJ
    uYWwtZW50cmllcy53cml0ZSJ9LCJhY3Rpb25fY2xhc3MiOiJpcnJldmVyc2libGVfY
    WN0aW9uIiwiYXVkaWVuY2UiOiJodHRwczovL2VycC5leGFtcGxlLmNvbSIsImNsYXN
    zX3NvdXJjZSI6ImRlcGxveW1lbnQiLCJjb25kaXRpb25zIjp7InVzZV9saW1pdCI6M
@@ -955,7 +964,7 @@ Table of Contents
    ser"}}
 
    The committed digest is the SHA-256 of those bytes; its base64url
-   form is 0qiDkwVoXwySxY32mS1NF_arp20x28leBo65z5PE5CQ.  The Signed
+   form is WmWZVqJc9U3SKX2ZuPbtWtc_kAgaIFtGh6L7gQuc284.  The Signed
    Statement carries the digest bytes inline as its payload, with
    payload-preimage-content-type application/mission-decision-
    evidence+json in its protected header (Section 5.1).  A verifier that

@@ -1529,10 +1529,14 @@ identifies the retained representation: the payload schema for a
 <code>+json</code> object, the compact artifact itself for a <code>+jwt</code>, <code>+sd-jwt</code>,
 or SET form. The protected <code>typ</code> of an operational signature
 envelope, where the defining profile fixes one, names the signed
-object as that profile scopes it: either the payload, as the runtime
-evidence types do, or the secured representation itself, as Consent
-Evidence's <code>mission-consent-evidence+jws</code> names the JWS over the
-<code>application/mission-consent-evidence+json</code> payload. The
+object as that profile scopes it: either the payload, as Discovery
+Evidence's <code>mission-discovery-evidence+json</code> does, or the secured
+representation itself, as Consent Evidence's
+<code>mission-consent-evidence+jws</code> names the JWS over the
+<code>application/mission-consent-evidence+json</code> payload. The runtime
+evidence types and the Approval Governance Record name the secured
+representation in <code>typ</code> and carry the payload's media type in the
+protected <code>cty</code>. The
 <code>payload-preimage-content-type</code> identifies the media type of the
 preimage committed at the transparency boundary; the exact bytes are
 what the canonical-bytes column fixes (<a href="#evidence-types" class="auto internal xref">Section 5.3</a>,
@@ -1567,11 +1571,11 @@ proves neither that a record is true nor that a feed is complete
 (<a href="#verification-failures" class="auto internal xref">Section 8.1</a>).<a href="#section-5.2-8" class="pilcrow">¶</a></p>
 <p id="section-5.2-9">The anti-cross-use rule above depends on
 keeping the identifiers' roles and checks distinct, not their string
-values: the runtime evidence rows deliberately carry the same media
-type string as operational <code>typ</code> and as
-<code>payload-preimage-content-type</code>. Collapsing the types into one
-envelope, one media type, or a shared <code>typ</code> list would relocate
-domain separation from the registered identifier into a payload
+values: the runtime evidence rows carry the same media type string as
+the protected <code>cty</code> and as <code>payload-preimage-content-type</code>, under one
+secured <code>typ</code>. Naming the record kind only in a payload member,
+rather than in a registered identifier the signature protects, would
+relocate domain separation from the registered identifier into that
 member.<a href="#section-5.2-9" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1666,7 +1670,7 @@ Mission's feed; a row registers nothing on its own.<a href="#section-5.3-3" clas
                 <code>application/mission-approval-governance+json</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">
-                <code>application/mission-approval-governance+json</code>
+                <code>application/mission-approval-governance+jws</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>issuer</code>
@@ -1679,7 +1683,7 @@ Mission's feed; a row registers nothing on its own.<a href="#section-5.3-3" clas
                 <code>application/mission-decision-evidence+json</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">
-                <code>application/mission-decision-evidence+json</code>
+                <code>application/mission-runtime-evidence+jws</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">PDP key</td>
             </tr>
@@ -1690,7 +1694,7 @@ Mission's feed; a row registers nothing on its own.<a href="#section-5.3-3" clas
                 <code>application/mission-execution-evidence+json</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">
-                <code>application/mission-execution-evidence+json</code>
+                <code>application/mission-runtime-evidence+jws</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">PEP key</td>
             </tr>
@@ -1701,7 +1705,7 @@ Mission's feed; a row registers nothing on its own.<a href="#section-5.3-3" clas
                 <code>application/mission-refusal-record+json</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">
-                <code>application/mission-refusal-record+json</code>
+                <code>application/mission-runtime-evidence+jws</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">PEP key</td>
             </tr>
@@ -1712,7 +1716,7 @@ Mission's feed; a row registers nothing on its own.<a href="#section-5.3-3" clas
                 <code>application/mission-receipt+json</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">
-                <code>application/mission-receipt+json</code>
+                <code>application/mission-runtime-evidence+jws</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">receipt issuer key</td>
             </tr>
@@ -1864,7 +1868,11 @@ would let a reserialization outside the envelope change the audit
 digest while the operational signature stayed valid.<a href="#section-5.3-8" class="pilcrow">¶</a></p>
 <p id="section-5.3-9">The operational <code>typ</code> column records the protected <code>typ</code> of the
 signature envelope a type's retained form carries, none where the
-type is retained unsigned. It is the per-type mapping named in
+type is retained unsigned. Where the defining profile pairs that
+<code>typ</code> with a protected <code>cty</code>, as the runtime evidence types and the
+Approval Governance Record do, the <code>cty</code> is the row's
+<code>payload-preimage-content-type</code>, and a verifier checks the pair. It
+is the per-type mapping named in
 <a href="#evidence-base" class="auto internal xref">Section 5.2</a>, checked when verifying the operational signature,
 never in place of <code>payload-preimage-content-type</code>. Harness and Egress
 Evidence fix none: their defining profile fixes the raw object's JCS
@@ -2253,30 +2261,31 @@ characters, to recover the exact value:<a href="#section-5.3.4-1" class="pilcrow
     "format": "jws-compact",
     "value":
       "eyJhbGciOiJFUzI1NiIsImtpZCI6InBkcC1rZXktMjAyNiIsInR5cCI6ImFw
-      cGxpY2F0aW9uL21pc3Npb24tZGVjaXNpb24tZXZpZGVuY2UranNvbiJ9.eyJ
-      hY3Rpb24iOnsibmFtZSI6ImpvdXJuYWwtZW50cmllcy53cml0ZSJ9LCJhY3R
-      pb25fY2xhc3MiOiJpcnJldmVyc2libGVfYWN0aW9uIiwiYXVkaWVuY2UiOiJ
-      odHRwczovL2VycC5leGFtcGxlLmNvbSIsImNsYXNzX3NvdXJjZSI6ImRlcGx
-      veW1lbnQiLCJjb25kaXRpb25zIjp7InVzZV9saW1pdCI6MSwidmFsaWRfdW5
-      0aWwiOiIyMDI2LTExLTAyVDA4OjE1OjAwWiJ9LCJjb250cmlidXRpbmdfY29
-      uc3RyYWludHMiOlsibWlzc2lvbl9yZXNvdXJjZV9hY2Nlc3MiLCJtYXhfYW1
-      vdW50Il0sImRlY2lzaW9uIjoicGVybWl0IiwiZW1pdHRlciI6eyJpZCI6InB
-      kcC5leGFtcGxlLmNvbSIsInJvbGUiOiJwZHAifSwiZW50cnlfZGlnZXN0Ijo
-      ic2hhLTI1NjpkUENOTEhzWnV6UFh1aGNvX3MyMVZUdkRJNGNhZ0lfTE1oUFF
-      zcWZOSktRIiwiZXZhbHVhdGVkX2F0IjoiMjAyNi0xMS0wMlQwODoxNDowM1o
-      iLCJldmFsdWF0aW9uX2lkIjoiZGVjXzhLMm5QNHFWOXJMM3RZNnNCMXpOMGV
-      GN2pCIiwiZXZpZGVuY2VfaWQiOiJldmRfOU5xM1RtUjZ4TDJ2UDhrWTRzRDF
-      lQjdqSDB3QzV1QSIsIm1pc3Npb24iOnsiYXV0aG9yaXR5X2hhc2giOiJzaGE
-      tMjU2OmwzS3ZaNG1QNXgwd1FyUjZ0WTJuRDliTTdzWDFjRjhnSDJ2SjRrRTV
-      wTlEiLCJpZCI6Im1zbl84UmZYMkxxdjlUcU12NHo3c0EyYk4xazBZcEVkSGM
-      5LSIsImlzc3VlciI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJwb2xpY3l
-      fdmlld19pZCI6InNoYS0yNTY6a1AzeFI5c1E3bk0ydkw0dFk2YkQxZUY4akM
-      1d0gwcFYyblIza1E0bVo3dCJ9LCJwYXJhbWV0ZXJfZGlnZXN0Ijoic2hhLTI
-      1NjpXUFZpNkVuUTdIOUZoLXFrOUFEeG1UZzh6cnVPZFZVWDFlc2wtdjNUZkN
-      JIiwicmVzb3VyY2UiOnsiaWQiOiJqZV8yMDI2UTNfaW52Xzg0MjEiLCJ0eXB
-      lIjoiam91cm5hbC1lbnRyeSJ9LCJzZXF1ZW5jZSI6NDIsInN1YmplY3QiOns
-      iaWQiOiJ1c2VyXzNwMnE4bU4xYTBrVjd0UiIsInR5cGUiOiJ1c2VyIn19.fo
-      eBPar5Zq5LGp7rFVQB5YBYaIJ3HeV0Mysvhkwe9Lx-
+      cGxpY2F0aW9uL21pc3Npb24tcnVudGltZS1ldmlkZW5jZStqd3MiLCJjdHki
+      OiJhcHBsaWNhdGlvbi9taXNzaW9uLWRlY2lzaW9uLWV2aWRlbmNlK2pzb24i
+      fQ.eyJhY3Rpb24iOnsibmFtZSI6ImpvdXJuYWwtZW50cmllcy53cml0ZSJ9L
+      CJhY3Rpb25fY2xhc3MiOiJpcnJldmVyc2libGVfYWN0aW9uIiwiYXVkaWVuY
+      2UiOiJodHRwczovL2VycC5leGFtcGxlLmNvbSIsImNsYXNzX3NvdXJjZSI6I
+      mRlcGxveW1lbnQiLCJjb25kaXRpb25zIjp7InVzZV9saW1pdCI6MSwidmFsa
+      WRfdW50aWwiOiIyMDI2LTExLTAyVDA4OjE1OjAwWiJ9LCJjb250cmlidXRpb
+      mdfY29uc3RyYWludHMiOlsibWlzc2lvbl9yZXNvdXJjZV9hY2Nlc3MiLCJtY
+      XhfYW1vdW50Il0sImRlY2lzaW9uIjoicGVybWl0IiwiZW1pdHRlciI6eyJpZ
+      CI6InBkcC5leGFtcGxlLmNvbSIsInJvbGUiOiJwZHAifSwiZW50cnlfZGlnZ
+      XN0Ijoic2hhLTI1NjpkUENOTEhzWnV6UFh1aGNvX3MyMVZUdkRJNGNhZ0lfT
+      E1oUFFzcWZOSktRIiwiZXZhbHVhdGVkX2F0IjoiMjAyNi0xMS0wMlQwODoxN
+      DowM1oiLCJldmFsdWF0aW9uX2lkIjoiZGVjXzhLMm5QNHFWOXJMM3RZNnNCM
+      XpOMGVGN2pCIiwiZXZpZGVuY2VfaWQiOiJldmRfOU5xM1RtUjZ4TDJ2UDhrW
+      TRzRDFlQjdqSDB3QzV1QSIsIm1pc3Npb24iOnsiYXV0aG9yaXR5X2hhc2giO
+      iJzaGEtMjU2OmwzS3ZaNG1QNXgwd1FyUjZ0WTJuRDliTTdzWDFjRjhnSDJ2S
+      jRrRTVwTlEiLCJpZCI6Im1zbl84UmZYMkxxdjlUcU12NHo3c0EyYk4xazBZc
+      EVkSGM5LSIsImlzc3VlciI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJwb
+      2xpY3lfdmlld19pZCI6InNoYS0yNTY6a1AzeFI5c1E3bk0ydkw0dFk2YkQxZ
+      UY4akM1d0gwcFYyblIza1E0bVo3dCJ9LCJwYXJhbWV0ZXJfZGlnZXN0Ijoic
+      2hhLTI1NjpXUFZpNkVuUTdIOUZoLXFrOUFEeG1UZzh6cnVPZFZVWDFlc2wtd
+      jNUZkNJIiwicmVzb3VyY2UiOnsiaWQiOiJqZV8yMDI2UTNfaW52Xzg0MjEiL
+      CJ0eXBlIjoiam91cm5hbC1lbnRyeSJ9LCJzZXF1ZW5jZSI6NDIsInN1YmplY
+      3QiOnsiaWQiOiJ1c2VyXzNwMnE4bU4xYTBrVjd0UiIsInR5cGUiOiJ1c2VyI
+      n19.foeBPar5Zq5LGp7rFVQB5YBYaIJ3HeV0Mysvhkwe9Lx-
       4z5KuH6nIgB9chzIMoCu1IBtmPq0eCi5YKa5OfccHg"
   }
 }
@@ -2309,7 +2318,8 @@ com","role":"pdp"},"entry_digest":"sha-
 02T08:14:03Z","evaluation_id":"dec_8K2nP4qV9rL3tY6sB1zN0eF7jB","ev
 idence_envelope":{"format":"jws-compact","value":"eyJhbGciOiJFUzI1
 NiIsImtpZCI6InBkcC1rZXktMjAyNiIsInR5cCI6ImFwcGxpY2F0aW9uL21pc3Npb2
-4tZGVjaXNpb24tZXZpZGVuY2UranNvbiJ9.eyJhY3Rpb24iOnsibmFtZSI6ImpvdXJ
+4tcnVudGltZS1ldmlkZW5jZStqd3MiLCJjdHkiOiJhcHBsaWNhdGlvbi9taXNzaW9u
+LWRlY2lzaW9uLWV2aWRlbmNlK2pzb24ifQ.eyJhY3Rpb24iOnsibmFtZSI6ImpvdXJ
 uYWwtZW50cmllcy53cml0ZSJ9LCJhY3Rpb25fY2xhc3MiOiJpcnJldmVyc2libGVfY
 WN0aW9uIiwiYXVkaWVuY2UiOiJodHRwczovL2VycC5leGFtcGxlLmNvbSIsImNsYXN
 zX3NvdXJjZSI6ImRlcGxveW1lbnQiLCJjb25kaXRpb25zIjp7InVzZV9saW1pdCI6M
@@ -2344,7 +2354,7 @@ ser"}}
 </pre><a href="#section-5.3.4-6" class="pilcrow">¶</a>
 </div>
 <p id="section-5.3.4-7">The committed digest is the SHA-256 of those bytes; its base64url
-form is <code>0qiDkwVoXwySxY32mS1NF_arp20x28leBo65z5PE5CQ</code>. The Signed
+form is <code>WmWZVqJc9U3SKX2ZuPbtWtc_kAgaIFtGh6L7gQuc284</code>. The Signed
 Statement carries the digest bytes inline as its payload, with
 <code>payload-preimage-content-type</code>
             <code>application/mission-decision-evidence+json</code> in its protected header

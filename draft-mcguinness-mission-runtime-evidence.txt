@@ -1919,8 +1919,8 @@ Table of Contents
       ([I-D.draft-mcguinness-mission-runtime]) (Section 5); and
 
    *  sign every record with the integrity envelope of Section 4.3, with
-      a kid resolvable in its published key set and a typ matching the
-      record's own media type.
+      a kid resolvable in its published key set, the protected typ that
+      envelope fixes, and a cty matching the record's own media type.
 
    A CONSUMER or VERIFIER conforming to this document MUST perform the
    byte-equality verification procedure and key checks of Section 4.3

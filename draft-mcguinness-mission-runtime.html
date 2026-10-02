@@ -5004,8 +5004,9 @@ individually signed, the <code>evidence_envelope</code> JWS convention of the
 runtime evidence companion
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>) is the
 suite's one signing convention for evidence objects and <span class="bcp14">SHOULD</span> be
-used, with a <code>typ</code> that names the record's own media type, rather
-than a record-specific signing scheme.<a href="#section-11.3-2.2.1" class="pilcrow">¶</a></p>
+used, with the protected <code>typ</code> that convention fixes and a <code>cty</code>
+that names the record's own media type, rather than a
+record-specific signing scheme.<a href="#section-11.3-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.3-2.3">
             <p id="section-11.3-2.3.1">Raw parameters <span class="bcp14">MUST NOT</span> appear in the record; when retained for

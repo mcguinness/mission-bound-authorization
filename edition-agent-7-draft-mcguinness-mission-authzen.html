@@ -4229,8 +4229,9 @@ wire: the PDP computes them and records them directly in Decision
 Evidence (<a href="#response-context" class="auto internal xref">Section 7.1</a>).<a href="#section-8-2" class="pilcrow">¶</a></p>
 <p id="section-8-3">The runtime evidence companion's integrity envelope is this profile's
 one signing convention for evidence objects: the default envelope
-format is <code>jws-compact</code>, and the protected <code>typ</code> names the record's
-own registered media type
+format is <code>jws-compact</code>, the protected <code>typ</code> is the one value that
+envelope fixes, and the protected <code>cty</code> names the record's own
+registered media type
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-8-3" class="pilcrow">¶</a></p>
 <div id="execution-evidence-requirement">
 <section id="section-8.1">

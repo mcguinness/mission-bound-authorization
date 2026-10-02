@@ -2480,9 +2480,10 @@ approval also consents an authority ceiling for later staged widening
 event requires an accountable principal deciding against committed
 inputs before any authority exists, and the proposer is never the
 approver. A deterministic, versioned policy can approve at machine
-speed within a ceiling a human consented to (the <code>policy_drawdown</code>
-and <code>template</code> authorization bases that companion profiles define on
-the OAuth binding's extension point, <a href="#invariants" class="auto internal xref">Section 8</a>). Policy approves
+speed within a ceiling a human consented to (the <code>template</code>,
+<code>policy_drawdown</code>, and <code>ceiling_drawdown</code> authorization bases that
+companion profiles define on the OAuth binding's extension point,
+<a href="#invariants" class="auto internal xref">Section 8</a>). Policy approves
 the instance because a human approved the policy or the template, with
 <code>policy_version</code> keeping that chain re-checkable. A model's generated
 judgment is never the sole authority for granting or widening: a
@@ -2843,9 +2844,12 @@ integrity anchors.<a href="#section-8-3.14.1" class="pilcrow">¶</a></p>
 binding fully defines one, <code>direct</code>, a human's own approval. It also
 provides the extension point, an authorization-basis <code>type</code> string,
 that companion profiles use to define others: <code>template</code>, a
-dispatch drawing on a ceiling the human consented to once, and
+dispatch drawing on a ceiling the human consented to once;
 <code>policy_drawdown</code>, a child instance a policy adjudicates within a
-bound the parent's human already consented to. Every basis fixes
+bound the parent's human already consented to; and
+<code>ceiling_drawdown</code>, a successor a policy adjudicates within an
+authority ceiling the Approver consented to at the initial
+approval. Every basis fixes
 the same accountable human as <code>consent_principal</code>; the bases differ
 only in what activated this instance and what root that activation
 traces to (the OAuth binding).<a href="#section-8-5.2.1" class="pilcrow">¶</a></p>

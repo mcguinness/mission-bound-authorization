@@ -3598,7 +3598,8 @@ profile's transaction-assurance tier covers
         <li class="normal" id="section-9-3.4">
           <p id="section-9-3.4.1">sign every record with the integrity envelope of
 <a href="#decision-evidence-integrity" class="auto internal xref">Section 4.3</a>, with a <code>kid</code> resolvable in its
-published key set and a <code>typ</code> matching the record's own media type.<a href="#section-9-3.4.1" class="pilcrow">¶</a></p>
+published key set, the protected <code>typ</code> that envelope fixes, and a
+<code>cty</code> matching the record's own media type.<a href="#section-9-3.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-9-4">A CONSUMER or VERIFIER conforming to this document <span class="bcp14">MUST</span> perform the
