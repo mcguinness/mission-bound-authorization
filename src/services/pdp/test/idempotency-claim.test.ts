@@ -319,6 +319,11 @@ describe("PDP idempotency claim (@spec runtime#idempotency, #917)", () => {
           { actor: { client_id: "ap-agent", act: [{ iss: "https://as.test", sub: "agent-1" }] } },
           { actor: { client_id: "ap-agent", act: [{ iss: "https://as.test", sub: "agent-2" }] } },
         ],
+        [
+          "actor leaf naming another ai_agent delegate",
+          { actor: { client_id: "ap-agent", act: [{ iss: "https://as.test", sub: "agent-1", sub_profile: "ai_agent" }] } },
+          { actor: { client_id: "ap-agent", act: [{ iss: "https://as.test", sub: "agent-2", sub_profile: "ai_agent" }] } },
+        ],
         ["audience", {}, { audience: OTHER_RESOURCE }],
         ["resource", {}, { resource: { type: "invoice", id: "inv-2", properties: { vendor_id: "acme" } } }],
         ["phase", { phase: "prepare" }, { phase: "commit" }],
@@ -354,6 +359,48 @@ describe("PDP idempotency claim (@spec runtime#idempotency, #917)", () => {
       );
       expectDenied(retry, "duplicate_suppressed", { next_action: "retry", retry_after: 1 });
       claims.close();
+    });
+
+    // #1016 review: a leaf act entry that names a client instance is the
+    // instance, not a delegate; another instance of the same client is the
+    // same intended execution and must not obtain a second permit.
+    it("another instance of the same client under the same key, carried as an instance-profiled leaf, never obtains a second permit", async () => {
+      const c = clock();
+      const { file, open } = domainOnFile(c);
+      const claims = open();
+      for (const profile of ["client_instance", "ai_agent client_instance"]) {
+        const key = freshKey();
+        const asInstance = (sub: string): RequestOptions => ({
+          key,
+          actor: { client_id: "ap-agent", act: [{ iss: "https://as.test", sub, sub_profile: profile }] },
+        });
+        const first = await evaluate(request(c, asInstance("inst-1")), options(claims, c, { consumptionStatus: unconsumed }));
+        expect(first.decision, `${profile}: ${JSON.stringify(first.context)}`).toBe(true);
+        // The second instance's binding differs, so it is not a retransmission
+        // of the first permit either: transient suppression, per the table.
+        const second = await evaluate(request(c, asInstance("inst-2")), options(claims, c, { consumptionStatus: unconsumed }));
+        expectDenied(second, "duplicate_suppressed", { next_action: "retry", retry_after: 1 });
+        // The first instance retrying is still the retransmission it was.
+        const resent = await evaluate(request(c, asInstance("inst-1")), options(claims, c, { consumptionStatus: unconsumed }));
+        expect(resent.context.evaluation_id).toBe(first.context.evaluation_id);
+      }
+      claims.close();
+      expect(rowsOf(file)).toHaveLength(2);
+    });
+
+    it("an instance-profiled leaf with no client to key it on has no stable actor and is refused actor_invalid", async () => {
+      const c = clock();
+      const { file, open } = domainOnFile(c);
+      const claims = open();
+      const refused = await evaluate(
+        request(c, { actor: { act: [{ iss: "https://as.test", sub: "inst-1", sub_profile: "client_instance" }] } }),
+        options(claims, c),
+      );
+      expect(refused.decision).toBe(false);
+      expect(refused.context.denial_reason).toBe("actor_invalid");
+      expect(refused.context.conditions).toBeUndefined();
+      claims.close();
+      expect(rowsOf(file)).toHaveLength(0);
     });
   });
 
@@ -431,6 +478,23 @@ describe("PDP idempotency claim (@spec runtime#idempotency, #917)", () => {
       expect((await evaluate(request(c, { key }), options(claims, c, { consumptionStatus: unconsumed }))).decision).toBe(true);
       c.set(T0 + VALID_MS + 1_000);
       const late = await evaluate(request(c, { key }), options(claims, c, { consumptionStatus: unconsumed }));
+      expectDenied(late, "duplicate_suppressed", { next_action: "retry", retry_after: 1 });
+      claims.close();
+    });
+
+    // #1016 review: the expiry check reads the clock after the consumption
+    // query, not before it.
+    it("does not return a permit that expires while the PEP is answering", async () => {
+      const c = clock();
+      const { open } = domainOnFile(c);
+      const claims = open();
+      const key = freshKey();
+      expect((await evaluate(request(c, { key }), options(claims, c, { consumptionStatus: unconsumed }))).decision).toBe(true);
+      const slowAnswer: ConsumptionStatusFn = () => {
+        c.set(T0 + VALID_MS + 1);
+        return "unconsumed";
+      };
+      const late = await evaluate(request(c, { key }), options(claims, c, { consumptionStatus: slowAnswer }));
       expectDenied(late, "duplicate_suppressed", { next_action: "retry", retry_after: 1 });
       claims.close();
     });
