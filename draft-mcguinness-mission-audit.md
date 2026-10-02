@@ -419,10 +419,14 @@ identifies the retained representation: the payload schema for a
 `+json` object, the compact artifact itself for a `+jwt`, `+sd-jwt`,
 or SET form. The protected `typ` of an operational signature
 envelope, where the defining profile fixes one, names the signed
-object as that profile scopes it: either the payload, as the runtime
-evidence types do, or the secured representation itself, as Consent
-Evidence's `mission-consent-evidence+jws` names the JWS over the
-`application/mission-consent-evidence+json` payload. The
+object as that profile scopes it: either the payload, as Discovery
+Evidence's `mission-discovery-evidence+json` does, or the secured
+representation itself, as Consent Evidence's
+`mission-consent-evidence+jws` names the JWS over the
+`application/mission-consent-evidence+json` payload. The runtime
+evidence types and the Approval Governance Record name the secured
+representation in `typ` and carry the payload's media type in the
+protected `cty`. The
 `payload-preimage-content-type` identifies the media type of the
 preimage committed at the transparency boundary; the exact bytes are
 what the canonical-bytes column fixes ({{evidence-types}},
@@ -461,11 +465,11 @@ proves neither that a record is true nor that a feed is complete
 
 The anti-cross-use rule above depends on
 keeping the identifiers' roles and checks distinct, not their string
-values: the runtime evidence rows deliberately carry the same media
-type string as operational `typ` and as
-`payload-preimage-content-type`. Collapsing the types into one
-envelope, one media type, or a shared `typ` list would relocate
-domain separation from the registered identifier into a payload
+values: the runtime evidence rows carry the same media type string as
+the protected `cty` and as `payload-preimage-content-type`, under one
+secured `typ`. Naming the record kind only in a payload member,
+rather than in a registered identifier the signature protects, would
+relocate domain separation from the registered identifier into that
 member.
 
 ## Evidence Types {#evidence-types}
@@ -498,11 +502,11 @@ Mission's feed; a row registers nothing on its own.
 | Lifecycle transition | Signals SET as issued, as the signals profile fixes; else {{transition-object}} (JCS) | `application/secevent+jwt`, else `application/mission-lifecycle-transition+json` | `secevent+jwt`, else none | `issuer` |
 | Derivation record | {{derivation-record}} (JCS) | `application/mission-derivation-record+json` | none | `issuer` |
 | Consent evidence | complete retained object, `evidence_envelope` included (JCS) | `application/mission-consent-evidence+json` | `mission-consent-evidence+jws` | `issuer` |
-| Approval governance | complete record including `envelope` (JCS), the record-digest preimage | `application/mission-approval-governance+json` | `application/mission-approval-governance+json` | `issuer` |
-| Decision evidence | complete object, `evidence_envelope` included (JCS) | `application/mission-decision-evidence+json` | `application/mission-decision-evidence+json` | PDP key |
-| Execution evidence | complete object, `evidence_envelope` included (JCS) | `application/mission-execution-evidence+json` | `application/mission-execution-evidence+json` | PEP key |
-| Refusal Record | complete object, `evidence_envelope` included (JCS) | `application/mission-refusal-record+json` | `application/mission-refusal-record+json` | PEP key |
-| Mission Receipt | complete object, `evidence_envelope` included (JCS) | `application/mission-receipt+json` | `application/mission-receipt+json` | receipt issuer key |
+| Approval governance | complete record including `envelope` (JCS), the record-digest preimage | `application/mission-approval-governance+json` | `application/mission-approval-governance+jws` | `issuer` |
+| Decision evidence | complete object, `evidence_envelope` included (JCS) | `application/mission-decision-evidence+json` | `application/mission-runtime-evidence+jws` | PDP key |
+| Execution evidence | complete object, `evidence_envelope` included (JCS) | `application/mission-execution-evidence+json` | `application/mission-runtime-evidence+jws` | PEP key |
+| Refusal Record | complete object, `evidence_envelope` included (JCS) | `application/mission-refusal-record+json` | `application/mission-runtime-evidence+jws` | PEP key |
+| Mission Receipt | complete object, `evidence_envelope` included (JCS) | `application/mission-receipt+json` | `application/mission-runtime-evidence+jws` | receipt issuer key |
 | Mission Mandate | plain form: JWS Compact Serialization, as issued; SD-JWT form: issuer-signed JWT component, as issued | `application/mission-mandate+jwt`, else `application/mission-mandate+sd-jwt` | `mission-mandate+jwt`, else `mission-mandate+sd-jwt` | `issuer` |
 | Work Product Binding | JWS Compact Serialization, as issued | `application/mission-work-product-binding+jwt` | `mission-work-product-binding+jwt` | signing `mediator` principal |
 | Child Evidence | Child Evidence object (JCS), as the child-delegation profile fixes | `application/mission-child-evidence+json` | none | `issuer` |
@@ -565,7 +569,11 @@ digest while the operational signature stayed valid.
 
 The operational `typ` column records the protected `typ` of the
 signature envelope a type's retained form carries, none where the
-type is retained unsigned. It is the per-type mapping named in
+type is retained unsigned. Where the defining profile pairs that
+`typ` with a protected `cty`, as the runtime evidence types and the
+Approval Governance Record do, the `cty` is the row's
+`payload-preimage-content-type`, and a verifier checks the pair. It
+is the per-type mapping named in
 {{evidence-base}}, checked when verifying the operational signature,
 never in place of `payload-preimage-content-type`. Harness and Egress
 Evidence fix none: their defining profile fixes the raw object's JCS
@@ -880,30 +888,31 @@ characters, to recover the exact value:
     "format": "jws-compact",
     "value":
       "eyJhbGciOiJFUzI1NiIsImtpZCI6InBkcC1rZXktMjAyNiIsInR5cCI6ImFw
-      cGxpY2F0aW9uL21pc3Npb24tZGVjaXNpb24tZXZpZGVuY2UranNvbiJ9.eyJ
-      hY3Rpb24iOnsibmFtZSI6ImpvdXJuYWwtZW50cmllcy53cml0ZSJ9LCJhY3R
-      pb25fY2xhc3MiOiJpcnJldmVyc2libGVfYWN0aW9uIiwiYXVkaWVuY2UiOiJ
-      odHRwczovL2VycC5leGFtcGxlLmNvbSIsImNsYXNzX3NvdXJjZSI6ImRlcGx
-      veW1lbnQiLCJjb25kaXRpb25zIjp7InVzZV9saW1pdCI6MSwidmFsaWRfdW5
-      0aWwiOiIyMDI2LTExLTAyVDA4OjE1OjAwWiJ9LCJjb250cmlidXRpbmdfY29
-      uc3RyYWludHMiOlsibWlzc2lvbl9yZXNvdXJjZV9hY2Nlc3MiLCJtYXhfYW1
-      vdW50Il0sImRlY2lzaW9uIjoicGVybWl0IiwiZW1pdHRlciI6eyJpZCI6InB
-      kcC5leGFtcGxlLmNvbSIsInJvbGUiOiJwZHAifSwiZW50cnlfZGlnZXN0Ijo
-      ic2hhLTI1NjpkUENOTEhzWnV6UFh1aGNvX3MyMVZUdkRJNGNhZ0lfTE1oUFF
-      zcWZOSktRIiwiZXZhbHVhdGVkX2F0IjoiMjAyNi0xMS0wMlQwODoxNDowM1o
-      iLCJldmFsdWF0aW9uX2lkIjoiZGVjXzhLMm5QNHFWOXJMM3RZNnNCMXpOMGV
-      GN2pCIiwiZXZpZGVuY2VfaWQiOiJldmRfOU5xM1RtUjZ4TDJ2UDhrWTRzRDF
-      lQjdqSDB3QzV1QSIsIm1pc3Npb24iOnsiYXV0aG9yaXR5X2hhc2giOiJzaGE
-      tMjU2OmwzS3ZaNG1QNXgwd1FyUjZ0WTJuRDliTTdzWDFjRjhnSDJ2SjRrRTV
-      wTlEiLCJpZCI6Im1zbl84UmZYMkxxdjlUcU12NHo3c0EyYk4xazBZcEVkSGM
-      5LSIsImlzc3VlciI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJwb2xpY3l
-      fdmlld19pZCI6InNoYS0yNTY6a1AzeFI5c1E3bk0ydkw0dFk2YkQxZUY4akM
-      1d0gwcFYyblIza1E0bVo3dCJ9LCJwYXJhbWV0ZXJfZGlnZXN0Ijoic2hhLTI
-      1NjpXUFZpNkVuUTdIOUZoLXFrOUFEeG1UZzh6cnVPZFZVWDFlc2wtdjNUZkN
-      JIiwicmVzb3VyY2UiOnsiaWQiOiJqZV8yMDI2UTNfaW52Xzg0MjEiLCJ0eXB
-      lIjoiam91cm5hbC1lbnRyeSJ9LCJzZXF1ZW5jZSI6NDIsInN1YmplY3QiOns
-      iaWQiOiJ1c2VyXzNwMnE4bU4xYTBrVjd0UiIsInR5cGUiOiJ1c2VyIn19.fo
-      eBPar5Zq5LGp7rFVQB5YBYaIJ3HeV0Mysvhkwe9Lx-
+      cGxpY2F0aW9uL21pc3Npb24tcnVudGltZS1ldmlkZW5jZStqd3MiLCJjdHki
+      OiJhcHBsaWNhdGlvbi9taXNzaW9uLWRlY2lzaW9uLWV2aWRlbmNlK2pzb24i
+      fQ.eyJhY3Rpb24iOnsibmFtZSI6ImpvdXJuYWwtZW50cmllcy53cml0ZSJ9L
+      CJhY3Rpb25fY2xhc3MiOiJpcnJldmVyc2libGVfYWN0aW9uIiwiYXVkaWVuY
+      2UiOiJodHRwczovL2VycC5leGFtcGxlLmNvbSIsImNsYXNzX3NvdXJjZSI6I
+      mRlcGxveW1lbnQiLCJjb25kaXRpb25zIjp7InVzZV9saW1pdCI6MSwidmFsa
+      WRfdW50aWwiOiIyMDI2LTExLTAyVDA4OjE1OjAwWiJ9LCJjb250cmlidXRpb
+      mdfY29uc3RyYWludHMiOlsibWlzc2lvbl9yZXNvdXJjZV9hY2Nlc3MiLCJtY
+      XhfYW1vdW50Il0sImRlY2lzaW9uIjoicGVybWl0IiwiZW1pdHRlciI6eyJpZ
+      CI6InBkcC5leGFtcGxlLmNvbSIsInJvbGUiOiJwZHAifSwiZW50cnlfZGlnZ
+      XN0Ijoic2hhLTI1NjpkUENOTEhzWnV6UFh1aGNvX3MyMVZUdkRJNGNhZ0lfT
+      E1oUFFzcWZOSktRIiwiZXZhbHVhdGVkX2F0IjoiMjAyNi0xMS0wMlQwODoxN
+      DowM1oiLCJldmFsdWF0aW9uX2lkIjoiZGVjXzhLMm5QNHFWOXJMM3RZNnNCM
+      XpOMGVGN2pCIiwiZXZpZGVuY2VfaWQiOiJldmRfOU5xM1RtUjZ4TDJ2UDhrW
+      TRzRDFlQjdqSDB3QzV1QSIsIm1pc3Npb24iOnsiYXV0aG9yaXR5X2hhc2giO
+      iJzaGEtMjU2OmwzS3ZaNG1QNXgwd1FyUjZ0WTJuRDliTTdzWDFjRjhnSDJ2S
+      jRrRTVwTlEiLCJpZCI6Im1zbl84UmZYMkxxdjlUcU12NHo3c0EyYk4xazBZc
+      EVkSGM5LSIsImlzc3VlciI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJwb
+      2xpY3lfdmlld19pZCI6InNoYS0yNTY6a1AzeFI5c1E3bk0ydkw0dFk2YkQxZ
+      UY4akM1d0gwcFYyblIza1E0bVo3dCJ9LCJwYXJhbWV0ZXJfZGlnZXN0Ijoic
+      2hhLTI1NjpXUFZpNkVuUTdIOUZoLXFrOUFEeG1UZzh6cnVPZFZVWDFlc2wtd
+      jNUZkNJIiwicmVzb3VyY2UiOnsiaWQiOiJqZV8yMDI2UTNfaW52Xzg0MjEiL
+      CJ0eXBlIjoiam91cm5hbC1lbnRyeSJ9LCJzZXF1ZW5jZSI6NDIsInN1YmplY
+      3QiOnsiaWQiOiJ1c2VyXzNwMnE4bU4xYTBrVjd0UiIsInR5cGUiOiJ1c2VyI
+      n19.foeBPar5Zq5LGp7rFVQB5YBYaIJ3HeV0Mysvhkwe9Lx-
       4z5KuH6nIgB9chzIMoCu1IBtmPq0eCi5YKa5OfccHg"
   }
 }
@@ -936,7 +945,8 @@ com","role":"pdp"},"entry_digest":"sha-
 02T08:14:03Z","evaluation_id":"dec_8K2nP4qV9rL3tY6sB1zN0eF7jB","ev
 idence_envelope":{"format":"jws-compact","value":"eyJhbGciOiJFUzI1
 NiIsImtpZCI6InBkcC1rZXktMjAyNiIsInR5cCI6ImFwcGxpY2F0aW9uL21pc3Npb2
-4tZGVjaXNpb24tZXZpZGVuY2UranNvbiJ9.eyJhY3Rpb24iOnsibmFtZSI6ImpvdXJ
+4tcnVudGltZS1ldmlkZW5jZStqd3MiLCJjdHkiOiJhcHBsaWNhdGlvbi9taXNzaW9u
+LWRlY2lzaW9uLWV2aWRlbmNlK2pzb24ifQ.eyJhY3Rpb24iOnsibmFtZSI6ImpvdXJ
 uYWwtZW50cmllcy53cml0ZSJ9LCJhY3Rpb25fY2xhc3MiOiJpcnJldmVyc2libGVfY
 WN0aW9uIiwiYXVkaWVuY2UiOiJodHRwczovL2VycC5leGFtcGxlLmNvbSIsImNsYXN
 zX3NvdXJjZSI6ImRlcGxveW1lbnQiLCJjb25kaXRpb25zIjp7InVzZV9saW1pdCI6M
@@ -971,7 +981,7 @@ ser"}}
 ~~~
 
 The committed digest is the SHA-256 of those bytes; its base64url
-form is `0qiDkwVoXwySxY32mS1NF_arp20x28leBo65z5PE5CQ`. The Signed
+form is `WmWZVqJc9U3SKX2ZuPbtWtc_kAgaIFtGh6L7gQuc284`. The Signed
 Statement carries the digest bytes inline as its payload, with
 `payload-preimage-content-type`
 `application/mission-decision-evidence+json` in its protected header

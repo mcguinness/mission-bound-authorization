@@ -2409,8 +2409,9 @@ Evidence ({{response-context}}).
 
 The runtime evidence companion's integrity envelope is this profile's
 one signing convention for evidence objects: the default envelope
-format is `jws-compact`, and the protected `typ` names the record's
-own registered media type
+format is `jws-compact`, the protected `typ` is the one value that
+envelope fixes, and the protected `cty` names the record's own
+registered media type
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 ## Execution Evidence Requirement {#execution-evidence-requirement}
