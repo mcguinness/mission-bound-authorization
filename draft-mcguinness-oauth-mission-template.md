@@ -326,19 +326,16 @@ A Mission Template is a consented object with these members:
   ({{I-D.draft-mcguinness-oauth-mission}}).
 
 `dispatch_policy`:
-: REQUIRED. An object carrying `id` and `version`, identifying the
-  Dispatch Policy under which the Mission Issuer instantiates from this
-  template. Its content is deployment-defined. Committing only `id` and
-  `version` leaves the policy body itself uncommitted, so a change to
-  its logic between template consent and a given dispatch is not
-  detectable from the template alone. A deployment SHOULD additionally
-  commit the Dispatch Policy body under an integrity anchor, computed
-  the way the issuance profile computes `authority_hash`
-  ({{I-D.draft-mcguinness-oauth-mission}}), or disclose it under
-  Consent Evidence
-  ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), so a
-  machine-speed dispatch decision stays auditable against the policy
-  content a human actually consented to, not only its identifier.
+: REQUIRED. An activation policy reference, an object of `id`,
+  `version`, and `digest` ({{I-D.draft-mcguinness-oauth-mission}},
+  Section "Standing-Consent Bases"), identifying the Dispatch Policy
+  under which the Mission Issuer instantiates from this template and
+  committing its content. The policy's content is deployment-defined.
+  Because `template_hash` covers this member, the template commits
+  the exact policy the human consented to, and the Mission Issuer
+  verifies its `digest` before each Dispatch under that section's
+  rule, so a machine-speed dispatch decision stays auditable against
+  the policy content, not only its identifier.
 
 `allowed_dispatchers`:
 : REQUIRED. A non-empty array of strings, each the client identifier
@@ -509,14 +506,19 @@ The Mission Issuer adjudicates a Dispatch in this order:
 2. **Authorize the Dispatcher.** Verify the Dispatcher is in the
    template's `allowed_dispatchers`. Refuse a request from any other
    principal.
-3. **Derive the instance Authority Set.** Derive an Authority Set from
+3. **Verify the Dispatch Policy.** Verify the Dispatch Policy snapshot
+   the Mission Issuer will evaluate against `dispatch_policy.digest`
+   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Standing-Consent
+   Bases"). On a mismatch, refuse the Dispatch with
+   `dispatch_policy_changed` ({{denial-reasons}}).
+4. **Derive the instance Authority Set.** Derive an Authority Set from
    the dispatch intent, and from the Dispatcher's authority proposal
    where one was submitted ({{grant-type}}), and bound it by the
    deployment's derivation
    policy, exactly as for any Mission
    ({{I-D.draft-mcguinness-oauth-mission}}). This document adds no
    authority-derivation rule.
-4. **Double intersection.** The derived instance Authority Set MUST be a
+5. **Double intersection.** The derived instance Authority Set MUST be a
    subset, under the issuance profile's subset rule
    ({{I-D.draft-mcguinness-oauth-mission}}), of **both** the
    deployment's derivation-policy ceiling **and** the Template Ceiling.
@@ -525,15 +527,15 @@ The Mission Issuer adjudicates a Dispatch in this order:
    Ceiling, the Mission Issuer MUST refuse the Dispatch with
    `out_of_template_ceiling` ({{denial-reasons}}). Raising the ceiling
    is a new template consent, not a dispatch.
-5. **Prohibited-class check.** Apply the prohibited-class rule
+6. **Prohibited-class check.** Apply the prohibited-class rule
    ({{prohibited-classes}}) to the surviving post-intersection set. If
    it would grant a high-consequence class, refuse the Dispatch with
    `dispatch_prohibited_class` ({{denial-reasons}}).
-6. **Enforce the bounds.** Refuse the Dispatch if it would exceed
+7. **Enforce the bounds.** Refuse the Dispatch if it would exceed
    `max_active` or `dispatch_rate`, or if the instance's
    Mission-Issuer-established Subject or its Agent falls outside
    `allowed_recipients` ({{the-mission-template}}).
-7. **Commit the instance.** Commit an ordinary Mission whose Authority
+8. **Commit the instance.** Commit an ordinary Mission whose Authority
    Set is the surviving set and whose:
 
    - `approver` is the template's human approver, the accountable
@@ -668,9 +670,10 @@ Template it was dispatched from:
 
 `template`:
 : An object carrying `id`, `issuer`, `template_version`,
-  `template_hash`, and `dispatch_policy` (the policy `id` and
-  `version`). Present on every dispatched Mission and absent on a
-  Mission created by ordinary approval.
+  `template_hash`, and `dispatch_policy` (the activation policy
+  reference: `id`, `version`, and `digest`). Present on every
+  dispatched Mission and absent on a Mission created by ordinary
+  approval.
 
 Consistent with the issuance profile's open-`mission`-claim rule
 ({{I-D.draft-mcguinness-oauth-mission}}), the `template` member is
@@ -710,8 +713,8 @@ instance with:
   PAR-only carriage rule; that profile's validation, derivation,
   recording, and hashing semantics apply unchanged
   ({{I-D.draft-mcguinness-oauth-mission}}). It is a proposal, never
-  authority: it bounds the derivation of step 3 of {{dispatch}} in
-  narrowing mode, and the double intersection of step 4 applies to
+  authority: it bounds the derivation of step 4 of {{dispatch}} in
+  narrowing mode, and the double intersection of step 5 applies to
   the result unchanged, so a proposal narrows the instance and never
   widens it beyond the Template Ceiling. Absent a proposal, the
   instance derives from the dispatch intent alone. An instance
@@ -848,9 +851,14 @@ established for adjudication denials
   ({{prohibited-classes}}), which a Dispatch never auto-approves. The
   authority is available only through a fresh human approval.
 
-A consumer that does not implement this document treats either value as
-it treats any unrecognized reason code: the Dispatch stays denied, with
-no further semantics.
+`dispatch_policy_changed`:
+: The Dispatch Policy the Mission Issuer would evaluate no longer
+  matches the `digest` the template committed ({{dispatch}}). Dispatch
+  under the changed policy requires a fresh human template consent.
+
+A consumer that does not implement this document treats any of these
+values as it treats any unrecognized reason code: the Dispatch stays
+denied, with no further semantics.
 
 # Instance Composition {#instance-composition}
 
@@ -911,8 +919,8 @@ Mission an authorized auditor can:
   at the recorded `template_version`, so the accountable principal is
   the human who consented to that version of the template.
 
-Each Dispatch MUST record the Dispatch Policy `id` and `version` that
-instantiated the Mission, and the dispatch event identifier
+Each Dispatch MUST record the Dispatch Policy `id`, `version`, and
+`digest` that instantiated the Mission, and the dispatch event identifier
 ({{dispatch}}), so the policy chain the architecture's Approve verb
 requires stays re-checkable
 ({{I-D.draft-mcguinness-mission-architecture}}). A deployment MUST
@@ -1083,6 +1091,13 @@ IANA action. Following the restraint of the sibling profiles:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- `dispatch_policy` is an activation policy reference (`id`,
+  `version`, `digest`) under the issuance profile's Standing-Consent
+  Bases, replacing the SHOULD to commit the policy body. Dispatch
+  verifies it as a new step 3 and refuses a mismatch with the new
+  `dispatch_policy_changed` reason; the `template` lineage member and
+  each Dispatch record carry the digest.
 
 - The consumption-bound rationale under Prohibited Classes states
   that dispatch multiplies an instance's bound by `max_active` and
