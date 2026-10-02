@@ -695,7 +695,7 @@ A consumer MUST ignore members it does not recognize.
 | `invalid_mission_intent_evidence` | 400 | submission | An evidence entry of unsupported type or failing its type's verification, or a policy-required evidence type absent from the submission. |
 | `unauthorized` | 401 | submission, join assertion | Request not authenticated. |
 | `join_failed` | 403 | join assertion | The acting token does not join the referenced Mission ({{join-assertion-request}}). |
-| `not_found` | 404 | submission, join assertion | A referenced submission or Mission does not exist OR is not visible to the caller. |
+| `not_found` | 404 | submission, join assertion | A referenced submission or Mission does not exist or is not visible to the caller. |
 | `conflict` | 409 | submission (expansion, child creation) | A resolved predecessor or parent whose state or serialization refuses the operation ({{native-carriage}}). |
 | `rate_limited` | 429 | submission, join assertion | Caller is rate-limited. |
 | `unavailable` | 503 | submission, join assertion | MAS temporarily cannot serve the request. |
@@ -1950,8 +1950,7 @@ Enforcement Scope Statement:
   at the token layer covers the rest.
 
 An enterprise deployment carries this statement inside its mapping
-contract ({{mapping-contract}}), not beside it, so the join's facts
-have one home.
+contract ({{mapping-contract}}).
 
 **No Mission-bound credentials.** Tokens carry no `mission` claim and
 no Mission-derived `authorization_details`. Nothing cryptographically
@@ -2011,8 +2010,8 @@ approval, the record, and the lifecycle remain with the MAS.
 
 The conformance floor ({{conformance}}) makes a MAS deployable. This
 profile is the operating profile for a MAS used as an estate's
-Mission control plane. It turns the floor's recommendations and
-options into the guarantees an enterprise deployment needs.
+Mission control plane. It makes several of the floor's
+recommendations and options mandatory and adds the obligations below.
 
 A deployment claims the Enterprise Mission Authority Profile over a
 declared coverage set: the Authorization Server, resource, and
@@ -2079,8 +2078,8 @@ following obligations:
   {{join-instance}} describes, a high-consequence join MUST bind
   (`subject`, `client`, `instance`), not (`subject`, `client`), so a
   single workload joins rather than every workload sharing a gateway
-  `client_id`. Client-instance identity rests on an unratified
-  individual draft ({{I-D.draft-mcguinness-oauth-client-instance-id}}).
+  `client_id`. Client-instance identity is defined by an individual
+  draft ({{I-D.draft-mcguinness-oauth-client-instance-id}}).
   Where a deployment has no instance-identity substrate, the
   high-consequence join binds only (`subject`, `client`), and the
   shared-`client_id` residual of {{join-spoofing}} remains, stated in
@@ -2177,8 +2176,8 @@ still joins under the mapping join at the conformance floor
 profile.
 
 The digest pair of {{join-assertion-request}} also assumes an
-introspection surface that resolves a token by digest. Mainstream
-Authorization Servers do not provide one, so a deployment plans for
+introspection surface that resolves a token by digest. Widely
+deployed Authorization Servers do not provide one, so a deployment plans for
 the `access_token` form.
 
 ## The Enterprise Mapping Contract {#mapping-contract}
@@ -2787,8 +2786,8 @@ happen. Common placements, all non-normative:
 - **Legacy-API wrapper PEP**: refuses in a wrapper fronting a system
   that cannot itself enforce.
 
-Each placement is credible only to the extent it has no unmediated
-bypass. The runtime profile's Enforcement Scope Statement states that
+A placement is effective only where it has no unmediated bypass. The
+runtime profile's Enforcement Scope Statement states that
 coverage ({{I-D.draft-mcguinness-mission-runtime}}).
 
 ## Progressive Adoption {#deployment-adoption}
@@ -2844,13 +2843,14 @@ family's delegated-authority layer
 ({{I-D.draft-mcguinness-mission-architecture}}) even as individual
 Authorization Servers become Mission-aware.
 
-A common starting estate runs bots on standing service accounts with
+A common starting estate runs automated jobs on standing service
+accounts with
 broad, durable entitlements. Migration is per task, not per account.
 Each recurring job becomes a durable Mission whose Authority Set is
 derived from the entitlements the job actually exercises, with the
 deployment's entitlement catalog as the derivation policy's input.
-The service account retains only what no Mission yet governs, and
-that shrinking residue is the adoption metric.
+The service account retains only what no Mission yet governs; the
+size of that remainder measures adoption.
 
 # MAS-Mode End-to-End Example {#e2e-example}
 
