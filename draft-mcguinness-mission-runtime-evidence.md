@@ -1017,14 +1017,30 @@ Decision Evidence is durable and integrity-protected. It is the
 authoritative record of what the PDP evaluated, not proof that the
 action occurred.
 
-## Evaluation request digest worked value {#request-digest-worked}
+## Evaluation request digest inputs {#request-digest-worked}
 
-For a consequential action that is not parameter-bound (here a
-consequential read), the record carries `evaluation_request_digest`
-in place of `parameter_digest`. The runtime profile does not
-standardize the digested request form, so the emitting deployment
-states the exact input; this non-normative example digests exactly
-the following evaluation-request summary object:
+For a consequential action that is not parameter-bound, a record
+carries `evaluation_request_digest` in place of `parameter_digest`.
+Decision Evidence, and a Refusal Record that follows an evaluation
+request, digest that request as the decision-API profile defines it;
+under the AuthZEN profile it is the request body as submitted
+({{I-D.draft-mcguinness-mission-authzen}}, Section "Evaluation Request
+Digest Input").
+
+A Refusal Record emitted before any evaluation request exists digests
+the pre-request input instead, and records `request_digest_input` as
+`pre_request`. The pre-request input is a JSON object with exactly
+these members:
+
+- `action`: REQUIRED. The refused action's name.
+- `audience`: REQUIRED. The audience the refusing component enforces.
+- `mission_id`: the established Mission identifier, present exactly
+  when the record carries `mission`.
+- `resource`, `subject`: the resource and subject identifiers, each
+  present when the refusing component knows it.
+
+No member is ever present as an empty string. For a refused
+consequential read that established all five members, the input is:
 
 ~~~ json
 {
