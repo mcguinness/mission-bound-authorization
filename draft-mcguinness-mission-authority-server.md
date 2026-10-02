@@ -2656,8 +2656,8 @@ document requests no IANA action for them.
   Mission-Reference request and classify reads as
   `consequential_read`; Estate Prerequisites name local RFC 9068
   validation; Progressive Adoption follows the architecture's
-  Assurance Levels; and the core document is called the OAuth
-  binding.
+  Assurance Levels; and "the issuance profile" becomes "the OAuth
+  binding" throughout.
 
 - Authentication discovery mirrors the Status draft: per-endpoint
   `*_auth_methods_supported` and `*_auth_signing_alg_values_supported`
