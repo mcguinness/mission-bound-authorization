@@ -406,8 +406,8 @@ Mission-joining PDP:
 
 Standalone binding:
 : The deployment mode this document defines: the Mission Issuer role
-  implemented by a MAS, with the deployment's tokens unchanged.
-  "AS-optional" is its informal gloss.
+  implemented by a MAS, with the deployment's tokens unchanged. "MAS
+  mode" and "AS-optional" are informal names for it.
 
 Mapping join:
 : The baseline Mission Join: the PDP compares the presented
@@ -795,10 +795,9 @@ credential to it before evaluating the action. When no cryptographic
 binding exists, a permit "under this Mission" rests on the join.
 
 This section defines the baseline mapping join. The Mission Join
-Assertion ({{join-assertion}}) is the enterprise-mode join built on
-it. The Enterprise profile uses two modes: Mission-bound credentials
-carry the high-consequence classes, and Join Assertions carry the
-externally joined governed paths outside those classes
+Assertion ({{join-assertion}}) builds on it. The Enterprise profile
+requires Mission-bound credentials for the high-consequence classes
+and Join Assertions on the other joined, PDP-gated paths
 ({{enterprise-profile}}).
 
 ## Join Rules {#join-rules}
@@ -2101,10 +2100,10 @@ following obligations:
   authenticated human remains the degenerate case, which the Mission
   record represents completely.
 
-The Join Assertion obligation separates two modes. The mapping join
-({{mission-join}}) is the baseline compatibility mode. The Join
-Assertion is the enterprise mode, because it centralizes subject and
-client mapping at the MAS, binds the proof to one token digest and key
+The Join Assertion obligation is what distinguishes this profile from
+the conformance floor, whose join is the mapping join
+({{mission-join}}). The Join Assertion centralizes subject and client
+mapping at the MAS, binds the proof to one token digest and key
 thumbprint, and produces audit evidence rather than leaving each PDP
 to maintain mapping tables.
 
