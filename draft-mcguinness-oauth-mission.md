@@ -4012,6 +4012,11 @@ particular, it MUST NOT advertise
 `mission_bound_authorization_supported` as `true` ({{discovery}}),
 the machine-checkable form of that claim.
 
+The Mission Binding Properties vector of
+{{I-D.draft-mcguinness-mission-architecture}} names this discharge as
+its `credential-mission-bound` property, informatively; these gates
+remain authoritative for OAuth binding conformance regardless.
+
 This document publishes a Mapping Assessment of how the surfaces
 above realize the Mission Substrate contract's kernel and
 capabilities ({{oauth-statement}}). It is not this document's
