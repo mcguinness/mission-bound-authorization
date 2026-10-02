@@ -5262,6 +5262,12 @@ The following are out of scope for this document:
   evaluation is the runtime layer's role ({{runtime-boundary}}).
   Verifying an agent's declared reasoning against the task is a
   further attestation problem outside both layers.
+- **Joint outcome and cross-resource effects.** Whether the actions
+  taken under a Mission jointly accomplish its task is outside this
+  document, as are the ordering, timing, atomicity, and compensation
+  of their effects across Resource Servers. The `mission` claim joins
+  requests to an approval for issuance and audit; it does not
+  identify a business transaction.
 - **Approval-free authorization upgrade.** The Authority Set is
   committed at approval; this document defines no mid-stream widening
   that bypasses consent. Widening requires a new approval, a successor
