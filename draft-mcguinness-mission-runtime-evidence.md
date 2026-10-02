@@ -705,14 +705,22 @@ Evidence ({{execution-evidence-object}}), never a Refusal Record:
 : CONDITIONAL. A string. REQUIRED for a parameter-bound action class.
 
 `evaluation_request_digest`:
-: CONDITIONAL. A string. A privacy-preserving digest of the whole
-  refused request, in the form of {{request-digest-worked}}. REQUIRED
+: CONDITIONAL. A string. A canonical-object digest of the refused
+  request: over the evaluation request, as the decision-API profile
+  defines it, when the refusal follows one, and otherwise over the
+  pre-request input of {{request-digest-worked}}. REQUIRED
   when `parameter_digest` is absent, so the record meets the runtime
   profile's record minimum
   ({{I-D.draft-mcguinness-mission-runtime}}). Distinct from a granted
   permit's `parameter_digest` condition
   ({{decision-evidence-object}}): a Refusal Record has no PDP decision
   and no permit.
+
+`request_digest_input`:
+: CONDITIONAL. A string naming the input `evaluation_request_digest`
+  covers: `decision_request` when the refusal follows an evaluation
+  request, `pre_request` when it precedes one. REQUIRED when
+  `evaluation_request_digest` is present; absent otherwise.
 
 `mission`:
 : OPTIONAL. An object. The Mission reference (`id`, `issuer`, and
