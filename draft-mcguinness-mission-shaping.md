@@ -664,12 +664,12 @@ For material ambiguity, a sound shaper does one of the following:
 3. refuses with a reason ({{refusal}}).
 
 When a shaper resolves an ambiguity in the broadening direction,
-Shaping Evidence MUST record the resolution and, where a deployment
-permits policy-based default narrowing, the policy rule that authorized
-it. The requirement is stated on the observable artifact because the
-Mission Issuer cannot observe the shaper's internal reasoning. A
-proposal that broadens authority on an ambiguity without a
-corresponding Shaping Evidence record is unsound. The Mission Issuer
+Shaping Evidence MUST record the resolution and, where deployment
+policy permits that default resolution, the policy rule that
+authorized it. The requirement is stated on the observable artifact
+because the Mission Issuer cannot observe the shaper's internal
+reasoning. A proposal that broadens authority on an ambiguity without
+a corresponding Shaping Evidence record is unsound. The Mission Issuer
 enforces its own ceiling and consent regardless of what the shaper
 recorded.
 
