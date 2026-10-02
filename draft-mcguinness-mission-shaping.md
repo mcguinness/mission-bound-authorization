@@ -592,16 +592,15 @@ a proposed entry.
 Where cross-vendor interoperability matters, the shaper SHOULD carry
 the concrete candidate authority it proposes (the resources, actions,
 and constraints) in an Authority Proposal, and record the same
-proposal in Shaping Evidence. The Mission Issuer then derives the
-Authority Set in narrowing mode, each entry a subset of a proposed
-entry, instead of from a configured mapping keyed on the Intent or
-from local policy that interprets free text
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
-Authority"). Narrowing is the portable derivation
-path: the proposal format and the narrowing rule are interoperable, so
-the resulting Authority Set is enforceable and auditable across
-domains, while the Mission Issuer's policy decision about what to
-narrow to stays local.
+Authority Proposal in Shaping Evidence. The Mission Issuer then
+derives the Authority Set in narrowing mode, each derived entry a
+subset of a proposed entry, rather than from a configured mapping
+keyed on the Intent ({{I-D.draft-mcguinness-oauth-mission}}, Section
+"Mission Authority"). Narrowing is the portable derivation path. The
+proposal format and the narrowing rule are interoperable, so the
+resulting Authority Set is enforceable and auditable across domains;
+only the Mission Issuer's policy choice of what to narrow to stays
+local.
 
 The proposal MUST NOT present issuer outputs as approved authority: the
 derived Authority Set is the Mission Issuer's product
@@ -1067,9 +1066,9 @@ It cannot:
   Mission Issuer.
 
 The Mission Issuer remains the enforcement point for approval: the
-issuance profile requires it to validate and narrow the proposal
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Authority").
-Deployments SHOULD monitor shaper
+issuance profile requires it to validate the proposal and derive
+authority under its own policy ({{I-D.draft-mcguinness-oauth-mission}},
+Section "Mission Authority"). Deployments SHOULD monitor shaper
 versions and evidence for anomalous broadening.
 
 ## Prompt Injection and Untrusted Content {#prompt-injection}
