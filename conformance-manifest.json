@@ -3370,6 +3370,18 @@
      "name": "authority source on the approval surface (@spec mission#authority-sources) > refuses access_denied at the decision when the subject discipline fails",
      "level": "endpoint",
      "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "issuer-qualified principals at the source gates (@spec mission#authority-sources, mission#approval-event, #829) > refuses a foreign-issuer Subject in every source mode, including user_delegated",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "issuer-qualified principals at the source gates (@spec mission#authority-sources, mission#approval-event, #829) > refuses a dispatch retry whose Subject is foreign or malformed before returning the instance its dispatch id created, and still returns it for a legitimate retry after revocation",
+     "level": "unit",
+     "surface": "derivation"
     }
    ]
   },
@@ -3601,6 +3613,54 @@
      "name": "authority source on the approval surface (@spec mission#authority-sources) > refuses access_denied when the Approver may not activate the source",
      "level": "endpoint",
      "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "issuer-qualified principals at the source gates (@spec mission#authority-sources, mission#approval-event, #829) > refuses a direct approval whose Approver is a foreign-issuer bob against local bob's activator, creating no Mission and publishing nothing",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "issuer-qualified principals at the source gates (@spec mission#authority-sources, mission#approval-event, #829) > refuses a foreign principal before derivation runs: an approval whose derivation would also fail reports the namespace refusal",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "issuer-qualified principals at the source gates (@spec mission#authority-sources, mission#approval-event, #829) > refuses a missing, malformed, or byte-distinct issuer, never normalizing it into the local namespace",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "issuer-qualified principals at the source gates (@spec mission#authority-sources, mission#approval-event, #829) > holds the exported kernel gates to the namespace on their own, not only through approve",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "issuer-qualified principals at the source gates (@spec mission#authority-sources, mission#approval-event, #829) > keeps two kernels with equal local subject names isolated: neither accepts the other's qualified principal or catalog",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "issuer-qualified principals at the source gates (@spec mission#authority-sources, mission#approval-event, #829) > binds a configured principalIssuer distinct from the Mission issuer, admitting its principals and refusing the Mission issuer's",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "issuer-qualified principals at the source gates (@spec mission#authority-sources, mission#approval-event, #829) > admits an upstream identity only after an explicit trusted mapping to a local principal; rewriting its issuer is not a mapping",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "issuer-qualified principals at the source gates (@spec mission#authority-sources, mission#approval-event, #829) > refuses a template-consent retry whose approver is foreign or malformed before returning the template its event created, and still returns it for a legitimate retry after revocation",
+     "level": "unit",
+     "surface": "derivation"
     }
    ]
   },

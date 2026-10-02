@@ -77,6 +77,9 @@ beforeAll(async () => {
   kernel = new MissionKernel({
     issuer: ORIGIN_ISS,
     policy: originPolicy as never,
+    // The origin org's principals are issued by its own identity provider,
+    // distinct from the AS that issues its Missions (#829).
+    principalIssuer: "https://id.org1.test",
     authoritySourceCatalog: testAuthoritySourceCatalog(originPolicy.ceiling, ["agent-a"], ["bob"]),
     statusKey: asKeys.privateKey,
     statusKid: "as-status",
@@ -99,7 +102,7 @@ beforeAll(async () => {
       },
     ] as never,
     subject: { iss: "https://id.org1.test", sub: "p-alice" },
-    approver: { iss: ORIGIN_ISS, sub: "bob" },
+    approver: { iss: "https://id.org1.test", sub: "bob" },
     clientId: "agent-a",
     approvalEventId: "apev-xorg",
   });

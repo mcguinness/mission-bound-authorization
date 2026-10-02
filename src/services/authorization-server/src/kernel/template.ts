@@ -25,8 +25,9 @@ import { randomBytes } from "node:crypto";
 import { authorityHash, computeAnchor, intentHash, type JsonValue, MISSION_TEMPLATE_TYP, proposalHash } from "@mission/core";
 import {
   assertApproverMayActivate,
+  assertLocalPrincipal,
   assertSubjectDiscipline,
-  type AuthoritySourceCatalog,
+  type BoundAuthoritySourceCatalog,
   authoritySourceOf,
   resolveSourceForClient,
 } from "./authority-source.js";
@@ -168,7 +169,7 @@ function assertDispatchersAndRecipients(input: CreateTemplateInput): void {
 export function createTemplate(
   store: TemplateStore,
   input: CreateTemplateInput,
-  options: { authoritySourceCatalog: AuthoritySourceCatalog; capabilityResolver?: CapabilitySourceResolver },
+  options: { authoritySourceCatalog: BoundAuthoritySourceCatalog; capabilityResolver?: CapabilitySourceResolver },
 ): MissionTemplate {
   if (input.ceiling.length === 0) {
     throw new TemplateError("template ceiling must be non-empty");
@@ -186,6 +187,19 @@ export function createTemplate(
     throw new TemplateError("review_cadence_s must be a positive integer number of seconds");
   }
   assertDispatchersAndRecipients(input);
+
+  // @spec mission#approval-event (step 3), mission#authority-sources (#829) ,
+  // the approver is a principal of this deployment's issuer namespace, checked
+  // BEFORE the idempotency return: a retry carrying a foreign or malformed
+  // approver under a known approval event is refused, never handed the
+  // template that event created. Only the namespace is checked here;
+  // activation (gate 2) still runs only for a new template, so a legitimate
+  // retry after the template expired or was revoked returns it unchanged.
+  try {
+    assertLocalPrincipal(options.authoritySourceCatalog, input.approver, "approver");
+  } catch (e) {
+    throw new TemplateError((e as Error).message);
+  }
 
   // Idempotency first: return the already-consented template unchanged rather
   // than recomputing the hash (a body change would need a NEW approval event).
@@ -229,7 +243,7 @@ export function createTemplate(
  */
 function establishTemplateAuthoritySource(
   input: CreateTemplateInput,
-  options: { authoritySourceCatalog: AuthoritySourceCatalog },
+  options: { authoritySourceCatalog: BoundAuthoritySourceCatalog },
 ): AuthoritySource {
   const catalog = options.authoritySourceCatalog;
   if (input.recipients.agents.length === 0) {
@@ -252,7 +266,7 @@ function establishTemplateAuthoritySource(
   }
   const resolvedEntry = entry as NonNullable<typeof entry>;
   try {
-    assertApproverMayActivate(resolvedEntry, input.approver);
+    assertApproverMayActivate(catalog, resolvedEntry, input.approver);
   } catch (e) {
     throw new TemplateError((e as Error).message);
   }
@@ -371,6 +385,14 @@ export function dispatchFromTemplate(
   if (!template) throw new Error(`unknown template ${input.templateId}`);
 
   const approvalEventId = `dsp_${input.dispatchEventId}`;
+
+  // @spec mission#authority-sources (#829): the instance's Subject is a
+  // principal of this deployment's issuer namespace, checked BEFORE the
+  // idempotency return: a retry carrying a foreign or malformed Subject under a
+  // known dispatch id is refused, never handed the instance that id created.
+  // Only the namespace is checked here; gate 4 (subject discipline) still runs
+  // only for a new instance, below.
+  kernel.assertDeploymentPrincipal(input.subject, "subject");
 
   // a. Idempotency: a caller-supplied dispatch id makes retries idempotent.
   // Checked BEFORE the gates so a retry after the template was revoked/expired,

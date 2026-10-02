@@ -364,15 +364,25 @@ describe("dispatch gates (@spec mission-template#dispatch-refusals)", () => {
   it("refuses a Subject that matches a listed subject in only one of iss and sub (@spec mission-template#the-mission-template)", () => {
     const t = mkTemplate();
     const before = kernel.allMissions().length;
-    for (const subject of [{ iss: ISS, sub: "mallory" }, { iss: "https://other.example", sub: "alice" }]) {
-      try {
-        dispatch(t.id, { subject });
-        expect.unreachable();
-      } catch (e) {
-        expect((e as DispatchError).reason).toBe("recipient_not_allowed");
-      }
-      expectNothingCommitted(t.id, before);
+    // A local principal that is not a listed recipient is refused by the
+    // recipient gate. A principal from another issuer namespace never reaches
+    // it: the deployment's namespace check (#829) refuses it first, before the
+    // dispatch idempotency check, as access_denied.
+    try {
+      dispatch(t.id, { subject: { iss: ISS, sub: "mallory" } });
+      expect.unreachable();
+    } catch (e) {
+      expect((e as DispatchError).reason).toBe("recipient_not_allowed");
     }
+    expectNothingCommitted(t.id, before);
+    try {
+      dispatch(t.id, { subject: { iss: "https://other.example", sub: "alice" } });
+      expect.unreachable();
+    } catch (e) {
+      expect(e).toBeInstanceOf(IntentError);
+      expect((e as IntentError).code).toBe("access_denied");
+    }
+    expectNothingCommitted(t.id, before);
   });
 
   // @spec mission-template#template-consent — standing consent decays: the

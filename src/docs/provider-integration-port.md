@@ -176,11 +176,26 @@ the store.
   - `approval resolution establishes identity from the surface (#759, #761) > the pushed login_hint is resolved and authorized, never accepted as an arbitrary Subject` (`demo/test/approval-resolution-identity.test.ts`)
   - `approval resolution establishes identity from the surface (#759, #761) > write-bearing distinctness and role checks run over the resolved identities` (same file)
   - `authority source on the approval surface (@spec mission#authority-sources) > refuses access_denied at the decision when the subject discipline fails` (`rar-carriage.test.ts`)
+- **Kernel principal namespace (#829).** The kernel accepts only canonical
+  local principals: a Subject and an Approver whose `iss` is byte-equal to the
+  kernel's principal namespace, `principalIssuer` in `KernelOptions` (default:
+  the kernel's `issuer`). The authority-source catalog is bound to that
+  namespace at kernel construction, and every source gate
+  (`assertApproverMayActivate`, `assertSubjectDiscipline`) refuses a foreign,
+  missing, or malformed tuple `access_denied` before comparing `sub`.
+  `kernel.approve` refuses one before derivation. Template consent and
+  dispatch refuse one before their idempotent returns, so a retry cannot
+  reuse an event ID with a different namespace's principal. This holds for a
+  direct kernel caller as well as this adapter, which always builds
+  principals in the kernel's namespace.
 - **Unsupported.** External Subjects. `decide()` always records `subject.iss`
   as this AS's issuer, and there is no injective external-to-local mapping. An
   unknown `login_hint` is refused 403 `approval_forbidden`, so nothing is
   approved under an unrecognized identity. Matching is exact string equality
-  on the configured `sub` values.
+  on the configured `sub` values. A deployment that admits identities from
+  another namespace maps each to a canonical local principal first, through
+  its own separately trusted mapping. The kernel does not map by equal `sub`,
+  and rewriting a request's `iss` does not establish a mapping.
 
 ### 3.3 Source and authority derivation
 
