@@ -461,7 +461,7 @@ resolution basis, which is one of the following:
 : The requester supplied a concrete resource identifier, and the
   shaper verified that it is admissible for shaping.
 
-`authority_source`:
+`capability_projection`:
 : A resource-owning system or Authorization Server supplied an allowed
   resource and action projection for this task.
 
@@ -473,7 +473,7 @@ For each resolved capability, Shaping Evidence SHOULD record:
 - what was requested;
 - what it resolved to;
 - the basis;
-- the source consulted (for `catalog` and `authority_source`); and
+- the source consulted (for `catalog` and `capability_projection`); and
 - where available, a digest over the source representation, so that
   approval and runtime enforcement can detect drift.
 
@@ -886,7 +886,9 @@ When a Mission record cites a `shaping_evidence_hash`, the deployment
 SHOULD retain the Shaping Evidence and its `input_exclusion_ruleset`
 for as long as it retains the Mission record (the audit horizon of
 {{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Record"), so
-that the cited evidence stays reproducible.
+that the cited evidence stays reproducible. Retained Shaping Evidence
+is not rewritten, for example to update a label: any change breaks the
+commitment the Mission record cites.
 
 # Submitting a Shaped Proposal {#composition}
 
