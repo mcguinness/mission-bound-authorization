@@ -523,7 +523,7 @@ appear in the Intent; it belongs in the Authority Proposal
   bounds. Where a bound is machine-enforceable, the shaper also emits
   it as a structured constraint in the Authority Proposal; the Mission
   Issuer never parses the prose ({{I-D.draft-mcguinness-oauth-mission}},
-  Section "Authority Proposal"). The shaper SHOULD NOT silently drop a
+  Section "Mission Authority"). The shaper SHOULD NOT silently drop a
   user-expressed bound; it records the bound in `task_bounds` or in
   Shaping Evidence, or it requests clarification or refuses.
 
@@ -610,14 +610,16 @@ capability sources, and shaping policy, and only the `task_bounds` and
 resource class as a fallback for unresolved detail.
 
 When the concrete objects of an open-ended task are not known at
-shaping time, the shaper SHOULD express the bound as `task_bounds` that
-hold as invariants over those objects (the owning customer, the
-tenant, an amount ceiling, read-only except named writes, a time
-window), instead of reaching for a broad resource class to anticipate
-them. The Mission Issuer derives authority bounded by those
-constraints, and runtime enforcement applies them per object at the
-point of use ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
-Authority").
+shaping time, the shaper SHOULD express the bound as invariants over
+those objects (the owning customer, the tenant, an amount ceiling,
+read-only except named writes, a time window), instead of reaching for
+a broad resource class to anticipate them. Each invariant is a
+structured constraint in the Authority Proposal, which bounds the
+derived authority, and is restated in `task_bounds` for the Approver.
+The Mission Issuer derives the same Authority Set whatever
+`task_bounds` says ({{I-D.draft-mcguinness-oauth-mission}}, Section
+"Mission Authority"), and runtime enforcement applies the constraints
+per object at the point of use.
 
 The shaper SHOULD propose a Mission Intent scoped to one concrete task,
 not to an agent's whole session or standing role. When a request spans
