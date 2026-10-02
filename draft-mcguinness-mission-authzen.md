@@ -524,12 +524,15 @@ this profile unchanged.
 
 # Mission-to-Policy Materialization {#mission-to-policy-materialization}
 
-The PDP evaluates a Mission against an action through a materialized
-policy view. The materialized policy view, its trusted-compiler and
+Where the PDP evaluates a Mission against an action through a
+materialized policy view, the view, its trusted-compiler and
 reproducibility rules, its bounded-fidelity property, and the
 content-addressed `policy_view_id` with its `mission-policy-view`
 integrity envelope are defined by the runtime profile
-({{I-D.draft-mcguinness-mission-runtime}}). The trusted compiler
+({{I-D.draft-mcguinness-mission-runtime}}); a PDP that evaluates the
+Mission's recorded authority directly meets that profile's authority
+input (its Section "Authority") without a view, and its requests omit
+`policy_view_id`. The trusted compiler
 computes that envelope, and the `authority_hash` it binds, from its
 own held Mission record; the issuance profile's baseline `mission`
 claim does not carry `authority_hash` on the wire
