@@ -414,10 +414,16 @@ The Grant Minter MUST observe:
    `active`, established from the MAS's own record at minting. Any
    other state refuses.
 3. **Subset and audience.** The grant's `authorization_details` MUST
-   be a subset of the Mission's consented Authority Set under the
-   issuance profile's subset rule. The grant SHOULD carry only the entries the
-   named consuming AS serves. The requester MAY request a narrower
-   subset. The requester MUST NOT obtain a wider one.
+   be a subset, under the issuance profile's subset rule
+   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Subset Rule"), of
+   the Mission's current Effective Authority Set
+   ({{I-D.draft-mcguinness-oauth-mission-status}}). That is the
+   consented Authority Set less what any composed narrowing companion
+   has removed; a grant is a derivation, so a contained capability is
+   absent from it ({{I-D.draft-mcguinness-oauth-mission-containment}},
+   Section "Derivation Gating"). The grant SHOULD carry only the
+   entries the named consuming AS serves. The requester MAY request a
+   narrower subset. The MAS MUST refuse a request for a wider one.
 4. **Derivation event.** Each grant minted is a derivation event.
    Where the Mission's established `derivation_limit`
    ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}) is set, the MAS MUST count
