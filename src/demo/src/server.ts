@@ -35,15 +35,17 @@ import { installConsoleSessionBoundary } from "./console-session-boundary.js";
 const idem = (): string => `idem_${randomUUID()}`;
 
 const TX_TOOLS = new Set(["execute_wire_transfer", "send_remittance_email"]);
+/** @spec runtime#idempotency (#917, #918): every tool whose Operation Profile defines a key. */
+const KEYED_TOOLS = new Set([...TX_TOOLS, "schedule_payment", "cancel_scheduled_payment"]);
 
 /**
- * @spec runtime#idempotency (#917): the demo stands in for the agent, so it
- * mints one `idempotency_key` per intended execution of a keyed tool when the
- * caller supplied none. A retry of the same execution (the JIT retry) carries
- * the key its first attempt used, from the args the step reported.
+ * @spec runtime#idempotency (#917, #918): the demo stands in for the agent, so
+ * it mints one `idempotency_key` per intended execution of a keyed tool when
+ * the caller supplied none. A retry of the same execution (the JIT retry)
+ * carries the key its first attempt used, from the args the step reported.
  */
 const keyed = (tool: string, args: Record<string, unknown>): Record<string, unknown> =>
-  TX_TOOLS.has(tool) && typeof args.idempotency_key !== "string" ? { ...args, idempotency_key: idem() } : args;
+  KEYED_TOOLS.has(tool) && typeof args.idempotency_key !== "string" ? { ...args, idempotency_key: idem() } : args;
 
 /**
  * The seeded payable invoices the deterministic /agent/run planner attempts, in
