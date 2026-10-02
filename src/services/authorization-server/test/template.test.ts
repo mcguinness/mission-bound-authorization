@@ -21,7 +21,10 @@ import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 const ISS = "https://as.test";
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
 const POLICY_VERSION = DERIVATION_POLICY.policy_version;
-const now = () => new Date("2026-07-01T00:00:00Z");
+const T0 = Date.parse("2026-07-01T00:00:00Z");
+/** The shared clock: fixed at T0 unless a test moves it; reset before each test. */
+let clockMs = T0;
+const now = () => new Date(clockMs);
 
 let key: CryptoKey;
 let kernel: MissionKernel;
@@ -34,6 +37,7 @@ beforeAll(async () => {
 });
 
 beforeEach(() => {
+  clockMs = T0;
   // Two Approvers, both real here: the templates this suite builds are
   // consented by "human-approver", and the shipped demo descriptor it also
   // exercises names "bob".
@@ -62,6 +66,7 @@ const mkTemplate = (over: Partial<CreateTemplateInput> = {}) =>
     per_instance_lifetime_s: 3600,
     max_active: 3,
     rate_per_min: 5,
+    review_cadence_s: 86400,
     approval_event_id: `tmpl-ev-${tmplSeq++}`,
     expires_at: "2026-12-01T00:00:00Z",
     ...over,
@@ -107,6 +112,13 @@ const amountOf = (m: { authority_set: AuthorityEntry[] }) =>
   m.authority_set[0]?.constraints?.max_amount?.amount;
 
 describe("createTemplate (@spec mission-template)", () => {
+  it("commits review_cadence_s in template_hash", () => {
+    const a = mkTemplate({ review_cadence_s: 3600 });
+    const b = mkTemplate({ review_cadence_s: 7200 });
+    expect(a.template_hash).not.toBe(b.template_hash);
+    expect(store.get(b.id)?.review_cadence_s).toBe(7200);
+  });
+
   it("computes a stable template_hash and is idempotent by approval_event_id", () => {
     const t = mkTemplate({ approval_event_id: "consent-1" });
     expect(t.id).toMatch(/^tmpl_/);
@@ -124,6 +136,7 @@ describe("createTemplate (@spec mission-template)", () => {
       per_instance_lifetime_s: 3600,
       max_active: 3,
       rate_per_min: 5,
+      review_cadence_s: 86400,
       approval_event_id: "consent-1",
       expires_at: "2026-12-01T00:00:00Z",
     }, kernel.authoritySourceOptions());
@@ -136,6 +149,11 @@ describe("createTemplate (@spec mission-template)", () => {
     expect(() => mkTemplate({ per_instance_lifetime_s: 0 })).toThrow(TemplateError);
     expect(() => mkTemplate({ max_active: 0 })).toThrow(TemplateError);
     expect(() => mkTemplate({ rate_per_min: -1 })).toThrow(TemplateError);
+    // @spec mission-template#the-mission-template — review_cadence is a
+    // REQUIRED positive integer number of seconds.
+    expect(() => mkTemplate({ review_cadence_s: 0 })).toThrow(TemplateError);
+    expect(() => mkTemplate({ review_cadence_s: 1.5 })).toThrow(TemplateError);
+    expect(() => mkTemplate({ review_cadence_s: undefined as never })).toThrow(TemplateError);
   });
 
   it("refuses dispatchers that are not a non-empty array of client_id strings (@spec mission-template#the-mission-template)", () => {
@@ -295,6 +313,31 @@ describe("dispatch gates (@spec mission-template#dispatch-refusals)", () => {
       }
       expectNothingCommitted(t.id, before);
     }
+  });
+
+  // @spec mission-template#template-consent — standing consent decays: the
+  // Issuer dispatches nothing from a template whose most recent human approval
+  // is OLDER than its review_cadence, measured from that approval (the
+  // template's created_at). "Older than" is strict: at exactly the bound,
+  // dispatch proceeds. A fresh approval re-consents as a new template.
+  it("refuses dispatch once the template's approval is older than review_cadence, allows it exactly at the bound, and commits nothing on refusal", () => {
+    const t = mkTemplate({ review_cadence_s: 3600 });
+    expect(t.created_at).toBe(new Date(T0).toISOString());
+    clockMs = T0 + 3600 * 1000;
+    const atBound = dispatch(t.id);
+    expect(atBound.mission.approval_basis?.approved_at).toBe(t.created_at);
+    const before = kernel.allMissions().length;
+    clockMs = T0 + 3601 * 1000;
+    try {
+      dispatch(t.id);
+      expect.unreachable();
+    } catch (e) {
+      expect((e as DispatchError).reason).toBe("review_overdue");
+    }
+    expect(kernel.allMissions().length).toBe(before);
+    expect(store.dispatchesSince(t.id, "1970-01-01T00:00:00.000Z")).toBe(1);
+    const renewed = mkTemplate({ review_cadence_s: 3600 });
+    expect(dispatch(renewed.id).mission.approval_basis?.approved_at).toBe(renewed.created_at);
   });
 
   it("refuses beyond max_active, and a slot frees when an instance terminates", () => {

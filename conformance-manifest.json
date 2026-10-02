@@ -11,16 +11,16 @@
     "content_sha256": "d00802fb051f408340682374fe233c88477a4005756813f8afcd4cf351307b09"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "f06f5e6a330dfe1274b231501edebcfd231955f3",
-    "content_sha256": "62f5cfa6be4461466a1cc25eaefee38d30453ba236825e193d94cfe8feb4b356"
+    "revision": "e4d7216f95e2857335cd4a598eba82b3975a2dea",
+    "content_sha256": "1a8672b2434475403a6606d89eb8c092f6f702d73f8f42e5d3cd54e412b48c86"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "f06f5e6a330dfe1274b231501edebcfd231955f3",
-    "content_sha256": "a2a1f271328ddd5634a826cbf588eadcc514418fad0f4679fe1f31c647056ec0"
+    "revision": "e4d7216f95e2857335cd4a598eba82b3975a2dea",
+    "content_sha256": "71b93e5299f66eb8ab272da1eebe4dda84f925569a3a4812834a297b8a96e613"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "f06f5e6a330dfe1274b231501edebcfd231955f3",
-    "content_sha256": "c135e806743d3cb526f584af7a9e8462292db01fa7b0c00c784f57a763debcf7"
+    "revision": "b145c1b303241a6c351083c8a7474ea46fa51ea8",
+    "content_sha256": "9f67aed07fa469580f4d4fce63d989010ab9234d9e788bdf25cfbe6cd7a87eda"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "daadb45f36cd901f0d646ba0aa942dfec95844ee",
@@ -63,8 +63,8 @@
     "content_sha256": "873b64d56c1813874239d7c4e07d5e1cbc777809c05d725efbf79439038750f9"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "35654da2745816f4b3c51ff2c4397d392def9931",
-    "content_sha256": "a0f4aa7bb212ace5eecd6d6cebbd9817585d319dc58644ae781124ee80b261b0"
+    "revision": "1d03c2573a162a9bb3424d4f8471e13b9417be36",
+    "content_sha256": "c73822fd3c970cfa15e0e1c027de33dfb172803d1dd7621d695ac02e26e74e82"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
@@ -91,20 +91,20 @@
     "content_sha256": "c9ed7e78d3821f796ce8d53f76bb5402bf8d599f83a12f650e6c1a1689dc9c5d"
    },
    "draft-mcguinness-mission-capability-binding.md": {
-    "revision": "2dc6ca1d93658b0b9ad55de66da07aa0a30ce4a2",
-    "content_sha256": "7747cec83e69020dce2611fd99172fbe14034d776ba68c9b64cdca9fd410d94f"
+    "revision": "175c6252b65d8fdca0347d3f214dd0282d6615fc",
+    "content_sha256": "5cbae2ac50393b51ea1fbaf2ce6a55f2df2213904a82fbaacf61088eeadb6b32"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
     "content_sha256": "adb2e8708f616b7504425b3134c2376ad3422d9c947b380645f54fb3e8db8f1d"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "1ea788e00f84b3804c447cb8bbb143c7b803901d",
-    "content_sha256": "1c4adaecf6fa1d626d7ff9bd57a71384ba1f307bf09f115a32460e0ea347a1ee"
+    "revision": "c45280a363b22a598095f14425d5801b34a0d311",
+    "content_sha256": "8a4974c7945a5a1d1ce13569df2e620ef249fc9113340b3fcb19d70395dba4dd"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
-    "revision": "0eb61bec966fef8cfc5efbb20b42c78057b3d05c",
-    "content_sha256": "209bd4edd5a8f50c9d4693af0627eaed50e5c4d29214a412641532d43b39ddd5"
+    "revision": "02c1fcf62e9f4fd3aad0df84d6ccabd6ebd7ce0d",
+    "content_sha256": "a4753cf75757d13a1df08c132518ade4b2012dec9d8f75938631f7470173970f"
    },
    "draft-mcguinness-oauth-mission-approved-set-verification.md": {
     "revision": "48b7abcdacfb66289c29c5312e5d6c6e683b5141",
@@ -225,6 +225,7 @@
    "authzen.batch",
    "approval-context.manifest",
    "child-delegation.carryover",
+   "child-delegation.subtree-rendering",
    "core.instance-context",
    "core.delegation",
    "runtime.instance-context",
@@ -23479,6 +23480,69 @@
    "notes": "Covered at unit level only, and unreachable at the endpoint by construction: the mission-dispatch grant names no Agent, and the implementation dispatches to the template's first listed agent, so an endpoint request cannot select an unlisted Agent. The kernel refuses an unlisted recipient with recipient_not_allowed. The draft does not yet say how the instance's Agent is established at Dispatch."
   },
   {
+   "id": "template.members.review-cadence-shape",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "the-mission-template",
+   "text": "A positive integer number of seconds. The maximum age of the template's most recent human approval",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a template's review_cadence is a positive integer number of seconds; a template without one, or with zero or a fractional value, is refused at template consent"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "createTemplate (@spec mission-template) > refuses an empty ceiling or non-positive bounds (TemplateError)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    }
+   ]
+  },
+  {
+   "id": "template.consent.review-cadence-stops-dispatch",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "template-consent",
+   "text": "The Mission Issuer MUST NOT dispatch from a template whose most recent human approval is older than the published `review_cadence`",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Dispatch from a template whose most recent human approval is more than review_cadence seconds old is refused, commits no Mission and no dispatch event, and issues no token; at exactly the bound the Dispatch proceeds, and a fresh approval re-consents"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > review_overdue: a template dispatches inside its review_cadence and is refused with access_denied once the approval is older",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "dispatch gates (@spec mission-template#dispatch-refusals) > refuses dispatch once the template's approval is older than review_cadence, allows it exactly at the bound, and commits nothing on refusal",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "The reference implementation measures from the template's created_at, which every instance records as approval_basis.approved_at. Its refusal reason review_overdue is implementation-local on access_denied (D205); the draft registers none."
+  },
+  {
    "id": "progressive.drawdown-policy.body-commitment-should",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "progressive-authorization",
@@ -25983,6 +26047,72 @@
     }
    ],
    "notes": "A consumer that received the cascade before any creation event does not infer absence of a replacement: it resynchronizes through the retained, signature-verified map, pairing by issuer-qualified identity. The map, not `related_to`, is the normative record of replacement."
+  },
+  {
+   "id": "child-delegation.subtree-rendering.displayed-control",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "derivation-budget",
+   "text": "Where an approval interface displays `derivation_limit`, or any per-Mission derivation control, as a limit on child creation, that interface MUST render the subtree figures below alongside it",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.subtree-rendering"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an approval interface that displays a per-Mission derivation control as a limit on child creation renders max_children (as a concurrency limit), max_child_depth, and the per-child derivation limit as distinct values beside it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#987 (D219 ruling). No implementation witness: the reference consent rendering shows no child-delegation figures yet."
+  },
+  {
+   "id": "child-delegation.subtree-rendering.policy-created",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "derivation-budget",
+   "text": "no approval interface exists for those children, so the Parent Mission's approval MUST render the subtree figures for that entry",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.subtree-rendering"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where child creation under an entry can be adjudicated by policy (policy_drawdown), the Parent Mission's approval rendering for that entry carries the three subtree figures as distinct values"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#987 (D219 ruling). No implementation witness: the reference consent rendering shows no child-delegation figures yet."
+  },
+  {
+   "id": "child-delegation.subtree-rendering.aggregate-statement",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "derivation-budget",
+   "text": "The rendering MUST also state whether a finite aggregate bound on the subtree is enforced.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.subtree-rendering"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the subtree rendering states whether a finite aggregate bound is enforced, and states that none is unless a lineage-keyed budget is deployed"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#987 (D219 ruling). No implementation witness: the reference consent rendering shows no child-delegation figures yet."
   },
   {
    "id": "child-delegation.carryover.expansion-disclosure",
