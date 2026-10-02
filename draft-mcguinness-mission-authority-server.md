@@ -369,8 +369,10 @@ under the Mission Join.
   signed Mission Status ({{lifecycle-and-state}}), joins the presented
   credential to the Mission, and evaluates the action under the
   runtime profile ({{mission-join}}).
-- Step 10: the PEP enforces the decision. A revocation at the MAS
-  stops the next such action at step 8.
+- Step 10: the PEP enforces the decision. After a revocation at the
+  MAS, the PDP refuses the next such action once its state check at
+  step 8 observes the revocation, which happens within the published
+  staleness bound ({{lifecycle-and-state}}).
 
 A Join Assertion moves the join's verification to the MAS
 ({{join-assertion}}), and Mission Expansion and Child Creation ride
