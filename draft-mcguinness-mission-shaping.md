@@ -324,8 +324,7 @@ The roles Mission requester and capability source are defined in
 
 The trust boundary separates the client, where the shaper runs, from
 the Mission Issuer, where the Mission Intent is validated and the
-Authority Set is created. This section defines the shaper's role on the
-client side of that boundary; it is the stable core of this document.
+Authority Set is created.
 
 ## Client-Side Placement {#client-side}
 
@@ -379,9 +378,7 @@ Three consequences follow:
    the submission, call the pushed authorization request endpoint or
    the authorization endpoint, handle the authorization response,
    select the recipient Mission Issuer on its own authority, or attest
-   to the submission on the Mission Issuer's behalf. It produces an
-   input; the client transmits it; the Mission Issuer decides what to
-   do with it.
+   to the submission on the Mission Issuer's behalf.
 
 ## Deployment Roles {#roles}
 
