@@ -1507,7 +1507,7 @@ future work are collected in <a href="#deferred" class="auto internal xref">Sect
 <p id="section-1.1-2">Because the invariants are not a wire format, two conforming deployments
 do not thereby interoperate at the PEP-PDP boundary; the interoperable
 wire surface is supplied by a separately specified decision API binding
-(<a href="#authzen" class="auto internal xref">Section 15</a>), the AuthZEN binding being
+(<a href="#authzen" class="auto internal xref">Section 15</a>), the AuthZEN profile being
 <span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>. That a wire format is a
 deployment choice does not make it an ad hoc one: the Runtime-Enforced
 level of the Mission Assurance Levels
@@ -2037,7 +2037,7 @@ composition, which this profile does not define.<a href="#section-2.6-2.9.1" cla
         </ul>
 <p id="section-2.6-3">An approval produced by the governance workflow returns as decision
 input on a fresh evaluation (<a href="#action-approval" class="auto internal xref">Section 5.4</a>), never as output
-state. The AuthZEN binding maps this output onto its response
+state. The AuthZEN profile maps this output onto its response
 context, the obligations profile, and ARAP (<a href="#authzen" class="auto internal xref">Section 15</a>).<a href="#section-2.6-3" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -3363,7 +3363,7 @@ mechanism, the action fails closed.<a href="#section-5.4-4.1.1" class="pilcrow">
           <li id="section-5.4-4.2">
             <p id="section-5.4-4.2.1">An action-bound approval <span class="bcp14">MUST</span> carry a maximum age, bounded by a
 value the deployment set publishes, and <span class="bcp14">MAY</span> additionally carry an
-absolute <code>approved_until</code> expiry (the AuthZEN binding surfaces ARAP's
+absolute <code>approved_until</code> expiry (the AuthZEN profile surfaces ARAP's
 approval expiry there, <a href="#authzen" class="auto internal xref">Section 15</a>). The approval is fresh only before
 the earlier of <code>approved_at</code> plus the maximum age and any
 <code>approved_until</code>; past that bound the approval is not fresh and the PEP
@@ -3400,7 +3400,7 @@ not the age of the approval it relied on.<a href="#section-5.4-6" class="pilcrow
 <p id="section-5.4-7">This profile does not define the wire workflow that obtains the
 approval. A decision-API binding <span class="bcp14">MAY</span> route the requiring denial through
 a standardized access-request and approval workflow and carry the
-resulting approval back as decision input; the AuthZEN binding composes
+resulting approval back as decision input; the AuthZEN profile composes
 with the AuthZEN Access Request and Approval Profile for exactly this
 (<a href="#authzen" class="auto internal xref">Section 15</a>). However obtained, the approval is decision input, not a
 bearer grant: the runtime decision of <a href="#decision" class="auto internal xref">Section 7</a> remains
@@ -3877,7 +3877,7 @@ locally, is the third lane; this profile reserves it and defines no
 residual form. Two things are not lanes: a description of
 requestable authority is payload a request may carry, and a
 transient condition is a denial outcome carrying a retry signal,
-calling for neither remediation nor a request. The AuthZEN binding
+calling for neither remediation nor a request. The AuthZEN profile
 realizes the first two lanes and the transient outcome as
 obligations, ARAP composition, and its transient-denial members
 (<a href="#authzen" class="auto internal xref">Section 15</a>).<a href="#section-7-5" class="pilcrow">¶</a></p>

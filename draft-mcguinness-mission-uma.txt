@@ -968,7 +968,7 @@ Table of Contents
 
    The composition consequences:
 
-   *  The runtime profile and its AuthZEN binding compose against either
+   *  The runtime profile and its AuthZEN profile compose against either
       carriage surface: the Mission reference arrives through token
       validation (JWT claims, or the issuer's introspection response
       that validates the opaque RPT), so binding establishment is

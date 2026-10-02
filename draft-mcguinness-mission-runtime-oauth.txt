@@ -381,7 +381,7 @@ Table of Contents
 4.1.  Required Instance Attribution
 
    The instance specification defines how to validate context and
-   associate it with a presenter; this binding selects that association
+   associate it with a presenter; this profile selects that association
    when Resource policy or the Enforcement Scope Statement requires
    instance attribution.  The PEP validates the credential, Instance
    Context, and current proof under

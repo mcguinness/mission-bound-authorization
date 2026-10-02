@@ -16,12 +16,12 @@ contents are discovery metadata, never authority for a server's
 effective capabilities), an MCP tool, an OpenAPI operation, or an
 equivalent capability source, the
 invoked identity can drift from what the catalog served at approval.
-This document defines the companion binding that ties an approved
+This document defines the companion mechanism that ties an approved
 catalog entry to the capability source it was derived from: the
  tool_id , source, and content digest recorded at derivation and
 verified at decision time, the per-capability extraction rule that
 computes the digest, the  capability_drift  denial reason as a
-coordinated extension of the AuthZEN binding's runtime denial
+coordinated extension of the AuthZEN profile's runtime denial
 classification, and the mapping onto the OpenID AuthZEN Profile for
 Model Context Protocol Tool Authorization (COAZ) for MCP
 deployments. 
@@ -1108,12 +1108,12 @@ contents are discovery metadata, never authority for a server's
 effective capabilities), an MCP tool, an OpenAPI operation, or an
 equivalent capability source, the
 invoked identity can drift from what the catalog served at approval.
-This document defines the companion binding that ties an approved
+This document defines the companion mechanism that ties an approved
 catalog entry to the capability source it was derived from: the
 <code>tool_id</code>, source, and content digest recorded at derivation and
 verified at decision time, the per-capability extraction rule that
 computes the digest, the <code>capability_drift</code> denial reason as a
-coordinated extension of the AuthZEN binding's runtime denial
+coordinated extension of the AuthZEN profile's runtime denial
 classification, and the mapping onto the OpenID AuthZEN Profile for
 Model Context Protocol Tool Authorization (COAZ) for MCP
 deployments.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
@@ -1258,25 +1258,25 @@ capability from one that has silently mutated underneath the
 approval.<a href="#section-1-1" class="pilcrow">¶</a></p>
 <p id="section-1-2">This document is a companion to Mission-Bound Runtime Enforcement:
 AuthZEN Profile <span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span> (the
-"AuthZEN binding"). It defines the capability-source binding a
+"AuthZEN profile"). It defines the capability-source binding a
 validating server records at derivation and a Policy Enforcement
 Point (PEP) presents at decision time in <code>context.capability_source</code>
 of the OpenID AuthZEN Authorization API <span>[<a href="#AUTHZEN" class="cite xref">AUTHZEN</a>]</span> request the
-AuthZEN binding shapes: a stable <code>tool_id</code>, the discovery
+AuthZEN profile shapes: a stable <code>tool_id</code>, the discovery
 <code>source_uri</code>, a <code>source_digest</code> over the capability's extracted
 definition, and an <code>operation_ref</code>. It defines the per-capability
 extraction rule that computes <code>source_digest</code>, the decision-time
 verification a PDP performs, the <code>capability_drift</code> denial reason
 this document registers as a coordinated extension of the AuthZEN
-binding's runtime denial classification, and the mapping onto the
+profile's runtime denial classification, and the mapping onto the
 AuthZEN Profile for Model Context Protocol Tool Authorization (COAZ)
 <span>[<a href="#COAZ" class="cite xref">COAZ</a>]</span> for MCP deployments.<a href="#section-1-2" class="pilcrow">¶</a></p>
-<p id="section-1-3">This document rides the AuthZEN binding's request as
+<p id="section-1-3">This document rides the AuthZEN profile's request as
 <code>context.capability_source</code> and the runtime profile's capability
 identity requirement; it defines no drift rule of its own, since that
 requirement is the runtime profile's
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). A deployment that does
-not claim this companion is unaffected: the AuthZEN binding's
+not claim this companion is unaffected: the AuthZEN profile's
 decision contract consumes an already established action identity.<a href="#section-1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1357,7 +1357,7 @@ evidence, and runtime metering. A Mission-governed MCP deployment <span class="b
 use COAZ to construct the AuthZEN <code>subject</code>, <code>resource</code>, <code>action</code>,
 and parameter-bearing <code>context</code> members, but the Mission-specific
 <code>context.mission</code>, <code>context.actor</code>, freshness, permit binding, and
-evidence requirements of the AuthZEN binding
+evidence requirements of the AuthZEN profile
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>) still apply.<a href="#section-4-2" class="pilcrow">¶</a></p>
 <p id="section-4-3">The minimum binding, committed by the validating server at derivation
 and presented by the executing component at request time in
@@ -1453,7 +1453,7 @@ scope of <a href="#capability-extraction" class="auto internal xref">Section 4.2
 wire representation and per-capability verification, carrying such
 a refusal as <code>capability_drift</code> (<a href="#capability-drift-reason" class="auto internal xref">Section 4.3</a>) with
 its boundary against <code>out_of_authority</code> fixed by the AuthZEN
-binding's runtime denial classification
+profile's runtime denial classification
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>); it defines no drift
 rule of its own.<a href="#section-4-7.2.1" class="pilcrow">¶</a></p>
 </li>
@@ -1485,7 +1485,7 @@ where a <code>catalog_digest</code> was recorded, the presented <code>catalog_di
           <span class="bcp14">MUST</span> equal it likewise; otherwise the PDP returns <code>capability_drift</code>
 (<a href="#capability-drift-reason" class="auto internal xref">Section 4.3</a>). Whether an action is catalog-sourced,
 and which digests were recorded, are determined from the
-materialized policy view the AuthZEN binding defines
+materialized policy view the AuthZEN profile defines
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), not from the PEP's
 request; where no source binding was recorded, this check does not
 apply.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
@@ -1574,7 +1574,7 @@ only the stable identifier plus source evidence above.<a href="#section-4.2-9" c
         </h3>
 <p id="section-4.3-1">This document registers <code>capability_drift</code> as a coordinated
 extension to the runtime denial classification, under the AuthZEN
-binding's extensibility rule
+profile's extensibility rule
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>): an extension value <span class="bcp14">MUST</span>
 be either a collision-resistant name (following the
 Collision-Resistant Name guidance of <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span> Section 4.2) or a
@@ -1601,7 +1601,7 @@ approved set for which no source binding was recorded is
 <p id="section-4.3-4">Capability or catalog drift, and an invoked identity outside the
 approved set when a source binding was recorded, surface as a PDP
 denial carrying <code>capability_drift</code>, under the carrier taxonomy of
-the AuthZEN binding (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-4.3-4" class="pilcrow">¶</a></p>
+the AuthZEN profile (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-4.3-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1627,7 +1627,7 @@ catalog-sourced action (<a href="#context-capability-source" class="auto interna
 against the recorded one and return <code>capability_drift</code> on a
 mismatch (<a href="#capability-verification" class="auto internal xref">Section 4.1</a>, <a href="#capability-drift-reason" class="auto internal xref">Section 4.3</a>).<a href="#section-5-4" class="pilcrow">¶</a></p>
 <p id="section-5-5">A deployment that does not claim this document is unaffected: the
-AuthZEN binding's decision contract consumes an already established
+AuthZEN profile's decision contract consumes an already established
 action identity (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-5-5" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1637,7 +1637,7 @@ action identity (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="c
 <a href="#section-6" class="section-number selfRef">6. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
       </h2>
 <p id="section-6-1">The runtime profile's Security Considerations
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) and the AuthZEN binding's
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) and the AuthZEN profile's
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>) apply in full. This
 section addresses only threats specific to capability-source
 binding.<a href="#section-6-1" class="pilcrow">¶</a></p>

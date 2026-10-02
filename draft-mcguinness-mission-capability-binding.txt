@@ -22,14 +22,14 @@ Abstract
    capabilities), an MCP tool, an OpenAPI operation, or an equivalent
    capability source, the invoked identity can drift from what the
    catalog served at approval.  This document defines the companion
-   binding that ties an approved catalog entry to the capability source
-   it was derived from: the tool_id, source, and content digest recorded
-   at derivation and verified at decision time, the per-capability
-   extraction rule that computes the digest, the capability_drift denial
-   reason as a coordinated extension of the AuthZEN binding's runtime
-   denial classification, and the mapping onto the OpenID AuthZEN
-   Profile for Model Context Protocol Tool Authorization (COAZ) for MCP
-   deployments.
+   mechanism that ties an approved catalog entry to the capability
+   source it was derived from: the tool_id, source, and content digest
+   recorded at derivation and verified at decision time, the per-
+   capability extraction rule that computes the digest, the
+   capability_drift denial reason as a coordinated extension of the
+   AuthZEN profile's runtime denial classification, and the mapping onto
+   the OpenID AuthZEN Profile for Model Context Protocol Tool
+   Authorization (COAZ) for MCP deployments.
 
 About This Document
 
@@ -111,26 +111,26 @@ Table of Contents
 
    This document is a companion to Mission-Bound Runtime Enforcement:
    AuthZEN Profile [I-D.draft-mcguinness-mission-authzen] (the "AuthZEN
-   binding").  It defines the capability-source binding a validating
+   profile").  It defines the capability-source binding a validating
    server records at derivation and a Policy Enforcement Point (PEP)
    presents at decision time in context.capability_source of the OpenID
-   AuthZEN Authorization API [AUTHZEN] request the AuthZEN binding
+   AuthZEN Authorization API [AUTHZEN] request the AuthZEN profile
    shapes: a stable tool_id, the discovery source_uri, a source_digest
    over the capability's extracted definition, and an operation_ref.  It
    defines the per-capability extraction rule that computes
    source_digest, the decision-time verification a PDP performs, the
    capability_drift denial reason this document registers as a
-   coordinated extension of the AuthZEN binding's runtime denial
+   coordinated extension of the AuthZEN profile's runtime denial
    classification, and the mapping onto the AuthZEN Profile for Model
    Context Protocol Tool Authorization (COAZ) [COAZ] for MCP
    deployments.
 
-   This document rides the AuthZEN binding's request as
+   This document rides the AuthZEN profile's request as
    context.capability_source and the runtime profile's capability
    identity requirement; it defines no drift rule of its own, since that
    requirement is the runtime profile's
    ([I-D.draft-mcguinness-mission-runtime]).  A deployment that does not
-   claim this companion is unaffected: the AuthZEN binding's decision
+   claim this companion is unaffected: the AuthZEN profile's decision
    contract consumes an already established action identity.
 
 2.  Conventions and Terminology
@@ -197,7 +197,7 @@ Table of Contents
    MAY use COAZ to construct the AuthZEN subject, resource, action, and
    parameter-bearing context members, but the Mission-specific
    context.mission, context.actor, freshness, permit binding, and
-   evidence requirements of the AuthZEN binding
+   evidence requirements of the AuthZEN profile
    ([I-D.draft-mcguinness-mission-authzen]) still apply.
 
    The minimum binding, committed by the validating server at derivation
@@ -262,7 +262,7 @@ Table of Contents
       document adds only the wire representation and per-capability
       verification, carrying such a refusal as capability_drift
       (Section 4.3) with its boundary against out_of_authority fixed by
-      the AuthZEN binding's runtime denial classification
+      the AuthZEN profile's runtime denial classification
       ([I-D.draft-mcguinness-mission-authzen]); it defines no drift rule
       of its own.
 
@@ -287,7 +287,7 @@ Table of Contents
    recorded, the presented catalog_digest MUST equal it likewise;
    otherwise the PDP returns capability_drift (Section 4.3).  Whether an
    action is catalog-sourced, and which digests were recorded, are
-   determined from the materialized policy view the AuthZEN binding
+   determined from the materialized policy view the AuthZEN profile
    defines ([I-D.draft-mcguinness-mission-authzen]), not from the PEP's
    request; where no source binding was recorded, this check does not
    apply.
@@ -356,7 +356,7 @@ Table of Contents
 4.3.  Capability Drift Denial Reason
 
    This document registers capability_drift as a coordinated extension
-   to the runtime denial classification, under the AuthZEN binding's
+   to the runtime denial classification, under the AuthZEN profile's
    extensibility rule ([I-D.draft-mcguinness-mission-authzen]): an
    extension value MUST be either a collision-resistant name (following
    the Collision-Resistant Name guidance of [RFC7519] Section 4.2) or a
@@ -378,7 +378,7 @@ Table of Contents
    Capability or catalog drift, and an invoked identity outside the
    approved set when a source binding was recorded, surface as a PDP
    denial carrying capability_drift, under the carrier taxonomy of the
-   AuthZEN binding ([I-D.draft-mcguinness-mission-authzen]).
+   AuthZEN profile ([I-D.draft-mcguinness-mission-authzen]).
 
 5.  Conformance
 
@@ -401,13 +401,13 @@ Table of Contents
    (Section 4.1, Section 4.3).
 
    A deployment that does not claim this document is unaffected: the
-   AuthZEN binding's decision contract consumes an already established
+   AuthZEN profile's decision contract consumes an already established
    action identity ([I-D.draft-mcguinness-mission-authzen]).
 
 6.  Security Considerations
 
    The runtime profile's Security Considerations
-   ([I-D.draft-mcguinness-mission-runtime]) and the AuthZEN binding's
+   ([I-D.draft-mcguinness-mission-runtime]) and the AuthZEN profile's
    ([I-D.draft-mcguinness-mission-authzen]) apply in full.  This section
    addresses only threats specific to capability-source binding.
 

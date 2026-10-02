@@ -1724,7 +1724,7 @@ such a profile names the Mission Issuer or issuer AS, the MAS is that
 party.<a href="#section-3-9.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-3-9.2">
-          <p id="section-3-9.2.1">The runtime profile and its AuthZEN binding, the harness, and
+          <p id="section-3-9.2.1">The runtime profile and its AuthZEN profile, the harness, and
 orchestration compose through the runtime profile's externally
 established binding mode
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), profiled here as the
@@ -2799,7 +2799,7 @@ PEP <span class="bcp14">MUST</span> supply the <code>mission_id</code> and <code
 work is bound to, taken from its Mission binding (a Mission-aware
 harness records exactly this,
 <span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>) or from deployment
-configuration. In the AuthZEN binding
+configuration. In the AuthZEN profile
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>) this is
 <code>context.mission</code>; the PEP additionally populates <code>state</code>, and
 <code>authority_hash</code> where the MAS's signed Mission Status response
@@ -2904,7 +2904,7 @@ sender-constrained, with DPoP or mutual TLS at the unchanged AS. For
 the high-consequence action classes they <span class="bcp14">MUST</span> be. With a pure bearer
 token, any holder inside the (subject, client) equivalence class
 joins (<a href="#join-spoofing" class="auto internal xref">Section 17.1</a>).<a href="#section-10-8" class="pilcrow">¶</a></p>
-<p id="section-10-9">A successful join, in the AuthZEN binding: the PEP supplies
+<p id="section-10-9">A successful join, in the AuthZEN profile: the PEP supplies
 <code>context.mission</code> populated from its Mission binding, with <code>state</code>
 (and <code>authority_hash</code> where disclosed) taken from the MAS's signed
 Mission Status response, and the other decision inputs per
@@ -3746,7 +3746,7 @@ Deployment Profile's <code>residual_risks</code>.<a href="#section-14-4.5.1" cla
 </li>
         <li class="normal" id="section-14-4.6">
           <p id="section-14-4.6.1"><strong>Runtime enforcement.</strong> Consequential actions <span class="bcp14">MUST</span> be enforced
-under the runtime profile and its AuthZEN binding
+under the runtime profile and its AuthZEN profile
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), with documented PEP
 coverage published in the runtime profile's Enforcement Scope
 Statement.<a href="#section-14-4.6.1" class="pilcrow">¶</a></p>
@@ -3954,7 +3954,7 @@ reference and calls a PDP before each consequential action;<a href="#section-15.
 </li>
           <li class="normal" id="section-15.1-2.3">
             <p id="section-15.1-2.3.1">the PDP runs the runtime profile's decision contract and its
-AuthZEN binding, drawing authority from the MAS-served Authority Set
+AuthZEN profile, drawing authority from the MAS-served Authority Set
 or a materialized policy view (<a href="#policy-distribution" class="auto internal xref">Section 14.4</a>);<a href="#section-15.1-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-15.1-2.4">
@@ -4172,7 +4172,7 @@ absence, never falling back to a mapping or asserted join
 contract, drawing authority from the Mission; and<a href="#section-16-7.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-16-7.5">
-          <p id="section-16-7.5.1">when the AuthZEN binding is in use, emits Decision Evidence per
+          <p id="section-16-7.5.1">when the AuthZEN profile is in use, emits Decision Evidence per
 <span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>, recording the
 Mission reference the join was verified against.<a href="#section-16-7.5.1" class="pilcrow">¶</a></p>
 </li>

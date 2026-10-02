@@ -19,7 +19,7 @@ manifest projecting these records into one portable object a holder
 can present without shipping a log. The records are defined against
 the runtime profile's abstract decision output and failure
 classification, so any decision-API binding produces the same
-records; the OpenID AuthZEN binding is one such producer. 
+records; the OpenID AuthZEN profile is one such producer. 
     " name="description">
 <meta content="xml2rfc 3.34.1" name="generator">
 <meta content="oauth" name="keyword">
@@ -1108,7 +1108,7 @@ manifest projecting these records into one portable object a holder
 can present without shipping a log. The records are defined against
 the runtime profile's abstract decision output and failure
 classification, so any decision-API binding produces the same
-records; the OpenID AuthZEN binding is one such producer.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+records; the OpenID AuthZEN profile is one such producer.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
 <section class="note rfcEditorRemove" id="section-note.1">
       <h2 id="name-about-this-document">
@@ -1482,7 +1482,7 @@ any one binding's wire.<a href="#section-2-6.14.1" class="pilcrow">¶</a></p>
       <dd class="break"></dd>
 </dl>
 <p id="section-2-7">HTTP and JSON message examples in this document follow the wire
-shape of the OpenID AuthZEN Authorization API binding
+shape of the AuthZEN profile
 <span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>, the family's reference
 producer; a deployment using a different decision-API binding
 produces the same records from its own wire inputs.<a href="#section-2-7" class="pilcrow">¶</a></p>
@@ -1603,7 +1603,7 @@ least 128 bits of entropy.<a href="#section-4.1-1.2.1" class="pilcrow">¶</a></p
 this record documents: the abstract evaluation identifier of the
 runtime profile's Decision Output
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), as carried by the
-deployment's decision-API binding (for example, the AuthZEN binding
+deployment's decision-API binding (for example, the AuthZEN profile
 carries this as the decision-API response's evaluation identifier,
 <span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). Distinct
 from <code>evidence_id</code>: <code>evaluation_id</code> correlates this record with the
@@ -1709,7 +1709,7 @@ of the enforcement boundary, as the PDP established it, which a
 permit binds (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>, Section
 "Permit Binding"), as carried by the deployment's decision-API
 binding (for example, the AuthZEN
-binding's decision-API request's audience member,
+profile's decision-API request's audience member,
 <span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-4.1-1.16.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
@@ -1791,7 +1791,7 @@ recorded. This digest commits the declared resolved context, not
             <p id="section-4.1-1.32.1"><span class="bcp14">REQUIRED</span> whenever the decision response contained obligations, on
 either decision. An array of obligation objects, recorded as
 returned to the PEP (for example, as carried by the AuthZEN
-binding, <span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-4.1-1.32.1" class="pilcrow">¶</a></p>
+profile, <span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-4.1-1.32.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-4.1-1.33">
@@ -1807,7 +1807,7 @@ The parameter binding is recorded once, in this record's
 equals the binding carried by the wire conditions. The phase binding
 is likewise recorded once in <code>action_phase</code>, under that member's
 equality rule. A binding maps its wire members onto this form (for
-example the AuthZEN binding's <code>conditions</code> response member,
+example the AuthZEN profile's <code>conditions</code> response member,
 <span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-4.1-1.34.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
@@ -1903,7 +1903,7 @@ naming the runtime profile's failure-condition classification
 deployment's decision-API binding, including any
 specification-defined extension under that binding's extensibility
 rule; a consumer <span class="bcp14">MUST</span> treat an unrecognized value as a deny and <span class="bcp14">MUST NOT</span> attach any other semantics to it. For example, the AuthZEN
-binding carries this as its wire denial-reason strings
+profile carries this as its wire denial-reason strings
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). When the denial
 is a constraint violation, the value is <code>parameter_violation</code> and the
 specific failing <code>constraints</code> keys are carried in
@@ -1950,7 +1950,7 @@ required) and a <code>value</code> (string, required).<a href="#section-4.1-1.56
 </dl>
 <p id="section-4.1-2">A Decision Evidence Object is closed to uncoordinated extension; see
 <a href="#evidence-extensions" class="auto internal xref">Section 8</a> for the extension rule and the coordinated
-extension members a deployment following the AuthZEN binding
+extension members a deployment following the AuthZEN profile
 commonly carries (<code>taint</code>, <code>mission_history</code>, <code>capability_source</code>,
 <code>hop_reference</code>).<a href="#section-4.1-2" class="pilcrow">¶</a></p>
 </section>
@@ -1969,7 +1969,7 @@ channel failure, PDP unreachability, or the PEP being unable to
 establish Mission state (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); or
 a PDP refusal of an in-scope request that reaches it without the
 Mission decision context a runtime enforcement scope requires, per
-the AuthZEN binding (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). Such a
+the AuthZEN profile (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). Such a
 refusal has no PDP decision and cannot populate the PDP-derived
 members above.<a href="#section-4.2-1" class="pilcrow">¶</a></p>
 <p id="section-4.2-2">A deployment records it as a Refusal Record, carrying
@@ -2047,7 +2047,7 @@ decision context a runtime enforcement scope requires,
 <code>mission_context_missing</code>. These name pre-evaluation conditions,
 PEP-side or PDP-side, and are disjoint from the runtime profile's
 PDP denial reasons for an evaluated decision (for example, as
-carried by the AuthZEN binding,
+carried by the AuthZEN profile,
 <span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>); a record that can
 populate the PDP-derived members of an evaluated decision is a
 Decision Evidence Object instead.<a href="#section-4.2-4.12.1" class="pilcrow">¶</a></p>
@@ -2107,7 +2107,7 @@ since that is exactly what the request lacked.<a href="#section-4.2-4.20.1" clas
           <dd style="margin-left: 1.5em" id="section-4.2-4.22">
             <p id="section-4.2-4.22.1"><span class="bcp14">OPTIONAL</span>. Objects. Verified facts only, in the projected forms
 <a href="#decision-evidence-object" class="auto internal xref">Section 4</a> defines (for example, as carried in the
-AuthZEN binding's decision-API request,
+AuthZEN profile's decision-API request,
 <span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). A PEP populates them from
 its own credential validation; a PDP populates them from the request
 context it received, never asserting a check only the other role
@@ -2199,7 +2199,7 @@ that failed closed:<a href="#section-4.2-8" class="pilcrow">¶</a></p>
 </pre><a href="#section-4.2-9" class="pilcrow">¶</a>
 </div>
 <p id="section-4.2-10">A PDP-side refusal, recorded by the PDP itself: an in-scope request
-reached it without the Mission decision context the AuthZEN binding
+reached it without the Mission decision context the AuthZEN profile
 requires, so no Mission reference is established and the PDP
 populates only what it can attest from the request it received:<a href="#section-4.2-10" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-4.2-11">
@@ -2632,7 +2632,7 @@ operation. All three are post-permit dispositions on this carrier,
 and none of them is the pre-permit denial a PDP records when it
 refuses a duplicate or conflicting claim before deciding, carried
 as <code>duplicate_suppressed</code> and <code>idempotency_conflict</code> in the AuthZEN
-binding (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). A deployment
+profile (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). A deployment
 <span class="bcp14">MUST NOT</span> record a post-permit duplicate as a PDP denial reason, or
 a pre-decision duplicate as an Execution Evidence <code>error</code>.<a href="#section-5.1-1.22.2" class="pilcrow">¶</a></p>
 <p id="section-5.1-1.22.3"><code>capability_source_unresolvable</code> names a capability-source
@@ -3482,9 +3482,9 @@ authority from any member it does not recognize. An extension member
 is recorded as presented; this document does not otherwise define
 its semantics.<a href="#section-8-1" class="pilcrow">¶</a></p>
 <p id="section-8-2">The following members are coordinated extensions a deployment
-following the family's Standards-Track AuthZEN binding commonly
+following the family's Standards-Track AuthZEN profile commonly
 carries. Each is registered and owned by the specification named,
-not by this document or by the AuthZEN binding merely because it is
+not by this document or by the AuthZEN profile merely because it is
 a common wire carrier.<a href="#section-8-2" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-8-3">
         <dt id="section-8-3.1">
@@ -3494,7 +3494,7 @@ a common wire carrier.<a href="#section-8-2" class="pilcrow">¶</a></p>
 <span class="bcp14">REQUIRED</span> when the decision request carried a taint context. What
 taints a session and when a taint requirement applies are defined
 by the harness profile (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>),
-which owns this member's semantics; the AuthZEN binding is one wire
+which owns this member's semantics; the AuthZEN profile is one wire
 carrier of the context this member records
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-8-3.2.1" class="pilcrow">¶</a></p>
 </dd>
@@ -3511,7 +3511,7 @@ established, including an unrecognized <code>predicate</code> value or an
 evidence store that could not be consulted within its bound).
 <span class="bcp14">REQUIRED</span> when policy selected any history predicate for the
 decision, whether or not the request carried a Mission history
-member. Registered and owned by the AuthZEN binding
+member. Registered and owned by the AuthZEN profile
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-8-3.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
@@ -3576,7 +3576,7 @@ emits the records themselves; a CONSUMER, or VERIFIER, that reads
 and checks them after the fact; a RECEIPT ISSUER that assembles and
 signs a Mission Receipt over them; and a RECEIPT VERIFIER that
 verifies one. A decision-API binding's own conformance statement,
-such as the AuthZEN binding's (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>),
+such as the AuthZEN profile's (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>),
 incorporates this document's PRODUCER role for its PDP, PEP, and
 executor.<a href="#section-9-1" class="pilcrow">¶</a></p>
 <p id="section-9-2">A PRODUCER conforming to this document <span class="bcp14">MUST</span>:<a href="#section-9-2" class="pilcrow">¶</a></p>
@@ -4438,7 +4438,7 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
       </h2>
 <p id="appendix-A-1">This document extracts the Decision Evidence, Execution Evidence, and
 Refusal Record objects that Mission-Bound Runtime Enforcement's
-AuthZEN binding first defined, so any decision-API binding can
+AuthZEN profile first defined, so any decision-API binding can
 produce them. The author thanks the Mission-Bound Authorization
 implementer community for feedback.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 </section>
