@@ -1913,14 +1913,14 @@ This section states what MAS-only deployment does not provide. These
 are structural properties of the mode, not implementation quality
 issues, and a deployment claiming this profile MUST NOT overstate
 them. The mode provides the contextual-governance kernel,
-State-Observable, and Structured Authority capabilities, but it does
-not claim that an unchanged Authorization Server's credential was
-issued under the Mission or that its issuance was lifecycle-gated.
+State-Observable, and Structured Authority capabilities. It does not
+claim that an unchanged Authorization Server's credential was issued
+under the Mission or that its issuance was lifecycle-gated.
 
 Credential-Bound correlation and action-time lifecycle gating compose
 through the runtime join and PEP coverage, within the conditional
 scope declared by {{mission-substrate}}. Among the Mission Assurance
-Levels this is the Runtime-Enforced level reached through the MAS
+Levels, this is the Runtime-Enforced level reached through the MAS
 binding, which provides no Mission-bound credential and no issuance
 gating ({{I-D.draft-mcguinness-mission-architecture}}).
 
@@ -1942,12 +1942,12 @@ Enforcement Scope Statement:
   at the token layer covers the rest.
 
 An enterprise deployment carries this statement inside its mapping
-contract ({{mapping-contract}}) rather than beside it, so the join's
-facts have one home.
+contract ({{mapping-contract}}), not beside it, so the join's facts
+have one home.
 
 **No Mission-bound credentials.** Tokens carry no `mission` claim and
 no Mission-derived `authorization_details`. Nothing cryptographically
-binds a token to the approval event, and no audit anchor travels in
+binds a token to the approval event. No audit anchor travels in
 credentials: `authority_hash` reaches consumers only through the MAS's
 signed status responses and the PDP's evidence, never in the
 credential a resource actually accepted. Resource Servers cannot
@@ -1962,25 +1962,24 @@ only through the runtime layer's state re-check.
 A MAS deployment MUST deploy the runtime profile's enforcement
 ({{I-D.draft-mcguinness-mission-runtime}}) over every consequential
 action path within the scope it claims Mission governance for.
-Because both properties are absent, enforcement rests entirely on PEP
-coverage: the no-unmediated-path condition consolidated by the
-security model ({{I-D.draft-mcguinness-mission-security-model}}) is
-load-bearing for all of this profile's guarantees, not only for the
-runtime profile's agent-compromise-resistant enforcement claim. A
-token exercised outside PEP coverage is ungoverned: its use is
-bounded by ordinary OAuth alone, and no Mission property applies to
-it.
+Because the mode has neither Mission-bound credentials nor issuance
+gating, enforcement rests entirely on PEP coverage. The security
+model's no-unmediated-path condition
+({{I-D.draft-mcguinness-mission-security-model}}) is required for
+every guarantee this document makes, not only for the runtime
+profile's agent-compromise-resistant enforcement claim. A token
+exercised outside PEP coverage is ungoverned: ordinary OAuth alone
+bounds its use, and no Mission property applies to it.
 
-**Weaker expansion and child-creation binding.** Mission Expansion
-and Child Delegation are carried natively in this mode
-({{native-surfaces}}), so a standalone deployment can widen authority
-and delegate to sub-agents; what the mode does not provide is the
-OAuth wire's token-exchange possession proof. Requests are bound to the
-predecessor or parent by authenticated client identity
-({{native-binding}}), which proves the same registered client, not
-possession of a held Mission-bound access token
-({{sec-native-binding}}). Offline attenuation remains inapplicable in
-this mode because it requires the Mission-bound credential
+**Weaker expansion and child-creation binding.** This mode carries
+Mission Expansion and Child Delegation natively ({{native-surfaces}}),
+so a standalone deployment can widen authority and delegate to
+sub-agents. The mode does not provide the OAuth wire's token-exchange
+possession proof. A request is bound to its predecessor or parent by
+authenticated client identity ({{native-binding}}), which proves the
+same registered client, not possession of a held Mission-bound access
+token ({{sec-native-binding}}). Offline attenuation does not apply in
+this mode, because it requires the Mission-bound credential
 ({{mission-substrate}}).
 
 **Upgrade path.** Implementing the OAuth binding at the AS restores
@@ -1988,37 +1987,37 @@ what this mode lacks: Mission-bound credentials and issuance gating.
 The MAS then serves as the AS's Mission store, or merges into the AS.
 The Mission record, the integrity anchors, and the lifecycle carry
 over unchanged, because a MAS operates the OAuth binding's own
-definitions of all three; the enforcement join becomes unnecessary for
-newly issued tokens, which carry the `mission` claim.
+definitions of all three. The enforcement join becomes unnecessary
+for tokens issued after the upgrade, which carry the `mission` claim.
 
-These are the limitations of MAS-only deployment. The Mission
-Issuance Grant companion
+The Mission Issuance Grant companion
 ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) defines the
-issuance join: a grant this MAS mints for an active Mission and an
+issuance join: a grant the MAS mints for an active Mission and an
 estate Authorization Server redeems at its token endpoint for
 Mission-bound tokens, state-gated at minting and at refresh. Where
 deployed, it removes the credential and issuance-gating limitations
 for the resources of each consuming Authorization Server, while
-approval, the record, and the lifecycle remain here.
+approval, the record, and the lifecycle remain with the MAS.
 
 # The Enterprise Mission Authority Profile {#enterprise-profile}
 
 The conformance floor ({{conformance}}) makes a MAS deployable. This
 profile is the operating profile for a MAS used as an estate's
-Mission control plane: it turns the floor's SHOULDs and OPTIONALs
-into the guarantees an enterprise deployment needs.
+Mission control plane. It turns the floor's recommendations and
+options into the guarantees an enterprise deployment needs.
 
 A deployment claims the Enterprise Mission Authority Profile over a
 declared coverage set: the Authorization Server, resource, and
 action-class paths the claim names. The estate-level obligations
-below hold deployment-wide; the per-path credential, join, and
-runtime obligations hold for every path in the set; a path outside
-the set is explicitly unclaimed, and never inherits the profile from
+below hold deployment-wide. The per-path credential, join, and
+runtime obligations hold for every path in the set. A path outside
+the set is explicitly unclaimed and never inherits the profile from
 the deployment's name.
 
 The profile builds on the Runtime-Enforced level of the Mission
-Assurance Levels under the MAS binding and adds the obligations below
-({{I-D.draft-mcguinness-mission-architecture}}).
+Assurance Levels under the MAS binding
+({{I-D.draft-mcguinness-mission-architecture}}) and adds the
+following obligations:
 
 - **Status and lifecycle.** The MAS MUST serve the Mission Status
   operation and the Mission Lifecycle endpoint with signed responses
@@ -2027,11 +2026,11 @@ Assurance Levels under the MAS binding and adds the obligations below
 - **Active freshness.** For the high-consequence action classes, the
   MAS-served state MUST be an active freshness source with a published
   staleness bound, meeting the runtime profile's requirement for those
-  classes ({{I-D.draft-mcguinness-mission-runtime}}); token-lifetime
+  classes ({{I-D.draft-mcguinness-mission-runtime}}). Token-lifetime
   expiry alone does not qualify. Where per-class bounds differ, the
-  metadata's single `mission_max_stale_seconds` ({{discovery}})
-  advertises the tightest bound in force, the value a consumer may
-  assume without knowing an action's class; the per-class bounds are
+  metadata's single `mission_max_stale_seconds` member ({{discovery}})
+  advertises the tightest bound in force, which a consumer may assume
+  without knowing an action's class. The per-class bounds are
   published in the Enforcement Scope Statement.
 - **Join Assertion.** The MAS MUST offer the Mission Join Assertion
   ({{join-assertion}}). For every joined, PDP-gated governed path not
@@ -2040,7 +2039,7 @@ Assurance Levels under the MAS binding and adds the obligations below
   MUST require one.
 - **Mission-bound issuance for the high-consequence classes.** For
   the high-consequence action classes
-  ({{I-D.draft-mcguinness-mission-runtime}}) the PDP MUST require an
+  ({{I-D.draft-mcguinness-mission-runtime}}), the PDP MUST require an
   acting credential satisfying the mission-credential-bound
   composition of the Mission Binding Properties
   ({{I-D.draft-mcguinness-mission-architecture}}): the
@@ -2052,32 +2051,32 @@ Assurance Levels under the MAS binding and adds the obligations below
     ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) is the
     issuance path for such a class, the grant MUST carry `cnf` and
     redemption MUST produce an access token sender-constrained to
-    that same key: the issuance upgrade opens no bearer interval
+    that same key. The issuance upgrade thus opens no bearer interval
     between grant and action, and this profile defines no rotation
     exception.
   - Mission-bound issuance restores the issuance gate; it does not
     replace this profile's runtime active-freshness check for these
     classes.
-  - Issuance also does not prove that a particular work item was
-    supposed to run under the selected Mission when a client
-    legitimately holds credentials for several Missions: work-item
-    attribution stays with the reference propagation channel and the
+  - When a client legitimately holds credentials for several
+    Missions, issuance does not prove that a particular work item was
+    supposed to run under the selected Mission. Work-item attribution
+    stays with the reference propagation channel and the
     `work-item-bound` property.
   - The Enterprise claim is made per covered Authorization Server,
     resource, and action path; a mixed estate's weaker paths never
     inherit it from the deployment's name.
-- **Instance-bound joins.** Where the acting credential carries Instance
-  Context ({{I-D.draft-mcguinness-oauth-client-instance-id}}) whose
-  association with the presenter is established as {{mission-join}}
-  describes, a high-consequence join MUST bind (`subject`, `client`,
-  `instance`), not (`subject`, `client`), so a single workload joins
-  rather than every workload sharing a gateway `client_id`.
-  Client-instance identity rests on an unratified individual draft
-  ({{I-D.draft-mcguinness-oauth-client-instance-id}}); where a
-  deployment has no instance-identity substrate, the high-consequence
-  join binds only (`subject`, `client`), and the shared-`client_id`
-  residual of {{join-spoofing}} remains, stated in the Mission
-  Deployment Profile's `residual_risks`.
+- **Instance-bound joins.** Where the acting credential carries
+  Instance Context ({{I-D.draft-mcguinness-oauth-client-instance-id}})
+  whose association with the presenter is established as
+  {{mission-join}} describes, a high-consequence join MUST bind
+  (`subject`, `client`, `instance`), not (`subject`, `client`), so a
+  single workload joins rather than every workload sharing a gateway
+  `client_id`. Client-instance identity rests on an unratified
+  individual draft ({{I-D.draft-mcguinness-oauth-client-instance-id}}).
+  Where a deployment has no instance-identity substrate, the
+  high-consequence join binds only (`subject`, `client`), and the
+  shared-`client_id` residual of {{join-spoofing}} remains, stated in
+  the Mission Deployment Profile's `residual_risks`.
 - **Runtime enforcement.** Consequential actions MUST be enforced
   under the runtime profile and its AuthZEN binding
   ({{I-D.draft-mcguinness-mission-authzen}}), with documented PEP
@@ -2086,26 +2085,27 @@ Assurance Levels under the MAS binding and adds the obligations below
 - **Audit evidence.** Joins and decisions MUST produce runtime
   evidence retained for the audit horizon
   ({{I-D.draft-mcguinness-mission-runtime}}).
-- **Approval governance.** Where a recording trigger of Mission
-  Approval Governance holds for an approval event (the Approver
-  differs from the Subject, more than one principal contributes, a
-  non-human assertion contributes, a threshold, veto, or
-  separation-of-duty rule is evaluated, or validating an assertion
-  requires authority standing outside the Mission record), the MAS
-  MUST record the Approval Governance Record
-  ({{I-D.draft-mcguinness-mission-approval-governance}}), committed
-  atomically with the Mission's creation and retained for its audit
-  horizon. The Mission record still carries exactly one accountable
-  `approver`, the only principal any projection or enforcement
-  consumes; direct self-approval by one authenticated human stays the
-  degenerate case the Mission record represents completely.
+- **Approval governance.** Under Mission Approval Governance
+  ({{I-D.draft-mcguinness-mission-approval-governance}}), a recording
+  trigger holds for an approval event when the Approver differs from
+  the Subject, more than one principal contributes, a non-human
+  assertion contributes, a threshold, veto, or separation-of-duty rule
+  is evaluated, or validating an assertion requires authority standing
+  outside the Mission record. Where a recording trigger holds for an
+  approval event, the MAS MUST record the Approval Governance
+  Record, committed atomically with the Mission's creation and
+  retained for its audit horizon. The Mission record still carries
+  exactly one accountable `approver`, the only principal any
+  projection or enforcement consumes. Direct self-approval by one
+  authenticated human remains the degenerate case, which the Mission
+  record represents completely.
 
-The Join Assertion obligation is what separates the modes: the
-mapping join ({{mission-join}}) is the baseline compatibility mode,
-and the Join Assertion is the enterprise mode, because it centralizes
-subject and client mapping at the MAS, binds the proof to one token
-digest and key thumbprint, and produces audit evidence rather than
-leaving each PDP to maintain mapping tables.
+The Join Assertion obligation separates two modes. The mapping join
+({{mission-join}}) is the baseline compatibility mode. The Join
+Assertion is the enterprise mode, because it centralizes subject and
+client mapping at the MAS, binds the proof to one token digest and key
+thumbprint, and produces audit evidence rather than leaving each PDP
+to maintain mapping tables.
 
 A deployment claiming this profile SHOULD publish its claims,
 coverage, and residual risks as a Mission Deployment Profile
@@ -2114,11 +2114,11 @@ coverage, and residual risks as a Mission Deployment Profile
 ## High-Consequence Binding {#high-consequence-binding}
 
 The two binding-establishment modes are mutually exclusive per
-action, as the runtime profile fixes
-({{I-D.draft-mcguinness-mission-runtime}}), and a high-consequence
-path switches modes rather than layering them: the join algorithm of
+action, as the runtime profile specifies
+({{I-D.draft-mcguinness-mission-runtime}}). A high-consequence path
+switches modes rather than layering them. The join algorithm of
 {{mission-join}} assumes a credential that cannot identify its
-Mission, and it never runs against one that can. For each action the
+Mission, and it never runs against one that can. For each action, the
 PDP:
 
 1. classifies the action under the runtime profile's classes;
@@ -2142,40 +2142,42 @@ PDP:
 ## Estate Prerequisites {#enterprise-prerequisites}
 
 The profile's mandatory path runs through the deployment's unchanged
-Authorization Server, and it assumes capabilities there:
-configuration rather than code, but gating nonetheless. Before
-claiming the profile a deployment confirms its estate AS provides:
+Authorization Server and assumes capabilities there. They require
+configuration rather than code, but they are prerequisites. Before
+claiming the profile, a deployment confirms that its estate AS
+provides:
 
 - **Token introspection or validatable JWT access tokens.**
   {{RFC7662}} introspection reachable by the MAS, under credentials the
   deployment protects ({{sec-join-assertion}}), or JWT access tokens
-  the MAS can validate locally under {{RFC9068}}; the MAS cannot mint a
-  Join Assertion for a token it can neither introspect nor validate
+  the MAS can validate locally under {{RFC9068}}. The MAS cannot mint
+  a Join Assertion for a token it can neither introspect nor validate
   ({{join-assertion-request}}).
 - **Sender-constrained issuance.** DPoP-bound or mutual-TLS-bound
   access tokens for the agent clients acting in the high-consequence
-  classes: the join requires sender-constraint for those classes
+  classes. The join requires sender-constraint for those classes
   ({{mission-join}}), and the MAS MUST NOT mint an assertion for a
   token without a `cnf` key ({{join-assertion-request}}).
 - **`cnf` in introspection or token claims.** Introspection responses,
   or validated JWT claims, that report the token's `cnf` confirmation,
   since the assertion binds the key thumbprint they report.
 
-An estate whose Authorization Server cannot provide these still
-joins under the mapping join at the conformance floor
-({{mission-join}}, {{conformance}}); it does not claim this profile.
-The digest pair of {{join-assertion-request}} further assumes an
-introspection surface that resolves a token by digest, which
-mainstream Authorization Servers do not provide; a deployment plans
-for the `access_token` form.
+An estate whose Authorization Server cannot provide these capabilities
+still joins under the mapping join at the conformance floor
+({{mission-join}}, {{conformance}}), but it does not claim this
+profile.
+
+The digest pair of {{join-assertion-request}} also assumes an
+introspection surface that resolves a token by digest. Mainstream
+Authorization Servers do not provide one, so a deployment plans for
+the `access_token` form.
 
 ## The Enterprise Mapping Contract {#mapping-contract}
 
-The dominant MAS risk is a coarse or drifting join: shared
-`client_id` values, many-to-one directory mappings, and workload
-identity that the join collapses ({{join-spoofing}}). An enterprise
-MAS MUST publish a mapping contract stating, for the joins it
-performs:
+A join can be coarse or can drift: shared `client_id` values,
+many-to-one directory mappings, and workload identity that the join
+collapses ({{join-spoofing}}). An enterprise MAS MUST publish a
+mapping contract stating, for the joins it performs:
 
 - the subject namespace mapping (how a credential's authenticated
   subject maps to the Mission's `subject`);
@@ -2201,12 +2203,12 @@ An enterprise MAS MAY serve audience-scoped Authority Set views, or
 the runtime profile's materialized policy view
 ({{I-D.draft-mcguinness-mission-runtime}}), to the PDPs that enforce
 for each audience, rather than each PDP resolving full Mission state
-per action. This is what makes the MAS the estate's approved-task
-authority distribution point: it distributes bounded, audience-scoped
-authority derived from the Mission, not tokens. The view is served
-under the Mission Status operation's authentication and anti-oracle
-rules, carries the Mission's `authority_hash` as its consent anchor,
-and does not widen authority beyond the Authority Set.
+per action. In doing so, the MAS distributes bounded, audience-scoped
+authority derived from the Mission, not tokens. The MAS serves the
+view under the Mission Status operation's authentication and
+anti-oracle rules. The view carries the Mission's `authority_hash` as
+its consent anchor and does not widen authority beyond the Authority
+Set.
 
 # Conformance {#conformance}
 
@@ -2255,7 +2257,7 @@ claiming it additionally:
 capability of the Mission Authority Server role, which the Enterprise
 profile requires. A MAS claiming it serves the join-assertion
 endpoint under {{join-assertion-request}} and mints assertions per
-{{join-assertion-artifact}}; a Mission-joining PDP that accepts
+{{join-assertion-artifact}}. A Mission-joining PDP that accepts
 assertions verifies them per {{join-assertion-pdp}}.
 
 A **Mission-joining PDP**:
