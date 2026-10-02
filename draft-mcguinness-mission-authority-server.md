@@ -2366,7 +2366,7 @@ Reliance floor ({{I-D.draft-mcguinness-mission-substrate}}).
 
 | Capability | Claim | Activation | Scope and defining sections | Limitations |
 | --- | --- | --- | --- | --- |
-| Lifecycle-Gated Authorization | supplied | always for MAS-native operations; a Mission-joining PDP for joined decisions | A current-state check at each such operation or decision ({{lifecycle-and-state}}, {{mission-join}}) | The unchanged Authorization Server gates neither issuance nor refresh; the token-layer residual runs to expiry |
+| Lifecycle-Gated Authorization | supplied | always for MAS-native authority operations; a Mission-joining PDP for joined decisions | A current-state check at each such operation or decision ({{lifecycle-and-state}}, {{mission-join}}) | The unchanged Authorization Server gates neither issuance nor refresh; the token-layer residual runs to expiry |
 | State-Observable | supplied | always | Signed Mission Status with the `mission_max_stale_seconds` bound ({{lifecycle-and-state}}, {{discovery}}) | Consumers fail closed past the declared freshness bound |
 | Structured Authority | supplied | always | The OAuth binding's Authority Set, held at the MAS and evaluated at the joining PDP ({{mission-join}}) | Semantics cover only declared authority-detail types and mappings |
 | Monotonic Derivation | supplied | native child creation ({{native-child}}) | The no-broader-than relation at child creation | Enforcement and expansion are never derivation; unchanged AS tokens are outside the claim |
