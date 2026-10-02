@@ -3474,7 +3474,11 @@ the Mission is revoked ({{composite-active}}):
 
 Delegation is an optional capability ({{conformance}}). An agent may
 delegate execution to downstream actors (a sub-agent, service, or tool
-that is itself an OAuth client) within a Mission.
+that is itself an OAuth client) within a Mission. An intermediary in
+the agent's own trust domain that presents the agent's own tokens,
+such as a gateway holding the agent's credentials, acts as part of
+that client and is not a delegate; one that obtains its own token by
+Token Exchange is a delegate.
 Delegation is represented with the OAuth Actor Profile
 {{I-D.draft-mcguinness-oauth-actor-profile}}, which profiles the
 `act` (actor) claim of {{Section 4.1 of RFC8693}}.
