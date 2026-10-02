@@ -11,16 +11,16 @@
     "content_sha256": "db9cda93f2b24c80f9dd723fa996aea3168a1f2b8644058ee381f8f70ef61465"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "7831b4f27ede463aca4eaeb5efa02021974ab3db",
-    "content_sha256": "65327eaf1212465c7597a7423238a49fa09ca355e5687d59c117cbbc4322205d"
+    "revision": "f7118a1afaae3b5fd4547d75037f3df91b56c701",
+    "content_sha256": "a3179c72e0a06e6d42a553a0649926e701806602fc6fbe142ac8ba2e9df01e32"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "5f0f4148f83a79be35089d83b3de007e9c74658b",
-    "content_sha256": "85cf264e29fbf6300fa2c2cfd58df6e05bd00f5d315e052dbc10bac12964689b"
+    "revision": "f7118a1afaae3b5fd4547d75037f3df91b56c701",
+    "content_sha256": "3352632c4f9668a5710b0f96e06525d13e46345dfa7f5b4ac96c585379cd192f"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "54e83575335a5a2de8057750cb3a049b2515cd4a",
-    "content_sha256": "dd42f88c7fc622b5b3b8b542d994fef9e3a04529c494369c1ac4bcfc1c158758"
+    "revision": "f7118a1afaae3b5fd4547d75037f3df91b56c701",
+    "content_sha256": "6333d11d9400169a3798f99f5a6578b4ba91192497ab4a5b4430680dcb65f584"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "daadb45f36cd901f0d646ba0aa942dfec95844ee",
@@ -20518,6 +20518,24 @@
      "file": "src/services/mcp-payments/test/approval-resolution-boundary.test.ts",
      "name": "approval resolution is outside the mediated tool boundary (#759) > approval-resolution tool names refuse unknown_tool and retain one PEP Refusal Record",
      "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pdp-unavailability.test.ts",
+     "name": "configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > refuses a 503 from a reachable PDP as pdp_unreachable, with no PDP decision retained",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pdp-unavailability.test.ts",
+     "name": "configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > refuses an unsigned 200 response as channel_failure, with no PDP decision retained",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/decision-evidence-retention.test.ts",
+     "name": "a permit the PDP did not evidence is refused, never executed (#741) > refuses the action when the decision carries no Decision Evidence",
+     "level": "endpoint",
      "surface": "evidence-emission"
     }
    ]
