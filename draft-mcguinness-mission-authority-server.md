@@ -2923,6 +2923,16 @@ shows the denial:
 
 \[\[ To be removed from the final specification ]]
 
+- Density and OAuth register, with no change to any requirement. The
+  abstract opens "This specification defines" in 129 words; the
+  Introduction states what the OAuth binding answers and what this
+  document answers; no paragraph runs over 130 words; error
+  requirements use the active OAuth form; examples open with "The
+  following"; the Statement's capability table is compacted, with its
+  qualifications listed under it; Security and Privacy Considerations
+  open with pointers to the OAuth binding, Mission Status, and the
+  runtime profile; and persuasive and figurative wording is removed.
+
 - Reading order. A Protocol Overview with the MAS-mode flow figure
   opens the document. The Mission Join, Reference Propagation, and the
   Join Assertion follow Lifecycle and State; Expansion and Child
