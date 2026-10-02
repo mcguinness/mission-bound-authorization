@@ -615,6 +615,16 @@ authorization under the mission when it is absent or different.  A PS
 whose policy places an agent under mission governance MUST reject a
 missionless token request from that agent.
 
+AAuth lists an AS-issued auth token's `mission_s256` among its optional
+claims, and the PS's delivery checks do not include it (Sections 9.4.1
+and 9.1.3 of {{I-D.draft-hardt-oauth-aauth-protocol}}).  In four-party
+access, before returning an AS-issued auth token to the agent, a PS
+MUST verify that the token carries the resource token's `mission_s256`
+exactly whenever the resource token carried one.  A token that fails
+this check fails the PS's delivery verification, and the PS answers
+`as_unreachable` (Section 9.1.3 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).
+
 A request's Mission association is required when that policy applies
 or when the request derives from a presented token or upstream token
 that carries `mission_s256`.  A required association that is missing,
@@ -1003,11 +1013,11 @@ Bounded Reliance floor ({{I-D.draft-mcguinness-mission-substrate}}):
 
 | Capability | Claim | Activation | Scope and defining sections | Limitations |
 | --- | --- | --- | --- | --- |
-| Lifecycle-Gated Authorization | supplied | always | Mission approval and other positive governance decisions at the mission endpoint, permission decisions, and auth-token issuance the PS performs or brokers for requests carrying the person-token-issued `mission_s256` claim; decisions fail closed when current state cannot be established ({{lifecycle}}, {{access-modes}}, {{mission-log}}) | Independently issued resource credentials and intentionally missionless requests, admitted by policy with no required or inherited association, are outside the claim; a failed required association is rejected, never treated as missionless ({{ref-propagation}}); the post-transition residual is bounded by person-token and auth-token lifetime and `expires_at` |
+| Lifecycle-Gated Authorization | supplied | always | Mission approval and other positive governance decisions at the mission endpoint, permission decisions, person-token issuance under a named or upstream-inherited mission, and auth-token issuance the PS performs or brokers for requests carrying the person-token-issued `mission_s256` claim; decisions fail closed when current state cannot be established ({{lifecycle}}, {{access-modes}}, {{mission-log}}) | Independently issued resource credentials and intentionally missionless requests, admitted by policy with no required or inherited association, are outside the claim; a failed required association is rejected, never treated as missionless ({{ref-propagation}}); the post-transition residual is bounded by person-token and auth-token lifetime and `expires_at` |
 | State-Observable | supplied | the AAuth Mission Management status operation active ({{I-D.draft-mcguinness-mission-aauth-management}}) | Authenticated per-role callers, the `active` and `terminated` vocabulary, responses stamped `observed_at` with a declared `fresh_until` reliance bound, failing closed on failed, unrecognized, or stale responses, absent and unauthorized references indistinguishable | The base binding exposes no consumer-facing state source; token acceptance is not observation |
 | Structured Authority | not supplied | -- | -- | The mission description is private prose and `approved_tools` is PS-governance input; scopes or a resource-owned policy language can supply structure inside its own boundary |
 | Monotonic Derivation | not supplied | -- | -- | No cross-boundary subset relation is defined; a resource policy language can define monotonicity within its own vocabulary |
-| Credential-Bound | supplied | PS authorization or federated authorization access mode, for requests whose resource token carries and validates the signed `mission_s256` claim ({{access-modes}}, {{ref-propagation}}) | PS-issued or PS-brokered artifacts carry the claim, a binding established at issuance rather than by an external join; fact semantics: PS issuance or brokering under the mission | Agent identity and resource-managed modes convey no mission binding; federated authorization artifacts are AS-issued under the PS's brokering |
+| Credential-Bound | supplied | PS authorization or federated authorization access mode, for requests whose resource token carries and validates the signed `mission_s256` claim ({{access-modes}}, {{ref-propagation}}) | PS-issued or PS-brokered artifacts carry the claim, a binding established at issuance rather than by an external join; fact semantics: PS issuance or brokering under the mission | Agent identity and resource-managed modes convey no mission binding; federated authorization artifacts are AS-issued under the PS's brokering, and the PS's delivery check rejects one that omits or alters the claim ({{ref-propagation}}) |
 | Authorized Context Correlation | not supplied | -- | -- | The PS co-establishes the mission, person, agent, and token where it is on the path; no authoritative join of independently established facts is defined |
 | Independently Verifiable | not supplied | -- | -- | `s256` proves byte identity to parties holding the blob; it does not prove record properties or current state to third parties |
 | Portable Evidence | not supplied | -- | -- | The mission log is PS-local; signed receipts or checkpoints would be an extension |
