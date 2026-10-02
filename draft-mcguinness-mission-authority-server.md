@@ -44,7 +44,9 @@ normative:
     author:
       - org: Model Context Protocol Project
     date: 2026
+  RFC8414:
   RFC9068:
+  RFC9396:
   RFC9325:
   RFC9728:
   I-D.draft-mcguinness-oauth-mission:
@@ -140,7 +142,6 @@ informative:
     date: 2026
   RFC6749:
   RFC8126:
-  RFC8414:
   RFC8693:
   RFC9449:
   RFC9635:
@@ -250,8 +251,8 @@ enforces through the Mission-Bound Runtime Enforcement profile. This
 is the standalone binding, the AS-optional
 deployment mode: Mission governance and per-action enforcement with no
 change to the deployment's Authorization Server, forgoing the
-Mission-bound credentials and issuance gating that only the issuance
-profile provides (the issuance-grant companion restores both at
+Mission-bound credentials and issuance gating that only the OAuth
+binding provides (the issuance-grant companion restores both at
 Authorization Servers that redeem its grants). Beyond a single-AS workaround, the Mission
 Authority Server is the standalone Mission Issuer for an estate whose
 task governance must span many Authorization Servers, SaaS systems,
@@ -265,7 +266,7 @@ Mission Authority Profile for that role.
 # Introduction
 
 Mission-Bound Authorization for OAuth 2.0
-{{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile") binds
+{{I-D.draft-mcguinness-oauth-mission}} (the "OAuth binding") binds
 issued authority to a durable, human-approved Mission. Its Mission
 Issuer role is played by the OAuth Authorization Server (AS)
 {{RFC6749}}: the AS validates the Mission Intent, runs the approval
@@ -279,7 +280,7 @@ Many deployments cannot make that change: the AS is a shared or
 third-party service, while the need to govern agent tasks is
 immediate. This document defines the **Mission Authority Server
 (MAS)** for those deployments: a standalone service that implements
-the Mission Issuer role of the issuance profile without being an OAuth
+the Mission Issuer role of the OAuth binding without being an OAuth
 Authorization Server. A MAS validates Mission Intents, runs approval
 events, records Missions, operates the Mission lifecycle, and serves
 Mission state. It derives no tokens, and it requires no change to the
@@ -310,7 +311,7 @@ Mission-aware.
 
 For deployments that want Mission-bound tokens on a particular AS
 later, the path is smooth: the record, anchors, and lifecycle a MAS
-operates are the issuance profile's own, so moving issuance into
+operates are the OAuth binding's own, so moving issuance into
 that AS carries them over unchanged, while the MAS continues to
 govern the rest of the estate.
 
@@ -325,7 +326,7 @@ it controls its AS, to keep governance decoupled from token issuance
 or to govern with one Mission Issuer across many Authorization
 Servers, accepting the enforcement posture of {{limitations}}. A
 deployment that wants Mission-bound tokens and issuance gating
-implements the issuance profile; a deployment that cannot deploy runtime
+implements the OAuth binding; a deployment that cannot deploy runtime
 enforcement over its consequential action paths obtains records but no
 enforcement from this profile and SHOULD NOT claim it
 ({{limitations}}).
@@ -354,8 +355,8 @@ defined by {{I-D.draft-mcguinness-mission-runtime}}. It additionally
 uses:
 
 Mission Authority Server (MAS):
-: A service that implements the Mission Issuer role of the issuance
-  profile without being an OAuth Authorization Server. It is the
+: A service that implements the Mission Issuer role of the OAuth
+  binding without being an OAuth Authorization Server. It is the
   `issuer` of the Missions it records, and it derives no tokens.
 
 Mission-joining PDP:
@@ -379,7 +380,7 @@ The contextual-governance kernel maps as follows:
 
 1. **Mission Reference**: the tuple (`issuer`, `mission_id`) names one
    Mission. The MAS issuer URL is the uniqueness namespace;
-   `mission_id` follows the issuance profile's comparison, retention,
+   `mission_id` follows the OAuth binding's comparison, retention,
    entropy, and non-reassignment rules.
 2. **Controller**: the MAS controls approval, Mission state, and the
    governance record. Consumers establish its identity and keys from
@@ -393,7 +394,7 @@ The contextual-governance kernel maps as follows:
 4. **Approved Context**: the Mission Intent, the recorded authority
    proposal where one was submitted, and the derived Authority Set
    in the immutable Mission record are the Approved Context. The
-   issuance profile's `intent_hash` and `authority_hash`, computed
+   OAuth binding's `intent_hash` and `authority_hash`, computed
    with the MAS issuer URL, plus `proposal_hash` where a proposal
    was submitted, are this binding's chosen commitments;
    they are not substrate-kernel requirements.
@@ -435,7 +436,7 @@ Bounded Reliance floor ({{I-D.draft-mcguinness-mission-substrate}}):
 | --- | --- | --- | --- | --- |
 | Lifecycle-Gated Authorization | supplied | always for MAS-native authority operations; a Mission-joining PDP deployment for joined action decisions | MAS-native authority operations check current state unconditionally; joined action decisions do so where a Mission-joining PDP is deployed ({{lifecycle-and-state}}, {{mission-join}}) | The unchanged Authorization Server does not gate token issuance or refresh; the token-layer residual runs to credential expiry |
 | State-Observable | supplied | always | Signed Mission Status responses with the `mission_max_stale_seconds` freshness bound ({{lifecycle-and-state}}, {{discovery}}) | Consumers fail closed when the declared freshness bound is exceeded |
-| Structured Authority | supplied | always | The issuance profile's Authority Set, including any supported type's own constraint vocabulary (for `mission_resource_access`, the Mission Resource Access Profile's Common Constraints), is held at the MAS and evaluated at the joining PDP | Semantics apply only to the declared authority-detail types and mappings |
+| Structured Authority | supplied | always | The OAuth binding's Authority Set, including any supported type's own constraint vocabulary (for `mission_resource_access`, the Mission Resource Access Profile's Common Constraints), is held at the MAS and evaluated at the joining PDP | Semantics apply only to the declared authority-detail types and mappings |
 | Monotonic Derivation | supplied | native child creation ({{native-child}}) | The defined no-broader-than relation at the native child-creation derivation point | PDP action evaluation is enforcement, never derivation; a separately approved expansion is a new approval; unchanged AS tokens are outside the claim |
 | Credential-Bound | supplied | the Join Assertion endpoint ({{join-assertion}}) | A signed assertion binds one introspected token digest and `cnf` thumbprint to the Mission; fact semantics: verified party correlation, with the assertion's `exp` bounded by the token's remaining lifetime | Neither the assertion nor the mapping join proves the Authorization Server issued the token under the Mission; a mapping-join-only deployment is outside this row |
 | Authorized Context Correlation | supplied | always | The mapping join and the Join Assertion ({{mission-join}}, {{join-assertion}}): the MAS and its joining PDPs are the joining authority under the enterprise mapping contract, joining the introspected credential, the subject and client mappings, and the Mission; a failed join denies `mission_mismatch`, never falling back | The association proves the credential belongs to the Mission's parties, never that it was issued for the Mission; the bare mapping join carries the (`subject`, `client`) equivalence-class ambiguity, and substitution protection requires the `cnf`-bound assertion ({{join-spoofing}}) |
@@ -517,8 +518,8 @@ The endpoint serves two operations, dispatched by request media type:
 ## Intent Submission {#intent-submission}
 
 The request body is a Mission Intent Submission envelope as the
-issuance profile defines it, `intent` plus OPTIONAL `evidence`, and
-the issuance profile's validation and Intent Submission Evidence
+OAuth binding defines it, `intent` plus OPTIONAL `evidence`, and
+the OAuth binding's validation and Intent Submission Evidence
 rules ({{I-D.draft-mcguinness-oauth-mission}}) and those of
 {{I-D.draft-mcguinness-oauth-mission-submission-evidence}} apply
 unchanged: the
@@ -527,18 +528,18 @@ MUST bound its total size, array lengths, evidence entry count, and
 evidence verification cost
 ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, Section
 "Bounded Verification"); and the envelope and the Intent are both
-closed at the top level. The issuance profile's OAuth error outcomes
+closed at the top level. The OAuth binding's OAuth error outcomes
 map to this endpoint's error codes ({{submission-errors}}):
 
 - A body that cannot be parsed as a JSON {{RFC8259}} object, is
   structurally invalid, exceeds the deployment's size bounds, or
-  contains a top-level member the issuance profile does not define
+  contains a top-level member the OAuth binding does not define
   MUST be refused with `invalid_mission_intent` (the MAS equivalent of
-  the issuance profile's `invalid_request` rejections, including
+  the OAuth binding's `invalid_request` rejections, including
   reject-unknown-top-level-member).
 - A well-formed Intent from which the MAS cannot derive a valid
   Authority Set under policy MUST be refused with `invalid_authority`
-  (the MAS's single equivalent of the issuance profile's two
+  (the MAS's single equivalent of the OAuth binding's two
   derivation-failure outcomes, `invalid_authorization_details` for a
   submitted proposal and `access_denied` for configured-mapping mode,
   {{I-D.draft-mcguinness-oauth-mission}}), so a client
@@ -548,14 +549,14 @@ map to this endpoint's error codes ({{submission-errors}}):
   evidence type absent from the submission
   ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, Section
   "Required Evidence Is Resolved Before Derivation") MUST be refused
-  with `invalid_mission_intent_evidence`, the code the issuance profile
+  with `invalid_mission_intent_evidence`, the code the OAuth binding
   registers for the same condition, carried here in the MAS error
   body; presented evidence is never silently ignored.
 
 The request body MAY additionally carry an `authorization_details`
 member: the client's authority proposal, an array of
-`authorization_details` objects. This member is this binding's
-proposal carriage, replacing the issuance profile's PAR-only
+`authorization_details` objects {{RFC9396}}. This member is this
+binding's proposal carriage, replacing the OAuth binding's PAR-only
 carriage rule; that profile's validation, derivation, recording, and
 hashing semantics apply unchanged
 ({{I-D.draft-mcguinness-oauth-mission}}). It is a proposal, never
@@ -563,26 +564,26 @@ authority, and it is a submission member, not a Submission-envelope
 member ({{native-carriage}}): the MAS MUST remove it before applying
 the envelope validation above.
 
-The issuance profile's intake refusals for a proposed entry map to
+The OAuth binding's intake refusals for a proposed entry map to
 `invalid_authority` here. A Mission created from a submission
 carrying a proposal records `proposed_authority` and `proposal_hash`
-as the issuance profile's Mission record defines them.
+as the OAuth binding's Mission record defines them.
 
 A MAS has no derivation event: no token is issued under the Mission,
-so a requested `requested_derivation_limit`
+so a `requested_derivation_limit` member
 ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}) binds nothing here (a MAS
 implementing the issuance-grant companion has one, each grant
 minted, and applies that profile's counting rule,
 {{I-D.draft-mcguinness-oauth-mission-issuance-grant}}). A MAS SHOULD refuse
 an Intent that carries it, or record it and ensure the approval
-rendering marks it non-binding, per the issuance profile's rule that
+rendering marks it non-binding, per the OAuth binding's rule that
 consent is not given to a limit that binds nowhere. The same
 treatment applies to any future Mission Intent member scoped to an
 issuance event.
 
 On acceptance the MAS derives the Authority Set from the Intent, and
 from the authority proposal where one was submitted, under
-the issuance profile's derivation rules
+the OAuth binding's derivation rules
 ({{I-D.draft-mcguinness-oauth-mission}}) and returns HTTP 202 with a
 pending-submission reference:
 
@@ -647,7 +648,7 @@ A submission is in one of four states:
 
 Only `approved` delivers a Mission: a consumer MUST treat every other
 `status` value, recognized or not, as not approved, mirroring the
-issuance profile's only-`active` rule. A resolved submission MUST
+OAuth binding's only-`active` rule. A resolved submission MUST
 remain resolvable for a deployment-defined window; the reference is
 never reused.
 
@@ -683,7 +684,9 @@ A consumer MUST ignore members it does not recognize.
 | `invalid_authority` | 400 | Well-formed Intent, but no valid Authority Set is derivable under policy. |
 | `invalid_mission_intent_evidence` | 400 | An evidence entry of unsupported type or failing its type's verification, or a policy-required evidence type absent from the submission. |
 | `unauthorized` | 401 | Request not authenticated. |
+| `join_failed` | 403 | The acting token does not join the referenced Mission ({{join-assertion-request}}). |
 | `not_found` | 404 | A referenced submission or Mission does not exist OR is not visible to the caller. |
+| `conflict` | 409 | A resolved predecessor or parent whose state or serialization refuses the operation ({{native-carriage}}). |
 | `rate_limited` | 429 | Caller is rate-limited. |
 | `unavailable` | 503 | MAS temporarily cannot serve the request. |
 
@@ -706,8 +709,8 @@ routes each pending submission to its approval surface (a review
 application, queue, or policy engine) and resolves it when the
 decision is made.
 
-The approval event executes steps 1 through 4 of the issuance
-profile's approval event unchanged
+The approval event executes steps 1 through 4 of the OAuth
+binding's approval event unchanged
 ({{I-D.draft-mcguinness-oauth-mission}}):
 
 1. Authenticate the Approver; this authentication MUST satisfy the
@@ -718,22 +721,22 @@ profile's approval event unchanged
    `acr_values`/`max_age`, an OAuth authorization-request parameter
    shape a MAS, having no such request, does not share), so the floor
    alone governs here.
-2. Establish the Subject under the issuance profile's rules: the MAS
+2. Establish the Subject under the OAuth binding's rules: the MAS
    MUST itself establish the Subject's (`iss`, `sub`) and MUST NOT
    take it from unauthenticated client input.
-3. Render the derived Authority Set for consent with the issuance
-   profile's rendering rules applied unchanged: client-supplied
+3. Render the derived Authority Set for consent with the OAuth
+   binding's rendering rules applied unchanged: client-supplied
    strings inert, direction-override and confusable presentation
    mitigated, derived authority visually distinguished from client
    text.
 4. Compute the integrity anchors, `authority_hash`, `intent_hash`,
    and, where an authority proposal was submitted, `proposal_hash`,
-   using the issuance profile's envelope with the MAS's issuer URL as
+   using the OAuth binding's envelope with the MAS's issuer URL as
    `iss`.
 
 Step 5 becomes: create the Mission record in the `active` state
-atomically with the approval decision. The record is the issuance
-profile's Mission Record, member for member; its `issuer` is the MAS's
+atomically with the approval decision. The record is the OAuth
+binding's Mission Record, member for member; its `issuer` is the MAS's
 issuer URL and its `approval_event_id` is the approval idempotency
 key. There is no authorization code to bind, so the deferred-approval
 profile's re-sequencing of this step
@@ -756,7 +759,7 @@ carries:
 
 `mission_expires_at`:
 : REQUIRED. A string. The Mission's effective `expires_at`, the
-  issuance profile's common Mission-creating response member
+  OAuth binding's common Mission-creating response member
   ({{I-D.draft-mcguinness-oauth-mission}}): this response is the
   success response that first delivers the newly created Mission's
   identifier, and no OAuth credential accompanies it here.
@@ -764,7 +767,7 @@ carries:
 `authorization_details`:
 : REQUIRED. An array. The consented Authority Set, so the client
   learns its granted authority here; this response is the MAS
-  counterpart of the issuance profile's token-response
+  counterpart of the OAuth binding's token-response
   `authorization_details` echo.
 
 Example:
@@ -812,7 +815,7 @@ implements them as its state surface, by reference:
   ({{I-D.draft-mcguinness-oauth-mission-signals}}), which compose
   unchanged, with the MAS as the transmitting Mission Issuer.
 
-The issuance profile's token-introspection projection does not apply:
+The OAuth binding's token-introspection projection does not apply:
 there is no token to introspect.
 
 The MAS publishes the corresponding metadata members
@@ -873,7 +876,7 @@ of the request body:
 
 These are submission members, not Mission Intent members: a MAS that
 implements this capability MUST remove them before applying the
-issuance profile's Intent validation, and the remainder of the body
+OAuth binding's Intent validation, and the remainder of the body
 is the Mission Intent Submission envelope, validated unchanged
 ({{intent-submission}}). On a
 MAS that does not implement this capability they are undefined
@@ -892,7 +895,7 @@ not exist on this surface; the binding of {{native-binding}} replaces
 it.
 
 The referenced profiles' OAuth error outcomes map onto this endpoint's
-error surface as the issuance profile's do ({{intent-submission}}):
+error surface as the OAuth binding's do ({{intent-submission}}):
 `invalid_request` outcomes map to `invalid_mission_intent`, and
 authority-derivation failures to `invalid_authority`. Two rules cover
 the outcomes those profiles express as `invalid_grant`:
@@ -1297,7 +1300,7 @@ A Mission-joining PDP and its PEPs MUST observe the following:
    ({{mapping-contract}}), exactly as for subjects.
 5. **Delegate narrowing.** When the joined party is a delegate rather
    than the Mission's `client_id`, the PDP MUST narrow the effective
-   Authority Set to the delegable subset under the issuance profile's
+   Authority Set to the delegable subset under the OAuth binding's
    per-entry `delegation` rules
    ({{I-D.draft-mcguinness-oauth-mission}}): entries without a
    `delegation` member are excluded, `allowed_delegates` is applied,
@@ -1399,7 +1402,7 @@ the action under the Mission's Authority Set and permits:
       "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t",
     "join_view_id":
       "sha-256:dV7wM3sK9nQ2vL5tR8bY1eG4jF6xH0pC3nT9kV2mZ5t",
-    "action_class": "irreversible_action",
+    "action_class": "consequential_read",
     "class_source": "resource_floor",
     "permit_expires_at": "2026-11-02T08:15:30Z"
   }
@@ -1432,7 +1435,7 @@ match the referenced Mission:
   "context": {
     "decision_id": "dec_2nP4qV9rL3tY6sB1zN0eF7jB8K",
     "denial_reason": "mission_mismatch",
-    "action_class": "irreversible_action",
+    "action_class": "consequential_read",
     "class_source": "resource_floor",
     "policy_view_id":
       "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"
@@ -1457,7 +1460,8 @@ its tokens ({{I-D.draft-mcguinness-oauth-client-instance-id}}: the
 identifies a concrete runtime instance once the PDP has validated that
 context and established its association with the presenter as a Context
 Consumer ({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section
-7.5). A sender-constraint key unique to the instance (Section 7.3)
+7.5). A sender-constraint key unique to the instance
+({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 7.3)
 establishes that association only where the token issuer conveys context
 solely from direct Client Attestation validation; context an issuer may
 have preserved from an input token also needs a profile that
@@ -1511,11 +1515,11 @@ channel's.
 
 The propagated value is exactly the Mission reference tuple:
 `mission_id` and `issuer`, compared as the canonical (`issuer`,
-`mission_id`) pair under the issuance profile's comparison rules
+`mission_id`) pair under the OAuth binding's comparison rules
 ({{I-D.draft-mcguinness-oauth-mission}}). The channel carries nothing
 else: state, integrity anchors, authority, and policy data always
 come from the MAS's signed Mission Status response
-({{submission-status}}), and a request carrying any of them in this
+({{lifecycle-and-state}}), and a request carrying any of them in this
 channel MUST be refused, never silently ignored, so ambiguity is
 detectable rather than absorbed. The tuple is single-homed: each
 carriage below maps this one tuple, and a new carrier profiles it
@@ -1530,7 +1534,8 @@ layout; the field is one line):
 ~~~ http-message
 POST /call HTTP/1.1
 Host: gateway.example.com
-Authorization: Bearer 2YotnFZFEjr1zCsicMWpAA
+Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
+DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 Mission-Reference: id="msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
   issuer="https://mas.example.com"
 ~~~
@@ -1667,7 +1672,7 @@ The tuple is a stable correlator and lands in gateway logs. An
 intermediary MUST NOT copy the field or the `_meta` key onto a
 request to an unrelated authority domain, and a terminating PEP
 SHOULD remove it before forwarding unless the downstream recipient
-participates in the same verified binding. The issuance profile's
+participates in the same verified binding. The OAuth binding's
 Mission Identifier correlation considerations apply to logged
 values.
 
@@ -1683,8 +1688,10 @@ supports the upgrade publishes its join-assertion endpoint as
 `mission_join_assertion_endpoint` ({{discovery}}). The endpoint MUST
 meet the TLS and caller-authentication requirements of the mission
 submission endpoint ({{mission-submission}}), and accepts the
-authentication methods and client-assertion algorithms advertised for
-it. A client assertion's `aud` and a caller-authentication access
+authentication methods and client-assertion algorithms advertised in
+`mission_submission_endpoint_auth_methods_supported` and
+`mission_submission_endpoint_auth_signing_alg_values_supported`. A
+client assertion's `aud` and a caller-authentication access
 token's audience MUST name the join-assertion endpoint. For
 access-token authentication, the MAS publishes Protected Resource
 Metadata {{RFC9728}} for this endpoint, identifying its resource,
@@ -1977,11 +1984,11 @@ possession of a held Mission-bound access token
 this mode because it requires the Mission-bound credential
 ({{mission-substrate}}).
 
-**Upgrade path.** Implementing the issuance profile at the AS restores
+**Upgrade path.** Implementing the OAuth binding at the AS restores
 what this mode lacks: Mission-bound credentials and issuance gating.
 The MAS then serves as the AS's Mission store, or merges into the AS.
 The Mission record, the integrity anchors, and the lifecycle carry
-over unchanged, because a MAS operates the issuance profile's own
+over unchanged, because a MAS operates the OAuth binding's own
 definitions of all three; the enforcement join becomes unnecessary for
 newly issued tokens, which carry the `mission` claim.
 
@@ -2010,8 +2017,8 @@ runtime obligations hold for every path in the set; a path outside
 the set is explicitly unclaimed, and never inherits the profile from
 the deployment's name.
 
-The profile is the Runtime-Enforced level of the Mission Assurance
-Levels under the MAS binding, with the obligations below
+The profile builds on the Runtime-Enforced level of the Mission
+Assurance Levels under the MAS binding and adds the obligations below
 ({{I-D.draft-mcguinness-mission-architecture}}).
 
 - **Status and lifecycle.** The MAS MUST serve the Mission Status
@@ -2140,18 +2147,20 @@ Authorization Server, and it assumes capabilities there:
 configuration rather than code, but gating nonetheless. Before
 claiming the profile a deployment confirms its estate AS provides:
 
-- **Token introspection.** {{RFC7662}} introspection reachable by the
-  MAS, under credentials the deployment protects
-  ({{sec-join-assertion}}); the MAS cannot mint a Join Assertion
-  without it ({{join-assertion-request}}).
+- **Token introspection or validatable JWT access tokens.**
+  {{RFC7662}} introspection reachable by the MAS, under credentials the
+  deployment protects ({{sec-join-assertion}}), or JWT access tokens
+  the MAS can validate locally under {{RFC9068}}; the MAS cannot mint a
+  Join Assertion for a token it can neither introspect nor validate
+  ({{join-assertion-request}}).
 - **Sender-constrained issuance.** DPoP-bound or mutual-TLS-bound
   access tokens for the agent clients acting in the high-consequence
   classes: the join requires sender-constraint for those classes
   ({{mission-join}}), and the MAS MUST NOT mint an assertion for a
   token without a `cnf` key ({{join-assertion-request}}).
-- **`cnf` in introspection.** Introspection responses that report the
-  token's `cnf` confirmation, since the assertion binds the key
-  thumbprint that response reports.
+- **`cnf` in introspection or token claims.** Introspection responses,
+  or validated JWT claims, that report the token's `cnf` confirmation,
+  since the assertion binds the key thumbprint they report.
 
 An estate whose Authorization Server cannot provide these still
 joins under the mapping join at the conformance floor
@@ -2174,7 +2183,7 @@ performs:
 - the client namespace mapping (how a credential's client maps to the
   Mission's `client_id`);
 - the delegate policy applied to `act`-chain actors, which MUST state
-  how the issuance profile's per-entry `delegation` rules are
+  how the OAuth binding's per-entry `delegation` rules are
   evaluated at the join;
 - whether client-instance identity is supported and required;
 - a mapping version identifier, so a mapping change is detectable;
@@ -2256,8 +2265,9 @@ is stated ({{I-D.draft-mcguinness-mission-runtime}}).
 
 ## Progressive Adoption {#deployment-adoption}
 
-A MAS is adopted level by level across the Mission Assurance Levels
-({{I-D.draft-mcguinness-mission-architecture}}), each phase
+A MAS deployment adopts the Mission Assurance Levels in the order
+deployments build them ({{I-D.draft-mcguinness-mission-architecture}});
+the levels are adoption bundles, not a ladder, and each phase is
 independently useful. The six phases group into three modes, and a
 deployment's claim is bounded by its mode: **records mode** (phases
 1 and 2) is inventory, approval, lifecycle, and audit, with no
@@ -2265,7 +2275,7 @@ prevention claim of any kind; **enforced-paths mode** (phases 3 and
 4) prevents on exactly the paths the Enforcement Scope Statement
 enumerates and is records mode everywhere else; **issuance mode**
 (phases 5 and 6) restores the token-layer gate. "No AS code change"
-holds in every mode; what changes is the claim, and a
+holds in phases 1 through 5; what changes is the claim, and a
 high-consequence enforcement claim requires issuance mode's
 machinery or the Estate Prerequisites' AS features
 ({{enterprise-prerequisites}}), never records alone:
@@ -2273,16 +2283,17 @@ machinery or the Estate Prerequisites' AS features
 1. The MAS records Missions and approvals: governance and audit of
    what tasks were approved, with no enforcement change yet
    (Baseline Issuance under the MAS binding: governance and audit,
-   without the level's issuance-gate kill switch; phase 2 supplies
-   the state-based cutoff).
-2. Mission Status and lifecycle become the estate-wide kill switch:
-   consumers fail safe on non-`active` state (the state-aware
-   half-step).
+   with no kill switch of any kind).
+2. Mission Status and lifecycle publish Mission state estate-wide:
+   the freshness surface runtime enforcement relies on. Under the MAS
+   binding this alone is no kill switch.
 3. PEP/PDP runtime enforcement gates consequential actions per the
-   runtime profile (the Runtime-Enforced level).
-4. Join Assertions and instance-bound joins harden the join for the
-   high-consequence classes (the Enterprise profile,
-   {{enterprise-profile}}).
+   runtime profile and, with phase 2's state surface, supplies the
+   kill switch (the Runtime-Enforced level).
+4. Join Assertions harden the join on joined paths outside the
+   high-consequence classes, which the Enterprise profile reserves
+   for Mission-bound issuance, and instance-bound joins narrow it to
+   one workload (the Enterprise profile, {{enterprise-profile}}).
 5. Estate Authorization Servers adopt the issuance join
    ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}), redeeming
    MAS-minted grants for Mission-bound, state-gated tokens: the
@@ -2318,7 +2329,7 @@ A **Mission Authority Server**:
   {{mission-submission}};
 - executes the approval event of {{mission-approval}}, creating the
   Mission record `active` atomically with the approval decision;
-- records Missions per the issuance profile's Mission Record section
+- records Missions per the OAuth binding's Mission Record section
   and retains each record for the audit horizon;
 - serves the Mission Status operation and the Mission Lifecycle
   endpoint with its full operation set (`revoke`, `suspend`, `resume`,
@@ -2375,7 +2386,7 @@ A client cannot gain authority by asserting another party's
 `mission_id`: the join requires the subject and client the PEP
 authenticates from the credential to match values the MAS recorded at
 approval, which the client cannot alter, so a reference to someone
-else's Mission fails with `mission_mismatch`. Three residuals remain:
+else's Mission fails with `mission_mismatch`. Four residuals remain:
 
 - **Mapping coarseness.** Where the deployment's account mapping is
   many-to-one (several AS accounts map to one directory subject), any
@@ -2464,7 +2475,7 @@ so within their lifetime and scope they work wherever PEP coverage is
 absent, and Mission revocation does not touch them. Mitigations are
 short token lifetimes at the AS, narrow scope hygiene for agent
 clients, and complete PEP coverage of consequential paths; none
-eliminates the residual, which only the issuance profile's gating
+eliminates the residual, which only the OAuth binding's gating
 removes ({{limitations}}).
 
 ## MAS Availability
@@ -2513,7 +2524,7 @@ profile's key-retention rules keep archived state evidence verifiable.
 ## Approval Surface Authentication
 
 The MAS's review surface is the approval event surface, and the
-issuance profile's approval rules apply to it unchanged: the Approver
+OAuth binding's approval rules apply to it unchanged: the Approver
 is authenticated to the `acr` mapping, the Subject is never taken from
 client input, client text is rendered inert, and derived authority is
 visually distinguished from it ({{mission-approval}}). The submission,
@@ -2525,11 +2536,11 @@ preserve the anti-oracle property
 
 A MAS holds task data centrally: every governed Mission Intent (goals,
 constraints, purposes) and every Mission record, outside the AS that
-holds the deployment's identity data. The issuance profile's
+holds the deployment's identity data. The OAuth binding's
 minimization guidance applies: collect only the Intent members the
 task needs, audience-filter every disclosure surface per the status
 profile's rules, and treat submission, status, and lifecycle logs as
-PII sinks. Retention is anchored on the issuance profile's audit
+PII sinks. Retention is anchored on the OAuth binding's audit
 horizon: records are retained at least that long, and SHOULD NOT be
 retained materially longer without a documented basis.
 
@@ -2537,8 +2548,8 @@ retained materially longer without a documented basis.
 
 ## HTTP Field Name Registration
 
-This document registers the following in the "Hypertext Transfer
-Protocol (HTTP) Field Name" registry ({{RFC9110}}):
+IANA is requested to register the following in the "Hypertext
+Transfer Protocol (HTTP) Field Name" registry ({{RFC9110}}):
 
 - Field Name: Mission-Reference
 - Status: permanent
@@ -2562,16 +2573,19 @@ registry {{RFC8615}}:
 IANA is requested to create the "Mission Authority Server Metadata"
 registry. The registration policy is
 Specification Required {{RFC8126}}. A Designated Expert reviews a
-submission for: a Member Name following the metadata naming
+submission for: a Metadata Name following the metadata naming
 conventions of {{discovery}} and not already registered; a definition
 precise enough that a client can consume the member from its
 specification alone; and no overlap with an existing member's
 semantics (a refinement belongs in the defining specification, not a
 parallel member). Registration does not require IETF review or a
-Standards Track document. Each entry has: Member Name, Change
-Controller, and Reference. The registry is seeded with the members of
-{{discovery}};
-for each, Change Controller IETF and Reference this document:
+Standards Track document. Each entry has the fields of the
+registration template in Section 7.1.1 of {{RFC8414}}: Metadata Name,
+Metadata Description, Change Controller, and Specification
+Document(s). The registry is seeded with the members of
+{{discovery}}; for each, the Metadata Description is the member's
+definition there, the Change Controller is IETF, and the
+Specification Document is this document:
 
 - `issuer`
 - `mission_submission_endpoint`
@@ -2591,7 +2605,7 @@ for each, Change Controller IETF and Reference this document:
 
 ## Media Type Registration
 
-This document registers one media type per {{RFC6838}}.
+IANA is requested to register one media type per {{RFC6838}}.
 
 ### Mission Join Assertion Media Type
 
@@ -2618,20 +2632,32 @@ This document registers one media type per {{RFC6838}}.
 - Author: IETF
 - Change controller: IETF
 
-## Runtime Denial Reason
+## Runtime Denial Reasons
 
-`mission_mismatch` extends the denial-reason set of
-{{I-D.draft-mcguinness-mission-authzen}} under that profile's
-denial-reason extensibility rule
-({{mission-join}}). That profile's denial reasons are AuthZEN
+`mission_mismatch` and `mission_reference_conflict` extend the
+denial-reason set of {{I-D.draft-mcguinness-mission-authzen}} under
+that profile's denial-reason extensibility rule ({{mission-join}},
+{{reference-verification}}). That profile's denial reasons are AuthZEN
 extension data and are not registered in an IETF registry, so this
-document requests no IANA action for it.
+document requests no IANA action for them.
 
 --- back
 
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Corrections. Cross-references name the right sections (the
+  propagation tuple's state source, a client-instance section);
+  Join Spoofing counts four residuals; IANA names both runtime denial
+  reasons; the error table lists `join_failed` and `conflict`; RFC 8414
+  and RFC 9396 are normative references, and the metadata registry
+  uses the RFC 8414 template; the examples show a DPoP-bound
+  Mission-Reference request and classify reads as
+  `consequential_read`; Estate Prerequisites name local RFC 9068
+  validation; Progressive Adoption follows the architecture's
+  Assurance Levels; and "the issuance profile" becomes "the OAuth
+  binding" throughout.
 
 - Authentication discovery mirrors the Status draft: per-endpoint
   `*_auth_methods_supported` and `*_auth_signing_alg_values_supported`
@@ -2786,7 +2812,7 @@ re-check.
       "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t",
     "join_view_id":
       "sha-256:dV7wM3sK9nQ2vL5tR8bY1eG4jF6xH0pC3nT9kV2mZ5t",
-    "action_class": "irreversible_action",
+    "action_class": "consequential_read",
     "class_source": "resource_floor",
     "permit_expires_at": "2026-11-02T08:15:30Z"
   }
