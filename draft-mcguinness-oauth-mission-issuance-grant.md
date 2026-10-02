@@ -75,6 +75,7 @@ normative:
     date: 2026
 
 informative:
+  RFC8628:
   RFC8725:
   I-D.draft-mcguinness-oauth-mission-consent-evidence:
     title: "Mission Consent Evidence for OAuth 2.0"
@@ -782,8 +783,9 @@ A source that is unavailable, fails verification, or reports a state
 `version` older than one already observed for this Mission is a
 transient failure, never authority exhaustion, and is refused in a
 machine-readable shape: this profile defines a token-endpoint use of
-the OAuth `temporarily_unavailable` error code {{RFC6749}}, carried
-with HTTP status 503. The response MAY carry `Retry-After` per the
+the OAuth `temporarily_unavailable` error code {{RFC6749}}
+({{oauth-error-registration}}), carried with HTTP status 503. The
+response MAY carry `Retry-After` per the
 deployment's declared state-recovery policy.
 The consuming AS leaves its stored ceiling unchanged. `invalid_grant`
 stays for the permanent classes: an invalid, expired, or replayed
@@ -1159,6 +1161,20 @@ Requests ({{par-carriage}}):
 - Parameter usage location: authorization request
 - Change controller: IETF
 - Specification document(s): {{par-carriage}} of this document
+
+## OAuth Extensions Error Registration {#oauth-error-registration}
+
+IANA is requested to register the following in the "OAuth Extensions
+Error" registry {{RFC6749}}. The name is the existing OAuth error code
+of {{Section 4.1.2.1 of RFC6749}}, registered only for the
+authorization endpoint; this entry adds its token-endpoint use
+({{transient-failure}}), as {{RFC8628}} did for `access_denied`.
+
+- Name: `temporarily_unavailable`
+- Usage Location: token error response
+- Protocol Extension: Mission Issuance Grant
+- Change Controller: IETF
+- Specification Document(s): {{transient-failure}} of this document
 
 ## OAuth Authorization Server Metadata Registration
 
