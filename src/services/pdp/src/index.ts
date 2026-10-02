@@ -24,7 +24,7 @@ export {
   type PrincipalMappingResolver,
 } from "./evaluate.js";
 export { PAYMENTS_RELATIONS, relationForAction, stalenessBound } from "./policy.js";
-export { RUNTIME_POSTURE, RUNTIME_CLASSES, LEASE_REQUIRED_CLASSES, executionLeaseMaxSeconds, loadRuntimePosture, PostureConfigError, postureStalenessBound, type RuntimePosture, type StalenessBound } from "./runtime-posture.js";
+export { RUNTIME_POSTURE, RUNTIME_CLASSES, LEASE_REQUIRED_CLASSES, executionLeaseMaxSeconds, loadRuntimePosture, PostureConfigError, postureStalenessBound, reversibleWriteKeyControl, type RuntimePosture, type StalenessBound } from "./runtime-posture.js";
 export { executionLeaseMs, permitDeadline, type PermitCeiling, type PermitDeadline, type PermitDeadlineInput } from "./permit-deadline.js";
 export {
   type ClaimChannel,
@@ -108,6 +108,9 @@ export {
   evidenceDeclarationFindings,
   resourceDispositions,
   retentionWindowSeconds,
+  REVERSIBLE_WRITE_CLASS,
+  reversibleWriteDeclarationFor,
+  reversibleWriteRetentionSeconds,
   validateEnforcementScopeStatement,
   type EvidenceDeclarationContext,
   type PerimeterDisposition,
@@ -121,6 +124,7 @@ export {
   type EnforcementScopeBaseline,
   type EnforcementScopeFinding,
   type EnforcementScopeStatement,
+  type ReversibleWriteIdempotencyDeclaration,
   type TransactionAssuranceDeclaration,
 } from "./enforcement-scope.js";
 export {
