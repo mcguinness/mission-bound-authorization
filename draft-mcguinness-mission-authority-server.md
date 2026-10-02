@@ -1687,8 +1687,10 @@ supports the upgrade publishes its join-assertion endpoint as
 `mission_join_assertion_endpoint` ({{discovery}}). The endpoint MUST
 meet the TLS and caller-authentication requirements of the mission
 submission endpoint ({{mission-submission}}), and accepts the
-authentication methods and client-assertion algorithms advertised for
-it. A client assertion's `aud` and a caller-authentication access
+authentication methods and client-assertion algorithms advertised in
+`mission_submission_endpoint_auth_methods_supported` and
+`mission_submission_endpoint_auth_signing_alg_values_supported`. A
+client assertion's `aud` and a caller-authentication access
 token's audience MUST name the join-assertion endpoint. For
 access-token authentication, the MAS publishes Protected Resource
 Metadata {{RFC9728}} for this endpoint, identifying its resource,
