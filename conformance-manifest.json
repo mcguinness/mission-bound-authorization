@@ -22723,7 +22723,7 @@
    "id": "issuance-grant.token-issuance.mission-claim-carriage",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
    "anchor": "token-issuance",
-   "text": "Issued tokens carry the issuance profile's `mission` claim with the grant's `id`, `issuer`, and `expires_at` unchanged",
+   "text": "Issued tokens carry the grant's `mission` object as the issuance profile's `mission` claim, unchanged except that they need not carry `authority_hash`",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -22733,7 +22733,7 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "every token issued under a grant carries a mission claim whose id, issuer, and expires_at equal the grant's mission members; authority_hash need not appear on the token and is recorded with the issuance instead"
+    "normative": "every token issued under a grant carries the grant's mission object as its mission claim, unchanged except that authority_hash may be absent; id, issuer, and expires_at always equal the grant's, and the consuming AS records authority_hash with the issuance"
    },
    "level": "endpoint",
    "coverage": "todo",

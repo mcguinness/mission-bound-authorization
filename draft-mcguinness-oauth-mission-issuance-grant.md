@@ -650,11 +650,12 @@ any check fails:
 
 On success the consuming AS mints tokens under these rules:
 
-- **`mission` claim.** Issued tokens carry the issuance profile's
-  `mission` claim with the grant's `id`, `issuer`, and `expires_at`
-  unchanged ({{mission-claim}}). They need not carry `authority_hash`:
-  the consuming AS records it with each issuance instead, which joins
-  its issuance log to the MAS record ({{trust}}).
+- **`mission` claim.** Issued tokens carry the grant's `mission`
+  object as the issuance profile's `mission` claim, unchanged except
+  that they need not carry `authority_hash`; `id`, `issuer`, and
+  `expires_at` always carry over ({{mission-claim}}). The consuming AS
+  records `authority_hash` with each issuance, beside the Mission
+  reference that joins its issuance log to the MAS record ({{trust}}).
 - **Subset.** Issued `authorization_details` MUST be a subset of the
   grant's. The consuming AS's own policy can only narrow them: it
   MUST NOT widen, remap, or supplement them. Representing them as
