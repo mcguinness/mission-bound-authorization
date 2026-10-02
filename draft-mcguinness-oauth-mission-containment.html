@@ -1285,21 +1285,24 @@ document.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.23">
-            <p id="section-toc.1-1.23.1"><a href="#section-23" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+            <p id="section-toc.1-1.23.1"><a href="#section-23" class="auto internal xref">23</a>. <a href="#name-document-history" class="internal xref">Document History</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.24">
-            <p id="section-toc.1-1.24.1"><a href="#section-24" class="auto internal xref"></a><a href="#name-references" class="internal xref">References</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.24.2.1">
-                <p id="section-toc.1-1.24.2.1.1"><a href="#section-24.1" class="auto internal xref"></a><a href="#name-normative-references" class="internal xref">Normative References</a></p>
+            <p id="section-toc.1-1.24.1"><a href="#section-24" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
 </li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.24.2.2">
-                <p id="section-toc.1-1.24.2.2.1"><a href="#section-24.2" class="auto internal xref"></a><a href="#name-informative-references" class="internal xref">Informative References</a></p>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.25">
+            <p id="section-toc.1-1.25.1"><a href="#section-25" class="auto internal xref"></a><a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.25.2.1">
+                <p id="section-toc.1-1.25.2.1.1"><a href="#section-25.1" class="auto internal xref"></a><a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.25.2.2">
+                <p id="section-toc.1-1.25.2.2.1"><a href="#section-25.2" class="auto internal xref"></a><a href="#name-informative-references" class="internal xref">Informative References</a></p>
 </li>
             </ul>
 </li>
-          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.25">
-            <p id="section-toc.1-1.25.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.26">
+            <p id="section-toc.1-1.26.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -2022,7 +2025,7 @@ successor Mission adjudicated under the expansion profile
 comes only from its own approval event. An <code>authority_contained</code>
 denial is the expansion-eligible signal for that path
 (<a href="#denial-reason" class="auto internal xref">Section 12</a>).<a href="#section-15-1" class="pilcrow">¶</a></p>
-<p id="section-15-2">Two rules close the laundering gap between containment and
+<p id="section-15-2">Three rules close the laundering gap between containment and
 expansion:<a href="#section-15-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-15-3.1">
@@ -2037,10 +2040,26 @@ predecessor's minus a memory.<a href="#section-15-3.1.1" class="pilcrow">¶</a><
 consent disclosure: at minimum the contained capability and the
 event class that contained each entry.<a href="#section-15-3.2.1" class="pilcrow">¶</a></p>
 </li>
+        <li class="normal" id="section-15-3.3">
+          <p id="section-15-3.3.1">Containing capability places a containment restriction on the
+Mission's expansion chain, the successors linked to it through
+<code>predecessor</code>. The Mission Issuer <span class="bcp14">MUST</span> retain each restriction,
+with its contained capability and event class, across every later
+successor in the chain, and <span class="bcp14">MUST</span> surface it in the consent
+disclosure of any later expansion whose authority overlaps that
+capability. A restriction clears only when a fresh human approval
+explicitly authorizes restoring the affected authority with its
+cause disclosed; an approval of unrelated authority does not clear
+it.<a href="#section-15-3.3.1" class="pilcrow">¶</a></p>
+</li>
       </ul>
 <p id="section-15-4">Together they keep the successor clean without letting it launder:
 capability removed for cause can return, but only past an Approver
-who saw the cause.<a href="#section-15-4" class="pilcrow">¶</a></p>
+who saw the cause, however many successors intervene. A restriction
+governs what a later approval discloses and, under the progressive
+authorization profile, whether a drawdown may be adjudicated by
+policy (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>); it never
+places a successor's approved authority under an inherited overlay.<a href="#section-15-4" class="pilcrow">¶</a></p>
 <p id="section-15-5">That guarantee is only as strong as the disclosure's own integrity
 reaching the Approver unaltered, and the issuance profile does not
 itself anchor consent-disclosure integrity. Where an implementation
@@ -2426,7 +2445,8 @@ only through an approval that sees the containment history
 <p id="section-20.4-1">The disclosure rule of <a href="#restoration" class="auto internal xref">Section 15</a> is load-bearing: without it,
 expansion is a laundering path in which capability removed for cause
 returns through a successor the Approver believes is clean. An
-implementation that omits the predecessor's containment history from
+implementation that omits the predecessor's containment history, or
+an outstanding restriction carried from earlier in the chain, from
 the expansion consent defeats containment for any adversary patient
 enough to ask again.<a href="#section-20.4-1" class="pilcrow">¶</a></p>
 </section>
@@ -2632,23 +2652,41 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 </div>
 </section>
 </div>
-<div id="acknowledgments">
+<div id="document-history">
 <section id="section-23">
+      <h2 id="name-document-history">
+<a href="#section-23" class="section-number selfRef">23. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
+      </h2>
+<p id="section-23-1">[[ To be removed from the final specification ]]<a href="#section-23-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-23-2.1">
+          <p id="section-23-2.1.1">Restoration Through Expansion (<a href="#restoration" class="auto internal xref">Section 15</a>): containing
+capability places a restriction on the Mission's expansion chain,
+retained across later successors and surfaced in any later
+expansion consent whose authority overlaps it, until a fresh human
+approval explicitly restores that authority with its cause
+disclosed. A successor's overlay still starts empty.<a href="#section-23-2.1.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="section-24">
       <h2 id="name-acknowledgments">
 <a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
       </h2>
-<p id="section-23-1">This document is part of the Mission-Bound Authorization for OAuth
+<p id="section-24-1">This document is part of the Mission-Bound Authorization for OAuth
 2.0 set and defines the in-Mission narrowing complement to Mission
-Expansion's widening.<a href="#section-23-1" class="pilcrow">¶</a></p>
+Expansion's widening.<a href="#section-24-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="sec-combined-references">
-<section id="section-24">
+<section id="section-25">
       <h2 id="name-references">
 <a href="#name-references" class="section-name selfRef">References</a>
       </h2>
 <div id="sec-normative-references">
-<section id="section-24.1">
+<section id="section-25.1">
         <h3 id="name-normative-references">
 <a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
@@ -2701,7 +2739,7 @@ Expansion's widening.<a href="#section-23-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="sec-informative-references">
-<section id="section-24.2">
+<section id="section-25.2">
         <h3 id="name-informative-references">
 <a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
@@ -2753,6 +2791,10 @@ Expansion's widening.<a href="#section-23-1" class="pilcrow">¶</a></p>
 <dt id="I-D.draft-mcguinness-oauth-mission-management">[I-D.draft-mcguinness-oauth-mission-management]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Management for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-management.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-management.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-progressive">[I-D.draft-mcguinness-oauth-mission-progressive]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Progressive Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-signals">[I-D.draft-mcguinness-oauth-mission-signals]</dt>
         <dd>
