@@ -13300,13 +13300,13 @@
      "surface": "decision-request"
     },
     {
-     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
-     "name": "the PDP idempotency claim through the executing PEP (@spec runtime#idempotency, #917) > a completed wire settles its claim over the co-resident channel: the same key is refused as completed and executes once",
-     "level": "endpoint",
-     "surface": "resource-operation"
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > a failure settles only from the attempt that redeemed the permit > a suppression from any other attempt never settles: the claim stays unresolved, closes indeterminate, and is never purged",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "High-consequence conjuncts witnessed (#917): the PDP's claim domain is a durable single-writer SQLite file; a completed or failed key is refused (duplicate_suppressed, next_action none) through terminal_at plus the declared idempotency_horizon_seconds (604800) and is new only after it; an indeterminate key carries no horizon and stays refused past it; a terminal row compacted after the reconciliation window (its stored decision dropped, its commitments kept) still refuses; restart, crash-before-persist and missing consumption knowledge all suppress rather than treat the key as fresh. Partial because the final conjunct is not witnessed: the shipped Enforcement Scope Statement publishes no retention posture for keys outside the high-consequence classes; that posture belongs to the reversible-write reservation (#918)."
+   "notes": "High-consequence conjuncts witnessed (#917): the PDP's claim domain is a durable single-writer SQLite file; a completed or failed key is refused (duplicate_suppressed, next_action none) through terminal_at plus the declared idempotency_horizon_seconds (604800) and is new only after it; an indeterminate key carries no horizon and stays refused past it; a terminal row compacted after the reconciliation window (its stored decision dropped, its commitments kept) still refuses; restart, crash-before-persist and missing consumption knowledge all suppress rather than treat the key as fresh; and a failed or suppressed record that the redemption owner does not name as the redeeming attempt's never settles a claim, so an unknown outcome cannot become a purgeable failed tombstone (#1016 review round 2). Partial because the final conjunct is not witnessed: the shipped Enforcement Scope Statement publishes no retention posture for keys outside the high-consequence classes; that posture belongs to the reversible-write reservation (#918)."
   },
   {
    "id": "runtime.idempotency.claim-exact-enforcement-only",
@@ -13946,6 +13946,18 @@
     {
      "file": "src/services/mcp-payments/test/transaction.test.ts",
      "name": "M5 transaction-assurance tier > scenario 4: wire transfer executes once with permit, evidence, and reconciliation",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "reconciliation settles a failure only from the attempt that redeemed the permit (#1016) > a committed wire with its completion evidence missing, beside a replay's permit_expired suppression, settles completed from the ledger, never failed",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "reconciliation settles a failure only from the attempt that redeemed the permit (#1016) > a genuine failure from the redeeming attempt still settles failed, live and through reconciliation",
      "level": "endpoint",
      "surface": "evidence-emission"
     }
