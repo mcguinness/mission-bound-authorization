@@ -137,7 +137,10 @@ it issues a permit, and refuses a missing or malformed key with
 writes, take the "short validity window combined with an idempotency key"
 permit-lifetime control (runtime permit binding; #918). They require the
 same `idempotency_key`, forwarded the same way; the PDP refuses a missing
-or malformed one with `parameter_violation` and makes no claim for it. The
+or malformed one with `parameter_violation` and makes no claim for it. Its
+permit expires no later than the operation's published
+`permit_validity_max_seconds` (300 s as shipped), which the statement holds
+shorter than the retention, so no permit outlives its reservation. The
 PEP reserves (idempotency scope, key) instead, in its own durable
 single-writer store (`topology.json` `stores.pepWriteReservations.file`),
 and commits the effect with its completed reservation and result in one
