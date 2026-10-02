@@ -321,9 +321,10 @@ agent's own presented token before any state check (Section 6.7.2 of
 error carries no ownership condition (Section 8.8 of
 {{I-D.draft-hardt-oauth-aauth-protocol}}), so at a PS endpoint that
 takes a `mission_s256` parameter, a PS MUST establish that the mission
-belongs to the requesting agent before reporting its state, and MUST
-answer a reference to another agent's mission exactly as it answers one
-to a mission that does not exist.
+belongs to the requesting agent before reporting its state.  For an
+absent mission and a mission belonging to another agent, the PS MUST
+return the same status, error, body, and header set, with observably
+equivalent timing.
 
 Possession of the reference, or a correct guess, conveys no authority
 over status, logs, or management.  A deployment that claims stronger
