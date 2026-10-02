@@ -324,7 +324,10 @@ plus the integrity `envelope` {{envelope}} defines.
       assertion, the deciding policy's identifier and version, and
       `approved_at`: the family's provenance chain for non-human
       approval, in which the policy approves the instance because a
-      human approved the policy.
+      human approved the policy. For a `service` assertion, the
+      identifier and version of the logic that produced the decision,
+      including the model's identifier and version where a model
+      produced it.
 
       `approved_at` is an RFC 3339 timestamp: the human approval
       instant of that exact policy version, not the assertion
