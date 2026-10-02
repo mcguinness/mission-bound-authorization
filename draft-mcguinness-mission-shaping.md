@@ -946,11 +946,8 @@ The issuance profile defines a `mission_intent` parameter carried in a
 Pushed Authorization Request (PAR) {{RFC9126}}, whose value is the
 Submission envelope ({{I-D.draft-mcguinness-oauth-mission}}, Section
 "Submission via PAR"). The Mission Intent proposal is the envelope's
-`intent` member. An Authority Proposal is the value of the
-`authorization_details` parameter in the same request. The
-Authorization Server {{RFC6749}}, acting as Mission Issuer, validates
-and narrows the submission, renders the consent disclosure, records
-the approval event, and derives the Authority Set.
+`intent` member, and an Authority Proposal is the value of the
+`authorization_details` parameter in the same request.
 
 Intent-bound evidence in the envelope's `evidence` array names the
 exact `intent_hash` of the submitted Intent. Intent-bound evidence
@@ -965,17 +962,15 @@ actually submits
 The shaper hands its output to the client, which performs the OAuth
 flow ({{proposes-only}}) and MAY also convey a `shaping_evidence_hash`
 so that the Mission record can cite the evidence ({{evidence-hash}}).
-Because the issuance profile rejects an unrecognized top-level member
-of both the Submission envelope and the Mission Intent, the hash is
-not carried inside `mission_intent`. The client conveys it in the
-`mission_shaping_evidence_hash` request parameter of the same pushed
-authorization request, which Consent Evidence defines
+The issuance profile rejects an unrecognized top-level member of the
+Submission envelope or the Mission Intent, so the client sends the
+hash in the `mission_shaping_evidence_hash` request parameter of the
+same pushed authorization request
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}, Section
-"Shaping Evidence Hash Parameter"). A Mission Issuer that does not
-implement Consent Evidence ignores the parameter, as it does any
-unrecognized request parameter. Conveying it does not require the
-Mission Issuer to trust the shaper: the value is a client-supplied
-audit commitment, not verified provenance.
+"Shaping Evidence Hash Parameter"), which a Mission Issuer without
+Consent Evidence ignores. The value is a client-supplied audit
+commitment, not verified provenance, so conveying it requires no trust
+in the shaper.
 
 ## Mission Issuer Handling {#issuer-handling}
 
@@ -989,14 +984,10 @@ produced, the Mission Issuer, under the issuance profile:
 - derives the Authority Set under its own policy; and
 - refuses, narrows, or requires approval as that profile requires.
 
-A `shaping_evidence_hash` that the Mission Issuer records on the
-Mission record is an audit commitment only.
-
-Runtime enforcement does not consume shaper output either. Mission-Bound
-Runtime Enforcement {{I-D.draft-mcguinness-mission-runtime}} consumes
+Runtime enforcement {{I-D.draft-mcguinness-mission-runtime}} consumes
 the Mission Intent and the Authority Set on the Mission record, both
-produced by the Mission Issuer, not by the shaper. A runtime that reads
-Shaping Evidence for an authorization decision is misusing it.
+produced by the Mission Issuer, not shaper output. A runtime that
+reads Shaping Evidence for an authorization decision is misusing it.
 
 # Re-Shaping {#re-shaping}
 
