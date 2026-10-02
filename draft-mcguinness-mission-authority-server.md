@@ -683,7 +683,9 @@ A consumer MUST ignore members it does not recognize.
 | `invalid_authority` | 400 | Well-formed Intent, but no valid Authority Set is derivable under policy. |
 | `invalid_mission_intent_evidence` | 400 | An evidence entry of unsupported type or failing its type's verification, or a policy-required evidence type absent from the submission. |
 | `unauthorized` | 401 | Request not authenticated. |
+| `join_failed` | 403 | The acting token does not join the referenced Mission ({{join-assertion-request}}). |
 | `not_found` | 404 | A referenced submission or Mission does not exist OR is not visible to the caller. |
+| `conflict` | 409 | A resolved predecessor or parent whose state or serialization refuses the operation ({{native-carriage}}). |
 | `rate_limited` | 429 | Caller is rate-limited. |
 | `unavailable` | 503 | MAS temporarily cannot serve the request. |
 
