@@ -88,9 +88,16 @@ it cannot be changed in place.
 
 This document uses Person, Agent, Person Server (PS), Access Server
 (AS), Resource, Person Token, Resource Token, Auth Token, mission,
-approved mission blob, mission proposal, and the `{approver, s256}`
-mission reference as defined by
+approved mission blob, and mission proposal as defined by
 {{I-D.draft-hardt-oauth-aauth-protocol}}.
+
+The pair of the approving PS and `s256` is the Mission Reference,
+AAuth's mission identity (Section 8.2.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}). The approving PS is named
+by the `iss` of a Person Token, the `ps` claim of a Resource Token or
+Auth Token, or the PS a request is made to; the blob carries no member
+naming it. On the wire, the reference is the `mission_s256` claim or
+parameter.
 
 # The expires_at Member {#member}
 
@@ -105,7 +112,7 @@ Because `expires_at` is in the approved mission blob, it is covered by
 `s256` and cannot be changed in place, as AAuth specifies for every
 blob member. Changing an approved expiry requires proposing and
 approving a new mission, which carries a new `s256` and therefore a new
-mission reference.
+Mission Reference.
 
 A mission whose approved blob has no `expires_at` member has no
 expiry.
@@ -129,14 +136,21 @@ so that status and logging reflect the transition without delay.
 
 # Proposal and Approval {#approval}
 
-A mission proposal MAY include `expires_at`. The PS or the Person MAY
-add or change the value during clarification, before approval. The
-approved value is the one in the approved mission blob, and the Agent
-verifies and stores the decoded blob bytes exactly as AAuth requires.
+A mission proposal MAY include `expires_at`, a proposal member this
+profile defines; AAuth's proposal carries `description`, `tools`, and
+`resources` (Section 8.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}).
+The PS or the Person MAY add or change the value during clarification,
+before approval. The approved value is the one in the approved mission
+blob, and the Agent verifies and stores the decoded blob bytes as
+AAuth specifies (Section 8.2 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).
 
 Support is discovered from the approved blob itself: a deployment that
 requires a lifetime bound checks the approved blob and treats the
-member's absence according to its policy. A proposal is not a
+member's absence according to its policy. A PS that does not implement
+this profile ignores the proposal member, since AAuth recipients
+ignore what they do not recognize (Section 11.7 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}). A proposal is not a
 guarantee that the approved blob will carry the bound.
 
 # Relationship to Other Specifications {#relationships}
@@ -171,9 +185,14 @@ blob member it profiles.
 
 # Security Considerations
 
-Clock synchronization, comparison precision, and tolerated clock skew
-MUST be documented by the deployment. An Agent SHOULD NOT schedule
-work that depends on completing near the deadline.
+AAuth judges a token's `exp` by the verifier's own clock with no
+tolerance for clock skew (Section 11.5.2 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}), and states no tolerance for
+the `expires_at` comparison (Section 8.2 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}). Clock synchronization,
+comparison precision, and tolerated clock skew MUST be documented by
+the deployment. An Agent SHOULD NOT schedule work that depends on
+completing near the deadline.
 
 Expiry bounds duration; it does not end a mission early. A compromise
 discovered before the deadline still requires an explicit termination
@@ -196,10 +215,12 @@ the blob itself.
 
 # IANA Considerations
 
-This document requests no IANA registrations. The AAuth Protocol does
-not currently establish a registry for approved mission-blob members.
-If AAuth creates one before publication, this document will request
-registration of `expires_at`.
+This document requests no IANA registrations. `expires_at` is an
+AAuth mission blob member (Section 8.2 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}), and AAuth establishes no
+registry for mission proposal members. If AAuth creates one before
+publication, this document will request registration of the proposal
+member `expires_at`.
 
 # Acknowledgments
 {: numbered="false"}
