@@ -248,9 +248,12 @@ state: at grant issuance always, and at redemption and every refresh
 where the consuming AS has a Mission-state integration. Runtime
 enforcement
 ({{I-D.draft-mcguinness-mission-runtime}}) composes
-credential-carried for these tokens; the MAS-only mode's join caveat
-(the credential's membership is mapped, not issued) does not apply
-to them. Tokens the estate issues outside this profile are
+credential-carried for these tokens. The Mission Join's limit, that it
+proves a credential belongs to the Mission's parties but never that
+it was issued for the Mission
+({{I-D.draft-mcguinness-mission-authority-server}}, Section "Mission
+Join"), does not apply to them. Tokens the estate issues outside this
+profile are
 unchanged and continue to compose through the Mission Join.
 
 # The Mission Issuance Grant {#grant}
@@ -295,8 +298,9 @@ Claims:
 
 `authorization_details`:
 : REQUIRED. The `mission_resource_access` entries {{RFC9396}} the
-  consuming AS may mint against: a subset of the Mission's consented
-  Authority Set, scoped to the resources this AS serves.
+  consuming AS issues against: a subset of the Mission's Effective
+  Authority Set, scoped to the resources this AS serves
+  ({{minting-rules}}).
 
 `cnf`:
 : OPTIONAL. A confirmation claim {{RFC7800}} binding redemption to a
@@ -568,7 +572,8 @@ On success the consuming AS mints tokens under these rules:
   requires {{RFC9396}} support at the consuming AS. An AS that
   models authority as `scope` instead projects the grant's
   `authorization_details` to `scope` under the issuance profile's
-  scope-projection rule ({{I-D.draft-mcguinness-oauth-mission}}):
+  scope-projection rule ({{I-D.draft-mcguinness-oauth-mission}},
+  Section "Scope Projection"):
   every issued scope value corresponds to authority the grant
   conveys, and none conveys authority, or relaxes a constraint, that
   the grant does not.
@@ -799,7 +804,8 @@ transient source failure at code exchange refuses
 so the exchange stays retryable within the code's own lifetime.
 
 This carriage serves user-delegated Missions
-({{I-D.draft-mcguinness-oauth-mission}}), where an authenticated
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Authority Sources"),
+where an authenticated
 resource owner exists to bind. The AS MUST bind the resource owner
 authenticated at the authorization endpoint to the grant's `sub`: it
 proceeds only where the authenticated user is the grant's Subject
@@ -888,7 +894,9 @@ full:
 The PAR carriage of {{par-carriage}} is OPTIONAL.
 
 A deployment claiming this profile states, alongside its
-Enforcement Scope Statement, which Authorization Servers consume
+Enforcement Scope Statement ({{I-D.draft-mcguinness-mission-runtime}},
+Section "Enforcement Scope and Conformance"), which Authorization
+Servers consume
 grants, the staleness bound of each one's state gating, and its
 reconciliation posture ({{security-considerations}}): the window
 within which minting and redemption logs are reconciled, or that
@@ -966,7 +974,8 @@ and nothing else of the record (no `purpose` text, no Intent, no full
 Authority Set) travels. The Mission identifier is a correlator across
 MAS and AS logs by design; that correlation is the audit trail, and
 deployments that need to limit broader correlation apply the
-issuance profile's identifier guidance.
+issuance profile's guidance ({{I-D.draft-mcguinness-oauth-mission}},
+Section "Mission Identifier Correlation").
 
 # IANA Considerations {#iana}
 
