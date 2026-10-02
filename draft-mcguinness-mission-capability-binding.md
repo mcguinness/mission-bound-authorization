@@ -107,7 +107,7 @@ contents are discovery metadata, never authority for a server's
 effective capabilities), an MCP tool, an OpenAPI operation, or an
 equivalent capability source, the
 invoked identity can drift from what the catalog served at approval.
-This document defines the companion binding that ties an approved
+This document defines the companion mechanism that ties an approved
 catalog entry to the capability source it was derived from: the
 `tool_id`, source, and content digest recorded at derivation and
 verified at decision time, the per-capability extraction rule that
