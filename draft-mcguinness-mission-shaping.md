@@ -1432,6 +1432,12 @@ guessing ({{clarifications}}).
   pushed authorization request parameter that Consent Evidence
   defines.
 
+- Tightened the prose by removing restatement: previews in the
+  Introduction, repeated scope and conformance statements, and
+  sentences that restated an adjacent requirement. Two clarification
+  requirements that said the same thing are one. No other requirement
+  changed.
+
 # Acknowledgments
 {:numbered="false"}
 
