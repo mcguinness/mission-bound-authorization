@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { canonicalDigest } from "@mission/core";
-import { createDecisionChannel, createEphemeralDecisionPoint, type DecisionFn, evaluateRemote, type Fga, isDecisionChannelRefusal, type MissionView, RUNTIME_POSTURE, loadRuntimePosture, relationForAction, stalenessBound } from "@mission/pdp";
+import { createDecisionChannel, createEphemeralDecisionPoint, type DecisionEvidenceObject, type DecisionFn, type DecisionOptions, type EvaluationRequest, evaluateRemote, type Fga, isDecisionChannelRefusal, type MissionView, RUNTIME_POSTURE, loadRuntimePosture, relationForAction, stalenessBound } from "@mission/pdp";
 import { CANONICAL_RESOURCE, createEphemeralEvidenceKeys, EvidenceStore, McpPaymentsServer, PaymentsStore, Pep, type TokenFacts } from "../src/index.js";
 import { PaymentsToolCatalog } from "../src/tool-catalog.js";
 
@@ -51,6 +51,27 @@ describe("configured PDP unavailability (@spec runtime#ride-through, authzen#fai
       expect(refusals[0]!.content).toMatchObject({ emitter: { role: "pep" }, denial_reason: "pdp_unreachable", decision: "deny" });
       expect(refusals[0]!.content.evidence_envelope).toBeDefined();
       expect(refusals[0]!.content).not.toHaveProperty("evaluation_id");
+    } finally { await x.channel.close(); x.payments.db.close(); }
+  });
+
+  // @spec authzen#evaluation-request-digest-input: the PDP digests the
+  // AuthZEN request the PEP submitted, not the channel's `{ request }`
+  // envelope or its MAC header fields.
+  it("over a remote hop, the PDP's Decision Evidence digests the request as submitted, excluding channel framing", async () => {
+    const x = await build("remote");
+    try {
+      const request = {
+        subject: { id: "alice" },
+        resource: { type: "invoice", id: "one", properties: { vendor_id: "acme" } },
+        action: { name: "payments:invoice.read" },
+        context: { audience: CANONICAL_RESOURCE, mission: { id: x.view.id, issuer: x.view.issuer, authority_hash: x.view.authority_hash } },
+      } as EvaluationRequest;
+      const submitted = canonicalDigest(JSON.parse(JSON.stringify(request)));
+      const decision = await x.channel.decide(request, x.getOptions() as DecisionOptions);
+      const record = decision.context.decision_evidence as DecisionEvidenceObject;
+      expect(record.emitter.role).toBe("pdp");
+      expect(record).not.toHaveProperty("parameter_digest");
+      expect(record.evaluation_request_digest).toBe(submitted);
     } finally { await x.channel.close(); x.payments.db.close(); }
   });
 

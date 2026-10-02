@@ -352,6 +352,25 @@ describe("evaluate() emits the Decision Evidence it decided (@spec runtime-evide
     await expect(emitter.emit({ ...input, action_class: "unregistered" as never })).rejects.toThrow("unknown action class");
   });
 
+  // @spec runtime-evidence#decision-evidence-object: without
+  // `parameter_digest`, the record carries `evaluation_request_digest`; the
+  // emitter signs no record that carries neither.
+  it("signs a record without parameter_digest only when it carries the evaluation request digest", async () => {
+    const { emitter } = emitterFixture();
+    const input = {
+      mission: { id: "msn", issuer: "https://as.test", policy_view_id: "pv" }, subject: { id: "alice" },
+      resource: { type: "invoice", id: "inv-1" }, action: { name: "payments:invoice.read" }, audience: RESOURCE,
+      evaluation_id: "evaluation", decision: "permit" as const, evaluated_at: NOW.toISOString(),
+      entry_digest: canonicalDigest({ entry: true }), conditions: { valid_until: NOW.toISOString() },
+    };
+    await expect(emitter.emit(input)).rejects.toThrow("evaluation request digest");
+    await expect(emitter.emit({ ...input, evaluation_request_digest: "" })).rejects.toThrow("evaluation request digest");
+    const digest = canonicalDigest({ request: "as submitted" });
+    const record = await emitter.emit({ ...input, evaluation_request_digest: digest });
+    expect(record.evaluation_request_digest).toBe(digest);
+    expect(record).not.toHaveProperty("parameter_digest");
+  });
+
   it("evidence_id matches 1*64(ALPHA/DIGIT/-/_) and its random segment decodes to at least 128 bits", async () => {
     const { emitter } = emitterFixture();
     const decision = await evaluate(req(), opts({ evidence: emitter }));
