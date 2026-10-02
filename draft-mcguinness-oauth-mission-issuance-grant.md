@@ -963,35 +963,30 @@ them apart: the token endpoint refuses a Mandate
 **The cross-domain grant is this shape across a trust boundary.**
 Cross-domain projection
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) carries a
-Mission to a Resource AS in another domain, with trust established
-by federation agreement and identity chaining. The issuance join is
-the same-estate case: bilateral, pre-configured trust between a MAS
-and its own Authorization Servers, no identity-chaining substrate
-required. A deployment does not use this profile across domains;
-projection exists for that.
+Mission to a Resource AS in another domain, under federation trust
+and identity chaining. The issuance join is the same-estate case,
+with bilateral, pre-configured trust ({{trust}}) and no identity
+chaining; a deployment does not use it across domains.
 
 **Native Mission-aware issuance replaces this grant.** An AS that
 becomes natively Mission-aware implements the issuance profile and
-mints without grants for its own resources; the record, anchors, and
-lifecycle it
-consumes are the same ones the MAS already operates, so nothing is
-re-approved in migration. Until then, the issuance join gives the
-estate Mission-bound tokens without the issuance profile's intake,
-approval, and record surfaces at each AS.
+mints without grants for its own resources. It consumes the record,
+anchors, and lifecycle the MAS already operates, so nothing is
+re-approved in migration.
 
-**The Mission Join remains for everything else.** Tokens minted
-under this profile compose credential-carried at the Policy Decision
-Point (PDP); ordinary tokens continue to compose through the Mission
-Join. The two joins coexist per resource and per AS.
+**The Mission Join remains for other tokens.** Tokens issued under
+this profile carry the Mission; the estate's other tokens compose
+through the Mission Join, and the two joins coexist per resource and
+per AS ({{issued-tokens}}).
 
 ## Composite Provision {#composite}
 
-In the substrate's terms ({{I-D.draft-mcguinness-mission-substrate}})
-the MAS alone claims neither Credential-Bound nor Lifecycle-Gated
-Authorization for the tokens its unchanged Authorization Servers
-issue. A MAS composed with its consuming Authorization Servers under
-this profile supplies both capabilities, jointly, for the resources
-those ASs serve. In the Mission Assurance Levels
+In the substrate's terms ({{I-D.draft-mcguinness-mission-substrate}}),
+a MAS alone claims neither Credential-Bound nor Lifecycle-Gated
+Authorization for tokens its unchanged Authorization Servers issue.
+Together with its consuming Authorization Servers under this profile,
+it supplies both, for the resources those servers serve. In the
+Mission Assurance Levels
 ({{I-D.draft-mcguinness-mission-architecture}}), this profile makes
 Baseline Issuance reachable under the standalone binding, and a
 consuming AS's refresh gating adds the state-aware half-step.
