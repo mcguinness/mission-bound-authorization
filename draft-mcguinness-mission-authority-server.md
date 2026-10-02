@@ -2618,14 +2618,14 @@ This document registers one media type per {{RFC6838}}.
 - Author: IETF
 - Change controller: IETF
 
-## Runtime Denial Reason
+## Runtime Denial Reasons
 
-`mission_mismatch` extends the denial-reason set of
-{{I-D.draft-mcguinness-mission-authzen}} under that profile's
-denial-reason extensibility rule
-({{mission-join}}). That profile's denial reasons are AuthZEN
+`mission_mismatch` and `mission_reference_conflict` extend the
+denial-reason set of {{I-D.draft-mcguinness-mission-authzen}} under
+that profile's denial-reason extensibility rule ({{mission-join}},
+{{reference-verification}}). That profile's denial reasons are AuthZEN
 extension data and are not registered in an IETF registry, so this
-document requests no IANA action for it.
+document requests no IANA action for them.
 
 --- back
 
