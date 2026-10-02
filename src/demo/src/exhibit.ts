@@ -11,7 +11,13 @@
 
 import { createExpansion, DEFERRED_GRANT_TYPE, successorWidensOnly, validateMissionIntent } from "@mission/authorization-server";
 import { buildScopeStatement, EgressGate, type MissionState, scopeDigest } from "@mission/agent";
-import { CANONICAL_RESOURCE, type CeilingEntry, DERIVATION_POLICY, DEV_SERVICE_TOKEN, TOPOLOGY } from "@mission/demo-data";
+import {
+  aamReconciliationCeiling,
+  aamReconciliationTemplate,
+  CANONICAL_RESOURCE,
+  DEV_SERVICE_TOKEN,
+  TOPOLOGY,
+} from "@mission/demo-data";
 import { SAAS_RESOURCE } from "@mission/mcp-saas";
 import type { TokenFacts } from "@mission/mcp-payments";
 import type { Decision, EvaluationRequest } from "@mission/pdp";
@@ -329,53 +335,14 @@ function act(stack: DemoStack, numeral: string, title: string, oneLine: string) 
 // (services/authorization-server/test/aam-nightly-reconciliation.test.ts).
 // ===========================================================================
 
-/** The bounded per-instance lifetime (the AAM "bounded task budget"). */
-const AAM_LIFETIME_S = 900;
 /** A far-future ceiling expiry, well above the per-instance clamp so the clamp
  *  (and the refresh-family lifetime bound) is observable but never expires mid-run. */
 const AAM_FAR_FUTURE = "2099-01-01T00:00:00Z";
 const AAM_TAINT_EVENT_ID = "aam-exhibit-taint-1";
 
-/**
- * The read-only reconciliation ceiling PLUS the single external-communication
- * capability (payments:remittance.send = "post to one finance channel"), built
- * from the derivation policy so every entry stays entry-wise within it: keep
- * read/list + remittance.send, copy constraints verbatim, keep CANONICAL_RESOURCE
- * (so containment's resource-remap targets the resource the Mission holds).
- * Consenting to this ceiling is NOT consent for a Dispatch to ever confer
- * remittance.send: the prohibited-class rule blocks that regardless of ceiling
- * membership (@spec mission-template#prohibited-classes). See
- * aamLowConsequenceIntent() below for what a Dispatch actually instantiates.
- */
-function aamCeiling(): CeilingEntry[] {
-  const keep = (a: string) => a.endsWith(".read") || a.endsWith(".list") || a === "payments:remittance.send";
-  return DERIVATION_POLICY.ceiling
-    .map((e) => {
-      const entry: CeilingEntry = { type: e.type, resource: e.resource, actions: e.actions.filter(keep) };
-      if (e.constraints) entry.constraints = e.constraints;
-      return entry;
-    })
-    .filter((e) => e.actions.length > 0);
-}
-
-/** The Task Template body (consent once): the ceiling, a bounded lifetime, and the
- *  human approver of record. */
-function aamTemplateBody(issuer: string, seq: number): Record<string, unknown> {
-  return {
-    template_version: "aam-nightly-reconciliation-1",
-    issuer,
-    approver: { iss: issuer, sub: "bob" }, // the consenting human of record
-    ceiling: aamCeiling(),
-    dispatch_policy: "aam-nightly-reconciliation",
-    dispatchers: ["ap-agent"], // the scheduler dispatches
-    recipients: ["subagent-invoice-extractor"], // the reconciliation sub-agent receives
-    per_instance_lifetime_s: AAM_LIFETIME_S,
-    max_active: 5,
-    rate_per_min: 30,
-    approval_event_id: `aam-tmpl-evt-${seq}`,
-    expires_at: AAM_FAR_FUTURE,
-  };
-}
+// The AAM Task Template ceiling and body come from @mission/demo-data
+// (aamReconciliationCeiling, aamReconciliationTemplate), the same builder the
+// authorization-server e2e uses, so the exhibit and its test cannot drift.
 
 /** A request pair: the mission_intent Submission envelope ({intent} — the
  *  task context is its `intent` member) plus the authority proposal that rides
@@ -530,7 +497,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     "the template is recorded with an integrity hash; consent is captured a single time for every later dispatch.",
   );
   hop("Operator (Bob)", "AS", "POST /templates (consent once)", "HTTP");
-  const templateBody = aamTemplateBody(asUrl, seq++);
+  const templateBody = aamReconciliationTemplate(asUrl, `aam-tmpl-evt-${seq++}`);
   httpReq("POST", `${asUrl}/templates`, {
     headers: { "content-type": "application/json", "x-service-token": "<service token>" },
     body: templateBody,
@@ -551,7 +518,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     "consent is captured ONCE here: the human approver of record is bob; the ceiling carries the read actions " +
       "PLUS one external-comms capability (payments:remittance.send), and NOT payments:payment.schedule.",
   );
-  const ceilingActions = aamCeiling().flatMap((e) => e.actions);
+  const ceilingActions = aamReconciliationCeiling().flatMap((e) => e.actions);
   const consentOk =
     tmplRes.status === 201 &&
     ceilingActions.includes("payments:remittance.send") &&
