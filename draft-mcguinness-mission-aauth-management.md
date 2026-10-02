@@ -706,7 +706,7 @@ be returned to a Person or authorized administrator and SHOULD be
 omitted from a response to an admitted Owning Agent unless required
 for that Agent's own revocation accounting.
 
-The result is observational, not exhaustive proof.  Identity-based
+The result is observational, not exhaustive proof.  Agent identity
 calls and resource-managed access can occur without a PS token request.
 An intermediary can make a downstream call outside the PS's view.
 `complete` means only that the returned page exhausts the PS's current
@@ -906,7 +906,7 @@ inventing a deadline.
 
 The PS has no general visibility or control over:
 
-* identity-based access where a Resource authorizes the Agent directly;
+* agent identity access where a Resource authorizes the Agent directly;
 * an opaque `AAuth-Access` token issued in resource-managed access;
 * a Resource that violated the base protocol's `mission_s256` copy rule;
 * credentials or side effects acquired outside AAuth; or
@@ -1023,7 +1023,7 @@ add tamper-evident storage or signed checkpoints.
 ## Delegation-Tree Limits
 
 The returned tree is based on PS observations, not global execution.
-Treating it as complete evidence can hide identity-based, opaque-token,
+Treating it as complete evidence can hide agent identity, opaque-token,
 or off-path activity.  Consumers MUST preserve the distinction between
 page completeness and observational completeness.  `parent_agent`
 values and the PS's own issuance-linked chain state are accepted only
@@ -1054,7 +1054,7 @@ This specification does define new wire elements:
   `sub_agent`, and `call_chain` relationship values; and
 * the error values in {{errors}}.
 
-The AAuth Protocol does not currently establish an IANA registry for
+The AAuth Protocol does not establish an IANA registry for
 Person Server metadata members, mission control plane actions or JSON
 members, termination reasons, delegation relationships, or AAuth error
 values.  Consequently, there is no
@@ -1105,7 +1105,7 @@ available its caller-role authorization policy, Auth Token retention
 period, supported access-mode coverage, maximum token lifetime,
 revocation retry policy, expiry clock policy if used, and worst-case
 residual behavior.  It MUST NOT claim that Mission termination revokes
-identity-based, opaque resource-managed, or otherwise untracked access.
+agent identity, opaque resource-managed, or otherwise untracked access.
 
 --- back
 
