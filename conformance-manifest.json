@@ -7644,7 +7644,7 @@
    "id": "status.request.served-audience-authorization",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-request",
-   "text": "The AS MUST honor such a request only where its configuration authorizes the authenticated caller for the named audience",
+   "text": "The Mission Issuer MUST honor a request naming an audience other than the caller's own only where its configuration authorizes the authenticated caller for that audience",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -7654,7 +7654,7 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a consuming Authorization Server's Mission Status request naming a resource audience its configuration does not authorize that caller for is refused with the not-found response, indistinguishable from an unknown Mission"
+    "normative": "a Mission Status request naming an audience other than the caller's own (for example a Mission Issuance Grant consuming Authorization Server's per-resource request) is honored only where the Mission Issuer's configuration authorizes that caller for the audience, and is otherwise refused with the not-found response, indistinguishable from an unknown Mission"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -7665,7 +7665,7 @@
    "id": "status.response.served-audience-aud",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-response",
-   "text": "the `audience` that request named",
+   "text": "`aud` equals the `audience` the request named",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -7675,7 +7675,7 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a consuming Authorization Server rejects a per-resource Mission Status response whose aud is not the audience its request named"
+    "normative": "a consumer rejects a Mission Status response whose aud is not the audience its request named (or, for a state-only response, the requester's identifier); a consuming Authorization Server's per-resource response is checked against the resource audience it requested"
    },
    "level": "endpoint",
    "coverage": "todo",
