@@ -3720,6 +3720,12 @@ bound profiled by `aauth-mission-expiry`.
 
 \[\[ To be removed from the final specification ]]
 
+- Approve and Record names the three approval roles (derivation,
+  adjudication, accountability) and summarizes the OAuth binding's
+  rule that a model's judgment enters adjudication only as a recorded
+  input to a deterministic policy, refusing or narrowing and never
+  granting or widening.
+
 - Derivation and narrowing, with no change to any profile's
   requirements. The derivation boundary states the derivation
   procedure the authority-bearing bindings share (narrowing or a
