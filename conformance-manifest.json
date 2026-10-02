@@ -13344,25 +13344,19 @@
      "surface": "decision-request"
     },
     {
-     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
-     "name": "the PDP idempotency claim through the executing PEP (@spec runtime#idempotency, #917) > a completed wire settles its claim over the co-resident channel: the same key is refused as completed and executes once",
-     "level": "endpoint",
-     "surface": "resource-operation"
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > a failure settles only from the attempt that redeemed the permit > a suppression from any other attempt never settles: the claim stays unresolved, closes indeterminate, and is never purged",
+     "level": "unit",
+     "surface": "decision-request"
     },
     {
      "file": "src/services/pdp/test/reversible-write-key-control.test.ts",
      "name": "the reversible-write key control the statement declares (@spec runtime#permit-binding, #918) > the statement this PDP loads publishes, for every keyed operation outside the high-consequence classes, its reservation owner and a retention longer than the permit",
      "level": "unit",
      "surface": "deployment-documentation"
-    },
-    {
-     "file": "src/services/mcp-payments/test/runtime-posture-metadata.test.ts",
-     "name": "runtime posture publication on the resource metadata surface > publishes the reservation domain, its owner and the retention posture for every keyed write outside the high-consequence classes",
-     "level": "unit",
-     "surface": "deployment-documentation"
     }
    ],
-   "notes": "High-consequence conjuncts witnessed (#917): the PDP's claim domain is a durable single-writer SQLite file; a completed or failed key is refused (duplicate_suppressed, next_action none) through terminal_at plus the declared idempotency_horizon_seconds (604800) and is new only after it; an indeterminate key carries no horizon and stays refused past it; a terminal row compacted after the reconciliation window (its stored decision dropped, its commitments kept) still refuses; restart, crash-before-persist and missing consumption knowledge all suppress rather than treat the key as fresh. Final conjunct witnessed (#918): outside the high-consequence classes the statement the PDP loads publishes, per keyed operation (payments:payment.schedule and payments:payment.schedule.cancel), the declared_horizon posture with a P7D retention longer than the 300 s permit, and a declaration naming no posture is refused at load; the resource metadata publishes the same statement."
+   "notes": "High-consequence conjuncts witnessed (#917): the PDP's claim domain is a durable single-writer SQLite file; a completed or failed key is refused (duplicate_suppressed, next_action none) through terminal_at plus the declared idempotency_horizon_seconds (604800) and is new only after it; an indeterminate key carries no horizon and stays refused past it; a terminal row compacted after the reconciliation window (its stored decision dropped, its commitments kept) still refuses; restart, crash-before-persist and missing consumption knowledge all suppress rather than treat the key as fresh; and a failed or suppressed record that the redemption owner does not name as the redeeming attempt's never settles a claim, so an unknown outcome cannot become a purgeable failed tombstone (#1016 review round 2). Final conjunct witnessed PDP-side (#918): outside the high-consequence classes, the statement this PDP loads (RUNTIME_POSTURE) publishes, per keyed operation (payments:payment.schedule and payments:payment.schedule.cancel), the declared_horizon posture with a P7D retention longer than the 300 s permit, and loadRuntimePosture refuses a declaration that names no posture. Only PDP citations are kept on this PDP row; the resource-metadata publication test is cited on the PEP and AS rows it proves."
   },
   {
    "id": "runtime.idempotency.claim-exact-enforcement-only",
@@ -14086,6 +14080,18 @@
     {
      "file": "src/services/mcp-payments/test/transaction.test.ts",
      "name": "M5 transaction-assurance tier > scenario 4: wire transfer executes once with permit, evidence, and reconciliation",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "reconciliation settles a failure only from the attempt that redeemed the permit (#1016) > a committed wire with its completion evidence missing, beside a replay's permit_expired suppression, settles completed from the ledger, never failed",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "reconciliation settles a failure only from the attempt that redeemed the permit (#1016) > a genuine failure from the redeeming attempt still settles failed, live and through reconciliation",
      "level": "endpoint",
      "surface": "evidence-emission"
     }

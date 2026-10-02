@@ -27,10 +27,12 @@ import {
   type EvidenceKeyResolver,
   type Fga,
   type MissionView,
+  newRecordId,
   openEphemeralClaimDomain,
   relationForAction,
   reversibleWriteKeyControl,
   RUNTIME_POSTURE,
+  type SettlementResult,
   stalenessBound,
 } from "@mission/pdp";
 import {
@@ -43,6 +45,7 @@ import {
   PaymentsStore,
   Pep,
   reconcileClaims,
+  recordRedeemingAttempt,
   redemptionStatusFor,
   type TokenFacts,
   TOOL_ACTIONS,
@@ -124,6 +127,7 @@ async function harness(o: HarnessOptions = {}) {
     audience: CANONICAL_RESOURCE,
     pepEpoch: redemption.epoch,
     consumptionStatus: status,
+    redeemingExecution: redemption.redeemer,
     getOptions: () => ({
       view: view(),
       fga: alwaysAllowFga,
@@ -135,10 +139,13 @@ async function harness(o: HarnessOptions = {}) {
     }),
   });
   const settlements: unknown[] = [];
+  const settlementResults: SettlementResult[] = [];
   const claimChannel: ClaimChannel = {
     settle: async (record) => {
       settlements.push(record);
-      return o.holdSettlement ? { accepted: false, reason: "held" } : channel.claims.settle(record);
+      const result: SettlementResult = o.holdSettlement ? { accepted: false, reason: "held" } : await channel.claims.settle(record);
+      settlementResults.push(result);
+      return result;
     },
     listUnresolved: () => channel.claims.listUnresolved(),
     reconcile: (id, resolution) => channel.claims.reconcile(id, resolution),
@@ -173,6 +180,7 @@ async function harness(o: HarnessOptions = {}) {
   return {
     server,
     pep,
+    payments,
     engine,
     connectors,
     evidence,
@@ -180,6 +188,8 @@ async function harness(o: HarnessOptions = {}) {
     channel: claimChannel,
     redemption,
     settlements,
+    /** What the PDP answered to each live settlement. */
+    settlementResults,
     /** The raw decision context the PEP last received (`next_action` and `retry_after` included). */
     lastDecision: () => lastDecision,
     advance: (ms: number) => {
@@ -321,6 +331,151 @@ describe("the PDP idempotency claim through the executing PEP (@spec runtime#ide
     expect((await wire(h, k)).denial_reason).toBe("duplicate_suppressed");
     expect(h.connectors.ledgerEntries()).toHaveLength(1);
     await h.close();
+  });
+});
+
+/**
+ * #1016 review round 2: a committed wire whose completion evidence was lost,
+ * and a replay of the same permit refused at admission after it expired. The
+ * replay never redeemed the permit, so its `permit_expired` suppression says
+ * nothing about the effect.
+ */
+async function committedWithLostEvidenceAndAReplay(h: Awaited<ReturnType<typeof harness>>, idempotencyKey: string) {
+  const permit = await h.pep.enforce("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idempotencyKey }, TOKEN);
+  const attempt = permit.attempt;
+  if (!attempt) throw new Error("no permit");
+  const evaluationId = String(permit.decision?.context.evaluation_id);
+  const digest = String((permit.decision?.context.conditions as { parameter_digest: string }).parameter_digest);
+  const opKey = operationKey("msn_917", "payments:payment.execute", digest, "commit");
+  // The redeeming attempt: it took the single use (and the redemption store
+  // recorded which attempt did) and the wire committed.
+  expect(h.engine.redeemPermit({ permitId: evaluationId, opKey, missionId: "msn_917", action: "payments:payment.execute", leaseExpiresAtMs: BASE_MS + 30_000 }).ok).toBe(true);
+  recordRedeemingAttempt(h.engine, evaluationId, attempt.executionId);
+  h.connectors.postWire({ opKey, invoiceId: "inv-1", payeeAccount: "acct-acme", amount: "125.00", currency: "USD", permitId: evaluationId, missionId: "msn_917" });
+  h.advance(PAST_LEASE_MS);
+  // The replay: same permit, its own attempt, refused before any redemption.
+  const replayExecutionId = newRecordId("exe");
+  expect(await h.pep.suppressExecution({ ...attempt, executionId: replayExecutionId, redeemed: false }, "permit_expired")).toEqual({ recorded: true });
+  return { evaluationId, replayExecutionId };
+}
+
+describe("reconciliation settles a failure only from the attempt that redeemed the permit (#1016)", () => {
+  it("a committed wire with its completion evidence missing, beside a replay's permit_expired suppression, settles completed from the ledger, never failed", async () => {
+    const h = await harness();
+    const k = key();
+    const { evaluationId } = await committedWithLostEvidenceAndAReplay(h, k);
+    const report = await reconcileClaims({ claims: h.channel, evidence: h.evidence, redemption: h.redemption, connectors: h.connectors });
+    expect(report.states).toEqual({ [evaluationId]: "completed" });
+    expect(report.open).toEqual([]);
+    expect((await wire(h, k)).denial_reason).toBe("duplicate_suppressed");
+    expect(h.lastDecision()?.next_action).toBe("none");
+    expect(h.connectors.ledgerEntries()).toHaveLength(1);
+    await h.close();
+  });
+
+  it("offers the PDP no failed or suppressed record the redemption store does not link to the redeeming attempt, and consults the ledger first", async () => {
+    const h = await harness();
+    const { evaluationId, replayExecutionId } = await committedWithLostEvidenceAndAReplay(h, key());
+    // A channel that would accept anything: what the reconciler offers is
+    // then the only thing standing between the replay and a `failed` claim.
+    const offered: Array<{ outcome: unknown; execution_id: unknown }> = [];
+    const permissive: ClaimChannel = {
+      settle: async () => ({ accepted: false, reason: "unused" }),
+      listUnresolved: async () => [
+        { evaluation_id: evaluationId, action_class: "irreversible_action", valid_until: "", window_closes_at: "" },
+      ],
+      reconcile: async (_id, resolution) => {
+        const record = resolution.kind === "execution_evidence" ? (resolution.record as Record<string, unknown>) : {};
+        offered.push({ outcome: record.outcome, execution_id: record.execution_id });
+        return { accepted: true, state: record.outcome === "completed" ? "completed" : "failed", duplicate: false };
+      },
+    };
+    const withoutLedger = await reconcileClaims({ claims: permissive, evidence: h.evidence, redemption: h.redemption });
+    expect(withoutLedger.open).toEqual([evaluationId]);
+    const withLedger = await reconcileClaims({ claims: permissive, evidence: h.evidence, redemption: h.redemption, connectors: h.connectors });
+    expect(withLedger.states).toEqual({ [evaluationId]: "completed" });
+    expect(offered.filter((o) => o.execution_id === replayExecutionId)).toEqual([]);
+    expect(offered.every((o) => o.outcome === "completed")).toBe(true);
+    await h.close();
+  });
+
+  it("a committed effect in the ledger takes precedence over the redeeming attempt's own failed or suppressed record", async () => {
+    const h = await harness();
+    const permit = await h.pep.enforce("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: key() }, TOKEN);
+    const attempt = permit.attempt;
+    if (!attempt) throw new Error("no permit");
+    const evaluationId = String(permit.decision?.context.evaluation_id);
+    const digest = String((permit.decision?.context.conditions as { parameter_digest: string }).parameter_digest);
+    const opKey = operationKey("msn_917", "payments:payment.execute", digest, "commit");
+    expect(h.engine.redeemPermit({ permitId: evaluationId, opKey, missionId: "msn_917", action: "payments:payment.execute", leaseExpiresAtMs: BASE_MS + 30_000 }).ok).toBe(true);
+    recordRedeemingAttempt(h.engine, evaluationId, attempt.executionId);
+    // The redeeming attempt recorded a refusal, yet the connector holds the
+    // effect (a commit that landed after the attempt gave up on it).
+    expect(await h.pep.suppressExecution({ ...attempt, redeemed: false }, "permit_expired")).toEqual({ recorded: true });
+    h.connectors.postWire({ opKey, invoiceId: "inv-1", payeeAccount: "acct-acme", amount: "125.00", currency: "USD", permitId: evaluationId, missionId: "msn_917" });
+    h.advance(PAST_LEASE_MS);
+    const offered: unknown[] = [];
+    const permissive: ClaimChannel = {
+      settle: async () => ({ accepted: false, reason: "unused" }),
+      listUnresolved: async () => [
+        { evaluation_id: evaluationId, action_class: "irreversible_action", valid_until: "", window_closes_at: "" },
+      ],
+      reconcile: async (_id, resolution) => {
+        const record = resolution.kind === "execution_evidence" ? (resolution.record as Record<string, unknown>) : {};
+        offered.push(record.outcome);
+        return { accepted: true, state: record.outcome === "completed" ? "completed" : "failed", duplicate: false };
+      },
+    };
+    const report = await reconcileClaims({ claims: permissive, evidence: h.evidence, redemption: h.redemption, connectors: h.connectors });
+    expect(report.states).toEqual({ [evaluationId]: "completed" });
+    expect(offered).toEqual(["completed"]);
+    await h.close();
+  });
+
+  it("without ledger knowledge the claim stays unresolved, closes indeterminate at the window, and is never purged", async () => {
+    const h = await harness();
+    const k = key();
+    const { evaluationId } = await committedWithLostEvidenceAndAReplay(h, k);
+    const report = await reconcileClaims({ claims: h.channel, evidence: h.evidence, redemption: h.redemption });
+    expect(report.open).toEqual([evaluationId]);
+    expect(report.states).toEqual({});
+    expect((await h.channel.listUnresolved()).map((u) => u.evaluation_id)).toEqual([evaluationId]);
+    // Past the reconciliation window: indeterminate, terminal.
+    h.advance(15 * 60_000);
+    expect((await wire(h, k)).denial_reason).toBe("duplicate_suppressed");
+    expect(h.lastDecision()?.next_action).toBe("none");
+    expect(await h.channel.listUnresolved()).toEqual([]);
+    // Far past the horizon: still refused, never fresh.
+    h.advance(3 * 604_800_000);
+    const late = await wire(h, k);
+    expect(late.denial_reason).toBe("duplicate_suppressed");
+    expect(h.lastDecision()?.next_action).toBe("none");
+    expect(h.connectors.ledgerEntries()).toHaveLength(1);
+    await h.close();
+  });
+
+  it("a genuine failure from the redeeming attempt still settles failed, live and through reconciliation", async () => {
+    for (const holdSettlement of [false, true]) {
+      const h = await harness({ holdSettlement });
+      const k = key();
+      // The parameters move after the permit and before the commit: the
+      // redeeming attempt refuses itself, parameter_mismatch, with no effect.
+      const refused = await h.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: k }, TOKEN, () =>
+        h.payments.bumpInvoiceAmount("inv-1", "150.00"),
+      );
+      expect(refused.refusal_reason, String(holdSettlement)).toBe("parameter_mismatch");
+      h.advance(PAST_LEASE_MS);
+      if (holdSettlement) {
+        const report = await reconcileClaims({ claims: h.channel, evidence: h.evidence, redemption: h.redemption, connectors: h.connectors });
+        expect(Object.values(report.states)).toEqual(["failed"]);
+      } else {
+        expect(h.settlementResults).toEqual([{ accepted: true, state: "failed", duplicate: false }]);
+      }
+      // Settled, so not left unresolved once the permit and its lease elapsed.
+      expect(await h.channel.listUnresolved()).toEqual([]);
+      expect(h.connectors.ledgerEntries()).toHaveLength(0);
+      await h.close();
+    }
   });
 });
 

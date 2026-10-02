@@ -2,7 +2,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { evaluateRemote, remoteClaimChannel } from "./client.js";
 import { type ClaimChannel, claimChannelFor, type DecisionPoint } from "./decision-point.js";
 import type { DecisionFn, DecisionOptions, EvaluationRequest } from "./evaluate.js";
-import type { ClaimRequester, ConsumptionStatusFn } from "./idempotency-claims.js";
+import type { ClaimRequester, ConsumptionStatusFn, RedeemingExecutionFn } from "./idempotency-claims.js";
 import { createPdpHttpServer } from "./server.js";
 import { stalenessBound } from "./policy.js";
 
@@ -39,6 +39,8 @@ export async function createDecisionChannel(point: DecisionPoint, config: {
   timeoutMs?: number;
   pepEpoch?: string;
   consumptionStatus?: ConsumptionStatusFn;
+  /** The same store's read-only answer naming the attempt that redeemed a permit (#1016 review round 2). */
+  redeemingExecution?: RedeemingExecutionFn;
 }): Promise<{
   decide: DecisionFn;
   claims: ClaimChannel;
@@ -53,7 +55,7 @@ export async function createDecisionChannel(point: DecisionPoint, config: {
   const claimsFor = point.claimsFor;
   if (config.mode === "co-resident") return {
     decide: decideAs ? decideAs(requester, config.consumptionStatus) : point.decide,
-    claims: claimsFor ? claimsFor(requester) : claimChannelFor(undefined, requester),
+    claims: claimsFor ? claimsFor(requester, config.redeemingExecution) : claimChannelFor(undefined, requester),
     remoteDecisionChannels: [],
     close: async () => {},
   };
@@ -69,6 +71,9 @@ export async function createDecisionChannel(point: DecisionPoint, config: {
       ? decideAs(options.requester, options.consumptionStatus)(request, options)
       : point.decide(request, options),
     ...(claimsFor ? { claimsFor } : {}),
+    ...(config.redeemingExecution
+      ? { redeemingExecution: (pepId: string) => (pepId === config.pepId ? config.redeemingExecution : undefined) }
+      : {}),
     ...(config.consumptionStatus
       ? { consumptionStatus: (pepId: string) => (pepId === config.pepId ? config.consumptionStatus : undefined) }
       : {}),

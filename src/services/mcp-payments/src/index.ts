@@ -106,7 +106,7 @@ export {
   WriteReservationStore,
   type WriteReservationStoreOptions,
 } from "./write-reservations.js";
-export { type RedemptionStatus, redemptionStatusFor } from "./redemption-status.js";
+export { type RedemptionStatus, recordRedeemingAttempt, redemptionStatusFor } from "./redemption-status.js";
 export type { ExecutionEvidence } from "./evidence.js";
 export { createEphemeralEvidenceKeys, type EphemeralEvidenceKeys } from "./ephemeral-signer.js";
 export {

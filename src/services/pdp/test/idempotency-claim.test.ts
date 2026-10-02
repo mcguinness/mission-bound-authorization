@@ -270,7 +270,9 @@ describe("PDP idempotency claim (@spec runtime#idempotency, #917)", () => {
       expectDenied(await other(k3), "idempotency_conflict", { next_action: "none" });
       const k4 = freshKey();
       const p4 = await evaluate(request(c, { key: k4 }), options(claims, c));
-      expect((await claims.settle(REQUESTER, await executionRecord(String(p4.context.evaluation_id), "failed"))).accepted).toBe(true);
+      // A failure settles only from the attempt the redemption record names.
+      const failure = await executionRecord(String(p4.context.evaluation_id), "failed");
+      expect((await claims.settle(REQUESTER, failure, () => String(failure.execution_id))).accepted).toBe(true);
       expectDenied(await other(k4), "idempotency_conflict", { next_action: "none" });
       // unresolved: the permit and its lease elapsed with nothing settled.
       const k2 = freshKey();
@@ -724,7 +726,7 @@ describe("PDP idempotency claim (@spec runtime#idempotency, #917)", () => {
       const record = await executionRecord(String(permit.context.evaluation_id), "completed");
       expect(await claims.settle(REQUESTER, record)).toEqual({ accepted: true, state: "completed", duplicate: false });
       expect(await claims.settle(REQUESTER, record)).toEqual({ accepted: true, state: "completed", duplicate: true });
-      const second = await executionRecord(String(permit.context.evaluation_id), "failed");
+      const second = await executionRecord(String(permit.context.evaluation_id), "completed");
       expect(await claims.settle(REQUESTER, second)).toEqual({ accepted: false, reason: "already_settled" });
       claims.close();
     });
@@ -781,6 +783,56 @@ describe("PDP idempotency claim (@spec runtime#idempotency, #917)", () => {
       expectDenied(await evaluate(request(c, { key }), options(claims, c)), "duplicate_suppressed", { next_action: "none" });
       claims.close();
       expect(rowsOf(file)).toEqual([expect.objectContaining({ state: "indeterminate" })]);
+    });
+  });
+
+  // #1016 review round 2: a failed or suppressed record proves no effect only
+  // for the attempt that took the single use.
+  describe("a failure settles only from the attempt that redeemed the permit", () => {
+    it("a suppression from any other attempt never settles: the claim stays unresolved, closes indeterminate, and is never purged", async () => {
+      const c = clock();
+      const { file, open } = domainOnFile(c);
+      const claims = open();
+      const key = freshKey();
+      const permit = await evaluate(request(c, { key }), options(claims, c));
+      const id = String(permit.context.evaluation_id);
+      c.set(T0 + VALID_MS + LEASE_MS + 1_000);
+      // A replay of the same permit, refused at admission, never redeemed it.
+      const replay = await executionRecord(id, "suppressed", "exe_replay", "permit_expired");
+      const redeemer = () => "exe_redeeming_attempt";
+      expect(await claims.reconcile(REQUESTER, id, { kind: "execution_evidence", record: replay }, redeemer)).toEqual({
+        accepted: false,
+        reason: "not_the_redeeming_attempt",
+      });
+      expect(await claims.settle(REQUESTER, replay)).toEqual({ accepted: false, reason: "redeeming_attempt_unknown" });
+      expect(await claims.settle(REQUESTER, replay, () => { throw new Error("redemption store unreachable"); })).toEqual({
+        accepted: false,
+        reason: "redeeming_attempt_unknown",
+      });
+      expect(claims.listUnresolved(REQUESTER).map((u) => u.evaluation_id)).toEqual([id]);
+      c.set(T0 + VALID_MS + LEASE_MS + WINDOW_MS);
+      expectDenied(await evaluate(request(c, { key }), options(claims, c)), "duplicate_suppressed", { next_action: "none" });
+      c.set(T0 + 3 * HORIZON_MS);
+      expectDenied(await evaluate(request(c, { key }), options(claims, c)), "duplicate_suppressed", { next_action: "none" });
+      claims.close();
+      expect(rowsOf(file)).toEqual([expect.objectContaining({ evaluation_id: id, state: "indeterminate" })]);
+    });
+
+    it("a failure from the attempt the redemption record names settles failed", async () => {
+      const c = clock();
+      const { open } = domainOnFile(c);
+      const claims = open();
+      const key = freshKey();
+      const permit = await evaluate(request(c, { key }), options(claims, c));
+      const id = String(permit.context.evaluation_id);
+      const failure = await executionRecord(id, "suppressed", "exe_redeeming_attempt", "parameter_mismatch");
+      expect(await claims.settle(REQUESTER, failure, () => "exe_redeeming_attempt")).toEqual({
+        accepted: true,
+        state: "failed",
+        duplicate: false,
+      });
+      expectDenied(await evaluate(request(c, { key }), options(claims, c)), "duplicate_suppressed", { next_action: "none" });
+      claims.close();
     });
   });
 

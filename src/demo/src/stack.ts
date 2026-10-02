@@ -702,6 +702,7 @@ export async function composeStack(opts: {
     mode, pepId: "mcp-payments-pep", audience: CANONICAL_RESOURCE,
     pepEpoch: redemption.epoch,
     consumptionStatus: redemption.status,
+    redeemingExecution: redemption.redeemer,
     getOptions: (request) => {
       const ref = request.context.mission;
       const loaded = ref ? loadView(ref) : undefined;
