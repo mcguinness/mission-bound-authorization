@@ -920,12 +920,6 @@ the Mission Intent and the Authority Set on the Mission record, both
 produced by the Mission Issuer, not by the shaper. A runtime that reads
 Shaping Evidence for an authorization decision is misusing it.
 
-A shaped proposal can go stale. A deployment that conveys a freshness
-bound with the proposal (for example, an expiry, or an evidence source
-digest that no longer matches) SHOULD re-shape rather than submit a
-proposal built against a capability catalog or policy version that has
-since changed.
-
 # Re-Shaping {#re-shaping}
 
 A proposal is not always approved as submitted, so shaping is a loop:
@@ -1115,7 +1109,11 @@ requiring clarification, narrowing, or refusal. A proposal shaped
 against an outdated catalog can also resolve the wrong capability.
 Capability resolutions SHOULD record source digests
 ({{capability-resolution}}) so that approval and runtime enforcement
-can detect drift. Deployments SHOULD re-shape when catalog data is
+can detect drift. A shaped proposal can go stale: a client that holds a
+freshness bound for a proposal (for example, an expiry, or a source
+digest that no longer matches) SHOULD re-shape it rather than submit a
+proposal built against a capability catalog or policy version that has
+since changed. Deployments SHOULD re-shape when catalog data is
 volatile.
 
 Re-shaping adds a loop variant of the same failure: widening by retry,
