@@ -1161,7 +1161,7 @@ profile defines the portable artifact and verification procedure.
 
 The composition consequences:
 
-- The runtime profile and its AuthZEN binding compose against either
+- The runtime profile and its AuthZEN profile compose against either
   credential surface: the Mission reference arrives through token
   validation (structured token claims, or the issuer's introspection
   response that validates the opaque token), so binding

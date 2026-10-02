@@ -805,7 +805,7 @@ authorization input. `nonce` correlates the response to the request in
 support of the signed-response and retry model of {{idempotency}} and
 is not, by itself, replay protection, per the absent-or-malformed-`nonce`
 rule above. RFC 9457 {{RFC9457}} problem details
-is neither used on these surfaces nor disparaged: the AuthZEN binding
+is neither used on these surfaces nor disparaged: the AuthZEN profile
 {{I-D.draft-mcguinness-mission-authzen}} carries it where that
 ecosystem does, and a future non-OAuth-shaped HTTP API in this family
 MAY choose it.

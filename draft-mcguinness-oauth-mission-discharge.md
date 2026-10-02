@@ -402,7 +402,7 @@ revoked. A runtime Policy Enforcement Point that does not recognize
 
 For that point-of-use denial this document defines the denial-reason
 identifier `authority_discharged`, a family-coordinated name under the
-AuthZEN binding's denial-reason extension rule
+AuthZEN profile's denial-reason extension rule
 ({{I-D.draft-mcguinness-mission-authzen}}), carried wherever the
 runtime layer's denial reasons travel: the decision response's
 `context.reason` and the runtime evidence companion's

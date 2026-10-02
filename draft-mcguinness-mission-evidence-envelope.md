@@ -175,7 +175,7 @@ says so.
 This document is Experimental. A deployment MAY implement the envelope and the Intent Admission payload
 type independently of every other family document; adopting it
 creates no dependency on Mission-Bound Runtime Enforcement, its
-AuthZEN binding, or their evidence companion
+AuthZEN profile, or their evidence companion
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}), because none of
 this document's normative content depends on records those documents
 define.
