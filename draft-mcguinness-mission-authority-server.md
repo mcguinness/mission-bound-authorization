@@ -2177,8 +2177,8 @@ profile.
 
 The digest pair of {{join-assertion-request}} also assumes an
 introspection surface that resolves a token by digest. Widely
-deployed Authorization Servers do not provide one, so a deployment plans for
-the `access_token` form.
+deployed Authorization Servers do not provide one, so a deployment
+plans for the `access_token` form.
 
 ## The Enterprise Mapping Contract {#mapping-contract}
 
