@@ -1295,10 +1295,16 @@ speed within a ceiling a human consented to (the `template`,
 companion profiles define on the OAuth binding's extension point,
 {{invariants}}). Policy approves
 the instance because a human approved the policy or the template, with
-`policy_version` keeping that chain re-checkable. A model's generated
-judgment is never the sole authority for granting or widening: a
-generated approver reading attacker-influenced proposals is itself an
-injection surface. The high-consequence classes stay on a fresh human
+`policy_version` keeping that chain re-checkable. Derivation fixes the
+authority, the adjudicator (a human or such a policy) decides
+activation, and a human is accountable. A model's judgment, over risk
+signals or enterprise context, enters adjudication only as a recorded
+input to the policy: it can refuse or narrow, never grant or widen.
+Neither the policy nor a model input to it gates on the Intent's
+prose members, which stay the human Approver's check
+({{I-D.draft-mcguinness-oauth-mission}}). A generated approver
+reading attacker-influenced proposals is itself an injection surface.
+The high-consequence classes stay on a fresh human
 decision, per the progressive profile's prohibited set
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}).
 
@@ -3720,6 +3726,13 @@ bound profiled by `aauth-mission-expiry`.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Approve and Record names the three approval roles (derivation,
+  adjudication, accountability) and summarizes the OAuth binding's
+  rule that a model's judgment enters adjudication only as a recorded
+  input to a deterministic policy, an input that can refuse or narrow
+  and never grant or widen; the prose members stay the human
+  Approver's check.
 
 - Composition states the per-Mission bound model once, with no change
   to any profile's requirements: an approval bounds the authority each

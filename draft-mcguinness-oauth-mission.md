@@ -1189,9 +1189,10 @@ The `goal`, `task_bounds`, and `success_criteria` members are
 human-readable disclosure and audit context. The AS MUST derive the
 same Authority Set, under the same policy, for two submissions that
 differ only in `goal`, `goal_lang`, `task_bounds`, or
-`success_criteria`, and MUST NOT gate issuance on those members;
-translating a user's words into structure is the shaper's job,
-before admission and outside the trust boundary
+`success_criteria`, and MUST NOT gate issuance on those members,
+whether in derivation, in an adjudicating policy, or through a model
+input to either; translating a user's words into structure is the
+shaper's job, before admission and outside the trust boundary
 ({{I-D.draft-mcguinness-mission-shaping}}).
 
 A client-proposed constraint on an individual Authority Set entry
@@ -2183,7 +2184,13 @@ assertion.
   `consent_principal`.
 
   For `kind: policy`: `policy`, a REQUIRED object with `id` and
-  `version` identifying the deciding policy or workflow.
+  `version` identifying the deciding policy or workflow. It decides
+  deterministically over recorded inputs, so re-evaluating that
+  `version` over them re-checks the decision. A model's output can
+  be one such input, recorded with the model's identifier and
+  version: it can refuse an activation or narrow the authority it
+  activates, and the AS MUST NOT let it supply or widen authority. A
+  model is never itself the deciding policy or workflow.
 
   `governance_record`:
   : OPTIONAL. A boolean. `true` when an Approval Governance Record
@@ -5834,11 +5841,19 @@ Cross-Domain:
   adjudicates commits that policy's content as `{id, version,
   digest}`, with the `mission-activation-policy` digest, and the
   activating issuer verifies it before each activation.
+
+- Stated that a `policy` adjudicator decides deterministically over
+  recorded inputs, that a model's output can be one such input that
+  refuses or narrows but never supplies or widens authority, and that
+  the prose members gate issuance in no adjudicating policy and
+  through no model input. These add requirements.
+
 - Corrected the child-delegation example in Composition and the
   Effective Ceiling: `max_children` limits concurrently non-terminal
   children, so the example's 12 descendants are Missions live at
   once, not a lifetime count; disclosure points at the child-delegation
   profile's distinct figures rather than one composed total.
+
 - Separated exact `target_resources` membership, checked for the
   Authority Set and for a proposal at submission, from later token
   narrowing under the subset rule. Made the per-capability

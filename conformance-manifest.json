@@ -55,16 +55,16 @@
     "content_sha256": "b5bb6abb6737b1fc3c4571380e89cc4d23e960b849450089f0e38b13462f32d7"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "8b1fbc5bc0306d7109c3fc050304d881b91decbf",
-    "content_sha256": "21c2d979934f80a7f3537a081f5fc1c49b684db7e8217a3c4fc853749708f4e4"
+    "revision": "6a3c451eff8b0568e16817fbb84be343f8e8e485",
+    "content_sha256": "eda0e3228ae98dc29894171fd1eec3d297b3591384036fa40a00c72ac62d0f6a"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "1ea788e00f84b3804c447cb8bbb143c7b803901d",
     "content_sha256": "873b64d56c1813874239d7c4e07d5e1cbc777809c05d725efbf79439038750f9"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "a27dab30b97ca4e07644a70d0b24f7acaafacfa2",
-    "content_sha256": "464a127fecc87ba59fabcd73ca2ee056f8959c1041438e6a5a3752ea6e7177cb"
+    "revision": "4aa384020091ffbb0cc90464cf93ee3fd0c4cac3",
+    "content_sha256": "33a6eb3328e2316f9228fead8b60cc4f306390f5ba5ca81920a62e2c22255866"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
@@ -75,8 +75,8 @@
     "content_sha256": "055d460354f9c98d981f74ce661daa606685695bedd42d04a31981158f8389d7"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "dfd8e24ec12234b4426b949c010d38ac5a296c2f",
-    "content_sha256": "07dba8626595edfa9b90eb556dead5d288ae94320a84fed4360f5abfc814dc63"
+    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
+    "content_sha256": "714a2ad1509b2ee9ab6c20aaa287a9c1856e608c3993171ca3b15e4c84eb1052"
    },
    "draft-mcguinness-mission-orchestration.md": {
     "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
@@ -99,8 +99,8 @@
     "content_sha256": "adb2e8708f616b7504425b3134c2376ad3422d9c947b380645f54fb3e8db8f1d"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "a27dab30b97ca4e07644a70d0b24f7acaafacfa2",
-    "content_sha256": "049993e20db107eff3062e185203212546b7f58e277a160d5dbca16545aafdb6"
+    "revision": "c45280a363b22a598095f14425d5801b34a0d311",
+    "content_sha256": "8a4974c7945a5a1d1ce13569df2e620ef249fc9113340b3fcb19d70395dba4dd"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "02c1fcf62e9f4fd3aad0df84d6ccabd6ebd7ce0d",
@@ -3238,6 +3238,53 @@
    "notes": "New member (#701); demonstrates the multi-assertion-AGR-not-collapsed property from the #701 and #716 reviews. Scoped to core.governance-record: the clause binds only an approval whose `adjudication.governance_record` is `true`, which requires an Approval Governance Record (the approval-governance companion); no published baseline selects it, matching that companion's own rows."
   },
   {
+   "id": "core.approval-basis.adjudication-policy-model-input-narrows",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "the AS MUST NOT let it supply or widen authority",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "governance-decision",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where a kind policy adjudicator's recorded inputs include a model's output, the activated Authority Set is no wider than the same policy version yields over the same recorded inputs with that output treated as no objection: the model's output can refuse the activation or narrow it, never add an entry or widen one"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Standing-consent facet: gated on core.standing-consent, the common source of kind policy (Template dispatch, policy drawdown, ceiling drawdown). The governance facet, core.approval-basis.adjudication-policy-model-input-narrows-governance, covers an Approval Governance Record accountable policy assertion. Re-checkability is the stated property beside it: re-evaluating the recorded policy version over the recorded inputs, model output included, reproduces the decision."
+  },
+  {
+   "id": "core.approval-basis.adjudication-policy-model-input-narrows-governance",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "the AS MUST NOT let it supply or widen authority",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where an Approval Governance Record's accountable assertion is kind policy (including a direct approval with no standing-consent basis) and that policy's recorded inputs include a model's output, the activated Authority Set is no wider than the same policy version yields over the same recorded inputs with that output treated as no objection"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Governance facet of core.approval-basis.adjudication-policy-model-input-narrows, quoting the same clause: kind policy reaches adjudication through an Approval Governance Record's accountable policy assertion without claiming capability core.standing-consent."
+  },
+  {
    "id": "core.approval-basis.discriminator-unknown-value-rule",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "mission-record",
@@ -4470,6 +4517,30 @@
     }
    ],
    "notes": "Core configured-mapping mode, not the Mission Template companion; the companion's unknown template_id error is specified and tested separately. The third test pins the companion branch (a submitted proposal deriving nothing stays invalid_authorization_details) so the two codes are not confused going forward."
+  },
+  {
+   "id": "core.derivation.prose-gates-no-adjudicator",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "authorization-derivation",
+   "text": "MUST NOT gate issuance on those members, whether in derivation, in an adjudicating policy, or through a model input to either",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "two submissions that differ only in goal, goal_lang, task_bounds, or success_criteria receive the same issuance outcome, refused or issued, under derivation and under any adjudicating policy, including one that takes a model's output as an input"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The AS-side rule only: a human Approver reading the rendered prose and declining is the intended consent check, not issuance gating by the AS."
   },
   {
    "id": "core.approval-authentication.floor-and-requested-carriage-both-satisfied",
