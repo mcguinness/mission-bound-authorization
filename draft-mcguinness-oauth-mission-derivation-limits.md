@@ -521,10 +521,16 @@ bound at consent time.
 For example, a child-delegation deployment
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) allowing
 `max_children` 3 per Mission with `max_child_depth` 2 admits up to 12
-descendant Missions (3 in the first generation, up to 9 in the
-second), each with its own independent `derivation_limit`; at 10
-each, the subtree admits up to 120 derivations while no single bound
-the Approver saw exceeds 10.
+concurrently non-terminal descendant Missions (3 in the first
+generation, up to 9 in the second), each with its own independent
+`derivation_limit`; at 10 each, those 12 live Missions can draw up to
+120 derivations while no single bound the Approver saw exceeds 10.
+Neither figure is a lifetime ceiling. `max_children` counts only
+non-terminal children, so a completed child frees its slot and its
+replacement brings its own `derivation_limit`. Absent a lineage-wide
+bound ({{I-D.draft-mcguinness-mission-metering}}), no count limits
+what the subtree derives over its lifetime; Mission expiry bounds only
+its duration.
 
 Cross-domain projection composes separately: local issuance at a
 Resource AS is not counted against the origin issuer's cap
@@ -628,6 +634,9 @@ intent_hash = sha-256:r--mF07yZfWRGV6N28A2u_8rUzIG-bNhpvFSS5FhoBk
 
 -00
 
+- Composition Across Missions states that the example's 12
+  descendants and 120 derivations count Missions live at once, not a
+  lifetime total.
 - Initial version. Carries the derivation limit of Mission-Bound
   Authorization for OAuth 2.0 with its wire names and rules unchanged:
   the `requested_derivation_limit` Intent member, the
