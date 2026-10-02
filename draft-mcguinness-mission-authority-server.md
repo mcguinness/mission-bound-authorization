@@ -2180,7 +2180,7 @@ and does not widen authority beyond the Authority Set.
 
 # Conformance {#conformance}
 
-An implementation conforms in one of two roles.
+An implementation conforms in one of three roles.
 
 A **Mission Authority Server**:
 
@@ -2221,6 +2221,13 @@ claiming it additionally:
   shared `mission_denial_reason` member, on its error and
   submission-status surfaces ({{native-carriage}}).
 
+**Join Assertion** ({{join-assertion}}) is a named optional
+capability of the Mission Authority Server role, which the Enterprise
+profile requires. A MAS claiming it serves the join-assertion
+endpoint under {{join-assertion-request}} and mints assertions per
+{{join-assertion-artifact}}; a Mission-joining PDP that accepts
+assertions verifies them per {{join-assertion-pdp}}.
+
 A **Mission-joining PDP**:
 
 - resolves referenced Missions at the MAS through the Mission Status
@@ -2237,6 +2244,29 @@ A **Mission-joining PDP**:
 - when the AuthZEN binding is in use, emits Decision Evidence per
   {{I-D.draft-mcguinness-mission-runtime-evidence}}, recording the
   Mission reference the join was verified against.
+
+A **Mission-joining PEP**:
+
+- supplies the Mission reference for governed work from its Mission
+  binding, deployment configuration, or a propagated reference
+  (rule 1 of {{join-rules}}, {{reference-propagation}});
+- authenticates the acting credential and populates the decision
+  request from it ({{join-scope}}), validating the presenter's
+  Instance Context where the mapping contract requires an
+  instance-bound join ({{join-instance}});
+- parses `Mission-Reference` and the MCP `_meta` key under
+  {{mission-reference-field}} and {{mcp-reference}}, and surfaces a
+  reference conflict with `mission_reference_conflict`
+  ({{reference-verification}});
+- never treats a Mission permit as overriding what the credential or
+  the resource would refuse (rule 8 of {{join-rules}}); and
+- does not copy the reference onto a request to an unrelated
+  authority domain ({{reference-forwarding}}).
+
+A deployment claiming the **Enterprise Mission Authority Profile**
+meets {{enterprise-profile}} over its declared coverage set; its MAS,
+PDPs, and PEPs conform in their roles above with that section's
+additional obligations.
 
 # Mission Substrate Statement {#mission-substrate}
 
