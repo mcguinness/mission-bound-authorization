@@ -400,7 +400,7 @@ The following is an example of a decoded grant payload; the
 The grant's `mission` claim is the issuance profile's `mission` claim
 object, whose `id` and `issuer` members the issuance profile defines
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "The Mission Claim").
-This profile adds two members:
+This profile requires two further members:
 
 - **`expires_at`.** The issuance profile defines `expires_at` as a
   REQUIRED Mission Record member and an OPTIONAL member of the
@@ -412,8 +412,10 @@ This profile adds two members:
   `authority_hash` ({{I-D.draft-mcguinness-oauth-mission}}, Section
   "Integrity Anchors"), reintroducing it beyond the issuance profile's
   baseline claim as this profile's lineage anchor: it names the
-  approved Authority Set the grant derives from. The consuming AS
-  carries it unchanged ({{token-issuance}}) and does not verify it.
+  approved Authority Set the grant derives from, for a consuming AS
+  that, without a Mission-state integration, has no further channel
+  back to the Mission Issuer once it holds the grant. The consuming
+  AS carries it unchanged ({{token-issuance}}) and does not verify it.
 
 # Obtaining a Grant {#minting}
 
