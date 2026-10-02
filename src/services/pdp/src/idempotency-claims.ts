@@ -171,7 +171,13 @@ export interface ClaimInput {
   evaluationId: string;
   validUntilMs: number;
   requester: ClaimRequester;
-  nowMs: number;
+  /**
+   * The decision's clock, epoch milliseconds. Read inside each transaction
+   * that decides, once, and that one reading serves both state advancement
+   * and the expiry comparison: a reading taken before an await (the
+   * consumption-status query) is never the one a decision rests on.
+   */
+  clock: () => number;
 }
 
 /** What the claim step tells the decision it is part of. */
@@ -405,10 +411,12 @@ export class IdempotencyClaimDomain {
   }
 
   private claimNow(input: ClaimInput): ClaimOutcome {
+    // One clock reading, inside the transaction, for every decision below.
+    const nowMs = input.clock();
     const found = this.select(input.scopeDigest, input.key);
-    const row = found ? this.advance(found, input.nowMs) : undefined;
+    const row = found ? this.advance(found, nowMs) : undefined;
     if (!row) {
-      this.insert(input);
+      this.insert(input, nowMs);
       return { kind: "claimed", ticket: this.ticket(input.evaluationId) };
     }
     if (row.operation_identity !== input.operationIdentity) return { kind: "conflict" };
@@ -417,7 +425,7 @@ export class IdempotencyClaimDomain {
         // Adoptable only with proof no permit left this PDP: no decision was
         // ever persisted, and no evaluation in this boot is still holding it.
         if (row.decision_json === null && (row.pdp_boot !== this.boot || !this.inFlight.has(row.evaluation_id))) {
-          this.adopt(row, input);
+          this.adopt(row, input, nowMs);
           return { kind: "claimed", ticket: this.ticket(input.evaluationId) };
         }
         return { kind: "suppressed", state: "claimed", transient: true, retryAfterSeconds: 1 };
@@ -425,7 +433,7 @@ export class IdempotencyClaimDomain {
         if (
           row.execution_id === null &&
           row.cache_key === input.cacheKey &&
-          input.nowMs < row.valid_until_ms &&
+          nowMs < row.valid_until_ms &&
           row.pep_id === input.requester.pep_id &&
           row.pep_epoch === input.requester.pep_epoch &&
           row.decision_json !== null
@@ -438,7 +446,7 @@ export class IdempotencyClaimDomain {
           kind: "suppressed",
           state: "unresolved",
           transient: true,
-          retryAfterSeconds: Math.max(1, Math.ceil((this.windowCloseMs(row) - input.nowMs) / 1000)),
+          retryAfterSeconds: Math.max(1, Math.ceil((this.windowCloseMs(row) - nowMs) / 1000)),
         };
       default:
         // completed, failed, indeterminate: terminal. A failed key is retried
@@ -449,8 +457,9 @@ export class IdempotencyClaimDomain {
 
   /**
    * Retransmission condition 6, then a recheck of 1 to 5 against the row as
-   * it stands after the query: a settlement or a sweep may have moved it
-   * while the PEP was answering. Returns the stored decision byte for byte,
+   * it stands after the query: a settlement, a sweep or the clock may have
+   * moved it while the PEP was answering, so the recheck reads the clock
+   * again, inside its transaction, after the await. Returns the stored decision byte for byte,
    * or `undefined` to suppress. The stored Decision Evidence is returned
    * with it and never re-emitted: a second emission would be a second signed
    * record for one `evaluation_id`.
@@ -463,8 +472,9 @@ export class IdempotencyClaimDomain {
     const status = await this.askConsumption(candidate, consumptionStatus);
     if (status !== "unconsumed") return undefined;
     return this.tx(() => {
+      const nowMs = input.clock();
       const found = this.select(input.scopeDigest, input.key);
-      const row = found ? this.advance(found, input.nowMs) : undefined;
+      const row = found ? this.advance(found, nowMs) : undefined;
       if (
         !row ||
         row.state !== "permit_issued" ||
@@ -472,14 +482,14 @@ export class IdempotencyClaimDomain {
         row.execution_id !== null ||
         row.operation_identity !== input.operationIdentity ||
         row.cache_key !== input.cacheKey ||
-        input.nowMs >= row.valid_until_ms ||
+        nowMs >= row.valid_until_ms ||
         row.pep_id !== input.requester.pep_id ||
         row.pep_epoch !== input.requester.pep_epoch ||
         row.decision_json === null
       ) {
         return undefined;
       }
-      this.log(row, row.state, row.state, "retransmitted", input.nowMs);
+      this.log(row, row.state, row.state, "retransmitted", nowMs);
       return JSON.parse(row.decision_json) as Decision;
     });
   }
@@ -691,7 +701,7 @@ export class IdempotencyClaimDomain {
       .get(scopeDigest, key) as ClaimRow | undefined;
   }
 
-  private insert(input: ClaimInput): void {
+  private insert(input: ClaimInput, nowMs: number): void {
     this.db
       .prepare(
         `INSERT INTO claims (scope_digest, idempotency_key, scope_json, action_class, operation_identity, cache_key,
@@ -710,13 +720,13 @@ export class IdempotencyClaimDomain {
         input.requester.pep_id,
         input.requester.pep_epoch,
         input.validUntilMs,
-        input.nowMs,
+        nowMs,
       );
     this.inFlight.add(input.evaluationId);
-    this.logKeys(input.scopeDigest, input.key, input.evaluationId, null, "claimed", "claimed", input.nowMs);
+    this.logKeys(input.scopeDigest, input.key, input.evaluationId, null, "claimed", "claimed", nowMs);
   }
 
-  private adopt(row: ClaimRow, input: ClaimInput): void {
+  private adopt(row: ClaimRow, input: ClaimInput, nowMs: number): void {
     this.db
       .prepare(
         `UPDATE claims SET evaluation_id = ?, cache_key = ?, pdp_boot = ?, pep_id = ?, pep_epoch = ?, valid_until_ms = ?, claimed_at_ms = ?
@@ -729,12 +739,12 @@ export class IdempotencyClaimDomain {
         input.requester.pep_id,
         input.requester.pep_epoch,
         input.validUntilMs,
-        input.nowMs,
+        nowMs,
         row.scope_digest,
         row.idempotency_key,
       );
     this.inFlight.add(input.evaluationId);
-    this.logKeys(row.scope_digest, row.idempotency_key, input.evaluationId, "claimed", "claimed", `adopted:${row.evaluation_id}`, input.nowMs);
+    this.logKeys(row.scope_digest, row.idempotency_key, input.evaluationId, "claimed", "claimed", `adopted:${row.evaluation_id}`, nowMs);
   }
 
   private ticket(evaluationId: string): ClaimTicket {

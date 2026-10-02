@@ -1035,11 +1035,13 @@ describe("the discharge operation on the lifecycle endpoint", () => {
     });
     const otherServer = otherAs.provider.listen(otherPort);
     try {
+      // The other AS's own principals: its kernel refuses a principal of the
+      // first AS's namespace (#829).
       const mission = otherAs.kernel.approve({
         intent: endpointIntent(),
         proposedAuthority: endpointProposal(),
-        subject: { iss: ISSUER, sub: "alice" },
-        approver: { iss: ISSUER, sub: "bob" },
+        subject: { iss: `http://localhost:${otherPort}`, sub: "alice" },
+        approver: { iss: `http://localhost:${otherPort}`, sub: "bob" },
         clientId: "ap-agent",
         approvalEventId: "apev-dis-unauth-target",
       });

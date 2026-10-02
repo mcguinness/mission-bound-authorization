@@ -31,6 +31,7 @@ import {
   type TxnArs,
 } from "./adapters/provider.js";
 import type { CrossOrgOptions } from "./adapters/cross-org-grant.js";
+import { bindAuthoritySourceCatalog } from "./kernel/authority-source.js";
 import { IssuerEvidenceStore } from "./kernel/issuer-evidence.js";
 import { defaultSubjectResolver, type SubjectResolver } from "./adapters/continuation-grant.js";
 import type { CarryoverConfig } from "./kernel/carryover.js";
@@ -52,7 +53,7 @@ import { newReplayCache } from "./kernel/instance-assertion.js";
 import { MissionKernel } from "./kernel/kernel.js";
 import type { TxnAuthorizationOptions } from "./adapters/transaction-authorization.js";
 import { StatusListPublisher } from "./kernel/status-list.js";
-import { createTemplate } from "./kernel/template.js";
+import { createTemplate, type DispatchPolicies } from "./kernel/template.js";
 import { trustedCapabilityResolver } from "./adapters/capability-resolver.js";
 import { TemplateStore } from "./kernel/template-store.js";
 import { isActivatingCommit, TERMINAL_STATES } from "./kernel/types.js";
@@ -398,9 +399,12 @@ export {
 export {
   createTemplate,
   dispatchFromTemplate,
+  selectDispatchAgent,
   TemplateStore,
   TemplateError,
   DispatchError,
+  type DispatchPolicies,
+  type DispatchPolicy,
   type MissionTemplate,
   type TemplateCreate,
   type TemplateState,
@@ -411,8 +415,12 @@ export {
 } from "./kernel/template.js";
 export {
   AUTHORITY_SOURCE_TYPES,
+  assertLocalPrincipal,
+  bindAuthoritySourceCatalog,
   type AuthoritySourceCatalog,
   type AuthoritySourceCatalogEntry,
+  type BoundAuthoritySourceCatalog,
+  type LocalPrincipal,
   authoritySourceOf,
   isAuthoritySourceType,
   parseAuthoritySource,
@@ -610,6 +618,13 @@ export interface BuiltAs {
 export async function buildAuthorizationServer(opts: {
   issuer: string;
   allowHeadlessAdjudication?: boolean;
+  /**
+   * @spec mission-template#the-mission-template — the deployment's Dispatch
+   * Policies, keyed by `dispatch_policy`: the Agent selection rule for a
+   * template that lists several Agents. Absent, only single-Agent templates
+   * dispatch.
+   */
+  dispatchPolicies?: DispatchPolicies;
   /**
    * @spec control-plane#deployment-declaration (D27) — the kernel store. The
    * default is in-memory and single-process; a `file` selects the OPT-IN
@@ -861,7 +876,10 @@ export async function buildAuthorizationServer(opts: {
   // so a dispatched instance inherits a source this deployment actually
   // declares.
   createTemplate(templateStore, demoReconciliationTemplate(opts.issuer) as never, {
-    authoritySourceCatalog: AUTHORITY_SOURCES as never,
+    // @spec mission#authority-sources (#829): bound to the same issuer the
+    // kernel below binds its catalog to, so consent holds the approver to the
+    // one namespace the kernel recognizes.
+    authoritySourceCatalog: bindAuthoritySourceCatalog(AUTHORITY_SOURCES as never, opts.issuer),
     capabilityResolver: trustedCapabilityResolver(),
   });
   // @spec async-delegation — forward reference to the provider (assigned after
@@ -1105,6 +1123,7 @@ export async function buildAuthorizationServer(opts: {
     continuationGrantKey: continuationKeys.privateKey,
     continuationGrantKid: asContinuation.kid,
     templateStore,
+    ...(opts.dispatchPolicies ? { dispatchPolicies: opts.dispatchPolicies } : {}),
     protectedEventSources,
     issuerEvidence,
     // @spec issuance-grant#effective-set-projection (#617 review 1) — the

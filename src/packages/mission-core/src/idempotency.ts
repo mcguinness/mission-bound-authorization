@@ -70,7 +70,9 @@ export function isVolatileScopeMember(value: unknown): boolean {
 
 /**
  * The fixed-member idempotency scope. `actor.act` is the immediate (leaf)
- * delegation entry only: the rest of the chain is volatile.
+ * delegate only, and only when that leaf names a delegate rather than a
+ * client instance ({@link idempotencyScopeActor}): the rest of the chain is
+ * volatile.
  */
 export interface IdempotencyScope {
   mission: { iss: string; id: string };
@@ -80,6 +82,55 @@ export interface IdempotencyScope {
   action: string;
   resource: { type: string; id: string };
   phase: string | null;
+}
+
+/** The actor members of a validated decision request, as the scope reads them. */
+export interface ScopeActorInput {
+  client_id?: string;
+  act?: ReadonlyArray<{ iss?: unknown; sub?: unknown; sub_profile?: unknown }>;
+}
+
+/** The `sub_profile` token marking an `act` entry that names a client instance. */
+const CLIENT_INSTANCE_PROFILE = "client_instance";
+
+/** Whether an `act` entry names a client instance (its space-delimited `sub_profile` carries `client_instance`). */
+export function namesClientInstance(entry: { sub_profile?: unknown }): boolean {
+  return (
+    typeof entry.sub_profile === "string" &&
+    entry.sub_profile.split(" ").includes(CLIENT_INSTANCE_PROFILE)
+  );
+}
+
+/**
+ * @spec runtime#idempotency ("Volatile members MUST NOT be added to the
+ * scope"), oauth-mission#delegated-instance-context: the stable actor
+ * identity a scope is keyed on, or `undefined` when none can be established.
+ *
+ * - No delegation (`act` absent): the client alone.
+ * - The leaf names a delegate (its `sub_profile` carries no
+ *   `client_instance`): the client and that delegate's `{iss, sub}`, so a
+ *   genuinely different delegate is a different scope.
+ * - The leaf names a client instance: an instance's identity is volatile
+ *   (the same reason `client_instance_id` is excluded), and instance
+ *   evidence does not establish a delegate. The stable identity is the
+ *   client the instance belongs to, so `act` is `null` and another instance
+ *   of the same client is the same scope. Without a `client_id` there is no
+ *   stable identity to key on: `undefined`, and the caller refuses.
+ *
+ * Shared by every owner of a (scope, key) record, the PDP claim (#917) and
+ * the PEP reservation (#918), so they derive the actor identically.
+ */
+export function idempotencyScopeActor(
+  actor: ScopeActorInput | undefined,
+): IdempotencyScope["actor"] | undefined {
+  const clientId =
+    typeof actor?.client_id === "string" && actor.client_id.length > 0 ? actor.client_id : null;
+  const leaf = actor?.act?.[actor.act.length - 1];
+  if (!leaf) return { client_id: clientId, act: null };
+  if (typeof leaf.iss !== "string" || typeof leaf.sub !== "string") return undefined;
+  if (namesClientInstance(leaf))
+    return clientId === null ? undefined : { client_id: clientId, act: null };
+  return { client_id: clientId, act: { iss: leaf.iss, sub: leaf.sub } };
 }
 
 /**

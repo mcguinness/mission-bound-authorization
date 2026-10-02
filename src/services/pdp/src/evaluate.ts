@@ -1230,7 +1230,12 @@ async function evaluateInner(
     if (!domain?.declares(actionClass)) return deny("out_of_authority");
     const key = req.action.properties?.idempotency_key;
     if (!isIdempotencyKey(key)) return deny("parameter_violation");
+    // @spec authzen#runtime-denial-classification `actor_invalid` ("the PDP
+    // cannot establish the runtime actor context"): an instance-profiled
+    // leaf with no client to key it on has no stable identity, and keying on
+    // the volatile instance would let another instance claim the same key.
     const scope = idempotencyScopeOf(req);
+    if (!scope) return deny("actor_invalid");
     const input: ClaimInput = {
       actionClass: actionClass as string,
       scope,
@@ -1241,7 +1246,9 @@ async function evaluateInner(
       evaluationId: decisionId,
       validUntilMs: deadline.validUntilMs,
       requester: opts.requester ?? { pep_id: "unbound", pep_epoch: `unbound:${randomUUID()}` },
-      nowMs: now().getTime(),
+      // The decision's own clock, read by the domain inside each transaction
+      // it decides in, never a reading taken before an await.
+      clock: () => now().getTime(),
     };
     // An unreachable domain throws here: no decision, so the PEP records
     // `pdp_unreachable` and nothing executes (runtime: "MUST fail closed

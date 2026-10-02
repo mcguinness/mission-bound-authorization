@@ -122,7 +122,7 @@ async function buildChain(
       },
     ] as never,
     subject: opts.subject ?? ORIGIN_SUBJECT,
-    approver: { iss: ORIGIN_ISS, sub: "bob" },
+    approver: { iss: "https://id.org1.test", sub: "bob" },
     clientId: "agent-a",
     approvalEventId: `apev-${crypto.randomUUID()}`,
   });
@@ -214,6 +214,9 @@ beforeAll(async () => {
   originKernel = new MissionKernel({
     issuer: ORIGIN_ISS,
     policy: originPolicy as never,
+    // The origin org's principals are issued by its own identity provider,
+    // distinct from the AS that issues its Missions (#829).
+    principalIssuer: "https://id.org1.test",
     authoritySourceCatalog: testAuthoritySourceCatalog(originPolicy.ceiling, ["agent-a"], ["bob"]),
     statusKey: originKeys.privateKey,
     statusKid: "as-status",

@@ -55,8 +55,8 @@
     "content_sha256": "b5bb6abb6737b1fc3c4571380e89cc4d23e960b849450089f0e38b13462f32d7"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "0da7a02d16762185010ab53ec555c77e10729acd",
-    "content_sha256": "466e5d1eb808864f09a6d9a9650ff45cbce75d1cc6c9620242cb114b64dbc7c0"
+    "revision": "30113da8793707597d5d5ced96eb838d881a29e6",
+    "content_sha256": "e7f66a5cb2708e6f6192888c4a98afd24baab76b1b77f8171f12ac2620858b55"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "1ea788e00f84b3804c447cb8bbb143c7b803901d",
@@ -75,8 +75,8 @@
     "content_sha256": "055d460354f9c98d981f74ce661daa606685695bedd42d04a31981158f8389d7"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "0da7a02d16762185010ab53ec555c77e10729acd",
-    "content_sha256": "2c63cf0670a58275f31a6a1fb3990df601e301b6606ef22bc9663dcb0b60dbec"
+    "revision": "a0ed2253257e1084af1a0ca8e9e4916a7a657906",
+    "content_sha256": "a3cf68f964225bf6908a62ad254a6b3494a0404bc04c6878b5be5cf92d612c31"
    },
    "draft-mcguinness-mission-orchestration.md": {
     "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
@@ -3370,6 +3370,18 @@
      "name": "authority source on the approval surface (@spec mission#authority-sources) > refuses access_denied at the decision when the subject discipline fails",
      "level": "endpoint",
      "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "issuer-qualified principals at the source gates (@spec mission#authority-sources, mission#approval-event, #829) > refuses a foreign-issuer Subject in every source mode, including user_delegated",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "issuer-qualified principals at the source gates (@spec mission#authority-sources, mission#approval-event, #829) > refuses a dispatch retry whose Subject is foreign or malformed before returning the instance its dispatch id created, and still returns it for a legitimate retry after revocation",
+     "level": "unit",
+     "surface": "derivation"
     }
    ]
   },
@@ -3601,6 +3613,54 @@
      "name": "authority source on the approval surface (@spec mission#authority-sources) > refuses access_denied when the Approver may not activate the source",
      "level": "endpoint",
      "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "issuer-qualified principals at the source gates (@spec mission#authority-sources, mission#approval-event, #829) > refuses a direct approval whose Approver is a foreign-issuer bob against local bob's activator, creating no Mission and publishing nothing",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "issuer-qualified principals at the source gates (@spec mission#authority-sources, mission#approval-event, #829) > refuses a foreign principal before derivation runs: an approval whose derivation would also fail reports the namespace refusal",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "issuer-qualified principals at the source gates (@spec mission#authority-sources, mission#approval-event, #829) > refuses a missing, malformed, or byte-distinct issuer, never normalizing it into the local namespace",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "issuer-qualified principals at the source gates (@spec mission#authority-sources, mission#approval-event, #829) > holds the exported kernel gates to the namespace on their own, not only through approve",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "issuer-qualified principals at the source gates (@spec mission#authority-sources, mission#approval-event, #829) > keeps two kernels with equal local subject names isolated: neither accepts the other's qualified principal or catalog",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "issuer-qualified principals at the source gates (@spec mission#authority-sources, mission#approval-event, #829) > binds a configured principalIssuer distinct from the Mission issuer, admitting its principals and refusing the Mission issuer's",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "issuer-qualified principals at the source gates (@spec mission#authority-sources, mission#approval-event, #829) > admits an upstream identity only after an explicit trusted mapping to a local principal; rewriting its issuer is not a mapping",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "issuer-qualified principals at the source gates (@spec mission#authority-sources, mission#approval-event, #829) > refuses a template-consent retry whose approver is foreign or malformed before returning the template its event created, and still returns it for a legitimate retry after revocation",
+     "level": "unit",
+     "surface": "derivation"
     }
    ]
   },
@@ -13177,6 +13237,18 @@
      "surface": "decision-request"
     },
     {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the idempotency scope is the published namespace > another instance of the same client under the same key, carried as an instance-profiled leaf, never obtains a second permit",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the idempotency scope is the published namespace > an instance-profiled leaf with no client to key it on has no stable actor and is refused actor_invalid",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
      "file": "src/services/mcp-payments/test/runtime-posture-metadata.test.ts",
      "name": "runtime posture publication on the resource metadata surface > publishes the reservation domain, its owner and the retention posture for every keyed write outside the high-consequence classes",
      "level": "unit",
@@ -13189,7 +13261,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "Witnessed (#917): the statement publishes idempotency_scope [mission, subject, actor, audience, action, resource, phase] per high-consequence class; a statement adding a volatile member (client_instance_id, the act chain above the leaf, freshness, approvals, timestamps) or omitting a dimension is refused at load; and the scope the PDP encodes is exactly the published one: pairs differing in any one dimension never collide under the fixed-member JCS encoding, and a new client_instance_id does not split it. The reversible-write declarations (#918) publish the same fixed-member scope for the PEP-reserved keys, and a declaration whose scope adds a volatile member or omits a dimension is refused at load."
+   "notes": "Witnessed (#917): the statement publishes idempotency_scope [mission, subject, actor, audience, action, resource, phase] per high-consequence class; a statement adding a volatile member (client_instance_id, the act chain above the leaf, freshness, approvals, timestamps) or omitting a dimension is refused at load; and the scope the PDP encodes is exactly the published one: pairs differing in any one dimension, a different delegate leaf included, never collide under the fixed-member JCS encoding, and a new client_instance_id does not split it. The actor dimension is a stable identity (@mission/core idempotencyScopeActor, #1016 review): a leaf act entry whose sub_profile carries client_instance names a volatile instance, so the scope keys on its client instead and another instance of the same client gets no second permit; an instance-profiled leaf with no client to key on is refused actor_invalid. The reversible-write declarations (#918) publish the same fixed-member scope for the PEP-reserved keys, and a declaration whose scope adds a volatile member or omits a dimension is refused at load."
   },
   {
    "id": "runtime.idempotency.tombstone-retention-and-refusal",
@@ -14724,7 +14796,7 @@
    "assertion": "replay",
    "observation": {
     "normative": "a re-presentation whose decision cache key equals the prior decision's and whose claim matches (same idempotency scope, key and operation identity), while the prior permit is unexpired and its evaluation_id unconsumed, returns the prior decision rather than a fresh evaluation or an error",
-    "local": "the reference PDP establishes unconsumed only from the executing PEP's explicit unconsumed answer for that evaluation_id, read from its D28 redemption store and asked of the PEP and epoch the permit was issued to; consumed, unknown, a failed or timed-out query, another epoch, a settled claim or a PDP restart suppresses with duplicate_suppressed (next_action retry), and the stored decision is returned byte for byte with its stored Decision Evidence, never re-emitted"
+    "local": "the reference PDP establishes unconsumed only from the executing PEP's explicit unconsumed answer for that evaluation_id, read from its D28 redemption store and asked of the PEP and epoch the permit was issued to; consumed, unknown, a failed or timed-out query, another epoch, a settled claim or a PDP restart suppresses with duplicate_suppressed (next_action retry); unexpired is judged on a clock read after that answer arrives, inside the transaction that returns the decision; and the stored decision is returned byte for byte with its stored Decision Evidence, never re-emitted"
    },
    "level": "concurrency",
    "coverage": "tested",
@@ -14756,6 +14828,12 @@
     {
      "file": "src/services/pdp/test/idempotency-claim.test.ts",
      "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > retransmission returns the prior decision only when every condition holds > does not return it once the permit expired",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > retransmission returns the prior decision only when every condition holds > does not return a permit that expires while the PEP is answering",
      "level": "unit",
      "surface": "decision-request"
     },
@@ -23961,7 +24039,7 @@
    "id": "template.dispatch.recipient-agent-membership",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "the-mission-template",
-   "text": "or whose Agent (the instance's `client_id`) is not an entry of `agents`",
+   "text": "or whose Agent is not an entry of `agents`",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -23975,8 +24053,14 @@
     "normative": "a Dispatch whose instance client_id (the Agent) is not an entry of agents is refused, and no Mission is derived"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > recipient_not_allowed: a Dispatch Policy that selects an unlisted Agent is refused",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
     {
      "file": "src/services/authorization-server/test/template.test.ts",
      "name": "dispatch gates (@spec mission-template#dispatch-refusals) > refuses a dispatcher or recipient not on the template's lists",
@@ -23984,7 +24068,157 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "Covered at unit level only, and unreachable at the endpoint by construction: the mission-dispatch grant names no Agent, and the implementation dispatches to the template's first listed agent, so an endpoint request cannot select an unlisted Agent. The kernel refuses an unlisted recipient with recipient_not_allowed. The draft does not yet say how the instance's Agent is established at Dispatch."
+   "notes": "The Agent is never request-selected (#970), so an unlisted Agent is reachable only through a Dispatch Policy that names one; the endpoint test registers such a policy and the Dispatch is refused with recipient_not_allowed."
+  },
+  {
+   "id": "template.dispatch.agent-selected-by-issuer",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "the-mission-template",
+   "text": "It selects the instance's Agent (the instance's `client_id`) from `agents` under the Dispatch Policy, never from Dispatcher input: with one listed Agent, that Agent; with several, the Agent the Dispatch Policy's selection rule names.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a dispatched instance's client_id is the template's one listed Agent, or, with several, the Agent the Dispatch Policy's rule selects, never chosen by array position; an Agent named in the Dispatch request is ignored"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > the Agent is never taken from the request: a Dispatch naming an Agent commits the template's Agent",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > with several listed Agents, the Dispatch Policy selects the Agent, a retry keeps it, and the token is bound to the Dispatcher",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "dispatch gates (@spec mission-template#dispatch-refusals) > selects the one listed Agent directly and ignores an Agent named in the dispatch input",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "dispatch gates (@spec mission-template#dispatch-refusals) > with several listed Agents, selects the Agent the Dispatch Policy names, and refuses agent_not_selected when no rule selects one",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ]
+  },
+  {
+   "id": "template.dispatch.agent-not-selected-refusal",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "the-mission-template",
+   "text": "The Mission Issuer refuses a Dispatch for which no Agent is selected",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Dispatch from a template listing several Agents, whose Dispatch Policy selects none, is refused, commits no Mission and no dispatch event, and issues no token"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > agent_not_selected: several listed Agents and no Dispatch Policy rule refuses the Dispatch with access_denied",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "dispatch gates (@spec mission-template#dispatch-refusals) > with several listed Agents, selects the Agent the Dispatch Policy names, and refuses agent_not_selected when no rule selects one",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "The reference refusal reason agent_not_selected is implementation-local on access_denied, following the D205 precedent; the draft registers none."
+  },
+  {
+   "id": "template.dispatch.committed-agent-kept-on-retry",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch",
+   "text": "The selection is part of the committed instance: a retried or recovered Dispatch returns the committed Agent and does not select again",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a retried Dispatch with a committed dispatch_event_id returns the committed instance and its committed Agent without consulting the selection rule again, even when the rule would now select another Agent or none"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "dispatch gates (@spec mission-template#dispatch-refusals) > a retried Dispatch returns the committed Agent without selecting again",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > with several listed Agents, the Dispatch Policy selects the Agent, a retry keeps it, and the token is bound to the Dispatcher",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "A selection that changes between attempts needs a reconfigured Dispatch Policy, which only the unit test can stage; the endpoint test shows the retry returning the committed Agent under a fixed policy."
+  },
+  {
+   "id": "template.grant-type.agent-separate-from-presenter",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "grant-type",
+   "text": "that selection is separate from the Dispatcher's authentication and from the presenter binding of the returned access token, which is sender-constrained to the Dispatcher's key.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the access token a Dispatch returns names the Dispatcher as its client and is sender-constrained to the Dispatcher's key, whichever Agent the instance names"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > happy path: dispatch mints a DPoP-bound mission token, and a repeated dispatch_event_id is idempotent",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > with several listed Agents, the Dispatch Policy selects the Agent, a retry keeps it, and the token is bound to the Dispatcher",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ]
   },
   {
    "id": "template.members.review-cadence-shape",
@@ -24069,6 +24303,72 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "progressive.in-ceiling.contained-overlap-falls-back",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "in-ceiling-expansion",
+   "text": "The drawdown policy MUST NOT policy-adjudicate a successor whose complete Authority Set, including authority carried forward from its predecessor, overlaps in authority capability under a containment restriction of its expansion chain",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A policy-adjudicated drawdown request whose complete successor Authority Set, including authority carried forward from the predecessor, overlaps capability the predecessor contained produces no successor by policy; it falls back to a fresh human approval whose consent disclosure names the contained capability and the event class that caused its containment."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Binds where containment.narrowing also runs (Containment Section \"Restoration Through Expansion\"). The negative test waits for a Progressive implementation (#999)."
+  },
+  {
+   "id": "progressive.in-ceiling.unrelated-drawdown-policy-eligible",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "in-ceiling-expansion",
+   "text": "A drawdown whose authority overlaps no restricted capability remains eligible for policy adjudication under the other guards of this section",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "While the chain carries a containment restriction, a drawdown whose complete successor Authority Set overlaps no restricted capability is still adjudicated by policy under the other in-ceiling guards; a non-empty overlay alone does not force a human approval."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Binds where containment.narrowing also runs (Containment Section \"Restoration Through Expansion\"). The negative test waits for a Progressive implementation (#999)."
+  },
+  {
+   "id": "progressive.in-ceiling.restriction-survives-intervening-successor",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "in-ceiling-expansion",
+   "text": "The Mission Issuer MUST apply this test to every drawdown in the chain after the containment, not only to one from the Mission that holds the overlay",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "After Mission A contains capability X and an unrelated policy drawdown creates successor B with an empty overlay, a later drawdown from B whose Authority Set overlaps X is refused policy adjudication and falls back to a fresh human approval disclosing the containment of X and its cause; an unrelated approval or a ceiling review in between does not clear the restriction."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Binds where containment.narrowing also runs (Containment Section \"Restoration Through Expansion\"). The negative test waits for a Progressive implementation (#999)."
   },
   {
    "id": "cross-domain.delegation-depth.composed-bound-disclosure",

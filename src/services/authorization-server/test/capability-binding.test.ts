@@ -580,7 +580,6 @@ describe("template dispatch inherits the ceiling's recorded bindings", () => {
       templateId,
       dispatchEventId: `dsp-cap-${(seq += 1)}`,
       dispatcher: "orchestrator",
-      recipient: "worker",
       intent: intentOf("reconcile Acme"),
       proposedAuthority: proposalOf(actions),
       subject: { iss: ISS, sub: "alice" },
