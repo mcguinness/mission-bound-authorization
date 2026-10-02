@@ -3487,6 +3487,16 @@ window; only a coupled resource-side precondition earns its enforced
 property. Uncovered facts and deployments not claiming the extension
 retain this residual and the operational mitigations above.
 
+An idempotency key identifies one request, not the business event the
+request carries out ({{idempotency}}). Two requests that carry out the
+same event under different action names, parameters, or actors are
+separate operations, and each can execute. Where an event must take
+effect once, the Operation Profile names the parameters that identify
+it, and the resource deduplicates on them. Under a metered bound each
+execution is charged, so a second representation duplicates an effect
+within the bound but adds no capacity
+({{I-D.draft-mcguinness-mission-metering}}).
+
 ## Confused Deputy Across Resources
 
 The permit binding of {{permit-binding}} ties a decision to the

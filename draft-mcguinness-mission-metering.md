@@ -638,6 +638,11 @@ behavior.
 - It MUST NOT leave the decrement ambiguous: a reservation settles on
   the evidence state ({{settlement-states}}), never on a generic
   failure signal.
+- For a metered action in the runtime profile's high-consequence
+  classes, the declared idempotency horizon
+  ({{I-D.draft-mcguinness-mission-runtime}}) MUST extend at least to
+  the Mission's `expires_at`, so a duplicate the Mission could still
+  admit always resolves against the recorded key.
 
 The reserve/commit posture fixes when consumption is charged; the
 evidence state fixes how the charge settles.
