@@ -361,8 +361,22 @@ canonicalization, and integrity envelope a deployment emits.
     : REQUIRED. From the request's Mission reference.
 
     `policy_view_id`:
-    : REQUIRED. The PDP's own view identifier; the PDP always knows
-      and populates it, whatever the request carried.
+    : REQUIRED where the PDP evaluates through a materialized policy
+      view ({{I-D.draft-mcguinness-mission-runtime}}): the PDP's own
+      view identifier, which it always knows and populates, whatever
+      the request carried. Absent where the PDP evaluates the
+      Mission's recorded authority directly, which records
+      `authority_hash` and `pdp_policy_version` instead.
+
+    `pdp_policy_version`:
+    : REQUIRED where `policy_view_id` is absent, and OPTIONAL
+      otherwise. A string: the PDP's local policy version, which with
+      `authority_hash` forms the runtime profile's policy-view version
+      for a PDP that evaluates the Mission's recorded authority
+      directly ({{I-D.draft-mcguinness-mission-runtime}}). It is
+      distinct from `policy_version`, the issuance profile's derivation
+      policy version, so a change to the PDP's local policy is
+      distinguishable in the recorded decision basis.
 
     `authority_hash`, `intent_hash`:
     : OPTIONAL. Neither is carried on the baseline `mission` claim or
@@ -372,7 +386,9 @@ canonicalization, and integrity envelope a deployment emits.
       privilege, or the request carried it under the Local
       Approved-Set Verification profile
       ({{I-D.draft-mcguinness-oauth-mission-approved-set-verification}},
-      Section "Local Approved-Set Verification").
+      Section "Local Approved-Set Verification"). `authority_hash` is
+      REQUIRED where `policy_view_id` is absent: a PDP that evaluates
+      the Mission's recorded authority directly holds it.
 
     `policy_version`:
     : OPTIONAL. From the request's Mission reference, when known.
@@ -1529,9 +1545,11 @@ that content already carries:
 
 `policy`:
 : OPTIONAL. An object, with `pdp_policy_view` (the projected Decision
-  Evidence's `mission.policy_view_id`) and `mission_policy_version`
-  (its `mission.policy_version`, when the Decision Evidence carries
-  it) ({{decision-evidence-object}}).
+  Evidence's `mission.policy_view_id`, when it carries one),
+  `pdp_policy_version` (its `mission.pdp_policy_version`, when it
+  carries one), and `mission_policy_version` (its
+  `mission.policy_version`, when the Decision Evidence carries it)
+  ({{decision-evidence-object}}).
 
 `executor`:
 : OPTIONAL. An object, the projected Decision Evidence's `actor`
@@ -2353,6 +2371,13 @@ evidence representation their shared envelope carries (using the
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Decision Evidence's `mission.policy_view_id` is REQUIRED where the
+  PDP evaluates through a materialized policy view; a PDP that
+  evaluates the Mission's recorded authority directly omits it and
+  records `authority_hash` and the new `pdp_policy_version`, following
+  the runtime profile's two evaluation paths; the Mission Receipt's
+  `policy` object projects `pdp_policy_version` likewise.
 
 - `evaluation_request_digest` covers the evaluation request as the
   decision-API profile defines it or, for a Refusal Record emitted

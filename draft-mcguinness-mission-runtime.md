@@ -258,7 +258,7 @@ point-of-use check, an active Mission becomes ambient authority for
 the actions an agent takes within a token's lifetime. This document
 is that check. It defines where enforcement sits, how a permit is
 bound to concrete parameters to close the time-of-check to
-time-of-use gap, the materialized policy view a decision evaluates
+time-of-use gap, the materialized policy view a decision can evaluate
 against, the fail-closed posture for constraints and consumption
 bounds, and the runtime evidence every decision and refusal path
 produces. For the high-consequence classes it further defines
@@ -338,8 +338,8 @@ issuance-and-derivation layer; it reads only the credential's
 established Mission reference, effective authority, subject and actor
 context, and sender-constraint confirmation, each realized concretely by
 the binding's credential profile. It obtains any value the credential
-does not carry (the current Mission lifecycle state, or a materialized
-policy-view version) at runtime as described below, never by requiring
+does not carry (the current Mission lifecycle state, or a policy-view
+version) at runtime as described below, never by requiring
 the issuance-and-derivation layer to add a field.
 
 For the OAuth binding, that issuance-and-derivation layer is
@@ -504,7 +504,7 @@ trust rules, from which the PDP establishes the Mission's lifecycle
 state and the freshness of that observation. Examples include a query
 to the Mission issuer, a local Mission database, an authenticated
 status or event feed, or a short-lived derived credential whose
-lifetime is the deployment's accepted state lease. The materialized
+lifetime is the deployment's accepted state lease. A materialized
 policy view ({{policy-view}}) is not a state source: it commits the
 compiled authority, never the mutable lifecycle state a decision
 consults.
@@ -747,6 +747,16 @@ credential narrowed below its Mission's approved set is evaluated at
 its own narrower authority. The OAuth realization of both bounds is
 {{I-D.draft-mcguinness-mission-runtime-oauth}}, Section "Credential
 Authority and Current Effective Authority".
+
+A PDP evaluates these bounds either through a materialized policy
+view ({{policy-view}}) or directly against the Mission's recorded
+authority. Whichever representation it evaluates MUST NOT be broader
+than the current effective authority, and MUST be bound to the
+Mission it represents by the Mission's identifier and
+`authority_hash`. Mutable Mission state, including the narrowing the
+current effective authority reflects, comes from a state source
+within the staleness bound ({{state-freshness}}), never from that
+representation.
 
 Where the deployment enforces a narrowing mechanism at action time,
 the PDP MUST establish the current effective authority from a source
@@ -1223,9 +1233,12 @@ Established Mission:
   ({{mission-binding}}).
 
 Policy-view version:
-: A deployment-opaque identifier the PDP emits for the materialized
-  policy and Mission view it evaluated against, so a permit and its
-  evidence record tie to a reproducible decision basis. It need not
+: A deployment-opaque identifier the PDP emits for the decision basis
+  it evaluated against, so a permit and its evidence record tie to a
+  reproducible decision basis: the materialized policy and Mission
+  view where the PDP uses one ({{policy-view}}), or the Mission's
+  `authority_hash` and the PDP's local policy version where it
+  evaluates the Mission's recorded authority directly. It need not
   reveal policy content; it is a correlator that lets an operator
   determine which materialized policy, Mission state view, and
   constraint interpretation a decision used. It is local to
@@ -1233,8 +1246,8 @@ Policy-view version:
   `policy_version` Mission-record field
   ({{I-D.draft-mcguinness-oauth-mission}}); this document does not
   interpret it beyond correlation, and defines no portable policy-version
-  registry. The materialized policy view and its content-addressed
-  `policy_view_id` are defined in {{policy-view}}.
+  registry. Where a view is used, the materialized policy view and its
+  content-addressed `policy_view_id` are defined in {{policy-view}}.
 
 Runtime enforcement evidence:
 : The record a consequential action produces for a PDP decision or a
@@ -1298,7 +1311,7 @@ It consumes these optional capabilities:
 
 | Capability | Consumption | Scope of consumption |
 | --- | --- | --- |
-| Structured Authority | required | The decision contract materializes and evaluates the effective Authority Set, with its subset rule and Common Constraints ({{input-authority}}, {{policy-view}}); as the substrate's composition rule warns, a Mission reference alone is not structured authority |
+| Structured Authority | required | The decision contract evaluates the effective Authority Set, directly or through a materialized policy view, with its subset rule and Common Constraints ({{input-authority}}, {{policy-view}}); as the substrate's composition rule warns, a Mission reference alone is not structured authority |
 | Lifecycle-Gated Authorization | required | Every Runtime Decision gates on the only-`active`-permits rule ({{decision}}) |
 | State-Observable | required when the enforcement scope's staleness bound is tighter than the credential lifetime | An authenticated freshness source with a stated staleness bound, consumed wherever an enforcement scope's published staleness bound is tighter than the credential lifetime ({{state-freshness}}) |
 | Monotonic Derivation | required when delegation or attenuation is enforced at action time | Consumed where delegation or attenuation is enforced at action time through effective-set evaluation ({{input-authority}}); observing a later narrowing, such as containment, is not a derivation property, and {{input-authority}} requires a source that reports it |
@@ -2153,11 +2166,15 @@ grants, widens, or restores another.
 
 ## Materialized Policy View {#policy-view}
 
-A PDP evaluates a Mission against an action through a **materialized
-policy view**: the reproducible, evaluable form of the Mission's
-approved authority, produced by the Mission Issuer or a trusted compiler
-and loaded by the PDP. A **trusted compiler** is a component the
-deployment trusts to materialize the Mission's approved authority
+This section governs a PDP that evaluates a Mission against an action
+through a **materialized policy view**: the reproducible, evaluable
+form of the Mission's approved authority, produced by the Mission
+Issuer or a trusted compiler and loaded by the PDP. A PDP can instead
+evaluate the Mission's recorded authority directly; the authority
+bounds, the state-source rule, and capability-source provenance apply
+either way ({{input-authority}}). A **trusted compiler** is a
+component the deployment trusts to materialize the Mission's approved
+authority
 faithfully and reproducibly; it is in the deployment's trust domain and
 its output is bound by the content-addressed `policy_view_id` below. The
 view is substrate-independent runtime machinery; a decision-API binding
@@ -3494,6 +3511,16 @@ window; only a coupled resource-side precondition earns its enforced
 property. Uncovered facts and deployments not claiming the extension
 retain this residual and the operational mitigations above.
 
+An idempotency key identifies one request, not the business event the
+request carries out ({{idempotency}}). Two requests that carry out the
+same event under different action names, parameters, or actors are
+separate operations, and each can execute. Where an event must take
+effect once, the Operation Profile names the parameters that identify
+it, and the resource deduplicates on them. Under a metered bound each
+execution is charged, so a second representation duplicates an effect
+within the bound but adds no capacity
+({{I-D.draft-mcguinness-mission-metering}}).
+
 ## Confused Deputy Across Resources
 
 The permit binding of {{permit-binding}} ties a decision to the
@@ -3711,6 +3738,14 @@ worked example shows the concrete record
 
 \[\[ To be removed from the final specification ]]
 
+- A materialized policy view is one way to evaluate the authority
+  input, not the only one: the Materialized Policy View section
+  governs a PDP that uses one, and the authority input requires
+  whatever the PDP evaluates to be no broader than the current
+  effective authority and bound to the Mission, with mutable state
+  from a state source; the policy-view version names whichever basis
+  the PDP evaluated.
+
 - The Operation Profile's items are grouped as the operation's binding
   and its declarations, with no change to any requirement or to which
   operations it applies to; a declaration is stated even where the
@@ -3718,6 +3753,10 @@ worked example shows the concrete record
 
 - The record minimum's evaluation request digest is over the input
   the runtime evidence companion defines (#971).
+
+- Security Considerations notes that an idempotency key identifies a
+  request, not the business event it carries out, and that the
+  Operation Profile and the resource own event-level deduplication.
 
 - The Enforcement Scope Statement is what a deployment adopting the
   Runtime-Enforced bundle publishes, not what earns the level; the

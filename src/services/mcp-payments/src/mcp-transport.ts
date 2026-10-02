@@ -85,7 +85,7 @@ async function route(
   signals?: RequestSignals,
 ): Promise<MediatedToolResult> {
   const mapping = TOOL_ACTIONS[name];
-  if (mapping?.actionClass && paymentsServer.hasTransactionTier()) {
+  if (mapping?.tier === "transaction-assurance" && paymentsServer.hasTransactionTier()) {
     return paymentsServer.callTransactionTool(name, args, token, undefined, signals);
   }
   // @spec runtime#compound-actions — a `prepare` crossing creates state, so it
@@ -96,7 +96,7 @@ async function route(
   if (
     name === "schedule_payment" ||
     mapping?.phase === "prepare" ||
-    (mapping?.actionClass && !paymentsServer.hasTransactionTier())
+    (mapping?.tier === "transaction-assurance" && !paymentsServer.hasTransactionTier())
   ) {
     return paymentsServer.callWriteTool(name, args, token, undefined, signals);
   }

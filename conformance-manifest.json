@@ -11,16 +11,16 @@
     "content_sha256": "d00802fb051f408340682374fe233c88477a4005756813f8afcd4cf351307b09"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "e4d7216f95e2857335cd4a598eba82b3975a2dea",
-    "content_sha256": "1a8672b2434475403a6606d89eb8c092f6f702d73f8f42e5d3cd54e412b48c86"
+    "revision": "f06f5e6a330dfe1274b231501edebcfd231955f3",
+    "content_sha256": "62f5cfa6be4461466a1cc25eaefee38d30453ba236825e193d94cfe8feb4b356"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "e4d7216f95e2857335cd4a598eba82b3975a2dea",
-    "content_sha256": "71b93e5299f66eb8ab272da1eebe4dda84f925569a3a4812834a297b8a96e613"
+    "revision": "f06f5e6a330dfe1274b231501edebcfd231955f3",
+    "content_sha256": "a2a1f271328ddd5634a826cbf588eadcc514418fad0f4679fe1f31c647056ec0"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "b145c1b303241a6c351083c8a7474ea46fa51ea8",
-    "content_sha256": "9f67aed07fa469580f4d4fce63d989010ab9234d9e788bdf25cfbe6cd7a87eda"
+    "revision": "0940aa14bf4a300fa5efdb755e99fc5f7ddd6f0f",
+    "content_sha256": "be3f31826ebdfebf1599a4832aa9af8615f7e811d2de81934c360a142250603c"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "daadb45f36cd901f0d646ba0aa942dfec95844ee",
@@ -55,16 +55,16 @@
     "content_sha256": "b5bb6abb6737b1fc3c4571380e89cc4d23e960b849450089f0e38b13462f32d7"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "6a3c451eff8b0568e16817fbb84be343f8e8e485",
-    "content_sha256": "eda0e3228ae98dc29894171fd1eec3d297b3591384036fa40a00c72ac62d0f6a"
+    "revision": "0da7a02d16762185010ab53ec555c77e10729acd",
+    "content_sha256": "466e5d1eb808864f09a6d9a9650ff45cbce75d1cc6c9620242cb114b64dbc7c0"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "1ea788e00f84b3804c447cb8bbb143c7b803901d",
     "content_sha256": "873b64d56c1813874239d7c4e07d5e1cbc777809c05d725efbf79439038750f9"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "35654da2745816f4b3c51ff2c4397d392def9931",
-    "content_sha256": "a0f4aa7bb212ace5eecd6d6cebbd9817585d319dc58644ae781124ee80b261b0"
+    "revision": "ad5950faa66f52d31791452c656a957810e32586",
+    "content_sha256": "d674de4cd0221ba436271d614771ac813740f10cdae1f2c6fe068f81c227b782"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
@@ -75,8 +75,8 @@
     "content_sha256": "055d460354f9c98d981f74ce661daa606685695bedd42d04a31981158f8389d7"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
-    "content_sha256": "714a2ad1509b2ee9ab6c20aaa287a9c1856e608c3993171ca3b15e4c84eb1052"
+    "revision": "0da7a02d16762185010ab53ec555c77e10729acd",
+    "content_sha256": "2c63cf0670a58275f31a6a1fb3990df601e301b6606ef22bc9663dcb0b60dbec"
    },
    "draft-mcguinness-mission-orchestration.md": {
     "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
@@ -87,24 +87,24 @@
     "content_sha256": "0ca8901a662c12afc19ed590685652dfe3604d0907364ccfe819a88d584499f9"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "1ea788e00f84b3804c447cb8bbb143c7b803901d",
-    "content_sha256": "c9ed7e78d3821f796ce8d53f76bb5402bf8d599f83a12f650e6c1a1689dc9c5d"
+    "revision": "367e69e46a32d3ae652feea03036d2e4bfea394c",
+    "content_sha256": "88374fb1cbcaee0d11bc3241f3743618ed542e3e86b18bd9f25d5e8617042962"
    },
    "draft-mcguinness-mission-capability-binding.md": {
-    "revision": "175c6252b65d8fdca0347d3f214dd0282d6615fc",
-    "content_sha256": "5cbae2ac50393b51ea1fbaf2ce6a55f2df2213904a82fbaacf61088eeadb6b32"
+    "revision": "2dc6ca1d93658b0b9ad55de66da07aa0a30ce4a2",
+    "content_sha256": "7747cec83e69020dce2611fd99172fbe14034d776ba68c9b64cdca9fd410d94f"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
     "content_sha256": "adb2e8708f616b7504425b3134c2376ad3422d9c947b380645f54fb3e8db8f1d"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "1ea788e00f84b3804c447cb8bbb143c7b803901d",
-    "content_sha256": "1c4adaecf6fa1d626d7ff9bd57a71384ba1f307bf09f115a32460e0ea347a1ee"
+    "revision": "a27dab30b97ca4e07644a70d0b24f7acaafacfa2",
+    "content_sha256": "049993e20db107eff3062e185203212546b7f58e277a160d5dbca16545aafdb6"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
-    "revision": "0eb61bec966fef8cfc5efbb20b42c78057b3d05c",
-    "content_sha256": "209bd4edd5a8f50c9d4693af0627eaed50e5c4d29214a412641532d43b39ddd5"
+    "revision": "02c1fcf62e9f4fd3aad0df84d6ccabd6ebd7ce0d",
+    "content_sha256": "a4753cf75757d13a1df08c132518ade4b2012dec9d8f75938631f7470173970f"
    },
    "draft-mcguinness-oauth-mission-approved-set-verification.md": {
     "revision": "48b7abcdacfb66289c29c5312e5d6c6e683b5141",
@@ -197,6 +197,7 @@
    "runtime.history-input",
    "runtime.evaluation-context-binding",
    "runtime.discovered-catalog",
+   "runtime.materialized-policy-view",
    "containment.narrowing",
    "cross-domain.origin-principal",
    "runtime.taint-enforcement",
@@ -224,6 +225,7 @@
    "authzen.batch",
    "approval-context.manifest",
    "child-delegation.carryover",
+   "child-delegation.subtree-rendering",
    "core.instance-context",
    "core.delegation",
    "runtime.instance-context",
@@ -3118,6 +3120,81 @@
    "notes": "New member (#701, revised per #716 review); OPTIONAL in this revision. Demonstrates that a Dispatcher (Template dispatch's activation_actor) or a requesting parent Agent (policy drawdown's activation_actor) is never reportable as the adjudicator, and that the Role Mapping table now names the exact policy per scenario (Template's dispatch_policy, distinct from the template's own id/version)."
   },
   {
+   "id": "core.standing-consent.activation-policy-reference",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "standing-consent-bases",
+   "text": "the object the accountable human consented to MUST carry that policy as an activation policy reference",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where a separate policy artifact adjudicates standing-consent activation (Template dispatch_policy, Progressive drawdown_policy, Child Delegation child_creation_policy), the consented object carries it as {id, version, digest} with the mission-activation-policy digest, inside the commitment that covers that object"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#985 (D219 ruling). No implementation witness yet: template dispatch, ceiling drawdown, and child-creation adjudication do not compute or verify the activation policy digest."
+  },
+  {
+   "id": "core.standing-consent.activation-policy-verify",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "standing-consent-bases",
+   "text": "Before each activation, the activating issuer MUST compute `digest` over the exact snapshot it evaluates, and MUST NOT activate the instance under that policy when the result differs",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an activation under a policy snapshot whose digest differs from the committed digest does not activate under that policy: Template refuses with dispatch_policy_changed, Progressive falls back to a fresh human approval, Child Delegation denies with policy_denied"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#985 (D219 ruling). No implementation witness yet: template dispatch, ceiling drawdown, and child-creation adjudication do not compute or verify the activation policy digest."
+  },
+  {
+   "id": "core.standing-consent.activation-policy-retain",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "standing-consent-bases",
+   "text": "The issuer MUST retain each snapshot's bytes and media type for the audit horizon",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the snapshot bytes and media type behind each activation policy digest are retained for the audit horizon of every Mission activated under that snapshot, so the digest reproduces"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#985 (D219 ruling). No implementation witness yet: template dispatch, ceiling drawdown, and child-creation adjudication do not compute or verify the activation policy digest."
+  },
+  {
    "id": "core.approval-basis.adjudication-governance-record-override",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "mission-record",
@@ -3160,6 +3237,53 @@
    "coverage": "todo",
    "tests": [],
    "notes": "New member (#701); demonstrates the multi-assertion-AGR-not-collapsed property from the #701 and #716 reviews. Scoped to core.governance-record: the clause binds only an approval whose `adjudication.governance_record` is `true`, which requires an Approval Governance Record (the approval-governance companion); no published baseline selects it, matching that companion's own rows."
+  },
+  {
+   "id": "core.approval-basis.adjudication-policy-model-input-narrows",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "the AS MUST NOT let it supply or widen authority",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "governance-decision",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where a kind policy adjudicator's recorded inputs include a model's output, the activated Authority Set is no wider than the same policy version yields over the same recorded inputs with that output treated as no objection: the model's output can refuse the activation or narrow it, never add an entry or widen one"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Standing-consent facet: gated on core.standing-consent, the common source of kind policy (Template dispatch, policy drawdown, ceiling drawdown). The governance facet, core.approval-basis.adjudication-policy-model-input-narrows-governance, covers an Approval Governance Record accountable policy assertion. Re-checkability is the stated property beside it: re-evaluating the recorded policy version over the recorded inputs, model output included, reproduces the decision."
+  },
+  {
+   "id": "core.approval-basis.adjudication-policy-model-input-narrows-governance",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "the AS MUST NOT let it supply or widen authority",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where an Approval Governance Record's accountable assertion is kind policy (including a direct approval with no standing-consent basis) and that policy's recorded inputs include a model's output, the activated Authority Set is no wider than the same policy version yields over the same recorded inputs with that output treated as no objection"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Governance facet of core.approval-basis.adjudication-policy-model-input-narrows, quoting the same clause: kind policy reaches adjudication through an Approval Governance Record's accountable policy assertion without claiming capability core.standing-consent."
   },
   {
    "id": "core.approval-basis.discriminator-unknown-value-rule",
@@ -4394,6 +4518,30 @@
     }
    ],
    "notes": "Core configured-mapping mode, not the Mission Template companion; the companion's unknown template_id error is specified and tested separately. The third test pins the companion branch (a submitted proposal deriving nothing stays invalid_authorization_details) so the two codes are not confused going forward."
+  },
+  {
+   "id": "core.derivation.prose-gates-no-adjudicator",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "authorization-derivation",
+   "text": "MUST NOT gate issuance on those members, whether in derivation, in an adjudicating policy, or through a model input to either",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "two submissions that differ only in goal, goal_lang, task_bounds, or success_criteria receive the same issuance outcome, refused or issued, under derivation and under any adjudicating policy, including one that takes a model's output as an input"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The AS-side rule only: a human Approver reading the rendered prose and declining is the intended consent check, not issuance gating by the AS."
   },
   {
    "id": "core.approval-authentication.floor-and-requested-carriage-both-satisfied",
@@ -12504,10 +12652,10 @@
    "tests": []
   },
   {
-   "id": "runtime.policy-view.three-properties",
+   "id": "runtime.input-authority.evaluated-representation-bound",
    "spec": "draft-mcguinness-mission-runtime.md",
-   "anchor": "policy-view",
-   "text": "The materialized policy view MUST satisfy three properties:",
+   "anchor": "input-authority",
+   "text": "Whichever representation it evaluates MUST NOT be broader than the current effective authority, and MUST be bound to the Mission it represents by the Mission's identifier and `authority_hash`.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -12517,13 +12665,36 @@
     "runtime-enforced"
    ],
    "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "whether the PDP evaluates a materialized policy view or the Mission's recorded authority directly, an action outside the current effective authority is refused, and the evaluated representation is tied to the Mission's id and authority_hash; mutable state comes from a state source, never from the representation"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#986 (D219 ruling). The reference PDP evaluates through a view; no direct-evaluation witness yet."
+  },
+  {
+   "id": "runtime.policy-view.three-properties",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "policy-view",
+   "text": "The materialized policy view MUST satisfy three properties:",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.materialized-policy-view"
+   },
+   "profiles": [],
+   "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
     "normative": "a materialized policy view is reproducible from identical manifest inputs, carries an identifying policy_view_id, and never enlarges the Authority Set's semantic bounds"
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#986 (D219): a materialized policy view is one evaluation path, so these rows bind a PDP that uses one and leave both baselines."
   },
   {
    "id": "runtime.policy-view.manifest-must-carry-fields",
@@ -12533,11 +12704,10 @@
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "runtime.materialized-policy-view"
    },
-   "profiles": [
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
@@ -12545,7 +12715,8 @@
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#986 (D219): a materialized policy view is one evaluation path, so these rows bind a PDP that uses one and leave both baselines."
   },
   {
    "id": "runtime.policy-view.no-embedded-lifecycle-state",
@@ -12555,11 +12726,10 @@
    "role": "PDP",
    "strength": "MUST NOT",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "runtime.materialized-policy-view"
    },
-   "profiles": [
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
@@ -12575,7 +12745,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "Tested that policy_view_id equality gates reliance and does not silently track a post-issuance containment change; not tested that the manifest object itself omits a lifecycle-state field."
+   "notes": "Tested that policy_view_id equality gates reliance and does not silently track a post-issuance containment change; not tested that the manifest object itself omits a lifecycle-state field. #986 (D219): a materialized policy view is one evaluation path, so these rows bind a PDP that uses one and leave both baselines."
   },
   {
    "id": "runtime.semantic-evaluators.no-widen-or-substitute",
@@ -14742,7 +14912,7 @@
    "id": "authzen.pdp-request.consistency-id-and-issuer-equal",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "pdp-request",
-   "text": "The `id` and `issuer` in `context.mission` equal the `mission_id` and issuer committed in the materialized policy view the PDP has loaded for this Mission ({{I-D.draft-mcguinness-mission-runtime}}); the PDP returns `view_inconsistent` on any inequality.",
+   "text": "The `id` and `issuer` in `context.mission` equal the `mission_id` and issuer committed in the materialized policy view the PDP has loaded for this Mission, or, for a PDP that evaluates the Mission's recorded authority directly, those of the trusted Mission record it evaluates ({{I-D.draft-mcguinness-mission-runtime}}); the PDP returns `view_inconsistent` on any inequality.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -14766,13 +14936,13 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "#702 renamed and narrowed this row (formerly consistency-view-id-and-authority-hash-equal): authority_hash left context.mission's baseline member set, and its own present-then-equal check now lives in the sibling row consistency-authority-hash-equal-when-present. services/pdp/src/evaluate.ts's rule 1 now checks id/issuer unconditionally and authority_hash present-then-check, matching this split."
+   "notes": "#702 renamed and narrowed this row (formerly consistency-view-id-and-authority-hash-equal): authority_hash left context.mission's baseline member set, and its own present-then-equal check now lives in the sibling row consistency-authority-hash-equal-when-present. services/pdp/src/evaluate.ts's rule 1 now checks id/issuer unconditionally and authority_hash present-then-check, matching this split. #986 (D219): the clause now also covers a PDP that evaluates the Mission's recorded authority directly; the reference PDP evaluates through a loaded view, so the cited tests witness that path only and the direct path has no witness yet."
   },
   {
    "id": "authzen.pdp-request.consistency-authority-hash-equal-when-present",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "pdp-request",
-   "text": "When `context.mission.authority_hash` is also present, it MUST equal the view's committed `authority_hash`, with the same `view_inconsistent` result on inequality",
+   "text": "When `context.mission.authority_hash` is also present, it MUST equal the `authority_hash` that view or record commits, with the same `view_inconsistent` result on inequality",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -14802,13 +14972,13 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "#702: split out of the former consistency-view-id-and-authority-hash-equal row, mirroring consistency-policy-view-id-equal's present-then-check pattern now that authority_hash is optional on context.mission."
+   "notes": "#702: split out of the former consistency-view-id-and-authority-hash-equal row, mirroring consistency-policy-view-id-equal's present-then-check pattern now that authority_hash is optional on context.mission. #986 (D219): the clause now also covers a PDP that evaluates the Mission's recorded authority directly; the reference PDP evaluates through a loaded view, so the cited tests witness that path only and the direct path has no witness yet."
   },
   {
    "id": "authzen.pdp-request.consistency-policy-view-id-equal",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "pdp-request",
-   "text": "When `context.mission.policy_view_id` is present, it MUST equal the loaded view's `policy_view_id`, and the PDP returns `view_inconsistent` on inequality.",
+   "text": "Where the PDP evaluates through a view and `context.mission.policy_view_id` is present, it MUST equal the loaded view's `policy_view_id`, and the PDP returns `view_inconsistent` on inequality.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -14831,7 +15001,8 @@
      "level": "endpoint",
      "surface": "decision-request"
     }
-   ]
+   ],
+   "notes": "#986 (D219): the clause now also covers a PDP that evaluates the Mission's recorded authority directly; the reference PDP evaluates through a loaded view, so the cited tests witness that path only and the direct path has no witness yet."
   },
   {
    "id": "authzen.pdp-request.consistency-state-version-mismatch-is-staleness",
@@ -14860,7 +15031,7 @@
    "id": "authzen.pdp-request.consistency-no-fail-on-optional-omission",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "pdp-request",
-   "text": "A PDP MUST NOT fail a decision solely because the optional `policy_view_id`, `policy_version`, or `authority_hash` was omitted; the view the PDP loaded is authoritative.",
+   "text": "A PDP MUST NOT fail a decision solely because the optional `policy_view_id`, `policy_version`, or `authority_hash` was omitted; the view the PDP loaded, or the Mission record it evaluates directly, is authoritative.",
    "role": "PDP",
    "strength": "MUST NOT",
    "applicability": {
@@ -23775,31 +23946,10 @@
    "notes": "The reference implementation measures from the template's created_at, which every instance records as approval_basis.approved_at. Its refusal reason review_overdue is implementation-local on access_denied (D205); the draft registers none."
   },
   {
-   "id": "progressive.drawdown-policy.body-commitment-should",
-   "spec": "draft-mcguinness-oauth-mission-progressive.md",
-   "anchor": "progressive-authorization",
-   "text": "A deployment SHOULD additionally commit the drawdown policy body under an integrity anchor, computed the way the issuance profile computes `authority_hash`",
-   "role": "AS",
-   "strength": "SHOULD",
-   "applicability": {
-    "kind": "capability",
-    "capability": "progressive.ceiling-drawdown"
-   },
-   "profiles": [],
-   "surface": "commitment",
-   "assertion": "output-bound",
-   "observation": {
-    "normative": "the committed ceiling_hash covers only the drawdown_policy identifier, not its body, unless the deployment additionally anchors the body under an integrity anchor or discloses it under Consent Evidence"
-   },
-   "level": "unit",
-   "coverage": "todo",
-   "tests": []
-  },
-  {
    "id": "progressive.ceiling-review.cadence-versioned-with-policy",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "ceiling-review",
-   "text": "a deployment's drawdown policy document MUST state the cadence effective under a given version, identified by the `policy_id` and `policy_version` the `ceiling_drawdown` activation already carries",
+   "text": "a deployment's drawdown policy document MUST state the cadence effective under a given version, identified by the `policy_id` and `policy_version` the `ceiling_drawdown` activation carries",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -23810,7 +23960,7 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the deployment's drawdown policy document states, for every policy_version it defines, the ceiling review cadence effective under that version, so an auditor can resolve the cadence in force at a past drawdown from the retained policy_id/policy_version alone"
+    "normative": "the deployment's drawdown policy document states, for every policy_version it defines, the ceiling review cadence effective under that version; because ceiling_hash commits the policy's digest, an auditor resolves the cadence in force at a past drawdown from the retained snapshot that digest names"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -25732,6 +25882,50 @@
    "notes": "#699 exercises the baseline-claim half only: the kernel's missionClaim is asserted to be exactly {id, issuer}. The descriptor half (a companion-minted credential-bound Mission descriptor, for example the MAS Join Assertion) has no minting path in this implementation, which resolves the MAS Join from a propagated reference at the PDP, so it stays unexercised and coverage stays partial."
   },
   {
+   "id": "approval-governance.assertion.accountable-kind-human-or-policy",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "assertion-requirements",
+   "text": "The matching assertion's `kind` MUST be `human` or `policy`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an evaluation whose assertion matching the accountable approver is kind service does not satisfy the accountable-approver rule: no record commits and the Mission is not created active, whether or not the service assertion was produced by a model"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Makes explicit what the OAuth binding's adjudication kind enum (human, policy) implies when governance_record is true. A model-backed judge enters as a service assertion: a contributing governance input, never the accountable approver."
+  },
+  {
+   "id": "approval-governance.record.service-authority-logic-version",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "record",
+   "text": "For a `service` assertion, the identifier and version of the logic that produced the decision",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a service assertion's authority names the identifier and version of the logic that produced its decision, and the model's identifier and version where a model produced it"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Defines authority for the service kind, previously defined only for human and policy assertions."
+  },
+  {
    "id": "child-delegation.carryover.no-progressive-drawdown",
    "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
    "anchor": "carryover",
@@ -26279,6 +26473,72 @@
     }
    ],
    "notes": "A consumer that received the cascade before any creation event does not infer absence of a replacement: it resynchronizes through the retained, signature-verified map, pairing by issuer-qualified identity. The map, not `related_to`, is the normative record of replacement."
+  },
+  {
+   "id": "child-delegation.subtree-rendering.displayed-control",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "derivation-budget",
+   "text": "Where an approval interface displays `derivation_limit`, or any per-Mission derivation control, as a limit on child creation, that interface MUST render the subtree figures below alongside it",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.subtree-rendering"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an approval interface that displays a per-Mission derivation control as a limit on child creation renders max_children (as a concurrency limit), max_child_depth, and the per-child derivation limit as distinct values beside it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#987 (D219 ruling). No implementation witness: the reference consent rendering shows no child-delegation figures yet."
+  },
+  {
+   "id": "child-delegation.subtree-rendering.policy-created",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "derivation-budget",
+   "text": "no approval interface exists for those children, so the Parent Mission's approval MUST render the subtree figures for that entry",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.subtree-rendering"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where child creation under an entry can be adjudicated by policy (policy_drawdown), the Parent Mission's approval rendering for that entry carries the three subtree figures as distinct values"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#987 (D219 ruling). No implementation witness: the reference consent rendering shows no child-delegation figures yet."
+  },
+  {
+   "id": "child-delegation.subtree-rendering.aggregate-statement",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "derivation-budget",
+   "text": "The rendering MUST also state whether a finite aggregate bound on the subtree is enforced.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.subtree-rendering"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the subtree rendering states whether a finite aggregate bound is enforced, and states that none is unless a lineage-keyed budget is deployed"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#987 (D219 ruling). No implementation witness: the reference consent rendering shows no child-delegation figures yet."
   },
   {
    "id": "child-delegation.carryover.expansion-disclosure",

@@ -327,7 +327,10 @@ describe("the Operation Profile defines an idempotency key for every non-idempot
   it("every high-consequence tool's Operation Profile defines a key, and its served schema requires one in the published format", () => {
     const catalog = TRUSTED_TOOL_CATALOGS.find((c) => c.service_id === "payments");
     const tools = (JSON.parse(catalog?.text ?? "{}") as { tools: Array<{ name: string; inputSchema: { required?: string[]; properties: Record<string, unknown> } }> }).tools;
-    const highConsequence = Object.entries(TOOL_ACTIONS).filter(([, mapping]) => mapping.actionClass !== undefined);
+    // Every entry carries its class (#1015); the high-consequence ones are the keyed ones.
+    const isHighConsequence = (actionClass: string) =>
+      ["irreversible_action", "external_commitment", "privileged_administration"].includes(actionClass);
+    const highConsequence = Object.entries(TOOL_ACTIONS).filter(([, mapping]) => isHighConsequence(mapping.actionClass));
     expect(highConsequence.map(([tool]) => tool).sort()).toEqual(["execute_wire_transfer", "send_remittance_email"]);
     for (const [tool, mapping] of highConsequence) {
       expect(mapping.idempotencyKey, tool).toBe(true);
@@ -336,7 +339,7 @@ describe("the Operation Profile defines an idempotency key for every non-idempot
       expect(definition?.inputSchema.properties.idempotency_key, tool).toEqual({ type: "string", pattern: IDEMPOTENCY_KEY_PATTERN.source });
     }
     // The key belongs to these operations only: no other tool asks for one.
-    for (const [tool, mapping] of Object.entries(TOOL_ACTIONS).filter(([, m]) => m.actionClass === undefined)) {
+    for (const [tool, mapping] of Object.entries(TOOL_ACTIONS).filter(([, m]) => !isHighConsequence(m.actionClass))) {
       expect(mapping.idempotencyKey, tool).toBeUndefined();
     }
   });

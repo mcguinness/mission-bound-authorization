@@ -18,6 +18,7 @@ import { randomUUID } from "node:crypto";
 import { SignJWT, generateKeyPair, exportJWK } from "jose";
 import { describe, expect, it } from "vitest";
 import type { Fga, MissionView } from "@mission/pdp";
+import { RUNTIME_POSTURE } from "@mission/pdp";
 import {
   buildEffectiveParams,
   CANONICAL_RESOURCE,
@@ -29,6 +30,7 @@ import {
   parameterDigest,
   PaymentsStore,
   Pep,
+  TOOL_ACTIONS,
   TransactionEngine,
   type ActionApprovalInput,
   type DecisionEvidence,
@@ -393,5 +395,56 @@ describe("the PEP establishes token validity before using any of its claims as d
     // evaluation, not as an evaluate() outcome.
     expect(evidence.all()).toHaveLength(0);
     await client.close();
+  });
+});
+
+describe("every mediated crossing carries the class the deployment assigns it (@spec runtime#classification)", () => {
+  it("every Operation Profile entry carries an action class the Enforcement Scope Statement declares, and only the high-consequence classes take the transaction tier", () => {
+    // #956 finding A: two of eight tools were labeled, so six reached the PDP
+    // with no class and were recorded under the default. Classification is
+    // the deployment's, by the class predicates; routing is a separate field.
+    const declared = new Set<string>(RUNTIME_POSTURE.mediated_scope.action_classes);
+    const highConsequence = new Set(["irreversible_action", "external_commitment", "privileged_administration"]);
+    for (const [tool, mapping] of Object.entries(TOOL_ACTIONS)) {
+      expect(declared.has(mapping.actionClass), `${tool} carries an undeclared class ${mapping.actionClass}`).toBe(true);
+      expect(mapping.tier === "transaction-assurance", `${tool} tier`).toBe(highConsequence.has(mapping.actionClass));
+    }
+    // The payments Operation Profile's assignments, with the compound
+    // action's preflight (no state, no effect) a read and its prepare (a
+    // reversible hold) a write.
+    expect(Object.fromEntries(Object.entries(TOOL_ACTIONS).map(([tool, m]) => [tool, m.actionClass]))).toEqual({
+      list_invoices: "consequential_read",
+      get_invoice: "consequential_read",
+      lookup_vendor: "consequential_read",
+      schedule_payment: "consequential_write",
+      check_transfer: "consequential_read",
+      hold_transfer: "consequential_write",
+      execute_wire_transfer: "irreversible_action",
+      send_remittance_email: "external_commitment",
+    });
+  });
+
+  it("schedule_payment reaches the PDP as a consequential write and is parameter-bound: its Decision Evidence records the deployment's class and the parameter digest", async () => {
+    const { server, evidence } = buildStack(view(["payments:payment.schedule"]), alwaysAllowFga);
+    const result = await server.callWriteTool("schedule_payment", { invoice_id: "inv-1" }, TOKEN);
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    const dec = evidence
+      .all()
+      .find((e): e is DecisionEvidence => e.kind === "decision" && e.content.decision === "permit");
+    expect(dec?.content.action.name).toBe("payments:payment.schedule");
+    expect(dec?.content.action_class).toBe("consequential_write");
+    expect(dec?.content.class_source).toBe("deployment");
+    expect(dec?.content.parameter_digest).toMatch(/^sha-256:/);
+  });
+
+  it("a consequential read reaches the PDP with the deployment's class, never the unclassified default", async () => {
+    const { server, evidence } = buildStack(view(["payments:invoice.read"]), alwaysAllowFga);
+    const result = await server.callReadTool("get_invoice", { invoice_id: "inv-1" }, TOKEN);
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    const dec = evidence
+      .all()
+      .find((e): e is DecisionEvidence => e.kind === "decision" && e.content.decision === "permit");
+    expect(dec?.content.action_class).toBe("consequential_read");
+    expect(dec?.content.class_source).toBe("deployment");
   });
 });
