@@ -1299,8 +1299,9 @@ the instance because a human approved the policy or the template, with
 authority, the adjudicator (a human or such a policy) decides
 activation, and a human is accountable. A model's judgment, over risk
 signals or enterprise context, enters adjudication only as a recorded
-input to the policy: it can refuse or narrow, never grant or widen,
-and no adjudicator gates on the Intent's prose members
+input to the policy: it can refuse or narrow, never grant or widen.
+Neither the policy nor a model input to it gates on the Intent's
+prose members, which stay the human Approver's check
 ({{I-D.draft-mcguinness-oauth-mission}}). A generated approver
 reading attacker-influenced proposals is itself an injection surface.
 The high-consequence classes stay on a fresh human
@@ -3723,8 +3724,9 @@ bound profiled by `aauth-mission-expiry`.
 - Approve and Record names the three approval roles (derivation,
   adjudication, accountability) and summarizes the OAuth binding's
   rule that a model's judgment enters adjudication only as a recorded
-  input to a deterministic policy, refusing or narrowing and never
-  granting or widening.
+  input to a deterministic policy, an input that can refuse or narrow
+  and never grant or widen; the prose members stay the human
+  Approver's check.
 
 - Derivation and narrowing, with no change to any profile's
   requirements. The derivation boundary states the derivation
