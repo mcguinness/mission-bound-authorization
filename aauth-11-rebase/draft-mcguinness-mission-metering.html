@@ -18,7 +18,7 @@ an exclusivity control ( exclusive , separation of duty),
 the runtime metering
 semantics that enforce them (atomic check-and-decrement, reserve and
 commit postures, duration leases, and settlement), and the AuthZEN wire
-binding for lease renewal and settlement. A consumption bound is
+representation for lease renewal and settlement. A consumption bound is
 consented at approval and enforced only by a runtime deployment that
 implements this profile; a deployment that does not meter a bound must
 refuse rather than silently ignore it. 
@@ -1106,7 +1106,7 @@ an exclusivity control (<code>exclusive</code>, separation of duty),
 the runtime metering
 semantics that enforce them (atomic check-and-decrement, reserve and
 commit postures, duration leases, and settlement), and the AuthZEN wire
-binding for lease renewal and settlement. A consumption bound is
+representation for lease renewal and settlement. A consumption bound is
 consented at approval and enforced only by a runtime deployment that
 implements this profile; a deployment that does not meter a bound must
 refuse rather than silently ignore it.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
@@ -1214,7 +1214,7 @@ refuse rather than silently ignore it.<a href="#section-abstract-1" class="pilcr
             <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-metering-evidence" class="internal xref">Metering Evidence</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
-            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-authzen-binding" class="internal xref">AuthZEN Binding</a></p>
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-authzen-wire-representation" class="internal xref">AuthZEN Wire Representation</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.1">
                 <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref">11.1</a>.  <a href="#name-settlement-exchange" class="internal xref">Settlement Exchange</a></p>
@@ -1292,7 +1292,7 @@ distributed-consistency concerns of its own.<a href="#section-1-1" class="pilcro
           <p id="section-1-3.2.1">the metering semantics a runtime deployment enforces, and<a href="#section-1-3.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-1-3.3">
-          <p id="section-1-3.3.1">the AuthZEN wire binding
+          <p id="section-1-3.3.1">the AuthZEN wire representation
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>) for settlement and
 duration-lease renewal.<a href="#section-1-3.3.1" class="pilcrow">¶</a></p>
 </li>
@@ -1997,7 +1997,7 @@ The groups are consented at the approval event, committed by
 <code>intent_hash</code> with the other Mission Intent members this document
 defines, and rendered in the consent disclosure (<a href="#consent" class="auto internal xref">Section 6.1</a> applies
 unchanged).<a href="#section-8-5" class="pilcrow">¶</a></p>
-<p id="section-8-6">In the AuthZEN binding, a refusal under a latched group is denied
+<p id="section-8-6">In the AuthZEN profile, a refusal under a latched group is denied
 with <code>exclusivity_latched</code>, an extension of the runtime denial set
 under the AuthZEN profile's coordinated-extension conventions
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), and recorded as the
@@ -2174,15 +2174,15 @@ refusal under an aggregate bound reads:<a href="#section-10-3" class="pilcrow">�
 </div>
 <div id="authzen-binding">
 <section id="section-11">
-      <h2 id="name-authzen-binding">
-<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-authzen-binding" class="section-name selfRef">AuthZEN Binding</a>
+      <h2 id="name-authzen-wire-representation">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-authzen-wire-representation" class="section-name selfRef">AuthZEN Wire Representation</a>
       </h2>
-<p id="section-11-1">Where the runtime deployment uses the AuthZEN binding
+<p id="section-11-1">Where the runtime deployment uses the AuthZEN profile
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), this section defines the
 wire representation of metering. It defines no new metering semantics
 and no new constraint. The requirements of this section and
 <a href="#settlement-exchange" class="auto internal xref">Section 11.1</a> apply only to a deployment that adopts the
-AuthZEN binding under that profile's conformance; for every other
+AuthZEN profile under that profile's conformance; for every other
 deployment the AuthZEN profile remains an informative reference.<a href="#section-11-1" class="pilcrow">¶</a></p>
 <p id="section-11-2">When metering a bound would exceed it, the PDP <span class="bcp14">MUST</span> deny with
 <code>quota_exceeded</code> (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>) instead of
@@ -2190,7 +2190,7 @@ returning a permit. The PDP <span class="bcp14">MUST</span> record <code>quota_e
 <code>denial_reason</code> in Decision Evidence.<a href="#section-11-2" class="pilcrow">¶</a></p>
 <p id="section-11-3">Whether a metered permit is reserved at decision time and committed on
 settlement, or committed at decision time, follows the deployment's
-documented reserve/commit posture (<a href="#retry" class="auto internal xref">Section 7.2</a>); this binding fixes
+documented reserve/commit posture (<a href="#retry" class="auto internal xref">Section 7.2</a>); this representation fixes
 neither. In a batch (boxcar) evaluation, consumption metering applies
 per item in request order. The exactness of the bound is the
 consistency bound of <a href="#topology" class="auto internal xref">Section 7.1</a>, not a property of this wire
@@ -2202,7 +2202,7 @@ binding.<a href="#section-11-3" class="pilcrow">¶</a></p>
         </h3>
 <p id="section-11.1-1">The metering rules require the PEP to signal actual use so the PDP
 commits consumption and releases any reservation. In the AuthZEN
-binding, delivery of the Execution Evidence Object
+profile, delivery of the Execution Evidence Object
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>) to the PDP is
 that commit-or-release signal: on receipt the PDP settles the linked
 action's consumption per <a href="#settlement-states" class="auto internal xref">Section 11.1.2</a>, keyed to the
@@ -2464,7 +2464,7 @@ the permit (<a href="#exclusivity" class="auto internal xref">Section 8</a>);<a 
 posture (<a href="#retry" class="auto internal xref">Section 7.2</a>); and<a href="#section-12-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-12-2.8">
-          <p id="section-12-2.8.1">where the AuthZEN binding is in use, implement the settlement
+          <p id="section-12-2.8.1">where the AuthZEN profile is in use, implement the settlement
 exchange of <a href="#settlement-exchange" class="auto internal xref">Section 11.1</a>.<a href="#section-12-2.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>

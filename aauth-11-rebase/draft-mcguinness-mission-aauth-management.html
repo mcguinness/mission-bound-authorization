@@ -2280,39 +2280,54 @@ idempotent: the recipient records nothing new, re-attempts each
 downstream revocation that did not succeed, and reports the current
 outcome (Section 11.12.3 of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).<a href="#section-11.3-2" class="pilcrow">¶</a></p>
 <p id="section-11.3-3">A revocation is confirmed, for <code>revocation_confirmed</code> and <code>complete</code>
-(<a href="#terminate" class="auto internal xref">Section 7</a>), when the recipient answers <code>200</code> with no <code>downstream</code>
-entry carrying an <code>error</code>.  A <code>200</code> says the recipient recorded the
-revocation and finished its cascade, not that it held a record of the
-token: AAuth defines no not-found response (Section 11.12.3 of
-<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).  Natural expiry also closes
-the tracked residual for a token.<a href="#section-11.3-3" class="pilcrow">¶</a></p>
-<p id="section-11.3-4">A <code>202</code> is pending: the PS polls the pending URL with a signed <code>GET</code>
+(<a href="#terminate" class="auto internal xref">Section 7</a>), only by an outcome that names the Tracked Auth Token's
+own Resource:<a href="#section-11.3-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-11.3-4.1">
+            <p id="section-11.3-4.1.1">an Auth Token the PS revoked at the Resource it was issued for is
+confirmed by that Resource's <code>200</code>, which has nothing downstream and
+carries an empty body; and<a href="#section-11.3-4.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-11.3-4.2">
+            <p id="section-11.3-4.2.1">an Auth Token an AS issued is confirmed only by a <code>downstream</code> entry,
+in the AS's <code>200</code> to the Person Token revocation, whose <code>recipient</code>
+is the token's <code>aud</code> and which carries no <code>error</code>.<a href="#section-11.3-4.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-11.3-5">An absent body, an absent <code>downstream</code> member, or a <code>downstream</code> array
+with no entry for the token's <code>aud</code> reports nothing about that token,
+which stays unconfirmed (Section 11.12.3 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).  A <code>200</code> says the recipient
+recorded the revocation and finished its cascade, not that it held a
+record of the token: AAuth defines no not-found response.  Natural
+expiry also closes the tracked residual for a token.<a href="#section-11.3-5" class="pilcrow">¶</a></p>
+<p id="section-11.3-6">A <code>202</code> is pending: the PS polls the pending URL with a signed <code>GET</code>
 under the same identity, honoring <code>Retry-After</code>, until the terminal
 response (Section 11.12.3 of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).
 Every other outcome leaves the token unconfirmed until a later attempt
-is confirmed or its <code>exp</code> passes:<a href="#section-11.3-4" class="pilcrow">¶</a></p>
+is confirmed or its <code>exp</code> passes:<a href="#section-11.3-6" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-11.3-5.1">
-            <p id="section-11.3-5.1.1">a <code>downstream</code> entry with <code>revocation_unsupported</code> or
+<li class="normal" id="section-11.3-7.1">
+            <p id="section-11.3-7.1.1">a <code>downstream</code> entry with <code>revocation_unsupported</code> or
 <code>revocation_unavailable</code> leaves the Auth Tokens at its <code>recipient</code>
 honored; after <code>revocation_unavailable</code>, the PS can revoke again
-later;<a href="#section-11.3-5.1.1" class="pilcrow">¶</a></p>
+later;<a href="#section-11.3-7.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-11.3-5.2">
-            <p id="section-11.3-5.2.1"><code>rate_limited</code> (<code>429</code>) carries a <code>Retry-After</code> interval the PS waits
-before retrying;<a href="#section-11.3-5.2.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-11.3-7.2">
+            <p id="section-11.3-7.2.1"><code>rate_limited</code> (<code>429</code>) carries a <code>Retry-After</code> interval the PS waits
+before retrying;<a href="#section-11.3-7.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-11.3-5.3">
-            <p id="section-11.3-5.3.1"><code>unsupported_iss</code> (<code>403</code>) means the recipient does not accept
-revocations from this PS and honors the token until its <code>exp</code>; and<a href="#section-11.3-5.3.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-11.3-7.3">
+            <p id="section-11.3-7.3.1"><code>unsupported_iss</code> (<code>403</code>) means the recipient does not accept
+revocations from this PS and honors the token until its <code>exp</code>; and<a href="#section-11.3-7.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-11.3-5.4">
-            <p id="section-11.3-5.4.1">a timeout, an unreachable or absent endpoint, a <code>5xx</code>, or an
-unparseable response establishes nothing.<a href="#section-11.3-5.4.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-11.3-7.4">
+            <p id="section-11.3-7.4.1">a timeout, an unreachable or absent endpoint, a <code>5xx</code>, or an
+unparseable response establishes nothing.<a href="#section-11.3-7.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-11.3-6">The PS <span class="bcp14">MUST NOT</span> report successful mission-wide revocation merely
-because it marked its local state or contacted an AS.<a href="#section-11.3-6" class="pilcrow">¶</a></p>
+<p id="section-11.3-8">The PS <span class="bcp14">MUST NOT</span> report successful mission-wide revocation merely
+because it marked its local state or contacted an AS.<a href="#section-11.3-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="residuals">

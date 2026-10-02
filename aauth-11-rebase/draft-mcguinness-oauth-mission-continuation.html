@@ -1509,6 +1509,22 @@ profile's requirements for the <code>mission_error</code> diagnostic
 The assertion carries no user subject: the IdP resolves the subject for
 each target from the hop, so continuation preserves the Mission's
 subject rather than projecting it; the actor is rebound per hop.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
+<p id="section-6.1-3">Mission delegation depth at this exchange, the depth at which the
+issuance profile's per-entry delegation constraints apply
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Delegation
+Constraints"), is counted over the selected hop's ancestry as the IdP's
+hop records hold it, from the root to that hop, followed by the current
+authenticated actor. Only consecutive entries with equal <code>(iss, sub)</code>
+merge. The root entry is the Mission's approved client at depth 0, and
+each remaining entry adds 1, so the chain A, B, B has depth 1 and A, B,
+A has depth 2. Sibling branches, the presented assertion, and any
+narrowing of what the onward <code>act</code> discloses do not change the depth
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-id-continuation-assertion-02#section-5.5.5" class="relref">Section 5.5.5</a> of [<a href="#I-D.draft-mcguinness-oauth-id-continuation-assertion" class="cite xref">I-D.draft-mcguinness-oauth-id-continuation-assertion</a>]</span>).
+At depth 0 the approved agent continues for itself and no delegation
+narrowing applies. This transport defines no reset: continuing to
+another Resource Authorization Server, or returning to an earlier
+actor, never restarts the count. Where the IdP cannot read a hop's
+complete ancestry, it issues nothing.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="transport-async">
@@ -1833,6 +1849,13 @@ exchange, those of the Identity Continuation Assertion in place of
 the issuance profile's <code>invalid_grant</code>, as the issuance profile
 permits for a Token Exchange profile that assigns its own code. The
 <code>mission_error</code> diagnostic requirements are unchanged (#921).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">The Identity Continuation Transport states how Mission delegation
+depth is counted there: over the hop's IdP-held ancestry plus the
+current actor, merging only consecutive equal actors, from the
+approved client at depth 0, with no reset, and with nothing issued
+when the ancestry is incomplete (#960).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

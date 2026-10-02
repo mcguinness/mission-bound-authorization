@@ -88,6 +88,7 @@ Table of Contents
      4.3.  Intent Translation
      4.4.  Layered Rendering
      4.5.  Disclosure Interrogation
+     4.6.  Shaping Evidence Hash Parameter
    5.  The Consent Rendering Hash
    6.  Rendering Assurance
    7.  Consent Evidence Object
@@ -112,11 +113,13 @@ Table of Contents
        13.1.1.  application/mission-consent-evidence+json
        13.1.2.  application/mission-consent-evidence+jws
        13.1.3.  application/mission-consent-disclosure+json
+     13.2.  OAuth Parameters Registry
    14. References
      14.1.  Normative References
      14.2.  Informative References
    Appendix A.  Rendering-Assurance Rungs Above the Floor
    Appendix B.  Worked Disclosure and Test Vector
+   Appendix C.  Document History
    Acknowledgments
    Author's Address
 
@@ -414,9 +417,11 @@ Table of Contents
       resist consent phishing, so it is committed by
       consent_rendering_hash and rendered for consent.
 
-   shaping_evidence_hash:  OPTIONAL.  A string.  Present when shaping
-      was used: the envelope anchor, with typ mission-shaping-evidence,
-      over the Shaping Evidence object, as Shaping defines it
+   shaping_evidence_hash:  OPTIONAL.  A string.  Present when the client
+      supplied the mission_shaping_evidence_hash parameter (Section 4.6)
+      or the deployment otherwise holds the hash: the envelope anchor,
+      with typ mission-shaping-evidence, over the Shaping Evidence
+      object, as Shaping defines it
       ([I-D.draft-mcguinness-mission-shaping], Section "Integrity and
       the Evidence Hash").
 
@@ -627,6 +632,43 @@ Table of Contents
    (interrogation, Section 7).  Interrogation before a decline is the
    record's most valuable case: it preserves which entry the Approver
    probed and could not accept.
+
+4.6.  Shaping Evidence Hash Parameter
+
+   A client whose Mission Intent was produced by a Mission Shaper
+   ([I-D.draft-mcguinness-mission-shaping]) MAY send the
+   mission_shaping_evidence_hash request parameter in the pushed
+   authorization request [RFC9126] that carries mission_intent
+   ([I-D.draft-mcguinness-oauth-mission], Section "Submission via PAR").
+   Its value is the shaping_evidence_hash that Shaping defines
+   ([I-D.draft-mcguinness-mission-shaping], Section "Integrity and the
+   Evidence Hash"), computed with iss set to this AS's issuer
+   identifier.
+
+   The value is a client-supplied audit commitment.  It is not verified
+   provenance, because the AS does not receive the Shaping Evidence and
+   cannot check the value against it; it is not admission evidence; and
+   it grants no authority.  An AS that implements this document:
+
+   1.  MUST refuse a value that is not a string in the integrity-anchor
+       encoding ([I-D.draft-mcguinness-oauth-mission],
+       Section "Integrity Anchors") with the invalid_request error code
+       (Section 2.3 of [RFC9126]);
+
+   2.  MUST record the value unchanged as the shaping_evidence_hash
+       member of the Consent Disclosure object (Section 4), where
+       consent_rendering_hash commits it (Section 5);
+
+   3.  MUST NOT use the value as input to admission, derivation, or the
+       approval decision; and
+
+   4.  MUST ignore the parameter on the front-channel authorization
+       request that redeems the request_uri, as the issuance profile
+       requires for mission_intent.
+
+   An AS that does not implement this document ignores the parameter, as
+   Section 3.1 of [RFC6749] requires for an unrecognized request
+   parameter, so a client can send it without first discovering support.
 
 5.  The Consent Rendering Hash
 
@@ -1203,7 +1245,10 @@ Table of Contents
       per-notice acknowledgment those classes require, recording each
       acknowledgment completion (Section 4.2);
 
-   *  record the interrogation it offers (Section 4.5); and
+   *  record the interrogation it offers (Section 4.5);
+
+   *  process a client-supplied mission_shaping_evidence_hash as
+      Section 4.6 specifies; and
 
    *  retain evidence for audit reconstruction (Section 9).
 
@@ -1447,6 +1492,23 @@ Table of Contents
 
    *  Change controller: IETF
 
+13.2.  OAuth Parameters Registry
+
+   This document requests registration of the following in the "OAuth
+   Parameters" registry:
+
+   *  Name: mission_shaping_evidence_hash
+
+   *  Parameter Usage Location: authorization request
+
+   *  Change Controller: IETF
+
+   *  Specification Document(s): this document, Section 4.6
+
+   PAR [RFC9126] carries authorization-request parameters without a
+   distinct usage location, so the pushed parameter needs no separate
+   registration.
+
 14.  References
 
 14.1.  Normative References
@@ -1487,6 +1549,10 @@ Table of Contents
               DOI 10.17487/RFC6234, May 2011,
               <https://www.rfc-editor.org/rfc/rfc6234>.
 
+   [RFC6749]  Hardt, D., Ed., "The OAuth 2.0 Authorization Framework",
+              RFC 6749, DOI 10.17487/RFC6749, October 2012,
+              <https://www.rfc-editor.org/rfc/rfc6749>.
+
    [RFC6838]  Freed, N., Klensin, J., and T. Hansen, "Media Type
               Specifications and Registration Procedures", BCP 13,
               RFC 6838, DOI 10.17487/RFC6838, January 2013,
@@ -1509,6 +1575,11 @@ Table of Contents
               Canonicalization Scheme (JCS)", RFC 8785,
               DOI 10.17487/RFC8785, June 2020,
               <https://www.rfc-editor.org/rfc/rfc8785>.
+
+   [RFC9126]  Lodderstedt, T., Campbell, B., Sakimura, N., Tonge, D.,
+              and F. Skokan, "OAuth 2.0 Pushed Authorization Requests",
+              RFC 9126, DOI 10.17487/RFC9126, September 2021,
+              <https://www.rfc-editor.org/rfc/rfc9126>.
 
 14.2.  Informative References
 
@@ -1815,6 +1886,15 @@ Appendix B.  Worked Disclosure and Test Vector
    256, and encodes as sha-256: followed by base64url with no padding
    reproduces this value exactly.  A divergence indicates a JCS or
    encoding difference to resolve before interoperating.
+
+Appendix C.  Document History
+
+   [[ To be removed from the final specification ]]
+
+   *  Defined and registered the mission_shaping_evidence_hash request
+      parameter, which carries a client-supplied shaping_evidence_hash
+      in the pushed authorization request into the Consent Disclosure
+      object, as a commitment that is never provenance or authority.
 
 Acknowledgments
 

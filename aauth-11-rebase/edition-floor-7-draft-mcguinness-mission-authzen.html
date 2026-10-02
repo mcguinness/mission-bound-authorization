@@ -11,7 +11,7 @@
 decision contract: before each consequential action runs, a Policy
 Enforcement Point (PEP) obtains a permit from a Policy Decision Point
 (PDP) that evaluates the action against the established Mission. This
-document is the concrete OpenID AuthZEN binding of that contract,
+document is the concrete OpenID AuthZEN profile of that contract,
 structured as a Decision Base plus named, independently adoptable
 feature profiles. The Decision Base maps the contract's decision
 inputs onto the AuthZEN Authorization API request, shapes the permit
@@ -1104,7 +1104,7 @@ svg {
 decision contract: before each consequential action runs, a Policy
 Enforcement Point (PEP) obtains a permit from a Policy Decision Point
 (PDP) that evaluates the action against the established Mission. This
-document is the concrete OpenID AuthZEN binding of that contract,
+document is the concrete OpenID AuthZEN profile of that contract,
 structured as a Decision Base plus named, independently adoptable
 feature profiles. The Decision Base maps the contract's decision
 inputs onto the AuthZEN Authorization API request, shapes the permit
@@ -1383,10 +1383,10 @@ failure posture, failure modes, runtime enforcement evidence, and the
 runtime
 conformance scope, but it states that the decision API wire format is a
 deployment choice and defines no binding of its own.<a href="#section-1-2" class="pilcrow">¶</a></p>
-<p id="section-1-3">This document is the OpenID AuthZEN binding of that contract: it maps
+<p id="section-1-3">This document is the OpenID AuthZEN profile of that contract: it maps
 the runtime profile's abstract decision contract onto the OpenID
 AuthZEN Authorization API <span>[<a href="#AUTHZEN" class="cite xref">AUTHZEN</a>]</span> and carries only the
-AuthZEN-binding deltas, structured as a <strong>Decision Base</strong> plus named
+AuthZEN-profile deltas, structured as a <strong>Decision Base</strong> plus named
 <strong>feature profiles</strong> documented as a dependency DAG with capability
 identifiers (<a href="#profiles-and-capabilities" class="auto internal xref">Section 2</a>). Neither the base nor a
 profile restates a requirement the runtime profile or a companion
@@ -1426,7 +1426,7 @@ condition (<a href="#parameter-digest" class="auto internal xref">Section 6.5</a
         <li class="normal" id="section-1-7.2">
           <p id="section-1-7.2.1"><strong>Runtime Evidence</strong>: how the PDP and PEP emit the Decision Evidence,
 Execution Evidence, and Refusal Record of the runtime evidence
-companion, and which response members this binding echoes into them
+companion, and which response members this profile echoes into them
 (<a href="#evidence" class="auto internal xref">Section 8</a>);<a href="#section-1-7.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-1-7.3">
@@ -1462,9 +1462,9 @@ in <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.
 not duplicated, here.<a href="#section-1-9" class="pilcrow">¶</a></p>
 <p id="section-1-10">AuthZEN continues the Policy Decision Point / Policy Enforcement
 Point request-response vocabulary XACML established for externalized
-authorization; this binding adopts AuthZEN's JSON/HTTP profile of
+authorization; this profile adopts AuthZEN's JSON/HTTP profile of
 that model, not a new one.<a href="#section-1-10" class="pilcrow">¶</a></p>
-<p id="section-1-11">The end-to-end flow this binding realizes:<a href="#section-1-11" class="pilcrow">¶</a></p>
+<p id="section-1-11">The end-to-end flow this profile realizes:<a href="#section-1-11" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-1-12">
 <pre>
  Agent        PEP              PDP           Access Request Service
@@ -1494,7 +1494,7 @@ that model, not a new one.<a href="#section-1-10" class="pilcrow">¶</a></p>
       <h2 id="name-profiles-and-capabilities">
 <a href="#section-2" class="section-number selfRef">2. </a><a href="#name-profiles-and-capabilities" class="section-name selfRef">Profiles and Capabilities</a>
       </h2>
-<p id="section-2-1">This binding is a Decision Base plus six named feature profiles, each
+<p id="section-2-1">This profile is a Decision Base plus six named feature profiles, each
 an optional composition on the base with its own prerequisites,
 producer and consumer roles, required request or response members,
 behavior when a required member is absent, and the assurance claim it
@@ -1682,12 +1682,12 @@ Mission Resource Access Profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>). Effective
 Authority Set is used as defined in
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>.<a href="#section-3-6" class="pilcrow">¶</a></p>
-<p id="section-3-7">Additional terms specific to this binding:<a href="#section-3-7" class="pilcrow">¶</a></p>
+<p id="section-3-7">Additional terms specific to this profile:<a href="#section-3-7" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-3-8">
         <dt id="section-3-8.1">Materialized policy view, trusted compiler:</dt>
         <dd style="margin-left: 1.5em" id="section-3-8.2">
           <p id="section-3-8.2.1">Defined by the runtime profile
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). This binding carries
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). This profile carries
 only the wire member <code>policy_view_id</code>
 (<a href="#mission-to-policy-materialization" class="auto internal xref">Section 5</a>).<a href="#section-3-8.2.1" class="pilcrow">¶</a></p>
 </dd>
@@ -1719,7 +1719,7 @@ envelope.<a href="#section-3-9" class="pilcrow">¶</a></p>
       <h2 id="name-mission-substrate">
 <a href="#section-4" class="section-number selfRef">4. </a><a href="#name-mission-substrate" class="section-name selfRef">Mission Substrate</a>
       </h2>
-<p id="section-4-1">This binding inherits the substrate requirements of the runtime
+<p id="section-4-1">This profile inherits the substrate requirements of the runtime
 profile (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), whose decision
 contract is defined against the Mission model rather than against
 OAuth 2.0 mechanics. OAuth enters only through the credential-derived
@@ -1727,7 +1727,7 @@ decision inputs (the token's <code>sub</code>, <code>client_id</code>, <code>cnf
 <code>authorization_details</code>, and <code>mission</code> claim), which the substrate's
 Mission-bound credential supplies. A deployment on another Mission
 substrate maps that substrate's credential to the same inputs and uses
-this binding unchanged.<a href="#section-4-1" class="pilcrow">¶</a></p>
+this profile unchanged.<a href="#section-4-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="mission-to-policy-materialization">
@@ -1749,11 +1749,11 @@ between a decision request and the loaded view is an equality test on
 <code>mission_id</code> and <code>issuer</code> alone, with <code>policy_view_id</code> as the
 optional, stronger content check where the requesting PEP holds it
 (<a href="#pdp-request" class="auto internal xref">Section 6</a>). Nothing in this
-binding requires the PDP to be remote: a PDP embedded in or colocated
+profile requires the PDP to be remote: a PDP embedded in or colocated
 with its PEP, evaluating against a loaded materialized policy view,
 is a conforming deployment, and the decision's network cost is then
 paid per freshness window rather than per action.<a href="#section-5-1" class="pilcrow">¶</a></p>
-<p id="section-5-2">This binding carries only the wire member, and only in the request:
+<p id="section-5-2">This profile carries only the wire member, and only in the request:
 <code>policy_view_id</code> appears in <code>context.mission.policy_view_id</code>
 (<a href="#context-mission" class="auto internal xref">Section 6.2</a>), when the requesting PEP holds it, as a
 content-addressed check against the view the PDP has loaded. The PDP
@@ -1786,7 +1786,7 @@ into that envelope: action-scoped members are carried in
 and evaluation-wide members in <code>context</code>, per the AuthZEN request
 model. It does not change which inputs <span class="bcp14">MUST</span> be evaluated; those are
 defined by the runtime profile.<a href="#section-6-1" class="pilcrow">¶</a></p>
-<p id="section-6-2">This binding is used after ordinary access-token validation under
+<p id="section-6-2">This profile is used after ordinary access-token validation under
 <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>: the PEP <span class="bcp14">MUST NOT</span> ask a
 PDP to authorize an action from unverified token claims, and the
 PEP-PDP channel <span class="bcp14">MUST</span> be integrity-protected and mutually authenticated
@@ -1837,7 +1837,7 @@ as that profile requires.<a href="#section-6-2" class="pilcrow">¶</a></p>
 within an approved Authority Set entry by matching the action's
 resource and action identity against that entry's <code>resource</code> and
 <code>actions</code> (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). In this
-binding, the approved entry's <code>resource</code> (the protected-resource or
+profile, the approved entry's <code>resource</code> (the protected-resource or
 audience URI, for example <code>https://erp.example.com</code>) is matched against
 <code>resource.properties.audience</code>, not against the AuthZEN <code>resource</code>
 object's <code>type</code>/<code>id</code> identity. The AuthZEN <code>resource</code> object's <code>type</code>
@@ -2475,7 +2475,7 @@ outcome, and carries no result member; the PDP <span class="bcp14">MUST NOT</spa
 predicate outcome asserted through any context member.<a href="#section-6.12-6" class="pilcrow">¶</a></p>
 <p id="section-6.12-7">The PDP <span class="bcp14">MUST</span> refuse the evaluation of a policy-selected predicate it
 does not recognize, treating the predicate as not establishable,
-consistent with this binding's unknown-value conventions
+consistent with this profile's unknown-value conventions
 (<a href="#runtime-denial-classification" class="auto internal xref">Section 7.5</a>). Where deployment or Resource
 policy requires a history predicate that is unsatisfied or cannot be
 established, the PDP <span class="bcp14">MUST</span> deny with
@@ -2635,7 +2635,7 @@ Authorization: ...
 <p id="section-6.15-1">A PDP that also serves non-Mission AuthZEN traffic <span class="bcp14">MUST NOT</span> downgrade:
 for an action within a runtime enforcement scope it mediates, a request
 whose <code>context</code> lacks the <code>mission</code> member (<a href="#context-mission" class="auto internal xref">Section 6.2</a>) is
-malformed under this binding, and the PDP <span class="bcp14">MUST</span> refuse it rather than
+malformed under this profile, and the PDP <span class="bcp14">MUST</span> refuse it rather than
 evaluate it against non-Mission policy alone, and <span class="bcp14">MUST</span> record the
 refusal as a Refusal Record with <code>denial_reason</code>
           <code>mission_context_missing</code>
@@ -2721,7 +2721,7 @@ parameter-bound action <span class="bcp14">MUST NOT</span> be permitted without 
             <p id="section-6.15-3.9.1">A deployment adopting Mission Capability Binding applies that
 companion's source checks and its <code>capability_drift</code> extension
 reason (<span>[<a href="#I-D.draft-mcguinness-mission-capability-binding" class="cite xref">I-D.draft-mcguinness-mission-capability-binding</a>]</span>); this
-binding consumes an already established action identity.<a href="#section-6.15-3.9.1" class="pilcrow">¶</a></p>
+profile consumes an already established action identity.<a href="#section-6.15-3.9.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-6.15-3.10">
             <p id="section-6.15-3.10.1">For a request claiming the cross-domain Origin Principal profile
@@ -2769,7 +2769,7 @@ bind to both the origin and the mapped local identity through the
         <h3 id="name-clock-skew">
 <a href="#section-6.16" class="section-number selfRef">6.16. </a><a href="#name-clock-skew" class="section-name selfRef">Clock skew</a>
         </h3>
-<p id="section-6.16-1">The time comparisons this binding performs (the permit's
+<p id="section-6.16-1">The time comparisons this profile performs (the permit's
 <code>valid_until</code> at the PEP, <a href="#response-context" class="auto internal xref">Section 7.1</a>, the
 <code>context.mission_state_observation</code> freshness window and
 <code>context.credential.expires_at</code> at the PDP, and the approval maximum
@@ -3602,7 +3602,7 @@ issuance profile's open lifecycle state space
 on a denial. A deny need not end the task, however. For an
 <code>out_of_authority</code> or <code>approval_required</code> denial, the PDP <span class="bcp14">MAY</span>
 mark the denial <strong>requestable</strong> by including a <code>context.access_request</code>
-object, composing this binding with the AuthZEN Access Request and
+object, composing this profile with the AuthZEN Access Request and
 Approval Profile <span>[<a href="#ARAP" class="cite xref">ARAP</a>]</span>. The PEP then submits an ARAP access request
 bound to the denied evaluation, an independent approver or policy
 adjudicates it (synchronously when policy auto-approves, otherwise
@@ -3762,7 +3762,7 @@ profile.<a href="#section-7.7-4" class="pilcrow">¶</a></p>
 <p id="section-7.8-1">Every runtime failure condition, whether named in the runtime profile's
 failure-mode table or in its other normative requirements
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), surfaces through exactly
-one of four carriers in this binding: a Refusal Record for a PEP or
+one of four carriers in this profile: a Refusal Record for a PEP or
 PDP refusal before any PDP decision
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>), a PDP
 denial (<code>reason</code> in the decision context, <code>denial_reason</code> in Decision
@@ -4138,7 +4138,7 @@ be executed twice or after its lease.<a href="#section-7.9-3" class="pilcrow">¶
 <p id="section-7.9-4">A PEP permit cache <span class="bcp14">MUST</span> key on the request's cache key
 (<a href="#projections" class="auto internal xref">Section 6.13</a>), which already excludes observation telemetry by
 definition, so a per-request timestamp cannot prevent a cache hit.
-This binding does not echo the materialized view identifier on the
+This profile does not echo the materialized view identifier on the
 response (<a href="#mission-to-policy-materialization" class="auto internal xref">Section 5</a>), so a cache cannot
 key on it; reuse is instead bounded by the permit's own <code>valid_until</code>
 and <code>use_limit</code>, the same lifetime-bounded controls that already gate
@@ -4165,7 +4165,7 @@ propagate the permit's <code>evaluation_id</code> to the resource request in the
 <code>Mission-Decision</code> request header field (<a href="#iana" class="auto internal xref">Section 13</a>); the field value is
 the <code>evaluation_id</code>, whose ABNF (<a href="#response-context" class="auto internal xref">Section 7.1</a>) is
 field-value-safe. The field is protected in transit per deployment: at
-minimum it rides the TLS channel this binding already requires
+minimum it rides the TLS channel this profile already requires
 (<a href="#security-considerations" class="auto internal xref">Section 11</a>), and where the deployment signs resource
 requests the signature <span class="bcp14">MUST</span> cover it.<a href="#section-7.10-1" class="pilcrow">¶</a></p>
 <p id="section-7.10-2">A Resource Server that logs the received <code>evaluation_id</code> with the
@@ -4195,7 +4195,7 @@ permit; the permit-binding rules above govern.<a href="#section-7.10-3" class="p
 Decision Evidence, Execution Evidence, and Refusal Records of the
 runtime evidence companion <span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>
 (normative reference) for every decision, execution outcome, and
-pre-decision refusal this binding produces; a PEP/PDP pair claiming
+pre-decision refusal this profile produces; a PEP/PDP pair claiming
 only the Decision Base satisfies the runtime profile's baseline
 evidence duty in its own internal form instead
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). The response's <code>evaluation_id</code>
@@ -4203,7 +4203,7 @@ evidence duty in its own internal form instead
 its own record identifier (<code>evidence_id</code>, <code>execution_id</code>, or
 <code>refusal_id</code>). Every core Decision Evidence and Execution Evidence
 member is defined directly by the runtime evidence companion. This
-binding registers one Decision Evidence extension member of its own,
+profile registers one Decision Evidence extension member of its own,
 <code>mission_history</code> (the policy-selected history predicates and their
 outcomes), under that companion's coordinated-extension rule
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>); it also carries
@@ -4212,22 +4212,22 @@ elsewhere, for example <code>taint</code> (owned by the harness profile,
 <span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>) and <code>capability_source</code>
 (owned by the Mission Capability Binding companion,
 <span>[<a href="#I-D.draft-mcguinness-mission-capability-binding" class="cite xref">I-D.draft-mcguinness-mission-capability-binding</a>]</span>).<a href="#section-8-1" class="pilcrow">¶</a></p>
-<p id="section-8-2">This binding's own contribution is the mapping: which decision
+<p id="section-8-2">This profile's own contribution is the mapping: which decision
 request and response members the PDP and PEP echo into a record, and
 which the PDP computes and records directly without a wire echo. The
 Decision Evidence <code>mission</code>, <code>subject</code>, <code>resource</code>, <code>action</code>,
 <code>audience</code>, <code>credential</code>, <code>parameter_digest</code>, <code>obligations</code>, <code>taint</code>,
 and <code>mission_history</code> members are populated from the correspondingly
-named members of this binding's PDP request and response
+named members of this profile's PDP request and response
 (<a href="#pdp-request" class="auto internal xref">Section 6</a>, <a href="#pdp-response" class="auto internal xref">Section 7</a>); the <code>conditions</code> member is
 populated from the response <code>context.conditions</code>
 (<a href="#response-context" class="auto internal xref">Section 7.1</a>); the <code>denial_reason</code> member carries the value
 returned in <code>context.reason</code> (<a href="#runtime-denial-classification" class="auto internal xref">Section 7.5</a>).
 The Decision Evidence <code>action_class</code>, <code>class_source</code>, and
-<code>mission_state_version</code> members are not echoed on this binding's
+<code>mission_state_version</code> members are not echoed on this profile's
 wire: the PDP computes them and records them directly in Decision
 Evidence (<a href="#response-context" class="auto internal xref">Section 7.1</a>).<a href="#section-8-2" class="pilcrow">¶</a></p>
-<p id="section-8-3">The runtime evidence companion's integrity envelope is this binding's
+<p id="section-8-3">The runtime evidence companion's integrity envelope is this profile's
 one signing convention for evidence objects: the default envelope
 format is <code>jws-compact</code>, and the protected <code>typ</code> names the record's
 own registered media type
@@ -4274,7 +4274,7 @@ reservation cannot be made.<a href="#section-8.1-2" class="pilcrow">¶</a></p>
 <p id="section-9-1">The PDP relies on Mission state to decide. The runtime profile defines
 the Mission state source, the maximum staleness bound, and the
 fail-closed rule (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). This
-binding conveys that state and its freshness on the wire through the
+profile conveys that state and its freshness on the wire through the
 <code>context.mission_state_observation</code> snapshot
 (<a href="#context-audience-freshness" class="auto internal xref">Section 6.8</a>), using a <code>mode</code> member with one of
 three values that describe how the PEP obtained the state:<a href="#section-9-1" class="pilcrow">¶</a></p>
@@ -4299,7 +4299,7 @@ the cache.<a href="#section-9-2.3.1" class="pilcrow">¶</a></p>
       </ul>
 <p id="section-9-3">When freshness cannot be established within the bound, the PDP fails
 closed for consequential actions as the runtime profile requires; in
-this binding that surfaces as a <code>stale_state</code> denial
+this profile that surfaces as a <code>stale_state</code> denial
 (<a href="#runtime-denial-classification" class="auto internal xref">Section 7.5</a>).<a href="#section-9-3" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -4308,9 +4308,9 @@ this binding that surfaces as a <code>stale_state</code> denial
       <h2 id="name-conformance">
 <a href="#section-10" class="section-number selfRef">10. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
       </h2>
-<p id="section-10-1">This binding adds AuthZEN-specific obligations on top of the runtime
+<p id="section-10-1">This profile adds AuthZEN-specific obligations on top of the runtime
 profile's enforcement contract; an implementation conforms to this
-binding only for the resources, action classes, and PDPs in the runtime
+profile only for the resources, action classes, and PDPs in the runtime
 enforcement scope it documents
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-10-1" class="pilcrow">¶</a></p>
 <p id="section-10-2">Each role's obligations are normative in their owning sections; this
@@ -4394,7 +4394,7 @@ records a decision or refusal in its own internal form, sufficient to
 satisfy the runtime profile's baseline evidence duty
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) without this profile's
 portable schema.<a href="#section-10-8" class="pilcrow">¶</a></p>
-<p id="section-10-9">A PDP conforming to this binding <span class="bcp14">SHOULD</span> advertise in its metadata
+<p id="section-10-9">A PDP conforming to this profile <span class="bcp14">SHOULD</span> advertise in its metadata
 <code>supported_obligations</code> array each obligation type it supports
 (<a href="#obligations" class="auto internal xref">Section 7.2</a>).<a href="#section-10-9" class="pilcrow">¶</a></p>
 <p id="section-10-10">A deployment whose requesting component and executing component
@@ -4416,7 +4416,7 @@ Evidence, is defined by the runtime evidence companion
 placement and bypass, classification integrity, freshness and
 consumption honesty, Resource policy authority, TOCTOU and replay, and
 the limits of a compromised PEP or PDP. This section addresses only
-threats specific to the AuthZEN binding; threats specific to the
+threats specific to the AuthZEN profile; threats specific to the
 evidence records are the runtime evidence companion's
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>), and threats
 specific to capability-source binding are the capability-binding
@@ -4431,7 +4431,7 @@ two policy surfaces, and the request selects between them by carrying
 <code>context.mission</code>. If an in-scope request that lost its Mission
 context (a PEP defect, or a path an attacker can influence) were
 evaluated against the non-Mission surface, a generic allow rule would
-stand in for the Mission evaluation this binding exists to force. The
+stand in for the Mission evaluation this profile exists to force. The
 consistency requirement of <a href="#pdp-request" class="auto internal xref">Section 6</a> refuses such a request
 outright; deployments <span class="bcp14">SHOULD</span> additionally alert on in-scope requests
 arriving without Mission context, since each one is a PEP defect or a
@@ -4507,11 +4507,11 @@ privacy properties of the Decision Evidence, Execution Evidence, and
 Refusal Record objects, including their status as PII sinks,
 parameter exposure, and actor-chain correlation, are the runtime
 evidence companion's (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).
-This binding's one coordinated extension member, <code>mission_history</code>
+This profile's one coordinated extension member, <code>mission_history</code>
 (<a href="#evidence" class="auto internal xref">Section 8</a>), carries behavioral history predicates and their
 outcomes and inherits that guidance in full: it is subject to the
 same PII-sink, access-control, and retention treatment as the OAuth binding
-record, with no exemption. This binding otherwise defines no
+record, with no exemption. This profile otherwise defines no
 additional record content.<a href="#section-12-1" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -4549,7 +4549,7 @@ itself and is not re-registered here.<a href="#section-13.1-1" class="pilcrow">�
         </h3>
 <p id="section-13.2-1">This document requests registration of seven capabilities, using the
 registry's template, in the AuthZEN Policy Decision Point Capabilities
-registry <span>[<a href="#AUTHZEN" class="cite xref">AUTHZEN</a>]</span> establishes: one naming this binding's Decision
+registry <span>[<a href="#AUTHZEN" class="cite xref">AUTHZEN</a>]</span> establishes: one naming this profile's Decision
 Base, and one for each named feature profile
 (<a href="#profiles-and-capabilities" class="auto internal xref">Section 2</a>), so a PEP can discover, per profile,
 which a PDP's metadata <code>capabilities</code> array advertises before it
@@ -4578,7 +4578,7 @@ enforcement (<a href="#profiles-and-capabilities" class="auto internal xref">Sec
 </li>
           <li class="normal" id="section-13.2-4.3">
             <p id="section-13.2-4.3.1">Capability Description: support for the Mission-Bound Runtime
-Enforcement AuthZEN binding's Decision Base.<a href="#section-13.2-4.3.1" class="pilcrow">¶</a></p>
+Enforcement AuthZEN profile's Decision Base.<a href="#section-13.2-4.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-13.2-4.4">
             <p id="section-13.2-4.4.1">Change Controller: the author of this document<a href="#section-13.2-4.4.1" class="pilcrow">¶</a></p>
@@ -4911,7 +4911,7 @@ precedes by no more than the published maximum clock skew, and
       <h2 id="name-acknowledgments">
 <a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
       </h2>
-<p id="appendix-B-1">This document is the AuthZEN binding of Mission-Bound Runtime
+<p id="appendix-B-1">This document is the AuthZEN profile of Mission-Bound Runtime
 Enforcement and builds on the OpenID AuthZEN
 Authorization API. The author thanks the OpenID AuthZEN community and
 the Mission-Bound Authorization implementer community for feedback.<a href="#appendix-B-1" class="pilcrow">¶</a></p>

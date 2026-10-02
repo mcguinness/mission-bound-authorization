@@ -1307,13 +1307,15 @@ Table of Contents
       binding's Mission Lifecycle and Gating section).  A state-aware
       consumer relies only while it observes active; a state-unaware
       consumer retains the bounded materialized-credential residual
-      (Section 10.4).  In AAuth, only PS operations and the person
-      identity, PS authorization, and federated authorization modes are
-      structurally gated; agent identity and resource-managed access do
-      not pass through the PS.  On the gated paths the gate covers
-      requests whose resource token carries the validated Mission
-      Reference; a stripped reference yields a missionless request,
-      bounded by the binding's downgrade rules
+      (Section 10.4).  In AAuth, only PS operations are structurally
+      gated, and agent identity and resource-managed access do not pass
+      through the PS.  In person identity access the gate is person-
+      token issuance (Section 7.1 of
+      [I-D.draft-hardt-oauth-aauth-protocol]).  In PS authorization and
+      federated authorization access it covers auth-token issuance and
+      federated brokering for requests whose resource token carries the
+      validated Mission Reference; a stripped reference yields a
+      missionless request, bounded by the binding's downgrade rules
       ([I-D.draft-mcguinness-mission-aauth]).
 
    *Authority only narrows*:  Derived tokens, delegated child Missions,
