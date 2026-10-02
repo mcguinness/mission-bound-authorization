@@ -1291,6 +1291,61 @@ export function demoReconciliationTemplate(issuer: string): DemoTemplateInput {
   };
 }
 
+/** Per-instance lifetime (seconds) of the AAM nightly-reconciliation Task Template. */
+export const AAM_RECONCILIATION_LIFETIME_S = 900;
+
+/**
+ * The AAM nightly-reconciliation Task Template ceiling: the read-only
+ * reconciliation actions PLUS the single external-communication capability
+ * (payments:remittance.send), built from the derivation policy so every entry
+ * stays entry-wise within it: keep read/list actions and remittance.send, copy
+ * constraints verbatim, drop delegation. Consenting to this ceiling does NOT
+ * mean a Dispatch may instantiate remittance.send: the prohibited-class rule
+ * blocks that regardless of ceiling membership (@spec mission-template#prohibited-classes).
+ */
+export function aamReconciliationCeiling(): CeilingEntry[] {
+  const keep = (a: string) =>
+    a.endsWith(".read") || a.endsWith(".list") || a === "payments:remittance.send";
+  return DERIVATION_POLICY.ceiling
+    .map((e) => {
+      const entry: CeilingEntry = {
+        type: e.type,
+        resource: e.resource,
+        actions: e.actions.filter(keep),
+      };
+      if (e.constraints) entry.constraints = e.constraints;
+      return entry;
+    })
+    .filter((e) => e.actions.length > 0);
+}
+
+/**
+ * The AAM nightly-reconciliation Task Template body (consent once), shared by
+ * the terminal exhibit and the authorization-server test so the two cannot
+ * drift (@spec mission-template#the-mission-template). The scheduler
+ * dispatches; the reconciliation sub-agent receives, acting for the consenting
+ * human, the template's one listed Subject.
+ */
+export function aamReconciliationTemplate(
+  issuer: string,
+  approvalEventId: string,
+): DemoTemplateInput {
+  return {
+    template_version: "aam-nightly-reconciliation-1",
+    issuer,
+    approver: { iss: issuer, sub: "bob" },
+    ceiling: aamReconciliationCeiling(),
+    dispatch_policy: "aam-nightly-reconciliation",
+    dispatchers: ["ap-agent"],
+    recipients: { subjects: [{ iss: issuer, sub: "bob" }], agents: ["subagent-invoice-extractor"] },
+    per_instance_lifetime_s: AAM_RECONCILIATION_LIFETIME_S,
+    max_active: 5,
+    rate_per_min: 30,
+    approval_event_id: approvalEventId,
+    expires_at: "2099-01-01T00:00:00Z",
+  };
+}
+
 export interface SeededClient {
   metadata: Record<string, unknown>;
   privateJwk: Record<string, unknown>;

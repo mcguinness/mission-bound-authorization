@@ -33,9 +33,9 @@
 
 import { type Server } from "node:http";
 import {
+  AAM_RECONCILIATION_LIFETIME_S,
+  aamReconciliationTemplate,
   CANONICAL_RESOURCE,
-  type CeilingEntry,
-  DERIVATION_POLICY,
   DEV_SERVICE_TOKEN,
   type SeededTrustedSource,
 } from "@mission/demo-data";
@@ -82,7 +82,7 @@ const RESOURCE = CANONICAL_RESOURCE;
 const FAR_FUTURE = "2099-01-01T00:00:00Z";
 // The consent ceiling's bounded lifetime (the AAM "bounded task budget"). Well
 // below FAR_FUTURE, so the clamp is observable but never expires mid-run.
-const LIFETIME_S = 900;
+const LIFETIME_S = AAM_RECONCILIATION_LIFETIME_S;
 const ANTHROPIC = "https://api.anthropic.com";
 const TAINT_EVENT_ID = "aam-taint-1";
 
@@ -246,43 +246,10 @@ function approveHumanMission(intentJson: string, proposedAuthority?: AuthorityEn
 
 // --- The consent ceiling + intents ------------------------------------------
 
-/**
- * The read-only reconciliation ceiling PLUS the single external-communication
- * capability (payments:remittance.send = "post to one finance channel"), built
- * programmatically from the derivation policy so every entry stays entry-wise
- * within it: keep read/list actions and remittance.send, copy constraints
- * verbatim, drop delegation, keep CANONICAL_RESOURCE (so containment's
- * resource-remap targets the same resource the Mission holds). Consenting to
- * this ceiling does NOT mean a Dispatch may ever instantiate remittance.send:
- * the prohibited-class rule blocks that regardless of ceiling membership; see
- * lowConsequenceIntent() below for what actually gets dispatched.
- */
-function reconciliationCeiling(): CeilingEntry[] {
-  const keep = (a: string) => a.endsWith(".read") || a.endsWith(".list") || a === "payments:remittance.send";
-  return DERIVATION_POLICY.ceiling
-    .map((e) => {
-      const entry: CeilingEntry = { type: e.type, resource: e.resource, actions: e.actions.filter(keep) };
-      if (e.constraints) entry.constraints = e.constraints;
-      return entry;
-    })
-    .filter((e) => e.actions.length > 0);
-}
-
+/** The Task Template body, from the shared @mission/demo-data builder the
+ *  terminal exhibit also uses, so the two cannot drift. */
 function reconciliationTemplateBody(): Record<string, unknown> {
-  return {
-    template_version: "aam-nightly-reconciliation-1",
-    issuer: ISSUER,
-    approver: { iss: ISSUER, sub: "bob" }, // the consenting human of record
-    ceiling: reconciliationCeiling(),
-    dispatch_policy: "aam-nightly-reconciliation",
-    dispatchers: ["ap-agent"], // the scheduler dispatches
-    recipients: { subjects: [{ iss: ISSUER, sub: "bob" }], agents: ["subagent-invoice-extractor"] }, // the reconciliation sub-agent receives, for the consenting human
-    per_instance_lifetime_s: LIFETIME_S,
-    max_active: 5,
-    rate_per_min: 30,
-    approval_event_id: `aam-tmpl-evt-${seq++}`,
-    expires_at: FAR_FUTURE,
-  };
+  return aamReconciliationTemplate(ISSUER, `aam-tmpl-evt-${seq++}`) as unknown as Record<string, unknown>;
 }
 
 /**

@@ -258,24 +258,34 @@ describe("dispatch gates (@spec mission-template#dispatch-refusals)", () => {
     );
   });
 
+  /** A refused Dispatch commits nothing: no Mission and no dispatch event. */
+  const expectNothingCommitted = (templateId: string, missionsBefore: number) => {
+    expect(kernel.allMissions().length).toBe(missionsBefore);
+    expect(store.dispatchesSince(templateId, "1970-01-01T00:00:00.000Z")).toBe(0);
+  };
+
   it("refuses a dispatcher or recipient not on the template's lists", () => {
     const t = mkTemplate();
+    const before = kernel.allMissions().length;
     try {
       dispatch(t.id, { dispatcher: "intruder" });
       expect.unreachable();
     } catch (e) {
       expect((e as DispatchError).reason).toBe("dispatcher_not_allowed");
     }
+    expectNothingCommitted(t.id, before);
     try {
       dispatch(t.id, { recipient: "intruder" });
       expect.unreachable();
     } catch (e) {
       expect((e as DispatchError).reason).toBe("recipient_not_allowed");
     }
+    expectNothingCommitted(t.id, before);
   });
 
   it("refuses a Subject that matches a listed subject in only one of iss and sub (@spec mission-template#the-mission-template)", () => {
     const t = mkTemplate();
+    const before = kernel.allMissions().length;
     for (const subject of [{ iss: ISS, sub: "mallory" }, { iss: "https://other.example", sub: "alice" }]) {
       try {
         dispatch(t.id, { subject });
@@ -283,6 +293,7 @@ describe("dispatch gates (@spec mission-template#dispatch-refusals)", () => {
       } catch (e) {
         expect((e as DispatchError).reason).toBe("recipient_not_allowed");
       }
+      expectNothingCommitted(t.id, before);
     }
   });
 

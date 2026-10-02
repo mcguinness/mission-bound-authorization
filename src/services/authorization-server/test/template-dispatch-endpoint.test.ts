@@ -351,10 +351,14 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
       dispatchers: ["not-ap-agent"],
     });
     const { template_id } = (await created.json()) as { template_id: string };
+    const missionsBefore = as.kernel.allMissions().length;
     const res = await dispatch({ templateId: template_id, intent: readOnlyIntent(), dispatchEventId: "evt-dispatcher" });
     const body = (await res.json()) as { mission_denial_reason?: string };
     expect(res.status, JSON.stringify(body)).toBe(403);
     expect(body.mission_denial_reason).toBe("dispatcher_not_allowed");
+    // A refused Dispatch commits nothing: no Mission and no dispatch event.
+    expect(as.kernel.allMissions().length).toBe(missionsBefore);
+    expect(as.templateStore.dispatchesSince(template_id, "1970-01-01T00:00:00.000Z")).toBe(0);
   });
 
   it("recipient_not_allowed: the established Subject (the template's approver) is not in recipients.subjects (@spec mission-template#the-mission-template)", async () => {
@@ -363,10 +367,14 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
       recipients: { subjects: [{ iss: ISSUER, sub: "carol" }], agents: ["subagent-invoice-extractor"] },
     });
     const { template_id } = (await created.json()) as { template_id: string };
+    const missionsBefore = as.kernel.allMissions().length;
     const res = await dispatch({ templateId: template_id, intent: readOnlyIntent(), dispatchEventId: "evt-subject" });
     const body = (await res.json()) as { mission_denial_reason?: string };
     expect(res.status, JSON.stringify(body)).toBe(403);
     expect(body.mission_denial_reason).toBe("recipient_not_allowed");
+    // A refused Dispatch commits nothing: no Mission and no dispatch event.
+    expect(as.kernel.allMissions().length).toBe(missionsBefore);
+    expect(as.templateStore.dispatchesSince(template_id, "1970-01-01T00:00:00.000Z")).toBe(0);
   });
 
   it("lifecycle revoke: a revoked template refuses a subsequent dispatch with template_not_active", async () => {
