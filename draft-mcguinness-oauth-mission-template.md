@@ -1084,6 +1084,10 @@ IANA action. Following the restraint of the sibling profiles:
 
 \[\[ To be removed from the final specification ]]
 
+- The consumption-bound rationale under Prohibited Classes states
+  that dispatch multiplies an instance's bound by `max_active` and
+  `dispatch_rate`, and that the template consent renders that product
+  under the metering profile.
 - `allowed_dispatchers` lists `client_id` strings, and
   `allowed_recipients` is an object of `subjects` (`iss` and `sub`)
   and `agents` (`client_id`), each checked separately at Dispatch, so

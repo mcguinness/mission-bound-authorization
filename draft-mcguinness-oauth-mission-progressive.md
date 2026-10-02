@@ -732,6 +732,9 @@ convention, none of which require registration.
 
 -01
 
+- The consumption-bound rationale rests on the metering profile's
+  successor rule: a successor continues its predecessor's counters, and
+  a policy-adjudicated successor cannot raise a bound.
 - Editorial: disambiguated `authority_ceiling` from the template
   profile's Template Ceiling and the shaping companion's shaping
   ceiling at its first definition ({{conventions-and-terminology}}), no

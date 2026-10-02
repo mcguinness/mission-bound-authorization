@@ -3714,6 +3714,10 @@ worked example shows the concrete record
 
 \[\[ To be removed from the final specification ]]
 
+- Security Considerations notes that an idempotency key identifies a
+  request, not the business event it carries out, and that the
+  Operation Profile and the resource own event-level deduplication.
+
 - The Enforcement Scope Statement is what a deployment adopting the
   Runtime-Enforced bundle publishes, not what earns the level; the
   level stays guidance, matching the architecture's assurance levels,

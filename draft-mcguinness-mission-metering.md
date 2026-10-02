@@ -1192,6 +1192,16 @@ this registry.
 
 \[\[ To be removed from the final specification ]]
 
+- Capacity Across Missions ({{capacity-across-missions}}): a Child
+  Mission is charged to every ancestor's bound or holds an escrowed
+  allocation, a successor or carryover replacement continues its
+  predecessor's counters, and a template consent renders the
+  per-instance bound with `max_active` and `dispatch_rate`. Lease
+  expiry no longer releases an unsettled reservation for an
+  idempotent or reversible action class ({{settlement-states}}), and a
+  metered high-consequence idempotency horizon reaches the Mission's
+  `expires_at` ({{retry}}).
+
 - Controls taxonomy retirement (#636, #117): `max_budget`, `max_calls`,
   `max_duration`, `max_egress_volume`, and `exclusive` move from
   `controls.<name>` to named top-level Mission Intent members, since
