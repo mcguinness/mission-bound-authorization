@@ -1084,8 +1084,8 @@ Where creation is adjudicated by policy with no human interaction
 - `activation_actor` is the
   requesting parent agent, the Parent Mission's `client_id`, distinct
   from `consent_principal`; and
-- `root_commitment` is the entry's
-  `child_creation_policy` reference where the entry carries one,
+- `root_commitment` is the `digest` of the entry's
+  `child_creation_policy` where the entry carries one,
   otherwise the Parent Mission's own `authority_hash`, which commits
   the authorizing delegation entry.
 
@@ -1095,10 +1095,14 @@ reference a committed value: the anti-laundering guarantee that a
 approval actually committed.
 
 Where the entry carries a
-`child_creation_policy`, `activation` carries that policy's `id` and
-`version` and this creation's own delegation event identifier (above)
-as `activation_event_id`. Where it does not, the drawdown is against
-the parent's approved delegation entry itself, not a separate policy
+`child_creation_policy`, `activation` carries that policy's `id`,
+`version`, and `digest` and this creation's own delegation event
+identifier (above) as `activation_event_id`. A policy snapshot that
+does not match `digest` denies child creation with `policy_denied`
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Standing-Consent
+Bases"). Where the entry carries no `child_creation_policy`, the
+drawdown is against the parent's approved delegation entry itself,
+not a separate policy
 artifact: `activation` omits `policy_id` and carries only the
 delegation event identifier as `activation_event_id`. The record's
 `approver` is `consent_principal`: the Parent Mission's human
@@ -1249,7 +1253,10 @@ profile's `children` member is such a member.
     `children`, ending the lineage.
 
   `child_creation_policy`:
-  : OPTIONAL. A policy reference evaluated before each child creation.
+  : OPTIONAL. An activation policy reference, an object of `id`,
+    `version`, and `digest` ({{I-D.draft-mcguinness-oauth-mission}},
+    Section "Standing-Consent Bases"), identifying the policy
+    evaluated before each child creation and committing its content.
 
 Example parent Authority Set entry whose `delegation` carries `children`,
 so the entry permits Child Missions to depth 2, at most 5 concurrently,
