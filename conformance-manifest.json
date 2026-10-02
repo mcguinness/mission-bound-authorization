@@ -13259,9 +13259,15 @@
      "name": "the reversible-write key control the statement declares (@spec runtime#permit-binding, #918) > refuses a declaration whose retention is not longer than the permit, whose owner is not a PEP location, whose scope is not the fixed-member one, or that covers another class",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > the reservation scope keys on a stable actor (@spec runtime#idempotency, #1016 review) > another instance of the same client, carried as an instance-profiled leaf, retries into the same scope and executes nothing new",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "Witnessed (#917): the statement publishes idempotency_scope [mission, subject, actor, audience, action, resource, phase] per high-consequence class; a statement adding a volatile member (client_instance_id, the act chain above the leaf, freshness, approvals, timestamps) or omitting a dimension is refused at load; and the scope the PDP encodes is exactly the published one: pairs differing in any one dimension, a different delegate leaf included, never collide under the fixed-member JCS encoding, and a new client_instance_id does not split it. The actor dimension is a stable identity (@mission/core idempotencyScopeActor, #1016 review): a leaf act entry whose sub_profile carries client_instance names a volatile instance, so the scope keys on its client instead and another instance of the same client gets no second permit; an instance-profiled leaf with no client to key on is refused actor_invalid. The reversible-write declarations (#918) publish the same fixed-member scope for the PEP-reserved keys, and a declaration whose scope adds a volatile member or omits a dimension is refused at load."
+   "notes": "Witnessed (#917): the statement publishes idempotency_scope [mission, subject, actor, audience, action, resource, phase] per high-consequence class; a statement adding a volatile member (client_instance_id, the act chain above the leaf, freshness, approvals, timestamps) or omitting a dimension is refused at load; and the scope the PDP encodes is exactly the published one: pairs differing in any one dimension, a different delegate leaf included, never collide under the fixed-member JCS encoding, and a new client_instance_id does not split it. The actor dimension is a stable identity (@mission/core idempotencyScopeActor, #1016 review): a leaf act entry whose sub_profile carries client_instance names a volatile instance, so the scope keys on its client instead and another instance of the same client gets no second permit; an instance-profiled leaf with no client to key on is refused actor_invalid. The reversible-write declarations (#918) publish the same fixed-member scope for the PEP-reserved keys, and a declaration whose scope adds a volatile member or omits a dimension is refused at load. The PEP's reservation scope uses the same stable actor: another instance of the same client does not split it."
   },
   {
    "id": "runtime.idempotency.tombstone-retention-and-refusal",
@@ -13575,9 +13581,21 @@
      "name": "runtime posture publication on the resource metadata surface > publishes the reservation domain, its owner and the retention posture for every keyed write outside the high-consequence classes",
      "level": "unit",
      "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > the reservation scope keys on a stable actor (@spec runtime#idempotency, #1016 review) > another instance of the same client, carried as an instance-profiled leaf, retries into the same scope and executes nothing new",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > the reservation scope keys on a stable actor (@spec runtime#idempotency, #1016 review) > an instance-profiled leaf with no client to key it on has no stable actor: the write is refused after its permit, executes nothing, and leaves no reservation",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "Witnessed (#918): schedule_payment and cancel_scheduled_payment elect the idempotency-key control, and the enforcing PEP (mcp-payments-pep) reserves (idempotency scope, idempotency_key) in its own durable single-writer SQLite file (stores.pepWriteReservations.file), separate from the PDP claim domain and from transaction.ts. The schedule effect and its completed reservation and result commit in one local transaction, so eight concurrent attempts under one key that all found the pair free execute once and the other seven read the winner's record (concurrency). The record survives a close and reopen of the file, and is retained for the published P7D horizon: a retry after the 300 s permit expired resolves against it through its own fresh Decision, held to verifyPermitAtUse before release, without reaching admission, while the expired permit replayed into the effect step admits nothing; past the horizon the key is new. A changed operation conflicts, a fault inside the transaction leaves neither row, a fault after the commit resolves to the retained result, a reserved record is refused and never purged by time, and an unreachable store suppresses consumption_unavailable. This is a different store and mechanism from the high-consequence transaction-assurance tier; no transaction.ts test is cited."
+   "notes": "Witnessed (#918): schedule_payment and cancel_scheduled_payment elect the idempotency-key control, and the enforcing PEP (mcp-payments-pep) reserves (idempotency scope, idempotency_key) in its own durable single-writer SQLite file (stores.pepWriteReservations.file), separate from the PDP claim domain and from transaction.ts. The schedule effect and its completed reservation and result commit in one local transaction, so eight concurrent attempts under one key that all found the pair free execute once and the other seven read the winner's record (concurrency). The record survives a close and reopen of the file, and is retained for the published P7D horizon: a retry after the 300 s permit expired resolves against it through its own fresh Decision, held to verifyPermitAtUse before release, without reaching admission, while the expired permit replayed into the effect step admits nothing; past the horizon the key is new. A changed operation conflicts, a fault inside the transaction leaves neither row, a fault after the commit resolves to the retained result, a reserved record is refused and never purged by time, and an unreachable store suppresses consumption_unavailable. This is a different store and mechanism from the high-consequence transaction-assurance tier; no transaction.ts test is cited. The reservation scope's actor is the shared stable identity (@mission/core idempotencyScopeActor, #1016 review): another instance of the same client, carried as an instance-profiled leaf, retries into the same scope and executes nothing new, and an instance-profiled leaf with no client to key on yields no scope, so the write is refused consumption_unavailable after its permit with no effect and no reservation."
   },
   {
    "id": "runtime.execution-reverification.mismatch-refusal",
