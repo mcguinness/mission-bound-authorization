@@ -2798,8 +2798,11 @@ the Enforcement Scope Statement enumerates and is records mode
 everywhere else. **Issuance mode** (phases 5 and 6) restores the
 token-layer gate.
 
-"No AS code change" holds in phases 1 through 5; what changes is the
-claim. A high-consequence enforcement claim requires issuance mode's
+"No AS code change" holds in records and enforced-paths modes (phases
+1 through 4); what changes is the claim. Issuance mode needs each
+consuming AS to redeem Issuance Grants (phase 5) or to become
+Mission-aware (phase 6). A high-consequence enforcement claim requires
+issuance mode's
 machinery or the Estate Prerequisites' AS features
 ({{enterprise-prerequisites}}), never records alone. The phases are:
 
