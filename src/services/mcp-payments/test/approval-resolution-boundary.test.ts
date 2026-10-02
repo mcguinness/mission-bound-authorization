@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { canonicalDigest } from "@mission/core";
 import type { Fga } from "@mission/pdp";
-import { createEphemeralEvidenceKeys, EvidenceStore, PaymentsStore, Pep, type PepDeps, type TokenFacts } from "../src/index.js";
+import { CANONICAL_RESOURCE, createEphemeralEvidenceKeys, EvidenceStore, PaymentsStore, Pep, type PepDeps, type TokenFacts } from "../src/index.js";
 import { TOOLS } from "../src/server.js";
 
 function build() {
@@ -24,6 +25,14 @@ describe("approval resolution is outside the mediated tool boundary (#759)", () 
       expect(evidence.all()).toHaveLength(1);
       expect(evidence.all()[0]).toMatchObject({ kind: "refusal" });
       expect(JSON.stringify(evidence.all()[0])).toContain('"role":"pep"');
+      // @spec runtime-evidence#request-digest-worked: no evaluation request
+      // exists yet, so the record digests the pre-request input. The Mission
+      // the credential claims was never established, so `mission_id` is
+      // absent, as is the unknown `resource`; neither appears as "".
+      expect(evidence.all()[0]!.content).toMatchObject({
+        request_digest_input: "pre_request",
+        evaluation_request_digest: canonicalDigest({ action: tool, audience: CANONICAL_RESOURCE, subject: "alice" }),
+      });
     }
   });
 
