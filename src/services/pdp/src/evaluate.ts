@@ -34,7 +34,7 @@ import type {
   RuntimeCapabilitySource,
   RuntimeCredentialRef,
 } from "./decision-evidence.js";
-import { runtimeCapabilitySourceOf } from "./decision-evidence.js";
+import { runtimeCapabilitySourceOf, evaluationRequestDigest } from "./decision-evidence.js";
 import type { Fga } from "./fga.js";
 import { type DelegatePolicy, resolveBaselineJoin } from "./mas-join.js";
 import {
@@ -375,6 +375,9 @@ function newDecisionId(): string {
 }
 
 export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): Promise<Decision> {
+  // @spec authzen#evaluation-request-digest-input: digest the request as
+  // submitted, on receipt, before evaluation applies any default or enrichment.
+  const requestDigest = evaluationRequestDigest(req);
   return getTracer("pdp").startActiveSpan("pdp.evaluate", async (span) => {
     try {
       // Private per-evaluation trace: never read a request-supplied list, and
@@ -387,7 +390,7 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
         span.setAttribute("mission.denial_reason", String(decision.context.denial_reason));
       }
       if (opts.evidence) {
-        decision.context.decision_evidence = await emitDecisionEvidence(req, opts, opts.evidence, decision, contributions);
+        decision.context.decision_evidence = await emitDecisionEvidence(req, opts, opts.evidence, decision, contributions, requestDigest);
       }
       return decision;
     } finally {
@@ -414,6 +417,7 @@ async function emitDecisionEvidence(
   emitter: DecisionEvidenceEmitter,
   decision: Decision,
   contributions: ReadonlySet<string>,
+  requestDigest: string,
 ): Promise<DecisionEvidenceObject> {
   const { view } = opts;
   // @spec cross-domain#origin-principal-mapping, runtime-evidence#principal_mapping,
@@ -460,6 +464,7 @@ async function emitDecisionEvidence(
     action: { name: req.action.name },
     audience: req.context.audience,
     evaluation_id: decision.context.evaluation_id as string,
+    evaluation_request_digest: requestDigest,
     decision: decision.decision ? "permit" : "deny",
     contributing_constraints: [...contributions],
     evaluated_at: opts.now().toISOString(),
