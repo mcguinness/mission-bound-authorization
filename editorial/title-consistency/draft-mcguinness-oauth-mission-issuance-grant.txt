@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          1 October 2026
-Expires: 4 April 2027
+Intended status: Standards Track                          2 October 2026
+Expires: 5 April 2027
 
 
                   Mission Issuance Grant for OAuth 2.0
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 4 April 2027.
+   This Internet-Draft will expire on 5 April 2027.
 
 Copyright Notice
 
@@ -274,7 +274,9 @@ Table of Contents
          "type": "mission_resource_access",
          "resource": "https://api.example.com/invoices",
          "actions": ["read"],
-         "constraints": { "resource_issued_after": "2026-07-01" }
+         "constraints": {
+           "resource_issued_after": "2026-07-01T00:00:00Z"
+         }
        }
      ]
    }
@@ -380,39 +382,31 @@ Table of Contents
    REQUIRED error string and an OPTIONAL error_description.  This
    endpoint uses:
 
-   +===============================+======+===========================+
-   | error                         | HTTP | Condition                 |
-   +===============================+======+===========================+
-   | invalid_request               | 400  | Missing or malformed      |
-   |                               |      | mission_id or audience,   |
-   |                               |      | or an unparseable body.   |
-   +-------------------------------+------+---------------------------+
-   | unauthorized                  | 401  | Request not               |
-   |                               |      | authenticated.            |
-   +-------------------------------+------+---------------------------+
-   | not_found                     | 404  | The mission_id is         |
-   |                               |      | unknown, or the requester |
-   |                               |      | is not the Mission's      |
-   |                               |      | recorded client.          |
-   +-------------------------------+------+---------------------------+
-   | invalid_audience              | 400  | audience names no AS this |
-   |                               |      | MAS mints for.            |
-   +-------------------------------+------+---------------------------+
-   | mission_not_active            | 409  | The Mission is not active |
-   |                               |      | (Section 5).              |
-   +-------------------------------+------+---------------------------+
-   | invalid_authorization_details | 400  | The requested subset is   |
-   |                               |      | not a subset of the       |
-   |                               |      | consented Authority Set,  |
-   |                               |      | or exceeds the audience   |
-   |                               |      | scope.                    |
-   +-------------------------------+------+---------------------------+
-   | derivation_limit_exhausted    | 409  | The Mission's established |
-   |                               |      | derivation_limit is       |
-   |                               |      | reached (Section 5).      |
-   +-------------------------------+------+---------------------------+
+   +=============================+====+=========================================================+
+   |error                        |HTTP|Condition                                                |
+   +=============================+====+=========================================================+
+   |invalid_request              |400 |Missing or malformed mission_id or audience, or an       |
+   |                             |    |unparseable body.                                        |
+   +-----------------------------+----+---------------------------------------------------------+
+   |unauthorized                 |401 |Request not authenticated.                               |
+   +-----------------------------+----+---------------------------------------------------------+
+   |not_found                    |404 |The mission_id is unknown, or the requester is not the   |
+   |                             |    |Mission's recorded client.                               |
+   +-----------------------------+----+---------------------------------------------------------+
+   |invalid_audience             |400 |audience names no AS this MAS mints for.                 |
+   +-----------------------------+----+---------------------------------------------------------+
+   |mission_not_active           |409 |The Mission is not active (Section 5).                   |
+   +-----------------------------+----+---------------------------------------------------------+
+   |invalid_authorization_details|400 |The requested subset is not a subset of the consented    |
+   |                             |    |Authority Set, or exceeds the audience scope.            |
+   +-----------------------------+----+---------------------------------------------------------+
+   |derivations_exhausted        |409 |The Mission's established derivation_limit is reached    |
+   |                             |    |(Section 5): the condition the OAuth binding's           |
+   |                             |    |mission_error value derivations_exhausted reports        |
+   |                             |    |([I-D.draft-mcguinness-oauth-mission-derivation-limits]).|
+   +-----------------------------+----+---------------------------------------------------------+
 
-                                 Table 1
+                                  Table 1
 
    not_found covers both an unknown Mission and a requester that is not
    the recorded client, so the split never becomes a membership oracle;

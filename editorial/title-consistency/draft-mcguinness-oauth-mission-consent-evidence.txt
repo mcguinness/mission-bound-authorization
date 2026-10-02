@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          1 October 2026
-Expires: 4 April 2027
+Intended status: Standards Track                          2 October 2026
+Expires: 5 April 2027
 
 
                  Mission Consent Evidence for OAuth 2.0
@@ -60,7 +60,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 4 April 2027.
+   This Internet-Draft will expire on 5 April 2027.
 
 Copyright Notice
 
@@ -414,9 +414,11 @@ Table of Contents
       resist consent phishing, so it is committed by
       consent_rendering_hash and rendered for consent.
 
-   shaping_evidence_hash:  OPTIONAL.  A string.  A commitment to Shaping
-      Evidence when shaping was used
-      ([I-D.draft-mcguinness-mission-shaping]).
+   shaping_evidence_hash:  OPTIONAL.  A string.  Present when shaping
+      was used: the envelope anchor, with typ mission-shaping-evidence,
+      over the Shaping Evidence object, as Shaping defines it
+      ([I-D.draft-mcguinness-mission-shaping], Section "Integrity and
+      the Evidence Hash").
 
    predecessor:  OPTIONAL.  A string.  The predecessor Mission
       identifier when this disclosure is for an expansion approval

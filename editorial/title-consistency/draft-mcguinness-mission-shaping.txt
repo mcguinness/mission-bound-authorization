@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                            1 October 2026
-Expires: 4 April 2027
+Intended status: Informational                            2 October 2026
+Expires: 5 April 2027
 
 
                          Mission Intent Shaping
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 4 April 2027.
+   This Internet-Draft will expire on 5 April 2027.
 
 Copyright Notice
 
@@ -987,10 +987,10 @@ Table of Contents
       narrower Mission Intent the client resubmits
       ([I-D.draft-mcguinness-oauth-mission-approval]).
 
-   Required revision:  Under approval revision, rejected_scope and
-      rejected_authorization_details identify the refused dimensions in
-      machine-readable form.  They are the input the shaper uses to plan
-      the narrowed revision
+   Required revision:  Under approval revision, mission_rejected_scope
+      and mission_rejected_authorization_details identify the refused
+      dimensions in machine-readable form.  They are the input the
+      shaper uses to plan the narrowed revision
       ([I-D.draft-mcguinness-oauth-mission-approval-revision]).
 
    Re-shaping is shaping.  A re-proposal passes through the full

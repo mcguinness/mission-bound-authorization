@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          1 October 2026
-Expires: 4 April 2027
+Intended status: Standards Track                          2 October 2026
+Expires: 5 April 2027
 
 
                Mission Status and Lifecycle for OAuth 2.0
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 4 April 2027.
+   This Internet-Draft will expire on 5 April 2027.
 
 Copyright Notice
 
@@ -534,7 +534,15 @@ Table of Contents
          [I-D.draft-mcguinness-oauth-mission-signals]), a lifecycle
          mutation can guard on it (Section 5.7), and a materialized
          policy view names the value it materialized
-         ([I-D.draft-mcguinness-mission-runtime]).
+         ([I-D.draft-mcguinness-mission-runtime]).  Companion records
+         carry this same counter under their own member names:
+         mission_state_version in Decision Evidence
+         ([I-D.draft-mcguinness-mission-runtime-evidence]),
+         prior_version and new_version in Containment Evidence
+         ([I-D.draft-mcguinness-oauth-mission-containment]),
+         prior_version and current_version in a Discharge Result
+         ([I-D.draft-mcguinness-oauth-mission-discharge]), and
+         expected_version on a lifecycle request (Section 5.7).
 
       -  Extension members: a companion profile MAY add further members
          to this object.  For example, the Status List companion adds a
@@ -857,6 +865,23 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-expansion]).  A deployment that
    needs a prompt cutoff on outstanding tokens uses the propagation
    mechanisms of Section 6.
+
+   Suspension is reversible, so a refresh refused for it should not
+   spend the client's ability to refresh after a resume.  After
+   validating a refresh request and before consuming or rotating its
+   refresh token, the AS SHOULD check whether the Mission, or an
+   ancestor whose state gates its derivation
+   ([I-D.draft-mcguinness-oauth-mission-child-delegation]), is
+   suspended.  When this check detects suspension, the AS SHOULD refuse
+   the request without consuming the refresh token or invalidating its
+   otherwise-valid grant solely because of that suspension.  This check
+   does not replace issuance-time state validation.  A concurrent
+   suspension can still cause issuance to be refused after the
+   preliminary check, and preserving refresh capability across that
+   interval requires coordination with the issuance commit.  The check
+   leaves refresh-token rotation and reuse detection intact, and a
+   resume does not revive a credential that expired or was revoked
+   independently.
 
 5.1.  Operations
 
@@ -1437,7 +1462,7 @@ Table of Contents
       array of strings naming the authentication methods the Mission
       Status endpoint (Section 3) accepts.  Its value space is a closed
       set defined by this document, not the OAuth Token Endpoint
-      Authentication Methods registry: mtls_client_auth (mutual-TLS
+      Authentication Methods registry: tls_client_auth (mutual-TLS
       client authentication [RFC8705]), private_key_jwt (private-key JWT
       client authentication [RFC7523]), and access_token (a
       mission_status-scoped, sender-constrained access token, whose
@@ -1491,6 +1516,11 @@ Table of Contents
       (Section 6).  When absent, no bound is declared, and a consumer
       sizes reliance to token lifetime alone.
 
+   When an endpoint's *_auth_methods_supported member is absent, the
+   methods that endpoint accepts are known only by out-of-band
+   configuration; token_endpoint_auth_methods_supported [RFC8414]
+   describes the token endpoint alone and is never read in its place.
+
    DPoP and mTLS support for issued credentials are read from the
    standard dpop_signing_alg_values_supported [RFC9449] and
    tls_client_certificate_bound_access_tokens [RFC8705] metadata; this
@@ -1522,14 +1552,15 @@ Table of Contents
      "mission_status_endpoint":
        "https://as.example.com/as/mission/status",
      "mission_status_endpoint_auth_methods_supported":
-       ["mtls_client_auth", "private_key_jwt", "access_token"],
+       ["tls_client_auth", "private_key_jwt", "access_token"],
      "mission_status_endpoint_auth_signing_alg_values_supported": ["ES256"],
      "mission_status_signing_alg_values_supported": ["ES256"],
      "mission_lifecycle_endpoint":
        "https://as.example.com/as/mission/lifecycle",
      "mission_lifecycle_endpoint_auth_methods_supported":
-       ["mtls_client_auth", "private_key_jwt", "access_token"],
-     "mission_lifecycle_endpoint_auth_signing_alg_values_supported": ["ES256"],
+       ["tls_client_auth", "private_key_jwt", "access_token"],
+     "mission_lifecycle_endpoint_auth_signing_alg_values_supported":
+       ["ES256"],
      "mission_max_stale_seconds": 60
    }
 
@@ -1905,11 +1936,21 @@ Informative References
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-runtime.html>.
 
+   [I-D.draft-mcguinness-mission-runtime-evidence]
+              McGuinness, K., "Mission Runtime Evidence", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-runtime-evidence.html>.
+
    [I-D.draft-mcguinness-oauth-mission-child-delegation]
               McGuinness, K., "Mission Child Delegation for OAuth 2.0",
               2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-child-
               delegation.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-containment]
+              McGuinness, K., "Mission Containment for OAuth 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-containment.html>.
 
    [I-D.draft-mcguinness-oauth-mission-cross-domain]
               McGuinness, K., "Mission Cross-Domain Projection for OAuth
@@ -1972,6 +2013,16 @@ Informative References
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The mutual-TLS method value is tls_client_auth, the registered
+      [RFC8705] spelling, and an absent endpoint auth-methods member is
+      never read from token-endpoint metadata.  The Mission Authority
+      Server publishes the same per-endpoint members.
+
+   *  A refresh against a suspended Mission is checked, and refused,
+      before its refresh token is consumed, so a resume restores refresh
+      with the same token; issuance-time validation still governs a
+      concurrent suspension (#914).
 
    *  Added conditional carryover correlation on an old child's cascaded
       observation; no state or authority is inferred from the pointer
