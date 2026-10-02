@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                             1 October 2026
-Expires: 4 April 2027
+Intended status: Experimental                             2 October 2026
+Expires: 5 April 2027
 
 
                       Mission Open-World Discovery
@@ -59,7 +59,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 4 April 2027.
+   This Internet-Draft will expire on 5 April 2027.
 
 Copyright Notice
 
@@ -574,7 +574,8 @@ Table of Contents
    resource:  REQUIRED.  The Encountered Resource object of Section 5.
 
    resource_declaration_digest:  CONDITIONAL.  REQUIRED when a self-
-      declaration existed at encounter: its content-addressed digest.
+      declaration existed at encounter: the integrity-anchor encoded
+      raw-octet digest of its exact retrieved bytes.
 
    sought_classes:  REQUIRED.  An array of strings: the action classes
       of the authority sought, under the deployment's classification

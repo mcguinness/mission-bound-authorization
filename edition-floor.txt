@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-01T23:32:38Z
-Source repository commit: fa5f6936f1ddbd54c052137b399988290af752ec
+Generated: 2026-10-02T00:13:47Z
+Source repository commit: 9de8dbca7ab266b9b04a8811317c57a03c4311f1
 Member count: 7
 
 Reading order:
@@ -28,8 +28,8 @@ Reading order:
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                            1 October 2026
-Expires: 4 April 2027
+Intended status: Informational                            2 October 2026
+Expires: 5 April 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -82,7 +82,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 4 April 2027.
+   This Internet-Draft will expire on 5 April 2027.
 
 Copyright Notice
 
@@ -4759,8 +4759,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          1 October 2026
-Expires: 4 April 2027
+Intended status: Standards Track                          2 October 2026
+Expires: 5 April 2027
 
 
                      Mission Substrate Requirements
@@ -4818,7 +4818,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 4 April 2027.
+   This Internet-Draft will expire on 5 April 2027.
 
 Copyright Notice
 
@@ -6293,8 +6293,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          1 October 2026
-Expires: 4 April 2027
+Intended status: Standards Track                          2 October 2026
+Expires: 5 April 2027
 
 
                Mission-Bound Authorization for OAuth 2.0
@@ -6353,7 +6353,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 4 April 2027.
+   This Internet-Draft will expire on 5 April 2027.
 
 Copyright Notice
 
@@ -7150,9 +7150,9 @@ Table of Contents
 
    goal and task_bounds then serve as rendering and bounding context
    over the proposed authority.  Each proposed entry that carries a
-   resource member MUST have it among the Intent's target_resources; the
-   AS refuses a request violating this with the invalid_request error
-   code.
+   resource member MUST have it among the Intent's target_resources,
+   compared as Section 5 states; the AS refuses a request violating this
+   with the invalid_request error code.
 
    The carriage rules of Section 4.1 apply to the proposal.  The AS
    records the submitted array on the Mission exactly as submitted and
@@ -7315,9 +7315,16 @@ Table of Contents
       ceiling is the separate, experimental Mission Template profile
       ([I-D.draft-mcguinness-oauth-mission-template]), not this mode.
 
-   In both modes the AS bounds every derived entry by the Mission
-   Intent: each derived entry that carries a resource member MUST have
-   it among the Intent's target_resources values.
+   In both modes the AS bounds every Authority Set entry by the Mission
+   Intent: each entry that carries a resource member MUST have it among
+   the Intent's target_resources values, by exact string equality.  This
+   membership check applies to the Authority Set, and to a proposal at
+   submission (Section 4.2).  A later token issuance is bounded by the
+   subset rule against the Authority Set (Section 5.1), not by the
+   target list again: a type whose subset relation admits a narrower
+   resource (for mission_resource_access, a descendant of a prefix
+   entry) can yield a token entry that target_resources does not name,
+   and a candidate outside every Authority Set entry fails that rule.
 
    The Mission records the policy version in force as policy_version
    (Section 7), an opaque audit correlator; the policy itself is not
@@ -7448,6 +7455,12 @@ Table of Contents
    unrecognized member, an incomparable value), the posture is
    conservative refusal, as each consuming rule of this document states.
 
+   An entry equal to its reference entry, byte-identical under the
+   canonical form of Section 8.2, is a subset of it for every type.
+   This is the one case the subset rule decides without the type's own
+   relation, and it is how an AS that has not declared narrowing for a
+   type establishes a subset (Section 5.2).
+
 5.2.  Authorization Details Types
 
    The Authority Set MAY include any AS-supported [RFC9396]
@@ -7463,15 +7476,9 @@ Table of Contents
    *  an entry is committed by authority_hash and gated on Mission state
       the same way regardless of type;
 
-   *  narrowing and delegation use the subset semantics the type defines
-      (Section 5.1, Section 14.3).  A type whose subset and delegation
-      semantics the AS does not understand MUST NOT be delegated,
-      audience-projected to a Resource AS
-      ([I-D.draft-mcguinness-oauth-mission-cross-domain]), or narrowed,
-      since the AS cannot prove that a transformed copy is still a
-      subset of what was approved.  The AS MUST NOT issue such an entry
-      to any audience other than its original approved audience, or in
-      any form other than exactly as approved;
+   *  narrowing and delegation use the subset and delegation semantics
+      the type defines (Section 5.1, Section 14.3), under the
+      transformation capabilities the AS declares for the type (below);
 
    *  evaluating the entry against a concrete request is the runtime
       layer's responsibility (Section 19.3.1), not the AS's.
@@ -7491,7 +7498,23 @@ Table of Contents
 
    The AS MUST NOT narrow, delegate, or project to scope an entry of a
    type for which it has not declared the corresponding capability; on
-   an undeclared capability the entry is carried as approved.
+   an undeclared capability the entry is carried as approved.  Issuing
+   an entry to an audience other than its original approved audience,
+   including audience projection to a Resource AS
+   ([I-D.draft-mcguinness-oauth-mission-cross-domain]), counts as
+   narrowing and needs narrowing, not projection.  Without narrowing,
+   the AS MUST NOT issue an entry to any audience other than its
+   original approved audience, or, except as scope under a declared
+   projection, in any form other than exactly as approved, since it
+   cannot prove that a transformed copy is still a subset of what was
+   approved.  A type that declares delegation without narrowing is
+   delegable only unchanged: the AS MUST NOT include an entry of such a
+   type in a delegated token unless it is equal (Section 5.1) to an
+   entry of the presented delegating token, it keeps that entry's
+   approved audience, and the type's delegation policy permits the
+   delegate (Section 14.3).  The reference is the presented token, not
+   the Mission Authority Set, so equality never restores an entry, or
+   any part of one, that the presented token omits.
 
    The AS declares the capabilities through these carriers, in order of
    preference:
@@ -9154,10 +9177,10 @@ Table of Contents
        prevents in Section 19.1.2, and the metadata that advertises the
        requirement in Section 17.
 
-   A Resource Server can also impose stronger actor-chain requirements
-   on a token that carries an act chain (for example, requiring and
-   recording the chain); log the mission claim's id and the token jti
-   with each served request, so its access logs join to Mission
+   A Resource Server can also require that a token carry an act chain
+   and record it, while authorizing only the token's current actor
+   (Section 4.1 of [RFC8693]); log the mission claim's id and the token
+   jti with each served request, so its access logs join to Mission
    evidence; or, where the AS offers it, introspect the token
    (Section 13) to observe Mission state per request.
 
@@ -9168,8 +9191,9 @@ Table of Contents
    Resource Server reads client_id as the immediate client, which is
    accurate for that single token, but it cannot see the delegation
    lineage in the act chain or look up the originally-approved agent in
-   the Mission Record, so it cannot apply actor-chain policy or join a
-   delegate's action to the Mission's approval in its audit records.
+   the Mission Record, so it cannot recognize the current actor as a
+   delegate, record the delegation lineage, or join a delegate's action
+   to the Mission's approval in its audit records.
 
    A resource that requires Mission-bound tokens can advertise that
    through the mission_bound_authorization_required protected resource
@@ -9740,10 +9764,11 @@ Table of Contents
    begins its own delegation basis and chain, and no organizational,
    network, or deployment boundary by itself restarts or extends a
    chain.  The chain is attribution, not authority: an act entry names
-   who acted, for audit and as policy input to the eligibility matching
-   of Section 14.3; an asserted actor identity grants nothing; and the
-   authorization_details subset relations (Section 5.1), not the chain,
-   show that authority narrowed.
+   who acted, for audit; the input to the eligibility matching of
+   Section 14.3 is the delegate the AS authenticates and asserts at the
+   exchange, not an entry read from the chain; an asserted actor
+   identity grants nothing; and the authorization_details subset
+   relations (Section 5.1), not the chain, show that authority narrowed.
 
 14.1.  Instance Context in Delegated Tokens
 
@@ -9842,14 +9867,32 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-cross-domain]).
 
    *Delegation depth.* The delegation depth of a token is the number of
-   actors in its act chain (the nesting depth of the act claim), counted
-   from the approved agent: the agent's own non-delegated token is depth
-   0, the first delegate is depth 1, and each further delegate adds 1.
-   The depth checked against max_depth is that of the token being
-   issued, computed after appending the new outermost actor, not the
-   depth of the delegating token.  A credential projected across a trust
-   domain carries no act chain and enters the target domain at depth 0
+   delegations between the approved agent and the token's current actor:
+   the agent's own non-delegated token is depth 0, the first delegate is
+   depth 1, and each further delegate adds 1.  The depth checked against
+   max_depth is that of the token being issued, computed after appending
+   the new outermost actor, not the depth of the delegating token.  A
+   credential projected across a trust domain carries no act chain and
+   enters the target domain at depth 0
    ([I-D.draft-mcguinness-oauth-mission-cross-domain]).
+
+   *Depth accounting.* The AS MUST establish delegation depth from
+   accounting it maintains for the tokens it issues under the Mission
+   and associates with the credential it validates (for example,
+   recorded at issuance against the token), not from the nesting of a
+   presented act claim.  The act chain is attribution (Section 14): it
+   renders the accounted chain and is not the source of the count.  Over
+   the exchanges this document defines the accounting is complete: each
+   delegated exchange adds exactly one delegate, a self-exchange
+   (Section 14.2) adds none, and a cross-domain projection is the one
+   defined reset.  A profile that issues Mission-bound tokens by another
+   path specifies how it preserves or reconstructs this accounting and
+   any reset it defines.  Where the AS cannot establish the depth of the
+   token being issued, no entry's delegation policy can be evaluated at
+   that depth, so every entry narrows out under the per-entry rule below
+   and the exchange is refused as an empty result.  A Resource Server
+   bases no authorization decision on a prior actor (Section 4.1 of
+   [RFC8693]).
 
    *Per-entry enforcement.* When the AS issues a token to a delegate
    (the actor that becomes the outermost act) at delegation depth d, it
@@ -12619,6 +12662,20 @@ Appendix G.  Document History
 
    -01
 
+   *  Separated exact target_resources membership, checked for the
+      Authority Set and for a proposal at submission, from later token
+      narrowing under the subset rule.  Made the per-capability
+      transformation rule the single home: audience projection to a
+      Resource AS needs narrowing, and without it a delegated token
+      includes an entry only exactly as approved; a type that declares
+      delegation without narrowing is delegable only as an entry equal
+      to one in the presented delegating token, under a new equality
+      case of the subset rule.  Delegation depth comes from accounting
+      the AS maintains for its own issuance, not from act nesting, a
+      depth the AS cannot establish narrows every entry out, and a
+      Resource Server authorizes only the current actor while it may
+      record the chain.  These add requirements.
+
    *  Stated that approval cannot establish comprehension, with non-
       normative rendering practices for large Authority Sets (Approval
       Comprehension), and named the approval-granularity trade-off in
@@ -13161,8 +13218,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          1 October 2026
-Expires: 4 April 2027
+Intended status: Standards Track                          2 October 2026
+Expires: 5 April 2027
 
 
                Mission Status and Lifecycle for OAuth 2.0
@@ -13214,7 +13271,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 4 April 2027.
+   This Internet-Draft will expire on 5 April 2027.
 
 Copyright Notice
 
@@ -13691,7 +13748,15 @@ Table of Contents
          [I-D.draft-mcguinness-oauth-mission-signals]), a lifecycle
          mutation can guard on it (Section 5.7), and a materialized
          policy view names the value it materialized
-         ([I-D.draft-mcguinness-mission-runtime]).
+         ([I-D.draft-mcguinness-mission-runtime]).  Companion records
+         carry this same counter under their own member names:
+         mission_state_version in Decision Evidence
+         ([I-D.draft-mcguinness-mission-runtime-evidence]),
+         prior_version and new_version in Containment Evidence
+         ([I-D.draft-mcguinness-oauth-mission-containment]),
+         prior_version and current_version in a Discharge Result
+         ([I-D.draft-mcguinness-oauth-mission-discharge]), and
+         expected_version on a lifecycle request (Section 5.7).
 
       -  Extension members: a companion profile MAY add further members
          to this object.  For example, the Status List companion adds a
@@ -15085,11 +15150,21 @@ Informative References
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-runtime.html>.
 
+   [I-D.draft-mcguinness-mission-runtime-evidence]
+              McGuinness, K., "Mission Runtime Evidence", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-runtime-evidence.html>.
+
    [I-D.draft-mcguinness-oauth-mission-child-delegation]
               McGuinness, K., "Mission Child Delegation for OAuth 2.0",
               2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-child-
               delegation.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-containment]
+              McGuinness, K., "Mission Containment for OAuth 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-containment.html>.
 
    [I-D.draft-mcguinness-oauth-mission-cross-domain]
               McGuinness, K., "Mission Cross-Domain Projection for OAuth
@@ -15183,8 +15258,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          1 October 2026
-Expires: 4 April 2027
+Intended status: Standards Track                          2 October 2026
+Expires: 5 April 2027
 
 
                    Mission-Bound Runtime Enforcement
@@ -15243,7 +15318,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 4 April 2027.
+   This Internet-Draft will expire on 5 April 2027.
 
 Copyright Notice
 
@@ -19609,8 +19684,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          1 October 2026
-Expires: 4 April 2027
+Intended status: Standards Track                          2 October 2026
+Expires: 5 April 2027
 
 
                         Mission Runtime Evidence
@@ -19660,7 +19735,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 4 April 2027.
+   This Internet-Draft will expire on 5 April 2027.
 
 Copyright Notice
 
@@ -22166,8 +22241,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          1 October 2026
-Expires: 4 April 2027
+Intended status: Standards Track                          2 October 2026
+Expires: 5 April 2027
 
 
            Mission-Bound Runtime Enforcement: AuthZEN Profile
@@ -22223,7 +22298,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 4 April 2027.
+   This Internet-Draft will expire on 5 April 2027.
 
 Copyright Notice
 
@@ -22294,6 +22369,7 @@ Table of Contents
    14. References
      14.1.  Normative References
      14.2.  Informative References
+   Appendix A.  Document History
    Acknowledgments
    Author's Address
 
@@ -23025,11 +23101,17 @@ Table of Contents
 
       mission_status_issued_at:  REQUIRED for cached and event_driven,
          OPTIONAL for fresh.  An RFC 3339 timestamp.  When the relied-on
-         Mission state was issued.
+         Mission state was issued: for a signed Mission Status Response,
+         the RFC 3339 representation of its iat, a NumericDate
+         ([I-D.draft-mcguinness-oauth-mission-status]). freshness_at can
+         precede this value by no more than the published maximum clock
+         skew (Section 6.16).
 
       mission_status_expires_at:  REQUIRED for cached and event_driven,
-         OPTIONAL for fresh.  An RFC 3339 timestamp.  When the relied-on
-         Mission state (or its lease) expires.
+         OPTIONAL for fresh.  An RFC 3339 timestamp.  When reliance on
+         the observed Mission state ends: for a signed Mission Status
+         Response, its mission.fresh_until, never its exp, or an earlier
+         end deployment policy sets; for a lease, the lease's end.
 
       assertion:  OPTIONAL.  A string.  The signed Mission Status
          Response [I-D.draft-mcguinness-oauth-mission-status] the PEP
@@ -23677,8 +23759,9 @@ Table of Contents
          context.credential.expires_at (Section 6.4), when present.  The
          approval's approved_until applies where the permit satisfies
          approval_required (Section 6.11).  The state valid-through is
-         defined by source: a signed Mission Status Response's expiry,
-         or a lease's end, both carried in a supplied
+         defined by source: a signed Mission Status Response's
+         mission.fresh_until (not its exp), or a lease's end, both
+         carried in a supplied
          context.mission_state_observation.mission_status_expires_at;
          or, for a polled observation reporting neither, freshness_at
          plus the deployment's published maximum staleness bound for the
@@ -25189,6 +25272,16 @@ Table of Contents
               Authentication Challenge Protocol", RFC 9470,
               DOI 10.17487/RFC9470, September 2023,
               <https://www.rfc-editor.org/rfc/rfc9470>.
+
+Appendix A.  Document History
+
+   [[ To be removed from the final specification ]]
+
+   *  The state observation's mission_status_issued_at is the RFC 3339
+      form of a Mission Status Response's iat, which freshness_at
+      precedes by no more than the published maximum clock skew, and
+      mission_status_expires_at and the state valid-through are its
+      mission.fresh_until, not its exp, or a lease's end.
 
 Acknowledgments
 

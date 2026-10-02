@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          1 October 2026
-Expires: 4 April 2027
+Intended status: Standards Track                          2 October 2026
+Expires: 5 April 2027
 
 
            Mission-Bound Runtime Enforcement: AuthZEN Profile
@@ -61,7 +61,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 4 April 2027.
+   This Internet-Draft will expire on 5 April 2027.
 
 Copyright Notice
 
@@ -132,6 +132,7 @@ Table of Contents
    14. References
      14.1.  Normative References
      14.2.  Informative References
+   Appendix A.  Document History
    Acknowledgments
    Author's Address
 
@@ -863,11 +864,17 @@ Table of Contents
 
       mission_status_issued_at:  REQUIRED for cached and event_driven,
          OPTIONAL for fresh.  An RFC 3339 timestamp.  When the relied-on
-         Mission state was issued.
+         Mission state was issued: for a signed Mission Status Response,
+         the RFC 3339 representation of its iat, a NumericDate
+         ([I-D.draft-mcguinness-oauth-mission-status]). freshness_at can
+         precede this value by no more than the published maximum clock
+         skew (Section 6.16).
 
       mission_status_expires_at:  REQUIRED for cached and event_driven,
-         OPTIONAL for fresh.  An RFC 3339 timestamp.  When the relied-on
-         Mission state (or its lease) expires.
+         OPTIONAL for fresh.  An RFC 3339 timestamp.  When reliance on
+         the observed Mission state ends: for a signed Mission Status
+         Response, its mission.fresh_until, never its exp, or an earlier
+         end deployment policy sets; for a lease, the lease's end.
 
       assertion:  OPTIONAL.  A string.  The signed Mission Status
          Response [I-D.draft-mcguinness-oauth-mission-status] the PEP
@@ -1515,8 +1522,9 @@ Table of Contents
          context.credential.expires_at (Section 6.4), when present.  The
          approval's approved_until applies where the permit satisfies
          approval_required (Section 6.11).  The state valid-through is
-         defined by source: a signed Mission Status Response's expiry,
-         or a lease's end, both carried in a supplied
+         defined by source: a signed Mission Status Response's
+         mission.fresh_until (not its exp), or a lease's end, both
+         carried in a supplied
          context.mission_state_observation.mission_status_expires_at;
          or, for a polled observation reporting neither, freshness_at
          plus the deployment's published maximum staleness bound for the
@@ -3027,6 +3035,16 @@ Table of Contents
               Authentication Challenge Protocol", RFC 9470,
               DOI 10.17487/RFC9470, September 2023,
               <https://www.rfc-editor.org/rfc/rfc9470>.
+
+Appendix A.  Document History
+
+   [[ To be removed from the final specification ]]
+
+   *  The state observation's mission_status_issued_at is the RFC 3339
+      form of a Mission Status Response's iat, which freshness_at
+      precedes by no more than the published maximum clock skew, and
+      mission_status_expires_at and the state valid-through are its
+      mission.fresh_until, not its exp, or a lease's end.
 
 Acknowledgments
 

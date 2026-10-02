@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          1 October 2026
-Expires: 4 April 2027
+Intended status: Standards Track                          2 October 2026
+Expires: 5 April 2027
 
 
                         Mission Authority Server
@@ -67,7 +67,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 4 April 2027.
+   This Internet-Draft will expire on 5 April 2027.
 
 Copyright Notice
 
@@ -554,9 +554,9 @@ Table of Contents
       evidence type absent from the submission
       ([I-D.draft-mcguinness-oauth-mission-submission-evidence],
       Section "Required Evidence Is Resolved Before Derivation") MUST be
-      refused with invalid_intent_evidence (the MAS equivalent of the
-      issuance profile's invalid_mission_intent_evidence); presented
-      evidence is never silently ignored.
+      refused with invalid_mission_intent_evidence, the code the
+      issuance profile registers for the same condition, carried here in
+      the MAS error body; presented evidence is never silently ignored.
 
    The request body MAY additionally carry an authorization_details
    member: the client's authority proposal, an array of
@@ -679,37 +679,49 @@ Table of Contents
 
    A consumer MUST ignore members it does not recognize.
 
-    +=========================+======+===============================+
-    | error                   | HTTP | Description                   |
-    +=========================+======+===============================+
-    | invalid_mission_intent  | 400  | Unparseable, structurally     |
-    |                         |      | invalid, oversized, or        |
-    |                         |      | containing an undefined top-  |
-    |                         |      | level member.                 |
-    +-------------------------+------+-------------------------------+
-    | invalid_authority       | 400  | Well-formed Intent, but no    |
-    |                         |      | valid Authority Set is        |
-    |                         |      | derivable under policy.       |
-    +-------------------------+------+-------------------------------+
-    | invalid_intent_evidence | 400  | An evidence entry of          |
-    |                         |      | unsupported type or failing   |
-    |                         |      | its type's verification, or a |
-    |                         |      | policy-required evidence type |
-    |                         |      | absent from the submission.   |
-    +-------------------------+------+-------------------------------+
-    | unauthorized            | 401  | Request not authenticated.    |
-    +-------------------------+------+-------------------------------+
-    | not_found               | 404  | A referenced submission or    |
-    |                         |      | Mission does not exist OR is  |
-    |                         |      | not visible to the caller.    |
-    +-------------------------+------+-------------------------------+
-    | rate_limited            | 429  | Caller is rate-limited.       |
-    +-------------------------+------+-------------------------------+
-    | unavailable             | 503  | MAS temporarily cannot serve  |
-    |                         |      | the request.                  |
-    +-------------------------+------+-------------------------------+
+     +=================================+======+======================+
+     | error                           | HTTP | Description          |
+     +=================================+======+======================+
+     | invalid_mission_intent          | 400  | Unparseable,         |
+     |                                 |      | structurally         |
+     |                                 |      | invalid, oversized,  |
+     |                                 |      | or containing an     |
+     |                                 |      | undefined top-level  |
+     |                                 |      | member.              |
+     +---------------------------------+------+----------------------+
+     | invalid_authority               | 400  | Well-formed Intent,  |
+     |                                 |      | but no valid         |
+     |                                 |      | Authority Set is     |
+     |                                 |      | derivable under      |
+     |                                 |      | policy.              |
+     +---------------------------------+------+----------------------+
+     | invalid_mission_intent_evidence | 400  | An evidence entry of |
+     |                                 |      | unsupported type or  |
+     |                                 |      | failing its type's   |
+     |                                 |      | verification, or a   |
+     |                                 |      | policy-required      |
+     |                                 |      | evidence type absent |
+     |                                 |      | from the submission. |
+     +---------------------------------+------+----------------------+
+     | unauthorized                    | 401  | Request not          |
+     |                                 |      | authenticated.       |
+     +---------------------------------+------+----------------------+
+     | not_found                       | 404  | A referenced         |
+     |                                 |      | submission or        |
+     |                                 |      | Mission does not     |
+     |                                 |      | exist OR is not      |
+     |                                 |      | visible to the       |
+     |                                 |      | caller.              |
+     +---------------------------------+------+----------------------+
+     | rate_limited                    | 429  | Caller is rate-      |
+     |                                 |      | limited.             |
+     +---------------------------------+------+----------------------+
+     | unavailable                     | 503  | MAS temporarily      |
+     |                                 |      | cannot serve the     |
+     |                                 |      | request.             |
+     +---------------------------------+------+----------------------+
 
-                                 Table 3
+                                  Table 3
 
    This aligns with the OAuth-shaped surfaces' shared error idiom
    [I-D.draft-mcguinness-oauth-mission-status]: an error/
@@ -1722,7 +1734,8 @@ Table of Contents
       the access token's ASCII bytes.  This is a member-named digest
       construction outside the default prefixed form: the member name
       fixes the algorithm, and a successor algorithm enters as a new
-      member, never by reinterpreting this one.
+      member, never by reinterpreting this one.  For the same token it
+      equals the ath value of a DPoP proof (Section 4.2 of [RFC9449]).
 
    token_jkt:  A string.  The JWK thumbprint [RFC7638], using SHA-256,
       of the token's cnf public key.
@@ -2956,6 +2969,11 @@ Table of Contents
               Current Practices", BCP 225, RFC 8725,
               DOI 10.17487/RFC8725, February 2020,
               <https://www.rfc-editor.org/rfc/rfc8725>.
+
+   [RFC9449]  Fett, D., Campbell, B., Bradley, J., Lodderstedt, T.,
+              Jones, M., and D. Waite, "OAuth 2.0 Demonstrating Proof of
+              Possession (DPoP)", RFC 9449, DOI 10.17487/RFC9449,
+              September 2023, <https://www.rfc-editor.org/rfc/rfc9449>.
 
    [RFC9635]  Richer, J., Ed. and F. Imbault, "Grant Negotiation and
               Authorization Protocol (GNAP)", RFC 9635,
