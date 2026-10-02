@@ -1460,7 +1460,8 @@ its tokens ({{I-D.draft-mcguinness-oauth-client-instance-id}}: the
 identifies a concrete runtime instance once the PDP has validated that
 context and established its association with the presenter as a Context
 Consumer ({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section
-7.5). A sender-constraint key unique to the instance (Section 7.3)
+7.5). A sender-constraint key unique to the instance
+({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 7.3)
 establishes that association only where the token issuer conveys context
 solely from direct Client Attestation validation; context an issuer may
 have preserved from an input token also needs a profile that
