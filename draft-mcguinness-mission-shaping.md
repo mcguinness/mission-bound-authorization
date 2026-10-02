@@ -895,12 +895,15 @@ Authorization Server {{RFC6749}}, acting as Mission Issuer, validates
 and narrows the submission, renders the consent disclosure, records
 the approval event, and derives the Authority Set.
 
-Intent Submission Evidence in the envelope's `evidence` array binds
-the exact `intent_hash` of the submitted Intent. Evidence obtained for
-an earlier candidate does not admit a re-shaped Intent, so a shaping
-pass that changes the Intent needs evidence for the Intent it actually
-submits ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}},
-Section "Evidence Binds One Exact Intent").
+Intent-bound evidence in the envelope's `evidence` array names the
+exact `intent_hash` of the submitted Intent. Intent-bound evidence
+obtained for an earlier candidate does not admit a re-shaped Intent
+unless its evidence type explicitly authorizes that transformation and
+defines how its lineage is verified. Otherwise, a shaping pass that
+changes the Intent needs intent-bound evidence for the Intent it
+actually submits
+({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, Section
+"Evidence Binds One Exact Intent").
 
 The shaper hands its output to the client, which performs the OAuth
 flow ({{proposes-only}}) and MAY also convey a `shaping_evidence_hash`
