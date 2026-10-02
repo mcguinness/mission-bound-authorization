@@ -25,13 +25,14 @@
 import { randomUUID } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
 import { macHex, REQUEST_MAC_DOMAIN } from "../src/channel-mac.js";
-import { evaluateRemote } from "../src/client.js";
+import { evaluateRemote, isDecisionChannelRefusal, requestMacParts } from "../src/client.js";
 import { channelDeadlineMs } from "../src/decision-channel.js";
 import { evaluate, type EvaluationRequest } from "../src/evaluate.js";
 import type { Fga } from "../src/fga.js";
 import type { MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
 import { createPdpHttpServer, type PdpHttpServerHandle } from "../src/server.js";
+import { freshKey, openTestClaims } from "./claim-fixture.js";
 
 const RESOURCE = "http://localhost:4403/mcp";
 const OTHER_RESOURCE = "http://localhost:4404/mcp";
@@ -400,5 +401,91 @@ describe("Remote Decision Channel (@spec runtime#decision-channel)", () => {
       allowedFreshnessSources: new Set(["status"]),
     });
     expect(dec.decision).toBe(true);
+  });
+});
+
+/**
+ * @spec runtime#idempotency, retransmission condition 5 (#917) — over the
+ * remote channel the claim's requester is the authenticated PEP identity and
+ * the MAC-covered epoch of its redemption store, never a member of the
+ * request body, and an unreachable claim domain is no decision at all.
+ */
+describe("the remote channel binds the claim requester (@spec runtime#idempotency, #917)", () => {
+  const keyed = (key: string): EvaluationRequest => ({
+    subject: { id: "alice" },
+    resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
+    action: { name: "payments:invoice.read", properties: { idempotency_key: key } },
+    context: {
+      audience: RESOURCE,
+      mission: { id: "msn_test_1", issuer: "https://as.test" },
+      action_class: "irreversible_action",
+      parameter_digest: "sha-256:pd-917",
+      freshness: { observed_at: NOW.toISOString(), source: "status" },
+    },
+  });
+  async function startClaimServer(claims = openTestClaims({ now: () => NOW })): Promise<PdpHttpServerHandle> {
+    handle = await createPdpHttpServer({
+      peps: new Map([[PEP_ID, { secret: SECRET, scopes: [RESOURCE] }]]),
+      getOptions: () => ({
+        view: view(),
+        fga: alwaysAllowFga,
+        modelId: "unit-test-model",
+        now: () => NOW,
+        stalenessBound,
+        relationForAction,
+        allowedFreshnessSources: new Set(["status"]),
+      }),
+      claims,
+      consumptionStatus: (pepId) => (pepId === PEP_ID ? () => "unconsumed" : undefined),
+    });
+    return handle;
+  }
+
+  it("covers the PEP epoch with the request MAC: an altered epoch header is refused before evaluation", async () => {
+    const server = await startClaimServer();
+    const send = async (signedEpoch: string, sentEpoch: string) => {
+      const nonce = randomUUID();
+      const issuedAt = String(Date.now());
+      const body = JSON.stringify({ request: keyed(freshKey()) });
+      const signature = macHex(SECRET, REQUEST_MAC_DOMAIN, requestMacParts(PEP_ID, nonce, issuedAt, body, signedEpoch));
+      return fetch(server.url, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-pdp-pep-id": PEP_ID,
+          "x-pdp-signature": signature,
+          "x-pdp-nonce": nonce,
+          "x-pdp-issued-at": issuedAt,
+          "x-pdp-pep-epoch": sentEpoch,
+        },
+        body,
+      });
+    };
+    expect((await send("epoch-1", "epoch-1")).status).toBe(200);
+    expect((await send("epoch-1", "epoch-2")).status).toBe(401);
+  });
+
+  it("returns a prior permit only to the authenticated PEP epoch it was issued to", async () => {
+    const server = await startClaimServer();
+    const key = freshKey();
+    const client = (pepEpoch: string) => ({ url: server.url, pepId: PEP_ID, secret: SECRET, pepEpoch });
+    const first = await evaluateRemote(keyed(key), client("epoch-1"));
+    expect(first.decision, JSON.stringify(first.context)).toBe(true);
+    const sameEpoch = await evaluateRemote(keyed(key), client("epoch-1"));
+    expect(sameEpoch.context.evaluation_id).toBe(first.context.evaluation_id);
+    expect(sameEpoch.decision).toBe(true);
+    const otherEpoch = await evaluateRemote(keyed(key), client("epoch-2"));
+    expect(otherEpoch.decision).toBe(false);
+    expect(otherEpoch.context.denial_reason).toBe("duplicate_suppressed");
+  });
+
+  it("answers 503 when the claim domain is unreachable, and the PEP obtains no decision", async () => {
+    const claims = openTestClaims({ now: () => NOW });
+    const server = await startClaimServer(claims);
+    claims.close();
+    const decision = await evaluateRemote(keyed(freshKey()), { url: server.url, pepId: PEP_ID, secret: SECRET, pepEpoch: "epoch-1" });
+    expect(isDecisionChannelRefusal(decision)).toBe(true);
+    expect(decision.context.denial_reason).toBe("decision_channel_refused");
+    expect(decision.context.channel_status).toBe(503);
   });
 });

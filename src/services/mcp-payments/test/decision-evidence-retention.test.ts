@@ -39,6 +39,7 @@ import {
   PostureConfigError,
   relationForAction,
   retentionWindowSeconds,
+  signEvidenceEnvelope,
   stalenessBound,
 } from "@mission/pdp";
 import { generateKeyPairSync, type KeyObject } from "node:crypto";
@@ -293,6 +294,52 @@ describe("retainDecision verifies before it retains (@spec runtime-evidence#deci
     const retained = evidence.all().find((e): e is DecisionEvidence => e.kind === "decision");
     expect(retained?.content).toBe(record);
     expect(Object.isFrozen(retained?.content)).toBe(true);
+  });
+
+  // @spec runtime#idempotency (#917): a retransmitted permit carries the
+  // record already retained for its evaluation, byte for byte.
+  it("accepts an identical re-presented record once, and refuses a different record under the same identifier", async () => {
+    const { privateKey, publicKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
+    const emitter = createDecisionEvidenceEmitter({
+      signer: { kid: "pdp-retransmit", key: privateKey },
+      emitterId: CANONICAL_RESOURCE,
+      audience: CANONICAL_RESOURCE,
+    });
+    const evidence = new EvidenceStore(
+      {},
+      buildEvidenceKeyResolver([
+        { kid: "pdp-retransmit", publicKey, role: "pdp", emitterId: CANONICAL_RESOURCE, audience: CANONICAL_RESOURCE },
+      ]),
+    );
+    const record = await emitter.emit({
+      mission: { id: "msn_ret", issuer: ISSUER, policy_view_id: "pv_1" },
+      subject: { id: "alice" },
+      resource: { type: "invoice", id: "inv-1" },
+      action: { name: "payments:invoice.read" },
+      audience: CANONICAL_RESOURCE,
+      evaluation_id: "dec_retransmitted",
+      evaluation_request_digest: FIXTURE_REQUEST_DIGEST,
+      decision: "permit",
+      entry_digest: "sha-256:fixture-entry",
+      conditions: { valid_until: NOW.toISOString() },
+      evaluated_at: NOW.toISOString(),
+    });
+    expect((await evidence.retainDecision(record)).retained).toBe(true);
+    const again = await evidence.retainDecision(JSON.parse(JSON.stringify(record)));
+    expect(again.retained).toBe(true);
+    expect(evidence.all().filter((e) => e.kind === "decision")).toHaveLength(1);
+    // Validly signed, same identifier, different content.
+    const { evidence_envelope: _envelope, ...content } = record;
+    const altered = { ...content, evaluated_at: new Date(NOW.getTime() + 1_000).toISOString() };
+    const forged = {
+      ...altered,
+      evidence_envelope: await signEvidenceEnvelope(altered as unknown as JsonValue, DECISION_EVIDENCE_MEDIA_TYPE, {
+        kid: "pdp-retransmit",
+        key: privateKey,
+      }),
+    };
+    expect(await evidence.retainDecision(forged as typeof record)).toEqual({ retained: false, reason: "conflicting_record" });
+    expect(evidence.all().filter((e) => e.kind === "decision")).toHaveLength(1);
   });
 });
 
