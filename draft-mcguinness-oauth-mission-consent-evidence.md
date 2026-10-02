@@ -102,7 +102,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-oauth-mission-discharge:
-    title: "Mission Completion and Entry Discharge for OAuth 2.0"
+    title: "Mission Entry Discharge for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-discharge.html
     author:
       -
@@ -453,8 +453,11 @@ A Consent Disclosure object has these members:
   committed by `consent_rendering_hash` and rendered for consent.
 
 `shaping_evidence_hash`:
-: OPTIONAL. A string. A commitment to Shaping Evidence when shaping was
-  used ({{I-D.draft-mcguinness-mission-shaping}}).
+: OPTIONAL. A string. Present when shaping was used: the envelope
+  anchor, with `typ` `mission-shaping-evidence`, over the Shaping
+  Evidence object, as Shaping defines it
+  ({{I-D.draft-mcguinness-mission-shaping}}, Section "Integrity and the
+  Evidence Hash").
 
 `predecessor`:
 : OPTIONAL. A string. The predecessor Mission identifier when this

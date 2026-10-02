@@ -28,6 +28,7 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  RFC3339:
   RFC6755:
   RFC9396:
   I-D.draft-mcguinness-oauth-mission:
@@ -97,7 +98,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-oauth-mission-continuation:
-    title: "Mission Continuation: Authorization Continuity for Mission-Bound Authorization"
+    title: "Mission Continuation for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html
     author:
       -
@@ -340,39 +341,58 @@ A Mission Template is a consented object with these members:
   content a human actually consented to, not only its identifier.
 
 `allowed_dispatchers`:
-: REQUIRED. An array identifying the principals permitted to dispatch
-  from this template. A Dispatch request from a principal not in this
-  set is refused ({{dispatch}}).
+: REQUIRED. A non-empty array of strings, each the client identifier
+  (`client_id`) of a principal permitted to dispatch from this
+  template. A Dispatch request whose authenticated client is not in
+  this set is refused ({{dispatch}}).
 
 `allowed_recipients`:
-: REQUIRED. An array bounding which Subjects and Agents a Mission
-  dispatched from this template may be created for. The Mission Issuer
+: REQUIRED. An object bounding which Subjects and Agents a Mission
+  dispatched from this template may be created for, with two members,
+  each a non-empty array: `subjects`, each an object with `iss` and
+  `sub` identifying a Subject as the issuance profile's `subject` does,
+  and `agents`, each a `client_id` string. The Mission Issuer
   establishes the instance's Subject as the issuance profile requires,
   never from Dispatcher input
-  ({{I-D.draft-mcguinness-oauth-mission}}), and refuses a Dispatch whose
-  established Subject or Agent falls outside this set, so a template
-  cannot mint a Mission for a party the human did not consent to.
+  ({{I-D.draft-mcguinness-oauth-mission}}), and refuses a Dispatch
+  whose established Subject does not equal an entry of `subjects` in
+  both `iss` and `sub`, or whose Agent (the instance's `client_id`) is
+  not an entry of `agents`, so a template cannot mint a Mission for a
+  party the human did not consent to. The two lists are independent:
+  any listed Agent may serve any listed Subject, subject to the other
+  Dispatch checks ({{dispatch}}); a deployment that needs restricted
+  pairings uses separate templates.
 
 `instance_lifetime`:
-: REQUIRED. A duration. The per-instance lifetime clamp: a dispatched
-  Mission's `expires_at` is clamped to no more than this from its
-  committed `created_at` ({{dispatch}}).
+: REQUIRED. A positive integer number of seconds. The per-instance
+  lifetime clamp: a dispatched Mission's `expires_at` is clamped to no
+  more than this from its committed `created_at` ({{dispatch}}).
 
 `max_active`:
-: REQUIRED. An integer. The maximum number of Missions dispatched from
-  this template that may be `active` at once. A Dispatch that would
-  exceed it is refused until an active instance terminates.
+: REQUIRED. A positive integer. The maximum number of Missions
+  dispatched from this template that may be `active` at once. A
+  Dispatch that would exceed it is refused until an active instance
+  terminates.
 
 `dispatch_rate`:
-: REQUIRED. A rate bound on Dispatch from this template per unit time.
+: REQUIRED. An object with two members, each a positive integer:
+  `limit`, a number of instantiations, and `window`, a number of
+  seconds. A Dispatch is refused when its instantiation would bring the
+  instantiations committed from this template within the trailing
+  `window` seconds above `limit`, so a burst of up to `limit` within one
+  window is within the bound. Only committed instantiations count: a
+  refused Dispatch and a recovered retry ({{dispatch}}) count nothing.
 
 `expires_at`:
-: REQUIRED. The template's own expiry ({{I-D.draft-mcguinness-oauth-mission}}).
-  After it, the template dispatches nothing.
+: REQUIRED. A string, an RFC 3339 {{RFC3339}} date-time. The template's
+  own expiry ({{I-D.draft-mcguinness-oauth-mission}}). After it, the
+  template dispatches nothing.
 
 `review_cadence`:
-: REQUIRED. The maximum age of the template's most recent human approval
-  past which the Mission Issuer MUST NOT dispatch ({{template-consent}}).
+: REQUIRED. A positive integer number of seconds. The maximum age of
+  the template's most recent human approval, measured from that
+  approval's `approved_at` ({{dispatch}}), past which the Mission Issuer
+  MUST NOT dispatch ({{template-consent}}).
 
 The concrete values of `instance_lifetime`, `max_active`,
 `dispatch_rate`, and `review_cadence`, and the action-class mapping the
@@ -541,7 +561,8 @@ The Mission Issuer adjudicates a Dispatch in this order:
      instance; `approval_basis` is the structured authorization-basis
      record, and the two are consistent by construction;
    - `subject` is established as the issuance profile requires, never
-     taken from Dispatcher input, and is within `allowed_recipients`
+     taken from Dispatcher input, and is an entry of
+     `allowed_recipients` `subjects`
      ({{I-D.draft-mcguinness-oauth-mission}});
    - `intent_hash` and `authority_hash` are computed over the instance's
      own Intent and final Authority Set, never over the template; the
@@ -1055,6 +1076,21 @@ IANA action. Following the restraint of the sibling profiles:
   object by that value.
 
 --- back
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- `allowed_dispatchers` lists `client_id` strings, and
+  `allowed_recipients` is an object of `subjects` (`iss` and `sub`)
+  and `agents` (`client_id`), each checked separately at Dispatch, so
+  any listed Agent may serve any listed Subject.
+- The dispatch bounds have stated encodings. `instance_lifetime` and
+  `review_cadence` are positive integer seconds, the latter measured
+  from the approval's `approved_at`; `max_active` is a positive
+  integer; `dispatch_rate` is a `limit` of committed instantiations per
+  trailing `window` of seconds, counting neither refused Dispatches nor
+  recovered retries; and `expires_at` is an RFC 3339 date-time.
 
 # Acknowledgments
 {:numbered="false"}

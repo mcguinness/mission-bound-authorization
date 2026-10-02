@@ -1,6 +1,6 @@
 ---
 title: "Mission Issuance Grant for OAuth 2.0"
-abbrev: "Mission Issuance Grant"
+abbrev: "OAuth Mission Issuance Grant"
 category: std
 
 docname: draft-mcguinness-oauth-mission-issuance-grant-latest
@@ -322,7 +322,9 @@ the one from the issuance profile's walkthrough):
       "type": "mission_resource_access",
       "resource": "https://api.example.com/invoices",
       "actions": ["read"],
-      "constraints": { "resource_issued_after": "2026-07-01" }
+      "constraints": {
+        "resource_issued_after": "2026-07-01T00:00:00Z"
+      }
     }
   ]
 }
@@ -440,7 +442,7 @@ endpoint uses:
 | `invalid_audience` | 400 | `audience` names no AS this MAS mints for. |
 | `mission_not_active` | 409 | The Mission is not `active` ({{minting}}). |
 | `invalid_authorization_details` | 400 | The requested subset is not a subset of the consented Authority Set, or exceeds the audience scope. |
-| `derivation_limit_exhausted` | 409 | The Mission's established `derivation_limit` is reached ({{minting}}). |
+| `derivations_exhausted` | 409 | The Mission's established `derivation_limit` is reached ({{minting}}): the condition the OAuth binding's `mission_error` value `derivations_exhausted` reports ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}). |
 
 `not_found` covers both an unknown Mission and a requester that is not
 the recorded client, so the split never becomes a membership oracle;

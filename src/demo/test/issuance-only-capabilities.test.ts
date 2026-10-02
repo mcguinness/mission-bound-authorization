@@ -478,6 +478,7 @@ describe("the issuance-only launcher refuses every excluded path (#873)", () => 
     for (const member of [
       "mission_child_delegation_supported",
       "identity_continuation_supported",
+      "identity_chaining_requested_token_types_supported",
       "delegated_refresh_token_profile_supported",
       "transaction_authorization_endpoint",
       "userinfo_endpoint",
@@ -564,6 +565,7 @@ describe("capability gates the launcher's wiring shadows, and the default assemb
       for (const member of [
         "mission_child_delegation_supported",
         "identity_continuation_supported",
+        "identity_chaining_requested_token_types_supported",
         "delegated_refresh_token_profile_supported",
         "userinfo_endpoint",
         "end_session_endpoint",

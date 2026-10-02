@@ -1,6 +1,6 @@
 ---
 title: "Mission Resource Access Profile for OAuth 2.0"
-abbrev: "OAuth Mission RAR"
+abbrev: "OAuth Mission Resource Access"
 category: std
 
 docname: draft-mcguinness-oauth-mission-resource-access-latest

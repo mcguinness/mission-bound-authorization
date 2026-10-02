@@ -58,7 +58,7 @@ const mkTemplate = (over: Partial<CreateTemplateInput> = {}) =>
     ceiling: [ceilEntry(["payments:invoice.read", "payments:vendor.read", "payments:payment.schedule"])],
     dispatch_policy: "test-policy",
     dispatchers: ["orchestrator"],
-    recipients: ["worker"],
+    recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents: ["worker"] },
     per_instance_lifetime_s: 3600,
     max_active: 3,
     rate_per_min: 5,
@@ -120,7 +120,7 @@ describe("createTemplate (@spec mission-template)", () => {
       ceiling: [ceilEntry(["payments:invoice.read"])],
       dispatch_policy: "test-policy",
       dispatchers: ["orchestrator"],
-      recipients: ["worker"],
+      recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents: ["worker"] },
       per_instance_lifetime_s: 3600,
       max_active: 3,
       rate_per_min: 5,
@@ -136,6 +136,18 @@ describe("createTemplate (@spec mission-template)", () => {
     expect(() => mkTemplate({ per_instance_lifetime_s: 0 })).toThrow(TemplateError);
     expect(() => mkTemplate({ max_active: 0 })).toThrow(TemplateError);
     expect(() => mkTemplate({ rate_per_min: -1 })).toThrow(TemplateError);
+  });
+
+  it("refuses dispatchers that are not a non-empty array of client_id strings (@spec mission-template#the-mission-template)", () => {
+    expect(() => mkTemplate({ dispatchers: [] })).toThrow(/dispatchers must be a non-empty array of client_id strings/);
+    expect(() => mkTemplate({ dispatchers: [""] })).toThrow(TemplateError);
+  });
+
+  it("refuses recipients that are not an object of non-empty subjects ({iss, sub}) and agents (@spec mission-template#the-mission-template)", () => {
+    expect(() => mkTemplate({ recipients: ["worker"] as never })).toThrow(/recipients must be an object/);
+    expect(() => mkTemplate({ recipients: { subjects: [], agents: ["worker"] } })).toThrow(/recipients\.subjects/);
+    expect(() => mkTemplate({ recipients: { subjects: [{ iss: ISS } as never], agents: ["worker"] } })).toThrow(/recipients\.subjects/);
+    expect(() => mkTemplate({ recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents: [] } })).toThrow(/recipients\.agents/);
   });
 });
 
@@ -246,19 +258,42 @@ describe("dispatch gates (@spec mission-template#dispatch-refusals)", () => {
     );
   });
 
+  /** A refused Dispatch commits nothing: no Mission and no dispatch event. */
+  const expectNothingCommitted = (templateId: string, missionsBefore: number) => {
+    expect(kernel.allMissions().length).toBe(missionsBefore);
+    expect(store.dispatchesSince(templateId, "1970-01-01T00:00:00.000Z")).toBe(0);
+  };
+
   it("refuses a dispatcher or recipient not on the template's lists", () => {
     const t = mkTemplate();
+    const before = kernel.allMissions().length;
     try {
       dispatch(t.id, { dispatcher: "intruder" });
       expect.unreachable();
     } catch (e) {
       expect((e as DispatchError).reason).toBe("dispatcher_not_allowed");
     }
+    expectNothingCommitted(t.id, before);
     try {
       dispatch(t.id, { recipient: "intruder" });
       expect.unreachable();
     } catch (e) {
       expect((e as DispatchError).reason).toBe("recipient_not_allowed");
+    }
+    expectNothingCommitted(t.id, before);
+  });
+
+  it("refuses a Subject that matches a listed subject in only one of iss and sub (@spec mission-template#the-mission-template)", () => {
+    const t = mkTemplate();
+    const before = kernel.allMissions().length;
+    for (const subject of [{ iss: ISS, sub: "mallory" }, { iss: "https://other.example", sub: "alice" }]) {
+      try {
+        dispatch(t.id, { subject });
+        expect.unreachable();
+      } catch (e) {
+        expect((e as DispatchError).reason).toBe("recipient_not_allowed");
+      }
+      expectNothingCommitted(t.id, before);
     }
   });
 
@@ -425,7 +460,9 @@ describe("seeded demo reconciliation template (@spec mission-template)", () => {
       dispatcher: "ap-agent",
       recipient: "subagent-invoice-extractor",
       intent: intentOf(["payments:invoice.read", "payments:vendor.read"]),
-      subject: { iss: ISS, sub: "alice" },
+      // The demo instance acts for the template's consenting human, its one
+      // listed Subject, exactly as the /token dispatch grant establishes it.
+      subject: { iss: ISS, sub: "bob" },
       policyVersion: POLICY_VERSION,
     });
     expect(mission.state).toBe("active");

@@ -75,7 +75,7 @@ normative:
 
 informative:
   I-D.draft-mcguinness-oauth-mission-work-products:
-    title: "Mission Work Products"
+    title: "Mission Work Products for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-work-products.html
     author:
       - ins: K. McGuinness
@@ -654,7 +654,8 @@ Evidence object:
 
 `resource_declaration_digest`:
 : CONDITIONAL. REQUIRED when a self-declaration existed at
-  encounter: its content-addressed digest.
+  encounter: the integrity-anchor encoded raw-octet digest of its
+  exact retrieved bytes.
 
 `sought_classes`:
 : REQUIRED. An array of strings: the action classes of the authority

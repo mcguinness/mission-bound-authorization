@@ -1,5 +1,5 @@
 /**
- * @spec draft-mcguinness-oauth-id-continuation-assertion-00 — the continuation
+ * @spec draft-mcguinness-oauth-id-continuation-assertion-02 — the continuation
  * handle store.
  *
  * A continuation ANCHOR captures the root authentication envelope (auth_time,
@@ -9,17 +9,17 @@
  * session id, so it can be terminated when that session ends).
  *
  * A continuation HANDLE is a durable reference bound to an anchor and Mission.
- * A Chain Authority mints a handle for each intra-domain hop; the handle is
- * carried inside an ICA (see continuation-assertion.ts) and RESOLVED here to
- * recover the Mission, current actor, root auth envelope, and DPoP key. The
- * presented handle is NOT single-use: a hop record persists across
- * continuations, so `resolve` never consumes it.
+ * The AS mints a handle for each hop it creates; a Continuation Assertion
+ * Issuer carries it inside an ICA (see continuation-assertion.ts), and it is
+ * RESOLVED here to recover the Mission, current actor, root auth envelope,
+ * and DPoP key. The presented handle is NOT single-use: a hop record persists
+ * across continuations, so `resolve` never consumes it.
  *
  * Terminal propagation: a Mission reaching a terminal lifecycle state
  * (`onLifecycleCommit`) marks all of its anchors and handles terminal; a
  * session ending (`terminateSession`) marks only its session-anchored anchors
  * and their handles terminal (grant anchors survive). A terminal handle OR
- * anchor makes `resolve` return undefined.
+ * anchor makes `lookup` report `terminal` and `resolve` return undefined.
  *
  * Structure mirrors `DeferralStore` (SQLite via `openStore`), but holds no
  * kernel reference: every operation is self-contained local state and
@@ -52,10 +52,26 @@ CREATE TABLE continuation_handles (
   actor_sub TEXT,
   cnf_jkt TEXT,
   prior_handle TEXT,
+  audience TEXT NOT NULL,
   state TEXT NOT NULL,
   created_at INTEGER NOT NULL
 ) STRICT;
 `;
+
+/**
+ * @spec id-continuation-assertion — the IdP's default hop-count limit (ICA -02
+ * 6.3: "The IdP MUST enforce a finite hop-count limit on every chain, either
+ * the tenant's configured value or the IdP's default"). A chain is one anchor;
+ * the root hop counts, and every continuation records a hop, so the limit also
+ * bounds how often one chain can be continued. A deployment overrides it with
+ * the `continuationHopLimit` build option.
+ */
+export const DEFAULT_CONTINUATION_HOP_LIMIT = 64;
+
+/** A fresh continuation handle: 144 bits of entropy, base64url, within the ICA handle bounds (22-256 chars). */
+export function newContinuationHandle(): string {
+  return `ich_${randomBytes(18).toString("base64url")}`;
+}
 
 export type AnchorType = "grant" | "session";
 export type ContinuationState = "active" | "terminal";
@@ -78,11 +94,23 @@ export interface ResolvedAnchor {
 export interface ResolvedContinuation {
   missionId: string;
   anchor: ResolvedAnchor;
+  /** The RAS audience recorded for this hop ({@link ContinuationStore.mint}). */
+  audience: string;
   /** `mint` always writes both; optional only because the columns are nullable. */
   actor: { iss?: string; sub?: string };
   authEnvelope: AuthEnvelope;
   cnfJkt?: string;
 }
+
+/**
+ * @spec id-continuation-assertion — what a presented handle identifies. The
+ * continuation exchange refuses an unknown handle and a terminal one with
+ * different codes (ICA -02 5.5.6), so the store keeps the two apart.
+ */
+export type HandleLookup =
+  | { status: "unknown" }
+  | { status: "terminal" }
+  | { status: "active"; continuation: ResolvedContinuation };
 
 interface AnchorRow {
   anchor_id: string;
@@ -102,6 +130,7 @@ interface HandleRow {
   actor_iss: string | null;
   actor_sub: string | null;
   cnf_jkt: string | null;
+  audience: string;
   state: string;
 }
 
@@ -152,10 +181,13 @@ export class ContinuationStore {
   }
 
   /**
-   * Mint a fresh continuation handle bound to an anchor and Mission. 144 bits
-   * of entropy, base64url, within the ICA handle bounds (22-256 chars).
+   * Record a continuation hop bound to an anchor and Mission, under a fresh
+   * handle ({@link newContinuationHandle}) unless the caller pre-generated one
+   * (the continuation exchange names the hop in the ID-JAG it signs, and records
+   * it only once the Mission gate has admitted the grant).
    */
   mint(input: {
+    handle?: string;
     anchorId: string;
     missionId: string;
     actor: { iss: string; sub: string };
@@ -164,19 +196,27 @@ export class ContinuationStore {
      * INITIAL handle rooted at Mission approval has no DPoP key yet (a real
      * deployment supplies the root auth event's cnf; the demo omits it). This is
      * a type widening, not a behaviour change: every chained-hop caller still
-     * passes a string and gets an identical row, and the four-signal check at
+     * passes a string and gets an identical row, and the current-actor check at
      * /token validates the PRESENTED key, never this stored value (`resolve`
      * already returns `cnfJkt` as optional).
      */
     cnfJkt?: string;
     priorHandle?: string;
+    /**
+     * @spec id-continuation-assertion — the RAS audience of this hop, "root or
+     * child" (ICA -02 5.1.2): a child hop's is the audience of the ID-JAG that
+     * names it. A root rooted at Mission approval has no root ID-JAG, so its
+     * audience is the AS issuer, where the Mission's grant is issued and
+     * redeemed. Issuer trust for the hop is checked against it (5.5.3 rule 3).
+     */
+    audience: string;
   }): string {
-    const handle = `ich_${randomBytes(18).toString("base64url")}`;
+    const handle = input.handle ?? newContinuationHandle();
     this.db
       .prepare(
         `INSERT INTO continuation_handles
-         (handle, anchor_id, mission_id, actor_iss, actor_sub, cnf_jkt, prior_handle, state, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?)`,
+         (handle, anchor_id, mission_id, actor_iss, actor_sub, cnf_jkt, prior_handle, audience, state, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)`,
       )
       .run(
         handle,
@@ -186,9 +226,23 @@ export class ContinuationStore {
         input.actor.sub,
         input.cnfJkt ?? null,
         input.priorHandle ?? null,
+        input.audience,
         this.now().getTime(),
       );
     return handle;
+  }
+
+  /**
+   * @spec id-continuation-assertion — the RAS audience recorded for an issued
+   * hop, active or terminal; undefined for a handle this store never minted.
+   * Issuer trust for the hop's RAS is established before any chain-state code
+   * (ICA -02 5.5.6), so this read does not look at state.
+   */
+  hopAudience(handle: string): string | undefined {
+    const row = this.db.prepare("SELECT audience FROM continuation_handles WHERE handle = ?").get(handle) as
+      | { audience: string }
+      | undefined;
+    return row?.audience;
   }
 
   /**
@@ -196,25 +250,38 @@ export class ContinuationStore {
    * or when the handle or its anchor is terminal. Never consumes the handle.
    */
   resolve(handle: string): ResolvedContinuation | undefined {
+    const found = this.lookup(handle);
+    return found.status === "active" ? found.continuation : undefined;
+  }
+
+  /**
+   * Classify a presented handle: `unknown` when this store never minted it,
+   * `terminal` when the handle or its anchor is terminal (an issued hop that is
+   * permanently unusable), else `active` with the resolved continuation. A
+   * handle whose anchor row is missing is `terminal` (fail closed). Never
+   * consumes the handle.
+   */
+  lookup(handle: string): HandleLookup {
     const h = this.db
       .prepare(
-        "SELECT handle, anchor_id, mission_id, actor_iss, actor_sub, cnf_jkt, state FROM continuation_handles WHERE handle = ?",
+        "SELECT handle, anchor_id, mission_id, actor_iss, actor_sub, cnf_jkt, audience, state FROM continuation_handles WHERE handle = ?",
       )
       .get(handle) as HandleRow | undefined;
-    if (!h || h.state === "terminal") return undefined;
+    if (!h) return { status: "unknown" };
+    if (h.state === "terminal") return { status: "terminal" };
     const a = this.db
       .prepare(
         "SELECT anchor_id, anchor_type, mission_id, session_id, auth_time, acr, amr, state FROM continuation_anchors WHERE anchor_id = ?",
       )
       .get(h.anchor_id) as AnchorRow | undefined;
-    if (!a || a.state === "terminal") return undefined;
+    if (!a || a.state === "terminal") return { status: "terminal" };
 
     const authEnvelope: AuthEnvelope = {
       ...(a.auth_time != null ? { authTime: a.auth_time } : {}),
       ...(a.acr != null ? { acr: a.acr } : {}),
       ...(a.amr != null ? { amr: JSON.parse(a.amr) as string[] } : {}),
     };
-    return {
+    const continuation: ResolvedContinuation = {
       missionId: h.mission_id,
       anchor: {
         anchorId: a.anchor_id,
@@ -223,6 +290,7 @@ export class ContinuationStore {
         ...(a.session_id != null ? { sessionId: a.session_id } : {}),
         state: a.state as ContinuationState,
       },
+      audience: h.audience,
       actor: {
         ...(h.actor_iss != null ? { iss: h.actor_iss } : {}),
         ...(h.actor_sub != null ? { sub: h.actor_sub } : {}),
@@ -230,6 +298,53 @@ export class ContinuationStore {
       authEnvelope,
       ...(h.cnf_jkt != null ? { cnfJkt: h.cnf_jkt } : {}),
     };
+    return { status: "active", continuation };
+  }
+
+  /**
+   * @spec id-continuation-assertion — a hop's actor lineage, root first (ICA
+   * -02 5.5.5): the recorded actor of every hop from the root to `handle`,
+   * walked through each hop's immutable parent reference, so sibling branches
+   * never contribute. Fails closed (throws) on a missing ancestor, an ancestor
+   * under another anchor, a hop with no recorded actor, or a cycle.
+   */
+  lineage(handle: string): Array<{ iss: string; sub: string }> {
+    const read = this.db.prepare(
+      "SELECT anchor_id, actor_iss, actor_sub, prior_handle FROM continuation_handles WHERE handle = ?",
+    );
+    const leafFirst: Array<{ iss: string; sub: string }> = [];
+    const seen = new Set<string>();
+    let anchorId: string | undefined;
+    let next: string | null = handle;
+    while (next !== null) {
+      if (seen.has(next)) throw new Error("continuation hop ancestry is cyclic");
+      seen.add(next);
+      const row = read.get(next) as
+        | { anchor_id: string; actor_iss: string | null; actor_sub: string | null; prior_handle: string | null }
+        | undefined;
+      if (!row) throw new Error("continuation hop ancestry is broken");
+      if (anchorId !== undefined && row.anchor_id !== anchorId) {
+        throw new Error("continuation hop ancestry crosses anchors");
+      }
+      anchorId = row.anchor_id;
+      if (row.actor_iss === null || row.actor_sub === null) {
+        throw new Error("continuation hop has no recorded actor");
+      }
+      leafFirst.push({ iss: row.actor_iss, sub: row.actor_sub });
+      next = row.prior_handle;
+    }
+    return leafFirst.reverse();
+  }
+
+  /**
+   * @spec id-continuation-assertion — the hop count of one chain (ICA -02 6.3):
+   * every hop recorded under the anchor, across all branches, root included.
+   */
+  hopCount(anchorId: string): number {
+    const row = this.db
+      .prepare("SELECT COUNT(*) AS n FROM continuation_handles WHERE anchor_id = ?")
+      .get(anchorId) as { n: number };
+    return row.n;
   }
 
   /**

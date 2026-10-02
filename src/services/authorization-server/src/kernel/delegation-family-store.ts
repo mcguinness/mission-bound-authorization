@@ -1,6 +1,6 @@
 /**
- * @spec draft-mcguinness-oauth-id-continuation-assertion-00 — the delegation
- * FAMILY store (async-delegation foundation).
+ * @spec async-delegation — the delegation FAMILY store (the async-delegation
+ * foundation).
  *
  * A delegation FAMILY binds a grant to the Mission whose delegation lineage it
  * belongs to. An upcoming async-delegation continuation transport records a

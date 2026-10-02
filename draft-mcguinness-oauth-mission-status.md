@@ -75,8 +75,24 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-oauth-mission-discharge:
-    title: "Mission Completion and Entry Discharge for OAuth 2.0"
+    title: "Mission Entry Discharge for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-discharge.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-containment:
+    title: "Mission Containment for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-runtime-evidence:
+    title: "Mission Runtime Evidence"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html
     author:
       -
         ins: K. McGuinness
@@ -586,7 +602,15 @@ The members are:
     value, {{I-D.draft-mcguinness-oauth-mission-signals}}), a
     lifecycle mutation can guard on it ({{idempotency}}), and a
     materialized policy view names the value it materialized
-    ({{I-D.draft-mcguinness-mission-runtime}}).
+    ({{I-D.draft-mcguinness-mission-runtime}}). Companion records carry
+    this same counter under their own member names:
+    `mission_state_version` in Decision Evidence
+    ({{I-D.draft-mcguinness-mission-runtime-evidence}}), `prior_version`
+    and `new_version` in Containment Evidence
+    ({{I-D.draft-mcguinness-oauth-mission-containment}}), `prior_version`
+    and `current_version` in a Discharge Result
+    ({{I-D.draft-mcguinness-oauth-mission-discharge}}), and
+    `expected_version` on a lifecycle request ({{idempotency}}).
   - Extension members: a companion profile MAY add further members to
     this object. For example, the Status List companion adds a
     `status_list` reference where the deployment publishes a Mission
@@ -874,6 +898,23 @@ mirroring the treatment of `superseded`
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}). A deployment that
 needs a prompt cutoff on outstanding tokens uses the propagation
 mechanisms of {{revocation-enforcement-classes}}.
+
+Suspension is reversible, so a refresh refused for it should not spend
+the client's ability to refresh after a `resume`. After validating a
+refresh request and before consuming or rotating its refresh token,
+the AS SHOULD check whether the Mission, or an ancestor whose state
+gates its derivation
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), is
+suspended. When this check detects suspension, the AS SHOULD
+refuse the request without consuming the refresh token or invalidating
+its otherwise-valid grant solely because of that suspension. This
+check does not replace issuance-time state validation. A concurrent
+suspension can still cause issuance to be refused after the
+preliminary check, and preserving refresh capability across that
+interval requires coordination with the issuance commit. The check
+leaves refresh-token rotation and reuse detection intact, and a
+`resume` does not revive a credential that expired or was revoked
+independently.
 
 ## Operations
 
@@ -1432,7 +1473,7 @@ through standard {{RFC8414}} discovery.
 : OPTIONAL. A JSON array of strings naming the authentication methods
   the Mission Status endpoint ({{mission-status}}) accepts. Its value
   space is a closed set defined by this document, not the OAuth Token
-  Endpoint Authentication Methods registry: `mtls_client_auth`
+  Endpoint Authentication Methods registry: `tls_client_auth`
   (mutual-TLS client authentication {{RFC8705}}), `private_key_jwt`
   (private-key JWT client authentication {{RFC7523}}), and `access_token`
   (a `mission_status`-scoped, sender-constrained access token, whose
@@ -1491,6 +1532,11 @@ through standard {{RFC8414}} discovery.
   ({{revocation-enforcement-classes}}). When absent, no bound is
   declared, and a consumer sizes reliance to token lifetime alone.
 
+When an endpoint's `*_auth_methods_supported` member is absent, the
+methods that endpoint accepts are known only by out-of-band
+configuration; `token_endpoint_auth_methods_supported` {{RFC8414}}
+describes the token endpoint alone and is never read in its place.
+
 DPoP and mTLS support for issued credentials are read from the
 standard `dpop_signing_alg_values_supported` {{RFC9449}} and
 `tls_client_certificate_bound_access_tokens` {{RFC8705}} metadata;
@@ -1524,14 +1570,15 @@ Cache-Control: max-age=3600
   "mission_status_endpoint":
     "https://as.example.com/as/mission/status",
   "mission_status_endpoint_auth_methods_supported":
-    ["mtls_client_auth", "private_key_jwt", "access_token"],
+    ["tls_client_auth", "private_key_jwt", "access_token"],
   "mission_status_endpoint_auth_signing_alg_values_supported": ["ES256"],
   "mission_status_signing_alg_values_supported": ["ES256"],
   "mission_lifecycle_endpoint":
     "https://as.example.com/as/mission/lifecycle",
   "mission_lifecycle_endpoint_auth_methods_supported":
-    ["mtls_client_auth", "private_key_jwt", "access_token"],
-  "mission_lifecycle_endpoint_auth_signing_alg_values_supported": ["ES256"],
+    ["tls_client_auth", "private_key_jwt", "access_token"],
+  "mission_lifecycle_endpoint_auth_signing_alg_values_supported":
+    ["ES256"],
   "mission_max_stale_seconds": 60
 }
 ~~~
@@ -1764,6 +1811,15 @@ Authorization work for feedback that shaped these extensions.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The mutual-TLS method value is `tls_client_auth`, the registered
+  {{RFC8705}} spelling, and an absent endpoint auth-methods member is
+  never read from token-endpoint metadata. The Mission Authority Server
+  publishes the same per-endpoint members.
+- A refresh against a suspended Mission is checked, and refused, before
+  its refresh token is consumed, so a `resume` restores refresh with the
+  same token; issuance-time validation still governs a concurrent
+  suspension (#914).
 
 - Added conditional carryover correlation on an old child's cascaded
   observation; no state or authority is inferred from the pointer (#576).
