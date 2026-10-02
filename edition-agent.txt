@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-02T18:04:05Z
-Source repository commit: 404e72bd2b7eea5d6098e4f1011b3083b96db22a
+Generated: 2026-10-02T18:54:45Z
+Source repository commit: c5764e89b5eac8f2bff75ee1fc06d14b4a789f6d
 Member count: 9
 
 Reading order:
@@ -17785,6 +17785,8 @@ Table of Contents
    that MUST fix all of the following, so two implementers of the same
    operation bind the same bytes:
 
+   *Binding*, the inputs that decide which bytes a decision binds:
+
    *  the action identifier and how it maps to a resource;
 
    *  the parameter schema: which parameters exist and their types;
@@ -17834,7 +17836,10 @@ Table of Contents
       operation-specific rule), and at least one conformance case MUST
       present changed parameters that fail the digest match, so
       normalization drift between the PDP and the executing PEP surfaces
-      at profile adoption rather than as a fail-closed outage;
+      at profile adoption rather than as a fail-closed outage.
+
+   *Declarations*, stated for every mediated operation even where the
+   answer is no:
 
    *  whether a single-use decision identifier is required (versus a
       validity window plus idempotency key);
@@ -19740,6 +19745,11 @@ Appendix C.  Runtime Evidence Worked Examples
 Appendix D.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The Operation Profile's items are grouped as the operation's
+      binding and its declarations, with no change to any requirement or
+      to which operations it applies to; a declaration is stated even
+      where the answer is no.
 
    *  The record minimum's evaluation request digest is over the input
       the runtime evidence companion defines (#971).
