@@ -735,10 +735,12 @@ receives a fresh copy of the bound:
   Delegation carryover replacement continue the counters of the
   Mission they replace: consumption to date carries forward, and the
   successor's bound caps the cumulative consumption of the chain. A
-  successor adjudicated by policy rather than by a fresh human
-  approval MUST NOT carry a larger bound than its predecessor. Where a
-  successor's bound is larger, its approval rendering MUST include the
-  consumption to date ({{consent}}).
+  successor raises a bound when it carries a larger or incomparable
+  value, or omits a bound, a `max_calls` class, or a
+  `max_egress_volume` dimension its predecessor carries. A successor
+  adjudicated by policy rather than by a fresh human approval MUST NOT
+  raise a bound. Where a successor raises a bound, its approval
+  rendering MUST include the consumption to date ({{consent}}).
 
 A Mission dispatched from a Mission Template
 ({{I-D.draft-mcguinness-oauth-mission-template}}) is created from a
@@ -1206,7 +1208,8 @@ this registry.
   Mission is charged to every ancestor's bound or holds an escrowed
   allocation whose remainder returns only after the allocation is
   closed, a successor or carryover replacement continues its
-  predecessor's counters, and a template consent renders the
+  predecessor's counters, a policy successor keeps every bound, and a
+  template consent renders the
   per-instance bound with `max_active` and `dispatch_rate`. Lease
   expiry no longer releases an unsettled reservation for an
   idempotent or reversible action class ({{settlement-states}}), and a
