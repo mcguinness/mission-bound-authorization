@@ -55,16 +55,16 @@
     "content_sha256": "b5bb6abb6737b1fc3c4571380e89cc4d23e960b849450089f0e38b13462f32d7"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "6a3c451eff8b0568e16817fbb84be343f8e8e485",
-    "content_sha256": "eda0e3228ae98dc29894171fd1eec3d297b3591384036fa40a00c72ac62d0f6a"
+    "revision": "53d57aecf73b0655bafc159076cad9a561451da7",
+    "content_sha256": "888e16b934e783d6ac876c6f8fe19643ea8203555085f59a633405fe9a7f59a3"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "1ea788e00f84b3804c447cb8bbb143c7b803901d",
     "content_sha256": "873b64d56c1813874239d7c4e07d5e1cbc777809c05d725efbf79439038750f9"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "35654da2745816f4b3c51ff2c4397d392def9931",
-    "content_sha256": "a0f4aa7bb212ace5eecd6d6cebbd9817585d319dc58644ae781124ee80b261b0"
+    "revision": "122a17e0a5fcb3c06eeb6c4b9d40f4ecc1f8b4f5",
+    "content_sha256": "bd8bd11524a01419d939f9c1bf8f88db032c31d1d677884848cd624892172ca0"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
@@ -75,8 +75,8 @@
     "content_sha256": "055d460354f9c98d981f74ce661daa606685695bedd42d04a31981158f8389d7"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
-    "content_sha256": "714a2ad1509b2ee9ab6c20aaa287a9c1856e608c3993171ca3b15e4c84eb1052"
+    "revision": "20ca362241fddf818b99536f549aa950f881c0ae",
+    "content_sha256": "a89ae61bc0cab9389717b5a78cea5e6db28628d4e55f5e328bab91e31d8fe480"
    },
    "draft-mcguinness-mission-orchestration.md": {
     "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
@@ -99,8 +99,8 @@
     "content_sha256": "adb2e8708f616b7504425b3134c2376ad3422d9c947b380645f54fb3e8db8f1d"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "1ea788e00f84b3804c447cb8bbb143c7b803901d",
-    "content_sha256": "1c4adaecf6fa1d626d7ff9bd57a71384ba1f307bf09f115a32460e0ea347a1ee"
+    "revision": "fc98755f772967a216298735a904b23431ca475d",
+    "content_sha256": "acf9b33f0212c45fa4191da4b07f266b019dacda7129691744107864979b478d"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "0eb61bec966fef8cfc5efbb20b42c78057b3d05c",
@@ -3116,6 +3116,81 @@
    "coverage": "todo",
    "tests": [],
    "notes": "New member (#701, revised per #716 review); OPTIONAL in this revision. Demonstrates that a Dispatcher (Template dispatch's activation_actor) or a requesting parent Agent (policy drawdown's activation_actor) is never reportable as the adjudicator, and that the Role Mapping table now names the exact policy per scenario (Template's dispatch_policy, distinct from the template's own id/version)."
+  },
+  {
+   "id": "core.standing-consent.activation-policy-reference",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "standing-consent-bases",
+   "text": "the object the accountable human consented to MUST carry that policy as an activation policy reference",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where a separate policy artifact adjudicates standing-consent activation (Template dispatch_policy, Progressive drawdown_policy, Child Delegation child_creation_policy), the consented object carries it as {id, version, digest} with the mission-activation-policy digest, inside the commitment that covers that object"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#985 (D219 ruling). No implementation witness yet: template dispatch, ceiling drawdown, and child-creation adjudication do not compute or verify the activation policy digest."
+  },
+  {
+   "id": "core.standing-consent.activation-policy-verify",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "standing-consent-bases",
+   "text": "Before each activation, the activating issuer MUST compute `digest` over the exact snapshot it evaluates, and MUST NOT activate the instance under that policy when the result differs",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an activation under a policy snapshot whose digest differs from the committed digest does not activate under that policy: Template refuses with dispatch_policy_changed, Progressive falls back to a fresh human approval, Child Delegation denies with policy_denied"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#985 (D219 ruling). No implementation witness yet: template dispatch, ceiling drawdown, and child-creation adjudication do not compute or verify the activation policy digest."
+  },
+  {
+   "id": "core.standing-consent.activation-policy-retain",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "standing-consent-bases",
+   "text": "The issuer MUST retain each snapshot's bytes and media type for the audit horizon",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the snapshot bytes and media type behind each activation policy digest are retained for the audit horizon of every Mission activated under that snapshot, so the digest reproduces"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#985 (D219 ruling). No implementation witness yet: template dispatch, ceiling drawdown, and child-creation adjudication do not compute or verify the activation policy digest."
   },
   {
    "id": "core.approval-basis.adjudication-governance-record-override",
@@ -23190,27 +23265,6 @@
     }
    ],
    "notes": "Covered at unit level only, and unreachable at the endpoint by construction: the mission-dispatch grant names no Agent, and the implementation dispatches to the template's first listed agent, so an endpoint request cannot select an unlisted Agent. The kernel refuses an unlisted recipient with recipient_not_allowed. The draft does not yet say how the instance's Agent is established at Dispatch."
-  },
-  {
-   "id": "progressive.drawdown-policy.body-commitment-should",
-   "spec": "draft-mcguinness-oauth-mission-progressive.md",
-   "anchor": "progressive-authorization",
-   "text": "A deployment SHOULD additionally commit the drawdown policy body under an integrity anchor, computed the way the issuance profile computes `authority_hash`",
-   "role": "AS",
-   "strength": "SHOULD",
-   "applicability": {
-    "kind": "capability",
-    "capability": "progressive.ceiling-drawdown"
-   },
-   "profiles": [],
-   "surface": "commitment",
-   "assertion": "output-bound",
-   "observation": {
-    "normative": "the committed ceiling_hash covers only the drawdown_policy identifier, not its body, unless the deployment additionally anchors the body under an integrity anchor or discloses it under Consent Evidence"
-   },
-   "level": "unit",
-   "coverage": "todo",
-   "tests": []
   },
   {
    "id": "progressive.ceiling-review.cadence-versioned-with-policy",
