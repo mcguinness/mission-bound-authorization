@@ -1883,83 +1883,125 @@ to obtain the private mission blob.<a href="#section-4.5-4" class="pilcrow">¶</
 The Carrier Binding Floor of
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-transaction-authorization" class="cite xref">I-D.draft-mcguinness-oauth-mission-transaction-authorization</a>]</span> names
 the slots a binding must provide to host action-bound transaction
-authorization, and several have no native home in AAuth or R3.
+authorization.  R3 supplies per-call authorization in its own terms
+(<span>[<a href="#I-D.draft-hardt-aauth-r3" class="cite xref">I-D.draft-hardt-aauth-r3</a>]</span>); the gap is to the family's stronger
+transaction profile.  The table classifies each slot as supplied, supplied conditionally,
+unproven equivalence, or absent, and names the signed native field and
+verifier step that supply it.  Its section numbers refer to
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>, or to
+<span>[<a href="#I-D.draft-hardt-aauth-r3" class="cite xref">I-D.draft-hardt-aauth-r3</a>]</span> where marked R3; the management status
+operation is that of <span>[<a href="#I-D.draft-mcguinness-mission-aauth-management" class="cite xref">I-D.draft-mcguinness-mission-aauth-management</a>]</span>.
 Consistent with this document's rule that it adds no new AAuth wire
-members, it defines no extensions to close them.<a href="#section-4.6-1" class="pilcrow">¶</a></p>
+members, it defines no extensions to close a gap.<a href="#section-4.6-1" class="pilcrow">¶</a></p>
 <span id="name-transaction-authorization-r"></span><table class="center" id="table-3">
           <caption>
 <a href="#table-3" class="selfRef">Table 3</a>:
-<a href="#name-transaction-authorization-r" class="selfRef">Transaction authorization requirements: native and missing</a>
+<a href="#name-transaction-authorization-r" class="selfRef">Transaction authorization requirements: native carriers and status</a>
           </caption>
 <thead>
             <tr>
               <th class="text-left" rowspan="1" colspan="1">Requirement</th>
-              <th class="text-left" rowspan="1" colspan="1">Native</th>
-              <th class="text-left" rowspan="1" colspan="1">Missing home</th>
+              <th class="text-left" rowspan="1" colspan="1">Native carrier and verifier step</th>
+              <th class="text-left" rowspan="1" colspan="1">Status</th>
+              <th class="text-left" rowspan="1" colspan="1">Gap</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Challenge carrier</td>
-              <td class="text-left" rowspan="1" colspan="1">The AAuth-Requirement challenge with a signed resource token</td>
-              <td class="text-left" rowspan="1" colspan="1">Members committing to the concrete parameters, the mission reference, and the presenter key</td>
+              <td class="text-left" rowspan="1" colspan="1">The resource token, signed by the resource and verified against its published keys (6.7.2), commits to the operation and parameters through <code>r3_uri</code> and <code>r3_s256</code> (R3 7.3), to the Mission through <code>mission_s256</code>, and to the presenter key through <code>agent_jkt</code> (6.7.1)</td>
+              <td class="text-left" rowspan="1" colspan="1">Supplied; the Mission commitment when the presented token carries one</td>
+              <td class="text-left" rowspan="1" colspan="1">The parameter commitment, in its own row</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Operation identity</td>
-              <td class="text-left" rowspan="1" colspan="1">R3 vocabulary operations, pinned by the content-addressed R3 document</td>
-              <td class="text-left" rowspan="1" colspan="1">Definition versioning and supersession</td>
+              <td class="text-left" rowspan="1" colspan="1">The R3 document, identified by <code>r3_s256</code> over its served bytes, names the operation in the resource's vocabulary (R3 7.2)</td>
+              <td class="text-left" rowspan="1" colspan="1">Supplied for identity; absent for supersession</td>
+              <td class="text-left" rowspan="1" colspan="1">A superseded definition that resolves only for workflows admitted under it</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Parameter commitment</td>
-              <td class="text-left" rowspan="1" colspan="1">The content-addressed R3 per-call document</td>
-              <td class="text-left" rowspan="1" colspan="1">A defined parameter-commitment member</td>
+              <td class="text-left" rowspan="1" colspan="1">The proposal's <code>parameters</code>, committed by <code>r3_s256</code>; under <code>401</code> the resource compares the retried call to them structurally, and under <code>202</code> it executes the held call (R3 10.1, R3 10.2)</td>
+              <td class="text-left" rowspan="1" colspan="1">Unproven equivalence</td>
+              <td class="text-left" rowspan="1" colspan="1">A verifiable equivalence to <code>parameter_digest</code> (below)</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Workflow handle</td>
-              <td class="text-left" rowspan="1" colspan="1">None: <code>r3_s256</code> is a content address, and intentionally identical calls share it</td>
-              <td class="text-left" rowspan="1" colspan="1">A transaction-instance identifier with its own lifetime and admission idempotency</td>
+              <td class="text-left" rowspan="1" colspan="1">Under <code>202</code>, the pending URL; once the call completes, its record and result are keyed by the auth token's <code>jti</code> and retained at least until that token's <code>exp</code> (6.5.1)</td>
+              <td class="text-left" rowspan="1" colspan="1">Supplied conditionally (<code>202</code> only)</td>
+              <td class="text-left" rowspan="1" colspan="1">A declared lifetime for the pending workflow; a handle under <code>401</code>; admission idempotency on either path</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Result class</td>
-              <td class="text-left" rowspan="1" colspan="1">None: the per-call result is an ordinary <code>aa-auth+jwt</code>
-</td>
+              <td class="text-left" rowspan="1" colspan="1">The per-call result is an ordinary <code>aa-auth+jwt</code> with the members of any R3 auth token (R3 9); only the referenced proposal and the resource's state show that it is per-call</td>
+              <td class="text-left" rowspan="1" colspan="1">Absent</td>
               <td class="text-left" rowspan="1" colspan="1">A class every verifier can distinguish, with single use semantic to the class</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">At most one result</td>
-              <td class="text-left" rowspan="1" colspan="1">R3 single-uses one issued token</td>
-              <td class="text-left" rowspan="1" colspan="1">An issuance guard giving one admitted transaction at most one result</td>
+              <td class="text-left" rowspan="1" colspan="1">One invocation per per-call auth token, with a repeated presentation answered from the retained result (R3 10.2, 6.5.1)</td>
+              <td class="text-left" rowspan="1" colspan="1">Supplied per token</td>
+              <td class="text-left" rowspan="1" colspan="1">An issuance guard: issuers need not keep replay state for resource tokens (6.7.1, 11.3.4.2), so one proposal can yield more than one per-call auth token; the resource's consumption of the proposal bounds execution, not issuance</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Possession</td>
-              <td class="text-left" rowspan="1" colspan="1">AAuth proof of possession</td>
-              <td class="text-left" rowspan="1" colspan="1">An execution proof bound to the presented artifact itself</td>
+              <td class="text-left" rowspan="1" colspan="1">The per-call auth token travels in <code>Signature-Key</code>, a covered component, on the <code>401</code> retry and the <code>202</code> poll alike, and its <code>cnf.jwk</code> must equal the request-signing key; the PS checks <code>agent_jkt</code> at redemption (11.3.3.1, 9.4.3.2, 6.7.2)</td>
+              <td class="text-left" rowspan="1" colspan="1">Supplied</td>
+              <td class="text-left" rowspan="1" colspan="1">None</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Current-state source</td>
-              <td class="text-left" rowspan="1" colspan="1">Conditional: the management status operation where deployed (<span>[<a href="#I-D.draft-mcguinness-mission-aauth-management" class="cite xref">I-D.draft-mcguinness-mission-aauth-management</a>]</span>)</td>
+              <td class="text-left" rowspan="1" colspan="1">The PS checks mission state when it acts on the resource token (6.7.2); at the resource, the management status operation where deployed</td>
+              <td class="text-left" rowspan="1" colspan="1">Supplied conditionally</td>
               <td class="text-left" rowspan="1" colspan="1">An unconditional source on the execution path</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Failure vocabulary</td>
-              <td class="text-left" rowspan="1" colspan="1">Proposal pending; the <code>denied</code>, <code>abandoned</code>, <code>expired</code>, and <code>revoked</code> polling errors (Section 11.9.4 of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>); and <code>expired_presented_token</code> when a per-call approval outlives the presented auth token (Section 10.2 of <span>[<a href="#I-D.draft-hardt-aauth-r3" class="cite xref">I-D.draft-hardt-aauth-r3</a>]</span>)</td>
+              <td class="text-left" rowspan="1" colspan="1">Proposal pending; the <code>denied</code>, <code>abandoned</code>, <code>expired</code>, and <code>revoked</code> polling errors (11.9.4); and an expired presented token when a per-call approval outlives it (R3 10.2)</td>
+              <td class="text-left" rowspan="1" colspan="1">Supplied</td>
               <td class="text-left" rowspan="1" colspan="1">None</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Fresh decision</td>
               <td class="text-left" rowspan="1" colspan="1">PS adjudication under the lifecycle gate (<a href="#lifecycle" class="auto internal xref">Section 4.8</a>)</td>
+              <td class="text-left" rowspan="1" colspan="1">Supplied</td>
               <td class="text-left" rowspan="1" colspan="1">None</td>
             </tr>
           </tbody>
         </table>
-<p id="section-4.6-3">A deployment could claim the capability only after the missing homes
-exist upstream and this binding additionally claims State-Observable
-unconditionally on the execution path (it is claimed conditionally),
-and either Structured Authority or an equivalent resource-owned
-evaluation of the operation commitment (not supplied).  Until then the
-execution gate and the authority evaluation the transaction invariants
-require have no source in this binding, and hosting the flow is
-unsupported.<a href="#section-4.6-3" class="pilcrow">¶</a></p>
+<p id="section-4.6-3">The R3 parameter commitment is not shown to be equivalent to
+<code>parameter_digest</code> (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).  R3
+commits to the parameters exactly as the resource serialized them in
+the proposal, and under <code>401</code> compares the retried call to them by
+JSON value equality or by the digest of a presented value.
+<code>parameter_digest</code> is a digest of a normalized parameter object: an
+Operation Profile fixes default insertion, omitted optional fields, and
+set-like arrays, and every parameter that influences the action's
+external effect enters it.  The two coincide for one resource
+operation only when the resource's proposal carries every
+effect-bearing parameter in that normalized form, which neither R3 nor
+this binding requires.  Under <code>202</code> the held call itself is executed,
+so no parameter can be substituted, but no digest exists for another
+verifier to recompute.  This binding defines no second
+canonicalization to close the gap.<a href="#section-4.6-3" class="pilcrow">¶</a></p>
+<p id="section-4.6-4">R3 also lets a resource seek approval to release a result it has
+already computed, rather than approval to execute (Section 10.4 of
+<span>[<a href="#I-D.draft-hardt-aauth-r3" class="cite xref">I-D.draft-hardt-aauth-r3</a>]</span>).  That approval gates disclosure, not
+execution.  The floor's invariants concern pre-execution approval, so a
+release-gated call is outside this mapping, and approving release is
+never treated as approving execution.<a href="#section-4.6-4" class="pilcrow">¶</a></p>
+<p id="section-4.6-5">The slots without a native home are operation supersession, parameter
+equivalence, a declared pending-workflow lifetime, the <code>401</code> workflow
+handle and admission idempotency, a distinguishable result class, an
+issuance guard giving one result per transaction instance, and an
+unconditional current-state source.  A
+deployment could claim the capability only after those exist upstream
+and this binding additionally claims State-Observable unconditionally
+on the execution path (it is claimed conditionally), and either
+Structured Authority or an equivalent resource-owned evaluation of the
+operation commitment (not supplied).  Until then the execution gate and
+the authority evaluation the transaction invariants require have no
+source in this binding, and hosting the flow is unsupported.<a href="#section-4.6-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="ref-propagation">
@@ -2642,6 +2684,10 @@ metadata member, error code, capability value, or registry value.<a href="#secti
 <dt id="I-D.draft-mcguinness-mission-aauth-management">[I-D.draft-mcguinness-mission-aauth-management]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"AAuth Mission Management"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth-management.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-aauth-management.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-transaction-authorization">[I-D.draft-mcguinness-oauth-mission-transaction-authorization]</dt>
       <dd>

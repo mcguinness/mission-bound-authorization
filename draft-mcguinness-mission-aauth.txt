@@ -619,89 +619,206 @@ Table of Contents
    The Carrier Binding Floor of
    [I-D.draft-mcguinness-oauth-mission-transaction-authorization] names
    the slots a binding must provide to host action-bound transaction
-   authorization, and several have no native home in AAuth or R3.
+   authorization.  R3 supplies per-call authorization in its own terms
+   ([I-D.draft-hardt-aauth-r3]); the gap is to the family's stronger
+   transaction profile.  The table classifies each slot as supplied,
+   supplied conditionally, unproven equivalence, or absent, and names
+   the signed native field and verifier step that supply it.  Its
+   section numbers refer to [I-D.draft-hardt-oauth-aauth-protocol], or
+   to [I-D.draft-hardt-aauth-r3] where marked R3; the management status
+   operation is that of [I-D.draft-mcguinness-mission-aauth-management].
    Consistent with this document's rule that it adds no new AAuth wire
-   members, it defines no extensions to close them.
+   members, it defines no extensions to close a gap.
 
-   +===========+=================================================+=============+
-   |Requirement|Native                                           |Missing home |
-   +===========+=================================================+=============+
-   |Challenge  |The AAuth-Requirement challenge with a signed    |Members      |
-   |carrier    |resource token                                   |committing to|
-   |           |                                                 |the concrete |
-   |           |                                                 |parameters,  |
-   |           |                                                 |the mission  |
-   |           |                                                 |reference,   |
-   |           |                                                 |and the      |
-   |           |                                                 |presenter key|
-   +-----------+-------------------------------------------------+-------------+
-   |Operation  |R3 vocabulary operations, pinned by the content- |Definition   |
-   |identity   |addressed R3 document                            |versioning   |
-   |           |                                                 |and          |
-   |           |                                                 |supersession |
-   +-----------+-------------------------------------------------+-------------+
-   |Parameter  |The content-addressed R3 per-call document       |A defined    |
-   |commitment |                                                 |parameter-   |
-   |           |                                                 |commitment   |
-   |           |                                                 |member       |
-   +-----------+-------------------------------------------------+-------------+
-   |Workflow   |None: r3_s256 is a content address, and          |A            |
-   |handle     |intentionally identical calls share it           |transaction- |
-   |           |                                                 |instance     |
-   |           |                                                 |identifier   |
-   |           |                                                 |with its own |
-   |           |                                                 |lifetime and |
-   |           |                                                 |admission    |
-   |           |                                                 |idempotency  |
-   +-----------+-------------------------------------------------+-------------+
-   |Result     |None: the per-call result is an ordinary aa-     |A class every|
-   |class      |auth+jwt                                         |verifier can |
-   |           |                                                 |distinguish, |
-   |           |                                                 |with single  |
-   |           |                                                 |use semantic |
-   |           |                                                 |to the class |
-   +-----------+-------------------------------------------------+-------------+
-   |At most one|R3 single-uses one issued token                  |An issuance  |
-   |result     |                                                 |guard giving |
-   |           |                                                 |one admitted |
-   |           |                                                 |transaction  |
-   |           |                                                 |at most one  |
-   |           |                                                 |result       |
-   +-----------+-------------------------------------------------+-------------+
-   |Possession |AAuth proof of possession                        |An execution |
-   |           |                                                 |proof bound  |
-   |           |                                                 |to the       |
-   |           |                                                 |presented    |
-   |           |                                                 |artifact     |
-   |           |                                                 |itself       |
-   +-----------+-------------------------------------------------+-------------+
-   |Current-   |Conditional: the management status operation     |An           |
-   |state      |where deployed                                   |unconditional|
-   |source     |([I-D.draft-mcguinness-mission-aauth-management])|source on the|
-   |           |                                                 |execution    |
-   |           |                                                 |path         |
-   +-----------+-------------------------------------------------+-------------+
-   |Failure    |Proposal pending; the denied, abandoned, expired,|None         |
-   |vocabulary |and revoked polling errors (Section 11.9.4 of    |             |
-   |           |[I-D.draft-hardt-oauth-aauth-protocol]); and     |             |
-   |           |expired_presented_token when a per-call approval |             |
-   |           |outlives the presented auth token (Section 10.2  |             |
-   |           |of [I-D.draft-hardt-aauth-r3])                   |             |
-   +-----------+-------------------------------------------------+-------------+
-   |Fresh      |PS adjudication under the lifecycle gate         |None         |
-   |decision   |(Section 4.8)                                    |             |
-   +-----------+-------------------------------------------------+-------------+
+   +=============+==================+===============+==================+
+   |Requirement  | Native carrier   | Status        | Gap              |
+   |             | and verifier     |               |                  |
+   |             | step             |               |                  |
+   +=============+==================+===============+==================+
+   |Challenge    | The resource     | Supplied; the | The parameter    |
+   |carrier      | token, signed    | Mission       | commitment, in   |
+   |             | by the resource  | commitment    | its own row      |
+   |             | and verified     | when the      |                  |
+   |             | against its      | presented     |                  |
+   |             | published keys   | token carries |                  |
+   |             | (6.7.2),         | one           |                  |
+   |             | commits to the   |               |                  |
+   |             | operation and    |               |                  |
+   |             | parameters       |               |                  |
+   |             | through r3_uri   |               |                  |
+   |             | and r3_s256 (R3  |               |                  |
+   |             | 7.3), to the     |               |                  |
+   |             | Mission through  |               |                  |
+   |             | mission_s256,    |               |                  |
+   |             | and to the       |               |                  |
+   |             | presenter key    |               |                  |
+   |             | through          |               |                  |
+   |             | agent_jkt        |               |                  |
+   |             | (6.7.1)          |               |                  |
+   +-------------+------------------+---------------+------------------+
+   |Operation    | The R3           | Supplied for  | A superseded     |
+   |identity     | document,        | identity;     | definition that  |
+   |             | identified by    | absent for    | resolves only    |
+   |             | r3_s256 over     | supersession  | for workflows    |
+   |             | its served       |               | admitted under   |
+   |             | bytes, names     |               | it               |
+   |             | the operation    |               |                  |
+   |             | in the           |               |                  |
+   |             | resource's       |               |                  |
+   |             | vocabulary (R3   |               |                  |
+   |             | 7.2)             |               |                  |
+   +-------------+------------------+---------------+------------------+
+   |Parameter    | The proposal's   | Unproven      | A verifiable     |
+   |commitment   | parameters,      | equivalence   | equivalence to   |
+   |             | committed by     |               | parameter_digest |
+   |             | r3_s256; under   |               | (below)          |
+   |             | 401 the          |               |                  |
+   |             | resource         |               |                  |
+   |             | compares the     |               |                  |
+   |             | retried call to  |               |                  |
+   |             | them             |               |                  |
+   |             | structurally,    |               |                  |
+   |             | and under 202    |               |                  |
+   |             | it executes the  |               |                  |
+   |             | held call (R3    |               |                  |
+   |             | 10.1, R3 10.2)   |               |                  |
+   +-------------+------------------+---------------+------------------+
+   |Workflow     | Under 202, the   | Supplied      | A declared       |
+   |handle       | pending URL;     | conditionally | lifetime for the |
+   |             | once the call    | (202 only)    | pending          |
+   |             | completes, its   |               | workflow; a      |
+   |             | record and       |               | handle under     |
+   |             | result are       |               | 401; admission   |
+   |             | keyed by the     |               | idempotency on   |
+   |             | auth token's     |               | either path      |
+   |             | jti and          |               |                  |
+   |             | retained at      |               |                  |
+   |             | least until      |               |                  |
+   |             | that token's     |               |                  |
+   |             | exp (6.5.1)      |               |                  |
+   +-------------+------------------+---------------+------------------+
+   |Result class | The per-call     | Absent        | A class every    |
+   |             | result is an     |               | verifier can     |
+   |             | ordinary aa-     |               | distinguish,     |
+   |             | auth+jwt with    |               | with single use  |
+   |             | the members of   |               | semantic to the  |
+   |             | any R3 auth      |               | class            |
+   |             | token (R3 9);    |               |                  |
+   |             | only the         |               |                  |
+   |             | referenced       |               |                  |
+   |             | proposal and     |               |                  |
+   |             | the resource's   |               |                  |
+   |             | state show that  |               |                  |
+   |             | it is per-call   |               |                  |
+   +-------------+------------------+---------------+------------------+
+   |At most one  | One invocation   | Supplied per  | An issuance      |
+   |result       | per per-call     | token         | guard: issuers   |
+   |             | auth token,      |               | need not keep    |
+   |             | with a repeated  |               | replay state for |
+   |             | presentation     |               | resource tokens  |
+   |             | answered from    |               | (6.7.1,          |
+   |             | the retained     |               | 11.3.4.2), so    |
+   |             | result (R3       |               | one proposal can |
+   |             | 10.2, 6.5.1)     |               | yield more than  |
+   |             |                  |               | one per-call     |
+   |             |                  |               | auth token; the  |
+   |             |                  |               | resource's       |
+   |             |                  |               | consumption of   |
+   |             |                  |               | the proposal     |
+   |             |                  |               | bounds           |
+   |             |                  |               | execution, not   |
+   |             |                  |               | issuance         |
+   +-------------+------------------+---------------+------------------+
+   |Possession   | The per-call     | Supplied      | None             |
+   |             | auth token       |               |                  |
+   |             | travels in       |               |                  |
+   |             | Signature-Key,   |               |                  |
+   |             | a covered        |               |                  |
+   |             | component, on    |               |                  |
+   |             | the 401 retry    |               |                  |
+   |             | and the 202      |               |                  |
+   |             | poll alike, and  |               |                  |
+   |             | its cnf.jwk      |               |                  |
+   |             | must equal the   |               |                  |
+   |             | request-signing  |               |                  |
+   |             | key; the PS      |               |                  |
+   |             | checks           |               |                  |
+   |             | agent_jkt at     |               |                  |
+   |             | redemption       |               |                  |
+   |             | (11.3.3.1,       |               |                  |
+   |             | 9.4.3.2, 6.7.2)  |               |                  |
+   +-------------+------------------+---------------+------------------+
+   |Current-state| The PS checks    | Supplied      | An unconditional |
+   |source       | mission state    | conditionally | source on the    |
+   |             | when it acts on  |               | execution path   |
+   |             | the resource     |               |                  |
+   |             | token (6.7.2);   |               |                  |
+   |             | at the           |               |                  |
+   |             | resource, the    |               |                  |
+   |             | management       |               |                  |
+   |             | status           |               |                  |
+   |             | operation where  |               |                  |
+   |             | deployed         |               |                  |
+   +-------------+------------------+---------------+------------------+
+   |Failure      | Proposal         | Supplied      | None             |
+   |vocabulary   | pending; the     |               |                  |
+   |             | denied,          |               |                  |
+   |             | abandoned,       |               |                  |
+   |             | expired, and     |               |                  |
+   |             | revoked polling  |               |                  |
+   |             | errors           |               |                  |
+   |             | (11.9.4); and    |               |                  |
+   |             | an expired       |               |                  |
+   |             | presented token  |               |                  |
+   |             | when a per-call  |               |                  |
+   |             | approval         |               |                  |
+   |             | outlives it (R3  |               |                  |
+   |             | 10.2)            |               |                  |
+   +-------------+------------------+---------------+------------------+
+   |Fresh        | PS adjudication  | Supplied      | None             |
+   |decision     | under the        |               |                  |
+   |             | lifecycle gate   |               |                  |
+   |             | (Section 4.8)    |               |                  |
+   +-------------+------------------+---------------+------------------+
 
-    Table 3: Transaction authorization requirements: native and missing
+      Table 3: Transaction authorization requirements: native carriers
+                                 and status
 
-   A deployment could claim the capability only after the missing homes
-   exist upstream and this binding additionally claims State-Observable
-   unconditionally on the execution path (it is claimed conditionally),
-   and either Structured Authority or an equivalent resource-owned
-   evaluation of the operation commitment (not supplied).  Until then
-   the execution gate and the authority evaluation the transaction
-   invariants require have no source in this binding, and hosting the
-   flow is unsupported.
+   The R3 parameter commitment is not shown to be equivalent to
+   parameter_digest ([I-D.draft-mcguinness-mission-runtime]).  R3
+   commits to the parameters exactly as the resource serialized them in
+   the proposal, and under 401 compares the retried call to them by JSON
+   value equality or by the digest of a presented value.
+   parameter_digest is a digest of a normalized parameter object: an
+   Operation Profile fixes default insertion, omitted optional fields,
+   and set-like arrays, and every parameter that influences the action's
+   external effect enters it.  The two coincide for one resource
+   operation only when the resource's proposal carries every effect-
+   bearing parameter in that normalized form, which neither R3 nor this
+   binding requires.  Under 202 the held call itself is executed, so no
+   parameter can be substituted, but no digest exists for another
+   verifier to recompute.  This binding defines no second
+   canonicalization to close the gap.
+
+   R3 also lets a resource seek approval to release a result it has
+   already computed, rather than approval to execute (Section 10.4 of
+   [I-D.draft-hardt-aauth-r3]).  That approval gates disclosure, not
+   execution.  The floor's invariants concern pre-execution approval, so
+   a release-gated call is outside this mapping, and approving release
+   is never treated as approving execution.
+
+   The slots without a native home are operation supersession, parameter
+   equivalence, a declared pending-workflow lifetime, the 401 workflow
+   handle and admission idempotency, a distinguishable result class, an
+   issuance guard giving one result per transaction instance, and an
+   unconditional current-state source.  A deployment could claim the
+   capability only after those exist upstream and this binding
+   additionally claims State-Observable unconditionally on the execution
+   path (it is claimed conditionally), and either Structured Authority
+   or an equivalent resource-owned evaluation of the operation
+   commitment (not supplied).  Until then the execution gate and the
+   authority evaluation the transaction invariants require have no
+   source in this binding, and hosting the flow is unsupported.
 
 4.7.  Reference Propagation
 
@@ -1382,6 +1499,11 @@ Table of Contents
               McGuinness, K., "AAuth Mission Management", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-aauth-management.html>.
+
+   [I-D.draft-mcguinness-mission-runtime]
+              McGuinness, K., "Mission-Bound Runtime Enforcement", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-runtime.html>.
 
    [I-D.draft-mcguinness-oauth-mission-transaction-authorization]
               McGuinness, K., "Mission Transaction Authorization Profile
