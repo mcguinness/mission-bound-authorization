@@ -1189,7 +1189,8 @@ and the client identity the Mission Issuer already sees.
 
 # IANA Considerations {#iana}
 
-This document has no IANA actions.
+This document has no IANA actions. The parameter and metadata names it
+mentions as examples are not registered.
 
 --- back
 
@@ -1317,10 +1318,9 @@ guessing ({{clarifications}}).
 \[\[ To be removed from the final specification ]]
 
 - Restructured for readability without changing any requirement.
-  Sections follow the processing model; the shaper's role, the
-  Authority Proposal, the evidence-only status of Shaping Evidence,
-  and staleness are each stated once. The construction table became a
-  per-member list, the two examples became one end-to-end appendix
+  Sections follow the processing model, and the shaper's role and the
+  Authority Proposal each have one home. The construction table became
+  a per-member list, the two examples became one end-to-end appendix
   showing the Intent, the Authority Proposal, and Shaping Evidence,
   and the Conformance section and "What Shaping Adds and Does Not"
   were folded into Conventions, Deployment Considerations, and the
@@ -1328,11 +1328,19 @@ guessing ({{clarifications}}).
 
 - Corrected statements against their sources: the derivation-refusal
   codes in Re-Shaping, the AAuth binding's intake (a natural-language
-  proposal, not a Mission Intent), and the narrowing mode that replaced
-  the reproducibility rule. Reconciled the shaping-ceiling outcomes
-  with Ambiguity Handling, named the parties the keywords bind, and
-  replaced the "sound shaper" idiom with BCP 14 keywords. Member
-  guidance adds `goal_lang` and the `target_resources` containment
+  proposal, not a Mission Intent), the narrowing mode that replaced
+  the reproducibility rule, and open-ended invariants, which are
+  Authority Proposal constraints rather than `task_bounds`.
+
+- Reconciled the shaping-ceiling outcomes with Ambiguity Handling and
+  defined a partial proposal; fixed the condition on the broadening
+  record; named the parties the keywords bind; limited Shaping
+  Evidence to consent disclosure and audit at the Mission Issuer;
+  made signing and integrity envelopes consistent; and moved
+  staleness to one client-side rule.
+
+- Replaced the "sound shaper" idiom with BCP 14 keywords. Member
+  guidance covers `goal_lang` and the `target_resources` containment
   rule, and `purpose` is chosen only when the request supports it.
 
 # Acknowledgments
