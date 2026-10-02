@@ -22615,6 +22615,48 @@
    "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with #963 decision D1; todo until that path exists."
   },
   {
+   "id": "issuance-grant.minting-rules.cnf-from-verified-constraint",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "minting-rules",
+   "text": "When the MAS includes `cnf`, it MUST take the key from a sender constraint it verified on the grant request",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a grant's cnf names the key of a sender constraint the MAS verified on the grant request: the DPoP proof key's JWK SHA-256 thumbprint as jkt, or the mutual-TLS client certificate's SHA-256 thumbprint as x5t#S256; a grant request with no verified sender constraint yields a grant without cnf"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with #963 decision D2; todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.minting-rules.no-assertion-key-cnf",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "minting-rules",
+   "text": "A private-key-JWT client assertion's signing key authenticates the client and MUST NOT become `cnf`.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a grant request authenticated only by a private-key-JWT client assertion yields a grant whose cnf, if any, never names the assertion's signing key"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with #963 decision D2; todo until that path exists."
+  },
+  {
    "id": "txn-authorization.token.txn-scoped-mint-gate",
    "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
    "anchor": "offline-verification",

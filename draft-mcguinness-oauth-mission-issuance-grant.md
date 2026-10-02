@@ -361,7 +361,9 @@ Claims:
 : OPTIONAL. A confirmation claim {{RFC7800}} binding redemption to a
   key: the `jkt` member for OAuth 2.0 Demonstrating Proof of
   Possession (DPoP, {{Section 6.1 of RFC9449}}), or the `x5t#S256`
-  member for mutual TLS ({{Section 3.1 of RFC8705}}). When it is
+  member for mutual TLS ({{Section 3.1 of RFC8705}}), set by the MAS
+  only from a sender constraint it verified on the grant request
+  ({{minting-rules}}). When it is
   present, the consuming AS MUST require proof of possession of that
   key at redemption: a DPoP proof in the token request whose public
   key has the `jkt` thumbprint, or a client certificate on the TLS
@@ -505,7 +507,17 @@ The MAS MUST apply the following rules:
    grants against it atomically and refuse beyond
    it, which gives that ceiling a binding locus under the standalone
    binding.
-5. **Evidence.** Each minting is recorded with the Mission record:
+5. **Key binding.** When the MAS includes `cnf`, it MUST take the key
+   from a sender constraint it verified on the grant request: the
+   public key of the request's DPoP proof, as `jkt`, or the client
+   certificate of the mutual-TLS connection, as `x5t#S256`. A
+   private-key-JWT client assertion's signing key authenticates the
+   client and MUST NOT become `cnf`. A grant request with no verified
+   sender constraint yields a grant without `cnf`. The redemption
+   rules for client authentication and public clients
+   ({{redemption}}) apply unchanged, so a public client cannot redeem
+   such a grant.
+6. **Evidence.** Each minting is recorded with the Mission record:
    the `jti`, audience, requested and granted entries, and time.
 
 ## Grant Response {#minting-response}
