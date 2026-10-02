@@ -1902,9 +1902,7 @@ The following is an example of a MAS metadata document:
 
 A consumer holding a Mission reference resolves the MAS metadata
 document from the reference's `issuer`. Whether a given `issuer` is a
-MAS or an OAuth AS is deployment configuration. The submission and
-lifecycle surfaces follow a reference-plus-continuation shape: a
-request yields an opaque reference that the client continues against.
+MAS or an OAuth AS is deployment configuration.
 
 # Limitations {#limitations}
 
