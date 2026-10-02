@@ -724,12 +724,15 @@ remaining errors below are defined by this document.
 | `rate_limited` | 429 | The caller exceeded a PS policy limit. |
 
 For a syntactically valid `{mission_s256}` segment, a PS MUST return
-the same status, error, body shape, header set, and observably
-equivalent timing whether the mission is absent or the authenticated
-caller lacks authorization for it, and MUST answer both identically
-within each caller class.  The PS MUST use `mission_not_found` for
-both.  It MUST NOT disclose the state, Agent identifier, timestamps,
-expiry, reason, or tenant before authorization succeeds.
+the same status, error, body, header set, and observably equivalent
+timing whether the mission is absent or the authenticated caller lacks
+authorization for it, and MUST answer both identically within each
+caller class.  The PS MUST use `mission_not_found` for both.  It MUST
+NOT disclose the state, Agent identifier, timestamps, expiry, reason,
+or tenant before authorization succeeds.  As Section 8.7 of
+{{I-D.draft-hardt-oauth-aauth-protocol}} notes for the mission
+endpoint, the natural arrangement leaks the difference in timing:
+checking authorization only after a successful lookup.
 
 The base protocol makes a terminated mission deliberately
 distinguishable to the agent that owns it, at that agent's own
