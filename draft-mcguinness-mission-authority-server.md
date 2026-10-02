@@ -1515,7 +1515,7 @@ The propagated value is exactly the Mission reference tuple:
 ({{I-D.draft-mcguinness-oauth-mission}}). The channel carries nothing
 else: state, integrity anchors, authority, and policy data always
 come from the MAS's signed Mission Status response
-({{submission-status}}), and a request carrying any of them in this
+({{lifecycle-and-state}}), and a request carrying any of them in this
 channel MUST be refused, never silently ignored, so ambiguity is
 detectable rather than absorbed. The tuple is single-homed: each
 carriage below maps this one tuple, and a new carrier profiles it
