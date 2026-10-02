@@ -555,9 +555,9 @@ members, it defines no extensions to close a gap.
 | Challenge carrier | The resource token, signed by the resource and verified against its published keys (6.7.2), commits to the operation and parameters through `r3_uri` and `r3_s256` (R3 7.3), to the Mission through `mission_s256`, and to the presenter key through `agent_jkt` (6.7.1) | Supplied; the Mission commitment when the presented token carries one | The parameter commitment, in its own row |
 | Operation identity | The R3 document, identified by `r3_s256` over its served bytes, names the operation in the resource's vocabulary (R3 7.2) | Supplied for identity; absent for supersession | A superseded definition that resolves only for workflows admitted under it |
 | Parameter commitment | The proposal's `parameters`, committed by `r3_s256`; under `401` the resource compares the retried call to them structurally, and under `202` it executes the held call (R3 10.1, R3 10.2) | Unproven equivalence | A verifiable equivalence to `parameter_digest` (below) |
-| Workflow handle | Under `202`, the pending URL, whose record is keyed by the auth token's `jti` and retained at least until its `exp` (6.5.1) | Supplied conditionally (`202` only) | A handle under `401`; admission idempotency on either path |
-| Result class | The per-call result is an ordinary `aa-auth+jwt`; its per-call nature is a member, `r3_granted`, not a class (R3 9) | Absent | A class every verifier can distinguish, with single use semantic to the class |
-| At most one result | One invocation per per-call auth token, with a repeated presentation answered from the retained result (R3 10.2, 6.5.1) | Supplied per token | One result per transaction instance: a call re-requested after an expired presented token yields a second per-call token |
+| Workflow handle | Under `202`, the pending URL; once the call completes, its record and result are keyed by the auth token's `jti` and retained at least until that token's `exp` (6.5.1) | Supplied conditionally (`202` only) | A declared lifetime for the pending workflow; a handle under `401`; admission idempotency on either path |
+| Result class | The per-call result is an ordinary `aa-auth+jwt` with the members of any R3 auth token (R3 9); only the referenced proposal and the resource's state show that it is per-call | Absent | A class every verifier can distinguish, with single use semantic to the class |
+| At most one result | One invocation per per-call auth token, with a repeated presentation answered from the retained result (R3 10.2, 6.5.1) | Supplied per token | An issuance guard: issuers need not keep replay state for resource tokens (6.7.1, 11.3.4.2), so one proposal can yield more than one per-call auth token; the resource's consumption of the proposal bounds execution, not issuance |
 | Possession | The per-call auth token travels in `Signature-Key`, a covered component, on the `401` retry and the `202` poll alike, and its `cnf.jwk` must equal the request-signing key; the PS checks `agent_jkt` at redemption (11.3.3.1, 9.4.3.2, 6.7.2) | Supplied | None |
 | Current-state source | The PS checks mission state when it acts on the resource token (6.7.2); at the resource, the management status operation where deployed | Supplied conditionally | An unconditional source on the execution path |
 | Failure vocabulary | Proposal pending; the `denied`, `abandoned`, `expired`, and `revoked` polling errors (11.9.4); and an expired presented token when a per-call approval outlives it (R3 10.2) | Supplied | None |
@@ -588,9 +588,10 @@ release-gated call is outside this mapping, and approving release is
 never treated as approving execution.
 
 The slots without a native home are operation supersession, parameter
-equivalence, the `401` workflow handle and admission idempotency, a
-distinguishable result class, one result per transaction instance
-across workflows, and an unconditional current-state source.  A
+equivalence, a declared pending-workflow lifetime, the `401` workflow
+handle and admission idempotency, a distinguishable result class, an
+issuance guard giving one result per transaction instance, and an
+unconditional current-state source.  A
 deployment could claim the capability only after those exist upstream
 and this binding additionally claims State-Observable unconditionally
 on the execution path (it is claimed conditionally), and either
