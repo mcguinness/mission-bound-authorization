@@ -929,9 +929,9 @@ The join binds identity, not possession. The acting credential's own
 sender binding keeps a joined permit from being a bearer property.
 Acting credentials for governed work SHOULD be sender-constrained,
 with DPoP or mutual TLS at the unchanged AS. For the high-consequence
-action classes, acting credentials MUST be sender-constrained. With a
-pure bearer token, any holder inside the (subject, client) equivalence
-class joins ({{join-spoofing}}).
+action classes, acting credentials for governed work MUST be
+sender-constrained. With a pure bearer token, any holder inside the
+(subject, client) equivalence class joins ({{join-spoofing}}).
 
 ## Instance-Bound Joins {#join-instance}
 
