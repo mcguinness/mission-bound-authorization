@@ -368,7 +368,7 @@ This profile adds two members:
 
 A MAS implementing this profile serves a Mission Issuance Grant
 endpoint, published as `mission_issuance_grant_endpoint` in its
-discovery metadata ({{iana}}).
+metadata ({{metadata}}).
 
 ## Grant Request {#minting-request}
 
@@ -819,6 +819,28 @@ user to authenticate; such a grant is redeemed directly
 The authenticated client MUST still be the grant's `client_id`
 ({{redemption}}).
 
+# Metadata {#metadata}
+
+A MAS that issues grants publishes the following member in its
+metadata ({{I-D.draft-mcguinness-mission-authority-server}}, Section
+"Mission Authority Server Metadata"):
+
+`mission_issuance_grant_endpoint`:
+: URL of the MAS's Mission Issuance Grant endpoint ({{minting}}).
+
+A consuming AS publishes the following members in its Authorization
+Server Metadata {{RFC8414}}:
+
+`mission_issuance_grant_supported`:
+: OPTIONAL. Boolean value; `true` when the AS redeems Mission Issuance
+  Grants at its token endpoint ({{redemption}}). If omitted, the
+  default value is `false`.
+
+`mission_issuance_grant_par_supported`:
+: OPTIONAL. Boolean value; `true` when the AS accepts the
+  `mission_issuance_grant` parameter in Pushed Authorization Requests
+  ({{par-carriage}}). If omitted, the default value is `false`.
+
 # Relationship to Other Artifacts {#relationships}
 
 **The Mandate is evidence; this grant authorizes.** Both are
@@ -903,7 +925,7 @@ reconciliation posture ({{security-considerations}}): the window
 within which minting and redemption logs are reconciled, or that
 they are not. A consuming AS advertises its support with the
 `mission_issuance_grant_supported` metadata member, and its PAR
-carriage with `mission_issuance_grant_par_supported` ({{iana}}).
+carriage with `mission_issuance_grant_par_supported` ({{metadata}}).
 
 # Security Considerations {#security-considerations}
 
@@ -1010,10 +1032,11 @@ IANA is requested to register one media type per {{RFC6838}}.
 
 IANA is requested to register the following in the "Mission
 Authority Server Metadata" registry established by
-{{I-D.draft-mcguinness-mission-authority-server}}. Change Controller
-IETF; Reference this document, {{minting}}.
+{{I-D.draft-mcguinness-mission-authority-server}}:
 
-- `mission_issuance_grant_endpoint`
+- Member Name: `mission_issuance_grant_endpoint`
+- Change Controller: IETF
+- Reference: {{metadata}} of this document
 
 ## OAuth Authorization Request Parameter Registration
 
@@ -1023,21 +1046,25 @@ Requests ({{par-carriage}}):
 
 - Parameter name: `mission_issuance_grant`
 - Parameter usage location: authorization request
-- Change Controller: IETF
-- Reference: this document, {{par-carriage}}
+- Change controller: IETF
+- Specification document(s): {{par-carriage}} of this document
 
 ## OAuth Authorization Server Metadata Registration
 
 IANA is requested to register the following in the "OAuth Authorization
-Server Metadata" registry {{RFC8414}}, so a consuming AS can signal its
-support. Change Controller IETF; Reference this document, {{redemption}}
-for the first and {{par-carriage}} for the second:
+Server Metadata" registry {{RFC8414}}:
 
-- `mission_issuance_grant_supported`: a JSON boolean; `true` when the
-  AS redeems Mission Issuance Grants at its token endpoint.
-- `mission_issuance_grant_par_supported`: a JSON boolean; `true` when
-  the AS accepts the `mission_issuance_grant` parameter in Pushed
-  Authorization Requests.
+- Metadata Name: `mission_issuance_grant_supported`
+- Metadata Description: Whether the authorization server redeems
+  Mission Issuance Grants at its token endpoint
+- Change Controller: IETF
+- Specification Document(s): {{metadata}} of this document
+
+- Metadata Name: `mission_issuance_grant_par_supported`
+- Metadata Description: Whether the authorization server accepts the
+  Mission Issuance Grant parameter in Pushed Authorization Requests
+- Change Controller: IETF
+- Specification Document(s): {{metadata}} of this document
 
 --- back
 
