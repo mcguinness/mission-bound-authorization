@@ -2155,6 +2155,13 @@ apply unchanged.
 
 \[\[ To be removed from the final specification ]]
 
+- `child_creation_policy` is an activation policy reference (`id`,
+  `version`, `digest`) under the issuance profile's Standing-Consent
+  Bases; `root_commitment` is its `digest`, `activation` carries the
+  digest, and a mismatched snapshot denies child creation with
+  `policy_denied`. Creation against the delegation entry itself, with
+  no `child_creation_policy`, is unchanged.
+
 - The child's initial grant states how it differs from the Mission
   Issuance Grant: its audience is the Mission Issuer's own token
   endpoint, since that issuer mints and redeems it, not a consuming
