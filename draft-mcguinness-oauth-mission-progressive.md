@@ -355,9 +355,12 @@ reused: that value names policy-approved child creation, not a
 ceiling drawdown.
 
 The issuance profile's fourth high-risk class, a consumption bound
-({{I-D.draft-mcguinness-oauth-mission}}), is not held back here: it is
-the containment an in-ceiling expansion draws down under, not a
-hazard drawdown amplifies. The `ceiling_drawdown` `approval_basis`
+({{I-D.draft-mcguinness-oauth-mission}}), is not held back here: a
+successor continues its predecessor's consumption counters, and a
+policy-adjudicated successor cannot raise a bound
+({{I-D.draft-mcguinness-mission-metering}}), so a drawdown widens
+authority within the ceiling without granting new capacity. The
+`ceiling_drawdown` `approval_basis`
 already carries the trace the issuance profile's approval-authentication
 floor requires for that class, through the `consent_principal` and
 `approved_at` fields this section defines; a deployment recording
@@ -729,6 +732,9 @@ convention, none of which require registration.
 
 -01
 
+- The consumption-bound rationale rests on the metering profile's
+  successor rule: a successor continues its predecessor's counters, and
+  a policy-adjudicated successor cannot raise a bound.
 - Editorial: disambiguated `authority_ceiling` from the template
   profile's Template Ceiling and the shaping companion's shaping
   ceiling at its first definition ({{conventions-and-terminology}}), no
