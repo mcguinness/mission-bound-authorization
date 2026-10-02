@@ -538,6 +538,55 @@ that submitted the Intent. For any other caller, and for an unknown
 identical status code, body, and headers, preserving the anti-oracle
 property of {{I-D.draft-mcguinness-oauth-mission-status}}.
 
+## Mission Reference Delivery {#mission-reference}
+
+The client learns its `mission_id` from the submission-status response
+after approval. When `status` is `approved`, the response additionally
+carries:
+
+`mission_id`:
+: REQUIRED. A string. The Mission's identifier.
+
+`mission_expires_at`:
+: REQUIRED. A string. The Mission's effective `expires_at`, the
+  OAuth binding's common Mission-creating response member
+  ({{I-D.draft-mcguinness-oauth-mission}}): this response is the
+  success response that first delivers the newly created Mission's
+  identifier, and no OAuth credential accompanies it here.
+
+`authorization_details`:
+: REQUIRED. An array. The consented Authority Set, so the client
+  learns its granted authority here; this response is the MAS
+  counterpart of the OAuth binding's token-response
+  `authorization_details` echo.
+
+Example:
+
+~~~ http-message
+HTTP/1.1 200 OK
+Content-Type: application/json
+Cache-Control: no-store
+
+{
+  "submission_id": "sub_4qV9rL3tY6sB1zN0eF7jB8K2nP",
+  "status": "approved",
+  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "mission_expires_at": "2026-12-31T23:59:59Z",
+  "authorization_details": [
+    { "type": "mission_resource_access",
+      "resource": "https://erp.example.com",
+      "actions": ["invoices.read", "journal-entries.write"],
+      "constraints": {
+        "max_amount": { "amount": "500.00", "currency": "USD" }
+      } }
+  ]
+}
+~~~
+
+`mission_id` remains a reference, never a credential
+({{I-D.draft-mcguinness-oauth-mission}}): presenting it authorizes
+nothing, and no MAS surface derives authority from possession of it.
+
 ## Error Responses {#submission-errors}
 
 A hard failure returns the matching HTTP status with a JSON object
@@ -627,55 +676,6 @@ A declined submission resolves to `denied`. Mission Consent Evidence
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}) composes
 unchanged: the MAS is the committing issuer for any
 consent-disclosure commitment.
-
-# Mission Reference Delivery {#mission-reference}
-
-The client learns its `mission_id` from the submission-status response
-after approval. When `status` is `approved`, the response additionally
-carries:
-
-`mission_id`:
-: REQUIRED. A string. The Mission's identifier.
-
-`mission_expires_at`:
-: REQUIRED. A string. The Mission's effective `expires_at`, the
-  OAuth binding's common Mission-creating response member
-  ({{I-D.draft-mcguinness-oauth-mission}}): this response is the
-  success response that first delivers the newly created Mission's
-  identifier, and no OAuth credential accompanies it here.
-
-`authorization_details`:
-: REQUIRED. An array. The consented Authority Set, so the client
-  learns its granted authority here; this response is the MAS
-  counterpart of the OAuth binding's token-response
-  `authorization_details` echo.
-
-Example:
-
-~~~ http-message
-HTTP/1.1 200 OK
-Content-Type: application/json
-Cache-Control: no-store
-
-{
-  "submission_id": "sub_4qV9rL3tY6sB1zN0eF7jB8K2nP",
-  "status": "approved",
-  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-  "mission_expires_at": "2026-12-31T23:59:59Z",
-  "authorization_details": [
-    { "type": "mission_resource_access",
-      "resource": "https://erp.example.com",
-      "actions": ["invoices.read", "journal-entries.write"],
-      "constraints": {
-        "max_amount": { "amount": "500.00", "currency": "USD" }
-      } }
-  ]
-}
-~~~
-
-`mission_id` remains a reference, never a credential
-({{I-D.draft-mcguinness-oauth-mission}}): presenting it authorizes
-nothing, and no MAS surface derives authority from possession of it.
 
 # Mission Lifecycle and State {#lifecycle-and-state}
 
