@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-02T17:17:14Z
-Source repository commit: e9fa5b11b037c042ddd9cc4c9ff3d646063e2e50
+Generated: 2026-10-02T17:50:11Z
+Source repository commit: 413d0833e290be91f99c6ae222a6c6f7c36383ad
 Member count: 7
 
 Reading order:
@@ -8582,7 +8582,7 @@ Table of Contents
 
       {
         "typ": "<mission-intent | mission-proposed-authority
-                | mission-authority-set>",
+                | mission-authority-set | mission-activation-policy>",
         "iss": "<the AS issuer URL>",
         "value": <the committed object>
       }
@@ -8594,7 +8594,10 @@ Table of Contents
        submitted authorization_details array exactly as recorded
        (Section 4.2); the anchor is present exactly when a proposal was
        submitted.  For authority_hash, typ is mission-authority-set and
-       value is the Authority Set as a JSON array of entries.
+       value is the Authority Set as a JSON array of entries.  For an
+       activation policy reference's digest, typ is mission-activation-
+       policy and value is the policy snapshot object that Section 7.1
+       defines.
 
    2.  Canonicalize the envelope with JCS [RFC8785].
 
@@ -8688,8 +8691,9 @@ Table of Contents
    classifies it as one of these species:
 
    *  *Envelope anchor*: the domain-separated, issuer-bound envelope of
-      Section 8.1 (intent_hash, proposal_hash, authority_hash, and
-      commitments produced with companion-defined typ values).
+      Section 8.1 (intent_hash, proposal_hash, authority_hash, an
+      activation policy reference's digest, and commitments produced
+      with companion-defined typ values).
 
    *  *Canonical-object digest*: sha-256: over the JCS serialization of
       a normalized JSON object without the envelope, where protocol

@@ -4069,7 +4069,7 @@ and <code>value</code> is that object:<a href="#section-8.1-2.1.1" class="pilcro
 <pre>
 {
   "typ": "&lt;mission-intent | mission-proposed-authority
-          | mission-authority-set&gt;",
+          | mission-authority-set | mission-activation-policy&gt;",
   "iss": "&lt;the AS issuer URL&gt;",
   "value": &lt;the committed object&gt;
 }
@@ -4085,7 +4085,9 @@ member, not the envelope or its <code>evidence</code>
 (<a href="#authority-proposal" class="auto internal xref">Section 4.2</a>); the anchor is present exactly when a
 proposal was submitted. For <code>authority_hash</code>, <code>typ</code> is
 <code>mission-authority-set</code> and <code>value</code> is the Authority Set as a JSON
-array of entries.<a href="#section-8.1-2.1.3" class="pilcrow">¶</a></p>
+array of entries. For an activation policy reference's <code>digest</code>,
+<code>typ</code> is <code>mission-activation-policy</code> and <code>value</code> is the policy
+snapshot object that <a href="#standing-consent-bases" class="auto internal xref">Section 7.1</a> defines.<a href="#section-8.1-2.1.3" class="pilcrow">¶</a></p>
 </li>
           <li id="section-8.1-2.2">
             <p id="section-8.1-2.2.1">Canonicalize the envelope with JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>.<a href="#section-8.1-2.2.1" class="pilcrow">¶</a></p>
@@ -4196,8 +4198,8 @@ classifies it as one of these species:<a href="#section-8.3-1" class="pilcrow">�
 <li class="normal" id="section-8.3-2.1">
             <p id="section-8.3-2.1.1"><strong>Envelope anchor</strong>: the domain-separated, issuer-bound envelope of
 <a href="#integrity-anchors" class="auto internal xref">Section 8.1</a> (<code>intent_hash</code>, <code>proposal_hash</code>,
-<code>authority_hash</code>, and commitments produced with companion-defined
-<code>typ</code> values).<a href="#section-8.3-2.1.1" class="pilcrow">¶</a></p>
+<code>authority_hash</code>, an activation policy reference's <code>digest</code>, and
+commitments produced with companion-defined <code>typ</code> values).<a href="#section-8.3-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-8.3-2.2">
             <p id="section-8.3-2.2.1"><strong>Canonical-object digest</strong>: <code>sha-256:</code> over the JCS serialization
