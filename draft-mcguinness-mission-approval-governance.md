@@ -1320,6 +1320,12 @@ version before treating the evaluation as re-checked
 
 \[\[ To be removed from the final specification ]]
 
+- The accountable approver's assertion is `human` or `policy`, never
+  `service`, and `authority` is defined for a `service` assertion,
+  naming the model's identifier and version where a model produced
+  the decision. A model-backed judge contributes as a governance input
+  and never becomes the accountable approver. This adds a requirement.
+
 - The Approval Context Manifest copies a recorded `ceiling_hash`
   verbatim, so the Progressive profile is an informative reference,
   meeting the maturity bound of the reference classification
