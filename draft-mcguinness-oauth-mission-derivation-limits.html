@@ -1488,6 +1488,11 @@ Mission Authority Server's minting of a grant
 artifacts it emits: a code exchange that returns both an access token
 and a refresh token is one derivation. A derivation that fails,
 including one refused for exceeding the bound, <span class="bcp14">MUST NOT</span> be counted.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+<p id="section-4.1-2">A child-creation token exchange
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>) is not
+counted against the Parent Mission's limit. The Child Mission's first
+issuance, its redemption of the child's initial grant, is counted
+against the child's own <code>derivation_limit</code>.<a href="#section-4.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="concurrency">
@@ -1782,10 +1787,16 @@ bound at consent time.<a href="#section-9.4-1" class="pilcrow">¶</a></p>
 <p id="section-9.4-2">For example, a child-delegation deployment
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>) allowing
 <code>max_children</code> 3 per Mission with <code>max_child_depth</code> 2 admits up to 12
-descendant Missions (3 in the first generation, up to 9 in the
-second), each with its own independent <code>derivation_limit</code>; at 10
-each, the subtree admits up to 120 derivations while no single bound
-the Approver saw exceeds 10.<a href="#section-9.4-2" class="pilcrow">¶</a></p>
+concurrently non-terminal descendant Missions (3 in the first
+generation, up to 9 in the second), each with its own independent
+<code>derivation_limit</code>; at 10 each, those 12 live Missions can draw up to
+120 derivations while no single bound the Approver saw exceeds 10.
+Neither figure is a lifetime ceiling. <code>max_children</code> counts only
+non-terminal children, so a completed child frees its slot and its
+replacement brings its own <code>derivation_limit</code>. Absent a lineage-wide
+bound (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>), no count limits
+what the subtree derives over its lifetime; Mission expiry bounds only
+its duration.<a href="#section-9.4-2" class="pilcrow">¶</a></p>
 <p id="section-9.4-3">Cross-domain projection composes separately: local issuance at a
 Resource AS is not counted against the origin issuer's cap
 (<a href="#cross-domain-counting" class="auto internal xref">Section 4.4</a>), and neither are the tokens a consuming
@@ -2003,19 +2014,30 @@ intent_hash = sha-256:r--mF07yZfWRGV6N28A2u_8rUzIG-bNhpvFSS5FhoBk
 <p id="appendix-B-2">-00<a href="#appendix-B-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-3.1">
-          <p id="appendix-B-3.1.1">Initial version. Carries the derivation limit of Mission-Bound
+          <p id="appendix-B-3.1.1">What Counts states that a child-creation token exchange is not
+counted against the Parent Mission's limit, and that the child's
+redemption of its initial grant counts against the child's own
+limit.<a href="#appendix-B-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-3.2">
+          <p id="appendix-B-3.2.1">Composition Across Missions states that the example's 12
+descendants and 120 derivations count Missions live at once, not a
+lifetime total.<a href="#appendix-B-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-3.3">
+          <p id="appendix-B-3.3.1">Initial version. Carries the derivation limit of Mission-Bound
 Authorization for OAuth 2.0 with its wire names and rules unchanged:
 the <code>requested_derivation_limit</code> Intent member, the
 <code>derivation_limit</code> record member, counting and refusal at issuance,
 the <code>derivations_exhausted</code> diagnostic, the <code>derivations_remaining</code>
-introspection member, and approval rendering.<a href="#appendix-B-3.1.1" class="pilcrow">¶</a></p>
+introspection member, and approval rendering.<a href="#appendix-B-3.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-3.2">
-          <p id="appendix-B-3.2.1">Under the Mission Issuance Grant profile, the Mission Authority
+        <li class="normal" id="appendix-B-3.4">
+          <p id="appendix-B-3.4.1">Under the Mission Issuance Grant profile, the Mission Authority
 Server's committed grant minting is a counted derivation; redemption
 and refresh at a consuming Authorization Server are not, and the
 limit does not cap the tokens they issue; the approval rendering
-states that bound (#963).<a href="#appendix-B-3.2.1" class="pilcrow">¶</a></p>
+states that bound (#963).<a href="#appendix-B-3.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
