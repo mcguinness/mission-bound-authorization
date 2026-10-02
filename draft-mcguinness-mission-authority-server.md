@@ -46,6 +46,7 @@ normative:
     date: 2026
   RFC8414:
   RFC9068:
+  RFC9396:
   RFC9325:
   RFC9728:
   I-D.draft-mcguinness-oauth-mission:
@@ -554,8 +555,8 @@ map to this endpoint's error codes ({{submission-errors}}):
 
 The request body MAY additionally carry an `authorization_details`
 member: the client's authority proposal, an array of
-`authorization_details` objects. This member is this binding's
-proposal carriage, replacing the issuance profile's PAR-only
+`authorization_details` objects {{RFC9396}}. This member is this
+binding's proposal carriage, replacing the issuance profile's PAR-only
 carriage rule; that profile's validation, derivation, recording, and
 hashing semantics apply unchanged
 ({{I-D.draft-mcguinness-oauth-mission}}). It is a proposal, never
