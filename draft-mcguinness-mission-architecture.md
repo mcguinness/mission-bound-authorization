@@ -1295,10 +1295,15 @@ speed within a ceiling a human consented to (the `template`,
 companion profiles define on the OAuth binding's extension point,
 {{invariants}}). Policy approves
 the instance because a human approved the policy or the template, with
-`policy_version` keeping that chain re-checkable. A model's generated
-judgment is never the sole authority for granting or widening: a
-generated approver reading attacker-influenced proposals is itself an
-injection surface. The high-consequence classes stay on a fresh human
+`policy_version` keeping that chain re-checkable. Derivation fixes the
+authority, the adjudicator (a human or such a policy) decides
+activation, and a human is accountable. A model's judgment, over risk
+signals or enterprise context, enters adjudication only as a recorded
+input to the policy: it can refuse or narrow, never grant or widen,
+and no adjudicator gates on the Intent's prose members
+({{I-D.draft-mcguinness-oauth-mission}}). A generated approver
+reading attacker-influenced proposals is itself an injection surface.
+The high-consequence classes stay on a fresh human
 decision, per the progressive profile's prohibited set
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}).
 
