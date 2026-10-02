@@ -147,37 +147,40 @@ Server.
 # Introduction
 
 Mission-Bound Authorization for OAuth 2.0
-{{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile") binds issued authority to a durable, human-approved
-Mission, with the Authorization Server (AS) as the Mission Issuer.
-The Mission Authority Server (MAS,
-{{I-D.draft-mcguinness-mission-authority-server}}) hosts the same
-object without touching the AS: it validates Mission Intents, runs
-approval, records Missions, and operates the lifecycle, while tokens
-remain ordinary and a Policy Decision Point joins them to Missions at
-the point of use. Between those two integrations there was none: an
-estate either changed its AS completely or not at all.
+{{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile") binds
+issued authority to a durable, human-approved Mission, with the
+Authorization Server (AS) as the Mission Issuer. The Mission Authority
+Server (MAS, {{I-D.draft-mcguinness-mission-authority-server}}) hosts
+the same Mission without changing the estate's Authorization Servers:
+it validates Mission Intents, runs approval, records Missions, and
+operates their lifecycle. The tokens those Authorization Servers issue
+remain ordinary. They do not carry the Mission, and their issuance
+and refresh do not depend on Mission state; enforcement can relate
+them to a Mission only at the point of use, through the Mission Join.
 
-This document defines the middle integration, the **issuance join**.
-The MAS remains the Mission Issuer; the estate's AS consumes the
-approved Mission at its token endpoint. The carrier is the **Mission
-Issuance Grant**, a short-lived assertion the MAS mints for an
-active Mission and the AS redeems under the JWT authorization grant
-{{RFC7523}} to issue tokens that carry the `mission` claim and are
-bounded by the Mission's derived authority. Because every grant is
-minted against current Mission state, and both redemption and refresh
-are gated on that state and on the Mission's current effective
-authority, the possession-independent kill switch returns to the
-issuance gate, the property the MAS-only mode structurally lacks.
+This specification defines the **issuance join**, in which the MAS
+remains the Mission Issuer and an estate's AS issues Mission-bound
+tokens. The carrier is the **Mission Issuance Grant**, a JWT the MAS
+issues for an active Mission and the client presents to the AS as a
+JWT authorization grant {{RFC7523}}. RFC 7523 defines how a client
+presents a JWT as an authorization grant and how the AS validates it.
+This profile defines what the grant contains, how the MAS issues it,
+what the AS issues in return, and how the AS keeps issuance and
+refresh bounded by the Mission's current state and authority.
 
-The Authorization Server's obligations are deliberately small:
-validate the grant, mint within its bounds, gate issuance and refresh
-on Mission state and current effective authority. It implements none
-of the issuance profile's intake, approval ceremony,
-derivation, record, or lifecycle surfaces; those stay at the MAS.
-The integration ladder is then: record-only governance, the runtime
-join, the issuance join, and native Mission-awareness, each adopted
-where its cost is warranted
+Every grant is issued against current Mission state, so a revoked
+Mission receives no new grants. An AS with a Mission-state
+integration ({{conventions}}) also checks the Mission at redemption
+and at every refresh; one without issues no refresh tokens, so its
+tokens end with their own short lifetime. Either way, every path to
+new tokens passes a Mission-state check: the issuance-gate kill switch
+that a MAS alone does not provide
 ({{I-D.draft-mcguinness-mission-authority-server}}).
+
+The AS implements none of the issuance profile's intake, approval
+ceremony, derivation, record, or lifecycle surfaces; those stay at the
+MAS. A deployment can adopt the issuance join at some Authorization
+Servers and keep the Mission Join at others ({{relationships}}).
 
 # Conventions and Terminology {#conventions}
 
