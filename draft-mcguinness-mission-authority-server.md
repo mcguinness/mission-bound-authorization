@@ -144,7 +144,6 @@ informative:
   RFC8126:
   RFC8693:
   RFC9449:
-  RFC9635:
   I-D.draft-mcguinness-mission-harness:
     title: "Mission-Aware Agent Harnesses"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html
@@ -1258,25 +1257,29 @@ mapping tables that every PDP operates and keeps correct. This section
 defines an OPTIONAL upgrade from mapping-table equality to a
 credential-bound proof: the MAS verifies the join centrally and mints
 a signed assertion of it, so the PDP verifies one signature and one
-token binding instead of operating a mapping table. A MAS that
-supports the upgrade publishes its join-assertion endpoint as
-`mission_join_assertion_endpoint` ({{discovery}}). The endpoint MUST
-meet the TLS and caller-authentication requirements of the mission
-submission endpoint ({{mission-submission}}), and accepts the
+token binding instead of operating a mapping table.
+
+A MAS that supports the upgrade publishes its join-assertion endpoint
+as `mission_join_assertion_endpoint` ({{discovery}}). The endpoint
+MUST meet the TLS and caller-authentication requirements of the
+mission submission endpoint ({{mission-submission}}). It accepts the
 authentication methods and client-assertion algorithms advertised in
 `mission_submission_endpoint_auth_methods_supported` and
-`mission_submission_endpoint_auth_signing_alg_values_supported`. A
-client assertion's `aud` and a caller-authentication access
-token's audience MUST name the join-assertion endpoint. For
-access-token authentication, the MAS publishes Protected Resource
+`mission_submission_endpoint_auth_signing_alg_values_supported`.
+
+A client assertion's `aud` claim and a caller-authentication access
+token's audience MUST name the join-assertion endpoint.
+
+For access-token authentication, the MAS publishes Protected Resource
 Metadata {{RFC9728}} for this endpoint, identifying its resource,
 required scope, and accepted sender constraints. That caller token is
-distinct from the acting `access_token` the request body carries
+distinct from the acting `access_token` that the request body carries
 ({{join-assertion-request}}), the credential whose join is asserted.
 
 ## Assertion Request {#join-assertion-request}
 
-The PEP, or the client acting for it, POSTs a JSON object:
+The PEP, or the client acting for it, sends a POST request whose body
+is a JSON object with the following members:
 
 `mission_id`:
 : REQUIRED. A string. The Mission the join is asserted against; its
@@ -1291,7 +1294,7 @@ The PEP, or the client acting for it, POSTs a JSON object:
   token's ASCII bytes. This is a member-named digest construction
   outside the default prefixed form: the member name fixes the
   algorithm, and a successor algorithm enters as a new member, never
-  by reinterpreting this one. For the same token it equals the `ath`
+  by reinterpreting this one. For the same token, it equals the `ath`
   value of a DPoP proof ({{Section 4.2 of RFC9449}}).
 
 `token_jkt`:
@@ -1301,36 +1304,42 @@ The PEP, or the client acting for it, POSTs a JSON object:
 The caller presents `access_token`, or `token_sha256` together with
 `token_jkt`. The digest pair keeps the credential itself off this
 wire, but it is usable only where the deployment's introspection
-surface can resolve a token by digest; `access_token` is the
+surface can resolve a token by digest. `access_token` is the
 interoperable form.
 
 The acting token MUST be sender-constrained. The MAS MUST NOT mint an
 assertion for a token without a `cnf` key: such a token gives the
 assertion nothing to bind.
 
-The MAS verifies the join centrally:
+The MAS verifies the join centrally, as follows:
 
-1. It establishes the acting token's validity, subject, and client.
-   Where the AS offers token introspection {{RFC7662}}, the MAS
-   introspects the token under introspection credentials it holds
-   there, and a token the AS reports inactive fails the request. Where
-   the AS offers no third-party introspection but issues JWT access
-   tokens, the MAS MAY instead validate the token locally under RFC
-   9068 {{RFC9068}} semantics, resolving the AS's signing keys from its
-   published metadata and taking the subject and client from the
-   validated claims; a token that fails signature, `exp`, or `aud`
-   validation fails the request. An opaque token that no introspection
-   surface will resolve cannot be verified, and the request fails.
+1. The MAS establishes the acting token's validity, subject, and
+   client:
+
+   - Where the AS offers token introspection {{RFC7662}}, the MAS
+     introspects the token under introspection credentials it holds
+     there. A token the AS reports inactive fails the request.
+   - Where the AS offers no third-party introspection but issues JWT
+     access tokens, the MAS MAY instead validate the token locally
+     under the semantics of {{RFC9068}}, resolving the AS's signing
+     keys from its published metadata and taking the subject and
+     client from the validated claims. A token that fails signature,
+     `exp`, or `aud` validation fails the request.
+   - An opaque token that no introspection surface will resolve
+     cannot be verified, and the request fails.
+
    Calling the AS is permitted in MAS mode; changing it is not.
-2. It verifies the subject and client joins of {{mission-join}}
+
+2. The MAS verifies the subject and client joins of {{mission-join}}
    against the introspection response or the validated token claims,
    under its own documented account and client mappings and delegate
    policy.
 
-A token that does not join is refused with the `join_failed` error
-(HTTP 403), in the error format of {{submission-errors}}; like
-`conflict`, it extends that section's error code set. An unknown
-or not-visible `mission_id` returns `not_found`, preserving the
+If the acting token does not join, the MAS rejects the request with
+the `join_failed` error code (HTTP 403), in the error format of
+{{submission-errors}}. Like `conflict`, `join_failed` extends that
+section's error code set. If the `mission_id` is unknown or not
+visible, the MAS returns the `not_found` error code, preserving the
 anti-oracle property.
 
 Visibility on this endpoint is bounded: a Mission is visible to its
@@ -1339,34 +1348,34 @@ for the Mission's enforcement scope. Any other caller MUST receive
 `not_found`, so the `join_failed` (403) and `not_found` (404) split
 never acts as a mapping oracle for callers outside that set.
 
-Assertion lifetime is capped by the token's, so short token lifetimes
-put minting on the rotation path: each rotation needs a fresh
-assertion and its introspection call, per Mission and per workload. A
-deployment amortizes deliberately: it sizes agent token lifetimes to
-the runtime layer's revocation cutoff rather than treating expiry as
-the kill switch (the token-lifetime trade of
+An assertion's lifetime is capped by the acting token's, so with
+short token lifetimes, minting is on the token-rotation path: each
+rotation needs a fresh assertion and its introspection call, per
+Mission and per workload. A deployment sizes agent token lifetimes to
+the runtime layer's revocation cutoff rather than treating token
+expiry as the revocation mechanism (the token-lifetime trade of
 {{I-D.draft-mcguinness-mission-runtime}}). The MAS MAY reuse an
 introspection result across mintings of the same token within the
 deployment's staleness bound, so re-minting for an unchanged token
 does not repeat the AS round trip.
 
-That same position makes minting a denial-of-service surface: it is a
-hot, per-action-adjacent path, invoked on every rotation for every
-Mission and workload the MAS serves. The MAS MUST rate-limit
-assertion requests per caller. The MAS SHOULD serve repeated requests
-for the same (token digest, audience) pair from cache within the
-assertion's lifetime, so a burst of re-mints for an unchanged token
-costs one evaluation rather than many.
+Minting is a high-frequency path, invoked on every rotation for every
+Mission and workload the MAS serves, and is therefore a
+denial-of-service surface. The MAS MUST rate-limit assertion requests
+per caller. The MAS SHOULD serve repeated requests for the same
+(token digest, audience) pair from cache within the assertion's
+lifetime, so a burst of re-mints for an unchanged token costs one
+evaluation rather than many.
 
 ## The Assertion {#join-assertion-artifact}
 
-On success the MAS mints a Mission Join Assertion: a signed JWT
-{{RFC7519}} whose protected header carries the `typ`
-`mission-join+jwt` and a `kid` resolvable in the MAS's `jwks_uri`;
-exact validation of that `typ`, with mutually exclusive validation
-rules for the artifact profiles, implements the substitution defense
-of {{RFC8725}}, Sections 3.11 and 3.12. Its
-claims:
+On success, the MAS mints a Mission Join Assertion, a signed JWT
+{{RFC7519}}. Its protected header carries the `typ` header parameter
+with the value `mission-join+jwt` and a `kid` header parameter
+resolvable in the MAS's `jwks_uri`. Exact validation of that `typ`,
+with mutually exclusive validation rules for the artifact profiles,
+implements the substitution defense of Sections 3.11 and 3.12 of
+{{RFC8725}}. The assertion contains the following claims:
 
 `iss`:
 : REQUIRED. The MAS's issuer URL.
@@ -1374,8 +1383,8 @@ claims:
 `mission`:
 : REQUIRED. An object containing `id` and `issuer`
   ({{I-D.draft-mcguinness-oauth-mission}}). The MAS MAY additionally
-  include `authority_hash` as an audit anchor; where included, PDP
-  Consumption's cross-check applies to it too
+  include `authority_hash` as an audit anchor; where it is included,
+  the PDP Consumption cross-check applies to it too
   ({{join-assertion-pdp}}). This object MUST NOT carry
   `approval_context_commitment`: the Approval Context Commitment
   profile fixes this descriptor as a must-not-carry site alongside the
@@ -1395,9 +1404,9 @@ claims:
   lifetime.
 
 `aud`:
-: RECOMMENDED. The PDP or PDPs the assertion is minted for; audience
-  scoping prevents replay of an assertion to a consumer it was not
-  minted for.
+: RECOMMENDED. The PDP or PDPs for which the assertion is minted.
+  Audience scoping prevents replay of an assertion to a consumer it
+  was not minted for.
 
 `mapping_version`:
 : OPTIONAL. A string. The mapping contract version
@@ -1406,28 +1415,38 @@ claims:
   contract, so each join is attributable to the mapping that
   produced it.
 
-The assertion carries no instance identifier. Where the acting token is
-sender-constrained to a key unique to the instance
+The assertion carries no instance identifier. Where the acting token
+is sender-constrained to a key unique to the instance
 ({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 7.3), the
 `jkt` binding names one runtime instance, not any holder of a
 client-shared key, so the assertion's token binding is materially
-stronger; an instance-bound join on this path takes the instance only
+stronger. An instance-bound join on this path takes the instance only
 from Instance Context whose association with the presenter has been
-established ({{mission-join}}); the token digest and `jkt` alone do not
-establish it.
+established ({{mission-join}}). The token digest and `jkt` alone do
+not establish that association.
 
 The endpoint returns HTTP 200 with a JSON object whose `assertion`
-member carries the JWT. Each minting is a join evidence event: the MAS
-records the Mission reference, the token digest and thumbprint, the
-authenticated caller, the mapping version where one is published
-({{mapping-contract}}), the token's Instance Context where the MAS
-validated it as a Context Consumer
-({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 7.5), and
-the validity window, retained for the audit horizon. Context for which
-the MAS has established only instance participation is recorded as
-participation, not as proof of which instance presented the credential.
+member carries the JWT.
 
-Example claims:
+Each minting is a join evidence event. The MAS records the following,
+retained for the audit horizon:
+
+- the Mission reference;
+- the token digest and thumbprint;
+- the authenticated caller;
+- the mapping version, where one is published ({{mapping-contract}});
+- the token's Instance Context, where the MAS validated it as a
+  Context Consumer
+  ({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 7.5);
+  and
+- the validity window.
+
+Context for which the MAS has established only instance participation
+is recorded as participation, not as proof of which instance presented
+the credential.
+
+The following is an example of the claims of a Mission Join
+Assertion:
 
 ~~~ json
 {
@@ -1449,11 +1468,11 @@ Example claims:
 
 ## PDP Consumption {#join-assertion-pdp}
 
-A PDP presented with a Join Assertion verifies, in place of the
-mapping checks of rules 3 and 4 of {{join-rules}}:
+A PDP presented with a Join Assertion verifies the following, in
+place of the mapping checks of rules 3 and 4 of {{join-rules}}:
 
-- the signature, under a key from the MAS's `jwks_uri`, and the
-  `mission-join+jwt` header `typ`;
+- the signature, under a key from the MAS's `jwks_uri`, and the `typ`
+  header parameter value `mission-join+jwt`;
 - that `iss` and the `mission` claim match the referenced Mission's
   `issuer` and `id`; when the assertion's `mission` also carries
   `authority_hash`, that it matches the referenced Mission's
@@ -1467,54 +1486,51 @@ at the MAS under the runtime profile's freshness rules, denies with
 `mission_mismatch` when any check above fails, and draws authority
 from the Mission.
 
-For an instance-bound join, the PDP also applies {{mission-join}}'s
-instance mapping to the validated presenter context supplied by the
+For an instance-bound join, the PDP also applies the instance mapping
+of {{mission-join}} to the validated presenter context supplied by the
 PEP. The Join Assertion replaces only the subject and client mapping
-checks; its signature, token digest, and key thumbprint cannot replace
+checks. Its signature, token digest, and key thumbprint cannot replace
 the instance check or satisfy a missing required instance association.
 
 For the high-consequence action classes
 ({{I-D.draft-mcguinness-mission-runtime}}) in MAS mode, the
 Enterprise profile requires Mission-bound issuance for the acting
-credential ({{enterprise-profile}}); a Join Assertion strengthens
-every joined path outside those classes and remains required there
-under that profile. The mapping join of {{mission-join}} remains
-the conformance floor: a deployment without the endpoint still joins,
-and a PDP MUST NOT treat possession of an assertion as authority,
-per the family rule that references and binding proofs grant nothing.
+credential ({{enterprise-profile}}). A Join Assertion strengthens
+every joined path outside those classes, and that profile requires
+one on those paths.
+
+The mapping join of {{mission-join}} remains the conformance floor: a
+deployment without the endpoint still joins, and a PDP MUST NOT treat
+possession of an assertion as authority, per the family rule that
+references and binding proofs grant nothing.
 
 # Mission Expansion and Child Creation {#native-surfaces}
 
 Mission Expansion ({{I-D.draft-mcguinness-oauth-mission-expansion}})
 and Mission Child Delegation
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) each rest on
-one abstract requirement, stated normatively by each of those profiles:
-that the requester prove possession of the predecessor or parent
-Mission's authority through a sender-constrained proof rather than a
-reusable bearer refresh credential. Those profiles bind that
-requirement on the OAuth wire to an {{RFC8693}} token exchange whose
-`subject_token` is the predecessor or parent Mission-bound access token,
-with possession proven against that token's own confirmation key. A MAS
-issues no tokens, so that token-exchange binding has no carrier here.
-This section defines the peer MAS binding of the same requirement, an
-authenticated-client submission on the mission submission endpoint, and
-names it as the other binding of that requirement without restating the
-requirement itself.
+one abstract requirement, stated normatively by each of those
+profiles: that the requester prove possession of the predecessor or
+parent Mission's authority through a sender-constrained proof rather
+than a reusable bearer refresh credential. On the OAuth wire, those
+profiles bind that requirement to an {{RFC8693}} token exchange whose
+`subject_token` is the predecessor or parent Mission-bound access
+token. A MAS issues no tokens, so that binding has no carrier here.
 
-This section defines the MAS-native wire for both operations: carriage
-on the mission submission endpoint ({{native-carriage}}) and the
-authenticated-client binding in place of the token-exchange possession
-proof ({{native-binding}}). It defines carriage and binding only; every
-mechanism (supersession, reconciliation, lineage, strict subset,
-fan-out, cascade, and the closed code sets) remains owned by its profile
-and applies here by reference ({{native-expansion}}, {{native-child}}).
-The capability is OPTIONAL ({{conformance}}).
+This section defines only the peer MAS binding: carriage on the
+mission submission endpoint ({{native-carriage}}) and an
+authenticated-client binding in place of the token-exchange
+possession proof ({{native-binding}}). Every mechanism (supersession,
+reconciliation, lineage, strict subset, fan-out, cascade, and the
+closed code sets) remains owned by its profile and applies here by
+reference ({{native-expansion}}, {{native-child}}). The capability is
+OPTIONAL ({{conformance}}).
 
 ## Submission Carriage {#native-carriage}
 
 The mission submission endpoint carries both operations as intent
-submissions ({{intent-submission}}) with additional top-level members
-of the request body:
+submissions ({{intent-submission}}) with the following additional
+top-level members of the request body:
 
 `predecessor`:
 : A string. The `mission_id` of the predecessor Mission this
@@ -1531,70 +1547,70 @@ of the request body:
   `child_actor` together marks the submission as a child-creation
   request.
 
-These are submission members, not Mission Intent members: a MAS that
-implements this capability MUST remove them before applying the
-OAuth binding's Intent validation, and the remainder of the body
-is the Mission Intent Submission envelope, validated unchanged
-({{intent-submission}}). On a
-MAS that does not implement this capability they are undefined
-top-level members and the submission is refused with
-`invalid_mission_intent`, the correct refusal for an unsupported
-operation.
+These members are submission members, not Mission Intent members. A
+MAS that implements this capability MUST remove them before applying
+the OAuth binding's Intent validation; the remainder of the body is
+the Mission Intent Submission envelope, validated unchanged
+({{intent-submission}}). On a MAS that does not implement this
+capability, they are undefined top-level members, and the MAS rejects
+the submission with the `invalid_mission_intent` error code, the
+correct refusal for an unsupported operation.
 
-A submission carrying both `predecessor` and either child member MUST
-be refused with `invalid_mission_intent`: the operations do not
-combine. A submission carrying `parent` without `child_actor`, or
-`child_actor` without `parent`, MUST be refused the same way.
+If a submission carries both `predecessor` and either child member,
+the MAS MUST reject it with the `invalid_mission_intent` error code:
+the operations do not combine. If a submission carries `parent`
+without `child_actor`, or `child_actor` without `parent`, the MAS
+MUST reject it with the same error code.
 
-The OAuth wire's token-exchange possession proof, the predecessor or
-parent Mission-bound access token presented as `subject_token`, does
-not exist on this surface; the binding of {{native-binding}} replaces
-it.
+The referenced profiles' OAuth error outcomes map onto this
+endpoint's error surface as the OAuth binding's outcomes do
+({{intent-submission}}): `invalid_request` outcomes map to
+`invalid_mission_intent`, and authority-derivation failures map to
+`invalid_authority`. Two rules cover the outcomes those profiles
+express as `invalid_grant`:
 
-The referenced profiles' OAuth error outcomes map onto this endpoint's
-error surface as the OAuth binding's do ({{intent-submission}}):
-`invalid_request` outcomes map to `invalid_mission_intent`, and
-authority-derivation failures to `invalid_authority`. Two rules cover
-the outcomes those profiles express as `invalid_grant`:
-
-- A `predecessor` or `parent` the binding does not resolve, whether
-  the Mission does not exist or is recorded under another client, MUST
-  be refused with `not_found`, with a response identical in both
-  cases, preserving the anti-oracle property of {{submission-status}}.
-- A reference the binding resolves whose state or serialization
-  refuses the operation (the expansion profile's predecessor-active
-  and reconciliation rules; the child-delegation profile's
-  parent-active rule) MUST be refused with `conflict`, returned with
-  HTTP 409. `conflict` extends the error code set of
-  {{submission-errors}} and is used only by this section's operations.
+- If the binding does not resolve a `predecessor` or `parent`,
+  whether the Mission does not exist or is recorded under another
+  client, the MAS MUST reject the submission with the `not_found`
+  error code and a response identical in both cases, preserving the
+  anti-oracle property of {{submission-status}}.
+- If the binding resolves the reference but its state or
+  serialization refuses the operation (the expansion profile's
+  predecessor-active and reconciliation rules; the child-delegation
+  profile's parent-active rule), the MAS MUST reject the submission
+  with the `conflict` error code, returned with HTTP 409. `conflict`
+  extends the error code set of {{submission-errors}} and is used
+  only by this section's operations.
 
 The profile-defined machine-readable code rides the MAS error surface
-in the member its profile defines: a reconciliation status in
-`mission_expansion_status`
-({{I-D.draft-mcguinness-oauth-mission-expansion}}) and an adjudication
-denial reason, for expansion and child creation alike, in the shared
-`mission_denial_reason` member that profile defines
-({{I-D.draft-mcguinness-oauth-mission-expansion}},
-{{I-D.draft-mcguinness-oauth-mission-child-delegation}}), carried as
-a member of the error response body ({{submission-errors}}) or, for a
-denial at adjudication, of the `denied` submission-status response
-({{submission-status}}).
+in the member its profile defines:
+
+- A reconciliation status rides in `mission_expansion_status`
+  ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
+- An adjudication denial reason, for expansion and child creation
+  alike, rides in the shared `mission_denial_reason` member that
+  profile defines ({{I-D.draft-mcguinness-oauth-mission-expansion}},
+  {{I-D.draft-mcguinness-oauth-mission-child-delegation}}). It is
+  carried as a member of the error response body
+  ({{submission-errors}}) or, for a denial at adjudication, of the
+  `denied` submission-status response ({{submission-status}}).
 
 ## Request Binding {#native-binding}
 
-The OAuth wire resolves the predecessor or parent from the Mission-bound
-access token presented as the token exchange's `subject_token`, proving
-possession against that token's confirmation key, and treats any named
-identifier only as a cross-check. A MAS holds no such tokens, so the
-named identifier is itself the reference, and the MAS binds the request
-to it as follows:
+On the OAuth wire, the predecessor or parent is resolved from the
+Mission-bound access token presented as the token exchange's
+`subject_token`, with possession proven against that token's
+confirmation key, and any named identifier serves only as a
+cross-check. A MAS holds no such tokens, so the named identifier is
+itself the reference. The MAS binds the request to that reference as
+follows:
 
 - The MAS MUST verify that the authenticated submitting client is the
   client recorded as the predecessor Mission's `client_id` (for
   expansion) or the Parent Mission's `client_id` (for child creation).
   Both identifiers live in the MAS's own client namespace
   ({{mission-submission}}), so the comparison is ordinarily
-  byte-equality; where a deployment maps client identities it MUST
+  byte-equality. Where a deployment maps client identities, it MUST
   document the mapping, exactly as the client join requires
   ({{mission-join}}).
 - For an expansion, the MAS MUST verify at the approval event that the
@@ -1602,23 +1618,23 @@ to it as follows:
   Mission's `subject`; a successor MUST NOT be created for a different
   Subject.
 
-This is an authentication-based binding, not a possession-based one:
-it proves the requester is the same registered client the predecessor
-or parent was recorded for, not that it holds and can prove possession
-of that Mission's access token. The delta from the OAuth wire is
-exactly that: a party able to authenticate as the registered client can
-request these operations for any of that client's Missions, where the
-token-exchange possession proof would limit it to the Missions whose
-Mission-bound access token it holds and can prove control of
-({{sec-native-binding}}).
+This binding is authentication-based, not possession-based. It proves
+that the requester is the same registered client for which the
+predecessor or parent was recorded, not that the requester holds and
+can prove possession of that Mission's access token. The difference
+from the OAuth wire is exactly this: a party able to authenticate as
+the registered client can request these operations for any of that
+client's Missions, whereas the token-exchange possession proof would
+limit it to the Missions whose Mission-bound access token it holds
+and can prove control of ({{sec-native-binding}}).
 
 Where the deployment authenticates client instances
-({{I-D.draft-mcguinness-oauth-client-instance-id}}), the MAS SHOULD bind
-at instance granularity rather than at the bare `client_id`, and a
-Mission Join Assertion for the predecessor or parent
-({{join-assertion}}), presented with the submission, strengthens the
-proof to a named runtime instance holding a sender-constrained
-credential that verifiably joins to that Mission.
+({{I-D.draft-mcguinness-oauth-client-instance-id}}), the MAS SHOULD
+bind at instance granularity rather than at the bare `client_id`. In
+such a deployment, a Mission Join Assertion for the predecessor or
+parent ({{join-assertion}}), presented with the submission,
+strengthens the proof to a named runtime instance holding a
+sender-constrained credential that verifiably joins to that Mission.
 
 ## Expansion Semantics {#native-expansion}
 
@@ -1630,7 +1646,7 @@ reference:
   submission is accepted, per that profile's predecessor-active rule.
 - **Reconciliation.** Concurrent expansions against the same
   predecessor are serialized under that profile's compare-and-set
-  reconciliation, and its closed reconciliation-status set applies: a
+  reconciliation. Its closed reconciliation-status set applies: a
   refusal at submission carries the code per {{native-carriage}}, and
   a pending submission overtaken by a concurrent expansion resolves to
   `denied` with the code in the status response.
@@ -1639,8 +1655,8 @@ reference:
   and the predecessor transitions to `superseded` with its `successor`
   member set. The `successor` and `related_to` members carry that
   profile's semantics and surface through the MAS's Mission Status
-  responses; `superseded` enters the state space the MAS reports
-  ({{lifecycle-and-state}}).
+  responses. The `superseded` state enters the state space the MAS
+  reports ({{lifecycle-and-state}}).
 - **Denial reasons.** That profile's closed denial-reason set applies;
   the code rides in `mission_denial_reason` per
   {{native-carriage}}.
@@ -1648,14 +1664,16 @@ reference:
 Approval of the successor is this document's native asynchronous
 approval event ({{mission-approval}}): fresh consent for the
 successor's derived Authority Set, with no authorization-code leg to
-re-sequence. On approval the client's poll delivers the successor's
+re-sequence. On approval, the client's poll delivers the successor's
 `mission_id` and consented authority ({{mission-reference}}). The
 successor-expiry rule and every other expansion rule that does not
-name the OAuth wire apply unchanged. Progressive authorization is out
-of scope here exactly as it is out of the expansion profile's base:
-every expansion on this surface is adjudicated by a fresh approval,
-and the policy-adjudicated variant remains the experimental
-companion's ({{I-D.draft-mcguinness-oauth-mission-progressive}}).
+name the OAuth wire apply unchanged.
+
+Progressive authorization is out of scope here, as it is out of the
+expansion profile's base: every expansion on this surface is
+adjudicated by a fresh approval. The policy-adjudicated variant
+remains with the experimental companion
+({{I-D.draft-mcguinness-oauth-mission-progressive}}).
 
 ## Child-Creation Semantics {#native-child}
 
@@ -1689,23 +1707,25 @@ reference:
   `subject_token` to resolve the parent against a cross-check, a binding
   failure is refused per {{native-carriage}}.
 
-The child client identity rules hold unchanged: the child actor is the
-Child Mission's client, recorded as its `client_id`; it authenticates
-itself to the MAS for its own submissions, status, and lifecycle
-operations; and child credentials MUST NOT transit the parent. The
-creating client learns the Child Mission's `mission_id` from its own
-submission status; `mission_id` is a reference, never a capability, so
-conveying it to the child actor moves no authority. At the point of
-use, the Mission Join ({{mission-join}}) binds the child's ordinary
-OAuth credentials to the Child Mission through the child's own
-`client_id`, never the parent's.
+The child client identity rules hold unchanged: the child actor is
+the Child Mission's client, recorded as its `client_id`; it
+authenticates itself to the MAS for its own submissions, status, and
+lifecycle operations; and child credentials MUST NOT transit the
+parent.
+
+The creating client learns the Child Mission's `mission_id` from its
+own submission status. A `mission_id` is a reference, never a
+capability, so conveying it to the child actor moves no authority. At
+the point of use, the Mission Join ({{mission-join}}) binds the
+child's ordinary OAuth credentials to the Child Mission through the
+child's own `client_id`, never the parent's.
 
 ## Expansion Example {#native-example}
 
-Mid-task, the agent behind the Q3 reconciliation Mission finds a
-$1,200 adjustment, outside its approved $500 cap. It submits an
-expansion: a Mission Intent for the broadened task whose body names
-the predecessor:
+The following example shows an expansion submission. Mid-task, the
+agent behind the Q3 reconciliation Mission finds a $1,200 adjustment,
+outside its approved $500 cap. It submits a Mission Intent for the
+broadened task whose body names the predecessor:
 
 ~~~ http-message
 POST /mas/mission/submit HTTP/1.1
@@ -1724,10 +1744,11 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 }
 ~~~
 
-The MAS authenticates the client, verifies it is the predecessor's
-recorded `client_id`, verifies the predecessor is `active`, strips
-`predecessor`, validates the remaining Submission envelope, derives
-the successor's Authority Set, and accepts:
+The MAS authenticates the client, verifies that it is the
+predecessor's recorded `client_id`, verifies that the predecessor is
+`active`, removes `predecessor`, validates the remaining Submission
+envelope, and derives the successor's Authority Set. The following
+example shows the MAS accepting the submission:
 
 ~~~ http-message
 HTTP/1.1 202 Accepted
@@ -1742,18 +1763,18 @@ Cache-Control: no-store
 ~~~
 
 Adjudication proceeds per {{mission-approval}}: the Approver consents
-to the widened cap, the MAS verifies the established Subject equals
-the predecessor's `subject`, and one atomic operation creates the
-successor `active` and supersedes the predecessor. The client's next
-poll returns `approved` with the successor's `mission_id`
+to the widened cap, the MAS verifies that the established Subject
+equals the predecessor's `subject`, and one atomic operation creates
+the successor `active` and supersedes the predecessor. The client's
+next poll returns `approved` with the successor's `mission_id`
 ({{mission-reference}}).
 
 # Mission Authority Server Metadata {#discovery}
 
 A MAS publishes a metadata document at the well-known URI {{RFC8615}}
-path `/.well-known/mission-authority-server`, registered in {{iana}}:
-a JSON object served over TLS as `application/json`. The document's
-location is constructed from the `issuer`, following the
+path `/.well-known/mission-authority-server`, registered in {{iana}}.
+The document is a JSON object served over TLS as `application/json`.
+Its location is constructed from the `issuer`, following the
 metadata-location rule of {{RFC8414}}:
 
 1. For an `issuer` with no path component, the document is served at
@@ -1764,10 +1785,10 @@ metadata-location rule of {{RFC8414}}:
    `https://host/tenant`, the document is at
    `https://host/.well-known/mission-authority-server/tenant`).
 
-Its members
-mirror the Mission suite's Authorization Server metadata members where
-applicable, so a consumer reads the same member names it would read
-from AS metadata {{RFC8414}}, resolved from this document instead:
+The document's members mirror the Mission suite's Authorization
+Server metadata members where applicable, so a consumer reads the
+same member names it would read from AS metadata {{RFC8414}},
+resolved from the MAS metadata document instead:
 
 `issuer`:
 : REQUIRED. A string. The MAS's issuer URL. It equals the `issuer` of
@@ -1849,7 +1870,7 @@ from AS metadata {{RFC8414}}, resolved from this document instead:
   issuer-signed artifacts, with the signing-key retention rules of
   {{I-D.draft-mcguinness-oauth-mission-status}}.
 
-Example:
+The following is an example of a MAS metadata document:
 
 ~~~ json
 {
@@ -1880,12 +1901,11 @@ Example:
 }
 ~~~
 
-A consumer holding a Mission reference resolves this document from the
-reference's `issuer`; whether a given `issuer` is a MAS or an OAuth AS
-is deployment configuration. The submission and lifecycle surfaces
-follow a reference-plus-continuation shape (a request yields an opaque
-reference the client continues against) that parallels the grant
-continuation pattern of GNAP {{RFC9635}}.
+A consumer holding a Mission reference resolves the MAS metadata
+document from the reference's `issuer`. Whether a given `issuer` is a
+MAS or an OAuth AS is deployment configuration. The submission and
+lifecycle surfaces follow a reference-plus-continuation shape: a
+request yields an opaque reference that the client continues against.
 
 # Limitations {#limitations}
 
