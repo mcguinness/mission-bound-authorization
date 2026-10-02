@@ -1533,7 +1533,8 @@ layout; the field is one line):
 ~~~ http-message
 POST /call HTTP/1.1
 Host: gateway.example.com
-Authorization: Bearer 2YotnFZFEjr1zCsicMWpAA
+Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
+DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 Mission-Reference: id="msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
   issuer="https://mas.example.com"
 ~~~
