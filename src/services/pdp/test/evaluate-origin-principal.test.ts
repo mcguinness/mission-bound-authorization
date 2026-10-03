@@ -62,12 +62,17 @@ const baseOpts = (extra: Partial<EvaluateOptions> = {}): EvaluateOptions => ({
   ...extra,
 });
 
+/** A `fresh` Mission state observation read at the decision instant. */
+const OBSERVED = { state: "active", mode: "fresh", freshness_at: NOW.toISOString() };
+
 const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => ({
   subject: { id: LOCAL.sub, properties: { iss: LOCAL.iss } },
   resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
   action: { name: "payments:invoice.read" },
   context: {
     mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash", subject: ORIGIN },
+    // REQUIRED under the declared pep placement (#1049 owner ruling).
+    mission_state_observation: OBSERVED,
   },
   ...over,
 });
@@ -98,7 +103,7 @@ describe("evaluateInner cross-domain Origin Principal dual-axis (#539 stage A)",
     expect(deny.context.principal_mapping).toEqual(allow.context.principal_mapping);
   });
   it("a request NOT claiming the profile (no context.mission.subject) is completely unaffected: no resolvers configured, still permits", async () => {
-    const dec = await evaluate(req({ context: { mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" } } }), baseOpts());
+    const dec = await evaluate(req({ context: { mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" }, mission_state_observation: OBSERVED } }), baseOpts());
     expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
     expect(dec.context.principal_mapping).toBeUndefined();
   });

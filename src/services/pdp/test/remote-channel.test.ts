@@ -59,7 +59,11 @@ const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => ({
   subject: { id: "alice" },
   resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
   action: { name: "payments:invoice.read" },
-  context: { mission: { id: "msn_test_1", issuer: "https://as.test" } },
+  // The observation is REQUIRED under the declared pep placement (#1049 owner ruling).
+  context: {
+    mission: { id: "msn_test_1", issuer: "https://as.test" },
+    mission_state_observation: { state: "active", mode: "fresh", freshness_at: NOW.toISOString() },
+  },
   ...over,
 });
 

@@ -810,11 +810,11 @@ async function evaluateInner(
   // on a high-consequence action class means Mission
   // state cannot be established at all, which is not weaker than state
   // established-but-stale: it MUST fail closed the same way, never pass
-  // through as if no staleness bound applied. Below the high-consequence
-  // floor the draft treats token-lifetime expiry as itself a conforming
-  // state source, so an absent PEP-supplied member there is not by itself a
-  // refusal; under `pdp` placement the PDP's own read is required at every
-  // bounded class (authzen rule 1).
+  // through as if no staleness bound applied. Under either declared
+  // placement the state input is required at every class (below); with no
+  // declared placement, the high-consequence floor still refuses an absent
+  // observation, and token-lifetime expiry is a conforming state source
+  // beneath it.
   //
   // The posture is a declaration, not a number. A class the deployment
   // declares with no active freshness requirement (the draft's Audit-only
@@ -837,6 +837,18 @@ async function evaluateInner(
       ? declaredStaleness.seconds * 1000
       : undefined;
   if (declaredStaleness.kind !== "none" && enforceableWindowMs === undefined) return deny("out_of_authority");
+  // @spec authzen#context-audience-freshness, authzen#pdp-request rule 1
+  // (#1049 owner rulings): the state input the declared placement names is
+  // present at every class that reaches a permit, whatever its freshness
+  // posture. Under `pep` placement the observation is REQUIRED; a lower
+  // class may rely on token-lifetime freshness as its state source, but
+  // that never excuses omitting the input. Under `pdp` placement the PDP
+  // "MUST establish state from its own source or deny with `stale_state`",
+  // with no class exception, `audit_only` included: no freshness window is
+  // not the same as no state.
+  const pdpPlaced = opts.stateSourcePlacement === "pdp";
+  if (opts.stateSourcePlacement === "pep" && observation === undefined) return deny("stale_state");
+  if (pdpPlaced && rfc3339Ms(opts.stateObservedAt) === undefined) return deny("stale_state");
   if (enforceableWindowMs !== undefined) {
     // @spec authzen#context-audience-freshness, runtime#state-freshness: the
     // trusted source is the enforcement scope's declared one. Under `pep`
@@ -844,7 +856,6 @@ async function evaluateInner(
     // `pdp` placement the PDP's own read is the only one relied on, and a
     // PEP-supplied observation's telemetry never counts; with no declared
     // placement, no observation establishes state.
-    const pdpPlaced = opts.stateSourcePlacement === "pdp";
     const relied = pdpPlaced
       ? opts.stateObservedAt === undefined
         ? undefined
@@ -880,13 +891,9 @@ async function evaluateInner(
       // valid-through; under `pdp` placement the PDP's own read reports none.
       acceptedObservationMs = observedAtMs;
       acceptedValidThroughMs = "validThroughMs" in relied ? relied.validThroughMs : undefined;
-    } else if (pdpPlaced || (actionClass !== undefined && HIGH_CONSEQUENCE_ACTION_CLASSES.has(actionClass))) {
-      // @spec authzen#pdp-request rule 1 (#1049 review P2-b): where state
-      // establishment is placed with the PDP, the PDP "MUST establish state
-      // from its own source or deny with `stale_state`", for every class
-      // under a bound, not only above the high-consequence floor. Under
-      // `pep` placement the floor below stands: token-lifetime freshness
-      // conforms for a class beneath it.
+    } else if (actionClass !== undefined && HIGH_CONSEQUENCE_ACTION_CLASSES.has(actionClass)) {
+      // Reached only with no declared placement: both declared placements
+      // refused a missing state input above.
       return deny("stale_state");
     }
   }

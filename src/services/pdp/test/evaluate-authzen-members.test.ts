@@ -113,6 +113,22 @@ describe("AuthZEN profile members (@spec authzen#pdp-request, authzen#context-au
       }
     });
 
+    // #1049 owner ruling: the observation is REQUIRED by placement. A lower
+    // class may rely on token-lifetime freshness as its state source, but that
+    // never excuses omitting the required state input.
+    it("a missing observation denies stale_state at every class below the high-consequence floor too, audit_only included", async () => {
+      for (const actionClass of ["consequential_write", "consequential_read", undefined, "audit_only"]) {
+        const label = actionClass ?? "no class (consequential_read)";
+        const classed = actionClass !== undefined ? { actionClass } : {};
+        const denied = await evaluate(observedRequest({ ...classed, observation: null }), options({ stateSourcePlacement: "pep" }));
+        expect(denied.decision, label).toBe(false);
+        expect(denied.context.denial_reason, label).toBe("stale_state");
+        // Control: the same request carrying the observation is permitted.
+        const permitted = await evaluate(observedRequest(classed), options({ stateSourcePlacement: "pep" }));
+        expect(permitted.decision, `${label}: ${JSON.stringify(permitted.context)}`).toBe(true);
+      }
+    });
+
     it("an observation lacking a member its mode requires, or carrying one that is malformed, denies stale_state in every mode", async () => {
       const issued = NOW.toISOString();
       const expires = new Date(NOW.getTime() + 60_000).toISOString();
@@ -366,6 +382,22 @@ describe("AuthZEN profile members (@spec authzen#pdp-request, authzen#context-au
         );
         expect(permitted.decision, `${label}: ${JSON.stringify(permitted.context)}`).toBe(true);
       }
+    });
+
+    // #1049 owner ruling: rule 1 has no class exception. A class with no
+    // active-freshness requirement still has the state-establishment one.
+    it("with no read of its own, denies stale_state for audit_only too; with a read, permits it", async () => {
+      const denied = await evaluate(
+        observedRequest({ actionClass: "audit_only", observation: null }),
+        options({ stateSourcePlacement: "pdp" }),
+      );
+      expect(denied.decision).toBe(false);
+      expect(denied.context.denial_reason).toBe("stale_state");
+      const permitted = await evaluate(
+        observedRequest({ actionClass: "audit_only", observation: null }),
+        options({ stateSourcePlacement: "pdp", stateObservedAt: NOW.toISOString() }),
+      );
+      expect(permitted.decision, JSON.stringify(permitted.context)).toBe(true);
     });
 
     it("relies on its own read, never the PEP's telemetry, and caps the permit at that read plus the class bound", async () => {

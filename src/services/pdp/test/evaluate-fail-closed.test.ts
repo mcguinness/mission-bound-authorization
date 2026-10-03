@@ -20,7 +20,8 @@
  * the deployment's published staleness bound, that the Mission is
  * `active`." Below that floor, token-lifetime expiry is itself a
  * conforming state source (@spec runtime#state-freshness, "Token-lifetime
- * freshness"), so an absent member there stays a permit.
+ * freshness"), but under a declared placement the state input is still
+ * REQUIRED (#1049 owner ruling), so an absent member denies at every class.
  *
  * GAP 3 (finding 2 of the follow-on author review): a PRESENT observation
  * was accepted on shape alone. `ageMs > bound` is the only check step 3 ran:
@@ -91,6 +92,8 @@ const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => ({
   action: { name: "payments:invoice.read", properties: { idempotency_key: freshKey() } },
   context: {
     mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
+    // REQUIRED under the declared pep placement (#1049 owner ruling).
+    mission_state_observation: { state: "active", mode: "fresh", freshness_at: NOW.toISOString() },
   },
   ...over,
 });
@@ -201,7 +204,11 @@ describe("evaluateInner fail-closed gaps (#608)", () => {
       }
     });
 
-    it("a non-high-consequence action_class with context.mission_state_observation absent -> permit (token-lifetime freshness suffices below the floor)", async () => {
+    // #1049 owner ruling: under pep placement the observation is REQUIRED at
+    // every class. Token-lifetime freshness may be a lower class's state
+    // source, but it never excuses omitting the state input, so these two
+    // cases, which asserted the old floor's permit, now deny.
+    it("a non-high-consequence action_class with context.mission_state_observation absent under pep placement -> deny stale_state (the observation is REQUIRED; token-lifetime freshness does not excuse omitting it)", async () => {
       const dec = await evaluate(
         req({
           context: {
@@ -211,12 +218,17 @@ describe("evaluateInner fail-closed gaps (#608)", () => {
         }),
         opts(view(entry)),
       );
-      expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
+      expect(dec.decision, JSON.stringify(dec.context)).toBe(false);
+      expect(dec.context.denial_reason).toBe("stale_state");
     });
 
-    it("no action_class at all, context.mission_state_observation absent -> permit (unclassified requests are unaffected)", async () => {
-      const dec = await evaluate(req(), opts(view(entry)));
-      expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
+    it("no action_class at all, context.mission_state_observation absent under pep placement -> deny stale_state (unclassified requests are not exempt)", async () => {
+      const dec = await evaluate(
+        req({ context: { mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" } } }),
+        opts(view(entry)),
+      );
+      expect(dec.decision, JSON.stringify(dec.context)).toBe(false);
+      expect(dec.context.denial_reason).toBe("stale_state");
     });
   });
 

@@ -79,6 +79,8 @@ const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => {
     action: { name: "payments:invoice.read" },
     context: {
       mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
+      // REQUIRED under the declared pep placement (#1049 owner ruling).
+      mission_state_observation: { state: "active", mode: "fresh", freshness_at: NOW.toISOString() },
     },
     ...over,
   };
@@ -191,6 +193,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
         context: {
           mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           amount: { amount: "125.00", currency: "USD" },
+          mission_state_observation: { state: "active", mode: "fresh", freshness_at: NOW.toISOString() },
         },
       }),
       opts(v),
@@ -266,6 +269,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
         context: {
           mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           amount: { amount: "900.00", currency: "USD" },
+          mission_state_observation: { state: "active", mode: "fresh", freshness_at: NOW.toISOString() },
         },
       }),
       opts(view()),
@@ -317,7 +321,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
 
   it("@spec mission#the-mission-claim, authzen#pdp-request rule 5 (#702) -- a baseline {id, issuer} context.mission (no authority_hash) permits: its absence is never itself a denial", async () => {
     const dec = await evaluate(
-      req({ context: { mission: { id: "msn_test_1", issuer: "https://as.test" } } }),
+      req({ context: { mission: { id: "msn_test_1", issuer: "https://as.test" }, mission_state_observation: { state: "active", mode: "fresh", freshness_at: NOW.toISOString() } } }),
       opts(view()),
     );
     expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
@@ -451,6 +455,7 @@ d("entry-driven action approval (@spec txn-authorization#applicability)", () => 
         context: {
           mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           parameter_digest: "sha-256:gated-op",
+          mission_state_observation: { state: "active", mode: "fresh", freshness_at: NOW.toISOString() },
           action_approval: {
             id: "apr_1",
             approved_at: NOW.toISOString(),
@@ -484,6 +489,8 @@ describe("basic gate: active predicate, non-active outcome, unrecognized-fails-c
     now: () => NOW,
     stalenessBound,
     relationForAction,
+    // The placement the base request's observation is supplied under.
+    stateSourcePlacement: "pep" as const,
   });
 
   it("active predicate true -> the gate proceeds to a decision (never the non-active outcome)", async () => {

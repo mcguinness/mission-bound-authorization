@@ -87,14 +87,17 @@ describe("classification cannot be used to evade the floor or a Resource-policy 
   it("a class declared with no active freshness requirement is evaluated with no observation window, never refused as stale", async () => {
     // @spec runtime#state-freshness — the draft's Audit-only row: "No active
     // freshness required". The remaining gates still run, so the refusal is
-    // the entry-match one and never `stale_state`.
+    // the entry-match one and never `stale_state`. The observation stays
+    // present, as the pep placement REQUIRES (#1049 owner ruling), but an
+    // hour old: no window applies to it, so its age refuses nothing.
+    const hourOld = new Date(NOW.getTime() - 3_600_000).toISOString();
     const request = reqFor("audit_only");
-    delete request.context.mission_state_observation;
+    request.context.mission_state_observation!.freshness_at = hourOld;
     const dec = await evaluate(request, opts);
     expect(dec.decision).toBe(false);
     expect(dec.context.denial_reason).toBe("out_of_authority");
     const permitted = reqFor("audit_only");
-    delete permitted.context.mission_state_observation;
+    permitted.context.mission_state_observation!.freshness_at = hourOld;
     permitted.action.name = "payments:invoice.read";
     expect((await evaluate(permitted, opts)).decision).toBe(true);
   });
