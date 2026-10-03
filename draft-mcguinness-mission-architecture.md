@@ -1614,10 +1614,10 @@ budget: consumption bounds attach to the Mission, not to any one
 instance, so a swarm of instances shares one budget
 ({{I-D.draft-mcguinness-mission-metering}}).
 
-Swarm execution is the rung before the Delegate verb's chooser: more
+Swarm execution comes before the Delegate verb's chooser: more
 attested instances of the pinned Deployment deriving under one
 Mission, with no new construct. A different principal acting inline,
-a durable sub-agent, and offline narrowing take the chooser's rungs.
+a durable sub-agent, and offline narrowing take the chooser's options.
 
 ## Project
 
@@ -2665,7 +2665,7 @@ what was never recorded present.
 The four levels are also the four reference stacks deployments take,
 each containing the previous. The stacks are expressed in the OAuth
 realization. A peer binding realizes the levels per its own document,
-and peer standing does not imply identical rungs or capabilities. The
+and peer standing does not imply identical levels or capabilities. The
 family manifest records each stack's exact membership.
 
 - **Protocol core** (Baseline Issuance): the OAuth binding alone, the
@@ -2735,17 +2735,20 @@ three:
 - action binding: does one authenticated permit cover these exact
   operation inputs?
 
-The three dimensions are independent. A native Mission-bound token
-has strong credential binding with no harness in sight; a trusted
-harness attributes work items precisely while the credential is an
-ordinary bearer token; an action-bound permit can exist over either.
-No single ladder orders them, so the family names the properties
-directly, as a vector, and a deployment claims the combination each
-path has. In the table, `mission-reference-selected` and
-`work-item-bound` answer attachment provenance;
-`credential-correlated`, `credential-mission-bound`,
-`presenter-key-bound`, and `instance-bound` answer credential binding;
-and `action-bound` answers action binding.
+The three dimensions are independent. A native Mission-bound token has
+strong credential binding with no harness in sight; a trusted harness
+attributes work items precisely while the credential is an ordinary
+bearer token; an action-bound permit can exist over either. No single
+ladder orders them, so the family names the properties directly, as a
+vector, and a deployment claims the combination each path has.
+
+As an index of related properties, the table's entries relate to the
+three dimensions as follows: `mission-reference-selected` and
+`work-item-bound` to attachment provenance; `credential-correlated`,
+`credential-mission-bound`, `presenter-key-bound`, and `instance-bound`
+to credential binding; and `action-bound` to action binding. The index
+establishes no property for any mechanism; the mechanism mapping below
+states what each mechanism establishes.
 
 | Property | Meaning | Minimum proof |
 | --- | --- | --- |
@@ -2980,7 +2983,7 @@ deployment's assurance level
   reaches a token issued before the transition.
 
 A standalone MAS path with no runtime gate gets neither.
-{{kill-switch-composition}} composes the properties by rung and
+{{kill-switch-composition}} composes the properties by level and
 binding, with what each leaves running.
 
 A deployment's incident runbook names which of these controls exist,
@@ -3000,11 +3003,11 @@ property for a class its Enforcement Scope Statement leaves
 lifecycle-gated-only, because the property requires a
 state-observable substrate per class, not per deployment
 ({{I-D.draft-mcguinness-mission-runtime}}). A row can therefore carry
-a Runtime-Enforced rung and a Baseline property together without
+a Runtime-Enforced level and a Baseline property together without
 contradiction.
 
 Each row below assumes a deployment that runs the containment profile,
-at the row's rung and under its binding. A rung and a binding alone
+at the row's level and under its binding. A level and a binding alone
 confer neither containment property: containment is an overlay a
 deployment adopts separately
 ({{I-D.draft-mcguinness-oauth-mission-containment}}). In the table,
@@ -3019,10 +3022,10 @@ grant ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) where the
 cell says so; "runtime profile" is
 {{I-D.draft-mcguinness-mission-runtime}}.
 
-| Rung | Binding | Property | Stops at commit | Runs to its own bound |
+| Level | Binding | Property | Stops at commit | Runs to its own bound |
 |---|---|---|---|---|
 | Baseline Issuance | OAuth binding, structured-authority | Baseline, a new-derivation kill ("Containment Properties") | New derivation, delegation, and cross-domain projection minted after the transition ("Derivation Gating") | Tokens already issued, to `exp`, and a consequential read under the token-lifetime default, the same bound (runtime profile); pre-transition projection grants (note 1) |
-| Baseline Issuance | Standalone MAS, no credential-carried authority | Neither; the runtime layer is the only cutoff, and it is absent at this rung | Nothing at the resource; the transition commits and is visible on the Mission Status Response and the introspection projection ("Visibility") | Every action, to the resource's own bound, if any (note 2) |
+| Baseline Issuance | Standalone MAS, no credential-carried authority | Neither; the runtime layer is the only cutoff, and it is absent at this level | Nothing at the resource; the transition commits and is visible on the Mission Status Response and the introspection projection ("Visibility") | Every action, to the resource's own bound, if any (note 2) |
 | Runtime-Enforced | Any binding, a class using a containment-aware state source within its published bound (note 3) | Runtime-Enforced for that class ("Containment Properties"); Baseline only for the classes in note 4 | The contained capability, denied at the class's next gated action once the source reflects the overlay, within the staleness bound plus the permit window plus the class's execution bound (runtime profile) | Paths no action-time gate reaches: token lifetime where issuance is gated, otherwise no bound |
 | Baseline Issuance | MAS as estate control plane, issuance join at each consuming AS | Baseline, from Derivation Gating at the Mission Issuer ("Derivation Gating") and, at a consuming AS with a Mission-state integration, from projecting each redemption and refresh through the Effective Authority Set (note 5) | New grant minting: the Mission Issuer's Derivation Gating evaluates the Effective Authority Set, so a grant minted after the transition excludes contained authority ("Derivation Gating"); and, at a consuming AS with a Mission-state integration, each redemption and refresh once its state source reflects the transition (issuance grant, "Effective Authority Set Projection") | An outstanding grant redeems once, within its 300-second lifetime, at a consuming AS without a Mission-state integration, which checks no Mission state at redemption and issues no refresh tokens; tokens already issued run to their own `exp` (issuance grant, "Redemption") |
 | Runtime-Enforced | OAuth binding with offline attenuation, a consumer whose check is active-state only (note 6) | Baseline ("Containment Properties"): a contained Mission stays `active` | New attenuation roots, which exclude contained authority ("Derivation Gating") | Roots minted before the transition, to their own lifetime (note 6) |
@@ -3034,7 +3037,7 @@ Notes:
    projection grant already redeemed before the transition runs to its
    own lifetime ({{I-D.draft-mcguinness-oauth-mission-containment}},
    Section "The Materialized-Capability Residual"). Offline attenuation
-   is not accepted at this rung (note 6).
+   is not accepted at this level (note 6).
 2. Under the standalone MAS at Baseline Issuance, every action runs to
    whatever native credential, session, or resource-local bound the
    resource enforces on its own, if any. It does so until runtime
@@ -3047,7 +3050,7 @@ Notes:
 4. Under any binding, where a class is checked only against an
    active-but-not-containment-aware source, left lifecycle-gated-only,
    or gated only by fresh derivation, it gets the Baseline property
-   only, regardless of rung ({{I-D.draft-mcguinness-mission-runtime}}).
+   only, regardless of level ({{I-D.draft-mcguinness-mission-runtime}}).
    A fresh derivation narrows what it mints and can shorten the
    residual, but it checks nothing at action time, so it carries the
    Baseline property, not the Runtime-Enforced one
@@ -4076,8 +4079,9 @@ bound profiled by `aauth-mission-expiry`.
   PS-gated modes; untitled tables get captions, and long citations
   leave table cells so the tables fit the text format; and inline
   enumerations across the document become lists. RFC 8693 is cited
-  where the delegation chooser names token exchange, and two stale uses
-  of "Completion" name the Entry Discharge companion.
+  where the delegation chooser names token exchange, two stale uses of
+  "Completion" name the Entry Discharge companion, and the assurance
+  levels are called levels throughout, never rungs.
 
 - The authority path, with no change to any profile's requirements.
   The Mission adds a figure from approval basis to action, with the
