@@ -1506,6 +1506,10 @@ Table of Contents
        "sha256": "rN2kQ4mZ7tP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2n",
        "jkt": "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs"
      },
+     "join": {
+       "client_id": "client_erp-recon-agent",
+       "disposition": "client"
+     },
      "iat": 1793606400,
      "exp": 1793608200
    }

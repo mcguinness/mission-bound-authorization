@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-03T04:40:01Z
-Source repository commit: 7b4c1158fa02643370838e8a86b2a0f5aeff36a2
+Generated: 2026-10-03T14:33:22Z
+Source repository commit: fe48a4e25a23ef0e186a81ee1614d5aa59b371d2
 Member count: 7
 
 Reading order:
@@ -15816,14 +15816,15 @@ Table of Contents
       (Section 7).
 
    For the high-consequence classes (Section 5.3) the profile goes
-   further: action-bound approval re-consents the concrete parameters
-   (Section 5.4), and mediated custody keeps the credential's sender-
-   constraint key in the enforcing component rather than the agent
-   (Section 5.6).  Those mechanisms compose into the two named claims of
-   Section 9.5, agent-compromise-resistant enforcement and trifecta
-   containment: the bar a deployment meets before representing itself as
-   resistant to a compromised or injected agent, and the High-Assurance
-   Agent level of the Mission Assurance Levels
+   further: the acting credential is sender-constrained with a verified
+   proof of possession (Section 5.6), action-bound approval re-consents
+   the concrete parameters (Section 5.4), and mediated custody keeps the
+   credential's sender-constraint key in the enforcing component rather
+   than the agent (Section 5.6).  Those mechanisms compose into the two
+   named claims of Section 9.5, agent-compromise-resistant enforcement
+   and trifecta containment: the bar a deployment meets before
+   representing itself as resistant to a compromised or injected agent,
+   and the High-Assurance Agent level of the Mission Assurance Levels
    ([I-D.draft-mcguinness-mission-architecture]).
 
 2.3.  Mission Binding Establishment
@@ -16554,6 +16555,13 @@ Table of Contents
     | fails, including       | evaluation                             |
     | sender-constraint      |                                        |
     | verification           |                                        |
+    +------------------------+----------------------------------------+
+    | A high-consequence     | Refuse                                 |
+    | action whose acting    |                                        |
+    | credential carries no  |                                        |
+    | verified sender-       |                                        |
+    | constraint binding     |                                        |
+    | (Section 5.6)          |                                        |
     +------------------------+----------------------------------------+
     | Mission governance is  | Refuse before runtime Mission          |
     | required but the       | evaluation, unless the Mission binding |
@@ -17421,6 +17429,20 @@ Table of Contents
    mediated custody, because a bearer token can be presented by whoever
    holds it, including the agent, so the mediating PEP could not be the
    sole holder of the authority.
+
+   Independently of mediation, the acting credential for an action in a
+   high-consequence class (Section 5.3) MUST be sender-constrained,
+   whether the Mission reference is credential-carried or externally
+   established (Section 2.3).  The PEP MUST NOT supply a confirmation
+   key as a decision input unless it verified the binding with a current
+   proof of possession of that key; a confirmation member alone is not a
+   verified binding.  The PDP MUST deny a high-consequence action whose
+   decision request carries no confirmation key.  The credential profile
+   defines the binding and its proof
+   ([I-D.draft-mcguinness-mission-runtime-oauth] for OAuth).  Sender-
+   constraint makes a stolen credential unusable on its own; it does not
+   protect against compromise of the bound key or of a component that
+   can use it.
 
    For an action class it mediates, a deployment SHOULD hold the sender-
    constraint private key for the Mission-bound credential in the
@@ -19894,6 +19916,13 @@ Appendix C.  Runtime Evidence Worked Examples
 Appendix D.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Credential Custody: the acting credential for a high-consequence
+      action is sender-constrained in either Mission-establishment mode.
+      The PEP supplies a confirmation key only from a binding it
+      verified with a current proof of possession, and the PDP denies a
+      high-consequence action without one.  Enforcement Invariants and
+      Failure Modes point to the rule.
 
    *  Out of Scope lists cross-PDP history composition other than
       through the deployment's evidence store or registered transparency

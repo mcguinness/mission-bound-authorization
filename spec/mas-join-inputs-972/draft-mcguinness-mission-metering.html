@@ -33,18 +33,18 @@ refuse rather than silently ignore it.
 <meta content="draft-mcguinness-mission-metering-latest" name="ietf.draft">
 <!-- Generator version information:
   xml2rfc 3.34.1
-    Python 3.14.7
-    ConfigArgParse 1.7.7
+    Python 3.14.8
+    ConfigArgParse 1.8.0
     google-i18n-address 3.1.1
     intervaltree 3.2.1
     Jinja2 3.1.6
     lxml 6.1.1
     natsort 8.4.0
-    platformdirs 4.11.10
+    platformdirs 4.12.2
     pycountry 24.6.1
     PyYAML 6.0.3
     requests 2.33.1
-    wcwidth 0.8.4
+    wcwidth 0.9.1
 -->
 <link href="draft-mcguinness-mission-metering.xml" rel="alternate" type="application/rfc+xml">
 <link href="#copyright" rel="license">
@@ -1206,6 +1206,11 @@ refuse rather than silently ignore it.<a href="#section-abstract-1" class="pilcr
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
             <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-exclusivity-and-separation-" class="internal xref">Exclusivity and Separation of Duty</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
+                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-exclusivity-across-missions" class="internal xref">Exclusivity Across Missions</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
             <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-capacity-across-missions" class="internal xref">Capacity Across Missions</a></p>
@@ -1732,7 +1737,8 @@ a string) and <code>actions</code> (<span class="bcp14">OPTIONAL</span>, an arra
 a consequential action whose resource equals <code>resource</code> and, when
 <code>actions</code> is present, whose invoked action is within it. Within a
 group, the selectors name authority the Approver consents <span class="bcp14">MUST NOT</span>
-be combined under this Mission (<a href="#exclusivity" class="auto internal xref">Section 8</a>).<a href="#section-6-2.10.1" class="pilcrow">¶</a></p>
+be combined under this Mission or any Mission derived from it,
+absent an explicitly approved relaxation (<a href="#exclusivity" class="auto internal xref">Section 8</a>).<a href="#section-6-2.10.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -1968,18 +1974,25 @@ evidence state fixes how the charge settles.<a href="#section-7.2-3" class="pilc
 is a stateful separation-of-duty rule enforced with the same
 machinery. Within an exclusivity group, the first permitted
 consequential action matching a selector latches the group to that
-selector, atomically with the permit; for the Mission's remaining
-lifetime the PDP <span class="bcp14">MUST</span> refuse a consequential action matching any
-other selector of the same group. The latch is per group and per
-Mission and is PDP-side operational state like a consumption counter
+selector, atomically with the permit. From then on the PDP <span class="bcp14">MUST</span>
+refuse a consequential action matching any other selector of the
+same group, under any Mission bound to the group, except an action
+within the scope of a relaxation recorded for that Mission
+(<a href="#exclusivity-across-missions" class="auto internal xref">Section 8.1</a>). The latch is per group, not per
+Mission, and is PDP-side operational state like a consumption counter
 (<a href="#metering" class="auto internal xref">Section 7</a>).<a href="#section-8-1" class="pilcrow">¶</a></p>
 <p id="section-8-2">The latch tracks execution, not permit issuance: a permit whose
 action is affirmatively not executed never combined the group's
-authority, so when Execution Evidence reports that outcome within the
-strongly consistent latch domain the PDP releases the latch,
-restoring monotonic narrowing rather than breaking it. Absent that
-affirmative non-execution the latch does not unlatch: narrowing by
-exercise is monotonic, like every other narrowing in the family.<a href="#section-8-2" class="pilcrow">¶</a></p>
+authority. The PDP releases the latch only when Execution Evidence,
+within the strongly consistent latch domain, reports affirmative
+non-execution for every permitted action that matched the latched
+selector under any Mission bound to the group. One action's
+non-execution never releases a group another action exercised, and an
+outstanding or indeterminate action keeps the latch. Absent that, the
+latch does not unlatch: narrowing by exercise is monotonic, like every
+other narrowing in the family. This settlement release is distinct
+from a relaxation (<a href="#exclusivity-across-missions" class="auto internal xref">Section 8.1</a>), which never
+unlatches the group.<a href="#section-8-2" class="pilcrow">¶</a></p>
 <p id="section-8-3">The latch is exempt from the Bounded-consistency enforcement profile
 of <a href="#topology" class="auto internal xref">Section 7.1</a>. A counter degrades gracefully under a per-PDP
 sub-budget or a reconciliation window; a separation-of-duty rule violated once is violated
@@ -1988,24 +2001,31 @@ selectors within the window. Therefore:<a href="#section-8-3" class="pilcrow">¶
 <ul class="normal">
 <li class="normal" id="section-8-4.1">
           <p id="section-8-4.1.1">An exclusivity group <span class="bcp14">MUST</span> be enforced under the Exact enforcement
-profile of <a href="#topology" class="auto internal xref">Section 7.1</a>, in a single strongly consistent
-per-Mission latch domain (the runtime profile's
-Mission-sharding guidance makes the Mission the consistency unit,
-<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-8-4.1.1" class="pilcrow">¶</a></p>
+profile of <a href="#topology" class="auto internal xref">Section 7.1</a>, in a single strongly consistent latch
+domain that spans every Mission bound to the group. The runtime
+profile's Mission-sharding guidance does not partition it
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-8-4.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-4.2">
-          <p id="section-8-4.2.1">The Bounded-consistency enforcement profile <span class="bcp14">MUST NOT</span> be applied to
-<code>exclusive</code>.<a href="#section-8-4.2.1" class="pilcrow">¶</a></p>
+          <p id="section-8-4.2.1">A group <span class="bcp14">MUST NOT</span> be divided into independently enforced allocations
+across Missions or PDPs, as a consumption bound may be: opposite
+branches never receive competing permits.<a href="#section-8-4.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-4.3">
-          <p id="section-8-4.3.1">The deployment <span class="bcp14">MUST</span> name the latch domain in its Enforcement Scope
-Statement.<a href="#section-8-4.3.1" class="pilcrow">¶</a></p>
+          <p id="section-8-4.3.1">The Bounded-consistency enforcement profile <span class="bcp14">MUST NOT</span> be applied to
+<code>exclusive</code>.<a href="#section-8-4.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-4.4">
+          <p id="section-8-4.4.1">The deployment <span class="bcp14">MUST</span> name the latch domain in its Enforcement Scope
+Statement.<a href="#section-8-4.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-8-5">Exclusivity turns the quarantine deployment pattern
 (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>) into consented,
 enforceable structure: an Approver can approve a Mission that may
-read a sensitive store or communicate externally, but never both.
+read a sensitive store or communicate externally, but never both
+without an explicitly approved relaxation
+(<a href="#exclusivity-across-missions" class="auto internal xref">Section 8.1</a>).
 The groups are consented at the approval event, committed by
 <code>intent_hash</code> with the other Mission Intent members this document
 defines, and rendered in the consent disclosure (<a href="#consent" class="auto internal xref">Section 6.1</a> applies
@@ -2017,6 +2037,79 @@ under the AuthZEN profile's coordinated-extension conventions
 <code>denial_reason</code> in Decision Evidence. A PDP that cannot establish a
 group's latch state fails closed for the actions the group covers,
 per the runtime profile's availability posture.<a href="#section-8-6" class="pilcrow">¶</a></p>
+<div id="exclusivity-across-missions">
+<section id="section-8.1">
+        <h3 id="name-exclusivity-across-missions">
+<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-exclusivity-across-missions" class="section-name selfRef">Exclusivity Across Missions</a>
+        </h3>
+<p id="section-8.1-1">An exclusivity group binds the delegation it is approved for, as a
+consumption bound does (<a href="#capacity-across-missions" class="auto internal xref">Section 9</a>), but it cannot
+be divided: a group is one restriction with one live latch state,
+never a set of independent copies.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8.1-2.1">
+            <p id="section-8.1-2.1.1"><strong>Shared binding.</strong> A group has a stable identity, fixed by the
+Mission whose approval created it. Every Mission derived from a
+Mission bound to the group is bound to it as well: Child Missions
+and their descendants, Expansion successors, and Child Delegation
+carryover replacements. A derived Mission is bound to the group's
+authoritative latch state, not to a snapshot of it: two children
+created while the group is unlatched share it, so the first
+matching action under either latches one selector for both. A
+derived Mission whose authority matches only one selector is still
+bound. Renaming, reordering, splitting, or omitting a group in a
+derived Intent does not create a new group; a group a derived Intent
+adds is an additional restriction and never replaces an inherited
+one.<a href="#section-8.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.1-2.2">
+            <p id="section-8.1-2.2.1"><strong>Atomic establishment.</strong> The Mission Issuer <span class="bcp14">MUST</span> establish a
+derived Mission's binding to every inherited group before that
+Mission can issue usable authority: at child creation, and at
+successor activation in the same atomic step as the expansion
+profile's activation check
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>, Section
+"Concurrent Expansion Reconciliation"), including a group that
+latched while the successor's approval was pending. A Mission
+Issuer that cannot establish and consistently enforce the binding
+<span class="bcp14">MUST</span> refuse the creation or activation.<a href="#section-8.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.1-2.3">
+            <p id="section-8.1-2.3.1"><strong>Retention.</strong> A latch persists while any Mission bound to the group
+holds usable authority, beyond the lifetime of the Mission whose
+approval created the group.<a href="#section-8.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.1-2.4">
+            <p id="section-8.1-2.4.1"><strong>Relaxation.</strong> An approval does not undo an action already
+executed, and the latch remains. What a relaxation changes is
+enforcement: an Approver authorized to relax the originating group
+may explicitly approve a relaxation scoped to named Missions or
+branches and to named authority, and the PDP then permits that
+authority under those Missions despite the latch. The relaxation's
+consent disclosure <span class="bcp14">MUST</span> name the group and its latched selector,
+the relevant execution history and any unresolved permits, the
+additional authority the relaxation enables, and the Missions or
+branches it affects. The relaxation is recorded for those Missions or branches
+only; the historical latch remains, and every other Mission bound
+to the group stays restricted. An ordinary approval of a child, an
+approval of unrelated authority, a ceiling renewal, or an approval of
+only part of the affected authority relaxes the group for nothing it
+does not name.<a href="#section-8.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.1-2.5">
+            <p id="section-8.1-2.5.1"><strong>Template instances.</strong> A Mission dispatched from a Mission
+Template (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-template" class="cite xref">I-D.draft-mcguinness-oauth-mission-template</a>]</span>) is a
+separately scoped standing-consent instance: its groups bind that
+instance and the Missions derived from it, not sibling instances.
+The template's consent rendering <span class="bcp14">MUST</span> state that the exclusion
+holds per instance.<a href="#section-8.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-8.1-3">The consent promise is therefore "never both without an explicitly
+approved relaxation", across the delegated work the Approver
+approved.<a href="#section-8.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="capacity-across-missions">
@@ -2364,9 +2457,12 @@ failure signal:<a href="#section-12.1.2-1" class="pilcrow">¶</a></p>
 <li class="normal" id="section-12.1.2-2.1">
               <p id="section-12.1.2-2.1.1"><strong>Affirmative non-execution</strong> (<code>outcome</code> <code>suppressed</code>): the action
 was permitted but affirmatively not attempted. The PDP releases
-the reservation and returns the quantity to the counter. Within
-the strongly consistent latch domain this same state releases an
-exclusivity latch (<a href="#exclusivity" class="auto internal xref">Section 8</a>).<a href="#section-12.1.2-2.1.1" class="pilcrow">¶</a></p>
+the reservation and returns the quantity to the counter. It
+releases an exclusivity latch only when, within the strongly
+consistent latch domain, every permitted action that matched the
+latched selector under any Mission bound to the group is
+affirmatively not executed (<a href="#exclusivity" class="auto internal xref">Section 8</a>); one suppressed action
+never releases a latch another action exercised or still holds.<a href="#section-12.1.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-12.1.2-2.2">
               <p id="section-12.1.2-2.2.1"><strong>Completed execution</strong> (<code>outcome</code> <code>completed</code>): the PDP commits
@@ -2605,9 +2701,9 @@ timer.<a href="#section-14-2.5.1" class="pilcrow">¶</a></p>
           <p id="section-14-2.6.1"><strong>Latch burning.</strong> Because the first matching action latches an
 exclusivity group, an injected agent can try to burn a group by
 driving the side it wants foreclosed, denying the Mission the other
-side. Releasing the latch on affirmative non-execution
-(<a href="#exclusivity" class="auto internal xref">Section 8</a>) keeps an unexecuted attempt from foreclosing the
-group permanently.<a href="#section-14-2.6.1" class="pilcrow">¶</a></p>
+side. Releasing the latch when every participating action is
+affirmatively not executed (<a href="#exclusivity" class="auto internal xref">Section 8</a>) keeps unexecuted
+attempts from foreclosing the group permanently.<a href="#section-14-2.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
@@ -2761,7 +2857,18 @@ this registry.<a href="#section-16-1" class="pilcrow">¶</a></p>
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Capacity Across Missions (<a href="#capacity-across-missions" class="auto internal xref">Section 9</a>): a Child
+          <p id="appendix-A-2.1.1">Exclusivity Across Missions (<a href="#exclusivity-across-missions" class="auto internal xref">Section 8.1</a>): an
+exclusivity group is one shared latch across the delegation (children,
+descendants, successors, carryover replacements), established
+atomically before a derived Mission issues usable authority, retained
+while derived authority remains usable, and relaxed only by an
+explicit, scoped, disclosed approval that keeps the historical latch.
+Settlement releases a latch only when every participating action is
+affirmatively not executed. Template instances are scoped per
+instance, with that limit disclosed.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">Capacity Across Missions (<a href="#capacity-across-missions" class="auto internal xref">Section 9</a>): a Child
 Mission is charged to every ancestor's bound or holds an escrowed
 allocation whose remainder returns only after the allocation is
 closed, a successor or carryover replacement continues its
@@ -2771,10 +2878,10 @@ per-instance bound with <code>max_active</code> and <code>dispatch_rate</code>. 
 expiry no longer releases an unsettled reservation for an
 idempotent or reversible action class (<a href="#settlement-states" class="auto internal xref">Section 12.1.2</a>), and a
 metered high-consequence idempotency horizon reaches the Mission's
-<code>expires_at</code> (<a href="#retry" class="auto internal xref">Section 7.2</a>).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+<code>expires_at</code> (<a href="#retry" class="auto internal xref">Section 7.2</a>).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">Controls taxonomy retirement (#636, #117): <code>max_budget</code>, <code>max_calls</code>,
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">Controls taxonomy retirement (#636, #117): <code>max_budget</code>, <code>max_calls</code>,
 <code>max_duration</code>, <code>max_egress_volume</code>, and <code>exclusive</code> move from
 <code>controls.&lt;name&gt;</code> to named top-level Mission Intent members, since
 the issuance profile retires the <code>controls</code> bucket entirely
@@ -2788,16 +2895,16 @@ of <code>exclusive</code> against <a href="#promotion-criteria" class="auto inte
 gate NOT MET (issue #117): it remains EXPERIMENTAL and unpromoted,
 now explicitly marked as such at its own definition (<a href="#bounds" class="auto internal xref">Section 6</a>).
 <code>max_derivations</code> renamed to <code>derivation_limit</code> in cross-references
-to the issuance profile.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+to the issuance profile.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">One informative cross-reference in Settlement by Evidence State
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1">One informative cross-reference in Settlement by Evidence State
 (<a href="#settlement-states" class="auto internal xref">Section 12.1.2</a>): a containment overlay's contain transition
 is not settlement evidence. An open reservation or duration lease
 still settles unchanged under the existing evidence-state rules, and
 contain narrows only forward draw, a new reservation or a lease
 renewal, through the ordinary permit check against the narrowed
-Effective Authority Set. No new settlement state (#670).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+Effective Authority Set. No new settlement state (#670).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

@@ -37,18 +37,18 @@ to report and bound the residual window honestly.
 <meta content="draft-mcguinness-mission-aauth-management-latest" name="ietf.draft">
 <!-- Generator version information:
   xml2rfc 3.34.1
-    Python 3.14.7
-    ConfigArgParse 1.7.7
+    Python 3.14.8
+    ConfigArgParse 1.8.0
     google-i18n-address 3.1.1
     intervaltree 3.2.1
     Jinja2 3.1.6
     lxml 6.1.1
     natsort 8.4.0
-    platformdirs 4.11.10
+    platformdirs 4.12.2
     pycountry 24.6.1
     PyYAML 6.0.3
     requests 2.33.1
-    wcwidth 0.8.4
+    wcwidth 0.9.1
 -->
 <link href="draft-mcguinness-mission-aauth-management.xml" rel="alternate" type="application/rfc+xml">
 <link href="#copyright" rel="license">
@@ -1470,7 +1470,12 @@ accept an alias for either half of the reference.<a href="#section-3.1-2" class=
 <p id="section-3.1-3">The pair is the sole protocol key.  Implementations <span class="bcp14">MAY</span> use internal
 database keys, but those keys <span class="bcp14">MUST NOT</span> appear in this protocol.  The PS
 <span class="bcp14">MUST NOT</span> require the caller to send the mission blob, and a status or
-tree response <span class="bcp14">MUST NOT</span> return it.<a href="#section-3.1-3" class="pilcrow">¶</a></p>
+tree response <span class="bcp14">MUST NOT</span> return it.  Status and tree responses do not
+expose the mission for audit, so Section 8.2.1 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>, which has the PS serve the
+persisted blob bytes wherever it exposes the mission for audit, does
+not reach them; a PS that exposes the mission for audit on another
+surface serves those exact bytes there.<a href="#section-3.1-3" class="pilcrow">¶</a></p>
 <p id="section-3.1-4">The Mission Reference is integrity-protected but is not a secret.
 Possession of it conveys no management authority.<a href="#section-3.1-4" class="pilcrow">¶</a></p>
 </section>
@@ -1829,7 +1834,13 @@ Content-Digest: sha-256=:...:
   "terminated_at": "2026-04-10T09:12:43Z",
   "termination_reason": "revoked",
   "observed_at": "2026-04-10T09:15:02Z",
-  "fresh_until": "2026-04-10T09:15:32Z"
+  "fresh_until": "2026-04-10T09:15:32Z",
+  "token_residual": {
+    "tracked": 4,
+    "revocation_attempted": 4,
+    "revocation_confirmed": 4,
+    "complete": true
+  }
 }
 </pre><a href="#section-6-4" class="pilcrow">¶</a>
 </div>
@@ -1845,7 +1856,11 @@ present only if it is in the mission blob
 (<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).  <code>terminated_at</code> is an
 RFC 3339 <code>date-time</code> <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span>; it and <code>termination_reason</code> are
 <span class="bcp14">REQUIRED</span> when <code>mission_status</code> is <code>terminated</code> and <span class="bcp14">MUST</span> be absent
-while it is <code>active</code>.<a href="#section-6-6" class="pilcrow">¶</a></p>
+while it is <code>active</code>.  <code>token_residual</code> (<a href="#terminate" class="auto internal xref">Section 7</a>) is likewise
+<span class="bcp14">REQUIRED</span> when <code>mission_status</code> is <code>terminated</code> and <span class="bcp14">MUST</span> be absent while
+it is <code>active</code>; it reports the residual as of <code>observed_at</code>, which
+gives an authorized caller the current revocation state of a
+terminated mission.<a href="#section-6-6" class="pilcrow">¶</a></p>
 <p id="section-6-7">The response reports state as of <code>observed_at</code> and is reliable until
 <code>fresh_until</code>; it is not a promise that the state will remain active.
 A consumer <span class="bcp14">MUST NOT</span> rely on a response after its <code>fresh_until</code>, and a
@@ -1887,7 +1902,7 @@ executable policy, and <span class="bcp14">MUST</span> be rendered as untrusted 
 <p id="section-7.1-4">For <code>superseded</code>, the request <span class="bcp14">MUST</span> include the replacement:<a href="#section-7.1-4" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-7.1-5">
 <pre>
-"replacement_s256": "QmV0dGVyTWlzc2lvbkRpZ2VzdFZhbHVlMTIzNDU2Nzg5MDE"
+"replacement_s256": "UewCpFZHMZtpxPwRETXY81ouxt724qQPkaNOJKjbd2E"
 </pre><a href="#section-7.1-5" class="pilcrow">¶</a>
 </div>
 <p id="section-7.1-6">The replacement is related evidence, not an alternate key for the
@@ -1938,15 +1953,19 @@ response time.<a href="#section-7.2-2.6.1" class="pilcrow">¶</a></p>
 allowed to delay or roll it back.  The PS <span class="bcp14">MAY</span> wait for a short, bounded
 set of immediate revocation results before responding, and revocation
 attempts <span class="bcp14">MAY</span> continue asynchronously.<a href="#section-7.2-3" class="pilcrow">¶</a></p>
-<p id="section-7.2-4">The PS returns <code>200 OK</code> with the status representation and a revocation
-summary:<a href="#section-7.2-4" class="pilcrow">¶</a></p>
+<p id="section-7.2-4">The PS returns <code>200 OK</code> with the full status representation
+(<a href="#status" class="auto internal xref">Section 6</a>), whose <code>token_residual</code> member is the revocation summary:<a href="#section-7.2-4" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-7.2-5">
 <pre>
 {
   "mission_s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
   "mission_status": "terminated",
+  "approved_at": "2026-04-07T14:30:00Z",
+  "expires_at": "2026-04-14T14:30:00Z",
   "terminated_at": "2026-04-10T09:12:43Z",
   "termination_reason": "revoked",
+  "observed_at": "2026-04-10T09:12:44Z",
+  "fresh_until": "2026-04-10T09:13:14Z",
   "token_residual": {
     "tracked": 4,
     "revocation_attempted": 4,
@@ -1957,8 +1976,12 @@ summary:<a href="#section-7.2-4" class="pilcrow">¶</a></p>
 }
 </pre><a href="#section-7.2-5" class="pilcrow">¶</a>
 </div>
-<p id="section-7.2-6">The counters disclose only tokens the caller is authorized to know
-about.  <code>complete</code> is true only when every Tracked Auth Token is either
+<p id="section-7.2-6"><code>token_residual</code> contains <code>tracked</code>, <code>revocation_attempted</code>, and
+<code>revocation_confirmed</code>, each a non-negative integer, and the boolean
+<code>complete</code>, all <span class="bcp14">REQUIRED</span>, and <code>residual_until</code>, an RFC 3339
+<code>date-time</code> <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span>, when a residual is known.  The counters
+disclose only tokens the caller is authorized to know about.
+<code>complete</code> is true only when every Tracked Auth Token is either
 confirmed revoked or expired and the PS knows of no untracked access
 mode for the mission.  <code>residual_until</code> is the latest <code>exp</code> among
 unconfirmed Tracked Auth Tokens.  It <span class="bcp14">MUST</span> be omitted when no residual is
@@ -1971,19 +1994,31 @@ opaque credentials may exist.<a href="#section-7.2-6" class="pilcrow">¶</a></p>
         <h3 id="name-idempotency-and-concurrency">
 <a href="#section-7.3" class="section-number selfRef">7.3. </a><a href="#name-idempotency-and-concurrency" class="section-name selfRef">Idempotency and Concurrency</a>
         </h3>
-<p id="section-7.3-1">The PS <span class="bcp14">MUST</span> retain the result associated with <code>(authenticated caller,
-request_id)</code> for at least 24 hours and <span class="bcp14">SHOULD</span> retain it for the mission
-log's lifetime.  Repeating an identical request returns the original
-result without a second lifecycle event.  Reusing a <code>request_id</code> with
-different request content fails with <code>idempotency_conflict</code>.<a href="#section-7.3-1" class="pilcrow">¶</a></p>
-<p id="section-7.3-2">Termination is also semantically idempotent across request identifiers.
+<p id="section-7.3-1">The PS <span class="bcp14">MUST</span> retain the outcome of a terminate request under
+<code>(authenticated caller, request_id)</code> for at least 24 hours and <span class="bcp14">SHOULD</span>
+retain it for the mission log's lifetime.  Two requests are equivalent
+when they have the same authenticated caller, are made to the same PS
+and the same <code>{mission_s256}</code> path target, and carry JSON bodies that
+are equal as parsed values: member order does not matter, and any
+difference in <code>reason</code>, <code>purpose</code>, <code>replacement_s256</code>, or another
+member, including an unrecognized one, makes them different.  Reusing
+a <code>request_id</code> for a request that is not equivalent, including one
+addressed to another mission, fails with <code>idempotency_conflict</code>.<a href="#section-7.3-1" class="pilcrow">¶</a></p>
+<p id="section-7.3-2">An equivalent request is a replay.  It creates no second lifecycle
+event and initiates no revocation.  Its response repeats the committed
+receipt exactly, namely <code>mission_s256</code>, <code>mission_status</code>,
+<code>terminated_at</code>, and <code>termination_reason</code>, and reports the rest of the
+status representation, including <code>observed_at</code>, <code>fresh_until</code>, and
+<code>token_residual</code>, as of the replay.  A client therefore distinguishes
+the original outcome from the current observation.<a href="#section-7.3-2" class="pilcrow">¶</a></p>
+<p id="section-7.3-3">Termination is also semantically idempotent across request identifiers.
 If the mission is already terminated, an authorized caller receives its
 existing terminal status.  The first committed reason and timestamp
 remain authoritative; a later request <span class="bcp14">MUST NOT</span> overwrite them.  A PS
-<span class="bcp14">MAY</span> append an audit entry noting the later authorized request.<a href="#section-7.3-2" class="pilcrow">¶</a></p>
-<p id="section-7.3-3">Concurrent requests are serialized.  At most one request records the
+<span class="bcp14">MAY</span> append an audit entry noting the later authorized request.<a href="#section-7.3-3" class="pilcrow">¶</a></p>
+<p id="section-7.3-4">Concurrent requests are serialized.  At most one request records the
 active-to-terminated transition.  Completion, expiry, and administrative
-termination obey the same rule.<a href="#section-7.3-3" class="pilcrow">¶</a></p>
+termination obey the same rule.<a href="#section-7.3-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
