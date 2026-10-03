@@ -41,6 +41,7 @@ import {
   type MissionView,
   newRecordId,
   operationIdentity,
+  parseStateObservation,
   type OriginPrincipal,
   type PrincipalMappingResolver,
   RUNTIME_POSTURE,
@@ -1186,6 +1187,16 @@ export class Pep {
       );
     }
 
+    // @spec authzen#context-audience-freshness: where the declared placement
+    // has this PEP supply state, the observation is REQUIRED with every member
+    // its `mode` requires. A loader read that does not yield one is state this
+    // PEP cannot establish: a pre-decision refusal, @spec
+    // runtime-evidence#pre-decision-refusal `state_unavailable`, never a
+    // decision request carrying a malformed observation.
+    if (this.placement === "pep" && parseStateObservation(observation) === undefined) {
+      return await this.refuse(token, "state_unavailable", mapping.action, view);
+    }
+
     // @spec attenuation#mission-binding-check: when the credential is an
     // Attenuating Agent Token chain, the effective authority is the leaf's
     // narrowed tools. An action within the Mission but OUTSIDE the leaf is
@@ -1359,16 +1370,18 @@ export class Pep {
           ...(missionAnchor.subject !== undefined ? { subject: missionAnchor.subject } : {}),
         },
         // @spec runtime#state-freshness, authzen#context-audience-freshness:
-        // the observation is the loader's OWN assertion of the state it read
-        // and when, propagated exactly as `loadView` returned it. The PEP
-        // never stamps its own clock here (Finding 1): doing so would relabel
-        // a cached or relayed observation as fresh at the moment it happened
-        // to be consumed, rather than at the moment it was actually read.
-        // Supplying it keeps a high-consequence action class
-        // (irreversible_action, external_commitment) from being denied
-        // `stale_state` merely for omitting the member (the PDP's #608 GAP 2
-        // fail-closed fix).
-        mission_state_observation: observation,
+        // under `pep` placement, the observation is the loader's OWN
+        // assertion of the state it read and when, propagated exactly as
+        // `loadView` returned it. The PEP never stamps its own clock here
+        // (Finding 1): doing so would relabel a cached or relayed observation
+        // as fresh at the moment it happened to be consumed, rather than at
+        // the moment it was actually read. Supplying it keeps a
+        // high-consequence action class (irreversible_action,
+        // external_commitment) from being denied `stale_state` merely for
+        // omitting the member (the PDP's #608 GAP 2 fail-closed fix). Under
+        // `pdp` placement the member is absent: the PDP establishes state
+        // from its own read.
+        ...(this.placement === "pep" ? { mission_state_observation: observation } : {}),
         actor: contextActor,
         ...(token.credential ? { credential: {
           ...(typeof token.credential.issuer === "string" ? { issuer: token.credential.issuer } : {}),
@@ -1415,6 +1428,10 @@ export class Pep {
       ...(this.deps.maxApprovalAgeSeconds ? { maxApprovalAgeSeconds: this.deps.maxApprovalAgeSeconds } : {}),
       ...(this.deps.requestable ? { requestable: this.deps.requestable } : {}),
       stateSourcePlacement: this.placement,
+      // @spec authzen#pdp-request rule 1: under `pdp` placement the
+      // co-resident PDP's own read is the loader read that produced `view`;
+      // a remote PDP resolves its own on its side of the channel.
+      ...(this.placement === "pdp" ? { stateObservedAt: observation.freshness_at } : {}),
       ...(this.deps.principalMapping ? { principalMapping: this.deps.principalMapping } : {}),
       ...(this.deps.entitlement ? { entitlement: this.deps.entitlement } : {}),
       ...(this.deps.entitlementStalenessBoundSeconds !== undefined

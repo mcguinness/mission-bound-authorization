@@ -712,7 +712,19 @@ export async function composeStack(opts: {
       const ref = request.context.mission;
       const loaded = ref ? loadView(ref) : undefined;
       if (!loaded) throw new Error("PDP cannot establish the Mission view");
-      return { view: loaded.view, fga, modelId, now: () => new Date(), stalenessBound, relationForAction, ...runtimeDecisionPolicy };
+      // @spec authzen#pdp-request rule 1: the PDP side's own read, the one a
+      // `pdp` placement relies on; under the published `pep` placement the
+      // PEP's observation is relied on instead.
+      return {
+        view: loaded.view,
+        stateObservedAt: loaded.observation.freshness_at,
+        fga,
+        modelId,
+        now: () => new Date(),
+        stalenessBound,
+        relationForAction,
+        ...runtimeDecisionPolicy,
+      };
     },
   });
   const enforcementScopeStatement = loadRuntimePosture({ ...RUNTIME_POSTURE, remote_decision_channels: decisionChannel.remoteDecisionChannels });

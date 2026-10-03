@@ -109,4 +109,42 @@ describe("the PEP sends the AuthZEN profile's members (@spec authzen#context-aud
     });
     expect(context.freshness).toBeUndefined();
   });
+
+  it("under PDP placement, omits context.mission_state_observation, and the co-resident PDP establishes state from its own read", async () => {
+    // A fresh read: the PDP's own read within the bound establishes state.
+    const fresh = fixture({ deps: { stateSourcePlacement: "pdp" } });
+    const permitted = await fresh.pep.enforce("get_invoice", { invoice_id: "inv-1" }, token);
+    expect(permitted.permitted, JSON.stringify(permitted)).toBe(true);
+    expect((fresh.requests[0]?.context as Record<string, unknown>).mission_state_observation).toBeUndefined();
+    // A read an hour old: the PDP's own read is what it relies on, so the
+    // consequential read is refused stale_state, though no observation rode
+    // the request.
+    const stale = fixture({
+      deps: { stateSourcePlacement: "pdp" },
+      observation: { state: "active", version: 7, mode: "fresh", freshness_at: new Date(Date.now() - 3_600_000).toISOString() },
+    });
+    const refused = await stale.pep.enforce("get_invoice", { invoice_id: "inv-1" }, token);
+    expect((stale.requests[0]?.context as Record<string, unknown>).mission_state_observation).toBeUndefined();
+    expect(refused.permitted).toBe(false);
+    expect(refused.denial_reason).toBe("stale_state");
+  });
+
+  it("under PEP placement, refuses state_unavailable without asking the PDP when the loader's observation lacks a member its mode requires or carries a malformed one", async () => {
+    const now = new Date().toISOString();
+    const malformed: Array<[string, Record<string, unknown>]> = [
+      ["no state", { mode: "fresh", freshness_at: now }],
+      ["no mode", { state: "active", freshness_at: now }],
+      ["no freshness_at", { state: "active", mode: "fresh" }],
+      ["a malformed freshness_at", { state: "active", mode: "fresh", freshness_at: "now" }],
+      ["cached with no mission_status_expires_at", { state: "active", mode: "cached", freshness_at: now, mission_status_issued_at: now }],
+      ["event_driven with no mission_status_issued_at", { state: "active", mode: "event_driven", freshness_at: now, mission_status_expires_at: now }],
+    ];
+    for (const [label, observation] of malformed) {
+      const f = fixture({ deps: { stateSourcePlacement: "pep" }, observation });
+      const result = await f.pep.enforce("get_invoice", { invoice_id: "inv-1" }, token);
+      expect(result.permitted, label).toBe(false);
+      expect(result.refusal_reason, label).toBe("state_unavailable");
+      expect(f.requests, label).toHaveLength(0);
+    }
+  });
 });
