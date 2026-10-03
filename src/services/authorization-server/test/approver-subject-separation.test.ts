@@ -376,8 +376,9 @@ describe("Approver and Subject stay separate identities (@spec mission#approval-
       decideHeaders: { [APPROVAL_SUBJECT_HEADER]: "alice" },
     });
     expect(browser.code, browser.error).toBeTruthy();
-    const record = as.kernel.allMissions().at(-1);
-    expect(record?.subject.sub).toBe("bob");
+    const issued = await redeem("ap-agent", browser.code as string, await newKeys());
+    const missionId = (decodeJwt(issued.access_token as string).mission as { id: string }).id;
+    expect(as.kernel.get(missionId)?.subject.sub).toBe("bob");
   });
 
   it("knows no account for an id outside the deployment, and no profile for a workload principal", async () => {
