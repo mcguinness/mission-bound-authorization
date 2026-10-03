@@ -61,6 +61,7 @@ informative:
       - org: OpenID Foundation
     date: 2023
   RFC4086:
+  RFC7517:
   RFC9126:
   I-D.draft-mcguinness-mission-shaping:
     title: "Mission Intent Shaping"
@@ -116,7 +117,9 @@ assertion binding the captured origin to the authorization server
 (AS), the exact provisional `intent_hash`, and the presenter. The
 assertion carries an HMAC {{RFC2104}} digest of the instruction under
 a per-request secret that never leaves the intake, so a holder of the
-assertion cannot test guesses at the instruction.
+assertion cannot test guesses against that digest. The assertion's
+`intent_hash` remains the OAuth binding's unsalted commitment to the
+Intent ({{privacy-considerations}}).
 
 The AS verifies the signer, its authorization for the claimed
 originator and channel, and the bindings. It does not recompute the
@@ -172,10 +175,11 @@ The AS accepts this evidence only from signers its own configuration
 authorizes. For each authorized signer, the configuration states:
 
 - the signer identifier, which the assertion's `iss` carries;
-- the signer's verification keys, scoped specifically to this
-  evidence type, for example by `use` or `key_ops` or a
-  deployment-registered key purpose; a key not scoped to this usage
-  does not satisfy the configuration;
+- the signer's verification keys, each of which the configuration
+  itself maps to this evidence type. A key's `use` or `key_ops`
+  values, such as `sig` or `verify` {{RFC7517}}, name cryptographic
+  operations, not authority to sign provenance, and never establish
+  that mapping alone;
 - the originators the signer may attest for: one or more originator
   issuers and, where the deployment narrows further, the principals
   or principal classes within them; and
@@ -223,8 +227,8 @@ The assertion's protected header MUST carry:
 - `typ` with the value `mission-request-provenance+jwt`;
 - `alg`: `ES256` {{RFC7518}} is mandatory to implement, and an
   implementation MAY support other JWS algorithms; and
-- `kid`, identifying a key the AS configuration scopes to this signer
-  ({{trust-configuration}}).
+- `kid`, identifying a key the AS configuration maps to this signer
+  and this evidence type ({{trust-configuration}}).
 
 The header MUST NOT carry `jku`, `x5u`, `jwk`, or `x5c`.
 
@@ -373,8 +377,8 @@ bound:
    present, and none of `jku`, `x5u`, `jwk`, or `x5c` is present.
 3. Look up the signer by the `iss` claim and `kid` in the AS's
    configuration ({{trust-configuration}}); refuse an unknown signer
-   or a key not scoped to this evidence type. Confirm `alg` is
-   permitted for that key.
+   or a key the configuration does not map to this evidence type.
+   Confirm `alg` is permitted for that key.
 4. Verify the signature, following {{RFC8725}}.
 5. Confirm every required claim is present with its defined type.
 6. Confirm `aud` equals this AS's issuer identifier.
@@ -408,25 +412,32 @@ atomically, with single-writer-wins semantics:
 - **Commit.** When the AS accepts the containing submission (for a
   Pushed Authorization Request {{RFC9126}}, when it returns the
   `request_uri`; for a token-endpoint carriage, when that request
-  succeeds), it commits the reservation. A committed pair is retained
+  succeeds or returns a pending continuation), it commits the
+  reservation. A committed pair is retained
   at least until `exp` plus the clock-skew allowance.
 - **Release.** When the AS refuses the containing submission for any
   reason, including another evidence entry failing, it releases the
   reservation. A reservation never outlives `exp` plus the clock-skew
   allowance.
 
-A client that retries after losing the response to an accepted
-submission presents a fresh assertion: the committed `jti` is refused
-as replay. The intake issues the fresh assertion from the same
-capture record ({{signing}}).
-
-On a surface that carries a Mission-creation idempotency fingerprint,
-recovery of a completed operation returns the recorded outcome
-without verifying the presented evidence again
+On a surface that carries a Mission-creation idempotency
+fingerprint, presented evidence is a member of that fingerprint
 ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, Section
-"Evidence on Idempotent Creation Surfaces"). That recovery applies
-only to the completed operation; any other submission follows
-{{verification}} in full, including the replay check.
+"Evidence on Idempotent Creation Surfaces"). A client retrying an
+operation on such a surface after a lost response MUST re-present the
+original evidence entry unchanged, including the original assertion:
+a fresh assertion changes the fingerprint, and the AS refuses the
+retry with `invalid_request` as a different operation. The AS
+resolves an exact retry by its fingerprint and returns the recorded
+outcome or continuation without verifying the assertion again, so
+the committed `jti` does not refuse it. Any submission other than an
+exact retry follows {{verification}} in full, including the replay
+check.
+
+On any other surface, such as PAR, a client that retries after losing
+the response to an accepted submission presents a fresh assertion:
+the committed `jti` is refused as replay. The intake issues the fresh
+assertion from the same capture record ({{signing}}).
 
 
 # Recorded Facts {#recorded-facts}
@@ -511,7 +522,8 @@ A request intake conforming to this document:
 - emits the claims of {{assertion}} and no claim that commits to
   request content; and
 - issues a fresh assertion for each changed Intent and for each
-  submission retry.
+  retry that is not an exact retry on a creation idempotency surface
+  ({{replay}}).
 
 An AS conforming to this document conforms to
 {{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, holds the
@@ -524,9 +536,9 @@ trust configuration of {{trust-configuration}}, and implements
 ## Signer Scope {#sec-signer-scope}
 
 A compromised signer can attest any originator and channel within its
-configured scope. Narrow scopes, keys scoped to this evidence type,
-and prompt removal of a signer from the AS configuration limit that
-exposure. A signer key is never accepted from the assertion
+configured scope. Narrow scopes, keys mapped to this evidence type
+alone, and prompt removal of a signer from the AS configuration limit
+that exposure. A signer key is never accepted from the assertion
 ({{trust-configuration}}).
 
 ## Shaper Influence {#sec-shaper}
@@ -557,11 +569,11 @@ Instructions are often short and predictable. Any deterministic
 commitment to one that a holder can compute without a secret, such as
 an unsalted hash or a hash with a disclosed salt, lets the holder test
 guessed wordings until one matches. The request digest resists that
-only because its secret never leaves the intake. The privacy claim is
-correspondingly limited: an assertion holder who lacks the secret
-cannot test guesses against the digest. The intake, an authorized
-auditor holding the secret, and any service that answers digest
-queries can.
+only because its secret never leaves the intake. This document's
+privacy claim is correspondingly limited, and covers `request_digest`
+alone: an assertion holder who lacks the secret cannot test guesses
+against the digest. The intake, an authorized auditor holding the
+secret, and any service that answers digest queries can.
 
 The same exposure arises indirectly. A hash over any artifact that
 contains an unsalted digest of the instruction, such as Shaping
@@ -570,6 +582,16 @@ digest when the artifact's other content is predictable. This is why
 the assertion carries no such hash ({{assertion}}) and why any
 association with Shaping Evidence stays in access-controlled audit
 storage ({{audit}}).
+
+`intent_hash` is outside the claim. The assertion carries it to bind
+one exact Intent, and it is the OAuth binding's unsalted commitment
+to that Intent ({{I-D.draft-mcguinness-oauth-mission}}, Section
+"Intent Retention and Anchor Disclosure"). Where shaping copies the
+instruction's wording into the Intent, for example into `goal`, and
+the Intent's other members are predictable, an assertion holder can
+test guessed wordings against `intent_hash` without the secret. A
+deployment that needs the wording kept from assertion holders keeps
+it out of the Intent; the request digest does not protect it there.
 
 A JWS authenticates its payload without encrypting it. The originator
 identifier, channel facts, and capture time are personal data visible
