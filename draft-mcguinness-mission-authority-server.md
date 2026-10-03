@@ -32,6 +32,7 @@ normative:
   RFC6838:
   RFC7519:
   RFC7638:
+  RFC8705:
   RFC7662:
   RFC8259:
   RFC8615:
@@ -1045,9 +1046,10 @@ never carries it. It is a JSON object with the following members:
 : A string. REQUIRED when `assertion` is present. The presented
   credential's digest, computed as in {{join-assertion-request}}.
 
-`token_jkt`:
-: A string. REQUIRED when `assertion` is present. The thumbprint of
-  the presented credential's confirmation key, computed as in
+`token_jkt`, `token_x5t`:
+: Strings. When `assertion` is present, exactly one is REQUIRED,
+  matching the presented credential's confirmation method: the
+  thumbprint of its confirmation key or certificate, computed as in
   {{join-assertion-request}}.
 
 The PEP computes the digest and thumbprint from the credential it
@@ -1379,10 +1381,17 @@ is a JSON object with the following members:
 
 `token_jkt`:
 : A string. The JWK thumbprint {{RFC7638}}, using SHA-256, of the
-  token's `cnf` public key.
+  token's `cnf` public key, for a token whose confirmation is a `jkt`
+  member.
+
+`token_x5t`:
+: A string. The base64url SHA-256 thumbprint of the certificate a
+  certificate-bound token is bound to: the value of its `x5t#S256`
+  confirmation member ({{Section 3.1 of RFC8705}}).
 
 The caller presents `access_token`, or `token_sha256` together with
-`token_jkt`. The digest pair keeps the credential itself off this
+exactly one of `token_jkt` and `token_x5t`, matching the token's
+confirmation method. The digest pair keeps the credential itself off this
 wire, but it is usable only where the deployment's introspection
 surface can resolve a token by digest. `access_token` is the
 interoperable form.
@@ -1474,8 +1483,11 @@ implements the substitution defense of Sections 3.11 and 3.12 of
 
 `token`:
 : REQUIRED. An object containing `sha256`, the token digest as in
-  {{join-assertion-request}}, and `jkt`, the thumbprint of the token's
-  `cnf` public key {{RFC7638}}.
+  {{join-assertion-request}}, and exactly one confirmation member
+  matching the token's confirmation method: `jkt`, the thumbprint of
+  the token's `cnf` public key {{RFC7638}}, or `x5t#S256`, the
+  thumbprint of the certificate the token is bound to
+  ({{Section 3.1 of RFC8705}}).
 
 `join`:
 : REQUIRED. An object carrying the result of the MAS's client and
@@ -1572,8 +1584,9 @@ mapping checks of rules 3 and 4 of {{join-rules}}:
   `authority_hash` too;
 - that `exp` has not passed and any `aud` names this PDP; and
 - the token binding: `context.mission_join.token_sha256` equals
-  `token.sha256`, and `context.mission_join.token_jkt` equals
-  `token.jkt`.
+  `token.sha256`, and the reported thumbprint equals the assertion's
+  confirmation member of the same method (`token_jkt` to `token.jkt`,
+  or `token_x5t` to `token.x5t#S256`).
 
 The PDP takes the joining client identifier, the disposition, and a
 delegate's depth from the assertion's `join` claim, not from its own
