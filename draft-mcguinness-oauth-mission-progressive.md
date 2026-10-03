@@ -781,6 +781,11 @@ convention, none of which require registration.
 
 -01
 
+- In-ceiling expansion: a drawdown that passes every policy-adjudication
+  guard completes synchronously in the token-exchange response,
+  committing activation, supersession and the creation reservation
+  before the response; the undefined `request_uri` redemption is
+  removed.
 - In-ceiling expansion: the discharge guard tests the complete successor
   Authority Set against the chain's discharge restrictions, from any
   later Mission, and the ceiling review discloses outstanding discharge

@@ -1973,6 +1973,10 @@ composition with the issuance flow.
 
 \[\[ To be removed from the final specification ]]
 
+- An in-ceiling drawdown under the progressive authorization companion
+  completes synchronously in the token-exchange response, a third
+  issuance point; fresh-consent expansion still completes deferred or
+  interactively.
 - Successor activation's compare-and-set also rechecks the complete
   successor Authority Set against current containment and discharge
   restrictions, refusing with `authority_restricted_since_approval`

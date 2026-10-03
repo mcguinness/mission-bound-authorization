@@ -2195,6 +2195,9 @@ apply unchanged.
 
 \[\[ To be removed from the final specification ]]
 
+- The completion comparison names the progressive authorization
+  companion's synchronous drawdown as the one synchronous expansion.
+
 - Child Missions and carryover replacements share their ancestors'
   exclusivity latches under the metering profile.
 
