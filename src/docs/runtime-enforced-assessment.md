@@ -272,7 +272,7 @@ Not exercised by this composition:
   `runtime.instance-context` (2), `runtime.semantic-evaluator`,
   `runtime.taint-enforcement` and `runtime.break-glass` (1 each). The loader
   refuses any break-glass value other than `absent` (`loadRuntimePosture`).
-- `mas.join-assertion` (8 rows, all `todo`): the composition has no Join
+- `mas.join-assertion` (13 rows, all `todo`): the composition has no Join
   Assertion endpoint or consumer, so the capability is unclaimed (#972).
 - `runtime.compromise-resistant` (1 tested, 3 partial, 7 todo) and
   `runtime.trifecta-containment` (1 tested, 2 todo): their tested rows cite

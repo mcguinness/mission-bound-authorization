@@ -163,14 +163,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-mission-metering:
-    title: "Mission Consumption Metering"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   I-D.draft-mcguinness-oauth-mission-status-list:
     title: "Mission Status List for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status-list.html
@@ -741,9 +733,9 @@ action-bound approval and never substitutes for the Mission's current
 authority, applicable Resource policy, or consumption state.
 
 Consumption of `txn` MUST be linearizable across every replica capable
-of executing the same operation, meeting the metering companion's
-Exact enforcement profile
-({{I-D.draft-mcguinness-mission-metering}}): the record commits before
+of executing the same operation, meeting the Exact enforcement profile
+the runtime profile defines ({{I-D.draft-mcguinness-mission-runtime}},
+Section "Idempotency"): the record commits before
 the irreversible effect, or atomically with it where the operation
 store supports that transaction. If the consumption store is
 unavailable, the resource MUST fail closed for this profile.
@@ -901,8 +893,9 @@ Transaction Authorization Server compromise, and pending-workflow exposure:
 
 Consumption-store availability, and the fail-closed posture generally:
 : The at-most-once property this profile claims exists only while the
-  consumption store meets the Exact enforcement profile of
-  {{I-D.draft-mcguinness-mission-metering}}; a deployment that
+  consumption store meets the Exact enforcement profile the runtime
+  profile defines ({{I-D.draft-mcguinness-mission-runtime}}); a
+  deployment that
   degrades to a merely local cache during partition no longer has
   that property and MUST NOT claim it. Every failure path of
   {{failure-semantics}} resolves to denial, refusal, or a fail-closed
@@ -1219,6 +1212,10 @@ through exactly one execution or terminal refusal.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- `txn` consumption meets the Exact enforcement profile the runtime
+  profile defines, rather than the metering companion's, which is no
+  longer referenced.
 
 - Linked applicability to the runtime compound-action model: a
   transaction token authorizes one commit-phase operation (#252).
