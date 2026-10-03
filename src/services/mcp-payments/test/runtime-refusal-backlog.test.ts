@@ -27,6 +27,7 @@ import {
   createMediatedClient,
   EvidenceStore,
   McpPaymentsServer,
+  openEphemeralWriteReservationStore,
   parameterDigest,
   PaymentsStore,
   Pep,
@@ -113,6 +114,7 @@ function buildStack(missionView: MissionView, fga: Fga) {
     jwks: { keys: [] },
     issuer: ISSUER,
     transaction: { engine, connectors, evidence },
+    writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
   });
   return { payments, evidence, connectors, engine, pep, server };
 }
@@ -230,7 +232,8 @@ describe("an action-bound approval is reverified against the concrete parameters
     };
 
     // The approval matches the CURRENT record: the gate is satisfied.
-    const before = await pep.enforce("schedule_payment", { invoice_id: "inv-1" }, TOKEN, approval);
+    const args = { invoice_id: "inv-1", idempotency_key: idem() };
+    const before = await pep.enforce("schedule_payment", args, TOKEN, approval);
     expect(before.permitted, JSON.stringify(before)).toBe(true);
 
     // Reparameterization: the record changes after approval. The SAME
@@ -242,7 +245,7 @@ describe("an action-bound approval is reverified against the concrete parameters
     // no public server API drives an approval-gated action through that
     // two-phase path; see the manifest row's notes.)
     payments.bumpInvoiceAmount("inv-1", "999.00");
-    const after = await pep.enforce("schedule_payment", { invoice_id: "inv-1" }, TOKEN, approval);
+    const after = await pep.enforce("schedule_payment", args, TOKEN, approval);
     expect(after.permitted).toBe(false);
     expect(after.denial_reason).toBe("action_approval_required");
     // Nothing executed on either call: enforce() alone never commits an
@@ -417,6 +420,7 @@ describe("every mediated crossing carries the class the deployment assigns it (@
       get_invoice: "consequential_read",
       lookup_vendor: "consequential_read",
       schedule_payment: "consequential_write",
+      cancel_scheduled_payment: "consequential_write",
       check_transfer: "consequential_read",
       hold_transfer: "consequential_write",
       execute_wire_transfer: "irreversible_action",
@@ -426,7 +430,7 @@ describe("every mediated crossing carries the class the deployment assigns it (@
 
   it("schedule_payment reaches the PDP as a consequential write and is parameter-bound: its Decision Evidence records the deployment's class and the parameter digest", async () => {
     const { server, evidence } = buildStack(view(["payments:payment.schedule"]), alwaysAllowFga);
-    const result = await server.callWriteTool("schedule_payment", { invoice_id: "inv-1" }, TOKEN);
+    const result = await server.callWriteTool("schedule_payment", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
     expect(result.ok, JSON.stringify(result)).toBe(true);
     const dec = evidence
       .all()

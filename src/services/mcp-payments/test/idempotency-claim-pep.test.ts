@@ -30,6 +30,7 @@ import {
   newRecordId,
   openEphemeralClaimDomain,
   relationForAction,
+  reversibleWriteKeyControl,
   RUNTIME_POSTURE,
   type SettlementResult,
   stalenessBound,
@@ -493,9 +494,12 @@ describe("the Operation Profile defines an idempotency key for every non-idempot
       expect(definition?.inputSchema.required, tool).toContain("idempotency_key");
       expect(definition?.inputSchema.properties.idempotency_key, tool).toEqual({ type: "string", pattern: IDEMPOTENCY_KEY_PATTERN.source });
     }
-    // The key belongs to these operations only: no other tool asks for one.
+    // The key belongs to these operations, and to the reversible writes the
+    // statement declares the idempotency-key control for (#918), whose key
+    // the PEP reserves rather than the PDP claims: no other tool asks for one.
     for (const [tool, mapping] of Object.entries(TOOL_ACTIONS).filter(([, m]) => !isHighConsequence(m.actionClass))) {
-      expect(mapping.idempotencyKey, tool).toBeUndefined();
+      const elects = reversibleWriteKeyControl(RUNTIME_POSTURE, mapping.actionClass, mapping.action);
+      expect(mapping.idempotencyKey, tool).toBe(elects ? true : undefined);
     }
   });
 

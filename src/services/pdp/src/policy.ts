@@ -21,6 +21,7 @@ export const PAYMENTS_RELATIONS: Record<string, { relation: "payer" | "reader"; 
   "payments:invoice.list": { relation: "reader", needsAmount: false },
   "payments:vendor.read": { relation: "reader", needsAmount: false },
   "payments:payment.schedule": { relation: "payer", needsAmount: true },
+  "payments:payment.schedule.cancel": { relation: "payer", needsAmount: true },
   "payments:payment.execute": { relation: "payer", needsAmount: true },
   "payments:remittance.send": { relation: "payer", needsAmount: true },
 };

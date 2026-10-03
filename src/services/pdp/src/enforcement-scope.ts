@@ -17,6 +17,8 @@
  * reach.
  */
 
+import { IDEMPOTENCY_SCOPE_DIMENSIONS, isScopeDimension, isVolatileScopeMember } from "@mission/core";
+
 /**
  * The per-entry perimeter disposition inside `mediated_scope`: whether an
  * entry is mediated at the point of use, reconstructed after the fact, or
@@ -107,9 +109,48 @@ export interface TransactionAssuranceDeclaration {
   idempotency_horizon_seconds?: number;
 }
 
+/**
+ * @spec runtime#permit-binding, runtime#idempotency (#918): one reversible
+ * consequential write that elects the "short validity window combined with an
+ * idempotency key" permit-lifetime control, and the reservation that control
+ * relies on. The PDP makes no claim for it; the enforcing PEP named by
+ * `reservation_owner` atomically reserves the (idempotency scope,
+ * `idempotency_key`) pair and retains the record for the published posture.
+ *
+ * `mediated_class_or_scope` is the reversible-write class itself, or one
+ * action identifier inside it: a deployment whose class also holds a write
+ * that does not elect this control declares the electing operations one by
+ * one, so the declaration never covers an operation it does not describe.
+ * `transaction_assurance` cannot carry this: its lease members are REQUIRED,
+ * and a reversible write publishes no lease.
+ */
+export interface ReversibleWriteIdempotencyDeclaration {
+  mediated_class_or_scope: string;
+  permit_lifetime_control: "validity_window_plus_idempotency_key";
+  /** The permit's validity window the key control is combined with, in whole seconds. */
+  permit_validity_max_seconds: number;
+  reservation_domain: string;
+  /** The `mediated_scope.pep_locations` entry that holds the reservation. */
+  reservation_owner: string;
+  idempotency_scope: readonly string[];
+  /**
+   * @spec runtime#idempotency: "Outside those classes a deployment MAY scope
+   * the guarantee to the reconciliation window, and it MUST publish which
+   * posture applies." `declared_horizon` names its own `retention_horizon`;
+   * `reconciliation_window` uses `extensions.outcome_reconciliation.window`.
+   */
+  retention_posture: "declared_horizon" | "reconciliation_window";
+  /** ISO 8601 duration of days or below; REQUIRED for `declared_horizon`. */
+  retention_horizon?: string;
+}
+
+/** The one reversible-write class that may elect the idempotency-key control. */
+export const REVERSIBLE_WRITE_CLASS = "consequential_write";
+
 export interface EnforcementExtensionDeclarations {
   custody?: ReadonlyArray<{ mediated_class: string; custody_mode: string }>;
   transaction_assurance?: ReadonlyArray<TransactionAssuranceDeclaration>;
+  reversible_write_idempotency?: ReadonlyArray<ReversibleWriteIdempotencyDeclaration>;
   evidence?: {
     mechanism: string;
     retention_window: string;
@@ -405,7 +446,133 @@ export function validateEnforcementScopeStatement(
     }
   }
 
+  findings.push(...reversibleWriteFindings(stmt, scopeOk && object(scope) ? scope : undefined));
+
   return findings;
+}
+
+/**
+ * @spec runtime#permit-binding, runtime#idempotency (#918): the
+ * `reversible_write_idempotency` declarations, shape-checked wherever they
+ * appear, like `transaction_assurance`. The class (or the action's class) is
+ * a declared mediated class; the owner is a declared PEP location; the scope
+ * names only fixed-member dimensions and no volatile member; and the
+ * retention horizon resolves to a fixed number of seconds longer than the
+ * permit window, so a duplicate arriving after the permit expired still
+ * finds the record.
+ */
+function reversibleWriteFindings(
+  stmt: Record<string, unknown>,
+  scope: Record<string, unknown> | undefined,
+): EnforcementScopeFinding[] {
+  const findings: EnforcementScopeFinding[] = [];
+  const declared = object(stmt.extensions) ? stmt.extensions.reversible_write_idempotency : undefined;
+  if (declared === undefined) return findings;
+  const push = (member: string, problem: string): void => {
+    findings.push({ member, problem });
+  };
+  if (!Array.isArray(declared)) {
+    push("extensions.reversible_write_idempotency", "must be an array of per-class or per-operation declarations");
+    return findings;
+  }
+  const classes = scope ? (scope.action_classes as readonly string[]) : [];
+  const peps = scope ? (scope.pep_locations as readonly string[]) : [];
+  const reconciliation = object(stmt.extensions) ? stmt.extensions.outcome_reconciliation : undefined;
+  const covered = new Set<string>();
+  declared.forEach((raw, i) => {
+    const member = `extensions.reversible_write_idempotency[${i}]`;
+    const decl = object(raw) ? raw : undefined;
+    if (!decl) {
+      push(member, "entry must be an object");
+      return;
+    }
+    const target = decl.mediated_class_or_scope;
+    if (!isNonEmptyString(target)) {
+      push(member, "missing the reversible-write class or operation this declaration covers");
+    } else if (!classes.includes(REVERSIBLE_WRITE_CLASS)) {
+      push(member, `${REVERSIBLE_WRITE_CLASS} is outside mediated_scope.action_classes`);
+    } else if (target !== REVERSIBLE_WRITE_CLASS && (classes.includes(target) || !target.includes(":"))) {
+      push(
+        member,
+        `mediated_class_or_scope "${target}" is neither ${REVERSIBLE_WRITE_CLASS} nor an action identifier inside it`,
+      );
+    } else if (covered.has(target)) {
+      push(member, `mediated_class_or_scope "${target}" is declared twice`);
+    } else covered.add(target);
+    if (decl.permit_lifetime_control !== "validity_window_plus_idempotency_key") {
+      push(member, "permit_lifetime_control must be validity_window_plus_idempotency_key");
+    }
+    const permitWindow = decl.permit_validity_max_seconds;
+    const permitOk = typeof permitWindow === "number" && Number.isSafeInteger(permitWindow) && permitWindow > 0;
+    if (!permitOk) push(member, "permit_validity_max_seconds must be a positive whole number of seconds");
+    if (!isNonEmptyString(decl.reservation_domain)) {
+      push(member, "missing the reservation domain and the component that holds it");
+    }
+    if (!isNonEmptyString(decl.reservation_owner)) {
+      push(member, "missing the reservation_owner that holds the reservation");
+    } else if (!peps.includes(decl.reservation_owner)) {
+      push(member, `reservation_owner "${decl.reservation_owner}" is not a declared mediated_scope.pep_locations entry`);
+    }
+    const dims = decl.idempotency_scope;
+    if (
+      !isNonEmptyStringArray(dims) ||
+      new Set(dims).size !== dims.length ||
+      !dims.every(isScopeDimension) ||
+      dims.some(isVolatileScopeMember) ||
+      !IDEMPOTENCY_SCOPE_DIMENSIONS.every((d) => dims.includes(d))
+    ) {
+      push(member, `idempotency_scope must name each of ${IDEMPOTENCY_SCOPE_DIMENSIONS.join(", ")} once, and no volatile member`);
+    }
+    let horizon: number | undefined;
+    if (decl.retention_posture === "declared_horizon") {
+      horizon = retentionWindowSeconds(decl.retention_horizon);
+      if (horizon === undefined) push(member, "retention_horizon must be an ISO 8601 duration of days or below");
+    } else if (decl.retention_posture === "reconciliation_window") {
+      if (decl.retention_horizon !== undefined) push(member, "a reconciliation_window posture names no retention_horizon of its own");
+      horizon = object(reconciliation) ? retentionWindowSeconds(reconciliation.window) : undefined;
+      if (horizon === undefined) push(member, "a reconciliation_window posture needs a declared outcome_reconciliation window");
+    } else {
+      push(member, "retention_posture must be declared_horizon or reconciliation_window");
+    }
+    if (horizon !== undefined && permitOk && horizon <= (permitWindow as number)) {
+      push(member, `the ${horizon}s retention is not longer than the ${permitWindow as number}s permit window`);
+    }
+  });
+  return findings;
+}
+
+/**
+ * @spec runtime#permit-binding, runtime#idempotency (#918): the declaration
+ * that covers one request, when it elects the idempotency-key control: an
+ * entry naming its action identifier, else one naming its class. Only a
+ * `consequential_write` request is ever covered; the high-consequence
+ * classes carry the PDP's claim instead.
+ */
+export function reversibleWriteDeclarationFor(
+  stmt: EnforcementScopeStatement,
+  actionClass: string | undefined,
+  action: string,
+): ReversibleWriteIdempotencyDeclaration | undefined {
+  if (actionClass !== REVERSIBLE_WRITE_CLASS) return undefined;
+  const declared = stmt.extensions?.reversible_write_idempotency ?? [];
+  return (
+    declared.find((d) => d.mediated_class_or_scope === action) ??
+    declared.find((d) => d.mediated_class_or_scope === REVERSIBLE_WRITE_CLASS)
+  );
+}
+
+/**
+ * The retention a declaration publishes, in whole seconds: its own horizon,
+ * or the reconciliation window for that posture. `undefined` only for a
+ * statement the validator above refuses.
+ */
+export function reversibleWriteRetentionSeconds(
+  stmt: EnforcementScopeStatement,
+  decl: ReversibleWriteIdempotencyDeclaration,
+): number | undefined {
+  return decl.retention_posture === "declared_horizon"
+    ? retentionWindowSeconds(decl.retention_horizon)
+    : retentionWindowSeconds(stmt.extensions?.outcome_reconciliation?.window);
 }
 
 /**
