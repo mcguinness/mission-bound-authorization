@@ -695,16 +695,20 @@ Interactive:
   code the client redeems to obtain the successor's authority. This is
   the interactive path retained from earlier revisions of this document.
 
-This document defines no synchronous exchange completion. An expansion
-response is a successor or a refusal, never a token derived under the
-predecessor: a request whose derived authority is a subset of the
-predecessor's own Effective Authority Set is refused with
-`nothing_to_expand` ({{verification-order}}, {{denial-reasons}}).
-Policy-adjudicated expansion within a pre-consented authority ceiling
-is the experimental progressive authorization companion's concern
+This document defines no synchronous exchange completion for an
+expansion that takes fresh consent. An expansion response is a
+successor or a refusal, never a token derived under the predecessor: a
+request whose derived authority is a subset of the predecessor's own
+Effective Authority Set is refused with `nothing_to_expand`
+({{verification-order}}, {{denial-reasons}}). Policy-adjudicated
+expansion within a pre-consented authority ceiling is the experimental
+progressive authorization companion's concern
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}): an in-ceiling
-drawdown completes through the retained interactive path with the
-approval prompt skipped, as that companion defines.
+drawdown that passes that companion's policy-adjudication guards
+completes synchronously in the token-exchange response, returning the
+successor's access token, as that companion defines; one that falls
+back to a fresh human approval completes in one of the two modes
+above.
 
 Whichever mode completes, obtaining the fresh approval means the Mission
 Issuer authenticates the Approver against the published approval-
@@ -721,7 +725,9 @@ At completion the Mission Issuer computes the successor's integrity
 anchors (`intent_hash`, `authority_hash`, and, where the exchange
 carried an authority proposal, `proposal_hash`) and, at the point the
 successor's authority is issued (the resolving poll for a deferred
-completion, or the code redemption for an interactive completion),
+completion, the code redemption for an interactive completion, or the
+token-exchange response for a policy-adjudicated drawdown under the
+progressive authorization companion),
 creates the successor Mission record in the `active` state, with
 its `predecessor` member set
 ({{predecessor-member}}), atomically with the predecessor's transition
