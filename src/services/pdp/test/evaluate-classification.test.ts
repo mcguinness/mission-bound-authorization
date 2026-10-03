@@ -41,12 +41,11 @@ const view: MissionView = {
 
 const reqFor = (actionClass: string): EvaluationRequest => ({
   subject: { id: "alice" },
-  resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
+  resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
   // Not in the entry's actions, regardless of class: an entry-match failure
   // is the gate a low or unrecognized classification could try to evade.
   action: { name: "payments:payment.execute" },
   context: {
-    audience: RESOURCE,
     mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
     action_class: actionClass,
     // Fresh state so a high-consequence class clears step 3 and this test

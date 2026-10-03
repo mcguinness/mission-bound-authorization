@@ -57,9 +57,9 @@ const view = (): MissionView => ({
 
 const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => ({
   subject: { id: "alice" },
-  resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
+  resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
   action: { name: "payments:invoice.read" },
-  context: { audience: RESOURCE, mission: { id: "msn_test_1", issuer: "https://as.test" } },
+  context: { mission: { id: "msn_test_1", issuer: "https://as.test" } },
   ...over,
 });
 
@@ -176,7 +176,7 @@ describe("Remote Decision Channel (@spec runtime#decision-channel)", () => {
     const evaluations = { n: 0 };
     const server = await startServer(evaluations);
     const decision = await evaluateRemote(
-      req({ context: { audience: OTHER_RESOURCE, mission: { id: "msn_test_1", issuer: "https://as.test" } } }),
+      req({ resource: { type: "invoice", id: "inv-1", properties: { audience: OTHER_RESOURCE, vendor_id: "acme" } } }),
       { url: server.url, pepId: PEP_ID, secret: SECRET },
     );
     expect(decision.decision).toBe(false);
@@ -413,10 +413,9 @@ describe("Remote Decision Channel (@spec runtime#decision-channel)", () => {
 describe("the remote channel binds the claim requester (@spec runtime#idempotency, #917)", () => {
   const keyed = (key: string): EvaluationRequest => ({
     subject: { id: "alice" },
-    resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
+    resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
     action: { name: "payments:invoice.read", properties: { idempotency_key: key } },
     context: {
-      audience: RESOURCE,
       mission: { id: "msn_test_1", issuer: "https://as.test" },
       action_class: "irreversible_action",
       parameter_digest: "sha-256:pd-917",

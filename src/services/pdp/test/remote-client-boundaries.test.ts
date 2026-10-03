@@ -3,7 +3,7 @@ import { evaluateRemote, isDecisionChannelRefusal } from "../src/client.js";
 import { macHex, RESPONSE_MAC_DOMAIN, sha256Hex } from "../src/channel-mac.js";
 import type { EvaluationRequest } from "../src/evaluate.js";
 
-const request = { subject: { id: "alice" }, resource: { type: "invoice", id: "one" }, action: { name: "read" }, context: { audience: "https://resource.test" } } as EvaluationRequest;
+const request = { subject: { id: "alice" }, resource: { type: "invoice", id: "one", properties: { audience: "https://resource.test" } }, action: { name: "read" }, context: {} } as EvaluationRequest;
 const config = { url: "http://unused.test/evaluate", pepId: "pep", secret: "test-only" };
 function signed(raw: string): typeof fetch {
   return (async (_url, init) => {

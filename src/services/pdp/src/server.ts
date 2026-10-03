@@ -301,8 +301,10 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
 
   async function handleEvaluate(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const authed = await authenticate(req, res, (body) => {
+      // @spec authzen#pdp-request: the enforcement scope a request names is
+      // its `resource.properties.audience`, the member the entry match reads.
       const request = body.request as EvaluationRequest | undefined;
-      return request?.context?.audience;
+      return request?.resource?.properties?.audience;
     });
     if (!authed) return;
     const evalRequest = authed.body.request as EvaluationRequest;

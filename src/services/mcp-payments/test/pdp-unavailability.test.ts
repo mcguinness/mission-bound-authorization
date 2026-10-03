@@ -62,9 +62,9 @@ describe("configured PDP unavailability (@spec runtime#ride-through, authzen#fai
     try {
       const request = {
         subject: { id: "alice" },
-        resource: { type: "invoice", id: "one", properties: { vendor_id: "acme" } },
+        resource: { type: "invoice", id: "one", properties: { audience: CANONICAL_RESOURCE, vendor_id: "acme" } },
         action: { name: "payments:invoice.read" },
-        context: { audience: CANONICAL_RESOURCE, mission: { id: x.view.id, issuer: x.view.issuer, authority_hash: x.view.authority_hash } },
+        context: { mission: { id: x.view.id, issuer: x.view.issuer, authority_hash: x.view.authority_hash } },
       } as EvaluationRequest;
       const submitted = canonicalDigest(JSON.parse(JSON.stringify(request)));
       const decision = await x.channel.decide(request, x.getOptions() as DecisionOptions);
@@ -197,8 +197,8 @@ describe("configured PDP unavailability (@spec runtime#ride-through, authzen#fai
       expect(stalenessBound("irreversible_action")).toEqual({ kind: "bounded", seconds: 30 });
       const started = Date.now();
       const decision = await channel.decide({
-        subject: { id: "alice" }, resource: { type: "invoice", id: "one" }, action: { name: "payments:payment.execute" },
-        context: { audience: CANONICAL_RESOURCE, mission: { id: "msn_remote", issuer: "https://as.test" }, action_class: "irreversible_action" },
+        subject: { id: "alice" }, resource: { type: "invoice", id: "one", properties: { audience: CANONICAL_RESOURCE } }, action: { name: "payments:payment.execute" },
+        context: { mission: { id: "msn_remote", issuer: "https://as.test" }, action_class: "irreversible_action" },
       });
       expect(Date.now() - started).toBeLessThan(5_000);
       expect(decision.decision).toBe(false);

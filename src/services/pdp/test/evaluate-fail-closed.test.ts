@@ -83,10 +83,9 @@ const view = (entry: AuthorityEntry): MissionView => ({
 
 const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => ({
   subject: { id: "alice" },
-  resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
+  resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
   action: { name: "payments:invoice.read", properties: { idempotency_key: freshKey() } },
   context: {
-    audience: RESOURCE,
     mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
   },
   ...over,
@@ -153,7 +152,6 @@ describe("evaluateInner fail-closed gaps (#608)", () => {
         const dec = await evaluate(
           req({
             context: {
-              audience: RESOURCE,
               mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
               action_class: actionClass,
             },
@@ -170,7 +168,6 @@ describe("evaluateInner fail-closed gaps (#608)", () => {
         const dec = await evaluate(
           req({
             context: {
-              audience: RESOURCE,
               mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
               action_class: actionClass,
               freshness: { observed_at: NOW.toISOString(), source: "status" },
@@ -187,7 +184,6 @@ describe("evaluateInner fail-closed gaps (#608)", () => {
         const dec = await evaluate(
           req({
             context: {
-              audience: RESOURCE,
               mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
               action_class: actionClass,
               // an hour old: beyond every class's staleness bound (30s/60s/300s default)
@@ -205,7 +201,6 @@ describe("evaluateInner fail-closed gaps (#608)", () => {
       const dec = await evaluate(
         req({
           context: {
-            audience: RESOURCE,
             mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
             action_class: "consequential_write",
           },
@@ -233,7 +228,6 @@ describe("evaluateInner fail-closed gaps (#608)", () => {
     const reqWith = (actionClass: string, freshness: { observed_at: string; source: string }) =>
       req({
         context: {
-          audience: RESOURCE,
           mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           action_class: actionClass,
           freshness,

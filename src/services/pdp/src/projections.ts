@@ -26,9 +26,10 @@ import type { MissionView } from "./policy-view.js";
  * is the client and, where the immediate (leaf) `act` entry names a
  * delegate, that delegate (`idempotencyScopeActor`), so a new client
  * instance, an instance-profiled leaf, or a longer chain above the leaf does
- * not split the scope; `audience` is the member the PDP matched the authority
- * entry against and the remote channel checked against the PEP's authorized
- * scopes; `phase` is the validated phase, `null` where the operation is no
+ * not split the scope; `audience` is `resource.properties.audience`, the
+ * member the PDP matched the authority entry against and the remote channel
+ * checked against the PEP's authorized scopes (@spec authzen#pdp-request);
+ * `phase` is the validated phase, `null` where the operation is no
  * phase of a compound action.
  */
 export function idempotencyScopeOf(req: EvaluationRequest): IdempotencyScope | undefined {
@@ -40,7 +41,7 @@ export function idempotencyScopeOf(req: EvaluationRequest): IdempotencyScope | u
     mission: { iss: req.context.mission.issuer, id: req.context.mission.id },
     subject: { iss: req.subject.properties?.iss ?? null, sub: req.subject.id },
     actor,
-    audience: req.context.audience,
+    audience: req.resource.properties.audience,
     action: req.action.name,
     resource: { type: req.resource.type, id: req.resource.id },
     phase: isActionPhase(req.context.action_phase) ? req.context.action_phase : null,

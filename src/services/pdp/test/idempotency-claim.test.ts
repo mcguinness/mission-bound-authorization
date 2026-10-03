@@ -136,19 +136,20 @@ interface RequestOptions {
   subIss?: string;
   actor?: NonNullable<EvaluationRequest["context"]["actor"]>;
   audience?: string;
-  resource?: EvaluationRequest["resource"];
+  /** The target object; the request's `resource.properties.audience` comes from `audience`. */
+  resource?: { type: string; id: string; properties?: { vendor_id?: string } };
 }
 
 function request(c: Clock, o: RequestOptions = {}): EvaluationRequest {
+  const target = o.resource ?? { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } };
   return {
     subject: { id: o.sub ?? "alice", properties: { iss: o.subIss ?? "https://as.test" } },
-    resource: o.resource ?? { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
+    resource: { ...target, properties: { ...target.properties, audience: o.audience ?? RESOURCE } },
     action: {
       name: o.action ?? "payments:payment.execute",
       ...(o.key === null ? {} : { properties: { idempotency_key: o.key ?? freshKey() } }),
     },
     context: {
-      audience: o.audience ?? RESOURCE,
       mission: { id: o.missionId ?? "msn_917", issuer: "https://as.test" },
       actor: o.actor ?? { client_id: "ap-agent" },
       action_class: o.actionClass ?? "irreversible_action",

@@ -1,5 +1,5 @@
 /**
- * @spec authzen#pdp-request (envelope binding, context.audience rule)
+ * @spec authzen#pdp-request (envelope binding, resource.properties.audience rule)
  * @spec authzen#denial-response, authzen#runtime-denial-classification
  * @spec runtime (abstract decision contract)
  *
@@ -127,15 +127,29 @@ export interface EvaluationRequest {
     properties?: { iss?: string };
   };
   /**
-   * Fine-grained target object (Resource-policy only), NOT the entry match.
-   * `vendor_ids`, when present, names the FULL collection a bound bulk read
-   * resolves to (@spec runtime#read-binding): `id`/`vendor_id` above still
-   * name one REPRESENTATIVE member (so every existing single-object caller
-   * is unaffected), but Resource policy is checked against EVERY member of
-   * `vendor_ids`, not just the representative one (see evaluateInner's
-   * step 6a).
+   * `type`/`id`: the fine-grained target object (Resource-policy only), NOT
+   * the entry match. `vendor_ids`, when present, names the FULL collection a
+   * bound bulk read resolves to (@spec runtime#read-binding): `id`/`vendor_id`
+   * still name one REPRESENTATIVE member (so every existing single-object
+   * caller is unaffected), but Resource policy is checked against EVERY
+   * member of `vendor_ids`, not just the representative one (see
+   * evaluateInner's step 6a).
    */
-  resource: { type: string; id: string; properties?: { vendor_id?: string; vendor_ids?: string[] } };
+  resource: {
+    type: string;
+    id: string;
+    properties: {
+      /**
+       * @spec authzen#context-audience-freshness, authzen#pdp-request:
+       * REQUIRED, the PEP's audience or protected-resource identifier. The
+       * approved entry's `resource` is matched against this member, never
+       * against `type` or `id`.
+       */
+      audience: string;
+      vendor_id?: string;
+      vendor_ids?: string[];
+    };
+  };
   action: {
     name: string;
     /**
@@ -148,7 +162,6 @@ export interface EvaluationRequest {
     properties?: { idempotency_key?: string };
   };
   context: {
-    audience: string; // matched against the approved entry's resource
     mission: {
       id: string;
       issuer: string;
@@ -568,7 +581,7 @@ async function emitDecisionEvidence(
     },
     resource: { type: req.resource.type, id: req.resource.id },
     action: { name: req.action.name },
-    audience: req.context.audience,
+    audience: req.resource.properties?.audience,
     evaluation_id: decision.context.evaluation_id as string,
     evaluation_request_digest: requestDigest,
     decision: decision.decision ? "permit" : "deny",
@@ -609,6 +622,10 @@ async function evaluateInner(
   const { view, fga, modelId, now } = opts;
   const pvid = policyViewId(view, modelId);
   const actionClass = req.context.action_class;
+  // @spec authzen#pdp-request: "A PDP MUST perform the entry match against
+  // `resource.properties.audience`". Read once; a request lacking it matches
+  // no entry.
+  const audience = req.resource.properties?.audience;
   const decisionId = newDecisionId();
   // @spec cross-domain#origin-principal-mapping, runtime-evidence#principal_mapping
   // — set once step 4a below validates the mapping (before entitlement lookup,
@@ -795,7 +812,7 @@ async function evaluateInner(
     // takes the ordinary evidence path rather than escaping evaluate().
     let mappingResult: PrincipalMappingObservation | undefined;
     try {
-      mappingResult = await opts.principalMapping?.resolve({ origin, audience: req.context.audience });
+      mappingResult = await opts.principalMapping?.resolve({ origin, audience });
     } catch {
       mappingResult = undefined;
     }
@@ -837,7 +854,7 @@ async function evaluateInner(
     let entitlement: EntitlementObservation | undefined;
     if (entitlementBoundS !== undefined) {
       try {
-        entitlement = await opts.entitlement?.resolve({ local: mappingResult.local, audience: req.context.audience });
+        entitlement = await opts.entitlement?.resolve({ local: mappingResult.local, audience });
       } catch {
         entitlement = undefined;
       }
@@ -850,7 +867,7 @@ async function evaluateInner(
     // intersected with this request's own (resource, action) pair, so an
     // entitlement gap on one action denies that action alone and leaves the
     // rest of the delegated set evaluable. The resource matched here is
-    // `context.audience`, the same member step 5 below matches an authority
+    // `resource.properties.audience`, the same member step 5 below matches an authority
     // entry's `resource` against; the AuthZEN `resource.id` names the
     // object instance, a different namespace the delegated set is not keyed
     // by.
@@ -862,7 +879,7 @@ async function evaluateInner(
       entitlementAgeMs >= -skewToleranceMs &&
       entitlementAgeMs <= entitlementBoundS * 1000 &&
       (entitlement.authority === undefined ||
-        entitlementPermits(entitlement.authority, req.context.audience, req.action.name));
+        entitlementPermits(entitlement.authority, audience, req.action.name));
     if (!entitlementCurrent) return deny("principal_mapping_failed");
   }
 
@@ -896,7 +913,8 @@ async function evaluateInner(
   }
 
   // 5. Authority entry match: the approved entry's resource is matched
-  //    against context.audience (NOT the AuthZEN resource member). On the
+  //    against resource.properties.audience, never the AuthZEN resource
+  //    object's type/id (@spec authzen#pdp-request). On the
   //    baseline-Join path (4b above), matched against the JOINED authority
   //    set, never the Mission's raw view.authority_set.
   // @spec runtime#input-authority — "For any other `authorization_details`
@@ -914,7 +932,7 @@ async function evaluateInner(
     (e) => {
       contributions.add(e.type);
       return e.type === MISSION_RESOURCE_ACCESS_TYPE &&
-      e.resource === req.context.audience &&
+      e.resource === audience &&
       e.actions.includes(req.action.name);
     },
   );
@@ -934,7 +952,7 @@ async function evaluateInner(
     const unrecognizedTypeMatch = candidateAuthoritySet.some(
       (e) =>
         e.type !== MISSION_RESOURCE_ACCESS_TYPE &&
-        e.resource === req.context.audience &&
+        e.resource === audience &&
         e.actions.includes(req.action.name),
     );
     if (unrecognizedTypeMatch) return deny("unsupported_authorization_type");

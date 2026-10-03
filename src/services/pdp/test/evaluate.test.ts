@@ -75,10 +75,9 @@ const view = (over: Partial<MissionView> = {}): MissionView => ({
 const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => {
   const built: EvaluationRequest = {
     subject: { id: "alice" },
-    resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
+    resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
     action: { name: "payments:invoice.read" },
     context: {
-      audience: RESOURCE,
       mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
     },
     ...over,
@@ -132,7 +131,6 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
       req({
         action: { name: "payments:payment.execute" },
         context: {
-          audience: RESOURCE,
           mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           amount: { amount: "125.00", currency: "USD" },
           action_class: "irreversible_action",
@@ -154,7 +152,6 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
       req({
         action: { name: "payments:invoice.read" },
         context: {
-          audience: RESOURCE,
           mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           action_class: "external_commitment",
           parameter_digest: "sha-256:pd2",
@@ -192,7 +189,6 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
       req({
         action: { name: "payments:payment.execute" },
         context: {
-          audience: RESOURCE,
           mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           amount: { amount: "125.00", currency: "USD" },
         },
@@ -241,7 +237,6 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
     const dec = await evaluate(
       req({
         context: {
-          audience: RESOURCE,
           mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash", policy_view_id: stalePvid },
         },
       }),
@@ -257,7 +252,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
   // subset-required's notes for why this scenario is no longer cited there.
   it("vendor outside the constraint -> deny parameter_violation (entry matched, constraint fails)", async () => {
     const dec = await evaluate(
-      req({ resource: { type: "invoice", id: "inv-3", properties: { vendor_id: "globex" } } }),
+      req({ resource: { type: "invoice", id: "inv-3", properties: { audience: RESOURCE, vendor_id: "globex" } } }),
       opts(view()),
     );
     expect(dec.decision).toBe(false);
@@ -269,7 +264,6 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
       req({
         action: { name: "payments:payment.execute" },
         context: {
-          audience: RESOURCE,
           mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           amount: { amount: "900.00", currency: "USD" },
         },
@@ -291,7 +285,6 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
       req({
         action: { name: "payments:payment.execute" },
         context: {
-          audience: RESOURCE,
           mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           amount: { amount: "100.00", currency: "USD" },
           action_class: "irreversible_action",
@@ -306,7 +299,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
 
   it("view inconsistency (authority_hash mismatch) -> deny view_inconsistent", async () => {
     const dec = await evaluate(
-      req({ context: { audience: RESOURCE, mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:WRONG" } } }),
+      req({ context: { mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:WRONG" } } }),
       opts(view()),
     );
     expect(dec.decision).toBe(false);
@@ -315,7 +308,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
 
   it("@spec authzen#pdp-request consistency-id-and-issuer-equal -- view inconsistency (issuer mismatch) -> deny view_inconsistent", async () => {
     const dec = await evaluate(
-      req({ context: { audience: RESOURCE, mission: { id: "msn_test_1", issuer: "https://evil.test" } } }),
+      req({ context: { mission: { id: "msn_test_1", issuer: "https://evil.test" } } }),
       opts(view()),
     );
     expect(dec.decision).toBe(false);
@@ -324,15 +317,15 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
 
   it("@spec mission#the-mission-claim, authzen#pdp-request rule 5 (#702) -- a baseline {id, issuer} context.mission (no authority_hash) permits: its absence is never itself a denial", async () => {
     const dec = await evaluate(
-      req({ context: { audience: RESOURCE, mission: { id: "msn_test_1", issuer: "https://as.test" } } }),
+      req({ context: { mission: { id: "msn_test_1", issuer: "https://as.test" } } }),
       opts(view()),
     );
     expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
   });
 
-  it("wrong audience -> deny out_of_authority (entry matched on context.audience)", async () => {
+  it("wrong audience -> deny out_of_authority (entry matched on resource.properties.audience)", async () => {
     const dec = await evaluate(
-      req({ context: { audience: "http://other/mcp", mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" } } }),
+      req({ resource: { type: "invoice", id: "inv-1", properties: { audience: "http://other/mcp", vendor_id: "acme" } } }),
       opts(view()),
     );
     expect(dec.decision).toBe(false);
@@ -347,7 +340,6 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
       req({
         action: { name: "payments:payment.execute" },
         context: {
-          audience: RESOURCE,
           mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           amount: { amount: "125.00", currency: "USD" },
           action_class: "irreversible_action",
@@ -377,7 +369,6 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
       req({
         action: { name: "payments:payment.execute" },
         context: {
-          audience: RESOURCE,
           mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           amount: { amount: "125.00", currency: "USD" },
           action_class: "irreversible_action",
@@ -402,7 +393,6 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
       req({
         action: { name: "payments:payment.execute" },
         context: {
-          audience: RESOURCE,
           mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           amount: { amount: "125.00", currency: "USD" },
           action_class: "irreversible_action",
@@ -459,7 +449,6 @@ d("entry-driven action approval (@spec txn-authorization#applicability)", () => 
     const decision = await evaluate(
       req({
         context: {
-          audience: RESOURCE,
           mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           parameter_digest: "sha-256:gated-op",
           action_approval: {
@@ -526,7 +515,7 @@ describe("basic gate: active predicate, non-active outcome, unrecognized-fails-c
   // boundary, so this stays a partial mapping for the propagation surface.
   it("a supplied mission reference that mismatches the loaded view is refused, never silently accepted", async () => {
     const dec = await evaluate(
-      req({ context: { audience: RESOURCE, mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:WRONG" } } }),
+      req({ context: { mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:WRONG" } } }),
       gateOpts(view()),
     );
     expect(dec.decision).toBe(false);

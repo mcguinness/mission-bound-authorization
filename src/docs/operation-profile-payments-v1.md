@@ -10,7 +10,7 @@ document. Version: `payments-runtime-profile-v1`; changes bump the suffix.
 - Canonical MCP resource URI (byte-for-byte everywhere per D38):
   `http://localhost:4403/mcp` (overridable via `.env`; whatever the value,
   it is used identically in PRM, OAuth `resource`, token `aud`, AuthZEN
-  `context.audience`, and evidence).
+  `resource.properties.audience`, and evidence).
 - Tool ids (capability source `tool_id`): `mcp://payments.demo/tools/<name>`.
 - AuthZEN action ids: `payments:<operation>` as listed below.
 

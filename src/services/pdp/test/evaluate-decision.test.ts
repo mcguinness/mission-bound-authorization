@@ -49,10 +49,9 @@ const view = (over: Partial<MissionView> = {}): MissionView => ({
 
 const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => ({
   subject: { id: "alice" },
-  resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
+  resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
   action: { name: "payments:invoice.read" },
   context: {
-    audience: RESOURCE,
     mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
   },
   ...over,
@@ -64,7 +63,6 @@ describe("a valid action-bound approval does not expand authority (@spec runtime
     const outOfAuthorityReq = req({
       action: { name: "payments:payment.execute" },
       context: {
-        audience: RESOURCE,
         mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
         parameter_digest: "sha-256:pd",
       },
@@ -88,7 +86,6 @@ describe("a valid action-bound approval does not expand authority (@spec runtime
       req({
         action: { name: "payments:payment.execute" },
         context: {
-          audience: RESOURCE,
           mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           parameter_digest: "sha-256:pd",
           action_approval: approval,
@@ -135,7 +132,6 @@ describe("a valid action-bound approval does not expand authority (@spec runtime
     const withApproval = await evaluate(
       req({
         context: {
-          audience: RESOURCE,
           mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           parameter_digest: "sha-256:pd",
           action_approval: approval,
@@ -154,7 +150,6 @@ describe("a valid action-bound approval does not expand authority (@spec runtime
     const withoutApproval = await evaluate(
       req({
         context: {
-          audience: RESOURCE,
           mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           parameter_digest: "sha-256:pd",
         },
@@ -172,7 +167,6 @@ describe("runtime decision gates are independently necessary (@spec runtime#deci
       req({
         action: { name: "payments:invoice.read" },
         context: {
-          audience: RESOURCE,
           mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           action_class: "irreversible_action", // 30s staleness bound
           freshness: { observed_at: "2026-07-22T11:58:00Z", source: "status" }, // 120s stale
@@ -256,9 +250,9 @@ describe("a bound bulk read's Resource-policy check covers every returned vendor
   };
   const listReq = (vendorIds: string[]): EvaluationRequest => ({
     subject: { id: "alice" },
-    resource: { type: "vendor", id: vendorIds[0] as string, properties: { vendor_id: vendorIds[0], vendor_ids: vendorIds } },
+    resource: { type: "vendor", id: vendorIds[0] as string, properties: { audience: LIST_RESOURCE, vendor_id: vendorIds[0], vendor_ids: vendorIds } },
     action: { name: "payments:invoice.list" },
-    context: { audience: LIST_RESOURCE, mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" } },
+    context: { mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" } },
   });
   const listOpts = (fga: Fga) => ({
     view: listView,
@@ -289,9 +283,9 @@ describe("a bound bulk read's Resource-policy check covers every returned vendor
   it("without vendor_ids (a single-object request), only the named representative is checked, unaffected by the collection check", async () => {
     const req: EvaluationRequest = {
       subject: { id: "alice" },
-      resource: { type: "vendor", id: "acme", properties: { vendor_id: "acme" } },
+      resource: { type: "vendor", id: "acme", properties: { audience: LIST_RESOURCE, vendor_id: "acme" } },
       action: { name: "payments:invoice.list" },
-      context: { audience: LIST_RESOURCE, mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" } },
+      context: { mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" } },
     };
     const denyGlobex = {
       checkWithContext: async (check: { object: string }) => check.object !== "vendor:globex",
@@ -318,10 +312,9 @@ describe("a permit expires no later than the state view it was decided against (
   });
   const execReq = (observedAt: string): EvaluationRequest => ({
     subject: { id: "alice" },
-    resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
+    resource: { type: "invoice", id: "inv-1", properties: { audience: EXEC_RESOURCE, vendor_id: "acme" } },
     action: { name: "payments:payment.execute", properties: { idempotency_key: freshKey() } },
     context: {
-      audience: EXEC_RESOURCE,
       mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
       action_class: "irreversible_action",
       parameter_digest: "sha-256:pd",
@@ -381,10 +374,9 @@ describe("compound-action phase carriers on the decision (@spec authzen#context-
   });
   const phaseReq = (actionPhase: string | undefined): EvaluationRequest => ({
     subject: { id: "alice" },
-    resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
+    resource: { type: "invoice", id: "inv-1", properties: { audience: PHASE_RESOURCE, vendor_id: "acme" } },
     action: { name: "payments:payment.execute" },
     context: {
-      audience: PHASE_RESOURCE,
       mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
       parameter_digest: "sha-256:pd",
       ...(actionPhase !== undefined ? { action_phase: actionPhase } : {}),

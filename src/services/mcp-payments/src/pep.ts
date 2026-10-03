@@ -1001,9 +1001,16 @@ function obligationOutcomes(
  * that request (@spec runtime-evidence#request-digest-worked).
  */
 interface RefusalEstablished {
-  resource?: EvaluationRequest["resource"];
+  resource?: TargetObject;
   evaluationRequest?: EvaluationRequest;
 }
+
+/**
+ * The target object this PEP resolves for a crossing: the AuthZEN
+ * `resource` identity and its object-scoped members, before the request's
+ * `resource.properties.audience` is added.
+ */
+type TargetObject = { type: string; id: string; properties?: { vendor_id?: string; vendor_ids?: string[] } };
 
 export class Pep {
   readonly capabilityCatalog: CapabilityCatalog;
@@ -1203,7 +1210,7 @@ export class Pep {
     let listEffective: ListEffectiveParams | undefined;
     let listDigest: string | undefined;
     let amount: { amount: string; currency: string } | undefined;
-    let resourceObj: EvaluationRequest["resource"] = { type: "server", id: CANONICAL_RESOURCE };
+    let resourceObj: TargetObject = { type: "server", id: CANONICAL_RESOURCE };
     let listVendorScope: string[] | undefined;
     if (mapping.needsInvoice) {
       const invoiceId = String(args.invoice_id ?? "");
@@ -1302,7 +1309,12 @@ export class Pep {
       // the token validator that authenticated this request, never anything
       // client-supplied.
       subject: { id: token.sub, ...(token.iss !== undefined ? { properties: { iss: token.iss } } : {}) },
-      resource: resourceObj,
+      // @spec authzen#context-audience-freshness, authzen#pdp-request: this
+      // PEP's protected-resource identifier rides `resource.properties.audience`
+      // on every request, beside the target object's own resource-scoped
+      // members; the PDP matches the approved entry against it, never against
+      // `type`/`id`.
+      resource: { ...resourceObj, properties: { ...resourceObj.properties, audience: CANONICAL_RESOURCE } },
       // @spec authzen#parameter-digest `idempotency_key` (#917): forwarded
       // exactly as the caller supplied it, distinct from `parameter_digest`.
       // A missing or malformed key is the PDP's to refuse; this PEP neither
@@ -1314,7 +1326,6 @@ export class Pep {
           : {}),
       },
       context: {
-        audience: CANONICAL_RESOURCE,
         mission: {
           // @spec authority-server#mission-join rule 1/2, #557 review point
           // 1 — `missionAnchor.id`, not `view.id`: on the Mission-bound path
