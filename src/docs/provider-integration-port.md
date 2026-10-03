@@ -205,9 +205,10 @@ the store.
   runs `establishAuthoritySource` (gates 1, 2, 4 and 5) and
   `assertAuthorityWithinSource` (gate 3) on one resolution, and computes
   `authority_hash`, `intent_hash` and, with a proposal, `proposal_hash`.
-  `insertRecord` re-asserts the source ceiling against that resolution (a
-  drawdown has none, so it uses `assertInheritedAuthoritySource`) and the
-  discharge mappings (`assertDischargePoliciesResolvable`). Each refusal is an
+  `insertRecord` re-asserts the source ceiling against that resolution, or
+  for a drawdown against its origin's committed root, records the Mission's
+  binding in the record transaction, and re-asserts the discharge mappings
+  (`assertDischargePoliciesResolvable`). Each refusal is an
   `IntentError`; `decide()` finishes the interaction with its code
   (`access_denied` for the source gates).
 - **Per-principal resolution (#827).** Gate 1 selects one root for the
@@ -222,12 +223,19 @@ the store.
   completion. The render consults the same resolver: for the `login_hint`
   Subject, or with none through `resolveForRendering`, which answers only a
   provenance every Subject of the client shares and otherwise refuses.
-  Drawdowns (child, template dispatch, carryover) re-resolve from provenance
-  and refuse when it denotes more than one root. Under a configured
-  replacement resolver they refuse outright, since the catalog behind the
-  kernel is not what the approval consulted. The committed-root binding is
-  #827's second part. Gate 4's human-principal list stays kernel
-  configuration; it can only refuse.
+  Gate 4's human-principal list stays kernel configuration; it can only
+  refuse.
+- **Committed roots (#827).** Every Mission records the root it committed
+  (`authority_source_bindings`: root id, deployment, root context and
+  provenance), private and outside every anchor. Each path's root follows its
+  approval basis. A child inherits its parent's root and that root's context,
+  whatever client the child presents. Template consent records each
+  recipient pair's root, the pairs sharing one provenance, and dispatch uses
+  the dispatching Subject's own. A carryover replacement takes its rendered
+  origin's root. Direct approval and Expansion resolve fresh. A drawdown
+  resolves its origin's root through the resolver's `resolveCommittedRoot`,
+  which never rebinds: a removed root, a changed provenance or policy digest,
+  or a root that no longer selects its own context refuses.
 - **Synchronous resolution.** The resolver is synchronous by contract: it runs
   inside an approval completion, whose record commit is one synchronous store
   transaction. A remote resolver answers from a snapshot and revalidates at
@@ -691,8 +699,8 @@ prunes settled rows and tombstone detail, and marks unreleased reservations
 `unacknowledged` (`kernel.ts`). For this path, a restart on the file-backed
 kernel leaves:
 
-- **Retained:** Mission Records, `derivation_count`, `grant_id`, lifecycle
-  events and tombstones.
+- **Retained:** Mission Records, their committed authority-source roots,
+  `derivation_count`, `grant_id`, lifecycle events and tombstones.
 - **Lost:** provider interactions, grants, codes and refresh tokens. Every
   outstanding refresh token is unknown, and oidc-provider refuses it
   `invalid_grant` (`refresh token not found`).
@@ -704,7 +712,15 @@ kernel leaves:
 - **Stranded:** an `active` Mission whose grant is gone. Nothing can derive
   from it, and it stays `active` until `expires_at` or a revocation.
 
-Nothing on this path is reconciled, because it has no reservations to settle.
+Committed authority-source roots are the one thing reconciled at kernel
+construction (#827). A row that predates them gains one only from trusted
+evidence: an explicit mapping (`authoritySourceReconciliation.mappings`,
+Mission ID to root ID), or a declared historical catalog in force at its
+approval (`.history`) in which exactly one root selected its client, Subject
+and provenance. A match in the current catalog is never evidence. A derived
+row takes its origin's root; a row without evidence stays unbound and every
+drawdown from it refuses. Nothing else on this path is reconciled, because it
+has no reservations to settle.
 Each unsupported recovery refuses rather than serves. No test boots the
 assembled AS on a file-backed kernel. The restart test,
 `restart recovery on the declared file-backed store > recovers the unpublished commit, the version high-water and the tombstone across a restart`
