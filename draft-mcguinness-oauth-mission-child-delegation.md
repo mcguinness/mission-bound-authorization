@@ -1232,7 +1232,10 @@ enforced.
 Bounding the aggregate
 across a subtree is the role of consumption metering, not this
 profile's attenuation rules
-({{I-D.draft-mcguinness-mission-metering}}). This warning is about the
+({{I-D.draft-mcguinness-mission-metering}}). An exclusivity group, by
+contrast, binds the whole subtree through one shared latch that the
+metering profile defines (Section "Exclusivity Across Missions" of
+{{I-D.draft-mcguinness-mission-metering}}). This warning is about the
 child-subtree axis specifically; the continuation profile separately
 counts derivations within a single Mission's own continued grants,
 where a delegated refresh-token family's successive refreshes are one
