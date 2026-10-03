@@ -668,6 +668,8 @@ lifecycle cutting through the last three. The Mission is the approved
 task, with a lifecycle. In the OAuth model, the Authority Set is the
 concrete authority (resources, actions, constraints) derived for it.
 
+## Approval and Lifecycle {#approval-and-lifecycle}
+
 In every binding, an explicit approval event creates the Mission and
 commits its approved context, or a verifiable commitment to it, and
 the Mission's Controller then owns its state. In the OAuth binding, a
@@ -698,6 +700,23 @@ Companions add states (`suspended`, `completed`, `superseded`,
 treats every state other than the exact value `active`, including one it
 does not recognize, as non-active, so an unrecognized state fails safe
 (the OAuth binding's Mission Lifecycle and Gating section).
+
+AAuth realizes the separation differently. Its exact-byte `s256`
+commits the private approved mission blob. The approving PS and `s256`
+are the Mission Reference, AAuth's mission identity (Section 8.2.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}). The blob carries no member
+naming the PS: a person token names it by `iss`, a resource or auth
+token by `ps`, and a request by its destination. On the wire the
+reference is the `mission_s256` claim or parameter. The PS applies
+contextual governance using that blob and the ordered mission log;
+scopes, resource tokens, Resource and Access Server policy, and
+optionally AAuth Rich Resource Requests
+(R3, {{I-D.draft-hardt-aauth-r3}}) carry deterministic resource
+authorization. AAuth does not add the OAuth Authority Set or its two
+anchors, and its native lifecycle remains exactly `active` or
+`terminated`.
+
+## The Authority Path {#mission-authority-path}
 
 In OAuth's names, authority then moves along one path from the approval
 event to an action, and no stage holds more than the stage before it:
@@ -743,20 +762,7 @@ deployed, a resource relies on the credential alone, and the
 materialized-credential residual remains ({{validity-model}}).
 {{authority-transitions}} places each mechanism on this path.
 
-AAuth realizes the separation differently. Its exact-byte `s256`
-commits the private approved mission blob. The approving PS and `s256`
-are the Mission Reference, AAuth's mission identity (Section 8.2.1 of
-{{I-D.draft-hardt-oauth-aauth-protocol}}). The blob carries no member
-naming the PS: a person token names it by `iss`, a resource or auth
-token by `ps`, and a request by its destination. On the wire the
-reference is the `mission_s256` claim or parameter. The PS applies
-contextual governance using that blob and the ordered mission log;
-scopes, resource tokens, Resource and Access Server policy, and
-optionally AAuth Rich Resource Requests
-(R3, {{I-D.draft-hardt-aauth-r3}}) carry deterministic resource
-authorization. AAuth does not add the OAuth Authority Set or its two
-anchors, and its native lifecycle remains exactly `active` or
-`terminated`.
+## The Delegated-Authority Layer {#delegated-authority-layer}
 
 The Mission model is the beginning of a distinct layer.
 Authentication and token issuance answer who is acting and what a
@@ -1921,6 +1927,7 @@ The derivation modes rank by how portable their result is:
 | Configured mapping keyed on structured Intent members | Conforming; the mapping is deployment-specific |
 | Model-assisted derivation over the structured inputs | Local-policy extension, bound by the Intent bounds |
 | Derivation from the prose members | Not a mode: prose is disclosure, shaped before admission |
+{: title="Derivation modes by portability"}
 
 A deployment seeking interoperable authority uses narrowing; a
 model-assisted extension stays local policy unless a profile pins it
@@ -2214,6 +2221,7 @@ The differences that decide a design:
 | Join ambiguity possible | no | yes (bounded by join assurance) | no when the native reference is preserved; it can be ignored in agent identity and resource-managed access | no | no (native binding; no cross-authority join) |
 | Revocation latency source | token lifetime, status, or runtime | runtime and status only | auth-token lifetime on PS paths; no Mission cutoff on agent identity and resource-managed paths | next introspection | token lifetime, or the declared introspection cache bound |
 | Offline Mission verification | partial (claims verify; state does not) | limited (join assertion) | reference integrity only; blob is private | JWT RPTs partial; opaque RPTs none | partial with a structured token or signed Mission Status |
+{: title="How the binding architectures differ"}
 
 A MAS deployment does not provide AS-native semantics just because both
 hold the same Mission, so a comparison of deployments compares their
@@ -2295,7 +2303,7 @@ for another:
 | Frame | Question it answers | Where |
 | --- | --- | --- |
 | Verbs | What happens to a Mission and its authority | {{layers}} |
-| Assurance levels | Which capabilities a deployment adopts, in the order deployments build them | this section |
+| Assurance levels | Which capabilities a deployment adopts, in the order deployments build them | {{assurance-level-definitions}} |
 | Assurance claims | What a relying party can verify | {{assurance-claims-axis}} |
 | Binding properties | Which relationships a path establishes: Mission attachment, credential binding (with presenter key and instance), and action binding | {{binding-properties}} |
 | Containment properties | What a capability kill reaches, per action class and state source | {{containment}}, {{kill-switch-composition}} |
@@ -2338,6 +2346,8 @@ lifecycle gate covers person identity, PS authorization, and federated
 authorization but not agent identity or resource-managed access, and
 its native auth token
 is Mission-referenced, not Mission-bound ({{token-classes}}).
+
+## The Four Levels {#assurance-level-definitions}
 
 The levels, cumulative:
 
@@ -2463,6 +2473,7 @@ Profile ({{deployment-profile}}).
 | Runtime-Enforced | Consequential actions that need a per-action decision: parameter-bound writes and bounds finer than the receiving Resource Server enforces; reversal and compensation stay the orchestration profile's, where adopted |
 | Governed Agent | Unattended operation and delegation, with Consent Evidence binding each approval event |
 | High-Assurance Agent | The high-consequence classes ({{I-D.draft-mcguinness-mission-runtime}}), under mediated custody and action-bound approval |
+{: title="What each level makes defensible to grant"}
 
 Every level above Baseline Issuance also carries the cross-cutting
 obligations its mechanisms imply:
@@ -2754,6 +2765,7 @@ needs the whole matrix:
 | Credential kill | credentials already issued | the binding's substrate, where it supports revocation; otherwise expiry ({{validity-model}}) |
 | Workload kill | the running compute itself | the platform |
 | Egress kill | the communication path | gateway and network controls |
+{: title="The containment matrix"}
 
 Mission termination participates in incident response; it does not
 replace it. Revoking the Mission stops issuance at once where the
@@ -2811,6 +2823,7 @@ residual the transition does not reach.
 | Runtime-Enforced | Any binding, a class using a containment-aware state source within its published bound (note 3) | Runtime-Enforced for that class ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Containment Properties"); Baseline only for the classes in note 4 | The contained capability, denied at the class's next gated action once the source reflects the overlay, within the staleness bound plus the permit window plus the class's execution bound ({{I-D.draft-mcguinness-mission-runtime}}) | Paths no action-time gate reaches: token lifetime where issuance is gated, otherwise no bound |
 | Baseline Issuance | MAS as estate control plane, issuance join at each consuming AS | Baseline, from Derivation Gating at the Mission Issuer ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Derivation Gating") and, at a consuming AS with a Mission-state integration, from projecting each redemption and refresh through the Effective Authority Set (note 5) | New grant minting: the Mission Issuer's Derivation Gating evaluates the Effective Authority Set, so a grant minted after the transition excludes contained authority ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Derivation Gating"); and, at a consuming AS with a Mission-state integration, each redemption and refresh once its state source reflects the transition ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}, Section "Effective Authority Set Projection") | An outstanding grant redeems once, within its 300-second lifetime, at a consuming AS without a Mission-state integration, which checks no Mission state at redemption and issues no refresh tokens; tokens already issued run to their own `exp` ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}, Section "Redemption") |
 | Runtime-Enforced | OAuth binding with offline attenuation, a consumer whose check is active-state only (note 6) | Baseline ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Containment Properties"): a contained Mission stays `active` | New attenuation roots, which exclude contained authority ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Derivation Gating") | Roots minted before the transition, to their own lifetime (note 6) |
+{: title="What a capability kill reaches, by level and binding"}
 
 Notes:
 
@@ -2888,6 +2901,7 @@ Each layer earns a specific property and leaves a specific residue:
 | Consent Evidence | silent divergence between what was shown and what was committed | the rendered disclosure | whether a human perceived or understood it |
 | Audit Transparency | undetectable log tampering or omission (under expected registration) | the evidence timeline | a producer logging a false record |
 | Mandate | reliance on unverifiable committed facts | portable Mission facts | authority (it grants none) |
+{: title="What each layer prevents, detects, and leaves"}
 
 The pattern is uniform: the family commits and checks what a party was
 shown, decided, or did; it does not make the human attentive, the
@@ -2915,6 +2929,7 @@ By starting condition:
 | AS cannot change (shared, third-party, SaaS) | Standalone MAS, phase by phase | Records and approvals first; enforcement arrives with PEP/PDP coverage |
 | Many Authorization Servers, one governance point | MAS as estate control plane; issuance join per consuming AS | Each AS adds grant redemption only ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) |
 | No PEP/PDP over consequential paths | The OAuth binding where the AS allows; the runtime layer where a class needs it | Lifetime-bounded reliance (short tokens, gated refresh); the runtime overlay added later, where the high-consequence classes live |
+{: title="Entry ramps by estate"}
 
 Every row shares the record, anchors, and lifecycle, so a ramp is an
 entry point, not a fork: Missions carry unchanged from any row to the
