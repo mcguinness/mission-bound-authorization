@@ -95,8 +95,8 @@
     "content_sha256": "7747cec83e69020dce2611fd99172fbe14034d776ba68c9b64cdca9fd410d94f"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "7bb182b0caae732be5813431f4c5ad6406eafaf7",
-    "content_sha256": "3d99176b70a7d440c8588863dc35d0f33defd7a5e3807947003767b93166168e"
+    "revision": "9facdd1bd11b7402b2f7ebf08cd02bb3e44e3653",
+    "content_sha256": "f3ddd8ba71c6fbad583a123bfb449c1e1a463394d80a34663501c1aaae7e975a"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
     "revision": "4b1ac7e9be5fb4097bcc8b50ddb173ea34aeb85e",
@@ -233,7 +233,8 @@
    "mas.instance-bound-join",
    "derivation-limits.limit",
    "continuation.ica-transport",
-   "submission-evidence.verification"
+   "submission-evidence.verification",
+   "expansion.interactive-completion"
   ]
  },
  "profiles": [
@@ -28053,6 +28054,138 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Review finding on #1031 (owner ruling D241): narrowing between adjudication and activation. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.response-shape",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "The Mission Issuer MUST answer the token exchange with an OAuth error response",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "An expansion that completes interactively is answered with HTTP 400, error mission_interaction_required, a mission_continuation handle and expires_in, never with an RFC 8693 success or authorization_pending."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), opened for owner review. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.continuation-refusal",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "MUST refuse a pushed request whose `mission_continuation` is unknown, expired, or bound to another client, with `invalid_request`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A pushed authorization request carrying an unknown or expired mission_continuation, or one issued to another client, is refused with invalid_request and yields no request_uri."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), opened for owner review. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.recorded-inputs-only",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "MUST take the predecessor, Intent, proposal, submission evidence, presenter confirmation, and actor context only from the recorded operation",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A pushed request that supplies a predecessor, Intent, proposal, submission evidence, presenter confirmation or actor context differing from the recorded operation is refused; the approval ceremony renders and binds only the recorded operation's inputs."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), opened for owner review. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.re-push-continues-operation",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "the client pushes again with the same `mission_continuation` and continues the same operation",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "After a request_uri expires, is consumed, or its authorization response is lost, a new pushed request with the same mission_continuation yields a new request_uri for the same operation, never a second operation."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), opened for owner review. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.no-second-code-after-activation",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "After activation the Mission Issuer MUST refuse a further pushed request for the continuation and MUST refuse redemption of any other code issued for the operation with `invalid_grant`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "Once the successor has activated, a further pushed request for the continuation is refused and redemption of any other authorization code issued for the operation fails with invalid_grant; at most one successor exists."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), opened for owner review. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.expired-continuation-retry",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "an operation whose continuation expired before activation answers that retry with `expired_token`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A creation_request_id retry for an operation whose mission_continuation expired before activation is answered with expired_token and creates nothing."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), opened for owner review. No implementation yet."
   }
  ]
 }
