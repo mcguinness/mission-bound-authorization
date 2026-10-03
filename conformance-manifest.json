@@ -19,12 +19,12 @@
     "content_sha256": "a2a1f271328ddd5634a826cbf588eadcc514418fad0f4679fe1f31c647056ec0"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "2420b64fd9660b832c2631b883d35c71ae34cc66",
-    "content_sha256": "067b2e24ff4cf83b52b78fc5db4faf1ce123a1efd46a0dc2d251622fbaaa4fd4"
+    "revision": "6966c5f4fd6ba8ff4b7fa76511f00f8b0af6aa17",
+    "content_sha256": "55d3d596ae6cc05d0b9af23b4dcbd395220c56fa4ebf7036139062e6d1e4f913"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
-    "revision": "daadb45f36cd901f0d646ba0aa942dfec95844ee",
-    "content_sha256": "ad6496575ca1b40942eba3392274aef786c782be9e4d256e5b4f378e9410f07b"
+    "revision": "255a6f89dbe59f958844374e9d97cf4dfedeac8a",
+    "content_sha256": "48e3a9acfd2728280b64e959d872460a109dad932465dd87960fa6b187499b89"
    },
    "draft-mcguinness-mission-substrate.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
@@ -35,8 +35,8 @@
     "content_sha256": "815cbcde45ab0b9fe6e5391596f158d4b282b390b40aa1299e9a8431614bcbae"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "0deed864cfd4ceb597047f3a617e0ad492907d76",
-    "content_sha256": "e681f15fe23ebf3b0bb8d32f1aed70eef88c140331a5f10216492d3669d045ae"
+    "revision": "c59d35524f50b6ca887e3dbf70c75ae260519dd2",
+    "content_sha256": "441c85571dc1b71097626c9665d92e01961f820219f3d563ee03cd823b1ec818"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
     "revision": "0a93cdc3a8c5598bf85b1b693c5985a477929131",
@@ -11342,6 +11342,29 @@
    "tests": []
   },
   {
+   "id": "runtime.enforcement-invariants.high-consequence-sender-constrained",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "enforcement-invariants",
+   "text": "a high-consequence action's acting credential MUST be sender-constrained; a bearer token is refused",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a high-consequence action's acting credential is sender-constrained and a current proof of possession is verified before the action is permitted, under either Mission-establishment mode; a bearer token, or a credential whose confirmation member is merely present but unverified, is refused"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Specification-only; no implementation or test exists yet (#1020, D240 option B). Acceptance bar for future tests: both Mission-establishment modes (credential-carried and externally established); refusal for a bearer token and for a credential whose proof of possession is missing, wrongly keyed, or otherwise invalid; a validly bound and proven credential proceeds to the remaining authorization checks. Refresh-token requirements are unchanged by this row; the guarantee is protection against theft of the credential alone, not key or signing-interface compromise."
+  },
+  {
    "id": "runtime.evidence-emission.signing-key-not-authority",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "agent-isolated-evidence-emission",
@@ -11784,6 +11807,29 @@
     }
    ],
    "notes": "Both MUSTs are now fully asserted, but at the PEP/RS resource-operation boundary, not inside a PDP unit test (this row's original misfit reasoning stands: evaluate() is never invoked on either path, so there is no decision-request event to observe). runtime-refusal-backlog.test.ts's new test signs a token with no `mission` claim, drives it through the full in-memory mediated channel, and shows the call denies invalid_credential with ZERO evidence recorded -- proving evaluate() (and so the PDP) was never asked, not merely that the caller's return value says false. mcp-channel.test.ts's 3b (CI-only) shows the same for a bad-signature token. Kept partial rather than tested: the checker's endpoint-level coverage rule requires a mapping whose surface matches the row's OWN declared surface (decision-request) for `tested`, and reclassifying this row's surface to resource-operation to reach it is a separate, deliberate manifest-structure decision this slice defers rather than makes as a side effect of adding tests (see the Wave 2 PR description)."
+  },
+  {
+   "id": "runtime.token-validation.high-consequence-proof-required",
+   "spec": "draft-mcguinness-mission-runtime-oauth.md",
+   "anchor": "token-validation",
+   "text": "the PEP MUST refuse a bearer token and MUST refuse a sender-constrained token without a valid proof for the request",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "for a high-consequence action, a PEP refuses a bearer token and refuses a sender-constrained token without a valid request proof; an mTLS-bound token's certificate must match the one authenticated on the request's own TLS connection, and a DPoP-bound token must pass RFC 9449 Section 7's complete request-proof validation, before the action proceeds to the remaining authorization checks"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Specification-only; no implementation or test exists yet (#1020, D240 option B). Realizes runtime.enforcement-invariants.high-consequence-sender-constrained on the OAuth binding. Acceptance bar for future tests: refusal for a bearer token, a missing proof, a wrong key (an mTLS certificate that does not match the one authenticated on the connection, or a DPoP proof signed by the wrong key), and an invalid DPoP request proof; a credential whose binding and proof both validate proceeds to the remaining authorization checks."
   },
   {
    "id": "runtime.token-validation.channel-integrity-and-token-forwarding",
