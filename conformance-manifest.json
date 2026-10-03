@@ -19,12 +19,12 @@
     "content_sha256": "a2a1f271328ddd5634a826cbf588eadcc514418fad0f4679fe1f31c647056ec0"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "2420b64fd9660b832c2631b883d35c71ae34cc66",
-    "content_sha256": "067b2e24ff4cf83b52b78fc5db4faf1ce123a1efd46a0dc2d251622fbaaa4fd4"
+    "revision": "ca5651271c9ffcd9ddfc7d5e30f8f9c66b1bb7ad",
+    "content_sha256": "9c8386a66e90b87bed75b4d34f8a295401777b9bd61a358ee60de3757174354b"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
-    "revision": "daadb45f36cd901f0d646ba0aa942dfec95844ee",
-    "content_sha256": "ad6496575ca1b40942eba3392274aef786c782be9e4d256e5b4f378e9410f07b"
+    "revision": "0eba2cac95618596018d16ba525b5cefdd22d261",
+    "content_sha256": "20fed99609633d69a287725514c81c999df0c71e1e1488a7b30e7b10a835578e"
    },
    "draft-mcguinness-mission-substrate.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
@@ -35,8 +35,8 @@
     "content_sha256": "815cbcde45ab0b9fe6e5391596f158d4b282b390b40aa1299e9a8431614bcbae"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "0deed864cfd4ceb597047f3a617e0ad492907d76",
-    "content_sha256": "e681f15fe23ebf3b0bb8d32f1aed70eef88c140331a5f10216492d3669d045ae"
+    "revision": "02014aa318f3548918be53c3faa41137b9331b81",
+    "content_sha256": "3207f14f575336e0fd1b4b3ab4eee30d143dab3fd4f44be8b5c69f3db290d0a4"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
     "revision": "0a93cdc3a8c5598bf85b1b693c5985a477929131",
@@ -75,8 +75,8 @@
     "content_sha256": "055d460354f9c98d981f74ce661daa606685695bedd42d04a31981158f8389d7"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "22cd16a360c79d98439b2dce02dfa3c02dc22f1f",
-    "content_sha256": "c31083a7b057d7086cecae0ed7820085140b2e03e0d5744995424557801060c1"
+    "revision": "7bb182b0caae732be5813431f4c5ad6406eafaf7",
+    "content_sha256": "b58add3277fa19af45e37df3b380e66fd833392ca7efda1170f656132cb48fb6"
    },
    "draft-mcguinness-mission-orchestration.md": {
     "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
@@ -95,12 +95,12 @@
     "content_sha256": "7747cec83e69020dce2611fd99172fbe14034d776ba68c9b64cdca9fd410d94f"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "22cd16a360c79d98439b2dce02dfa3c02dc22f1f",
-    "content_sha256": "08e29eee9728517c02ca3aa1e78ae6aadf19d059ebb701ea99645f40a1a15c9f"
+    "revision": "7bb182b0caae732be5813431f4c5ad6406eafaf7",
+    "content_sha256": "3d99176b70a7d440c8588863dc35d0f33defd7a5e3807947003767b93166168e"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "df1487c03f3dd106755253ccc01b3576d0cd5c8a",
-    "content_sha256": "921c33cb9b2c927742873fd04218fda820192c350eba6771fb23d5b88dbe52f0"
+    "revision": "7bb182b0caae732be5813431f4c5ad6406eafaf7",
+    "content_sha256": "ca64142309f66877d2142dd8e049e53d31688dc4bad707e726a07090694088db"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "02c1fcf62e9f4fd3aad0df84d6ccabd6ebd7ce0d",
@@ -11376,6 +11376,75 @@
    "tests": []
   },
   {
+   "id": "runtime.custody.high-consequence-credential-sender-constrained",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "custody",
+   "text": "MUST be sender-constrained, whether the Mission reference is credential-carried or externally established",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a high-consequence action never proceeds on an acting credential without a verified sender-constraint binding, whether the Mission is credential-carried or externally established"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Implementation evidence, not yet cited as coverage: mcp-payments requires cnf.jkt on every Mission-bound token (validateToken / validateOrdinaryToken) and refuses a token with no DPoP proof, the bearer scheme, or a proof from another key before the PEP, for every action class (mcp-http-channel.test.ts 4a and 4b; validate-ordinary-token.test.ts 'still refuses a token with no cnf.jkt at all'). Those tests are candidate witnesses once mutation-proved against a high-consequence action. The externally established mode (Mission Join) has no such test."
+  },
+  {
+   "id": "runtime.custody.pep-supplies-only-verified-confirmation",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "custody",
+   "text": "The PEP MUST NOT supply a confirmation key as a decision input unless it verified the binding with a current proof of possession of that key",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a decision request carries a confirmation key only when the PEP verified a current proof of possession for it; a cnf member alone never reaches the decision"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Implementation evidence, not yet cited as coverage: mcp-payments requires cnf.jkt on every Mission-bound token (validateToken / validateOrdinaryToken) and refuses a token with no DPoP proof, the bearer scheme, or a proof from another key before the PEP, for every action class (mcp-http-channel.test.ts 4a and 4b; validate-ordinary-token.test.ts 'still refuses a token with no cnf.jkt at all'). Those tests are candidate witnesses once mutation-proved against a high-consequence action."
+  },
+  {
+   "id": "runtime.custody.pdp-denies-high-consequence-without-confirmation",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "custody",
+   "text": "The PDP MUST deny a high-consequence action whose decision request carries no confirmation key",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a decision request for a high-consequence action with no confirmation key is denied"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Not implemented: the reference PDP reads no confirmation key (src/services/pdp/src/decision-evidence.ts records 'never token bytes or confirmation keys'), so a PDP-side denial needs the PEP to pass the key and the PDP to check it for the high-consequence classes."
+  },
+  {
    "id": "runtime.evidence-emission.signing-key-not-authority",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "agent-isolated-evidence-emission",
@@ -11782,6 +11851,29 @@
     }
    ],
    "notes": "Audience arm: a wrong-audience token is refused (runtime-refusal-backlog.test.ts, unconditional). Proof-of-possession arm: mcp-http-channel.test.ts's 4a (a valid DPoP-scheme token with no proof header, and the bearer scheme) and 4b (a well-formed proof signed by the wrong key) are both rejected at the gate before the PEP, with zero evidence/ledger, and a valid-DPoP client on the same live server then permits (non-vacuous); both CI-only (live OpenFGA, the file's shared beforeAll)."
+  },
+  {
+   "id": "runtime.token-validation.no-cnf-is-bearer-for-high-consequence",
+   "spec": "draft-mcguinness-mission-runtime-oauth.md",
+   "anchor": "token-validation",
+   "text": "An access token whose validated credential context carries no such binding is a bearer token and does not meet that requirement",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a high-consequence action is refused when the validated credential context (the cnf claim of a validated JWT, or the cnf member of an opaque token's introspection response) carries no sender-constraint binding, or carries one whose DPoP or mTLS proof the PEP did not verify for the request"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Implementation evidence, not yet cited as coverage: mcp-payments requires cnf.jkt on every Mission-bound token (validateToken / validateOrdinaryToken) and refuses a token with no DPoP proof, the bearer scheme, or a proof from another key before the PEP, for every action class (mcp-http-channel.test.ts 4a and 4b; validate-ordinary-token.test.ts 'still refuses a token with no cnf.jkt at all'). Those tests are candidate witnesses once mutation-proved against a high-consequence action."
   },
   {
    "id": "runtime.token-validation.no-unverified-claims-and-missing-mission-refusal",
@@ -24643,6 +24735,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Owner ruling on #1026 and #1000 (2026-10-02). No implementation yet."
+  },
+  {
+   "id": "progressive.in-ceiling.synchronous-completion-commits-before-response",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "in-ceiling-expansion",
+   "text": "The Mission Issuer MUST commit the successor's activation, the predecessor's supersession, and the creation reservation, applying the expansion profile's activation checks in that same atomic step, before it delivers the response",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A drawdown that passes every policy-adjudication guard is answered in the token-exchange response with the successor's access token; by the time the response is delivered the successor is active, the predecessor is superseded, and the creation reservation is committed, and a retry with the same creation_request_id recovers that successor rather than creating another. A drawdown that falls back to a fresh human approval completes deferred or interactively instead."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#998 option (a), endorsed by owner review 2026-10-02. No Progressive implementation yet."
   },
   {
    "id": "cross-domain.delegation-depth.composed-bound-disclosure",
