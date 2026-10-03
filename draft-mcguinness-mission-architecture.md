@@ -436,13 +436,13 @@ bindings are these:
 - A standalone binding hosts the same object without changing an
   existing Authorization Server
   ({{I-D.draft-mcguinness-mission-authority-server}}).
-- An AAuth binding maps the shared approval, reference,
-  lifecycle-gate, and log capabilities onto that protocol's native
-  Mission Context without importing the OAuth Authority Set
-  ({{I-D.draft-mcguinness-mission-aauth}}). In AAuth
-  ({{I-D.draft-hardt-oauth-aauth-protocol}}), the Mission Context
-  instead governs resource decisions at the Person Server (PS)
-  without becoming their authority language.
+- An AAuth binding ({{I-D.draft-mcguinness-mission-aauth}}) maps the
+  shared approval, reference, lifecycle-gate, and log capabilities
+  onto the native Mission Context of AAuth
+  ({{I-D.draft-hardt-oauth-aauth-protocol}}) without importing the
+  OAuth Authority Set. There, the Mission Context governs resource
+  decisions at the Person Server (PS) without becoming their authority
+  language.
 - UMA 2.0 and GNAP bindings exist as experimental sketches
   ({{components}}).
 
@@ -932,7 +932,7 @@ right and builds so that wrong is survivable, on two arms:
   disclosure as well as authority, and mediated custody generalizes
   from credentials to context.
 
-The arms differ in maturity. The exposure arm's enforceable edges are
+The arms differ in maturity. The input arm's enforceable edges are
 the harness taint rule, egress mediation, and catalog filtering
 ({{I-D.draft-mcguinness-mission-harness}},
 {{I-D.draft-mcguinness-mission-runtime}},
@@ -2425,8 +2425,8 @@ Per-action enforcement is budgeted, not blanket:
 Runtime enforcement composes as an overlay, not a substrate swap: a
 deployment mediates the paths where the high-consequence classes live
 and lets every other resource ride lifetime-bounded reliance
-({{assurance-levels}}), with token lifetimes sized to the tolerated
-staleness and no state evaluation at the resource.
+({{assurance-level-definitions}}), with token lifetimes sized to the
+tolerated staleness and no state evaluation at the resource.
 
 The standalone mode trades the token-layer kill switch for zero
 Authorization Server changes. A MAS creates, approves, and serves
@@ -2566,10 +2566,10 @@ Each level includes the one before it:
   and runtime evidence ({{I-D.draft-mcguinness-mission-runtime}} and
   its AuthZEN profile).
 
-  **Grants**: per-action enforcement and bounded revocation: for
+  **Grants**: per-action enforcement and bounded revocation (for
   gated classes, within the staleness bound plus the permit window
   plus the class's execution bound; for paths no runtime gate
-  reaches, within token lifetime where issuance is gated.
+  reaches, within token lifetime where issuance is gated).
 
   Runtime-Enforced is the smallest deployment that turns a Mission
   from governed issuance into action-time defense. Every normative
@@ -2712,7 +2712,7 @@ profile fixes, listed in the Deployment Profile
   ({{I-D.draft-mcguinness-mission-runtime}}).
 - **Agent-compromise-resistant enforcement** and **trifecta
   containment**: the two named High-Assurance claims, unchanged
-  ({{assurance-levels}}).
+  ({{assurance-level-definitions}}).
 
 Two deployments at the same level under different bindings can hold
 different claims; the MAS modes are the worked case
@@ -3085,7 +3085,7 @@ In each layer, the family commits and checks what a party was shown,
 decided, or did. It does not make the human attentive, the producer
 honest, or the unmediated path disappear. Those are the residues the
 Mission Assurance Levels ({{assurance-levels}}) and the security
-model make a deployment state rather than assume. The exposure arm
+model make a deployment state rather than assume. The input arm
 ({{survivable-incorrectness}}) carries the same honesty in the other
 direction.
 
