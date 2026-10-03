@@ -97,7 +97,7 @@ export function permitDeadline(input: PermitDeadlineInput): PermitDeadline {
         // A bounded class the deployment mediates with no observation to cap
         // against. Reachable today only below the high-consequence floor,
         // where the draft treats the credential's own lifetime as a
-        // conforming state source and an absent `context.freshness` is not
+        // conforming state source and an absent state observation is not
         // itself a refusal. The class's published bound is still the longest
         // any reliance on state may run, so it caps the permit measured from
         // the decision instant: never later than the permit lifetime alone,
