@@ -93,6 +93,22 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-expansion:
+    title: "Mission Expansion for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-progressive:
+    title: "Mission Progressive Authorization for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -389,11 +405,13 @@ finalized" is a completion condition.
 ## Relationship to Runtime Enforcement {#runtime}
 
 Discharge is an issuance-gating signal and is fully meaningful at the
-issuance profile alone. It is also a natural input to the runtime layer
-({{I-D.draft-mcguinness-mission-runtime}}): a runtime Policy
-Enforcement Point that recognizes `terminal_when` SHOULD deny a
-discharged entry at the point of use, closing the window between
-discharge and token expiry the same way it denies a revoked Mission. A
+issuance profile alone: issuance-only discharge is a conforming
+posture, with the residual that a credential issued before a discharge
+stays valid until it expires ({{discharge}}). Where the deployment also
+runs the runtime profile, that profile requires its PDP to refuse a
+discharged entry at the point of use
+({{I-D.draft-mcguinness-mission-runtime}}), closing the window between
+discharge and token expiry the same way it refuses a revoked Mission. A
 Policy Enforcement Point learns that an entry is discharged from the
 Status profile's Mission Status operation or the token introspection
 projection ({{visibility}}), the same way it learns a Mission is
@@ -478,6 +496,21 @@ state and MUST NOT revert: a later delivery presenting any valid
 condition against an already-discharged entry is acknowledged
 `already_discharged` ({{discharge-result}}) and does not restore the
 entry's authority.
+
+A committed discharge also places a discharge restriction on the
+Mission's expansion chain, the successors linked to it through
+`predecessor` ({{I-D.draft-mcguinness-oauth-mission-expansion}}). The
+Mission Issuer MUST retain each restriction, with the discharged entry
+and the condition that discharged it, across every later successor in
+the chain. A restriction clears only for authority that a fresh human
+approval explicitly restores with the discharged entry and its
+condition disclosed; any authority that approval does not restore
+stays restricted. An intervening successor, an approval of unrelated
+authority, and a ceiling renewal under the progressive authorization
+profile ({{I-D.draft-mcguinness-oauth-mission-progressive}}) do not
+clear it. Restoration grants authority through the successor's own
+approval: the discharge never reverts, and the predecessor's entry
+stays discharged.
 
 A committed discharge is a committed metadata-only change for the
 purposes of the state version
@@ -1245,6 +1278,19 @@ An Authorization Server claiming the completion capability MUST:
 A consumer claiming the completion capability MUST fail closed for an
 entry carrying a `terminal_when` constraint it does not understand
 ({{forward-compat}}).
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Discharge Commit ({{discharge-commit}}): a committed discharge places
+  a restriction on the Mission's expansion chain, retained across later
+  successors and cleared only for the authority a fresh human approval
+  explicitly restores with the discharged entry and its condition
+  disclosed. The discharge itself never reverts.
+- Relationship to Runtime Enforcement ({{runtime}}): issuance-only
+  discharge stays conforming; where the runtime profile runs, its PDP
+  refuses a discharged entry.
 
 # Acknowledgments
 {:numbered="false"}

@@ -151,6 +151,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-discharge:
+    title: "Mission Entry Discharge for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-discharge.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -649,11 +657,15 @@ profile's overlay where deployed
 Authority the predecessor once held but containment or discharge has
 removed is therefore never `nothing_to_expand`: a request for it
 widens the effective set and is expansion-eligible. Such authority
-returns only through a fresh-consent successor, with the
-predecessor's containment history surfaced in the expansion consent
-disclosure ({{completion-modes}},
-{{I-D.draft-mcguinness-oauth-mission-containment}}), never by
-re-deriving under the predecessor.
+returns only through a fresh-consent successor, never by re-deriving
+under the predecessor. The expansion consent disclosure
+({{completion-modes}}) surfaces the predecessor's containment history
+and the chain's outstanding containment restrictions
+({{I-D.draft-mcguinness-oauth-mission-containment}}). An expansion that
+restores authority under a discharge restriction of the chain MUST
+authorize that authority explicitly, and its consent disclosure MUST
+name the discharged entry and the condition that discharged it
+({{I-D.draft-mcguinness-oauth-mission-discharge}}).
 
 ## Completion modes {#completion-modes}
 
@@ -1093,15 +1105,26 @@ re-verification of the deferred window ({{deferred-window}}). In the
 same atomic step that would activate the successor and supersede the
 predecessor, the Mission Issuer MUST verify:
 
-1. the predecessor is still in the `active` state; and
+1. the predecessor is still in the `active` state;
 2. no other replacement expansion has already activated a successor for
    this predecessor (equivalently, the predecessor has not already
-   transitioned to `superseded`).
+   transitioned to `superseded`); and
+3. the successor's complete Authority Set, including authority carried
+   forward from the predecessor, overlaps in authority no authority
+   under a current containment or discharge restriction of the chain
+   ({{I-D.draft-mcguinness-oauth-mission-containment}},
+   {{I-D.draft-mcguinness-oauth-mission-discharge}}) that the
+   successor's approval did not explicitly restore with that
+   restriction disclosed.
 
-If either check fails, the Mission Issuer MUST refuse the completion
+If any check fails, the Mission Issuer MUST refuse the completion
 with `invalid_grant` and the applicable reconciliation status from the
 closed set below. The losing or otherwise stale expansion is rejected
-at completion; it activates no successor.
+at completion; it activates no successor. The third check catches
+narrowing that lands between adjudication and activation: authority
+contained or discharged after the approval returns only through a new
+expansion, adjudicated against the current restrictions, which require
+fresh human approval with the restriction disclosed.
 
 The reconciliation status codes are:
 
@@ -1125,6 +1148,13 @@ The reconciliation status codes are:
   {{I-D.draft-mcguinness-oauth-mission-status}}) and cannot be expanded
   until it returns to `active`. The client MAY retry the expansion after
   the predecessor is `active` again.
+
+`authority_restricted_since_approval`:
+: The successor's Authority Set overlaps authority that came under a
+  containment or discharge restriction of the chain after the
+  successor's approval was adjudicated (check 3 above). The client MAY
+  submit a new expansion, which is adjudicated against the current
+  restrictions.
 
 The two terminal-exit codes overlap in the `superseded` case by design:
 `superseded_by_concurrent_expansion` is the specific reconciliation
@@ -1937,5 +1967,13 @@ composition with the issuance flow.
 
 \[\[ To be removed from the final specification ]]
 
+- Successor activation's compare-and-set also rechecks the complete
+  successor Authority Set against current containment and discharge
+  restrictions, refusing with `authority_restricted_since_approval`
+  when narrowing landed after adjudication.
+- A fresh-consent restoration of authority under a discharge
+  restriction authorizes that authority explicitly and discloses the
+  discharged entry and its condition; the consent also surfaces the
+  chain's outstanding containment restrictions.
 - Added explicitly approved carryover hooks for disclosure, atomic completion,
   and the carried child's unchanged expiry ceiling (#576).
