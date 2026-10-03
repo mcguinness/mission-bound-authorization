@@ -439,6 +439,18 @@ before representing itself as resistant to a compromised or injected
 agent, and the High-Assurance Agent level of the Mission Assurance
 Levels ({{I-D.draft-mcguinness-mission-architecture}}).
 
+Independent of those claims, a high-consequence action's acting
+credential MUST be sender-constrained; a bearer token is refused,
+whether the Mission is credential-carried or externally established
+({{mission-binding}}). Verifying a current proof of possession before
+permitting the action already applies to any sender-constrained
+credential ({{failure-modes}}), and a confirmation member's presence
+alone does not satisfy it. The guarantee is protection against theft
+of the credential alone; compromise of the key material or the
+client's signing interface is not addressed
+({{Section 4.10.1 of RFC9700}}). The OAuth realization is defined by
+{{I-D.draft-mcguinness-mission-runtime-oauth}}.
+
 ## Mission Binding Establishment {#mission-binding}
 
 Every decision evaluates one Mission: the **established Mission**. A
@@ -1107,6 +1119,7 @@ refusal.
 | Condition | Required behavior |
 |---|---|
 | Credential validation fails, including sender-constraint verification | Refuse before runtime Mission evaluation |
+| A high-consequence action's acting credential is a bearer token, or its proof of possession is unverified | Refuse |
 | Mission governance is required but the credential carries no Mission reference | Refuse before runtime Mission evaluation, unless the Mission binding is externally established ({{mission-binding}}) |
 | PEP-PDP channel authentication or integrity protection fails | Fail closed |
 | Mission state cannot be established within the staleness bound | Fail closed for consequential actions |
@@ -1637,9 +1650,10 @@ by its predicate is not a basis to leave the invocation ungated.
 The three classes of the first rule are the **high-consequence
 classes**, to which this profile's strictest requirements attach
 (action-bound approval ({{action-approval}}), mediated custody
-({{custody}}), active-state freshness ({{state-freshness}}), and
-execution-outcome evidence ({{evidence}}), each as specified in its
-own section). A deployment that leaves such an action ungated does
+({{custody}}), active-state freshness ({{state-freshness}}),
+execution-outcome evidence ({{evidence}}), and sender-constrained
+acting credentials ({{enforcement-invariants}}), each as specified in
+its own section). A deployment that leaves such an action ungated does
 not enforce this profile for that action's class
 ({{pep-placement}}).
 
@@ -3742,6 +3756,12 @@ worked example shows the concrete record
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Added a sender-constraint floor for high-consequence actions: the
+  acting credential MUST be sender-constrained and a bearer token is
+  refused, under either Mission-establishment mode, with the guarantee
+  stated as theft of the credential alone and the OAuth realization in
+  the runtime-oauth companion (#1020).
 
 - Out of Scope lists cross-PDP history composition other than through
   the deployment's evidence store or registered transparency records,
