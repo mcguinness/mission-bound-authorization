@@ -1216,3 +1216,18 @@ agent identity, opaque resource-managed, or otherwise untracked access.
 The AAuth mission-management seam and two-state lifecycle were defined
 by Dick Hardt in the AAuth Protocol.  This companion preserves those
 native choices.
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- A Person reaches status and termination through the PS's own
+  interface, by internal invocation or by a backend calling the control
+  plane as a management service; the PS authorizes and records the
+  action as the authenticated Person and never applies a management
+  service's administrative privilege. A management service acting for
+  a human is authorized and recorded as that human, with the service as
+  the channel. A browser session never authenticates a control-plane
+  request, and Person Interfaces security considerations cover
+  cross-site submission, account or tenant switching, stale sessions,
+  and the service-principal confused deputy (#839).
