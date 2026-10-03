@@ -4055,6 +4055,17 @@ bound profiled by `aauth-mission-expiry`.
 
 \[\[ To be removed from the final specification ]]
 
+- A readability pass, with no change to any profile's requirements.
+  The Mission and Mission Assurance Levels gain subsections (Approval
+  and Lifecycle, The Authority Path, The Delegated-Authority Layer, The
+  Four Levels); each verb section leads with its question, boundary,
+  and owners; the Map of This Document lists the parts and adds reading
+  paths; the access modes the AAuth Person Server gates are named the
+  PS-gated modes; untitled tables get captions, and long citations
+  leave table cells so the tables fit the text format; and inline
+  enumerations across the document become lists. RFC 8693 is cited
+  where the delegation chooser names token exchange.
+
 - The authority path, with no change to any profile's requirements.
   The Mission adds a figure from approval basis to action, with the
   lifecycle gate beside the path, child creation as a new approval
