@@ -4311,7 +4311,7 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "lifecycle refusals carry mission_error with one of mission_revoked, mission_expired, mission_superseded, derivations_exhausted",
+    "normative": "lifecycle refusals carry mission_error with one of mission_revoked, mission_expired, mission_superseded, derivations_exhausted, or a value a companion defines for a state it adds (Mission Status's mission_suspended and mission_completed)",
     "local": "fixed (#636/#706 cut): oidc-provider 9.10's InvalidGrant/err_out.js copy only error/error_description/scope/state from a thrown error, so mission_error never reached the client before this change; MissionGrantError plus a grant.error listener now splice it into the body wherever gateDerivation/gateActive refuses a still-valid grant. Proven positively at the wire with a real, non-undefined value for derivations_exhausted (a Mission capped at requested_derivation_limit 1, second derivation refused). This demo's own /lifecycle route additionally destroys the underlying OAuth Grant on a terminal transition (documented in provider.ts), so a revoked or expired-via-that-route Mission fails through oidc-provider's own grant lookup instead, never reaching this mechanism; mission_revoked and mission_expired are therefore reachable in deployments that gate purely on Mission state (a raw state change, or natural wall-clock expiry) but are untested at the wire here for that reason. mission_superseded is not yet defined by any companion in this codebase."
    },
    "level": "endpoint",
@@ -7973,6 +7973,59 @@
      "file": "src/services/authorization-server/test/refresh-precheck.test.ts",
      "name": "refresh pre-check: a refused refresh consumes nothing (@spec mission#issuance-gating, #914) > delegation-family grant: a family refresh refused while suspended saves no refresh token, the same token refreshes after resume, and its replay is still reuse",
      "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ]
+  },
+  {
+   "id": "status.lifecycle.mission-error-diagnostic",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "When the issuance profile's gating refuses a derivation because the Mission is `suspended` or `completed`, the AS SHOULD include, alongside `error`, the `mission_error` token-error-response member",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a derivation the issuance gate refuses because the Mission's own state is suspended carries mission_error mission_suspended, and one refused because it is completed carries mission_completed",
+    "local": "Witnessed at the wire for suspended on the approval-grant refresh, the delegation-family refresh, and the ICA continuation exchange (under that profile's unauthorized_client), and for completed on the approval-grant refresh. This demo's /lifecycle route destroys the OAuth grant on a terminal transition, so a completed Mission's refresh through the route fails at the grant lookup before the gate, outside this clause; the completed witness drives the raw kernel transition to reach the gate. A lineage refusal while the Mission's own state is active carries no value (unit witness)."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/refresh-precheck.test.ts",
+     "name": "refresh pre-check: a refused refresh consumes nothing (@spec mission#issuance-gating, #914) > rotating approval grant: a refresh refused while suspended saves no refresh token, the same token refreshes after resume, and its replay is still reuse",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/refresh-precheck.test.ts",
+     "name": "refresh pre-check: a refused refresh consumes nothing (@spec mission#issuance-gating, #914) > delegation-family grant: a family refresh refused while suspended saves no refresh token, the same token refreshes after resume, and its replay is still reuse",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b0) consumption is atomic with issuance (#617 review 1): a redemption refused at the Mission gate leaves the ICA UNCONSUMED; the SAME assertion redeems once the gate reopens",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/refresh-precheck.test.ts",
+     "name": "mission_error for Mission Status states (@spec status#mission-lifecycle-endpoint) > approval grant on a completed Mission: the refresh is refused invalid_grant with mission_completed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/refresh-precheck.test.ts",
+     "name": "mission_error for Mission Status states (@spec status#mission-lifecycle-endpoint) > the value names the Mission's own state: a lineage refusal while its own state is active carries none",
+     "level": "unit",
      "surface": "token-endpoint"
     }
    ]
