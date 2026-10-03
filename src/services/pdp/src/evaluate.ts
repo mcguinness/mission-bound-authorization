@@ -69,7 +69,7 @@ import {
   type StalenessBound,
   type StateSourcePlacement,
 } from "./runtime-posture.js";
-import { type MissionStateObservation, rfc3339Ms } from "./state-observation.js";
+import { type MissionStateObservation, parseStateObservation, rfc3339Ms } from "./state-observation.js";
 
 export type { EntitlementObservation, EntitlementResolver, OriginPrincipal, PrincipalMappingObservation, PrincipalMappingResolver } from "@mission/core";
 
@@ -352,6 +352,15 @@ export interface EvaluateOptions {
    * closed on missing config, not open).
    */
   stateSourcePlacement?: StateSourcePlacement;
+  /**
+   * @spec authzen#pdp-request rule 1, runtime#state-freshness: under `pdp`
+   * placement, when the PDP's own read of the declared state source produced
+   * `view` (RFC 3339): the Mission state this PDP establishes is `view.state`
+   * as of this instant. Read on the PDP's side of any channel. Absent or
+   * malformed, the PDP has established no state within any bound. Unused
+   * under `pep` placement.
+   */
+  stateObservedAt?: string;
   /**
    * @spec runtime#state-freshness: allowed future clock skew for
    * `freshness_at`, seconds (default `DEFAULT_FRESHNESS_SKEW_TOLERANCE_SECONDS`).
@@ -638,10 +647,12 @@ async function evaluateInner(
   // the same binding without a temporal-dead-zone reference.
   let principalMapping: PrincipalMappingObservation | undefined;
   // @spec runtime#state-freshness — the accepted Mission-state observation
-  // (epoch ms) the permit cap is computed from; set only by the freshness gate
-  // in step 3, and left `undefined` when the class's declared posture needed
-  // no observation and none was presented.
+  // (epoch ms) the permit cap is computed from, and the expiry or lease end
+  // its source reported, if any; set only by the freshness gate in step 3,
+  // and left `undefined` when the class's declared posture needed no
+  // observation and none was presented.
   let acceptedObservationMs: number | undefined;
+  let acceptedValidThroughMs: number | undefined;
   // @spec authority-server#mission-join (#557 review point 1) — set once
   // step 4b below resolves the baseline Join, so `join_view_id` (below) is
   // present on the SAME decision's Decision Evidence/Refusal Record
@@ -717,6 +728,40 @@ async function evaluateInner(
   // 2. Mission state (@spec: mission_inactive).
   if (view.state !== "active") return deny("mission_inactive");
 
+  // 2a. The PEP-supplied Mission state observation, wherever it is present
+  // (@spec authzen#context-audience-freshness). A member its `mode` REQUIRES
+  // is missing, or one it carries is malformed: the PDP cannot establish
+  // Mission state from it, so it denies the way a stale observation does,
+  // before any rule reads the observation's state.
+  const skewToleranceMs = (opts.freshnessSkewToleranceSeconds ?? DEFAULT_FRESHNESS_SKEW_TOLERANCE_SECONDS) * 1000;
+  const presented = req.context.mission_state_observation;
+  const observation = presented === undefined ? undefined : parseStateObservation(presented);
+  if (presented !== undefined) {
+    if (observation === undefined) return deny("stale_state");
+    // @spec authzen#context-audience-freshness, authzen#clock-skew:
+    // `freshness_at` "can precede this value by no more than the published
+    // maximum clock skew", and an issuance dated past the skew in the future
+    // is not one the source has made yet.
+    if (
+      observation.issuedAtMs !== undefined &&
+      (observation.freshnessAtMs < observation.issuedAtMs - skewToleranceMs ||
+        observation.issuedAtMs - now().getTime() > skewToleranceMs)
+    ) {
+      return deny("stale_state");
+    }
+    // @spec authzen#pdp-request rule 1: the PEP-supplied state is "exactly
+    // `active`; every other value, recognized or not, is non-active". Step 2
+    // already held the PDP's own view active, so any other value here is also
+    // a disagreement with it, and the PDP's view is the floor either way:
+    // `mission_inactive`. PEP-supplied state can only narrow, never substitute.
+    if (observation.state !== "active") return deny("mission_inactive");
+    // @spec authzen#pdp-request rule 4: a presented `version` is compared
+    // against the PDP's own tracked Mission state version (the loaded view's
+    // `version`), never against `policy_view_id`, and a mismatch is
+    // staleness: one side has missed a committed change.
+    if (observation.version !== undefined && observation.version !== view.version) return deny("stale_state");
+  }
+
   // 3. Freshness against the staleness bound (@spec: stale_state).
   // @spec runtime#state-freshness: "The PDP MUST refuse a consequential
   // action when it cannot establish, within the deployment's published
@@ -733,7 +778,6 @@ async function evaluateInner(
   // row) runs the remaining gates with no observation window, and an action
   // class the policy does not declare at all is a request fault refused
   // below. Neither is `stale_state`, which asserts a freshness fact.
-  const skewToleranceMs = (opts.freshnessSkewToleranceSeconds ?? DEFAULT_FRESHNESS_SKEW_TOLERANCE_SECONDS) * 1000;
   const declaredStaleness = opts.stalenessBound(actionClass);
   // A custom/injected policy cannot opt a consequential class out of the
   // freshness floor even if it bypasses the deployment config loader.
@@ -753,20 +797,34 @@ async function evaluateInner(
   if (enforceableWindowMs !== undefined) {
     // @spec authzen#context-audience-freshness, runtime#state-freshness: the
     // trusted source is the enforcement scope's declared one. Under `pep`
-    // placement the authenticated PEP supplies its read of that source; with
-    // no declared placement, no observation establishes state.
-    const presented = req.context.mission_state_observation;
-    if (presented !== undefined) {
-      const observedAtMs = opts.stateSourcePlacement === "pep" ? rfc3339Ms(presented?.freshness_at) : undefined;
-      const ageMs = now().getTime() - (observedAtMs ?? Number.NaN);
-      // A malformed timestamp, one dated far enough in the future to be
-      // fabricated rather than ordinary clock drift, or an observation the
-      // declared placement does not rely on: none of these let the PDP
-      // establish Mission state from this observation, so each denies the
-      // same way as present-but-stale (@spec runtime#state-freshness, "cannot
-      // establish ... within the staleness bound"), never permits on an
-      // unverifiable input.
-      if (observedAtMs === undefined || ageMs < -skewToleranceMs || ageMs > enforceableWindowMs) {
+    // placement the authenticated PEP supplies its read of that source; under
+    // `pdp` placement the PDP's own read is the only one relied on, and a
+    // PEP-supplied observation's telemetry never counts; with no declared
+    // placement, no observation establishes state.
+    const pdpPlaced = opts.stateSourcePlacement === "pdp";
+    const relied = pdpPlaced
+      ? opts.stateObservedAt === undefined
+        ? undefined
+        : { observedAtMs: rfc3339Ms(opts.stateObservedAt) ?? Number.NaN }
+      : observation === undefined
+        ? undefined
+        : { observedAtMs: observation.freshnessAtMs, validThroughMs: observation.expiresAtMs };
+    if (relied !== undefined) {
+      const observedAtMs = relied.observedAtMs;
+      const ageMs = now().getTime() - observedAtMs;
+      // A malformed read time, an observation the declared placement does not
+      // rely on, or one dated far enough in the future to be fabricated rather
+      // than ordinary clock drift: none lets the PDP establish Mission state,
+      // so each denies the same way as present-but-stale (@spec
+      // runtime#state-freshness, "cannot establish ... within the staleness
+      // bound"), never permits on an unverifiable input. A malformed
+      // PEP-supplied observation was refused at step 2a.
+      if (
+        !Number.isFinite(observedAtMs) ||
+        (!pdpPlaced && opts.stateSourcePlacement !== "pep") ||
+        ageMs < -skewToleranceMs ||
+        ageMs > enforceableWindowMs
+      ) {
         return deny("stale_state");
       }
       // @spec runtime#state-freshness — the observation this Decision is
@@ -774,8 +832,11 @@ async function evaluateInner(
       // above (parseable, inside the class window, from the declared source).
       // The permit cap below reads this and nothing else: request freshness
       // metadata the PDP rejected, or would have rejected, must never be able
-      // to buy a longer permit.
+      // to buy a longer permit. Under `pep` placement the source's reported
+      // expiry (`mission_status_expires_at`) is that observation's
+      // valid-through; under `pdp` placement the PDP's own read reports none.
       acceptedObservationMs = observedAtMs;
+      acceptedValidThroughMs = "validThroughMs" in relied ? relied.validThroughMs : undefined;
     } else if (actionClass !== undefined && HIGH_CONSEQUENCE_ACTION_CLASSES.has(actionClass)) {
       return deny("stale_state");
     }
@@ -1227,6 +1288,7 @@ async function evaluateInner(
     permitTtlSeconds: permitTtl,
     stalenessBound: declaredStaleness,
     ...(acceptedObservationMs !== undefined ? { stateObservedAtMs: acceptedObservationMs } : {}),
+    ...(acceptedValidThroughMs !== undefined ? { stateValidThroughMs: acceptedValidThroughMs } : {}),
     ...(reversibleWriteMaxSeconds !== undefined
       ? {
           ceilings: [
