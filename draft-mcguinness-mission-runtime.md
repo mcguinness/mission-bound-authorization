@@ -3312,6 +3312,9 @@ work and are not required to enforce it:
   disconnected from its Mission state source); fail-closed
   ({{failure-modes}}) remains the base rule when state cannot be
   established;
+- cross-PDP history composition other than through the deployment's
+  evidence store or registered transparency records
+  ({{input-history}});
 - action-hierarchy and resource-containment subset extensions (this
   profile uses the flat subset rule of
   {{I-D.draft-mcguinness-oauth-mission}});
@@ -3739,6 +3742,10 @@ worked example shows the concrete record
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Out of Scope lists cross-PDP history composition other than through
+  the deployment's evidence store or registered transparency records,
+  matching History. No requirement changed.
 
 - Authority input: for every issuer-held narrowing mechanism the
   deployment runs, the PDP establishes current effective authority from

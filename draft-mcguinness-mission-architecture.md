@@ -31,7 +31,8 @@ informative:
     author:
       - org: A2A Project
     date: 2026
-  I-D.draft-zehavi-oauth-rar-metadata:
+  I-D.draft-ietf-oauth-rar-metadata-remediation:
+  RFC9728:
   I-D.draft-mcguinness-mission-metering:
     title: "Mission Consumption Metering"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html
@@ -1736,10 +1737,12 @@ derivation consumes the declared operations as candidate vocabulary
 resource-authored material, and the declaration's digest rides the
 derived authority (the progressive companion's
 `resource_declaration_digest`,
-{{I-D.draft-mcguinness-oauth-mission-progressive}}). Proposed RAR-type
-metadata ({{I-D.draft-zehavi-oauth-rar-metadata}}), a resource
-publishing the `authorization_details` types and fields it understands,
-is the OAuth-native descriptive surface the direction builds on.
+{{I-D.draft-mcguinness-oauth-mission-progressive}}). The OAuth-native
+descriptive surfaces the direction builds on are an authorization
+server's RAR type metadata, the schema and documentation of each type
+it supports ({{I-D.draft-ietf-oauth-rar-metadata-remediation}}), and a
+protected resource's `authorization_details_types_supported`
+({{RFC9728}}).
 
 In AAuth, R3 can describe deterministic resource authorization
 independently of mission approval; the PS considers the resource request
@@ -3726,6 +3729,11 @@ bound profiled by `aauth-mission-expiry`.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The RAR metadata citation names the working-group successor
+  draft-ietf-oauth-rar-metadata-remediation and separates an
+  authorization server's type metadata from a protected resource's
+  RFC 9728 `authorization_details_types_supported`.
 
 - Approve and Record names the three approval roles (derivation,
   adjudication, accountability) and summarizes the OAuth binding's
