@@ -139,13 +139,17 @@ describe("child mission creation (@spec child-delegation#child-creation, #parent
     const parent = approveParent();
     commits.length = 0;
     const original = kernel.insertRecord.bind(kernel);
-    const insertion = vi.spyOn(kernel, "insertRecord").mockImplementationOnce((record, precondition) => {
+    const insertion = vi.spyOn(kernel, "insertRecord").mockImplementationOnce((record, precondition, options) => {
       expect(precondition).toBeTypeOf("function");
-      return original(record, () => {
-        expect(kernel.db.inTransaction).toBe(true);
-        precondition!();
-        throw new Error("fault after fanout admission");
-      });
+      return original(
+        record,
+        () => {
+          expect(kernel.db.inTransaction).toBe(true);
+          precondition!();
+          throw new Error("fault after fanout admission");
+        },
+        options,
+      );
     });
     try {
       expect(() => createChild(parent.id, ["payments:invoice.read"])).toThrow("fault after fanout admission");
@@ -572,7 +576,7 @@ describe("fan-out accounting and child evidence (@spec child-delegation#fanout, 
           {
             id: "d-people",
             type: "user_delegated",
-            clients: [],
+            clients: ["parent-agent"],
             activators: ["bob"],
             ceiling: [
               {
@@ -629,7 +633,11 @@ describe("fan-out accounting and child evidence (@spec child-delegation#fanout, 
       grant_id: null,
       status_list_idx: null,
     };
-    dKernel.insertRecord(parentRecord);
+    // A hand-built direct approval: its source is what the catalog resolves
+    // for this Subject through this client, exactly as approve() would (#827).
+    dKernel.insertRecord(parentRecord, undefined, {
+      source: dKernel.resolveAuthoritySource({ clientId: parentRecord.client_id, subject: parentRecord.subject }),
+    });
 
     const dProposal: AuthorityEntry[] = [
       {

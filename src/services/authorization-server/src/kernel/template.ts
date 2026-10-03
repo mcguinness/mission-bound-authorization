@@ -22,7 +22,7 @@
  */
 
 import { randomBytes } from "node:crypto";
-import { authorityHash, computeAnchor, intentHash, type JsonValue, MISSION_TEMPLATE_TYP, proposalHash } from "@mission/core";
+import { authorityHash, canonicalize, computeAnchor, intentHash, type JsonValue, MISSION_TEMPLATE_TYP, proposalHash } from "@mission/core";
 import {
   assertApproverMayActivate,
   assertLocalPrincipal,
@@ -30,6 +30,7 @@ import {
   type AuthoritySourceResolution,
   type AuthoritySourceResolver,
   type BoundAuthoritySourceCatalog,
+  bindingOf,
   catalogAuthoritySourceResolver,
   resolveApprovalSource,
 } from "./authority-source.js";
@@ -42,6 +43,7 @@ import {
   type MissionTemplate,
   type TemplateCreate,
   type TemplateRecipients,
+  type TemplateSourceBinding,
   type TemplateState,
   TemplateStore,
 } from "./template-store.js";
@@ -162,11 +164,12 @@ function assertDispatchersAndRecipients(input: CreateTemplateInput): void {
  * consent IS an approval event, so it establishes the template's
  * `authority_source` from the injected trusted catalog, keyed on the
  * `recipients` (each recipient Subject through each recipient Agent, #827)
- * and never from the request body. Every pair MUST resolve to the SAME root,
- * or the template is refused: a template whose instances would draw on two
- * different authorities has no single provenance to inherit. The
- * established source is provenance and stays OUTSIDE `template_hash`, exactly
- * as `authority_source` stays outside both Mission anchors.
+ * and never from the request body. Each pair commits its own root, and every
+ * pair MUST share one provenance, or the template is refused: a template
+ * whose instances would draw on two kinds of authority has no single
+ * provenance to inherit. The established source and the per-recipient roots
+ * are provenance and stay OUTSIDE `template_hash`, exactly as
+ * `authority_source` stays outside both Mission anchors.
  */
 export function createTemplate(
   store: TemplateStore,
@@ -212,7 +215,7 @@ export function createTemplate(
   const existing = store.getByApprovalEvent(input.approval_event_id);
   if (existing) return existing;
 
-  const authority_source = establishTemplateAuthoritySource(input, options);
+  const { authority_source, source_bindings } = establishTemplateAuthoritySource(input, options);
   // At this trusted establishment boundary, request-body bindings are never facts.
   const ceiling = options.capabilityResolver
     ? resolveFreshCapabilitySources(input.ceiling.map(({ capability_sources: _drop, ...entry }) => entry), options.capabilityResolver)
@@ -237,7 +240,7 @@ export function createTemplate(
     templateBody as unknown as JsonValue,
   );
   const id = `tmpl_${randomBytes(18).toString("base64url")}`;
-  const create: TemplateCreate = { ...input, ceiling, id, template_hash, authority_source };
+  const create: TemplateCreate = { ...input, ceiling, id, template_hash, authority_source, source_bindings };
   return store.create(create);
 }
 
@@ -250,17 +253,22 @@ export function createTemplate(
 function establishTemplateAuthoritySource(
   input: CreateTemplateInput,
   options: { authoritySourceCatalog: BoundAuthoritySourceCatalog; authoritySourceResolver?: AuthoritySourceResolver },
-): AuthoritySource {
+): { authority_source: AuthoritySource; source_bindings: TemplateSourceBinding[] } {
   const catalog = options.authoritySourceCatalog;
   const resolver = options.authoritySourceResolver ?? catalogAuthoritySourceResolver(catalog);
   if (input.recipients.agents.length === 0) {
     throw new TemplateError("template recipients.agents must be non-empty");
   }
-  // @spec mission#authority-sources (#827): resolve for every recipient
-  // Subject through every recipient Agent, through the same resolver an
-  // approval uses. One root for all of them, or no template: a shared agent
-  // registration never lets one recipient's instances draw on another's root.
-  let root: AuthoritySourceResolution | undefined;
+  // @spec mission#authority-sources (#827): resolve every recipient Subject
+  // through every recipient Agent, through the same resolver an approval
+  // uses, and record each pair's root. The pairs may resolve different roots
+  // (two people sharing one agent registration), but they share ONE
+  // provenance, or no template: the template's `authority_source` is the one
+  // provenance every instance inherits. Gate 2 runs once per distinct root.
+  let provenance: AuthoritySource | undefined;
+  let provenanceBytes: string | undefined;
+  const activated = new Set<string>();
+  const source_bindings: TemplateSourceBinding[] = [];
   for (const subject of input.recipients.subjects) {
     for (const agent of input.recipients.agents) {
       let resolved: AuthoritySourceResolution;
@@ -273,21 +281,30 @@ function establishTemplateAuthoritySource(
       } catch (e) {
         throw new TemplateError((e as Error).message);
       }
-      if (root && resolved.rootId !== root.rootId) {
+      const bytes = canonicalize(resolved.provenance as unknown as JsonValue);
+      if (provenanceBytes !== undefined && bytes !== provenanceBytes) {
         throw new TemplateError(
           "template recipients draw on more than one authority source; a template has one source",
         );
       }
-      root = resolved;
+      provenance = resolved.provenance;
+      provenanceBytes = bytes;
+      if (!activated.has(resolved.rootId)) {
+        try {
+          assertApproverMayActivate(catalog, resolved.entry, input.approver);
+        } catch (e) {
+          throw new TemplateError((e as Error).message);
+        }
+        activated.add(resolved.rootId);
+      }
+      source_bindings.push({
+        subject: { iss: resolved.principal.iss, sub: resolved.principal.sub },
+        agent,
+        binding: bindingOf(resolved),
+      });
     }
   }
-  const resolvedRoot = root as AuthoritySourceResolution;
-  try {
-    assertApproverMayActivate(catalog, resolvedRoot.entry, input.approver);
-  } catch (e) {
-    throw new TemplateError((e as Error).message);
-  }
-  return resolvedRoot.provenance;
+  return { authority_source: provenance as AuthoritySource, source_bindings };
 }
 
 export interface DispatchInput {
@@ -577,8 +594,19 @@ export function dispatchFromTemplate(
   // and gate 4 (subject discipline, since the Subject is per instance). Both
   // run before the instance's anchors are computed.
   const authoritySource = template.authority_source;
-  kernel.assertInheritedAuthoritySource(authoritySource, final);
-  kernel.assertSubjectDisciplineForSource(authoritySource, input.subject);
+  // @spec mission#authority-sources (#827): the instance inherits the root
+  // its own recipient pair committed at consent: this Subject through the
+  // selected Agent, never another recipient's root through a shared
+  // registration.
+  const recipientRoot = store.sourceBinding(template.id, input.subject, recipient);
+  if (!recipientRoot) {
+    throw new IntentError(
+      "access_denied",
+      `template ${template.id} committed no authority-source root for this recipient`,
+    );
+  }
+  const resolvedRoot = kernel.assertInheritedAuthoritySource(recipientRoot, final);
+  kernel.assertInheritedSubjectDiscipline(resolvedRoot, input.subject);
 
   // e. Build a NORMAL MissionRecord (as expansion.ts does). Anchors are over
   // the INSTANCE's own intent and `final` set (never the template body). The
@@ -660,7 +688,7 @@ export function dispatchFromTemplate(
   };
 
   // f. Insert the instance and record the dispatch (audit + rate/max-active).
-  kernel.insertRecord(record);
+  kernel.insertRecord(record, undefined, { source: { inherited: recipientRoot } });
   store.recordDispatch({
     dispatchEventId: input.dispatchEventId,
     templateId: template.id,

@@ -357,8 +357,9 @@ export interface AuthoritySourceResolution {
 
 /**
  * The private, issuer-local record of the root a Mission committed: its root
- * id, deployment, root context (Subject and client) and provenance. Never on
- * the wire and outside every anchor.
+ * id, deployment, root context (the Subject and client the root was resolved
+ * for) and provenance. Persisted with the Mission in the record transaction
+ * (`SourceBindingStore`); never on the wire and outside every anchor.
  */
 export interface AuthoritySourceBinding {
   readonly rootId: string;
@@ -571,8 +572,9 @@ export function resolveApprovalSource(
 }
 
 /**
- * The funnel backstop for a FRESH approval: the record carries exactly the
- * provenance its one resolution established, byte for byte.
+ * The funnel backstop for every creation: the record carries exactly the
+ * provenance its one resolution established (fresh, or its origin's committed
+ * root), byte for byte.
  */
 export function assertRecordedSourceResolved(
   recorded: AuthoritySource,
@@ -590,41 +592,84 @@ export function assertRecordedSourceResolved(
 }
 
 /**
- * The DRAWDOWN and funnel-backstop resolution: re-resolve the declaration a
- * record's IMMUTABLE `authority_source` denotes, against catalog state current
- * at the moment authority is drawn. Refuses when the identity no longer
- * resolves; it never rewrites the record's member from a fresh lookup, which
- * would let a drawdown change provenance with no approval event.
- *
- * Refuses, too, when the identity denotes MORE than one root (#827: repeated
- * modes across disjoint Subjects): provenance alone cannot say which root a
- * Mission committed, and the first match is never the answer. An inherited
- * source in such a catalog draws on its committed root instead.
- *
- * GATE 5 lives here too: an `organizational` record's committed policy
- * `digest` must equal the digest of the governed policy currently loaded, so
- * drift refuses.
+ * @spec mission#authority-sources (#827): RECONCILIATION evidence from a
+ * trusted historical catalog: the root that, in that catalog, selected this
+ * client and Subject with exactly this provenance (type, policy reference and
+ * digest). Undefined unless exactly one root does: a historical catalog that
+ * cannot name the root is no evidence, and nothing falls back to another.
  */
-export function resolveDeclaredSource(
+export function historicalRootFor(
   catalog: AuthoritySourceCatalog,
-  source: AuthoritySource,
-): AuthoritySourceCatalogEntry {
-  const matches = catalog.entries.filter((e) => sameSourceIdentity(e, source));
-  const entry = matches[0];
-  if (!entry) {
+  context: { clientId: string; sub: string; provenance: AuthoritySource },
+): string | undefined {
+  const bytes = canonicalize(context.provenance as unknown as JsonValue);
+  const roots = selectingEntries(catalog, context.clientId, context.sub).filter(
+    (e) => canonicalize(authoritySourceOf(e) as unknown as JsonValue) === bytes,
+  );
+  return roots.length === 1 ? roots[0]?.id : undefined;
+}
+
+/** The binding a resolution commits: its root, deployment, root context and
+ *  provenance. Drawdowns copy it verbatim, so a child keeps its root's context
+ *  (Subject and client), never its own client. */
+export function bindingOf(resolution: AuthoritySourceResolution): AuthoritySourceBinding {
+  return Object.freeze({
+    rootId: resolution.rootId,
+    deployment: resolution.deployment,
+    principal: { iss: resolution.principal.iss, sub: resolution.principal.sub },
+    clientId: resolution.clientId,
+    provenance: resolution.provenance,
+  });
+}
+
+/**
+ * The DRAWDOWN resolution (#827): the CURRENT declaration of the root a
+ * Mission committed, from the same resolver approvals consult, against state
+ * current at the moment authority is drawn. It never re-resolves provenance,
+ * which cannot say which of several roots of one mode a Mission drew on, and
+ * it never rebinds: a missing root, a changed provenance, or a root that no
+ * longer selects its own Subject and client refuses.
+ *
+ * GATE 5 runs here too: an `organizational` root's committed policy digest
+ * must equal the governed policy currently loaded, so drift refuses. A
+ * resolver that throws anything other than a refusal is unavailable, and an
+ * answer for another root, deployment, root context or source refuses.
+ */
+export function resolveCommittedSource(
+  resolver: AuthoritySourceResolver,
+  input: { deployment: string; binding: AuthoritySourceBinding },
+): AuthoritySourceResolution {
+  const { binding } = input;
+  if (binding.deployment !== input.deployment) {
+    throw new IntentError("access_denied", "the committed authority source belongs to another deployment");
+  }
+  let r: AuthoritySourceResolution;
+  try {
+    r = resolver.resolveCommittedRoot({ deployment: input.deployment, binding });
+  } catch (e) {
+    if (e instanceof IntentError) throw e;
+    throw new IntentError("access_denied", "the authority-source resolver is unavailable");
+  }
+  const consistent =
+    r !== null &&
+    typeof r === "object" &&
+    r.rootId === binding.rootId &&
+    r.entry?.id === binding.rootId &&
+    r.deployment === input.deployment &&
+    r.clientId === binding.clientId &&
+    r.principal?.iss === binding.principal.iss &&
+    r.principal?.sub === binding.principal.sub &&
+    sameSourceIdentity(r.entry, binding.provenance) &&
+    canonicalize(r.provenance as unknown as JsonValue) ===
+      canonicalize(authoritySourceOf(r.entry) as unknown as JsonValue);
+  if (!consistent) {
     throw new IntentError(
       "access_denied",
-      `the ${source.type} authority source this Mission draws on is no longer declared`,
+      "the authority-source resolver answered for a different root, deployment, root context or source",
     );
   }
-  if (matches.length > 1) {
-    throw new IntentError(
-      "access_denied",
-      `the ${source.type} authority source this Mission draws on denotes more than one root, so it cannot be re-resolved from provenance alone`,
-    );
-  }
-  assertPolicyDigestMatches(entry, source);
-  return entry;
+  assertPolicyDigestMatches(r.entry, binding.provenance);
+  return r;
 }
 
 /** The immutable record member an entry establishes: `type`, plus `policy` for
