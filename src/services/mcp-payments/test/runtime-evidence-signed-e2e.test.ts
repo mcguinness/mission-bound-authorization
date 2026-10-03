@@ -34,6 +34,7 @@ import {
   type TokenFacts,
   verifyEvidenceEnvelope,
 } from "../src/index.js";
+import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 
 const ISSUER = "https://as.test";
 
@@ -50,6 +51,7 @@ const TOKEN: TokenFacts = {
   clientId: "ap-agent",
   mission: { id: "msn_e2e", issuer: ISSUER, authority_hash: "sha-256:e2ehash" },
   cnfJkt: "jkt-1",
+  credentialAuthority: ALL_ACTIONS_CREDENTIAL,
 };
 
 function view(actions: string[]): MissionView {

@@ -11860,9 +11860,39 @@
      "name": "mediated MCP channel (harness duty 2: no bypass) > 3b: a tampered credential (bad signature) is denied at the channel with no PEP evidence",
      "level": "cross-component",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > admits a conforming at+jwt over HTTP and the mediated channel, carrying its own authority",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > refuses a token with %s on both transports, yielding no facts",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > refuses a transaction token and an attenuation root presented as a Mission access token",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > refuses an at+jwt presented as an attenuation root",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > never demotes a Mission-bound token that fails its profile to the ordinary class on a gateway route",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "validateMissionToken rejects a token signed by the wrong key or carrying the wrong audience before either ever becomes a TokenFacts value a caller could pass on; mcp-channel.test.ts's 3b (CI-only, live OpenFGA) shows the same failure at the full channel level with zero PEP evidence produced, so the rejection precedes any use of the token's claims, not merely the return value."
+   "notes": "validateMissionToken rejects a token signed by the wrong key or carrying the wrong audience before either ever becomes a TokenFacts value a caller could pass on; mcp-channel.test.ts's 3b (CI-only, live OpenFGA) shows the same failure at the full channel level with zero PEP evidence produced, so the rejection precedes any use of the token's claims, not merely the return value. #825: the Mission access-token profile (typ at+jwt; exp, iat, jti, sub, client_id, cnf.jkt and the mission claim, each typed; authorization_details read in full) is met on the HTTP and mediated paths before any claim becomes a fact, each requirement refused individually, and a token of another class (transaction, attenuation root) or one failing the profile on a gateway route is never admitted as this class."
   },
   {
    "id": "runtime.token-validation.audience-and-pop",
@@ -11902,9 +11932,27 @@
      "name": "HTTP mediated MCP channel (harness duty 2 + DPoP proof-of-possession over HTTP) > 4b: DISCRIMINATING mismatched-key (DPoP proof signed by a DIFFERENT key than cnf.jkt) is rejected BEFORE the PEP -- zero evidence/ledger; a valid DPoP client on the SAME server then permits",
      "level": "cross-component",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: proof of possession binds the leaf, fresh and once (@spec runtime-oauth#token-validation, #825) > accepts a proof bound to the leaf, and refuses the same proof presented again",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: proof of possession binds the leaf, fresh and once (@spec runtime-oauth#token-validation, #825) > refuses a proof with %s",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: proof of possession binds the leaf, fresh and once (@spec runtime-oauth#token-validation, #825) > refuses a proof whose ath hashes the root rather than the leaf",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "Audience arm: a wrong-audience token is refused (runtime-refusal-backlog.test.ts, unconditional). Proof-of-possession arm: mcp-http-channel.test.ts's 4a (a valid DPoP-scheme token with no proof header, and the bearer scheme) and 4b (a well-formed proof signed by the wrong key) are both rejected at the gate before the PEP, with zero evidence/ledger, and a valid-DPoP client on the same live server then permits (non-vacuous); both CI-only (live OpenFGA, the file's shared beforeAll)."
+   "notes": "Audience arm: a wrong-audience token is refused (runtime-refusal-backlog.test.ts, unconditional). Proof-of-possession arm: mcp-http-channel.test.ts's 4a (a valid DPoP-scheme token with no proof header, and the bearer scheme) and 4b (a well-formed proof signed by the wrong key) are both rejected at the gate before the PEP, with zero evidence/ledger, and a valid-DPoP client on the same live server then permits (non-vacuous); both CI-only (live OpenFGA, the file's shared beforeAll). #825: an attenuation chain's proof of possession runs the same DPoP check: bound to the leaf token by ath, with a fresh iat and a jti refused on reuse."
   },
   {
    "id": "runtime.token-validation.no-cnf-is-bearer-for-high-consequence",

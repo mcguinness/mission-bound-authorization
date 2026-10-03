@@ -37,6 +37,7 @@ import {
   type DecisionEvidence,
   type TokenFacts,
 } from "../src/index.js";
+import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 
 /** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
 const idem = (): string => `idem_${randomUUID()}`;
@@ -64,6 +65,7 @@ const TOKEN: TokenFacts = {
   clientId: "ap-agent",
   mission: { id: "msn_test", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
   cnfJkt: "jkt-1",
+  credentialAuthority: ALL_ACTIONS_CREDENTIAL,
 };
 
 function view(actions: string[], overrides: Partial<MissionView["authority_set"][number]> = {}): MissionView {
@@ -343,12 +345,14 @@ describe("the PEP establishes token validity before using any of its claims as d
       sub: "alice",
       client_id: "ap-agent",
       cnf: { jkt: "jkt-1" },
+      authorization_details: [...ALL_ACTIONS_CREDENTIAL],
       mission: { id: "msn_test", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
     })
-      .setProtectedHeader({ alg: "ES256", kid: "mission-key" })
+      .setProtectedHeader({ alg: "ES256", kid: "mission-key", typ: "at+jwt" })
       .setIssuer(ISSUER)
       .setAudience(CANONICAL_RESOURCE)
       .setIssuedAt()
+      .setJti(crypto.randomUUID())
       .setExpirationTime("5m")
       .sign(untrusted.privateKey);
 
@@ -364,12 +368,14 @@ describe("the PEP establishes token validity before using any of its claims as d
       sub: "alice",
       client_id: "ap-agent",
       cnf: { jkt: "jkt-1" },
+      authorization_details: [...ALL_ACTIONS_CREDENTIAL],
       mission: { id: "msn_test", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
     })
-      .setProtectedHeader({ alg: "ES256", kid: "mission-key" })
+      .setProtectedHeader({ alg: "ES256", kid: "mission-key", typ: "at+jwt" })
       .setIssuer(ISSUER)
       .setAudience("https://other-resource.example.com/mcp") // NOT this resource
       .setIssuedAt()
+      .setJti(crypto.randomUUID())
       .setExpirationTime("5m")
       .sign(kp.privateKey);
 

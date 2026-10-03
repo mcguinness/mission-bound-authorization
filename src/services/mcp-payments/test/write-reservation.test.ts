@@ -47,6 +47,7 @@ import {
   TransactionEngine,
   type WriteToolResult,
 } from "../src/index.js";
+import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 
 const KEYS = createEphemeralEvidenceKeys();
 const BASE_MS = Date.parse("2026-10-02T12:00:00.000Z");
@@ -65,6 +66,7 @@ const tokenFor = (missionId: string): TokenFacts => ({
   clientId: "ap-agent",
   mission: { id: missionId, issuer: ISSUER, authority_hash: `sha-256:${missionId}` },
   cnfJkt: "jkt-918",
+  credentialAuthority: ALL_ACTIONS_CREDENTIAL,
 });
 const TOKEN_A = tokenFor("msn_918a");
 const TOKEN_B = tokenFor("msn_918b");

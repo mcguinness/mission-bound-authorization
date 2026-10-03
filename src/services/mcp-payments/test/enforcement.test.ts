@@ -21,6 +21,7 @@ import {
   type ExecutionEvidence,
   type TokenFacts,
 } from "../src/index.js";
+import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 
 /** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
 const idem = (): string => `idem_${randomUUID()}`;
@@ -71,6 +72,7 @@ const TOKEN: TokenFacts = {
   clientInstanceId: "inst-1",
   mission: { id: "msn_m4", issuer: "https://as.test", authority_hash: "sha-256:m4hash" },
   cnfJkt: "jkt-1",
+  credentialAuthority: ALL_ACTIONS_CREDENTIAL,
 };
 
 let fga: Fga;

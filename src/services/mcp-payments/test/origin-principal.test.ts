@@ -23,6 +23,7 @@ import {
   type DecisionEvidence,
   type TokenFacts,
 } from "../src/index.js";
+import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 
 // @spec runtime-evidence#decision-evidence-object (#741): one bundle per
 // test module. `signing`/`resolver` wire the PEP's store; `decide` is the
@@ -84,6 +85,7 @@ describe("PEP AuthZEN envelope: origin principal and local-subject issuer (#539 
       iss: ISSUER,
       mission: { id: missionId, issuer: ISSUER, authority_hash: "sha-256:hash539", subject: ORIGIN },
       cnfJkt: "jkt-1",
+      credentialAuthority: ALL_ACTIONS_CREDENTIAL,
     };
     // The client-controlled tool arguments attempt to smuggle a different
     // origin principal in; a request field the PEP never reads for this
@@ -101,6 +103,7 @@ describe("PEP AuthZEN envelope: origin principal and local-subject issuer (#539 
       iss: ISSUER,
       mission: { id: missionId, issuer: ISSUER, authority_hash: "sha-256:hash539" },
       cnfJkt: "jkt-1",
+      credentialAuthority: ALL_ACTIONS_CREDENTIAL,
     };
     await pep.enforce("lookup_vendor", { vendor_id: "acme" }, token);
     expect(envelopes).toHaveLength(1);
@@ -115,6 +118,7 @@ describe("PEP AuthZEN envelope: origin principal and local-subject issuer (#539 
       iss: ISSUER,
       mission: { id: missionId, issuer: ISSUER, authority_hash: "sha-256:hash539" },
       cnfJkt: "jkt-1",
+      credentialAuthority: ALL_ACTIONS_CREDENTIAL,
     };
     await pep.enforce("lookup_vendor", { vendor_id: "acme" }, token);
     expect(envelopes[0]?.subject).toEqual({ id: "emp-4417", properties: { iss: ISSUER } });
@@ -127,6 +131,7 @@ describe("PEP AuthZEN envelope: origin principal and local-subject issuer (#539 
       clientId: "ap-agent",
       mission: { id: missionId, issuer: ISSUER, authority_hash: "sha-256:hash539" },
       cnfJkt: "jkt-1",
+      credentialAuthority: ALL_ACTIONS_CREDENTIAL,
     };
     await pep.enforce("lookup_vendor", { vendor_id: "acme" }, token);
     expect(envelopes[0]?.subject).toEqual({ id: "emp-4417" });
@@ -168,6 +173,7 @@ describe("PEP AuthZEN envelope: origin principal and local-subject issuer (#539 
     iss: LOCAL.iss,
     mission: { id: missionId, issuer: ISSUER, authority_hash: "sha-256:hash539", subject: ORIGIN },
     cnfJkt: "jkt-1",
+    credentialAuthority: ALL_ACTIONS_CREDENTIAL,
   });
 
   it("PepDeps.principalMapping/.entitlement/.entitlementStalenessBoundSeconds forward unchanged to the PDP: a profile-claiming request permits once mapping and entitlement both resolve", async () => {
@@ -255,6 +261,7 @@ describe("PEP AuthZEN envelope: origin principal and local-subject issuer (#539 
       iss: ISSUER,
       mission: { id: missionId, issuer: ISSUER, authority_hash: "sha-256:hash539", subject: ORIGIN },
       cnfJkt: "jkt-1",
+      credentialAuthority: ALL_ACTIONS_CREDENTIAL,
     };
     const res = await pep.enforce("lookup_vendor", { vendor_id: "acme" }, token);
     expect(res.permitted).toBe(false);
