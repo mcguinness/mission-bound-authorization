@@ -31,7 +31,9 @@ normative:
   RFC6749:
   RFC6750:
   RFC7662:
+  RFC8705:
   RFC9068:
+  RFC9449:
   RFC9700:
   RFC9728:
   I-D.draft-mcguinness-oauth-mission:
@@ -275,6 +277,24 @@ Mission evaluation. When the PEP is an OAuth Resource Server, it uses
 the normal OAuth error behavior for the protected resource (for
 example, Bearer token errors under {{RFC6750}}); this document defines
 no new OAuth error code.
+
+Beyond that validation, for a high-consequence action
+({{I-D.draft-mcguinness-mission-runtime}}, Section "Action
+Classification"), the PEP MUST refuse a bearer token and MUST refuse a
+sender-constrained token without a valid proof for the request,
+realizing the runtime core's possession requirement for either
+Mission-establishment mode
+({{I-D.draft-mcguinness-mission-runtime}}, Section "Enforcement
+Invariants"). For an mTLS-bound token, the PEP MUST verify that the
+certificate authenticated on the request's own TLS connection matches
+the certificate the token is bound to ({{Section 3 of RFC8705}});
+receiving a certificate, or matching a supplied thumbprint without
+that authenticated match, does not establish possession. For a
+DPoP-bound token, the PEP MUST perform the complete request-proof
+validation of {{Section 7 of RFC9449}}. A credential that fails either
+check is refused before the Mission is evaluated; a credential whose
+binding and proof both validate proceeds to the remaining
+authorization checks.
 
 A Mission reference reaches the decision in one of two ways. A
 credential-carried reference is the `mission` claim of a validated JWT,
