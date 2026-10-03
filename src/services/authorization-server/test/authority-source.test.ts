@@ -1751,4 +1751,101 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
     ).toThrow(/both select subject 'bob'/);
     expect(() => k({ authoritySourceReconciliation: { mappings: { "msn-x": "" } } })).toThrow(/must name a root/);
   });
+  it("refuses a committed-root answer whose client or Subject selector no longer selects the binding's context", () => {
+    const narrow: AuthoritySourceCatalog = {
+      humanPrincipals: ["alice", "bob", "rita"],
+      entries: [
+        { id: "narrow-people", type: "user_delegated", clients: ["ap-agent"], activators: ["rita"], ceiling: [cap(READS, "acme")] },
+      ],
+    };
+    const base = catalogAuthoritySourceResolver(bindAuthoritySourceCatalog(narrow, ISS, ISS));
+    // The same root id, with the binding's client, then its Subject, excluded.
+    for (const patch of [{ clients: ["other-agent"] }, { subjects: ["bob"] }]) {
+      const kernel = k({
+        authoritySourceCatalog: catalog() as never,
+        authoritySourceResolver: {
+          ...base,
+          resolveCommittedRoot: (input) => {
+            const r = base.resolveCommittedRoot(input);
+            return { ...r, entry: { ...r.entry, ...patch } };
+          },
+        },
+        actorProfiles: CHILD_ACTORS,
+      });
+      const parent = approveFor(kernel, "alice", "ap-agent", [grant(READS, "acme")]);
+      refusedWith(() => childOf(kernel, parent.id), /answered for a different root, deployment, root context or source/);
+    }
+  });
+
+  it("reconciles a template instance by its template's consent instant, never its dispatch instant", () => {
+    const file = storeFile();
+    const kernel = k({ store: { file } });
+    const store = new TemplateStore();
+    const template = createTemplate(
+      store,
+      {
+        template_version: "t827-legacy",
+        issuer: ISS,
+        approver: { iss: ISS, sub: "rita" },
+        ceiling: [grant(READS, "acme")],
+        dispatch_policy: { id: "read-only", version: "1" },
+        dispatchers: ["ap-agent"],
+        recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents: ["ap-agent"] },
+        per_instance_lifetime_s: 900,
+        max_active: 5,
+        rate_per_min: 30,
+        review_cadence_s: 86400,
+        approval_event_id: `tmpl-827-${seq++}`,
+        expires_at: "2099-01-01T00:00:00Z",
+      } as never,
+      { ...kernel.authoritySourceOptions(), dispatchPolicies: READ_ONLY_POLICIES },
+    );
+    const dispatchOne = () =>
+      dispatchFromTemplate(kernel, store, {
+        templateId: template.id,
+        dispatchEventId: `dsp-827-${seq++}`,
+        dispatcher: "ap-agent",
+        dispatchPolicies: READ_ONLY_POLICIES,
+        intent: intent({ expires_at: "2026-11-01T00:00:00Z" }),
+        subject: { iss: ISS, sub: "alice" },
+        policyVersion: DERIVATION_POLICY.policy_version,
+      } as never).mission;
+    const consented = dispatchOne();
+    const unusable = dispatchOne();
+    // Legacy rows with no bindings, from a template consented in 2020, long
+    // before these dispatches; one row's consent instant is lost.
+    kernel.db.prepare("DELETE FROM authority_source_bindings").run();
+    const setApprovedAt = (id: string, at: string | undefined): void => {
+      const row = kernel.db.prepare("SELECT approval_basis_json FROM missions WHERE id = ?").get(id) as {
+        approval_basis_json: string;
+      };
+      const basis = JSON.parse(row.approval_basis_json) as Record<string, unknown>;
+      if (at === undefined) delete basis.approved_at;
+      else basis.approved_at = at;
+      kernel.db.prepare("UPDATE missions SET approval_basis_json = ? WHERE id = ?").run(JSON.stringify(basis), id);
+    };
+    setApprovedAt(consented.id, "2020-01-01T00:00:00.000Z");
+    setApprovedAt(unusable.id, undefined);
+    kernel.db.close();
+    // Root A was in force at the consent; replacement root B, for the same
+    // recipient pair and provenance, was in force by the dispatches.
+    const replaced = shared();
+    (replaced.entries as { id: string }[])[1].id = "alice-delegated-b";
+    const after = k({
+      store: { file },
+      authoritySourceReconciliation: {
+        history: [
+          { catalog: shared(), from: "2000-01-01T00:00:00Z", until: "2025-01-01T00:00:00Z" },
+          { catalog: replaced, from: "2025-01-01T00:00:00Z" },
+        ],
+      },
+    });
+    try {
+      expect(after.committedSourceBinding(consented.id).rootId).toBe("alice-delegated");
+      expect(after.sourceBindings.basisOf(consented.id)).toBe("reconciled");
+      expect(after.sourceBindings.get(unusable.id)).toBeUndefined();
+    } finally {
+      after.db.close();
+    }
+  });
 });

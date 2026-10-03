@@ -633,7 +633,9 @@ export function bindingOf(resolution: AuthoritySourceResolution): AuthoritySourc
  * GATE 5 runs here too: an `organizational` root's committed policy digest
  * must equal the governed policy currently loaded, so drift refuses. A
  * resolver that throws anything other than a refusal is unavailable, and an
- * answer for another root, deployment, root context or source refuses.
+ * answer for another root, deployment, root context or source refuses, as
+ * does a declaration whose client or Subject selector no longer selects the
+ * binding's own context.
  */
 export function resolveCommittedSource(
   resolver: AuthoritySourceResolver,
@@ -659,6 +661,9 @@ export function resolveCommittedSource(
     r.clientId === binding.clientId &&
     r.principal?.iss === binding.principal.iss &&
     r.principal?.sub === binding.principal.sub &&
+    Array.isArray(r.entry.clients) &&
+    r.entry.clients.includes(binding.clientId) &&
+    (r.entry.subjects === undefined || r.entry.subjects.includes(binding.principal.sub)) &&
     sameSourceIdentity(r.entry, binding.provenance) &&
     canonicalize(r.provenance as unknown as JsonValue) ===
       canonicalize(authoritySourceOf(r.entry) as unknown as JsonValue);

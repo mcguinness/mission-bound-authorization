@@ -5,8 +5,13 @@
  *
  * - an explicit reconciliation mapping (Mission ID to root ID), or
  * - a trusted historical catalog the operator declares was in force over an
- *   interval containing the row's `created_at`, in which exactly one root
- *   selected the row's client and Subject with the row's provenance.
+ *   interval containing the row's APPROVAL instant, in which exactly one root
+ *   selected the row's client and Subject with the row's provenance. The
+ *   instant follows the approval basis: a direct approval's is its
+ *   `created_at`; a template instance's is the consent instant of its
+ *   template (`approval_basis.approved_at`), when the recipient pair's root
+ *   was resolved, never its later dispatch. A template instance without a
+ *   usable consent instant has no historical evidence.
  *
  * A unique match in the CURRENT catalog is not evidence: root A may have been
  * removed and root B added for the same Subject, client and provenance, and
@@ -79,6 +84,7 @@ function intervalsOf(history: readonly HistoricalAuthoritySourceCatalog[]): Inte
 interface Row {
   id: string;
   created_at: string;
+  approval_basis_json: string;
   subject_iss: string;
   subject_sub: string;
   client_id: string;
@@ -135,7 +141,8 @@ export function reconcileSourceBindings(
   }
   const rows = db
     .prepare(
-      `SELECT id, created_at, subject_iss, subject_sub, client_id, authority_source_json, parent_id, related_to
+      `SELECT id, created_at, approval_basis_json, subject_iss, subject_sub, client_id, authority_source_json,
+       parent_id, related_to
        FROM missions m
        WHERE NOT EXISTS (SELECT 1 FROM authority_source_bindings b WHERE b.mission_id = m.id)
        ORDER BY created_at, id`,
@@ -163,6 +170,27 @@ export function reconcileSourceBindings(
   return bound;
 }
 
+/**
+ * The instant a root row's root was resolved, by its approval basis: a direct
+ * approval (and an Expansion successor) at its own creation, a template
+ * instance at its template's consent. Undefined when the basis names no
+ * usable instant, which is no historical evidence.
+ */
+function approvalInstantOf(row: Row): number | undefined {
+  let basis: { type?: unknown; approved_at?: unknown };
+  try {
+    basis = JSON.parse(row.approval_basis_json) as { type?: unknown; approved_at?: unknown };
+  } catch {
+    return undefined;
+  }
+  if (basis.type === "direct") return Date.parse(row.created_at);
+  if (basis.type === "template") {
+    const at = typeof basis.approved_at === "string" ? Date.parse(basis.approved_at) : Number.NaN;
+    return Number.isFinite(at) ? at : undefined;
+  }
+  return undefined;
+}
+
 function evidenceFor(
   db: Database,
   row: Row,
@@ -186,7 +214,8 @@ function evidenceFor(
   if (mapped !== undefined) {
     return { rootId: mapped, deployment: context.deployment, principal, clientId: row.client_id, provenance };
   }
-  const at = Date.parse(row.created_at);
+  const at = approvalInstantOf(row);
+  if (at === undefined) return undefined;
   const interval = intervals.find((i) => i.from <= at && at < i.until);
   if (!interval) return undefined;
   const rootId = historicalRootFor(interval.catalog, { clientId: row.client_id, sub: row.subject_sub, provenance });
