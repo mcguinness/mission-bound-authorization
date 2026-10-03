@@ -21,12 +21,12 @@ function fixture(source: () => string = () => text) {
     // once.
     authority_set: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: [...new Set(TOOLS.map(t => t.action))], constraints: { vendors: ["acme"] } }],
     subject: { iss: token.mission.issuer, sub: "alice" }, client_id: "ap-agent" };
-  const loadView = () => ({ view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } });
+  const loadView = () => ({ view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } });
   const requests: EvaluationRequest[] = [];
   const catalog = new PaymentsToolCatalog(source);
   const pep = new Pep({ payments, evidence, capabilityCatalog: catalog, decide: async (...args) => {
     requests.push(args[0]); return keys.decide(...args);
-  }, fga: { checkWithContext: async () => true } as unknown as Fga, modelId: "test", loadView, instanceEpoch: "epoch", allowedFreshnessSources: new Set(["load_view"]) });
+  }, fga: { checkWithContext: async () => true } as unknown as Fga, modelId: "test", loadView, instanceEpoch: "epoch" });
   const server = new McpPaymentsServer({ pep, payments, loadView, jwks: { keys: [] }, issuer: token.mission.issuer, writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }) });
   return { pep, server, evidence, requests, catalog, view, payments };
 }

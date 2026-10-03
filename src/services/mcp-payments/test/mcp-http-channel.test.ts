@@ -155,7 +155,7 @@ async function build(): Promise<{
   const connectors = new Connectors();
   const engine = new TransactionEngine("epoch-1");
   // @spec runtime#state-freshness: a synchronous live read, freshness-
-  // stamped at this read (Finding 1); "load_view" declared trusted below.
+  // stamped at this read (Finding 1), under the published `pep` placement.
   // Deliberately NONCONFORMING (@spec authority-server#reference-tuple,
   // #685 review): matches on `id` alone so the issuer-conflict tests below
   // exercise enforceInner's OWN view-issuer check (mission_reference_conflict)
@@ -164,7 +164,7 @@ async function build(): Promise<{
   // negative-boundary loader that intentionally does not.
   const loadView = (ref: { id: string }) =>
     ref.id === VIEW.id
-      ? { view: VIEW, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+      ? { view: VIEW, observation: { state: VIEW.state, version: VIEW.version, mode: "fresh", freshness_at: new Date().toISOString() } }
       : undefined;
   const pep = new Pep({
     decide: EVIDENCE_KEYS.decide,
@@ -174,7 +174,6 @@ async function build(): Promise<{
     modelId,
     loadView,
     instanceEpoch: "epoch-1",
-    allowedFreshnessSources: new Set(["load_view"]),
   });
   const server = new McpPaymentsServer({
     pep,
@@ -530,7 +529,7 @@ d("MAS-governed HTTP MCP channel (baseline Join)", () => {
     const view = opts.delegate ? DELEGATE_VIEW : VIEW;
     const loadView = (ref: { id: string; issuer: string }) =>
       ref.id === view.id && ref.issuer === view.issuer
-        ? { view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+        ? { view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } }
         : undefined;
     // The deployment's actor records: rule 5's depth source. Empty unless this
     // deployment recorded the edge, which is what makes an unrecorded
@@ -551,7 +550,6 @@ d("MAS-governed HTTP MCP channel (baseline Join)", () => {
       modelId,
       loadView,
       instanceEpoch: "epoch-1",
-      allowedFreshnessSources: new Set(["load_view"]),
       masJoin: {
         // Rule 8, bound 1: read from the credential AS ISSUED, its own scope.
         resolveOrdinaryAuthority: (token) => {

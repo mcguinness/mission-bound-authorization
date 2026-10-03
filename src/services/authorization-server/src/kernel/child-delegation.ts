@@ -305,10 +305,13 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
   // @spec mission#authority-sources — a child drawdown draws on the PARENT's
   // established source, so the child inherits `authority_source` verbatim: the
   // record member is immutable, and re-establishing it at drawdown would let a
-  // child change provenance with no approval event. Only the source ceiling is
-  // re-asserted, against catalog state current at the moment authority is
-  // drawn, and it runs BEFORE the child's anchors are computed.
-  kernel.assertInheritedAuthoritySource(parent.authority_source, childAuthority);
+  // child change provenance with no approval event. The child inherits the
+  // parent's committed ROOT too (#827), with the root's own context, whatever
+  // client the child presents. Only the source ceiling is re-asserted, against
+  // that root's declaration current at the moment authority is drawn, and it
+  // runs BEFORE the child's anchors are computed.
+  const parentRoot = kernel.committedSourceBinding(parent.id);
+  kernel.assertInheritedAuthoritySource(parentRoot, childAuthority);
 
   // The prospective child identity, computed BEFORE the fan-out gates so a deny
   // Child Evidence record carries a real `child` member (REQUIRED unconditionally,
@@ -556,7 +559,7 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
     status_list_idx: null,
     parent: parentRef,
   };
-  kernel.insertRecord(child, assertFanout);
+  kernel.insertRecord(child, assertFanout, { source: { inherited: parentRoot } });
 
   // @spec child-delegation#child-evidence — permit record. `fanout` is recorded
   // for the PRIMARY justifying entry (the child's first Authority Set entry);

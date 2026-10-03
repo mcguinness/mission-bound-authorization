@@ -84,10 +84,9 @@ describe("Refusal Records are per-attempt, immutable, and append-only", () => {
       modelId: "unused",
       loadView: (ref) =>
         ref.id === view.id && ref.issuer === view.issuer
-          ? { view: view as never, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+          ? ({ view, observation: { state: view.state, mode: "fresh", freshness_at: new Date().toISOString() } } as never)
           : undefined,
       instanceEpoch: "epoch-1",
-      allowedFreshnessSources: new Set(["load_view"]),
     });
 
     const first = await pep.enforce("schedule_payment", { invoice_id: "inv-missing" }, TOKEN);
