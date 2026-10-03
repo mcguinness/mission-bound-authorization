@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          2 October 2026
-Expires: 5 April 2027
+Intended status: Standards Track                          3 October 2026
+Expires: 6 April 2027
 
 
                  Mission Entry Discharge for OAuth 2.0
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 5 April 2027.
+   This Internet-Draft will expire on 6 April 2027.
 
 Copyright Notice
 
@@ -107,6 +107,7 @@ Table of Contents
        7.2.1.  application/mission-discharge-receipt+jwt
    8.  Conformance
      8.1.  Completion Conformance
+   9.  Document History
    Acknowledgments
    References
      Normative References
@@ -392,11 +393,13 @@ Table of Contents
 3.7.  Relationship to Runtime Enforcement
 
    Discharge is an issuance-gating signal and is fully meaningful at the
-   issuance profile alone.  It is also a natural input to the runtime
-   layer ([I-D.draft-mcguinness-mission-runtime]): a runtime Policy
-   Enforcement Point that recognizes terminal_when SHOULD deny a
-   discharged entry at the point of use, closing the window between
-   discharge and token expiry the same way it denies a revoked Mission.
+   issuance profile alone: issuance-only discharge is a conforming
+   posture, with the residual that a credential issued before a
+   discharge stays valid until it expires (Section 3.3).  Where the
+   deployment also runs the runtime profile, that profile requires its
+   PDP to refuse a discharged entry at the point of use
+   ([I-D.draft-mcguinness-mission-runtime]), closing the window between
+   discharge and token expiry the same way it refuses a revoked Mission.
    A Policy Enforcement Point learns that an entry is discharged from
    the Status profile's Mission Status operation or the token
    introspection projection (Section 3.3.1), the same way it learns a
@@ -485,6 +488,22 @@ Table of Contents
    condition against an already-discharged entry is acknowledged
    already_discharged (Section 4.3.4) and does not restore the entry's
    authority.
+
+   A committed discharge also places a discharge restriction on the
+   Mission's expansion chain, the successors linked to it through
+   predecessor ([I-D.draft-mcguinness-oauth-mission-expansion]).  The
+   Mission Issuer MUST retain each restriction, with the discharged
+   entry and the condition that discharged it, across every later
+   successor in the chain.  A restriction clears only for authority that
+   a fresh human approval explicitly restores with the discharged entry
+   and its condition disclosed; any authority that approval does not
+   restore stays restricted.  An intervening successor, an approval of
+   unrelated authority, and a ceiling renewal under the progressive
+   authorization profile
+   ([I-D.draft-mcguinness-oauth-mission-progressive]) do not clear it.
+   Restoration grants authority through the successor's own approval:
+   the discharge never reverts, and the predecessor's entry stays
+   discharged.
 
    A committed discharge is a committed metadata-only change for the
    purposes of the state version
@@ -1281,6 +1300,20 @@ Table of Contents
    entry carrying a terminal_when constraint it does not understand
    (Section 3.5).
 
+9.  Document History
+
+   [[ To be removed from the final specification ]]
+
+   *  Discharge Commit (Section 4.1): a committed discharge places a
+      restriction on the Mission's expansion chain, retained across
+      later successors and cleared only for the authority a fresh human
+      approval explicitly restores with the discharged entry and its
+      condition disclosed.  The discharge itself never reverts.
+
+   *  Relationship to Runtime Enforcement (Section 3.7): issuance-only
+      discharge stays conforming; where the runtime profile runs, its
+      PDP refuses a discharged entry.
+
 Acknowledgments
 
    The author thanks the implementers and reviewers of the Mission-Bound
@@ -1360,6 +1393,17 @@ Informative References
               2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-child-
               delegation.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-expansion]
+              McGuinness, K., "Mission Expansion for OAuth 2.0", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-oauth-mission-expansion.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-progressive]
+              McGuinness, K., "Mission Progressive Authorization for
+              OAuth 2.0", 2026, <https://mcguinness.github.io/mission-
+              bound-authorization/draft-mcguinness-oauth-mission-
+              progressive.html>.
 
    [I-D.draft-mcguinness-oauth-mission-signals]
               McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",

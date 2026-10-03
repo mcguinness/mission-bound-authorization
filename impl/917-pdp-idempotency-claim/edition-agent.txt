@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-02T23:18:46Z
-Source repository commit: 2dd3f4561ebb1903ba25bbbc1ec145abaa0419c7
+Generated: 2026-10-03T03:40:52Z
+Source repository commit: 3d4a13155a07f9a9940a82100e6f309e40829e97
 Member count: 9
 
 Reading order:
@@ -30,8 +30,8 @@ Reading order:
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                            2 October 2026
-Expires: 5 April 2027
+Intended status: Informational                            3 October 2026
+Expires: 6 April 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -84,7 +84,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 5 April 2027.
+   This Internet-Draft will expire on 6 April 2027.
 
 Copyright Notice
 
@@ -4855,8 +4855,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          2 October 2026
-Expires: 5 April 2027
+Intended status: Standards Track                          3 October 2026
+Expires: 6 April 2027
 
 
                      Mission Substrate Requirements
@@ -4914,7 +4914,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 5 April 2027.
+   This Internet-Draft will expire on 6 April 2027.
 
 Copyright Notice
 
@@ -6391,8 +6391,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          2 October 2026
-Expires: 5 April 2027
+Intended status: Standards Track                          3 October 2026
+Expires: 6 April 2027
 
 
                Mission-Bound Authorization for OAuth 2.0
@@ -6451,7 +6451,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 5 April 2027.
+   This Internet-Draft will expire on 6 April 2027.
 
 Copyright Notice
 
@@ -9491,12 +9491,19 @@ Table of Contents
    keeps the wire shape and response status its defining document gives
    it.
 
-   A client that decodes authorization_remediation proposes the carried
-   entries back on the standard authorization_details parameter
-   (Section 4.2), where they derive under this document's ordinary rules
-   (Section 5): of an advertised, schema-valid type (Section 16),
-   narrowed same-type (Section 5.1, Section 5.2) like any other
-   proposal.
+   A client that decodes authorization_remediation can request the
+   carried entries on the standard authorization_details parameter of a
+   refresh request (Section 10), where they derive under this document's
+   ordinary rules (Section 5): of an advertised, schema-valid type
+   (Section 16), narrowed same-type (Section 5.1, Section 5.2) like any
+   other request.  The AS issues only what both the presented refresh
+   grant (Section 6 of [RFC9396]) and the Authority Set contain, so a
+   refresh-token family narrower than the Mission does not obtain the
+   Mission's wider authority.  For entries outside the Authority Set,
+   more authority requires a new approval, proposed as for a new Mission
+   (Section 4.2), or an expansion where that companion is deployed
+   (Section 11).  A client holding no refresh grant that covers the
+   entries proposes them as for a new Mission.
 
    A third grain routes the same denial into a governed access request
    rather than a fresh derivation: the AuthZEN Access Request and
@@ -9835,10 +9842,16 @@ Table of Contents
 
    Delegation is an optional capability (Section 18).  An agent may
    delegate execution to downstream actors (a sub-agent, service, or
-   tool that is itself an OAuth client) within a Mission.  Delegation is
-   represented with the OAuth Actor Profile
-   [I-D.draft-mcguinness-oauth-actor-profile], which profiles the act
-   (actor) claim of Section 4.1 of [RFC8693].
+   tool that is itself an OAuth client) within a Mission.  An
+   intermediary in the agent's own trust domain that presents the
+   agent's own tokens, such as a gateway holding the agent's
+   credentials, acts as part of that client and is not a delegate;
+   acting as that client, it can also narrow by self-exchange
+   (Section 14.2), which does not delegate.  An intermediary
+   authenticated as a distinct actor that obtains a delegated token by
+   Token Exchange is a delegate.  Delegation is represented with the
+   OAuth Actor Profile [I-D.draft-mcguinness-oauth-actor-profile], which
+   profiles the act (actor) claim of Section 4.1 of [RFC8693].
 
    A delegate obtains a delegated token by Token Exchange ([RFC8693]).
    The AS issues the delegated token subject to all of the following:
@@ -10307,6 +10320,11 @@ Table of Contents
    constraint-discovery surface; mission_resource_access's is defined by
    the Mission Resource Access Profile
    ([I-D.draft-mcguinness-oauth-mission-resource-access]).
+
+   A protected resource can list the authorization_details types it
+   accepts in the authorization_details_types_supported parameter
+   (Section 2 of [RFC9728]), so a client can propose entries of a type
+   its target accepts.
 
 18.  Conformance
 
@@ -12107,6 +12125,13 @@ B.5.  Non-Goals
       Verifying an agent's declared reasoning against the task is a
       further attestation problem outside both layers.
 
+   *  *Joint outcome and cross-resource effects.* Whether the actions
+      taken under a Mission jointly accomplish its task is outside this
+      document, as are the ordering, timing, atomicity, and compensation
+      of their effects across Resource Servers.  The mission claim joins
+      requests to an approval for issuance and audit; it does not
+      identify a business transaction.
+
    *  *Approval-free authorization upgrade.* The Authority Set is
       committed at approval; this document defines no mid-stream
       widening that bypasses consent.  Widening requires a new approval,
@@ -12805,6 +12830,19 @@ Appendix G.  Document History
 
    -01
 
+   *  Routed RAR remediation by containment: entries that both a
+      presented refresh grant and the active Mission's Authority Set
+      contain are requested by refresh, and entries outside the
+      Authority Set need a new approval or an expansion.  Added a Non-
+      Goal for joint outcomes and cross-resource effects (the mission
+      claim does not identify a business transaction), stated that an
+      intermediary in the agent's own trust domain presenting the
+      agent's own tokens acts as part of that client, self-exchange
+      included, while one authenticated as a distinct actor that obtains
+      a delegated token is a delegate, and pointed to RFC 9728's
+      authorization_details_types_supported.  No requirement or wire
+      behavior changed.
+
    *  Standing-Consent Bases defines the activation policy reference: a
       standing-consent basis whose activation a separate policy artifact
       adjudicates commits that policy's content as {id, version,
@@ -13380,8 +13418,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          2 October 2026
-Expires: 5 April 2027
+Intended status: Standards Track                          3 October 2026
+Expires: 6 April 2027
 
 
                Mission Status and Lifecycle for OAuth 2.0
@@ -13433,7 +13471,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 5 April 2027.
+   This Internet-Draft will expire on 6 April 2027.
 
 Copyright Notice
 
@@ -15445,8 +15483,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          2 October 2026
-Expires: 5 April 2027
+Intended status: Standards Track                          3 October 2026
+Expires: 6 April 2027
 
 
                    Mission-Bound Runtime Enforcement
@@ -15505,7 +15543,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 5 April 2027.
+   This Internet-Draft will expire on 6 April 2027.
 
 Copyright Notice
 
@@ -16130,22 +16168,24 @@ Table of Contents
    authority reflects, comes from a state source within the staleness
    bound (Section 2.5), never from that representation.
 
-   Where the deployment enforces a narrowing mechanism at action time,
-   the PDP MUST establish the current effective authority from a source
-   that reports that mechanism's narrowing, within the staleness bound
-   that governs the active check (Section 2.5).  A source that reports
-   only lifecycle state does not qualify: a narrowed Mission stays
-   active.
+   For every issuer-held narrowing mechanism the deployment runs, the
+   PDP MUST establish the current effective authority from a source that
+   reports that mechanism's narrowing, within the staleness bound that
+   governs the active check (Section 2.5).  A PDP that cannot establish
+   it MUST refuse the action.  A source that reports only lifecycle
+   state does not qualify: a narrowed Mission stays active.
 
    Where the deployment runs the Entry Discharge companion's discharge
    mechanism ([I-D.draft-mcguinness-oauth-mission-discharge]), the
-   current effective authority excludes a discharged entry once the PDP
-   can establish discharge state from its Mission state source.  A PDP
-   that recognizes an entry's discharge condition SHOULD refuse an
-   action within a discharged entry at the point of use, learning
-   discharge state from the surfaces that report it
-   ([I-D.draft-mcguinness-oauth-mission-discharge],
-   Section "Relationship to Runtime Enforcement").
+   current effective authority excludes a discharged entry.  The PDP
+   MUST refuse an action within a discharged entry at the point of use,
+   learning discharge state from the surfaces that report it
+   ([I-D.draft-mcguinness-oauth-mission-discharge], Section "Discharge
+   Visibility").  Discharge is not optional at an action boundary this
+   profile governs: a deployment that applies discharge only at issuance
+   keeps the residual of credentials issued before the discharge, and an
+   action boundary that omits discharge does not provide this profile's
+   current-effective-authority guarantee.
 
    Where a Mission participates in the Containment profile
    ([I-D.draft-mcguinness-oauth-mission-containment]), the current
@@ -19842,6 +19882,11 @@ Appendix D.  Document History
 
    [[ To be removed from the final specification ]]
 
+   *  Authority input: for every issuer-held narrowing mechanism the
+      deployment runs, the PDP establishes current effective authority
+      from a source reporting it and refuses when it cannot; the PDP
+      refuses an action within a discharged entry (formerly SHOULD).
+
    *  A materialized policy view is one way to evaluate the authority
       input, not the only one: the Materialized Policy View section
       governs a PDP that uses one, and the authority input requires
@@ -19934,8 +19979,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          2 October 2026
-Expires: 5 April 2027
+Intended status: Standards Track                          3 October 2026
+Expires: 6 April 2027
 
 
                         Mission Runtime Evidence
@@ -19985,7 +20030,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 5 April 2027.
+   This Internet-Draft will expire on 6 April 2027.
 
 Copyright Notice
 
@@ -22556,8 +22601,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          2 October 2026
-Expires: 5 April 2027
+Intended status: Standards Track                          3 October 2026
+Expires: 6 April 2027
 
 
            Mission-Bound Runtime Enforcement: AuthZEN Profile
@@ -22613,7 +22658,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 5 April 2027.
+   This Internet-Draft will expire on 6 April 2027.
 
 Copyright Notice
 
@@ -25690,8 +25735,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          2 October 2026
-Expires: 5 April 2027
+Intended status: Standards Track                          3 October 2026
+Expires: 6 April 2027
 
 
                      Mission-Aware Agent Harnesses
@@ -25743,7 +25788,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 5 April 2027.
+   This Internet-Draft will expire on 6 April 2027.
 
 Copyright Notice
 
@@ -27649,8 +27694,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          2 October 2026
-Expires: 5 April 2027
+Intended status: Standards Track                          3 October 2026
+Expires: 6 April 2027
 
 
                  Mission Consent Evidence for OAuth 2.0
@@ -27705,7 +27750,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 5 April 2027.
+   This Internet-Draft will expire on 6 April 2027.
 
 Copyright Notice
 

@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                             2 October 2026
-Expires: 5 April 2027
+Intended status: Experimental                             3 October 2026
+Expires: 6 April 2027
 
 
                    Mission Containment for OAuth 2.0
@@ -60,7 +60,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 5 April 2027.
+   This Internet-Draft will expire on 6 April 2027.
 
 Copyright Notice
 
@@ -670,11 +670,18 @@ Table of Contents
       ([I-D.draft-mcguinness-oauth-mission-status]);
 
    *  any surface of those profiles that discloses Mission authority
-      MUST omit contained capability or annotate it as contained; and
+      MUST omit contained capability, removing contained actions,
+      keeping an entry's uncontained remainder, and omitting an entry
+      with no authority left; and
 
    *  a mission.lifecycle-change event MUST carry containment_version,
       and MAY carry authority_hash
       ([I-D.draft-mcguinness-oauth-mission-signals], Section 14).
+
+   An annotation does not substitute for that exclusion from an
+   authorization-bearing field.  Containment history stays in the
+   records this profile retains, for audit and restoration disclosure
+   (Section 15).
 
    A consumer that does not understand containment_version ignores it;
    the state version already makes the change observable (Section 7).  A
@@ -1172,6 +1179,10 @@ Table of Contents
 23.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Visibility (Section 13): current-authority surfaces omit contained
+      capability at action grain, keeping an entry's uncontained
+      remainder; an annotation no longer substitutes for exclusion.
 
    *  Restoration Through Expansion (Section 15): containing capability
       places a restriction on the Mission's expansion chain, retained

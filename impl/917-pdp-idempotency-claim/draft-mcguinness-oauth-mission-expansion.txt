@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          2 October 2026
-Expires: 5 April 2027
+Intended status: Standards Track                          3 October 2026
+Expires: 6 April 2027
 
 
                     Mission Expansion for OAuth 2.0
@@ -60,7 +60,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 5 April 2027.
+   This Internet-Draft will expire on 6 April 2027.
 
 Copyright Notice
 
@@ -622,10 +622,15 @@ Table of Contents
    Authority the predecessor once held but containment or discharge has
    removed is therefore never nothing_to_expand: a request for it widens
    the effective set and is expansion-eligible.  Such authority returns
-   only through a fresh-consent successor, with the predecessor's
-   containment history surfaced in the expansion consent disclosure
-   (Section 5.2, [I-D.draft-mcguinness-oauth-mission-containment]),
-   never by re-deriving under the predecessor.
+   only through a fresh-consent successor, never by re-deriving under
+   the predecessor.  The expansion consent disclosure (Section 5.2)
+   surfaces the predecessor's containment history and the chain's
+   outstanding containment restrictions
+   ([I-D.draft-mcguinness-oauth-mission-containment]).  An expansion
+   that restores authority under a discharge restriction of the chain
+   MUST authorize that authority explicitly, and its consent disclosure
+   MUST name the discharged entry and the condition that discharged it
+   ([I-D.draft-mcguinness-oauth-mission-discharge]).
 
 5.2.  Completion modes
 
@@ -1080,16 +1085,29 @@ Table of Contents
    atomic step that would activate the successor and supersede the
    predecessor, the Mission Issuer MUST verify:
 
-   1.  the predecessor is still in the active state; and
+   1.  the predecessor is still in the active state;
 
    2.  no other replacement expansion has already activated a successor
        for this predecessor (equivalently, the predecessor has not
-       already transitioned to superseded).
+       already transitioned to superseded); and
 
-   If either check fails, the Mission Issuer MUST refuse the completion
+   3.  the successor's complete Authority Set, including authority
+       carried forward from the predecessor, overlaps in authority no
+       authority under a current containment or discharge restriction of
+       the chain ([I-D.draft-mcguinness-oauth-mission-containment],
+       [I-D.draft-mcguinness-oauth-mission-discharge]) that the
+       successor's approval did not explicitly restore with that
+       restriction disclosed.
+
+   If any check fails, the Mission Issuer MUST refuse the completion
    with invalid_grant and the applicable reconciliation status from the
    closed set below.  The losing or otherwise stale expansion is
-   rejected at completion; it activates no successor.
+   rejected at completion; it activates no successor.  The third check
+   catches narrowing that lands between adjudication and activation:
+   authority contained or discharged after the approval returns only
+   through a new expansion, adjudicated against the current
+   restrictions, which require fresh human approval with the restriction
+   disclosed.
 
    The reconciliation status codes are:
 
@@ -1111,6 +1129,12 @@ Table of Contents
       profile [I-D.draft-mcguinness-oauth-mission-status]) and cannot be
       expanded until it returns to active.  The client MAY retry the
       expansion after the predecessor is active again.
+
+   authority_restricted_since_approval:  The successor's Authority Set
+      overlaps authority that came under a containment or discharge
+      restriction of the chain after the successor's approval was
+      adjudicated (check 3 above).  The client MAY submit a new
+      expansion, which is adjudicated against the current restrictions.
 
    The two terminal-exit codes overlap in the superseded case by design:
    superseded_by_concurrent_expansion is the specific reconciliation
@@ -2082,6 +2106,12 @@ Informative References
               authorization/draft-mcguinness-oauth-mission-
               continuation.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-discharge]
+              McGuinness, K., "Mission Entry Discharge for OAuth 2.0",
+              2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-
+              discharge.html>.
+
    [I-D.draft-mcguinness-oauth-mission-progressive]
               McGuinness, K., "Mission Progressive Authorization for
               OAuth 2.0", 2026, <https://mcguinness.github.io/mission-
@@ -2121,6 +2151,16 @@ Informative References
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Successor activation's compare-and-set also rechecks the complete
+      successor Authority Set against current containment and discharge
+      restrictions, refusing with authority_restricted_since_approval
+      when narrowing landed after adjudication.
+
+   *  A fresh-consent restoration of authority under a discharge
+      restriction authorizes that authority explicitly and discloses the
+      discharged entry and its condition; the consent also surfaces the
+      chain's outstanding containment restrictions.
 
    *  Added explicitly approved carryover hooks for disclosure, atomic
       completion, and the carried child's unchanged expiry ceiling
