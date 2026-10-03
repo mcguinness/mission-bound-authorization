@@ -758,22 +758,24 @@ current effective authority reflects, comes from a state source
 within the staleness bound ({{state-freshness}}), never from that
 representation.
 
-Where the deployment enforces a narrowing mechanism at action time,
-the PDP MUST establish the current effective authority from a source
-that reports that mechanism's narrowing, within the staleness bound
-that governs the `active` check ({{state-freshness}}). A source that
-reports only lifecycle state does not qualify: a narrowed Mission
-stays `active`.
+For every issuer-held narrowing mechanism the deployment runs, the PDP
+MUST establish the current effective authority from a source that
+reports that mechanism's narrowing, within the staleness bound that
+governs the `active` check ({{state-freshness}}). A PDP that cannot
+establish it MUST refuse the action. A source that reports only
+lifecycle state does not qualify: a narrowed Mission stays `active`.
 
 Where the deployment runs the Entry Discharge companion's discharge
 mechanism ({{I-D.draft-mcguinness-oauth-mission-discharge}}), the
-current effective authority excludes a discharged entry once the PDP
-can establish discharge state from its Mission state source. A PDP
-that recognizes an entry's discharge condition SHOULD refuse an action
-within a discharged entry at the point of use, learning discharge
-state from the surfaces that report it
+current effective authority excludes a discharged entry. The PDP MUST
+refuse an action within a discharged entry at the point of use,
+learning discharge state from the surfaces that report it
 ({{I-D.draft-mcguinness-oauth-mission-discharge}}, Section
-"Relationship to Runtime Enforcement").
+"Discharge Visibility"). Discharge is not optional at an action
+boundary this profile governs: a deployment that applies discharge
+only at issuance keeps the residual of credentials issued before the
+discharge, and an action boundary that omits discharge does not
+provide this profile's current-effective-authority guarantee.
 
 Where a Mission participates in the Containment profile
 ({{I-D.draft-mcguinness-oauth-mission-containment}}), the current
@@ -3737,6 +3739,11 @@ worked example shows the concrete record
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Authority input: for every issuer-held narrowing mechanism the
+  deployment runs, the PDP establishes current effective authority from
+  a source reporting it and refuses when it cannot; the PDP refuses an
+  action within a discharged entry (formerly SHOULD).
 
 - A materialized policy view is one way to evaluate the authority
   input, not the only one: the Materialized Policy View section
