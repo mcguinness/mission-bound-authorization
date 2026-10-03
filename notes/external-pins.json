@@ -93,6 +93,19 @@
       "pin_id": "RAR-METADATA@f95b9441d015"
     },
     {
+      "id": "RAR-REMEDIATION",
+      "kind": "datatracker",
+      "doc": "draft-ietf-oauth-rar-metadata-remediation",
+      "rev": "00",
+      "url": "https://www.ietf.org/archive/id/draft-ietf-oauth-rar-metadata-remediation-00.txt",
+      "sha256": "36e806e002fe5f3698d2d5c30d2c81782d3afc969d26e4159c11c69698dde9fe",
+      "ref": "IETF Internet-Draft, rev 00 (2026-08-23)",
+      "status": "established",
+      "note": "Pins the working-group successor of draft-zehavi-oauth-rar-metadata. The OAuth binding, the AuthZEN profile and the architecture guide cite I-D.draft-ietf-oauth-rar-metadata-remediation. The RAR-METADATA pin above stays for the v0-preview.1 bundle, whose pinned documents still cite the predecessor. Digest is of the published .txt.",
+      "reference_keys": ["I-D.draft-ietf-oauth-rar-metadata-remediation"],
+      "pin_id": "RAR-REMEDIATION@36e806e002fe"
+    },
+    {
       "id": "STATUS-LIST",
       "kind": "datatracker",
       "doc": "draft-ietf-oauth-status-list",

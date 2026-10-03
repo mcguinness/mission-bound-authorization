@@ -31,7 +31,9 @@ normative:
   RFC6749:
   RFC6750:
   RFC7662:
+  RFC8705:
   RFC9068:
+  RFC9449:
   RFC9700:
   RFC9728:
   I-D.draft-mcguinness-oauth-mission:
@@ -254,6 +256,24 @@ forms; this document adds no validation step of its own:
 
 Each value the runtime decision uses is read from the resulting
 validated credential context ({{claims-mapping}}).
+
+For an action in a high-consequence class, the runtime core requires a
+sender-constrained acting credential
+({{I-D.draft-mcguinness-mission-runtime}}, Section "Credential Custody
+and Mediated Execution"). The `cnf` claim of a validated JWT, or the
+`cnf` member of the introspection response for an opaque token
+({{Section 6.2 of RFC9449}}, {{Section 3.2 of RFC8705}}), supplies the
+sender-constraint binding: a DPoP key (`jkt`), proved with a DPoP proof
+checked per {{Section 7.1 of RFC9449}}, or a client certificate
+thumbprint (`x5t#S256`), proved over mutual TLS per
+{{Section 3 of RFC8705}}. An access token whose validated credential
+context carries no such binding is a bearer token and does not meet that
+requirement, and a binding whose proof the PEP has not verified for the
+request supplies no confirmation key to the decision. The requirement
+attaches to the action's class, not to issuance: the issuance profile's
+level for the primary access token is unchanged
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission-Bound Access
+Tokens").
 
 Under the issuance profile alone, introspection freshness is per use:
 each response is an observation for one decision, not a cacheable state
@@ -622,6 +642,17 @@ The Mission-bound token claims this document maps are registered by
 {{I-D.draft-mcguinness-oauth-mission}}.
 
 --- back
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Establishing Validated Credential Context: the OAuth realization of
+  the runtime core's sender-constraint requirement for high-consequence
+  actions: the `cnf` binding of the validated credential context (a
+  JWT's claim, or an opaque token's introspection response), with a
+  proof the PEP verified; a context with no binding is a bearer token.
+  Adds RFC 8705 and RFC 9449 as normative references.
 
 # Acknowledgments
 {:numbered="false"}
