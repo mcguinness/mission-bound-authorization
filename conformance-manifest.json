@@ -28011,12 +28011,12 @@
    "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
   },
   {
-   "id": "mas.submission.interval-default",
+   "id": "mas.submission.interval-in-force",
    "spec": "draft-mcguinness-mission-authority-server.md",
-   "anchor": "intent-submission",
-   "text": "If it is absent, the client MUST use 5 seconds",
+   "anchor": "submission-status",
+   "text": "The interval in force for a submission is the most recent `interval` the client received for it, or 5 seconds if it has received none",
    "role": "client",
-   "strength": "MUST",
+   "strength": "stated",
    "applicability": {
     "kind": "unconditional"
    },
@@ -28024,7 +28024,7 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a client polls no faster than every 5 seconds when no interval is given"
+    "normative": "the interval in force starts at 5 seconds, a pending response carrying a positive-integer interval replaces it, and one omitting interval (or carrying a non-positive-integer value) leaves it unchanged"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -28034,10 +28034,10 @@
   {
    "id": "mas.submission.interval-wait",
    "spec": "draft-mcguinness-mission-authority-server.md",
-   "anchor": "intent-submission",
-   "text": "The minimum number of seconds the client SHOULD wait between submission-status requests",
+   "anchor": "submission-status",
+   "text": "The client MUST wait at least the interval in force between submission-status requests for a submission, measured from its receipt of the preceding response for that submission",
    "role": "client",
-   "strength": "SHOULD",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -28045,7 +28045,7 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a client waits at least interval seconds between status requests"
+    "normative": "a client never sends a status request for a submission sooner than the interval in force after receiving the preceding response for it"
    },
    "level": "endpoint",
    "coverage": "todo",
