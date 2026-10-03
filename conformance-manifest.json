@@ -99,8 +99,8 @@
     "content_sha256": "08e29eee9728517c02ca3aa1e78ae6aadf19d059ebb701ea99645f40a1a15c9f"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "a27dab30b97ca4e07644a70d0b24f7acaafacfa2",
-    "content_sha256": "049993e20db107eff3062e185203212546b7f58e277a160d5dbca16545aafdb6"
+    "revision": "efce23c4a2f108ee20cc9926ec9730405f698be7",
+    "content_sha256": "e4e6707f3b1e5b0847284cf685a056926826b5b02220c843faad8ee5f7e219ca"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "02c1fcf62e9f4fd3aad0df84d6ccabd6ebd7ce0d",
@@ -3137,12 +3137,26 @@
    "surface": "commitment",
    "assertion": "output-bound",
    "observation": {
-    "normative": "where a separate policy artifact adjudicates standing-consent activation (Template dispatch_policy, Progressive drawdown_policy, Child Delegation child_creation_policy), the consented object carries it as {id, version, digest} with the mission-activation-policy digest, inside the commitment that covers that object"
+    "normative": "where a separate policy artifact adjudicates standing-consent activation (Template dispatch_policy, Progressive drawdown_policy, Child Delegation child_creation_policy), the consented object carries it as {id, version, digest} with the mission-activation-policy digest, inside the commitment that covers that object",
+    "local": "Template: template_hash commits dispatch_policy {id, version, digest}, the digest computed from the issuer's held snapshot (content change changes the digest and template_hash; a request-body digest is ignored; an unheld id or version refuses). Child Delegation: the entry carries child_creation_policy {id, version, digest} and root_commitment is its digest. Progressive's ceiling drawdown is not implemented in the reference, so the drawdown_policy clause has no witness; the Template and Child Delegation clauses are asserted."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#985 (D219 ruling). No implementation witness yet: template dispatch, ceiling drawdown, and child-creation adjudication do not compute or verify the activation policy digest."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "createTemplate (@spec mission-template) > commits the Dispatch Policy's content digest in template_hash and refuses a policy the issuer does not hold",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "approval basis (@spec mission#approval-basis, child-delegation#child-creation) > uses the justifying entry's child_creation_policy digest as root_commitment when the entry carries one",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ],
+   "notes": "#985 (D219); reference implementation (template dispatch, child creation)."
   },
   {
    "id": "core.standing-consent.activation-policy-verify",
@@ -3162,12 +3176,26 @@
    "surface": "derivation",
    "assertion": "refusal",
    "observation": {
-    "normative": "an activation under a policy snapshot whose digest differs from the committed digest does not activate under that policy: Template refuses with dispatch_policy_changed, Progressive falls back to a fresh human approval, Child Delegation denies with policy_denied"
+    "normative": "an activation under a policy snapshot whose digest differs from the committed digest does not activate under that policy: Template refuses with dispatch_policy_changed, Progressive falls back to a fresh human approval, Child Delegation denies with policy_denied",
+    "local": "Template: a held snapshot edited under the same version, a changed version, or no snapshot refuses dispatch_policy_changed with no instance and no dispatch row committed; the committed snapshot still dispatches. Child Delegation: the same three changes deny policy_denied (with deny Child Evidence) and commit no child; restoring the snapshot admits creation. Progressive's ceiling drawdown is not implemented in the reference, so the drawdown_policy clause has no witness; the Template and Child Delegation clauses are asserted."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#985 (D219 ruling). No implementation witness yet: template dispatch, ceiling drawdown, and child-creation adjudication do not compute or verify the activation policy digest."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "dispatch gates (@spec mission-template#dispatch-refusals) > refuses dispatch_policy_changed when the held policy's content, version, or presence changes, committing nothing",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "approval basis (@spec mission#approval-basis, child-delegation#child-creation) > uses the justifying entry's child_creation_policy digest as root_commitment when the entry carries one",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#985 (D219); reference implementation (template dispatch, child creation)."
   },
   {
    "id": "core.standing-consent.activation-policy-retain",
@@ -3192,7 +3220,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#985 (D219 ruling). No implementation witness yet: template dispatch, ceiling drawdown, and child-creation adjudication do not compute or verify the activation policy digest."
+   "notes": "#985 (D219). No implementation witness: the reference registry holds the current snapshot per policy id, not the history an audit horizon needs once a policy is edited."
   },
   {
    "id": "core.approval-basis.adjudication-governance-record-override",
