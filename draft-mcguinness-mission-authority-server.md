@@ -797,6 +797,35 @@ signals are supported, `mission_event_stream_endpoint`) in its
 discovery document ({{discovery}}) with the semantics those profiles
 define for the members of the same names.
 
+## Join Disclosure {#join-disclosure}
+
+A Mission-joining PDP compares a presented credential with the
+Mission's Subject and client ({{join-rules}}). The MAS discloses both
+in its Mission Status responses, as members of the `mission` object,
+which the Mission Status profile lets a companion add
+({{I-D.draft-mcguinness-oauth-mission-status}}):
+
+`subject`:
+: An object carrying the Mission's `iss` and `sub`: the Subject the
+  MAS established at approval ({{mission-approval}}).
+
+`client_id`:
+: A string. The Mission's `client_id` ({{mission-submission}}).
+
+When the authenticated caller is a PDP enrolled for the Mission's
+enforcement scope, the MAS MUST include `subject` and `client_id`, and
+MUST disclose each `authorization_details` entry in the response with
+its `delegation` member as recorded. For any other caller, the MAS
+MUST NOT include `subject` or `client_id`. These members describe the
+Mission; the response envelope's `sub` still identifies the
+requesting caller.
+
+The PEPs and PDPs enrolled for a Mission's enforcement scope are
+deployment configuration that the MAS holds. This document defines no
+enrollment protocol: the MAS authenticates the caller and checks it
+against that configuration. The same set bounds visibility at the
+join-assertion endpoint ({{join-assertion-request}}).
+
 # Mission Join {#mission-join}
 
 In MAS mode the acting access token is an ordinary OAuth token from
@@ -833,7 +862,9 @@ A Mission-joining PDP and its PEPs MUST observe the following:
    runtime profile's state and freshness rules
    ({{I-D.draft-mcguinness-mission-runtime}}): fail closed when state
    cannot be established within the published staleness bound, and use
-   an active freshness mechanism for the high-consequence classes.
+   an active freshness mechanism for the high-consequence classes. The
+   Mission's `subject`, `client_id`, and entry `delegation` members
+   come from that response's join disclosure ({{join-disclosure}}).
 3. **Subject join.** The PDP MUST verify that the presented
    credential's authenticated subject equals the Mission's
    `subject.sub` under the deployment's account mapping. Where the
@@ -2636,6 +2667,10 @@ minimization guidance applies: collect only the Intent members the
 task needs, audience-filter every disclosure surface per the status
 profile's rules, and treat submission, status, and lifecycle logs as
 PII sinks.
+
+The join disclosure ({{join-disclosure}}) reveals a Mission's Subject
+and client only to the PDPs enrolled for its enforcement scope. A
+deployment enrolls only the PDPs that enforce that scope.
 
 Retention is anchored on the OAuth binding's audit horizon. A MAS
 retains records at least that long and SHOULD NOT retain them
