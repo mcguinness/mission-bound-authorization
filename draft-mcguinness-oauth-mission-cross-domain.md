@@ -48,6 +48,7 @@ normative:
     date: 2026
 
 informative:
+  RFC9700:
   I-D.draft-mcguinness-oauth-mission-resource-access:
     title: "Mission Resource Access Profile for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
@@ -623,8 +624,8 @@ and the Origin Principal profile standardizes the mapping input and
 its invariants, {{origin-principal}}).
 
 Sender-constraining is REQUIRED for the cross-domain grant, stronger
-than the RECOMMENDED level the issuance profile sets for the primary
-access token ({{I-D.draft-mcguinness-oauth-mission}}, Section
+than the {{RFC9700}} recommendation the issuance profile adopts for the
+primary access token ({{I-D.draft-mcguinness-oauth-mission}}, Section
 "Mission-Bound Access Tokens"): the grant's position at the trust
 boundary demands it ({{grant-at-boundary}}), and the underlying grant
 provides no replay backstop of its own.
@@ -1592,6 +1593,11 @@ exceeds the Mission's `expires_at`. The ID-JAG carried identity
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Issuing the Cross-Domain Grant: the comparison with the primary
+  access token names the RFC 9700 recommendation the issuance profile
+  adopts; the issuance profile sets no BCP 14 level of its own there.
+  No requirement changed.
 
 - Controls taxonomy retirement (#636): `max_derivations` renamed
   `derivation_limit` at its one normative reference (Issuing the

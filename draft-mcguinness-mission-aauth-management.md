@@ -222,7 +222,12 @@ accept an alias for either half of the reference.
 The pair is the sole protocol key.  Implementations MAY use internal
 database keys, but those keys MUST NOT appear in this protocol.  The PS
 MUST NOT require the caller to send the mission blob, and a status or
-tree response MUST NOT return it.
+tree response MUST NOT return it.  Status and tree responses do not
+expose the mission for audit, so Section 8.2.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}, which has the PS serve the
+persisted blob bytes wherever it exposes the mission for audit, does
+not reach them; a PS that exposes the mission for audit on another
+surface serves those exact bytes there.
 
 The Mission Reference is integrity-protected but is not a secret.
 Possession of it conveys no management authority.
@@ -506,7 +511,13 @@ After authenticating and authorizing the caller, the PS returns:
   "terminated_at": "2026-04-10T09:12:43Z",
   "termination_reason": "revoked",
   "observed_at": "2026-04-10T09:15:02Z",
-  "fresh_until": "2026-04-10T09:15:32Z"
+  "fresh_until": "2026-04-10T09:15:32Z",
+  "token_residual": {
+    "tracked": 4,
+    "revocation_attempted": 4,
+    "revocation_confirmed": 4,
+    "complete": true
+  }
 }
 ~~~
 
@@ -523,7 +534,11 @@ present only if it is in the mission blob
 ({{I-D.draft-hardt-oauth-aauth-protocol}}).  `terminated_at` is an
 RFC 3339 `date-time` {{RFC3339}}; it and `termination_reason` are
 REQUIRED when `mission_status` is `terminated` and MUST be absent
-while it is `active`.
+while it is `active`.  `token_residual` ({{terminate}}) is likewise
+REQUIRED when `mission_status` is `terminated` and MUST be absent while
+it is `active`; it reports the residual as of `observed_at`, which
+gives an authorized caller the current revocation state of a
+terminated mission.
 
 The response reports state as of `observed_at` and is reliable until
 `fresh_until`; it is not a promise that the state will remain active.
@@ -560,7 +575,7 @@ executable policy, and MUST be rendered as untrusted text.
 For `superseded`, the request MUST include the replacement:
 
 ~~~ json
-"replacement_s256": "QmV0dGVyTWlzc2lvbkRpZ2VzdFZhbHVlMTIzNDU2Nzg5MDE"
+"replacement_s256": "UewCpFZHMZtpxPwRETXY81ouxt724qQPkaNOJKjbd2E"
 ~~~
 
 The replacement is related evidence, not an alternate key for the
@@ -596,15 +611,19 @@ allowed to delay or roll it back.  The PS MAY wait for a short, bounded
 set of immediate revocation results before responding, and revocation
 attempts MAY continue asynchronously.
 
-The PS returns `200 OK` with the status representation and a revocation
-summary:
+The PS returns `200 OK` with the full status representation
+({{status}}), whose `token_residual` member is the revocation summary:
 
 ~~~ json
 {
   "mission_s256": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
   "mission_status": "terminated",
+  "approved_at": "2026-04-07T14:30:00Z",
+  "expires_at": "2026-04-14T14:30:00Z",
   "terminated_at": "2026-04-10T09:12:43Z",
   "termination_reason": "revoked",
+  "observed_at": "2026-04-10T09:12:44Z",
+  "fresh_until": "2026-04-10T09:13:14Z",
   "token_residual": {
     "tracked": 4,
     "revocation_attempted": 4,
@@ -615,8 +634,12 @@ summary:
 }
 ~~~
 
-The counters disclose only tokens the caller is authorized to know
-about.  `complete` is true only when every Tracked Auth Token is either
+`token_residual` contains `tracked`, `revocation_attempted`, and
+`revocation_confirmed`, each a non-negative integer, and the boolean
+`complete`, all REQUIRED, and `residual_until`, an RFC 3339
+`date-time` {{RFC3339}}, when a residual is known.  The counters
+disclose only tokens the caller is authorized to know about.
+`complete` is true only when every Tracked Auth Token is either
 confirmed revoked or expired and the PS knows of no untracked access
 mode for the mission.  `residual_until` is the latest `exp` among
 unconfirmed Tracked Auth Tokens.  It MUST be omitted when no residual is
@@ -625,11 +648,24 @@ opaque credentials may exist.
 
 ## Idempotency and Concurrency {#idempotency}
 
-The PS MUST retain the result associated with `(authenticated caller,
-request_id)` for at least 24 hours and SHOULD retain it for the mission
-log's lifetime.  Repeating an identical request returns the original
-result without a second lifecycle event.  Reusing a `request_id` with
-different request content fails with `idempotency_conflict`.
+The PS MUST retain the outcome of a terminate request under
+`(authenticated caller, request_id)` for at least 24 hours and SHOULD
+retain it for the mission log's lifetime.  Two requests are equivalent
+when they have the same authenticated caller, are made to the same PS
+and the same `{mission_s256}` path target, and carry JSON bodies that
+are equal as parsed values: member order does not matter, and any
+difference in `reason`, `purpose`, `replacement_s256`, or another
+member, including an unrecognized one, makes them different.  Reusing
+a `request_id` for a request that is not equivalent, including one
+addressed to another mission, fails with `idempotency_conflict`.
+
+An equivalent request is a replay.  It creates no second lifecycle
+event and initiates no revocation.  Its response repeats the committed
+receipt exactly, namely `mission_s256`, `mission_status`,
+`terminated_at`, and `termination_reason`, and reports the rest of the
+status representation, including `observed_at`, `fresh_until`, and
+`token_residual`, as of the replay.  A client therefore distinguishes
+the original outcome from the current observation.
 
 Termination is also semantically idempotent across request identifiers.
 If the mission is already terminated, an authorized caller receives its
