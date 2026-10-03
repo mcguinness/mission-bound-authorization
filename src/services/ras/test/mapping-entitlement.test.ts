@@ -207,8 +207,8 @@ describe("RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762)
   // child's approval-basis root_commitment, so the destination ceiling compares it
   // rather than stripping it: a declared reference binds, and the minted entry
   // keeps it alongside its retained-action provenance.
-  const childPolicy = "urn:policy:child-drawdown:v1";
-  const withChildPolicy = (policy?: string): AuthorityEntry => ({
+  const childPolicy = { id: "urn:policy:child-drawdown", version: "1", digest: `sha-256:${"A".repeat(43)}` };
+  const withChildPolicy = (policy?: typeof childPolicy): AuthorityEntry => ({
     ...delegated,
     delegation: {
       max_depth: 1,
@@ -230,7 +230,7 @@ describe("RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762)
 
   it("a candidate altering the declared policy reference refuses before minting", async () => {
     const server = await ras({ localCeiling: [withChildPolicy(childPolicy)] });
-    await expect(server.redeem(await mintGrant({ authorizationDetails: [withChildPolicy("urn:policy:child-drawdown:v2")] }), clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
+    await expect(server.redeem(await mintGrant({ authorizationDetails: [withChildPolicy({ ...childPolicy, digest: `sha-256:${"B".repeat(43)}` })] }), clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
   });
 
   it("a ceiling declaring no children grant drops the entry carrying one, minting no child-creation authority", async () => {

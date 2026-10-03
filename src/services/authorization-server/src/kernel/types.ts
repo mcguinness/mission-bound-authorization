@@ -1,4 +1,4 @@
-import type { AuthorityEntry, JsonValue } from "@mission/core";
+import type { ActivationPolicyRef, AuthorityEntry, JsonValue } from "@mission/core";
 export type { AuthorityEntry, DelegateMatcher, ChildFanoutControls, TerminalWhenCondition } from "@mission/core";
 
 /**
@@ -159,8 +159,11 @@ export interface TemplateRef {
   template_version: string;
   /** The template integrity anchor (@spec mission-template) the instance commits to. */
   template_hash: string;
-  /** The template's dispatch policy identifier (audit only). */
-  dispatch_policy: string;
+  /**
+   * @spec mission-template#template-member — the template's Dispatch Policy as
+   * an activation policy reference (`id`, `version`, `digest`); audit only.
+   */
+  dispatch_policy: ActivationPolicyRef;
 }
 
 /**
@@ -368,16 +371,21 @@ export interface ApprovalBasisPolicyDrawdown {
   type: "policy_drawdown";
   /** The parent's accountable human. Identical to {@link MissionRecord.approver}. */
   consent_principal: { iss: string; sub: string };
+  /**
+   * @spec child-delegation#child-creation — with a `child_creation_policy`,
+   * that policy's `id`, `version`, and `digest` plus this creation's event
+   * identifier; without one, only the event identifier.
+   */
   activation: {
-    /** The `child_creation_policy` reference, when the justifying entry carries one. */
     policy_id?: string;
-    policy_version: string;
+    policy_version?: string;
+    policy_digest?: string;
     activation_event_id: string;
   };
   /** The parent agent / requesting principal that triggered this child. */
   activation_actor: { iss: string; sub: string };
   /**
-   * The drawdown policy's committed reference: the justifying entry's
+   * The consented root's commitment: the `digest` of the justifying entry's
    * `child_creation_policy` when carried, else the parent's `authority_hash`
    * (the integrity anchor of the consented root that grants the drawdown).
    */

@@ -1,12 +1,17 @@
 export { ACTION_PHASES, type ActionPhase, isActionPhase } from "./action-phase.js";
 export {
+  ACTIVATION_POLICY_TYP,
+  type ActivationPolicyRef,
+  type ActivationPolicySnapshot,
   AUTHORITY_ENTRY_TYP,
   AUTHORITY_SET_TYP,
+  activationPolicyDigest,
   authorityHash,
   computeAnchor,
   GOVERNED_POLICY_TYP,
   INTENT_TYP,
   intentHash,
+  isActivationPolicyRef,
   MISSION_CREATION_FINGERPRINT_TYP,
   MISSION_INTENT_EVIDENCE_TYP,
   MISSION_ORIGIN_SUBJECT_TYP,

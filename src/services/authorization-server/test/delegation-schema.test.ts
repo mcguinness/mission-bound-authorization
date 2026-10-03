@@ -43,11 +43,24 @@ describe("validateMissionResourceAccessSchema — allowed_child_actors validatio
             max_children: 5,
             max_child_depth: 2,
             allowed_child_actors: [{ sub_profile: "ai_agent" }, { sub: "subagent-1" }],
-            child_creation_policy: "urn:policy:child-drawdown:v1",
+            child_creation_policy: { id: "urn:policy:child-drawdown", version: "1", digest: `sha-256:${"A".repeat(43)}` },
           },
         },
       }),
     ).toBeUndefined();
+  });
+
+  // @spec mission#standing-consent-bases — child_creation_policy is an
+  // activation policy reference, never a bare string.
+  it("rejects a child_creation_policy that is not an activation policy reference", () => {
+    for (const child_creation_policy of ["urn:policy:child-drawdown:v1", { id: "p", version: "1" }]) {
+      expect(
+        validateMissionResourceAccessSchema({
+          ...base,
+          delegation: { max_depth: 2, children: { child_creation_policy } },
+        }),
+      ).toMatch(/child_creation_policy must be an activation policy reference/);
+    }
   });
 
   it("rejects a non-array allowed_child_actors", () => {
