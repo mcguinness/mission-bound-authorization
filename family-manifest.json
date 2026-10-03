@@ -1943,6 +1943,8 @@
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-child-delegation",
+    "draft-mcguinness-oauth-mission-expansion",
+    "draft-mcguinness-oauth-mission-progressive",
     "draft-mcguinness-oauth-mission-resource-access",
     "draft-mcguinness-oauth-mission-signals",
     "draft-mcguinness-oauth-mission-status"
@@ -1979,6 +1981,7 @@
     "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-continuation",
+    "draft-mcguinness-oauth-mission-discharge",
     "draft-mcguinness-oauth-mission-progressive",
     "draft-mcguinness-oauth-mission-signals",
     "draft-mcguinness-oauth-mission-status",

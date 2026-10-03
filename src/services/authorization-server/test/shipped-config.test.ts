@@ -404,10 +404,16 @@ describe("shipped authority-source catalog (@spec mission#authority-sources)", (
     });
     // Gate 1 fail-closed: a client the catalog does not declare resolves no
     // source at all, which only a wired catalog can produce.
-    expect(() => as.kernel.authoritySourceEntry("no-such-agent")).toThrow(
+    expect(() => as.kernel.renderAuthoritySource({ clientId: "no-such-agent" })).toThrow(
       /no trusted authority source is declared/,
     );
-    expect(as.kernel.authoritySourceEntry("governed-agent").type).toBe("organizational");
+    expect(() =>
+      as.kernel.resolveAuthoritySource({
+        clientId: "no-such-agent",
+        subject: { iss: "http://localhost:14599", sub: "alice" },
+      }),
+    ).toThrow(/no trusted authority source is declared/);
+    expect(as.kernel.renderAuthoritySource({ clientId: "governed-agent" }).type).toBe("organizational");
   });
 });
 
@@ -461,6 +467,22 @@ describe("authority-source config loader (@spec mission#authority-sources)", () 
     vi.resetModules();
     await expect(import("@mission/demo-data")).rejects.toThrow(
       /activators must be a string array/,
+    );
+  });
+
+  it("carries a subjects selector into the catalog, and refuses an empty one (#827)", async () => {
+    process.env.MISSION_CONFIG_DIR = configWith((source) => {
+      source.subjects = ["alice"];
+    });
+    vi.resetModules();
+    const { AUTHORITY_SOURCES: loaded } = await import("@mission/demo-data");
+    expect(loaded.entries.find((e) => e.id === "acme-people")?.subjects).toEqual(["alice"]);
+    process.env.MISSION_CONFIG_DIR = configWith((source) => {
+      source.subjects = [];
+    });
+    vi.resetModules();
+    await expect(import("@mission/demo-data")).rejects.toThrow(
+      /subjects, when present, must be non-empty/,
     );
   });
 });

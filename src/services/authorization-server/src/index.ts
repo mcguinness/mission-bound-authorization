@@ -417,8 +417,13 @@ export {
   AUTHORITY_SOURCE_TYPES,
   assertLocalPrincipal,
   bindAuthoritySourceCatalog,
+  catalogAuthoritySourceResolver,
+  type AuthoritySourceBinding,
   type AuthoritySourceCatalog,
   type AuthoritySourceCatalogEntry,
+  type AuthoritySourceRequest,
+  type AuthoritySourceResolution,
+  type AuthoritySourceResolver,
   type BoundAuthoritySourceCatalog,
   type LocalPrincipal,
   authoritySourceOf,
@@ -876,10 +881,11 @@ export async function buildAuthorizationServer(opts: {
   // so a dispatched instance inherits a source this deployment actually
   // declares.
   createTemplate(templateStore, demoReconciliationTemplate(opts.issuer) as never, {
-    // @spec mission#authority-sources (#829): bound to the same issuer the
-    // kernel below binds its catalog to, so consent holds the approver to the
-    // one namespace the kernel recognizes.
-    authoritySourceCatalog: bindAuthoritySourceCatalog(AUTHORITY_SOURCES as never, opts.issuer),
+    // @spec mission#authority-sources (#829, #827): bound to the same issuer
+    // and deployment the kernel below binds its catalog to, so consent holds
+    // the approver to the one namespace the kernel recognizes and resolves
+    // for the one deployment it serves.
+    authoritySourceCatalog: bindAuthoritySourceCatalog(AUTHORITY_SOURCES as never, opts.issuer, opts.issuer),
     capabilityResolver: trustedCapabilityResolver(),
   });
   // @spec async-delegation — forward reference to the provider (assigned after

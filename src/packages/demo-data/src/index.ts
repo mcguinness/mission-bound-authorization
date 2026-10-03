@@ -1545,6 +1545,8 @@ export interface AuthoritySourceSeed {
   id: string;
   type: "user_delegated" | "service_owned" | "organizational";
   clients: string[];
+  /** OPTIONAL Subject selector (#827); absent selects every Subject of `clients`. */
+  subjects?: string[];
   /** REQUIRED and non-empty: gate 2 has no vacuous form (@see loadAuthoritySources). */
   activators: string[];
   ceiling: CeilingEntry[];
@@ -1567,7 +1569,9 @@ const AUTHORITY_SOURCE_TYPES = ["user_delegated", "service_owned", "organization
  * literal string "deployment" to mean the deployment's own derivation ceiling
  * (the user-delegated case, where the source's authority is the deployment's);
  * an `organizational` source takes its ceiling from the governed policy it
- * references, never from a second copy here.
+ * references, never from a second copy here. `subjects` (OPTIONAL, #827)
+ * selects which Subjects of `clients` the source applies to; whether two
+ * sources overlap is the kernel's catalog validation, run at construction.
  */
 function loadAuthoritySources(): AuthoritySourceCatalogSeed {
   const file = "authority-sources.json";
@@ -1582,6 +1586,11 @@ function loadAuthoritySources(): AuthoritySourceCatalogSeed {
       throw new ConfigError(file, `${ctx}.type '${type}' is not a recognized authority source`);
     }
     const clients = reqStringArray(file, e, "clients", ctx);
+    const subjects =
+      e.subjects === undefined ? undefined : reqStringArray(file, e, "subjects", ctx);
+    if (subjects && subjects.length === 0) {
+      throw new ConfigError(file, `${ctx}.subjects, when present, must be non-empty`);
+    }
     const activators = reqStringArray(file, e, "activators", ctx);
     if (activators.length === 0) {
       throw new ConfigError(
@@ -1617,6 +1626,7 @@ function loadAuthoritySources(): AuthoritySourceCatalogSeed {
         id,
         type,
         clients,
+        ...(subjects ? { subjects } : {}),
         activators,
         ceiling: governed.ceiling,
         principals: principals as string[],
@@ -1635,6 +1645,7 @@ function loadAuthoritySources(): AuthoritySourceCatalogSeed {
       id,
       type,
       clients,
+      ...(subjects ? { subjects } : {}),
       activators,
       ceiling,
       ...(principals ? { principals } : {}),
