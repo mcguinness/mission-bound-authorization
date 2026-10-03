@@ -1970,8 +1970,10 @@ resolved from the MAS metadata document instead:
   {{I-D.draft-mcguinness-oauth-mission-signals}}.
 
 `mission_max_stale_seconds`:
-: OPTIONAL. An integer. Semantics per
-  {{I-D.draft-mcguinness-oauth-mission-status}}.
+: REQUIRED. An integer. Semantics per
+  {{I-D.draft-mcguinness-oauth-mission-status}}. A MAS has no other
+  state surface, so this bound is the one join rule 2 fails closed
+  against ({{join-rules}}).
 
 `jwks_uri`:
 : REQUIRED. A string containing a URL. The MAS's JSON Web Key Set:
