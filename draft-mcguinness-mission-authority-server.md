@@ -697,7 +697,8 @@ A consumer MUST ignore members it does not recognize.
 | `invalid_authority` | 400 | submission | Well-formed Intent, but no valid Authority Set is derivable under policy. |
 | `invalid_mission_intent_evidence` | 400 | submission | An evidence entry of unsupported type or failing its type's verification, or a policy-required evidence type absent from the submission. |
 | `unauthorized` | 401 | submission, join assertion | Request not authenticated. |
-| `join_failed` | 403 | join assertion | The acting token does not join the referenced Mission ({{join-assertion-request}}). |
+| `invalid_join_request` | 400 | join assertion | The request body is not a JSON object carrying `mission_id` and exactly one token form ({{join-assertion-request}}). |
+| `join_failed` | 403 | join assertion | The referenced Mission is not `active`, or the acting token is inactive, carries no `cnf` confirmation, or does not join the referenced Mission ({{join-assertion-request}}). |
 | `not_found` | 404 | submission, join assertion | A referenced submission or Mission does not exist or is not visible to the caller. |
 | `conflict` | 409 | submission (expansion, child creation) | A resolved predecessor or parent whose state or serialization refuses the operation ({{native-carriage}}). |
 | `rate_limited` | 429 | submission, join assertion | Caller is rate-limited. |
@@ -1435,11 +1436,19 @@ The MAS verifies the join centrally, as follows:
    depth from the deployment's actor records; a delegate with no actor
    record under the Mission does not join (rule 5 of {{join-rules}}).
 
-If the acting token does not join, the MAS rejects the request with
-the `join_failed` error code (HTTP 403), in the error format of
-{{submission-errors}}. If the `mission_id` is unknown or not
-visible, the MAS returns the `not_found` error code, preserving the
-anti-oracle property.
+The MAS mints an assertion only for a Mission in the `active` state.
+It responds in the error format of {{submission-errors}}, as follows:
+
+- If the request body is not a JSON object carrying `mission_id` and
+  exactly one of the two token forms, the MAS rejects it with HTTP 400
+  and the `invalid_join_request` error code.
+- If the `mission_id` is unknown or not visible to the caller, the MAS
+  returns the `not_found` error code, preserving the anti-oracle
+  property.
+- If the Mission is visible but not `active`, the acting token is
+  inactive or carries no `cnf` confirmation, or the acting token does
+  not join, the MAS rejects the request with HTTP 403 and the
+  `join_failed` error code.
 
 Visibility on this endpoint is bounded: a Mission is visible to its
 `client_id`, its recorded delegates, and the PEPs and PDPs enrolled
