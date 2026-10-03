@@ -172,6 +172,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-progressive:
+    title: "Mission Progressive Authorization for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -604,11 +612,15 @@ commit:
 
 The child-creation token exchange completes in one of three modes,
 the family's shared completion pattern for Mission-creating
-exchanges. Child creation keeps the synchronous mode that Mission
-Expansion does not define: an expansion always widens and always
-takes fresh consent, so it completes only deferred or interactively
-({{I-D.draft-mcguinness-oauth-mission-expansion}}), while a Child
-Mission is always a creation and a strict subset of its parent, so a
+exchanges. Child creation keeps the synchronous mode that an
+ordinary, fresh-consent Mission Expansion does not define: such an
+expansion always widens and takes fresh consent, so it completes only
+deferred or interactively
+({{I-D.draft-mcguinness-oauth-mission-expansion}}). The one
+synchronous expansion is the progressive authorization companion's
+policy-adjudicated drawdown
+({{I-D.draft-mcguinness-oauth-mission-progressive}}). A Child Mission
+is always a creation and a strict subset of its parent, so a
 policy-permitted synchronous completion is unambiguous
 ({{strict-subset}}). The deferred token
 response is a completion mode, not a replacement:
@@ -1232,7 +1244,10 @@ enforced.
 Bounding the aggregate
 across a subtree is the role of consumption metering, not this
 profile's attenuation rules
-({{I-D.draft-mcguinness-mission-metering}}). This warning is about the
+({{I-D.draft-mcguinness-mission-metering}}). An exclusivity group, by
+contrast, binds the whole subtree through one shared latch that the
+metering profile defines (Section "Exclusivity Across Missions" of
+{{I-D.draft-mcguinness-mission-metering}}). This warning is about the
 child-subtree axis specifically; the continuation profile separately
 counts derivations within a single Mission's own continued grants,
 where a delegated refresh-token family's successive refreshes are one
@@ -2179,6 +2194,12 @@ apply unchanged.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The completion comparison names the progressive authorization
+  companion's synchronous drawdown as the one synchronous expansion.
+
+- Child Missions and carryover replacements share their ancestors'
+  exclusivity latches under the metering profile.
 
 - `child_creation_policy` is an activation policy reference (`id`,
   `version`, `digest`) under the issuance profile's Standing-Consent
