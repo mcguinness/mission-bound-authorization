@@ -88,7 +88,7 @@ normative:
       -
         org: OpenID Foundation
     date: 2026
-  I-D.draft-zehavi-oauth-rar-metadata:
+  I-D.draft-ietf-oauth-rar-metadata-remediation:
   ARAP:
     target: https://openid.github.io/authzen/authzen-access-request-approval-profile-1_0.html
     title: "AuthZEN Access Request and Approval Profile - Draft 1"
@@ -2167,8 +2167,8 @@ Lane 3, partial evaluation:
 
 Not a lane, the RAR remediation grain:
 : `insufficient_authorization` and `authorization_remediation` of
-  {{I-D.draft-zehavi-oauth-rar-metadata}}, as adopted into the family's
-  remediation by the issuance profile
+  {{I-D.draft-ietf-oauth-rar-metadata-remediation}}, as adopted
+  into the family's remediation by the issuance profile
   ({{I-D.draft-mcguinness-oauth-mission}}). It is PAYLOAD, not a lane:
   it DESCRIBES authority that could be requested, MAY travel as
   payload within an ARAP request, and confers nothing by itself. The
