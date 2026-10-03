@@ -387,7 +387,7 @@ This document defines no new token type and no new credential.  Each
 caller class authenticates with a mechanism the base protocol or the
 PS already has.
 
-## Person
+## Person {#person-caller}
 
 The PS authenticates the Person using its normal person-facing channel.
 This specification does not replace the PS's account authentication or
@@ -399,6 +399,32 @@ The Person MAY read status and delegation data, and MAY terminate with
 reason `completed`, `revoked`, or `superseded`.  For `superseded`,
 `replacement_s256` is REQUIRED, and the PS SHOULD verify that the
 same Person authorized both missions before recording the relationship.
+
+A Person reaches these operations through the PS's own interface, which
+either invokes the operation inside the PS or has its backend call the
+control plane as a management service ({{management-service}}).  Either
+way the PS MUST authorize the action as the authenticated Person under
+the rules above, MUST record that Person as the principal, and MUST NOT
+apply a management service's administrative privilege to it.  An
+internal invocation is not a control-plane request, but the same
+authorization, atomic transition ({{terminate}}), and logging
+({{logging}}) duties apply to it.  How the Person signs in to the
+interface remains the PS's own; this document defines no user login.
+
+For example, a Person ends a mission from the PS's account page:
+
+1. The Person signs in to the PS's interface and selects the mission.
+2. The interface submits termination as an explicit action, protected
+   against cross-site submission by the interface itself
+   ({{person-interfaces}}).
+3. The interface invokes termination inside the PS, or its backend
+   signs a control-plane `terminate` request as a registered management
+   service and conveys the Person's identity over its trusted channel.
+4. The PS binds the Person to the person the mission represents,
+   authorizes reason `revoked` for that Person and mission, and runs
+   the atomic transition.
+5. The mission log records the Person as principal and the interface as
+   the channel.
 
 ## Administrator
 
@@ -419,7 +445,7 @@ administrative request.  It SHOULD require step-up authentication or
 dual control for high-blast-radius automation.  This profile does not
 define fleet enumeration or bulk termination.
 
-## Management Service
+## Management Service {#management-service}
 
 A management service authenticates with the AAuth HTTP Message
 Signatures profile {{RFC9421}}, signing under the `jwks_uri` scheme of
@@ -442,6 +468,15 @@ A management service is subject to the administrative rules above:
 least-privilege scoping, a separate privilege for delegation data,
 `administrative` limited to the administrator role, and the recorded
 principal, role, decision, and purpose on every successful request.
+
+A management service can act for a human, as the PS's own interface
+backend does for the Person ({{person-caller}}).  For such a call the PS
+MUST authorize the action as that human under the human's own caller
+rules, MUST record the human as the principal and the service as the
+channel, and MUST NOT apply the service's administrative privilege.
+How the service conveys the human's identity is a deployment trust
+relationship this document does not define, and the PS relies on it
+only for a service it registers for that purpose.
 
 ## Owning Agent
 
@@ -473,10 +508,12 @@ this endpoint: AAuth requires its parent to mediate PS operations.
 ## Ambient Credentials
 
 Every action defined here is a JSON `POST` authenticated as this
-section requires.  A PS that serves a human-facing interface at the
-same origin MUST NOT let an ambient credential, such as a cookie or
-session a browser attaches automatically, satisfy that
-authentication.
+section requires, and a browser session never authenticates a
+control-plane request directly.  A PS that serves a human-facing
+interface at the same origin MUST NOT let an ambient credential, such
+as a cookie or session a browser attaches automatically, satisfy that
+authentication.  The interface reaches the operations through the PS
+({{person-caller}}).
 
 # Status Operation {#status}
 
@@ -1043,6 +1080,24 @@ their use.  Management automation SHOULD require a declared purpose and
 SHOULD use approval or dual control appropriate to its potential blast
 radius.  The endpoint MUST NOT infer administrative authority from an
 Agent's domain or `parent_agent` relationship.
+
+## Person Interfaces {#person-interfaces}
+
+A PS interface that reaches these operations carries web-session risks
+the signed control plane does not.  What makes a Person's action
+explicit is the interface's own protection against cross-site
+submission, which the PS that serves the interface validates; the
+control plane's refusal of ambient credentials does not protect the
+interface itself.  The PS binds each action to the Person
+authenticated when the action is taken and to the person the mission
+represents, never to an account or tenant selected in the request, so
+switching accounts or tenants mid-session cannot redirect it.  A
+session established before the Person's authorization changed carries
+no earlier authorization forward: the PS evaluates authorization at
+the action.  A backend that calls as a management service for the
+Person could otherwise apply its own administrative privilege, a
+confused deputy; the PS authorizes such a call as the Person and never
+under the service's privilege ({{management-service}}).
 
 ## Races and Failures
 
