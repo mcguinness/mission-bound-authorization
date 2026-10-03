@@ -2682,19 +2682,22 @@ compares the claims, not the level.
 ## Mission Binding Properties {#binding-properties}
 
 Whether an operation is bound to a Mission is not one question but
-three. Attachment provenance asks who selected and attached the
-Mission to this work item. Credential binding asks whether the
-acting credential's authority was issued and bounded for the
-Mission. Action binding asks whether one authenticated permit covers
-these exact operation inputs.
+three:
 
-The dimensions are independent: a native Mission-bound token has
-strong credential binding with no harness in sight, a trusted
+- attachment provenance: who selected and attached the Mission to
+  this work item?
+- credential binding: was the acting credential's authority issued
+  and bounded for the Mission?
+- action binding: does one authenticated permit cover these exact
+  operation inputs?
+
+The three dimensions are independent. A native Mission-bound token
+has strong credential binding with no harness in sight; a trusted
 harness attributes work items precisely while the credential is an
-ordinary bearer token, and an action-bound permit can exist over
-either. No single ladder orders them, so the family names the
-properties directly, as a vector, and a deployment claims the
-combination each path actually has.
+ordinary bearer token; an action-bound permit can exist over either.
+No single ladder orders them, so the family names the properties
+directly, as a vector, and a deployment claims the combination each
+path has.
 
 | Property | Meaning | Minimum proof |
 | --- | --- | --- |
@@ -2708,24 +2711,17 @@ combination each path actually has.
 {: title="Mission binding properties"}
 
 The properties are claimed per covered Authorization Server,
-resource, and action path, never as a product-wide maximum: a mixed
+resource, and action path, never as a product-wide maximum. A mixed
 estate claims what each path has, and a weaker path never inherits a
 stronger path's claim from the deployment's name. Where policy
 requires a property on a path, its absence denies; nothing falls
 back silently to a weaker binding.
 
 **Credential-mission-bound** is defined by equivalence, not by one
-artifact, and is the family's authoritative definition of what earns
-the term "Mission-bound" (see also {{token-classes}}'s Mission-bound
-token class, which this equivalence backs). A binding that claims
-substrate conformance evidences the definition through the capability
-claims of its own Mission Substrate Statement, not by protocol
-lineage. The OAuth binding claims no substrate conformance and
-publishes no Statement: it is assessed through its own informative
-Mapping Assessment ({{I-D.draft-mcguinness-oauth-mission}}) and
-discharges the definition directly through its own Conformance gates,
-independent of the substrate contract. For
-the covered path the credential establishes all of these conditions:
+artifact. It is the family's authoritative definition of what earns
+the term "Mission-bound", and it backs the Mission-bound token class
+({{token-classes}}). For the covered path, the credential establishes
+all of these conditions:
 
 1. a trusted issuer authorized to issue for the Mission;
 2. the canonical (`mission.issuer`, `mission.id`) pair identifying
@@ -2744,46 +2740,56 @@ the covered path the credential establishes all of these conditions:
    ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), or an
    equivalently specified artifact. A token-carried Authority Set
    commitment, where a binding supplies one, strengthens this
-   condition's local verifiability; it is never itself the
+   condition's local verifiability. It is never itself the
    Mission-identity requirement of condition 2, and its absence does
    not fail this condition where the issuer-retained record is
    otherwise reachable.
 
-Each condition names what actually establishes it, so a Statement
-capability claim maps to a condition rather than to the property as a
-whole: condition 3 is the Substrate Statement's Monotonic Derivation
-capability, and condition 5's active-state gate is its
-Lifecycle-Gated Authorization capability. The Substrate's
-Credential-Bound capability can select correlation-only fact
-semantics ({{I-D.draft-mcguinness-mission-substrate}}), which by
-itself evidences neither the derivation-link condition (6) nor the
+A binding that claims substrate conformance evidences the definition
+through the capability claims of its own Mission Substrate Statement,
+not by protocol lineage. A binding earns the property only where its
+Statement's claims jointly cover every condition. Each condition
+names what establishes it, so a Statement capability claim maps to a
+condition rather than to the property as a whole. Condition 3 is the
+Substrate Statement's Monotonic Derivation capability; condition 5's
+active-state gate is its Lifecycle-Gated Authorization capability.
+
+The Substrate's Credential-Bound capability can select
+correlation-only fact semantics
+({{I-D.draft-mcguinness-mission-substrate}}), which by itself
+evidences neither the derivation-link condition (6) nor the
 authority-projection condition (3). A Credential-Bound claim alone,
 whatever semantics it selects, never by itself evidences
 `credential-mission-bound`, since conditions 1 and 4 come from the
 deployment's issuer trust configuration and the credential's own
 subject, `client_id`, and actor claims, never from a Statement
-capability row. A binding earns the property only where its
-Statement's claims jointly cover every condition.
+capability row.
 
-For the OAuth binding, the approval event discharges condition 4,
-the subset rule discharges condition 3, the lifecycle gate discharges
-condition 5's active-state gate, the Mission Issuer role discharges
-condition 1, and the same approval event's Mission Record, retained
-for the audit horizon, discharges condition 6
-({{I-D.draft-mcguinness-oauth-mission}}).
+The OAuth binding claims no substrate conformance and publishes no
+Statement. It is assessed through its own informative Mapping
+Assessment ({{I-D.draft-mcguinness-oauth-mission}}) and discharges
+the definition directly through its own Conformance gates,
+independent of the substrate contract. For the OAuth binding
+({{I-D.draft-mcguinness-oauth-mission}}):
 
-Sender constraint is deliberately not among them: issuance-time key
+- the Mission Issuer role discharges condition 1;
+- the subset rule discharges condition 3;
+- the approval event discharges condition 4;
+- the lifecycle gate discharges condition 5's active-state gate; and
+- the same approval event's Mission Record, retained for the audit
+  horizon, discharges condition 6.
+
+Sender constraint is not among the six conditions. Issuance-time key
 targeting and presentation-time proof are `presenter-key-bound`, a
 separate property, so a path that needs possession requires the
-composition rather than reading it into the equivalence. The
+composition rather than reading possession into the equivalence. The
 mechanisms match: the OAuth binding recommends sender-constrained
-tokens and the generic Issuance Grant leaves `cnf` optional. Native
+tokens, and the generic Issuance Grant leaves `cnf` optional. Native
 issuance, the Mission Issuance Grant, and a conforming cross-domain
-exchange therefore satisfy the equivalence, and
-supply `presenter-key-bound` exactly where their confirmation
-binding is actually in force. A Mission Join Assertion fails
-conditions 3, 5, and 6 by design, which is what separates
-correlation from issuance.
+exchange therefore satisfy the equivalence, and supply
+`presenter-key-bound` exactly where their confirmation binding is in
+force. A Mission Join Assertion fails conditions 3, 5, and 6 by
+design; that failure is what separates correlation from issuance.
 
 **Presenter-key-bound** is possession and nothing more: the
 credential names a confirmation key at issuance, and the presenter
@@ -2813,8 +2819,8 @@ controls, in one of two proof forms:
   AuthZEN profile ({{I-D.draft-mcguinness-mission-authzen}})
   discharges it under exactly those conditions.
 
-A parameter binding alone makes a response neither form, and an
-evaluation identifier alone is a correlator, never the property: it
+A parameter binding alone makes a response neither form. An
+evaluation identifier alone is a correlator, never the property; it
 qualifies only where dereferencing it through an authenticated,
 audience-bound, freshness- and use-controlled permit store yields
 one of the two forms above, complete.
@@ -2831,15 +2837,15 @@ every member property:
 - **runtime-action-bound**: authoritative Mission establishment plus
   `action-bound`.
 
-A work-item-attribution composition is deliberately absent.
-`work-item-bound` and `action-bound` holding together does not prove
-the permitted action came from that work item: concurrent items
-under one Mission still substitute. The composition becomes
-definable only when a verified cross-link exists, the action permit
-or its authenticated request context binding the same
-tamper-resistant work-item identifier the harness recorded. No
-family carrier supplies that cross-link, so a deployment claims the
-two properties separately and nothing more.
+The family defines no work-item-attribution composition. Holding
+`work-item-bound` and `action-bound` together does not prove the
+permitted action came from that work item: concurrent items under
+one Mission still substitute. The composition becomes definable only
+when a verified cross-link exists: the action permit, or its
+authenticated request context, binds the same tamper-resistant
+work-item identifier the harness recorded. No family carrier
+supplies that cross-link, so a deployment claims the two properties
+separately and nothing more.
 
 The mechanism mapping is conservative:
 
@@ -2855,7 +2861,7 @@ The mechanism mapping is conservative:
 | AuthZEN runtime permit | The channel-bound `action-bound` form, under that binding's conditions |
 {: title="Mission binding mechanisms"}
 
-The property names above are stable identifiers, and a claim is a
+The property names above are stable identifiers. A claim is a
 per-path declaration, not prose: each claimed property or
 composition names the covered issuer, resource, and action-class
 paths. The Enforcement Scope Statement carries the per-path
@@ -2870,11 +2876,10 @@ Deployment Profile's own future work.
 
 Binding properties and the assurance claims above compose rather
 than repeat. A binding property says what a path establishes, from
-the Mission a work item is attached to through the credential,
-presenter key, and instance to the authorized action. An assurance
-claim says what the deployment's enforcement proves.
-Credential-level and action-level binding likewise compose rather
-than substitute.
+the Mission a work item is attached to, through the credential,
+presenter key, and instance, to the authorized action. An assurance
+claim says what the deployment's enforcement proves. Credential-level
+and action-level binding likewise compose rather than substitute.
 
 ## The Containment Matrix {#containment}
 
@@ -2894,22 +2899,29 @@ needs the whole matrix:
 {: title="The containment matrix"}
 
 Mission termination participates in incident response; it does not
-replace it. Revoking the Mission stops issuance at once where the
-binding gates it, and stops mediated actions within the staleness bound
-plus the permit window and the class's execution bound
-({{validity-model}}, {{assurance-claims-axis}}). Revoking the Mission
-terminates no process and closes no network path. The converse holds
-too: killing a workload leaves the Mission `active` and its authority
-derivable to a replacement instance unless the Mission is also revoked.
+replace it. Revoking the Mission:
+
+- stops issuance at once where the binding gates it;
+- stops mediated actions within the staleness bound plus the permit
+  window and the class's execution bound ({{validity-model}},
+  {{assurance-claims-axis}}); and
+- terminates no process and closes no network path.
+
+The converse holds too: killing a workload leaves the Mission
+`active` and its authority derivable to a replacement instance
+unless the Mission is also revoked.
 
 Capability kill provides, per action class and consumer, one of two
 containment properties or neither, never by the deployment's
 assurance level ({{I-D.draft-mcguinness-oauth-mission-containment}},
-Section "Containment Properties"). The Baseline property is a
-new-derivation kill that also propagates to Child Missions justified
-by the contained entry. The Runtime-Enforced property is an
-action-time kill that also reaches a token issued before the
-transition. A standalone MAS path with no runtime gate gets neither.
+Section "Containment Properties"):
+
+- the Baseline property, a new-derivation kill that also propagates
+  to Child Missions justified by the contained entry; and
+- the Runtime-Enforced property, an action-time kill that also
+  reaches a token issued before the transition.
+
+A standalone MAS path with no runtime gate gets neither.
 {{kill-switch-composition}} composes the properties by rung and
 binding, with what each leaves running.
 
@@ -2919,27 +2931,28 @@ property its consumers obtain.
 
 ## Composed Kill-Switch Reality {#kill-switch-composition}
 
-"Baseline" and "Runtime-Enforced" name two different things that share
-spelling. Above, they name a level a deployment adopts. The containment
-profile uses the same two words for a property a consumer obtains per
-action class ({{I-D.draft-mcguinness-oauth-mission-containment}},
-Section "Containment Properties"). The two are not 1:1. A
-Runtime-Enforced deployment can still provide only the Baseline property
-for a class its Enforcement Scope Statement leaves lifecycle-gated-only,
-because the property requires a state-observable substrate per class,
-not per deployment ({{I-D.draft-mcguinness-mission-runtime}}). A row can
-therefore carry a Runtime-Enforced rung and a Baseline property together
-without contradiction.
+The words "Baseline" and "Runtime-Enforced" each have two meanings.
+Above, they name a level a deployment adopts. The containment profile
+uses the same words for a property a consumer obtains per action
+class ({{I-D.draft-mcguinness-oauth-mission-containment}},
+Section "Containment Properties"). Level and property are not 1:1. A
+Runtime-Enforced deployment can still provide only the Baseline
+property for a class its Enforcement Scope Statement leaves
+lifecycle-gated-only, because the property requires a
+state-observable substrate per class, not per deployment
+({{I-D.draft-mcguinness-mission-runtime}}). A row can therefore carry
+a Runtime-Enforced rung and a Baseline property together without
+contradiction.
 
 Each row below assumes a deployment that runs the containment
 profile, at the row's rung and under its binding. A rung and a
 binding alone confer neither containment property: containment is an
-overlay a deployment separately adopts
-({{I-D.draft-mcguinness-oauth-mission-containment}}). "Stops at
-commit" names what a contain transition's own state-version commit
-reaches immediately
+overlay a deployment adopts separately
+({{I-D.draft-mcguinness-oauth-mission-containment}}). In the table,
+"Stops at commit" is what a contain transition's own state-version
+commit reaches immediately
 ({{I-D.draft-mcguinness-oauth-mission-containment}},
-Section "The Contain Transition"); "runs to its own bound" names the
+Section "The Contain Transition"), and "Runs to its own bound" is the
 residual the transition does not reach.
 
 | Rung | Binding | Property | Stops at commit | Runs to its own bound |
@@ -2982,7 +2995,7 @@ Notes:
    "Effective Authority Set Projection"). One that has it projects
    every redemption and refresh through the Mission's current
    Effective Authority Set, so its issuance excludes contained
-   authority within its published staleness bound; a lifecycle-state
+   authority within its published staleness bound. A lifecycle-state
    check alone, under which a contained Mission still reads `active`,
    is not such an integration. One that has none checks no Mission
    state at redemption, issues no refresh tokens, and relies on the
@@ -3009,12 +3022,11 @@ None of this closes the conforming Baseline residual on a path or for
 a class no containment-aware action-time gate reaches. For a class a
 Runtime-Enforced action-time gate reaches instead, a pre-transition
 credential does not run to its own bound at all. Where the residual
-does persist, the binding determines the artifact and its cutoff. An
-ungated standalone-MAS path, for instance, runs to whatever native
-credential, session, or resource-local bound the resource enforces
-on its own, if any, or to none, not to a token lifetime. What changes
-row to row is which gate, if any, reaches a class before its own
-bound, and how tight that bound is.
+does persist, the binding determines the artifact and its cutoff: an
+ungated standalone-MAS path, for instance, runs to the resource's own
+bound, if any (note 2), or to none, not to a token lifetime. What
+changes row to row is which gate, if any, reaches a class before its
+own bound, and how tight that bound is.
 
 ## Prevention, Detection, and Residue {#prevention-detection}
 
@@ -3029,13 +3041,13 @@ Each layer earns a specific property and leaves a specific residue:
 | Mandate | reliance on unverifiable committed facts | portable Mission facts | authority (it grants none) |
 {: title="What each layer prevents, detects, and leaves"}
 
-The pattern is uniform: the family commits and checks what a party was
-shown, decided, or did; it does not make the human attentive, the
-producer honest, or the unmediated path disappear. Those are the
-residues the Mission Assurance Levels ({{assurance-levels}}) and the
-security model make a deployment state rather than assume. The
-exposure arm ({{survivable-incorrectness}}) carries the same honesty
-in the other direction.
+In each layer, the family commits and checks what a party was shown,
+decided, or did. It does not make the human attentive, the producer
+honest, or the unmediated path disappear. Those are the residues the
+Mission Assurance Levels ({{assurance-levels}}) and the security
+model make a deployment state rather than assume. The exposure arm
+({{survivable-incorrectness}}) carries the same honesty in the other
+direction.
 
 # Mission Deployment Patterns {#deployment}
 
