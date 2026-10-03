@@ -353,7 +353,11 @@ Mission's `drawdown_policy.id`) and `policy_version` (its
 issuance profile's standing-consent requirement) is the instant the
 Approver consented the ceiling that `ceiling_hash` commits, read
 from the Mission Issuer's retained record of that consent, never
-from the drawdown request. The child delegation
+from the drawdown request. Its record's `approval_event_id` identifies
+this drawdown, never the ceiling consent: a value derived one-to-one
+from the requesting client and the exchange's `creation_request_id`
+({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "Creation
+Idempotency"). The child delegation
 profile's `policy_drawdown` basis
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) is not
 reused: that value names policy-approved child creation, not a
@@ -780,6 +784,11 @@ convention, none of which require registration.
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- In-ceiling expansion: a `ceiling_drawdown` successor's
+  `approval_event_id` identifies the drawdown, derived one-to-one from
+  the requesting client and the exchange's `creation_request_id`; no
+  new member (#1017).
 
 - In-ceiling expansion: a drawdown that passes every policy-adjudication
   guard completes synchronously in the token-exchange response,
