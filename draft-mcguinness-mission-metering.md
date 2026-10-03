@@ -1275,6 +1275,16 @@ this registry.
 
 \[\[ To be removed from the final specification ]]
 
+- Exclusivity Across Missions ({{exclusivity-across-missions}}): an
+  exclusivity group is one shared latch across the delegation (children,
+  descendants, successors, carryover replacements), established
+  atomically before a derived Mission issues usable authority, retained
+  while derived authority remains usable, and relaxed only by an
+  explicit, scoped, disclosed approval that keeps the historical latch.
+  Settlement releases a latch only when every participating action is
+  affirmatively not executed. Template instances are scoped per
+  instance, with that limit disclosed.
+
 - Capacity Across Missions ({{capacity-across-missions}}): a Child
   Mission is charged to every ancestor's bound or holds an escrowed
   allocation whose remainder returns only after the allocation is

@@ -2183,6 +2183,9 @@ apply unchanged.
 
 \[\[ To be removed from the final specification ]]
 
+- Child Missions and carryover replacements share their ancestors'
+  exclusivity latches under the metering profile.
+
 - `child_creation_policy` is an activation policy reference (`id`,
   `version`, `digest`) under the issuance profile's Standing-Consent
   Bases; `root_commitment` is its `digest`, `activation` carries the
