@@ -2547,8 +2547,9 @@ reference a committed value: the anti-laundering guarantee that a
 approval actually committed.<a href="#section-6.1-10" class="pilcrow">¶</a></p>
 <p id="section-6.1-11">Where the entry carries a
 <code>child_creation_policy</code>, <code>activation</code> carries that policy's <code>id</code>,
-<code>version</code>, and <code>digest</code> and this creation's own delegation event
-identifier (above) as <code>activation_event_id</code>. A policy snapshot that
+<code>version</code>, and <code>digest</code> as <code>policy_id</code>, <code>policy_version</code>, and
+<code>policy_digest</code>, and this creation's own delegation event identifier
+(above) as <code>activation_event_id</code>. A policy snapshot that
 does not match <code>digest</code> denies child creation with <code>policy_denied</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Standing-Consent
 Bases"). Where the entry carries no <code>child_creation_policy</code>, the
@@ -4172,10 +4173,11 @@ exclusivity latches under the metering profile.<a href="#appendix-B-2.2.1" class
         <li class="normal" id="appendix-B-2.3">
           <p id="appendix-B-2.3.1"><code>child_creation_policy</code> is an activation policy reference (<code>id</code>,
 <code>version</code>, <code>digest</code>) under the issuance profile's Standing-Consent
-Bases; <code>root_commitment</code> is its <code>digest</code>, <code>activation</code> carries the
-digest, and a mismatched snapshot denies child creation with
-<code>policy_denied</code>. Creation against the delegation entry itself, with
-no <code>child_creation_policy</code>, is unchanged.<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
+Bases; <code>root_commitment</code> is its <code>digest</code>, <code>activation</code> carries it as
+<code>policy_id</code>, <code>policy_version</code>, and <code>policy_digest</code>, and a mismatched
+snapshot denies child creation with <code>policy_denied</code>. Creation against
+the delegation entry itself, with no <code>child_creation_policy</code>, is
+unchanged.<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.4">
           <p id="appendix-B-2.4.1">Approval rendering of child creation shows <code>max_children</code> as a

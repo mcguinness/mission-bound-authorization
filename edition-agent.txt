@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-03T14:15:12Z
-Source repository commit: bc3089920798e1548a6792a06ba7b9e2f57ace91
+Generated: 2026-10-03T15:16:25Z
+Source repository commit: e53946070f912326cb7e789145aa63400a90319c
 Member count: 9
 
 Reading order:
@@ -14322,6 +14322,18 @@ Table of Contents
    resume does not revive a credential that expired or was revoked
    independently.
 
+   An error code alone does not tell a client whether a resume can lift
+   a refusal.  When the issuance profile's gating refuses a derivation
+   because the Mission is suspended or completed, the AS SHOULD include,
+   alongside error, the mission_error token-error-response member
+   ([I-D.draft-mcguinness-oauth-mission], Section "Issuance Gating")
+   with the value mission_suspended or mission_completed, respectively.
+   The issuance profile's rules for that member apply: it is diagnostic
+   only, it grants nothing, an unrecognized value is ignored, and it is
+   returned only to the authenticated client presenting the Mission's
+   grant. mission_suspended reports a refusal that a resume can lift;
+   mission_completed reports a terminal one.
+
 5.1.  Operations
 
    The endpoint accepts authenticated POST requests with a form-
@@ -15150,10 +15162,13 @@ Table of Contents
    This document requests IANA actions for OAuth AS metadata members and
    a media type.  It defines no new registry of its own: the endpoint
    authentication-method value space is a closed set defined inline
-   (Section 8).  A companion profile MAY register further extension
-   members or Common Constraints against a family registry; the Entry
-   Discharge companion registers terminal_when in the Mission Resource
-   Access Profile's Mission Common Constraints registry this way
+   (Section 8). mission_suspended and mission_completed (Section 5) are
+   values of the issuance profile's mission_error member, which has no
+   IANA registry, so this document requests no registration for them.  A
+   companion profile MAY register further extension members or Common
+   Constraints against a family registry; the Entry Discharge companion
+   registers terminal_when in the Mission Resource Access Profile's
+   Mission Common Constraints registry this way
    ([I-D.draft-mcguinness-oauth-mission-discharge]).
 
 12.1.  OAuth Authorization Server Metadata Registration
@@ -15458,6 +15473,11 @@ Informative References
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  A derivation refused because the Mission is suspended or completed
+      carries the mission_error value mission_suspended or
+      mission_completed, so a client can tell a refusal that a resume
+      lifts from a terminal one.
 
    *  A caller may request the projection for an audience other than its
       own, such as each resource a Mission Issuance Grant consuming
