@@ -5869,6 +5869,13 @@ Cross-Domain:
 
 -01
 
+- Stated that a model's output in derivation is a recorded input to
+  the AS's deterministic derivation policy that can refuse or narrow
+  and never supplies or widens authority: candidate authority keeps a
+  proposal or configured-mapping origin, deterministic policy
+  validates every resulting entry, and replay uses the retained
+  output. This adds a requirement.
+
 - Routed RAR remediation by containment: entries that both a
   presented refresh grant and the active Mission's Authority Set
   contain are requested by refresh, and entries outside the Authority
