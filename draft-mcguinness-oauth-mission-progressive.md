@@ -388,12 +388,20 @@ committed, class-named exception admits it; absent the exception, the
 Mission fails to activate under that profile's atomic-commitment
 rule.
 
-When the adjudication is by the pre-consented drawdown policy, the
-Mission Issuer MAY complete the authorization request without prompting
-the Approver, issuing the authorization code directly on redemption of
-the expansion's `request_uri`. The successor is still created through the
-full approval-event machinery of the expansion profile; only the
-interactive prompt is skipped.
+A drawdown that passes every policy-adjudication guard of this
+section completes synchronously in the token-exchange response
+({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "The
+Expansion Request"), which returns the successor's access token. The
+successor is still created through the full approval-event machinery
+of the expansion profile, under the `ceiling_drawdown` basis; only the
+interactive prompt is skipped. The Mission Issuer MUST commit the
+successor's activation, the predecessor's supersession, and the
+creation reservation, applying the expansion profile's activation
+checks in that same atomic step, before it delivers the response. A
+lost response is recovered through `creation_request_id`
+({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "Creation
+Idempotency"). A drawdown that falls back to a fresh human approval
+completes deferred or interactively, as any expansion does.
 
 Skipping the interactive prompt also skips the expansion profile's
 child-cascade consent notice
