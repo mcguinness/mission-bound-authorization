@@ -16,13 +16,17 @@
 //   token_residual: tracked, revocation_attempted, revocation_confirmed
 //     (non-negative integers) and complete (boolean) REQUIRED;
 //     residual_until a date-time when present.
+//   every request: no mission_s256 body member (the path names the mission).
 //   terminate request: action, reason, request_id REQUIRED;
 //     replacement_s256 REQUIRED when reason is superseded.
 //   delegation-tree response: mission_s256, as_of, nodes, complete REQUIRED;
 //     each node has agent and relationship; a non-root node has parent_agent;
-//     next_cursor present means complete is false.
+//     next_cursor is present exactly when complete is false.
 //   metadata: issuer, mission_control_endpoint and
-//     mission_control_actions_supported (a subset of the defined actions).
+//     mission_control_actions_supported, which MUST contain status and
+//     terminate.
+//   timestamps: RFC 3339 date-time values that name a real instant; ordering
+//     (fresh_until not before observed_at) compares instants, never strings.
 //
 // The check fails if any expected kind of example is missing, so removing an
 // example cannot make it pass vacuously.
@@ -43,6 +47,19 @@ const STATES = ["active", "terminated"];
 const RELATIONSHIPS = ["root", "sub_agent", "call_chain"];
 const DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
 const S256 = /^[A-Za-z0-9_-]{43}$/;
+
+// An RFC 3339 date-time as an instant in milliseconds, or NaN when the value
+// is not a well-formed date-time or names no real calendar instant.
+export function instant(v) {
+  if (typeof v !== "string" || !DATE_TIME.test(v)) return NaN;
+  const ms = Date.parse(v);
+  if (Number.isNaN(ms)) return NaN;
+  // Date.parse rolls invalid calendar dates (2026-02-30) forward; reject them.
+  const [y, mo, d] = v.slice(0, 10).split("-").map(Number);
+  const days = new Date(Date.UTC(y, mo, 0)).getUTCDate();
+  if (mo < 1 || mo > 12 || d < 1 || d > days) return NaN;
+  return ms;
+}
 
 export function extractExamples(text) {
   const lines = text.split("\n");
@@ -94,7 +111,7 @@ function checkTokenResidual(tr, err) {
     if (!Number.isInteger(tr[m]) || tr[m] < 0) err(`token_residual.${m} missing or not a non-negative integer`);
   }
   if (typeof tr.complete !== "boolean") err("token_residual.complete missing or not a boolean");
-  if ("residual_until" in tr && !DATE_TIME.test(tr.residual_until)) err("token_residual.residual_until is not a date-time");
+  if ("residual_until" in tr && Number.isNaN(instant(tr.residual_until))) err("token_residual.residual_until is not a date-time");
   if (tr.revocation_confirmed > tr.revocation_attempted || tr.revocation_attempted > tr.tracked) {
     err("token_residual counters are not monotone (confirmed <= attempted <= tracked)");
   }
@@ -107,9 +124,10 @@ function checkStatusRepresentation(obj, err) {
   if ("mission_s256" in obj && !S256.test(obj.mission_s256)) err("mission_s256 is not an unpadded base64url SHA-256 digest");
   if ("mission_status" in obj && !STATES.includes(obj.mission_status)) err(`mission_status ${obj.mission_status} is not a protocol state`);
   for (const m of ["approved_at", "observed_at", "fresh_until", "expires_at", "terminated_at"]) {
-    if (m in obj && !DATE_TIME.test(obj[m])) err(`${m} is not an RFC 3339 date-time`);
+    if (m in obj && Number.isNaN(instant(obj[m]))) err(`${m} is not an RFC 3339 date-time`);
   }
-  if (obj.observed_at && obj.fresh_until && obj.fresh_until < obj.observed_at) err("fresh_until precedes observed_at");
+  const observed = instant(obj.observed_at), fresh = instant(obj.fresh_until);
+  if (!Number.isNaN(observed) && !Number.isNaN(fresh) && fresh < observed) err("fresh_until precedes observed_at");
   const conditional = ["terminated_at", "termination_reason", "token_residual"];
   if (obj.mission_status === "terminated") {
     for (const m of conditional) if (!(m in obj)) err(`missing ${m}, REQUIRED when terminated`);
@@ -120,26 +138,37 @@ function checkStatusRepresentation(obj, err) {
   }
 }
 
+function noBodyReference(o, err) {
+  if ("mission_s256" in o) err("a request body MUST NOT carry mission_s256; the path names the mission");
+}
+
 const CHECKS = {
-  "status-request": (o, err) => { if (o.action !== "status") err("action is not status"); },
+  "status-request": (o, err) => {
+    noBodyReference(o, err);
+    if (o.action !== "status") err("action is not status");
+  },
   "status-response": checkStatusRepresentation,
   "terminate-response": (o, err) => {
     checkStatusRepresentation(o, err);
     if (o.mission_status !== "terminated") err("a terminate response reports a terminated mission");
   },
   "terminate-request": (o, err) => {
+    noBodyReference(o, err);
     for (const m of ["action", "reason", "request_id"]) if (!(m in o)) err(`missing REQUIRED member ${m}`);
     if ("reason" in o && !REASONS.includes(o.reason)) err(`reason ${o.reason} is not defined`);
     if (o.reason === "superseded" && !("replacement_s256" in o)) err("superseded requires replacement_s256");
   },
   "tree-request": (o, err) => {
+    noBodyReference(o, err);
     if ("max_results" in o && (!Number.isInteger(o.max_results) || o.max_results < 1)) err("max_results is not a positive integer");
     if ("cursor" in o && typeof o.cursor !== "string") err("cursor is not a string");
   },
   "tree-response": (o, err) => {
     for (const m of ["mission_s256", "as_of", "nodes", "complete"]) if (!(m in o)) err(`missing REQUIRED member ${m}`);
-    if ("as_of" in o && !DATE_TIME.test(o.as_of)) err("as_of is not an RFC 3339 date-time");
+    if ("as_of" in o && Number.isNaN(instant(o.as_of))) err("as_of is not an RFC 3339 date-time");
+    if ("complete" in o && typeof o.complete !== "boolean") err("complete is not a boolean");
     if ("next_cursor" in o && o.complete !== false) err("next_cursor present but complete is not false");
+    if (o.complete === false && !("next_cursor" in o)) err("complete is false but next_cursor is absent; another page REQUIRES next_cursor");
     for (const [k, n] of (o.nodes || []).entries()) {
       if (!n.agent) err(`node ${k} missing agent`);
       if (!RELATIONSHIPS.includes(n.relationship)) err(`node ${k} relationship ${n.relationship} is not defined`);
@@ -148,7 +177,10 @@ const CHECKS = {
   },
   "metadata": (o, err) => {
     for (const m of ["issuer", "mission_control_endpoint", "mission_control_actions_supported"]) if (!(m in o)) err(`missing ${m}`);
-    for (const a of o.mission_control_actions_supported || []) if (!ACTIONS.includes(a)) err(`action ${a} is not defined`);
+    const actions = o.mission_control_actions_supported;
+    if (!Array.isArray(actions)) return err("mission_control_actions_supported is not an array");
+    for (const a of ["status", "terminate"]) if (!actions.includes(a)) err(`mission_control_actions_supported MUST contain ${a}`);
+    for (const a of actions) if (!ACTIONS.includes(a)) err(`action ${a} is not defined`);
   },
   "fragment": (o, err) => {
     for (const k of Object.keys(o)) if (k !== "replacement_s256") err(`fragment member ${k} is not a defined request member`);
