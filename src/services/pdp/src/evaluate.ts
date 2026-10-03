@@ -207,6 +207,12 @@ export interface EvaluationRequest {
      * verify the authenticated credential inputs or tell whether the join
      * occurred" otherwise. Absent on every ordinary Mission-bound request;
      * this whole step is then a complete no-op, byte-for-byte unchanged.
+     *
+     * @spec authority-server#join-authzen (#972 item 2) — the draft's
+     * definition of this member. Its Join Assertion members (`assertion`,
+     * `token_sha256`, `token_jkt`, `token_x5t`) are not read here: this PDP
+     * does not consume Join Assertions, so it joins under the mapping rules,
+     * as the draft says a non-consuming PDP does.
      */
     mission_join?: {
       /**

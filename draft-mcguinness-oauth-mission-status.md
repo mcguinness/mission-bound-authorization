@@ -940,6 +940,19 @@ leaves refresh-token rotation and reuse detection intact, and a
 `resume` does not revive a credential that expired or was revoked
 independently.
 
+An error code alone does not tell a client whether a `resume` can
+lift a refusal. When the issuance profile's gating refuses a
+derivation because the Mission is `suspended` or `completed`, the AS
+SHOULD include, alongside `error`, the `mission_error`
+token-error-response member ({{I-D.draft-mcguinness-oauth-mission}},
+Section "Issuance Gating") with the value `mission_suspended` or
+`mission_completed`, respectively. The issuance profile's rules for
+that member apply: it is diagnostic only, it grants nothing, an
+unrecognized value is ignored, and it is returned only to the
+authenticated client presenting the Mission's grant.
+`mission_suspended` reports a refusal that a `resume` can lift;
+`mission_completed` reports a terminal one.
+
 ## Operations
 
 The endpoint accepts authenticated POST requests with a
@@ -1761,7 +1774,10 @@ profile's privacy considerations.
 This document requests IANA actions for OAuth AS metadata members and
 a media type. It defines no new registry of its own: the endpoint
 authentication-method value space is a closed set defined inline
-({{as-metadata}}). A companion profile MAY register further extension
+({{as-metadata}}). `mission_suspended` and `mission_completed`
+({{mission-lifecycle-endpoint}}) are values of the issuance profile's
+`mission_error` member, which has no IANA registry, so this document
+requests no registration for them. A companion profile MAY register further extension
 members or Common Constraints against a family registry; the Entry
 Discharge companion registers `terminal_when` in the Mission Resource
 Access Profile's Mission Common Constraints registry this way
@@ -1838,6 +1854,10 @@ Authorization work for feedback that shaped these extensions.
 
 \[\[ To be removed from the final specification ]]
 
+- A derivation refused because the Mission is `suspended` or
+  `completed` carries the `mission_error` value `mission_suspended` or
+  `mission_completed`, so a client can tell a refusal that a `resume`
+  lifts from a terminal one.
 - A caller may request the projection for an audience other than its
   own, such as each resource a Mission Issuance Grant consuming
   Authorization Server serves, only where the Mission Issuer's

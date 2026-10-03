@@ -7,6 +7,7 @@ import {
   CANONICAL_RESOURCE,
   CHILD_MISSION_CARRYOVER,
   CONTAINMENT_POLICY,
+  DEMO_DISPATCH_POLICIES,
   demoReconciliationTemplate,
   DERIVATION_POLICY,
   seedAgentClient,
@@ -53,6 +54,7 @@ import { newReplayCache } from "./kernel/instance-assertion.js";
 import { MissionKernel } from "./kernel/kernel.js";
 import type { TxnAuthorizationOptions } from "./adapters/transaction-authorization.js";
 import { StatusListPublisher } from "./kernel/status-list.js";
+import type { ActivationPolicyRegistry } from "./kernel/activation-policy.js";
 import { createTemplate, type DispatchPolicies } from "./kernel/template.js";
 import { trustedCapabilityResolver } from "./adapters/capability-resolver.js";
 import { TemplateStore } from "./kernel/template-store.js";
@@ -397,6 +399,12 @@ export {
   type MintChildGrantInput,
 } from "./adapters/child-grant.js";
 export {
+  activationPolicyMatches,
+  type ActivationPolicyRegistry,
+  mintActivationPolicyRef,
+  type RegisteredActivationPolicy,
+} from "./kernel/activation-policy.js";
+export {
   createTemplate,
   dispatchFromTemplate,
   selectDispatchAgent,
@@ -624,12 +632,22 @@ export async function buildAuthorizationServer(opts: {
   issuer: string;
   allowHeadlessAdjudication?: boolean;
   /**
-   * @spec mission-template#the-mission-template — the deployment's Dispatch
-   * Policies, keyed by `dispatch_policy`: the Agent selection rule for a
-   * template that lists several Agents. Absent, only single-Agent templates
-   * dispatch.
+   * @spec mission-template#the-mission-template, mission#standing-consent-bases
+   * — the deployment's Dispatch Policies, keyed by `dispatch_policy.id`: each
+   * policy's version and the exact snapshot the issuer evaluates, whose JSON
+   * `select_agent` member is the Agent selection rule for a template that
+   * lists several Agents. Merged over the demo policies
+   * ({@link DEMO_DISPATCH_POLICIES}); a template commits the named policy's
+   * digest at consent and Dispatch verifies it before evaluating anything.
    */
   dispatchPolicies?: DispatchPolicies;
+  /**
+   * @spec mission#standing-consent-bases — the activation policies the kernel
+   * evaluates for a policy-adjudicated child creation, keyed by policy `id`.
+   * An Authority Set entry's `child_creation_policy` is verified against them
+   * before each child creation. Absent, none is configured.
+   */
+  activationPolicies?: ActivationPolicyRegistry;
   /**
    * @spec control-plane#deployment-declaration (D27) — the kernel store. The
    * default is in-memory and single-process; a `file` selects the OPT-IN
@@ -876,6 +894,7 @@ export async function buildAuthorizationServer(opts: {
   // read-only reconciliation template. Independent of the kernel (dispatch is a
   // pure function over both); the wire PR calls dispatchFromTemplate.
   const templateStore = new TemplateStore();
+  const dispatchPolicies: DispatchPolicies = { ...DEMO_DISPATCH_POLICIES, ...(opts.dispatchPolicies ?? {}) };
   // @spec mission#authority-sources — template consent establishes the
   // template's authority source from the SAME trusted catalog the kernel uses,
   // so a dispatched instance inherits a source this deployment actually
@@ -887,6 +906,7 @@ export async function buildAuthorizationServer(opts: {
     // for the one deployment it serves.
     authoritySourceCatalog: bindAuthoritySourceCatalog(AUTHORITY_SOURCES as never, opts.issuer, opts.issuer),
     capabilityResolver: trustedCapabilityResolver(),
+    dispatchPolicies,
   });
   // @spec async-delegation — forward reference to the provider (assigned after
   // buildProvider, like statusListPublisher). Captured by the terminal subscriber in
@@ -936,6 +956,7 @@ export async function buildAuthorizationServer(opts: {
     // @spec draft-mcguinness-oauth-mission#per-entry-enforcement — the AS-asserted
     // actor-type registry, config-shipped and optionally extended by the caller.
     actorProfiles: { ...ACTOR_PROFILES, ...(opts.actorProfiles ?? {}) },
+    ...(opts.activationPolicies ? { activationPolicies: opts.activationPolicies } : {}),
     // @spec mission#authority-sources, mission#approval-event — the deployment's
     // TRUSTED authority-source catalog (config/authority-sources.json plus the
     // governed policies it references). The approval event establishes
@@ -1129,7 +1150,7 @@ export async function buildAuthorizationServer(opts: {
     continuationGrantKey: continuationKeys.privateKey,
     continuationGrantKid: asContinuation.kid,
     templateStore,
-    ...(opts.dispatchPolicies ? { dispatchPolicies: opts.dispatchPolicies } : {}),
+    dispatchPolicies,
     protectedEventSources,
     issuerEvidence,
     // @spec issuance-grant#effective-set-projection (#617 review 1) — the
