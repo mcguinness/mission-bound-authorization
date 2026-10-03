@@ -2983,6 +2983,13 @@ in the other direction.
 
 # Mission Deployment Patterns {#deployment}
 
+A deployment enters the family from the estate it already runs
+({{entry-ramps}}). It can stop at issuance alone ({{issuance-only}}),
+adopt Missions one short task at a time ({{short-mission}}), and
+compose named patterns for untrusted input ({{quarantine-pattern}})
+and for work that never ends ({{standing-agent}}). The Deployment
+Profile states what it built ({{deployment-profile}}).
+
 ## Entry Ramps by Estate {#entry-ramps}
 
 Which chokepoint a deployment builds first is decided by the estate
