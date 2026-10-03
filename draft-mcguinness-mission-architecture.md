@@ -1495,10 +1495,10 @@ Both build on the actor chain of the OAuth binding's Delegation Within
 a Mission section. Offline attenuation requires the runtime
 enforcement layer: its kill switch is the runtime state re-check.
 
-The chooser: the OAuth binding's token-exchange delegation for an
-execution hop living and dying with the parent's lifecycle; a Child
-Mission when the delegate needs its own lifecycle, approval, or audit
-identity; attenuation, experimental, only where offline minting is
+The chooser: the OAuth binding's token-exchange delegation ({{RFC8693}})
+for an execution hop living and dying with the parent's lifecycle; a
+Child Mission when the delegate needs its own lifecycle, approval, or
+audit identity; attenuation, experimental, only where offline minting is
 the constraint. The same principal exercising the same authority
 concurrently is not delegation but swarm execution
 ({{swarm-execution}}).
