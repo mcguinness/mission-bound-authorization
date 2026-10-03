@@ -483,8 +483,9 @@ The body reads in four parts, followed by appendices:
   ({{mission-life}}); the Mission ({{the-mission}}), with its approval
   and lifecycle ({{approval-and-lifecycle}}), authority path
   ({{mission-authority-path}}), delegated-authority layer
-  ({{delegated-authority-layer}}), and capability envelope
-  ({{capability-envelope}}); what the family does not do
+  ({{delegated-authority-layer}}), capability envelope
+  ({{capability-envelope}}), and survivable incorrectness
+  ({{survivable-incorrectness}}); what the family does not do
   ({{non-goals}}); the roles ({{components}}); the verb spine that
   organizes every mechanism ({{layers}}); the invariants
   ({{invariants}}); and who owns meaning and who commits authority
@@ -513,7 +514,8 @@ Readers with one goal can start on a shorter path:
 
 - New to Missions: {{mission-life}}, {{the-mission}}, and {{layers}}.
 - Choosing what to deploy: {{assurance-levels}} and {{deployment}}.
-- Writing or assessing a binding: {{substrate}} and {{requirements}}.
+- Writing or assessing a binding: {{substrate}}, {{binding-properties}},
+  and {{requirements}}.
 - Reviewing security: {{invariants}}, {{containment}}, and
   {{security-considerations}}.
 
@@ -525,9 +527,9 @@ establishes, not a requirement this document places.
 
 Other documents define these terms:
 
-- Binding-neutral Mission terms (the Mission Reference and
-  Controller, the approved context, the approval event, the
-  governance gate, bounded reliance, and the named substrate
+- Binding-neutral Mission terms (the Mission Context, the Mission
+  Reference and Controller, the approved context, the approval event,
+  the governance gate, bounded reliance, and the named substrate
   capabilities): the substrate contract
   ({{I-D.draft-mcguinness-mission-substrate}}).
 - The transition classification, including `decide_anew`: the
@@ -754,7 +756,7 @@ anchors, and its native lifecycle remains exactly `active` or
 
 ## The Authority Path {#mission-authority-path}
 
-In OAuth's names, authority then moves along one path from the approval
+In OAuth's names, authority moves along one path from the approval
 event to an action, and no stage holds more than the stage before it:
 
 ~~~
@@ -924,8 +926,9 @@ The stance beneath the levers is **survivable incorrectness**: the
 agent is probabilistic, so the family never bets on the model being
 right and builds so that wrong is survivable, on two arms:
 
-- The action arm is this envelope and its levers, wire-backed, with
-  in-flight work unwinding through recorded reversibility classes
+- The action arm is the capability envelope ({{capability-envelope}})
+  and its levers, wire-backed, with in-flight work unwinding through
+  recorded reversibility classes
   ({{I-D.draft-mcguinness-mission-orchestration}}).
 - The input arm is **least exposure**: everything the agent sees can
   steer it and everything it holds can leak, so a Mission budgets
@@ -1040,7 +1043,7 @@ AAuth Person Server:
 : The controlling authority for the native Mission Context rather than
   an OAuth-style Mission Issuer; AAuth's `s256` commits the mission
   blob. The PS gates three of AAuth's resource access modes, the
-  *PS-gated modes* (person identity, PS authorization, and federated
+  **PS-gated modes** (person identity, PS authorization, and federated
   authorization). In person identity it gates person-token issuance
   but does not decide at the resource; PS authorization is
   three-party, and federated authorization four-party. It does not
@@ -1309,7 +1312,7 @@ by the question each answers.
               lifecycle; authority anchors where defined
                         |
  govern       Status (pull), Signals (push),
-              Expansion (widen), Completion (retire)
+              Expansion (widen), Discharge (retire)
                         |
  enforce      Runtime contract -> AuthZEN profile:
  each action  a PDP permit before every consequential action
@@ -1334,7 +1337,7 @@ by the question each answers.
 The family manifest records each verb's owning documents. The
 Packages column gives the product architect's view: the five
 architecture packages a deployment builds, independent of how the
-drafts are cut for standardization.
+drafts are cut for standardization:
 
 - Mission Control;
 - Authority Distribution, including the four Mission Issuer bindings
@@ -1442,7 +1445,8 @@ approver.
 A deterministic, versioned policy can approve at machine speed within
 a ceiling a human consented to (the `template`, `policy_drawdown`, and
 `ceiling_drawdown` authorization bases that companion profiles define
-on the OAuth binding's extension point, {{invariants}}). Policy
+on the OAuth binding's extension point; see Authorization bases in
+{{invariants}}). Policy
 approves the instance because a human approved the policy or the
 template; `policy_version` keeps that chain re-checkable. Derivation
 fixes the authority, the adjudicator (a human or such a policy)
@@ -2149,11 +2153,11 @@ vocabulary ownership migrates to the substrate contract by touch
 
 The OAuth binding instantiates the substrate through eight primitives,
 each with a normative home and consumers: six in the table below, the
-Mission-Bound Credential in its own subsection after Token Classes, and
-the approval event, whose fidelity is described with the derivation
-boundary ({{approval-fidelity}}). The binding-neutral kernel requires
-none of these OAuth-binding representations or stronger semantics
-verbatim, though several instantiate mandatory kernel functions:
+Mission-Bound Credential ({{mission-bound-credential}}), and the
+approval event, whose fidelity is described in {{approval-fidelity}}.
+The binding-neutral kernel requires none of these OAuth-binding
+representations or stronger semantics verbatim, though several
+instantiate mandatory kernel functions:
 
 - the identifier and issuer realize the Mission Reference and
   Controller;
@@ -2167,7 +2171,7 @@ verbatim, though several instantiate mandatory kernel functions:
 |---|---|---|---|
 | Mission Identifier and Issuer | An opaque, non-reused identifier with at least 128 bits of entropy and no semantic content, plus the issuer URL; together they name exactly one Mission. The kernel requires stability, non-reassignment, and unguessability, not this syntax | The OAuth binding: Mission Record, Mission Identifier Format | Every companion: decisions, evidence, harness bindings, the state surfaces, the audit statement subject, the Mandate |
 | Lifecycle state space | The states of {{approval-and-lifecycle}}, open to companion-defined states, with the only-`active` rule, fail-safe unrecognized states, and a freshness source with a stated staleness bound | The OAuth binding (state space, only-`active`); the status and runtime profiles (freshness); Status and Signals (observation) | Runtime per-class re-check (fail closed on staleness), harness pause, suppress, and terminate, the orchestrator's unwind trigger, the Mandate (state as of minting) |
-| Authority Set representation | Authorization-details entries ({{RFC9396}}), each naming resource, actions, and constraints, under the subset rule (derived or delegated authority is never broader) and, for `mission_resource_access`, the Common Constraints vocabulary (registered names with fixed subset and intersection rules) | The OAuth binding: Mission Authority, Subset Rule; the Mission Resource Access Profile: Common Constraints | Runtime and the AuthZEN profile, the MAS, Expansion and Completion, Child Delegation and Offline Attenuation, Consent Evidence, the Mandate |
+| Authority Set representation | Authorization-details entries ({{RFC9396}}), each naming resource, actions, and constraints, under the subset rule (derived or delegated authority is never broader) and, for `mission_resource_access`, the Common Constraints vocabulary (registered names with fixed subset and intersection rules) | The OAuth binding: Mission Authority, Subset Rule; the Mission Resource Access Profile: Common Constraints | Runtime and the AuthZEN profile, the MAS, Expansion and Discharge, Child Delegation and Offline Attenuation, Consent Evidence, the Mandate |
 | Integrity-anchor envelope | A committed object hashed over a `typ`-domain-separated, issuer-bound envelope with fixed canonicalization and an algorithm-prefixed encoding a verifier recognizes or rejects (unknown prefixes refuse; no downgrade); the `typ` space is the extension point | The OAuth binding: Integrity Anchors, Canonicalization Rules, Extensibility | Consent Evidence, Shaping, the runtime layer and AuthZEN profile (`mission-policy-view`), Orchestration, the Mandate, Audit Transparency |
 | Issuer key material | Signing keys resolvable from `issuer`; across a rotation each key identifier stays resolvable while artifacts signed under it remain within the audit horizon | The OAuth binding: Signing and Key Rotation | Verifiers of Mission-bound credentials, Consent Evidence, the Mandate, the signed state surfaces, Audit Transparency |
 | Audit horizon | The deployment-declared retention window: at least the Mission's lifetime plus a declared post-terminal period | The OAuth binding: Mission Record | Consent and runtime evidence and Audit Transparency (retention), the MAS (record retention), the security model's retention analysis |
@@ -2206,7 +2210,7 @@ the `credential-mission-bound` equivalence of the binding properties
 discharges it, earned only where all hold together. The OAuth binding
 discharges the equivalence through its own conformance rule.
 
-## The Mission-Bound Credential
+## The Mission-Bound Credential {#mission-bound-credential}
 
 The Mission-Bound Credential is a credential carrying the `mission`
 claim (`id`, `issuer`) and Mission-derived authorization details,
@@ -2226,7 +2230,7 @@ split on it:
 - an AAuth auth token can carry the native Mission Reference
   (`mission_s256`) but does not carry Mission-derived authorization
   details, so it is Mission-referenced, not a Mission-bound credential
-  in the strong sense ({{I-D.draft-mcguinness-mission-aauth}}).
+  ({{I-D.draft-mcguinness-mission-aauth}}).
 
 For profiles that compose with the credential, the seam is the runtime
 profile's Mission binding establishment step
@@ -2360,9 +2364,8 @@ architecture, not only its binding. Three patterns cover the bindings:
   the association at the decision point (the standalone MAS); and
 - **context-carried**: AAuth carries its native Mission Reference
   (`mission_s256`) while authority remains in resource scopes and
-  policy. The PS gates person identity, PS authorization, and
-  federated authorization, while agent identity and resource-managed
-  access bypass the PS.
+  policy. The PS gates the PS-gated modes ({{components}}), while agent
+  identity and resource-managed access bypass the PS.
 
 The differences that decide a design:
 
@@ -2462,7 +2465,7 @@ for another:
 | Verbs | What happens to a Mission and its authority | {{layers}} |
 | Assurance levels | Which capabilities a deployment adopts, in the order deployments build them | {{assurance-level-definitions}} |
 | Assurance claims | What a relying party can verify | {{assurance-claims-axis}} |
-| Binding properties | Which relationships a path establishes: Mission attachment, credential binding (with presenter key and instance), and action binding | {{binding-properties}} |
+| Binding properties | Which relationships a path establishes: attachment provenance, credential binding (with presenter key and instance), and action binding | {{binding-properties}} |
 | Containment properties | What a capability kill reaches, per action class and state source | {{containment}}, {{kill-switch-composition}} |
 | Deployment Profile | Where a deployment declares all of the above | {{deployment-profile}} |
 {: title="Assurance frames"}
@@ -2479,7 +2482,7 @@ per-action enforcement (Runtime-Enforced), then agent governance and
 compromise resistance (Governed Agent and High-Assurance Agent).
 
 A level does not determine any action class's containment property.
-The proof obligations noted with each level are the claims that
+The proof obligations noted with a level are the claims that
 become available at that bundle, not properties the level name
 asserts. A relying party compares claims, not levels
 ({{assurance-claims-axis}}), because the family's strongest
@@ -2511,12 +2514,12 @@ Each level includes the one before it:
   derived and committed at the approval event with the integrity
   anchors (the OAuth binding).
 
-  **Structured-authority bindings**: where such a binding issues
-  Mission-bound credentials, issuance is bounded by the subset rule
-  and gated on Mission state. That gated issuance grants task-bound,
-  auditable authority and a possession-independent kill switch at the
-  issuance gate. It grants no per-action control, and outstanding
-  tokens run to their own expiry.
+  **Credential-issuing bindings**: where a structured-authority binding
+  issues Mission-bound credentials, issuance is bounded by the subset
+  rule and gated on Mission state. That gated issuance grants
+  task-bound, auditable authority and a possession-independent kill
+  switch at the issuance gate. It grants no per-action control, and
+  outstanding tokens run to their own expiry.
 
   Sized deliberately, that expiry is the level's revocation bound.
   **Lifetime-bounded reliance**, access-token lifetimes no longer than
@@ -2616,7 +2619,7 @@ Each level includes the one before it:
   pre-consented egress to Approver-named destinations as its one
   carve-out; and full mediation of the external-communication and
   external-commitment classes with the egress-channel enumeration.
-  With both, an injected agent cannot egress on the strength of
+  With both halves, an injected agent cannot egress on the strength of
   untrusted content alone.
 
   Both claims are named high bars, never implied by basic adoption. A
@@ -2712,8 +2715,8 @@ profile fixes, listed in the Deployment Profile
   outcome reconciliation) for the classes claimed
   ({{I-D.draft-mcguinness-mission-runtime}}).
 - **Agent-compromise-resistant enforcement** and **trifecta
-  containment**: the two named High-Assurance claims, unchanged
-  ({{assurance-level-definitions}}).
+  containment**: the two named High-Assurance claims, as defined in
+  {{assurance-level-definitions}}.
 
 Two deployments at the same level under different bindings can hold
 different claims; the MAS modes are the worked case
@@ -2738,14 +2741,18 @@ harness attributes work items precisely while the credential is an
 ordinary bearer token; an action-bound permit can exist over either.
 No single ladder orders them, so the family names the properties
 directly, as a vector, and a deployment claims the combination each
-path has.
+path has. In the table, `mission-reference-selected` and
+`work-item-bound` answer attachment provenance;
+`credential-correlated`, `credential-mission-bound`,
+`presenter-key-bound`, and `instance-bound` answer credential binding;
+and `action-bound` answers action binding.
 
 | Property | Meaning | Minimum proof |
 | --- | --- | --- |
 | `mission-reference-selected` | A Mission tuple was supplied for routing and selection | The canonical (issuer, mission id) pair; grants nothing and makes no security claim |
 | `work-item-bound` | A trusted component bound that tuple to this session, queue, or task item | An authenticated attacher, a tamper-resistant work-item identifier, and stated inheritance and retry rules |
 | `credential-correlated` | The presented credential is correlated to the Mission's parties | A mapping join or Mission Join Assertion, with its stated ceiling |
-| `credential-mission-bound` | The credential's authority was issued or derived for the Mission | The six equivalence properties below |
+| `credential-mission-bound` | The credential's authority was issued or derived for the Mission | The six conditions below |
 | `presenter-key-bound` | The presenter proves possession of the key the credential is constrained to | Issuance-time key targeting (`cnf` or an equivalent confirmation) plus presentation-time proof of possession |
 | `instance-bound` | The concrete acting instance is identified and holds the bound key | `presenter-key-bound` plus the instance requirements below |
 | `action-bound` | An authenticated permit authorizes one operation, resource, and input projection | One of the two proof forms below |
@@ -2961,9 +2968,11 @@ The converse holds too: killing a workload leaves the Mission
 unless the Mission is also revoked.
 
 Capability kill provides, per action class and consumer, one of two
-containment properties or neither, never by the deployment's
-assurance level ({{I-D.draft-mcguinness-oauth-mission-containment}},
-Section "Containment Properties"):
+containment properties (named like, but distinct from, the levels of the
+same name; {{kill-switch-composition}}) or neither, never by the
+deployment's assurance level
+({{I-D.draft-mcguinness-oauth-mission-containment}}, Section
+"Containment Properties"):
 
 - the Baseline property, a new-derivation kill that also propagates
   to Child Missions justified by the contained entry; and
@@ -2981,7 +2990,8 @@ property its consumers obtain.
 ## Composed Kill-Switch Reality {#kill-switch-composition}
 
 The words "Baseline" and "Runtime-Enforced" each have two meanings.
-Above, they name a level a deployment adopts. The containment profile
+In {{assurance-level-definitions}}, they name a level a deployment
+adopts. The containment profile
 uses the same words for a property a consumer obtains per action
 class ({{I-D.draft-mcguinness-oauth-mission-containment}},
 Section "Containment Properties"). Level and property are not 1:1. A
@@ -4066,7 +4076,8 @@ bound profiled by `aauth-mission-expiry`.
   PS-gated modes; untitled tables get captions, and long citations
   leave table cells so the tables fit the text format; and inline
   enumerations across the document become lists. RFC 8693 is cited
-  where the delegation chooser names token exchange.
+  where the delegation chooser names token exchange, and two stale uses
+  of "Completion" name the Entry Discharge companion.
 
 - The authority path, with no change to any profile's requirements.
   The Mission adds a figure from approval basis to action, with the
