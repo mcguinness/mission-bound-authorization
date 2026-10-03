@@ -1413,7 +1413,9 @@ The MAS verifies the join centrally, as follows:
 2. The MAS verifies the subject and client joins of {{mission-join}}
    against the introspection response or the validated token claims,
    under its own documented account and client mappings and delegate
-   policy.
+   policy. For a delegate, the MAS also establishes the delegate's
+   depth from the deployment's actor records; a delegate with no actor
+   record under the Mission does not join (rule 5 of {{join-rules}}).
 
 If the acting token does not join, the MAS rejects the request with
 the `join_failed` error code (HTTP 403), in the error format of
@@ -1475,6 +1477,16 @@ implements the substitution defense of Sections 3.11 and 3.12 of
   {{join-assertion-request}}, and `jkt`, the thumbprint of the token's
   `cnf` public key {{RFC7638}}.
 
+`join`:
+: REQUIRED. An object carrying the result of the MAS's client and
+  delegate evaluation. Its `client_id` member (a string, REQUIRED) is
+  the joining client's identifier in the Mission's client namespace.
+  Its `disposition` member (a string, REQUIRED) is `client` when that
+  identifier is the Mission's own `client_id`, and `delegate`
+  otherwise. Its `depth` member (an integer) is the delegate's depth
+  from the deployment's actor records, REQUIRED when `disposition` is
+  `delegate`.
+
 `iat`:
 : REQUIRED. Issuance time.
 
@@ -1512,6 +1524,7 @@ retained for the audit horizon:
 
 - the Mission reference;
 - the token digest and thumbprint;
+- the `join` result;
 - the authenticated caller;
 - the mapping version, where one is published ({{mapping-contract}});
 - the token's Instance Context, where the MAS validated it as a
@@ -1561,6 +1574,14 @@ mapping checks of rules 3 and 4 of {{join-rules}}:
 - the token binding: `context.mission_join.token_sha256` equals
   `token.sha256`, and `context.mission_join.token_jkt` equals
   `token.jkt`.
+
+The PDP takes the joining client identifier, the disposition, and a
+delegate's depth from the assertion's `join` claim, not from its own
+mappings. It applies rule 5 of {{join-rules}} with them, and they are
+the joining client identifier and disposition that rule 9's
+commitment changes with. When `context.mission_join` also carries
+`delegate_depth` and it differs from `join.depth`, the PDP MUST deny
+with `mission_mismatch`.
 
 Every other join rule holds unchanged: the PDP resolves Mission state
 at the MAS under the runtime profile's freshness rules, denies with
