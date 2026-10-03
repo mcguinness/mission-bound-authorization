@@ -2137,20 +2137,47 @@ pushed request.<a href="#section-5.3-5.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-5.3-6">The <code>request_uri</code> is a temporary front-channel reference; the
-continuation names the durable operation. When a <code>request_uri</code>
-expires, the user agent consumes it, or the authorization response is
-lost, the client pushes again with the same <code>mission_continuation</code> and
-continues the same operation. Redemption of the authorization code
-verifies the PKCE or DPoP binding and activates the successor under
-the checks of <a href="#reconciliation" class="auto internal xref">Section 10</a>, atomically with the predecessor's
-supersession; <code>subject_token</code> expiry during the window does not gate
-it (<a href="#deferred-window" class="auto internal xref">Section 5.4</a>). After activation the Mission Issuer <span class="bcp14">MUST</span>
+continuation names the durable operation, which has one approval
+ceremony and one outcome. The Mission Issuer <span class="bcp14">MUST</span> serialize
+adjudication per operation and record at most one approval outcome
+for it: the first ceremony to conclude records approval or denial, and
+every other ceremony or pushed request for the continuation resumes
+from that recorded outcome instead of adjudicating again. When a
+<code>request_uri</code> expires, the user agent consumes it, or the authorization
+response is lost, the client pushes again with the same
+<code>mission_continuation</code>:<a href="#section-5.3-6" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5.3-7.1">
+            <p id="section-5.3-7.1.1">before an outcome is recorded, the push starts no second
+adjudication; it continues the operation's one ceremony;<a href="#section-5.3-7.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.3-7.2">
+            <p id="section-5.3-7.2.1">after approval, the Mission Issuer issues a fresh authorization code
+for the recorded approval, bound to that push's PKCE or DPoP input,
+without prompting again; and<a href="#section-5.3-7.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.3-7.3">
+            <p id="section-5.3-7.3.1">after denial, the operation has failed: the Mission Issuer <span class="bcp14">MUST</span>
+refuse the push with <code>access_denied</code>, and a <code>creation_request_id</code>
+retry receives <code>access_denied</code>.<a href="#section-5.3-7.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-5.3-8">Redemption of an authorization code verifies the PKCE or DPoP binding
+and, in the same atomic step as activation, that the continuation has
+not expired and the recorded outcome is approval; it then activates
+the successor under the checks of <a href="#reconciliation" class="auto internal xref">Section 10</a>, atomically with
+the predecessor's supersession. The continuation's expiry is the
+operation's deadline, a clock separate from the authorization code's
+own lifetime (<span><a href="https://rfc-editor.org/rfc/rfc6749#section-4.1.2" class="relref">Section 4.1.2</a> of [<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>): the Mission Issuer <span class="bcp14">MUST</span>
+refuse redemption at or after it with <code>invalid_grant</code>, and nothing
+activates. <code>subject_token</code> expiry during the window does not gate
+redemption (<a href="#deferred-window" class="auto internal xref">Section 5.4</a>). After activation the Mission Issuer <span class="bcp14">MUST</span>
 refuse a further pushed request for the continuation and <span class="bcp14">MUST</span> refuse
 redemption of any other code issued for the operation with
 <code>invalid_grant</code>. A lost redemption response is recovered by repeating
 the token exchange with the same <code>creation_request_id</code>
 (<a href="#creation-recovery" class="auto internal xref">Section 11.3</a>); an operation whose continuation expired
-before activation answers that retry with <code>expired_token</code>.<a href="#section-5.3-6" class="pilcrow">¶</a></p>
+before activation answers that retry with <code>expired_token</code>.<a href="#section-5.3-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="deferred-window">
@@ -2734,10 +2761,12 @@ select, and because the existing single-use artifacts do not close
 the retry fault. DPoP proof <code>jti</code> single-use (<a href="#request-binding" class="auto internal xref">Section 4.2</a>)
 prevents replay of one captured proof; a client that loses the
 response retries with a fresh, valid proof, and without the
-identifier that retry is a second creation. The retained interactive
-path's single-use artifacts prevent only duplicate redemption within
-one ceremony; the reservation made at initiation is what prevents a
-retry from starting a second ceremony (<a href="#creation-recovery" class="auto internal xref">Section 11.3</a>).<a href="#section-11-2" class="pilcrow">¶</a></p>
+identifier that retry is a second creation. The interactive path's
+single-use artifacts prevent only duplicate redemption within one
+ceremony; the reservation made at initiation, and the single recorded
+approval outcome of <a href="#interactive-handoff" class="auto internal xref">Section 5.3</a>, prevent a retry or a
+repeated pushed request from starting a second ceremony
+(<a href="#creation-recovery" class="auto internal xref">Section 11.3</a>).<a href="#section-11-2" class="pilcrow">¶</a></p>
 <p id="section-11-3">The child delegation profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>) carries the
 same parameter with the same semantics on its child-creation
@@ -2944,7 +2973,8 @@ second deferral.<a href="#section-11.3-2.1.1" class="pilcrow">¶</a></p>
           <li class="normal" id="section-11.3-2.2">
             <p id="section-11.3-2.2.1">A pending interactive completion returns the same
 <code>mission_continuation</code> (<a href="#interactive-handoff" class="auto internal xref">Section 5.3</a>). The reservation is
-made at initiation, so a retry cannot open a second operation.<a href="#section-11.3-2.2.1" class="pilcrow">¶</a></p>
+made at initiation, so a retry cannot start a second approval
+ceremony.<a href="#section-11.3-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.3-2.3">
             <p id="section-11.3-2.3.1">A completed operation whose delivery credential is still valid
