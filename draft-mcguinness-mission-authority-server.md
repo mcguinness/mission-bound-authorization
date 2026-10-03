@@ -468,8 +468,8 @@ The endpoint serves two operations, dispatched by request media type:
 - **Intent submission**: an HTTPS POST whose `application/json` body
   is the Mission Intent Submission envelope ({{intent-submission}}).
 - **Submission status**: an HTTPS POST with an
-  `application/x-www-form-urlencoded` body containing a `submission`
-  parameter ({{submission-status}}).
+  `application/x-www-form-urlencoded` body containing a
+  `submission_id` parameter ({{submission-status}}).
 
 ## Intent Submission {#intent-submission}
 
@@ -602,8 +602,9 @@ Cache-Control: no-store
 The client polls for the outcome with a form-urlencoded POST
 carrying:
 
-`submission`:
-: REQUIRED. A string. The `submission_id`.
+`submission_id`:
+: REQUIRED. A string. The `submission_id` the MAS returned on
+  acceptance.
 
 A submission is in one of four states:
 
