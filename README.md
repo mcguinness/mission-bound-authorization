@@ -88,6 +88,20 @@ history.
 | [**AAuth**](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-aauth.html) | AAuth's Person Server (the user-held control point) owns contextual governance | Native AAuth access semantics; authority expressed in AAuth's own access model |
 | [**UMA**](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-uma.html) / [**GNAP**](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-gnap.html) | Protocol research and evaluation | Experimental sketches, authored against the substrate contract |
 
+Choose by where approval and authority can live in your estate. Use
+the OAuth binding when your Authorization Server can issue
+Mission-bound credentials. Use the Standalone MAS when the estate's
+Authorization Servers stay as they are: credentials are joined to
+Missions explicitly, each governed path needs its own enforcement
+point, and a path that requires Mission-bound credentials upgrades to
+Mission-bound issuance through the Issuance Grant. Use AAuth when its
+Person Server is where contextual governance natively belongs. UMA and
+GNAP serve named research deployments. The reference implementation
+proceeds in a fixed order (the issuance-only OAuth floor, the AS-native
+runtime overlay, MAS migration, then a bounded AAuth pilot); that
+order follows implementation evidence and implies neither capability
+equivalence nor production maturity.
+
 New bindings are authored against
 [Substrate Requirements](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-mission-substrate.html)
 and claim their capabilities through a Mission Substrate Statement.
