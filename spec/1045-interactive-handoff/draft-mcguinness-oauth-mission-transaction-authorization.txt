@@ -624,10 +624,11 @@ Table of Contents
    authority, applicable Resource policy, or consumption state.
 
    Consumption of txn MUST be linearizable across every replica capable
-   of executing the same operation, meeting the metering companion's
-   Exact enforcement profile ([I-D.draft-mcguinness-mission-metering]):
-   the record commits before the irreversible effect, or atomically with
-   it where the operation store supports that transaction.  If the
+   of executing the same operation, meeting the Exact enforcement
+   profile the runtime profile defines
+   ([I-D.draft-mcguinness-mission-runtime], Section "Idempotency"): the
+   record commits before the irreversible effect, or atomically with it
+   where the operation store supports that transaction.  If the
    consumption store is unavailable, the resource MUST fail closed for
    this profile.
 
@@ -780,8 +781,9 @@ Table of Contents
 
    Consumption-store availability, and the fail-closed posture
    generally:  The at-most-once property this profile claims exists only
-      while the consumption store meets the Exact enforcement profile of
-      [I-D.draft-mcguinness-mission-metering]; a deployment that
+      while the consumption store meets the Exact enforcement profile
+      the runtime profile defines
+      ([I-D.draft-mcguinness-mission-runtime]); a deployment that
       degrades to a merely local cache during partition no longer has
       that property and MUST NOT claim it.  Every failure path of
       Section 9 resolves to denial, refusal, or a fail-closed state,
@@ -1182,6 +1184,10 @@ Table of Contents
 
    [[ To be removed from the final specification ]]
 
+   *  txn consumption meets the Exact enforcement profile the runtime
+      profile defines, rather than the metering companion's, which is no
+      longer referenced.
+
    *  Linked applicability to the runtime compound-action model: a
       transaction token authorizes one commit-phase operation (#252).
 
@@ -1309,11 +1315,6 @@ Informative References
               AuthZEN Profile", 2026, <https://mcguinness.github.io/
               mission-bound-authorization/draft-mcguinness-mission-
               authzen.html>.
-
-   [I-D.draft-mcguinness-mission-metering]
-              McGuinness, K., "Mission Consumption Metering", 2026,
-              <https://mcguinness.github.io/mission-bound-authorization/
-              draft-mcguinness-mission-metering.html>.
 
    [I-D.draft-mcguinness-mission-runtime-evidence]
               McGuinness, K., "Mission Runtime Evidence", 2026,

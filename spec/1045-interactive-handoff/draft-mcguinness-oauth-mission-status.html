@@ -2944,10 +2944,11 @@ conforming.<a href="#section-5.7-7" class="pilcrow">¶</a></p>
         </h3>
 <p id="section-5.8-1">A Mission revocation through this endpoint cascades to credentials
 derived from the Mission per the AS's advertised revocation
-propagation (<a href="#revocation-enforcement-classes" class="auto internal xref">Section 6</a>). The AS <span class="bcp14">MAY</span> additionally invoke
-<span>[<a href="#RFC7009" class="cite xref">RFC7009</a>]</span> token revocation for specific outstanding tokens when it
-knows their <code>jti</code>. <span>[<a href="#RFC7009" class="cite xref">RFC7009</a>]</span> alone does NOT revoke a Mission; the
-lifecycle endpoint is the authoritative Mission state change.<a href="#section-5.8-1" class="pilcrow">¶</a></p>
+propagation (<a href="#revocation-enforcement-classes" class="auto internal xref">Section 6</a>). The AS <span class="bcp14">MAY</span>
+additionally revoke specific outstanding tokens it knows by <code>jti</code>,
+with the same effect as <span>[<a href="#RFC7009" class="cite xref">RFC7009</a>]</span> revocation of each token.
+<span>[<a href="#RFC7009" class="cite xref">RFC7009</a>]</span> alone does NOT revoke a Mission; the lifecycle endpoint is
+the authoritative Mission state change.<a href="#section-5.8-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="deferred-lifecycle">
