@@ -1,5 +1,5 @@
-import { authorityHash, intentHash } from "@mission/core";
-import { demoReconciliationTemplate, DERIVATION_POLICY } from "@mission/demo-data";
+import { activationPolicyDigest, authorityHash, intentHash } from "@mission/core";
+import { DEMO_DISPATCH_POLICIES, demoReconciliationTemplate, DERIVATION_POLICY } from "@mission/demo-data";
 import { type CryptoKey, generateKeyPair } from "jose";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
@@ -9,6 +9,8 @@ import {
   type CreateTemplateInput,
   DispatchError,
   type DispatchInput,
+  type DispatchPolicies,
+  type DispatchPolicy,
   dispatchFromTemplate,
   IntentError,
   MissionKernel,
@@ -45,6 +47,25 @@ beforeEach(() => {
   store = new TemplateStore(now);
 });
 
+/**
+ * @spec mission#standing-consent-bases — the Dispatch Policy snapshots this
+ * suite's issuer holds, by id. A template commits the named snapshot's digest;
+ * a Dispatch evaluates the registry it is handed.
+ */
+const snapshotOf = (id: string, content = JSON.stringify({ id, rule: "dispatch within the template ceiling" })) => ({
+  version: "1",
+  content_type: "application/json",
+  content,
+});
+const REGISTRY: DispatchPolicies = Object.fromEntries(
+  ["test-policy", "names-unlisted", "route-extractor", "route"].map((id) => [id, snapshotOf(id)]),
+);
+const policyRef = (id: string) => ({ id, version: "1" });
+/** The registered policy `id` with an Agent selection rule; same snapshot, so its digest still matches. */
+const withRule = (id: string, selectAgent: DispatchPolicy["selectAgent"]): DispatchPolicies => ({
+  [id]: { ...(REGISTRY[id] as DispatchPolicy), ...(selectAgent ? { selectAgent } : {}) },
+});
+
 /** A template ceiling entry on the payments resource (constraints restated so
  *  the double intersection is constraint-attributable). */
 const ceilEntry = (actions: string[], maxAmount = "200.00"): AuthorityEntry => ({
@@ -60,7 +81,7 @@ const mkTemplate = (over: Partial<CreateTemplateInput> = {}) =>
     issuer: ISS,
     approver: { iss: ISS, sub: "human-approver" },
     ceiling: [ceilEntry(["payments:invoice.read", "payments:vendor.read", "payments:payment.schedule"])],
-    dispatch_policy: "test-policy",
+    dispatch_policy: policyRef("test-policy"),
     dispatchers: ["orchestrator"],
     recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents: ["worker"] },
     per_instance_lifetime_s: 3600,
@@ -70,7 +91,7 @@ const mkTemplate = (over: Partial<CreateTemplateInput> = {}) =>
     approval_event_id: `tmpl-ev-${tmplSeq++}`,
     expires_at: "2026-12-01T00:00:00Z",
     ...over,
-  }, kernel.authoritySourceOptions());
+  }, { ...kernel.authoritySourceOptions(), dispatchPolicies: REGISTRY });
 
 /** An untrusted Intent proposing the given actions (default max_amount 500,
  *  which is exactly the policy ceiling, so any narrower final is attributable). */
@@ -104,6 +125,7 @@ const dispatch = (templateId: string, over: Partial<DispatchInput> = {}) =>
     intent: intentOf(["payments:invoice.read"]),
     subject: { iss: ISS, sub: "alice" },
     policyVersion: POLICY_VERSION,
+    dispatchPolicies: REGISTRY,
     ...over,
   });
 
@@ -129,7 +151,7 @@ describe("createTemplate (@spec mission-template)", () => {
       issuer: ISS,
       approver: { iss: ISS, sub: "human-approver" },
       ceiling: [ceilEntry(["payments:invoice.read"])],
-      dispatch_policy: "test-policy",
+      dispatch_policy: policyRef("test-policy"),
       dispatchers: ["orchestrator"],
       recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents: ["worker"] },
       per_instance_lifetime_s: 3600,
@@ -141,6 +163,52 @@ describe("createTemplate (@spec mission-template)", () => {
     }, kernel.authoritySourceOptions());
     expect(again.id).toBe(t.id);
     expect(again.template_hash).toBe(t.template_hash);
+  });
+
+  // @spec mission#standing-consent-bases — the consented template commits the
+  // Dispatch Policy as an activation policy reference whose digest the issuer
+  // computes from the snapshot it holds.
+  it("commits the Dispatch Policy's content digest in template_hash and refuses a policy the issuer does not hold", () => {
+    const t = mkTemplate();
+    expect(t.dispatch_policy).toEqual({
+      id: "test-policy",
+      version: "1",
+      digest: activationPolicyDigest(ISS, snapshotOf("test-policy")),
+    });
+    // Same id and version, different content: a different template_hash.
+    const edited = createTemplate(
+      store,
+      {
+        template_version: "tmpl-v1",
+        issuer: ISS,
+        approver: { iss: ISS, sub: "human-approver" },
+        ceiling: [ceilEntry(["payments:invoice.read", "payments:vendor.read", "payments:payment.schedule"])],
+        dispatch_policy: policyRef("test-policy"),
+        dispatchers: ["orchestrator"],
+        recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents: ["worker"] },
+        per_instance_lifetime_s: 3600,
+        max_active: 3,
+        rate_per_min: 5,
+        review_cadence_s: 86400,
+        approval_event_id: `tmpl-ev-${tmplSeq++}`,
+        expires_at: "2026-12-01T00:00:00Z",
+      },
+      {
+        ...kernel.authoritySourceOptions(),
+        dispatchPolicies: { "test-policy": snapshotOf("test-policy", '{"rule":"edited"}') },
+      },
+    );
+    expect(edited.dispatch_policy.digest).not.toBe(t.dispatch_policy.digest);
+    expect(edited.template_hash).not.toBe(t.template_hash);
+    // A request-body digest is never a fact: the issuer computes it.
+    const claimed = mkTemplate({
+      dispatch_policy: { ...policyRef("test-policy"), digest: "sha-256:forged" } as never,
+    });
+    expect(claimed.dispatch_policy.digest).toBe(t.dispatch_policy.digest);
+    // An unheld policy, a version the issuer does not hold, or a malformed name refuses.
+    expect(() => mkTemplate({ dispatch_policy: policyRef("unheld") })).toThrow(TemplateError);
+    expect(() => mkTemplate({ dispatch_policy: { id: "test-policy", version: "2" } })).toThrow(TemplateError);
+    expect(() => mkTemplate({ dispatch_policy: "test-policy" as never })).toThrow(TemplateError);
   });
 
   it("refuses an empty ceiling or non-positive bounds (TemplateError)", () => {
@@ -234,7 +302,11 @@ describe("dispatchFromTemplate double intersection (@spec mission-template#dispa
     expect(mission.template?.id).toBe(t.id);
     expect(mission.template?.template_hash).toBe(t.template_hash);
     expect(mission.template?.template_version).toBe("tmpl-v1");
-    expect(mission.template?.dispatch_policy).toBe("test-policy");
+    expect(mission.template?.dispatch_policy).toEqual({
+      id: "test-policy",
+      version: "1",
+      digest: activationPolicyDigest(ISS, snapshotOf("test-policy")),
+    });
   });
 });
 
@@ -293,9 +365,9 @@ describe("dispatch gates (@spec mission-template#dispatch-refusals)", () => {
     expectNothingCommitted(t.id, before);
     // The Agent is never request-selected, so an unlisted one is reachable only
     // through a Dispatch Policy that names it; the membership check refuses it.
-    const multi = mkTemplate({ recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents: ["worker", "subagent-invoice-extractor"] }, dispatch_policy: "names-unlisted" });
+    const multi = mkTemplate({ recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents: ["worker", "subagent-invoice-extractor"] }, dispatch_policy: policyRef("names-unlisted") });
     try {
-      dispatch(multi.id, { dispatchPolicies: { "names-unlisted": { selectAgent: () => "intruder" } } });
+      dispatch(multi.id, { dispatchPolicies: withRule("names-unlisted", () => "intruder") });
       expect.unreachable();
     } catch (e) {
       expect((e as DispatchError).reason).toBe("recipient_not_allowed");
@@ -307,6 +379,31 @@ describe("dispatch gates (@spec mission-template#dispatch-refusals)", () => {
   // the instance's Agent from `agents` under the Dispatch Policy, never from
   // Dispatcher input: one listed Agent directly; several through the policy's
   // selection rule, never by array position.
+  // @spec mission-template#dispatch (step 3), mission#standing-consent-bases —
+  // a Dispatch Policy whose snapshot no longer matches the committed digest
+  // never adjudicates a Dispatch, even under an unchanged version.
+  it("refuses dispatch_policy_changed when the held policy's content, version, or presence changes, committing nothing", () => {
+    const t = mkTemplate();
+    const before = kernel.allMissions().length;
+    const changes: DispatchPolicies[] = [
+      { "test-policy": snapshotOf("test-policy", '{"rule":"edited under the same version"}') },
+      { "test-policy": { ...snapshotOf("test-policy"), version: "2" } },
+      {},
+    ];
+    for (const dispatchPolicies of changes) {
+      try {
+        dispatch(t.id, { dispatchPolicies });
+        expect.unreachable();
+      } catch (e) {
+        expect((e as DispatchError).reason).toBe("dispatch_policy_changed");
+      }
+      expect(kernel.allMissions().length).toBe(before);
+      expect(store.dispatchesSince(t.id, "1970-01-01T00:00:00.000Z")).toBe(0);
+    }
+    // The held snapshot it committed still dispatches.
+    expect(dispatch(t.id).mission.template?.dispatch_policy).toEqual(t.dispatch_policy);
+  });
+
   it("selects the one listed Agent directly and ignores an Agent named in the dispatch input", () => {
     const t = mkTemplate();
     expect(dispatch(t.id).mission.client_id).toBe("worker");
@@ -315,23 +412,22 @@ describe("dispatch gates (@spec mission-template#dispatch-refusals)", () => {
 
   it("with several listed Agents, selects the Agent the Dispatch Policy names, and refuses agent_not_selected when no rule selects one", () => {
     const agents = ["worker", "subagent-invoice-extractor"];
-    const t = mkTemplate({ recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents }, dispatch_policy: "route-extractor" });
+    const t = mkTemplate({ recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents }, dispatch_policy: policyRef("route-extractor") });
     const seen: Array<{ agents: readonly string[]; subject: { iss: string; sub: string } }> = [];
-    const routeExtractor = {
-      "route-extractor": {
-        selectAgent: (c: { agents: readonly string[]; subject: { iss: string; sub: string } }) => {
-          seen.push(c);
-          return c.agents.find((a) => a === "subagent-invoice-extractor");
-        },
-      },
-    };
+    const routeExtractor = withRule("route-extractor", (c) => {
+      seen.push(c);
+      return c.agents.find((a) => a === "subagent-invoice-extractor");
+    });
     const { mission } = dispatch(t.id, { dispatchPolicies: routeExtractor });
     // Not the first listed Agent: the policy, not array order, selected it.
     expect(mission.client_id).toBe("subagent-invoice-extractor");
     expect(seen).toEqual([{ agents, subject: { iss: ISS, sub: "alice" }, templateId: t.id }]);
 
     const before = kernel.allMissions().length;
-    for (const dispatchPolicies of [undefined, {}, { "other-policy": routeExtractor["route-extractor"] }, { "route-extractor": { selectAgent: () => undefined } }]) {
+    // The committed policy is held, but no rule selects: the registry's own
+    // snapshot (no selection rule) and the same snapshot with a rule that
+    // selects nothing.
+    for (const dispatchPolicies of [undefined, withRule("route-extractor", () => undefined)]) {
       try {
         dispatch(t.id, dispatchPolicies ? { dispatchPolicies } : {});
         expect.unreachable();
@@ -346,9 +442,9 @@ describe("dispatch gates (@spec mission-template#dispatch-refusals)", () => {
   // @spec mission-template#dispatch — the selected Agent is part of the
   // committed instance: a retried Dispatch returns it and never selects again.
   it("a retried Dispatch returns the committed Agent without selecting again", () => {
-    const t = mkTemplate({ recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents: ["worker", "subagent-invoice-extractor"] }, dispatch_policy: "route" });
+    const t = mkTemplate({ recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents: ["worker", "subagent-invoice-extractor"] }, dispatch_policy: policyRef("route") });
     let calls = 0;
-    const select = (agent: string) => ({ route: { selectAgent: () => { calls++; return agent; } } });
+    const select = (agent: string) => withRule("route", () => { calls++; return agent; });
     const first = dispatch(t.id, { dispatchEventId: "evt-agent-retry", dispatchPolicies: select("subagent-invoice-extractor") });
     expect(first.mission.client_id).toBe("subagent-invoice-extractor");
     expect(calls).toBe(1);
@@ -566,10 +662,14 @@ describe("seeded demo reconciliation template (@spec mission-template)", () => {
   it("createTemplate accepts the demo descriptor and it dispatches a read-only instance", () => {
     // The artifact the wire PR + demo consume: prove it both constructs AND
     // dispatches, against the same DERIVATION_POLICY the demo AS uses.
-    const t = createTemplate(store, demoReconciliationTemplate(ISS) as never, kernel.authoritySourceOptions());
+    const t = createTemplate(store, demoReconciliationTemplate(ISS) as never, {
+      ...kernel.authoritySourceOptions(),
+      dispatchPolicies: DEMO_DISPATCH_POLICIES,
+    });
     const { mission } = dispatchFromTemplate(kernel, store, {
       templateId: t.id,
       dispatchEventId: "demo-dsp-1",
+      dispatchPolicies: DEMO_DISPATCH_POLICIES,
       dispatcher: "ap-agent",
       intent: intentOf(["payments:invoice.read", "payments:vendor.read"]),
       // The demo instance acts for the template's consenting human, its one

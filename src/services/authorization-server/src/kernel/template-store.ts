@@ -20,6 +20,7 @@
  * dispatcher supplies (from `kernel.get`); see {@link activeInstanceCount}.
  */
 
+import type { ActivationPolicyRef } from "@mission/core";
 import { openStore, UniqueViolationError, withTransaction, type Database } from "@mission/store";
 import { parseAuthoritySource } from "./authority-source.js";
 import type { AuthorityEntry, AuthoritySource } from "./types.js";
@@ -46,7 +47,7 @@ CREATE TABLE templates (
   approver_sub TEXT NOT NULL,
   authority_source_json TEXT NOT NULL,
   ceiling_json TEXT NOT NULL,
-  dispatch_policy TEXT NOT NULL,
+  dispatch_policy_json TEXT NOT NULL,
   dispatchers_json TEXT NOT NULL,
   recipients_json TEXT NOT NULL,
   per_instance_lifetime_s INTEGER NOT NULL,
@@ -92,8 +93,12 @@ export interface MissionTemplate {
   authority_source: AuthoritySource;
   /** The template ceiling: one side of the double intersection at dispatch. */
   ceiling: AuthorityEntry[];
-  /** Opaque dispatch policy identifier (audit / lineage only). */
-  dispatch_policy: string;
+  /**
+   * @spec mission-template#the-mission-template, mission#standing-consent-bases
+   * — the Dispatch Policy as an activation policy reference (`id`, `version`,
+   * `digest`), inside `template_hash`; Dispatch verifies `digest` first.
+   */
+  dispatch_policy: ActivationPolicyRef;
   /** Actors permitted to dispatch instances from this template. */
   dispatchers: string[];
   /** `allowed_recipients`: Subjects and Agents (an Agent becomes the instance `client_id`). */
@@ -122,7 +127,7 @@ export interface TemplateCreate {
   approver: { iss: string; sub: string };
   authority_source: AuthoritySource;
   ceiling: AuthorityEntry[];
-  dispatch_policy: string;
+  dispatch_policy: ActivationPolicyRef;
   dispatchers: string[];
   recipients: TemplateRecipients;
   per_instance_lifetime_s: number;
@@ -142,7 +147,7 @@ interface TemplateRow {
   approver_sub: string;
   authority_source_json: string;
   ceiling_json: string;
-  dispatch_policy: string;
+  dispatch_policy_json: string;
   dispatchers_json: string;
   recipients_json: string;
   per_instance_lifetime_s: number;
@@ -169,7 +174,7 @@ function rowToTemplate(row: TemplateRow): MissionTemplate {
       `template ${row.id}`,
     ),
     ceiling: JSON.parse(row.ceiling_json) as AuthorityEntry[],
-    dispatch_policy: row.dispatch_policy,
+    dispatch_policy: JSON.parse(row.dispatch_policy_json) as ActivationPolicyRef,
     dispatchers: JSON.parse(row.dispatchers_json) as string[],
     recipients: JSON.parse(row.recipients_json) as TemplateRecipients,
     per_instance_lifetime_s: row.per_instance_lifetime_s,
@@ -209,7 +214,7 @@ export class TemplateStore {
         this.db
           .prepare(
             `INSERT INTO templates (id, template_version, issuer, approver_iss, approver_sub,
-             authority_source_json, ceiling_json, dispatch_policy, dispatchers_json,
+             authority_source_json, ceiling_json, dispatch_policy_json, dispatchers_json,
              recipients_json, per_instance_lifetime_s, max_active, rate_per_min, review_cadence_s,
              template_hash, approval_event_id, expires_at, state, created_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)`,
@@ -222,7 +227,7 @@ export class TemplateStore {
             input.approver.sub,
             JSON.stringify(input.authority_source),
             JSON.stringify(input.ceiling),
-            input.dispatch_policy,
+            JSON.stringify(input.dispatch_policy),
             JSON.stringify(input.dispatchers),
             JSON.stringify(input.recipients),
             input.per_instance_lifetime_s,

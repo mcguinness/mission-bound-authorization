@@ -1265,7 +1265,8 @@ export interface DemoTemplateInput {
   issuer: string;
   approver: { iss: string; sub: string };
   ceiling: CeilingEntry[];
-  dispatch_policy: string;
+  /** The Dispatch Policy the human consents to, by `id` and `version` (@spec mission#standing-consent-bases). */
+  dispatch_policy: { id: string; version: string };
   dispatchers: string[];
   /** `allowed_recipients`: independent Subject and Agent lists. */
   recipients: { subjects: Array<{ iss: string; sub: string }>; agents: string[] };
@@ -1320,7 +1321,7 @@ export function demoReconciliationTemplate(issuer: string): DemoTemplateInput {
     // The consenting human of record (an approver-role user).
     approver: { iss: issuer, sub: "bob" },
     ceiling,
-    dispatch_policy: "read-only-reconciliation",
+    dispatch_policy: { id: "read-only-reconciliation", version: "1" },
     // The orchestrator dispatches; the invoice sub-agent receives, acting for
     // the consenting human (the established Subject of every instance).
     dispatchers: ["ap-agent"],
@@ -1378,7 +1379,7 @@ export function aamReconciliationTemplate(
     issuer,
     approver: { iss: issuer, sub: "bob" },
     ceiling: aamReconciliationCeiling(),
-    dispatch_policy: "aam-nightly-reconciliation",
+    dispatch_policy: { id: "aam-nightly-reconciliation", version: "1" },
     dispatchers: ["ap-agent"],
     recipients: { subjects: [{ iss: issuer, sub: "bob" }], agents: ["subagent-invoice-extractor"] },
     per_instance_lifetime_s: AAM_RECONCILIATION_LIFETIME_S,
@@ -1389,6 +1390,36 @@ export function aamReconciliationTemplate(
     expires_at: "2099-01-01T00:00:00Z",
   };
 }
+
+/**
+ * @spec mission#standing-consent-bases — the demo deployment's Dispatch
+ * Policies: the exact snapshot the Mission Issuer holds and evaluates for each,
+ * by policy id. A template commits the named policy's `digest` at consent, and
+ * Dispatch refuses once the snapshot no longer matches it. Each policy here
+ * dispatches only single-Agent templates, so it carries no selection rule.
+ */
+export const DEMO_DISPATCH_POLICIES: Readonly<
+  Record<string, { version: string; content_type: string; content: string }>
+> = {
+  "read-only-reconciliation": {
+    version: "1",
+    content_type: "application/json",
+    content: JSON.stringify({
+      id: "read-only-reconciliation",
+      version: "1",
+      dispatch: "instantiate within the template ceiling for the listed Subject and single Agent",
+    }),
+  },
+  "aam-nightly-reconciliation": {
+    version: "1",
+    content_type: "application/json",
+    content: JSON.stringify({
+      id: "aam-nightly-reconciliation",
+      version: "1",
+      dispatch: "nightly scheduled reconciliation for the listed Subject and single Agent",
+    }),
+  },
+};
 
 export interface SeededClient {
   metadata: Record<string, unknown>;
