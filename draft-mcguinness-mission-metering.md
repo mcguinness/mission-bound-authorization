@@ -753,11 +753,10 @@ never a set of independent copies.
   may explicitly approve a relaxation scoped to named Missions or
   branches and to named authority, and the PDP then permits that
   authority under those Missions despite the latch. The relaxation's
-  consent disclosure
-  MUST name the group and its latched selector, the relevant
-  execution history and any unresolved permits, the additional
-  authority the relaxation enables, and the Missions or branches it
-  affects. The relaxation is recorded for those Missions or branches
+  consent disclosure MUST name the group and its latched selector,
+  the relevant execution history and any unresolved permits, the
+  additional authority the relaxation enables, and the Missions or
+  branches it affects. The relaxation is recorded for those Missions or branches
   only; the historical latch remains, and every other Mission bound
   to the group stays restricted. An ordinary approval of a child, an
   approval of unrelated authority, a ceiling renewal, or an approval of
