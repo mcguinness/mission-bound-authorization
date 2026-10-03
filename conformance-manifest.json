@@ -7,8 +7,8 @@
     "content_sha256": "ec57264fec92ea2dd3c42ba1067c70d72195f251bc5c416ccad856cb1beac3a1"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "2dbc4808363ba25f739a1f293418f6e34faaa551",
-    "content_sha256": "977d0dbe5dc5aeeacc01a9d960246cd2837854687e628afb178563961d3aff3f"
+    "revision": "68b6713ad9cf5556704e40d0386c8e3716582be8",
+    "content_sha256": "dfffde4a2feed909aa58ab9d787aa77f801f5603d270809450cbfcfd445ae001"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "6f10361ef7fae0c457e78b003860587fb773ac4f",
@@ -19,8 +19,8 @@
     "content_sha256": "a2a1f271328ddd5634a826cbf588eadcc514418fad0f4679fe1f31c647056ec0"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "ca5651271c9ffcd9ddfc7d5e30f8f9c66b1bb7ad",
-    "content_sha256": "9c8386a66e90b87bed75b4d34f8a295401777b9bd61a358ee60de3757174354b"
+    "revision": "091f1ffd5e6b77d47f8f189797bfdb0cf64ea328",
+    "content_sha256": "2dec6151c2f5be97d04850b1d0253608ade2b9d406227f7a3149814c781af1f7"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "2b422bf1c54a64ae5cdf4440f041a0d27f2a0e05",
@@ -59,12 +59,12 @@
     "content_sha256": "e7f66a5cb2708e6f6192888c4a98afd24baab76b1b77f8171f12ac2620858b55"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
-    "revision": "1ea788e00f84b3804c447cb8bbb143c7b803901d",
-    "content_sha256": "873b64d56c1813874239d7c4e07d5e1cbc777809c05d725efbf79439038750f9"
+    "revision": "091f1ffd5e6b77d47f8f189797bfdb0cf64ea328",
+    "content_sha256": "76ae8710dc0faf41220e947e05a4dc4a79440c0039746089a4b24e486c1d06de"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "7d1fed45af9c9ca56175d0f20b6f62b1e50ce0a4",
-    "content_sha256": "626e0a2ac239dfbcc7abacc529c627e25d6f69451706c84b9aaa27853fd1f689"
+    "revision": "91d63587ee517c333a14ad19241844bd05deb32d",
+    "content_sha256": "f1fbdd18be8a94ee432a34810920f76dbbaf0f1d5b5772d6dfbaae40e9a743ce"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
@@ -28124,6 +28124,179 @@
    "coverage": "todo",
    "tests": [],
    "notes": "The reference composition publishes no MAS metadata document. Todo (#972)."
+  },
+  {
+   "id": "mas.join-assertion.mint-requires-active",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-request",
+   "text": "The MAS mints an assertion only for a Mission in the `active` state",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "no assertion is minted for a Mission that is not active"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+  },
+  {
+   "id": "mas.join-assertion.malformed-request",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-request",
+   "text": "the MAS rejects it with HTTP 400 and the `invalid_join_request` error code",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a body without mission_id and exactly one token form gets 400 invalid_join_request"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+  },
+  {
+   "id": "mas.join-assertion.join-failed-outcomes",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-request",
+   "text": "the MAS rejects the request with HTTP 403 and the `join_failed` error code",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a visible non-active Mission, an inactive or unbound token, or a failed join gets 403 join_failed, while an unknown or invisible Mission keeps 404 not_found"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+  },
+  {
+   "id": "mas.submission.interval-in-force",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "submission-status",
+   "text": "The interval in force for a submission is the most recent `interval` the client received for it, or 5 seconds if it has received none",
+   "role": "client",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the interval in force starts at 5 seconds, a pending response carrying a positive-integer interval replaces it, and one omitting interval (or carrying a non-positive-integer value) leaves it unchanged"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#972)."
+  },
+  {
+   "id": "mas.submission.interval-wait",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "submission-status",
+   "text": "The client MUST wait at least the interval in force between submission-status requests for a submission, measured from its receipt of the preceding response for that submission",
+   "role": "client",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a client never sends a status request for a submission sooner than the interval in force after receiving the preceding response for it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#972)."
+  },
+  {
+   "id": "mas.submission.status-parameter",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "submission-status",
+   "text": "REQUIRED. A string. The `submission_id` the MAS returned on acceptance",
+   "role": "client",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the status request carries the submission_id parameter"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#972)."
+  },
+  {
+   "id": "mas.join-assertion.signs-with-listed-alg",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-artifact",
+   "text": "The MAS MUST sign the assertion with an algorithm listed in its `mission_status_signing_alg_values_supported` metadata member",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every assertion's alg is listed in the MAS's mission_status_signing_alg_values_supported"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+  },
+  {
+   "id": "mas.join-assertion.pdp-rejects-unlisted-alg",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "discovery",
+   "text": "a PDP MUST reject an assertion whose `alg` is `none` or is not listed",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an assertion signed with none or an unlisted alg is rejected"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
   },
   {
    "id": "authzen.instance-context.no-upstream-actor",
