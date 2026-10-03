@@ -551,8 +551,9 @@ the evidence authenticates only what the shaper chose to present.
 
 ## Replay and Presenter Substitution {#sec-replay}
 
-Reservation of (`iss`, `jti`) refuses reuse of one assertion, and the
-presenter binding refuses another client presenting it
+Reservation of (`iss`, `jti`) refuses reuse of one assertion outside
+an exact creation retry ({{replay}}), and the presenter binding
+refuses another client presenting it
 ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, Section
 "The Exchange Establishes the Presenter"). The capture-age bound
 limits how long a captured instruction can back new assertions.
