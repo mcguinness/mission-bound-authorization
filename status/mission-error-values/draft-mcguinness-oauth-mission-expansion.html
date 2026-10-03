@@ -34,18 +34,18 @@ Mission is unaffected by this document.
 <meta content="draft-mcguinness-oauth-mission-expansion-latest" name="ietf.draft">
 <!-- Generator version information:
   xml2rfc 3.34.1
-    Python 3.14.7
-    ConfigArgParse 1.7.7
+    Python 3.14.8
+    ConfigArgParse 1.8.0
     google-i18n-address 3.1.1
     intervaltree 3.2.1
     Jinja2 3.1.6
     lxml 6.1.1
     natsort 8.4.0
-    platformdirs 4.11.10
+    platformdirs 4.12.2
     pycountry 24.6.1
     PyYAML 6.0.3
     requests 2.33.1
-    wcwidth 0.8.4
+    wcwidth 0.9.1
 -->
 <link href="draft-mcguinness-oauth-mission-expansion.xml" rel="alternate" type="application/rfc+xml">
 <link href="#copyright" rel="license">
@@ -2019,16 +2019,20 @@ the interactive path retained from earlier revisions of this document.<a href="#
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-5.2-3">This document defines no synchronous exchange completion. An expansion
-response is a successor or a refusal, never a token derived under the
-predecessor: a request whose derived authority is a subset of the
-predecessor's own Effective Authority Set is refused with
-<code>nothing_to_expand</code> (<a href="#verification-order" class="auto internal xref">Section 5.1</a>, <a href="#denial-reasons" class="auto internal xref">Section 12</a>).
-Policy-adjudicated expansion within a pre-consented authority ceiling
-is the experimental progressive authorization companion's concern
+<p id="section-5.2-3">This document defines no synchronous exchange completion for an
+expansion that takes fresh consent. An expansion response is a
+successor or a refusal, never a token derived under the predecessor: a
+request whose derived authority is a subset of the predecessor's own
+Effective Authority Set is refused with <code>nothing_to_expand</code>
+(<a href="#verification-order" class="auto internal xref">Section 5.1</a>, <a href="#denial-reasons" class="auto internal xref">Section 12</a>). Policy-adjudicated
+expansion within a pre-consented authority ceiling is the experimental
+progressive authorization companion's concern
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>): an in-ceiling
-drawdown completes through the retained interactive path with the
-approval prompt skipped, as that companion defines.<a href="#section-5.2-3" class="pilcrow">¶</a></p>
+drawdown that passes that companion's policy-adjudication guards
+completes synchronously in the token-exchange response, returning the
+successor's access token, as that companion defines; one that falls
+back to a fresh human approval completes in one of the two modes
+above.<a href="#section-5.2-3" class="pilcrow">¶</a></p>
 <p id="section-5.2-4">Whichever mode completes, obtaining the fresh approval means the Mission
 Issuer authenticates the Approver against the published approval-
 authentication floor, obtains fresh consent for the
@@ -2043,7 +2047,9 @@ predecessor is untouched (<a href="#denial-reasons" class="auto internal xref">S
 anchors (<code>intent_hash</code>, <code>authority_hash</code>, and, where the exchange
 carried an authority proposal, <code>proposal_hash</code>) and, at the point the
 successor's authority is issued (the resolving poll for a deferred
-completion, or the code redemption for an interactive completion),
+completion, the code redemption for an interactive completion, or the
+token-exchange response for a policy-adjudicated drawdown under the
+progressive authorization companion),
 creates the successor Mission record in the <code>active</code> state, with
 its <code>predecessor</code> member set
 (<a href="#predecessor-member" class="auto internal xref">Section 6</a>), atomically with the predecessor's transition
@@ -3841,20 +3847,26 @@ composition with the issuance flow.<a href="#section-18-1" class="pilcrow">¶</a
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Successor activation's compare-and-set also rechecks the complete
-successor Authority Set against current containment and discharge
-restrictions, refusing with <code>authority_restricted_since_approval</code>
-when narrowing landed after adjudication.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.1.1">An in-ceiling drawdown under the progressive authorization companion
+completes synchronously in the token-exchange response, a third
+issuance point; fresh-consent expansion still completes deferred or
+interactively.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">A fresh-consent restoration of authority under a discharge
-restriction authorizes that authority explicitly and discloses the
-discharged entry and its condition; the consent also surfaces the
-chain's outstanding containment restrictions.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.2.1">Successor activation's compare-and-set also rechecks the complete
+successor Authority Set against current containment and discharge
+restrictions, refusing with <code>authority_restricted_since_approval</code>
+when narrowing landed after adjudication.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">Added explicitly approved carryover hooks for disclosure, atomic completion,
-and the carried child's unchanged expiry ceiling (#576).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.3.1">A fresh-consent restoration of authority under a discharge
+restriction authorizes that authority explicitly and discloses the
+discharged entry and its condition; the consent also surfaces the
+chain's outstanding containment restrictions.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1">Added explicitly approved carryover hooks for disclosure, atomic completion,
+and the carried child's unchanged expiry ceiling (#576).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

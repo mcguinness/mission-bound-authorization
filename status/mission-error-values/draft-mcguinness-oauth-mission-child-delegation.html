@@ -30,18 +30,18 @@ Mission is never created by session ancestry alone.
 <meta content="draft-mcguinness-oauth-mission-child-delegation-latest" name="ietf.draft">
 <!-- Generator version information:
   xml2rfc 3.34.1
-    Python 3.14.7
-    ConfigArgParse 1.7.7
+    Python 3.14.8
+    ConfigArgParse 1.8.0
     google-i18n-address 3.1.1
     intervaltree 3.2.1
     Jinja2 3.1.6
     lxml 6.1.1
     natsort 8.4.0
-    platformdirs 4.11.10
+    platformdirs 4.12.2
     pycountry 24.6.1
     PyYAML 6.0.3
     requests 2.33.1
-    wcwidth 0.8.4
+    wcwidth 0.9.1
 -->
 <link href="draft-mcguinness-oauth-mission-child-delegation.xml" rel="alternate" type="application/rfc+xml">
 <link href="#copyright" rel="license">
@@ -1885,11 +1885,15 @@ Mission state, not of the expired token.<a href="#section-5.3-3.2.1" class="pilc
         </h3>
 <p id="section-5.4-1">The child-creation token exchange completes in one of three modes,
 the family's shared completion pattern for Mission-creating
-exchanges. Child creation keeps the synchronous mode that Mission
-Expansion does not define: an expansion always widens and always
-takes fresh consent, so it completes only deferred or interactively
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>), while a Child
-Mission is always a creation and a strict subset of its parent, so a
+exchanges. Child creation keeps the synchronous mode that an
+ordinary, fresh-consent Mission Expansion does not define: such an
+expansion always widens and takes fresh consent, so it completes only
+deferred or interactively
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>). The one
+synchronous expansion is the progressive authorization companion's
+policy-adjudicated drawdown
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>). A Child Mission
+is always a creation and a strict subset of its parent, so a
 policy-permitted synchronous completion is unambiguous
 (<a href="#strict-subset" class="auto internal xref">Section 7.1</a>). The deferred token
 response is a completion mode, not a replacement:<a href="#section-5.4-1" class="pilcrow">¶</a></p>
@@ -2543,8 +2547,9 @@ reference a committed value: the anti-laundering guarantee that a
 approval actually committed.<a href="#section-6.1-10" class="pilcrow">¶</a></p>
 <p id="section-6.1-11">Where the entry carries a
 <code>child_creation_policy</code>, <code>activation</code> carries that policy's <code>id</code>,
-<code>version</code>, and <code>digest</code> and this creation's own delegation event
-identifier (above) as <code>activation_event_id</code>. A policy snapshot that
+<code>version</code>, and <code>digest</code> as <code>policy_id</code>, <code>policy_version</code>, and
+<code>policy_digest</code>, and this creation's own delegation event identifier
+(above) as <code>activation_event_id</code>. A policy snapshot that
 does not match <code>digest</code> denies child creation with <code>policy_denied</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Standing-Consent
 Bases"). Where the entry carries no <code>child_creation_policy</code>, the
@@ -4042,6 +4047,10 @@ token-exchange grant the rest of the Mission family already uses.<a href="#secti
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Issuance Grant for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-progressive">[I-D.draft-mcguinness-oauth-mission-progressive]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Progressive Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-signals">[I-D.draft-mcguinness-oauth-mission-signals]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Lifecycle Signals for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html</a>&gt;</span>. </dd>
@@ -4154,39 +4163,44 @@ apply unchanged.<a href="#appendix-A-7" class="pilcrow">¶</a></p>
 <p id="appendix-B-1">[[ To be removed from the final specification ]]<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-2.1">
-          <p id="appendix-B-2.1.1">Child Missions and carryover replacements share their ancestors'
-exclusivity latches under the metering profile.<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.1.1">The completion comparison names the progressive authorization
+companion's synchronous drawdown as the one synchronous expansion.<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.2">
-          <p id="appendix-B-2.2.1"><code>child_creation_policy</code> is an activation policy reference (<code>id</code>,
-<code>version</code>, <code>digest</code>) under the issuance profile's Standing-Consent
-Bases; <code>root_commitment</code> is its <code>digest</code>, <code>activation</code> carries the
-digest, and a mismatched snapshot denies child creation with
-<code>policy_denied</code>. Creation against the delegation entry itself, with
-no <code>child_creation_policy</code>, is unchanged.<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.2.1">Child Missions and carryover replacements share their ancestors'
+exclusivity latches under the metering profile.<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.3">
-          <p id="appendix-B-2.3.1">Approval rendering of child creation shows <code>max_children</code> as a
+          <p id="appendix-B-2.3.1"><code>child_creation_policy</code> is an activation policy reference (<code>id</code>,
+<code>version</code>, <code>digest</code>) under the issuance profile's Standing-Consent
+Bases; <code>root_commitment</code> is its <code>digest</code>, <code>activation</code> carries it as
+<code>policy_id</code>, <code>policy_version</code>, and <code>policy_digest</code>, and a mismatched
+snapshot denies child creation with <code>policy_denied</code>. Creation against
+the delegation entry itself, with no <code>child_creation_policy</code>, is
+unchanged.<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.4">
+          <p id="appendix-B-2.4.1">Approval rendering of child creation shows <code>max_children</code> as a
 concurrency limit, <code>max_child_depth</code>, and the per-child derivation
 limit as distinct figures, never one composed total, and states
 whether a finite aggregate is enforced. The Parent Mission's
 approval renders them where child creation can be adjudicated by
-policy.<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-B-2.4">
-          <p id="appendix-B-2.4.1">The child's initial grant states how it differs from the Mission
-Issuance Grant: its audience is the Mission Issuer's own token
-endpoint, since that issuer mints and redeems it, not a consuming
-Authorization Server's issuer identifier. No wire change.<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
+policy.<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.5">
-          <p id="appendix-B-2.5.1">The delegated-token versus Child Mission test adds audience: a
-sub-agent that calls a Resource Server that is not Mission-aware
-runs under a Child Mission, where child creation is authorized and
-that Resource Server can enforce the projected authority.<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.5.1">The child's initial grant states how it differs from the Mission
+Issuance Grant: its audience is the Mission Issuer's own token
+endpoint, since that issuer mints and redeems it, not a consuming
+Authorization Server's issuer identifier. No wire change.<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.6">
-          <p id="appendix-B-2.6.1">Client-instance references follow their successors:
+          <p id="appendix-B-2.6.1">The delegated-token versus Child Mission test adds audience: a
+sub-agent that calls a Resource Server that is not Mission-aware
+runs under a Child Mission, where child creation is authorized and
+that Resource Server can enforce the projected authority.<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.7">
+          <p id="appendix-B-2.7.1">Client-instance references follow their successors:
 draft-mcguinness-oauth-client-instance-assertion is replaced by
 {I-D.draft-mcguinness-oauth-client-instance-id}, and the
 deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
@@ -4194,13 +4208,13 @@ cited. An instance-granular
 <code>child_actor</code> no longer carries the instance identifier in <code>sub</code>:
 the successor forbids setting <code>sub</code> or an actor from instance
 evidence alone (Section 5), and <code>client_instance</code> was a value only
-the deprecated draft defined.<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
+the deprecated draft defined.<a href="#appendix-B-2.7.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.7">
-          <p id="appendix-B-2.7.1">Added the capability-gated Child Mission Carryover foundation, including
+        <li class="normal" id="appendix-B-2.8">
+          <p id="appendix-B-2.8.1">Added the capability-gated Child Mission Carryover foundation, including
 full snapshot and budget checks, committed exclusion semantics, fresh
 direct approvals, and durable observation and recovery. Carryover
-preserves record continuity, not worker continuity (#576).<a href="#appendix-B-2.7.1" class="pilcrow">¶</a></p>
+preserves record continuity, not worker continuity (#576).<a href="#appendix-B-2.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

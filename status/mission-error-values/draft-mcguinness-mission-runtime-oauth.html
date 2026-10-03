@@ -25,18 +25,18 @@ semantics are defined by Mission-Bound Authorization for OAuth 2.0.
 <meta content="draft-mcguinness-mission-runtime-oauth-latest" name="ietf.draft">
 <!-- Generator version information:
   xml2rfc 3.34.1
-    Python 3.14.7
-    ConfigArgParse 1.7.7
+    Python 3.14.8
+    ConfigArgParse 1.8.0
     google-i18n-address 3.1.1
     intervaltree 3.2.1
     Jinja2 3.1.6
     lxml 6.1.1
     natsort 8.4.0
-    platformdirs 4.11.10
+    platformdirs 4.12.2
     pycountry 24.6.1
     PyYAML 6.0.3
     requests 2.33.1
-    wcwidth 0.8.4
+    wcwidth 0.9.1
 -->
 <link href="draft-mcguinness-mission-runtime-oauth.xml" rel="alternate" type="application/rfc+xml">
 <link href="#copyright" rel="license">
@@ -1376,7 +1376,11 @@ and Mediated Execution"). The <code>cnf</code> claim of a validated JWT, or the
 sender-constraint binding: a DPoP key (<code>jkt</code>), proved with a DPoP proof
 checked per <span><a href="https://rfc-editor.org/rfc/rfc9449#section-7.1" class="relref">Section 7.1</a> of [<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>, or a client certificate
 thumbprint (<code>x5t#S256</code>), proved over mutual TLS per
-<span><a href="https://rfc-editor.org/rfc/rfc8705#section-3" class="relref">Section 3</a> of [<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>. An access token whose validated credential
+<span><a href="https://rfc-editor.org/rfc/rfc8705#section-3" class="relref">Section 3</a> of [<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>. Proof over mutual TLS means the certificate
+authenticated on the request's own TLS connection matches the bound
+thumbprint; a certificate merely received with the request, or a
+thumbprint match against a certificate the connection did not
+authenticate, establishes no possession. An access token whose validated credential
 context carries no such binding is a bearer token and does not meet that
 requirement, and a binding whose proof the PEP has not verified for the
 request supplies no confirmation key to the decision. The requirement
