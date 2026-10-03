@@ -1,0 +1,701 @@
+---
+title: "Mission Request Provenance for OAuth 2.0"
+abbrev: "OAuth Mission Request Provenance"
+category: std
+
+docname: draft-mcguinness-oauth-mission-request-provenance-latest
+submissiontype: IETF
+workgroup: Web Authorization Protocol
+number:
+date:
+consensus: true
+v: 3
+keyword:
+ - oauth
+ - mission
+ - agent
+ - provenance
+ - evidence
+venue:
+  github: "mcguinness/mission-bound-authorization"
+  latest: "https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-request-provenance.html"
+
+author:
+ -
+    fullname: Karl McGuinness
+    organization: Independent
+    email: public@karlmcguinness.com
+
+normative:
+  RFC2104:
+  RFC3339:
+  RFC4648:
+  RFC6234:
+  RFC7515:
+  RFC7518:
+  RFC7519:
+  RFC7800:
+  RFC8725:
+  I-D.draft-mcguinness-oauth-mission:
+    title: "Mission-Bound Authorization for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-submission-evidence:
+    title: "Mission Intent Submission Evidence for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-submission-evidence.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+
+informative:
+  OpenID.Core:
+    title: "OpenID Connect Core 1.0 incorporating errata set 2"
+    target: https://openid.net/specs/openid-connect-core-1_0.html
+    author:
+      - org: OpenID Foundation
+    date: 2023
+  RFC4086:
+  RFC9126:
+  I-D.draft-mcguinness-mission-shaping:
+    title: "Mission Intent Shaping"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-evidence-envelope:
+    title: "Mission Evidence Envelope"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-evidence-envelope.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+
+--- abstract
+
+Mission-Bound Authorization for OAuth 2.0 commits the Mission Intent a
+client submits, but that commitment says nothing about where the
+request behind the Intent came from. This document defines an
+optional Intent Submission Evidence type, `mission-request-provenance`:
+a signed assertion from a trusted request intake that captured a
+person's instruction before it was shaped into a Mission Intent. The
+assertion binds who originated the instruction, through which
+authenticated channel, and when, to one authorization server, one
+exact Intent, and one presenter, and carries only a secret-keyed
+digest of the instruction. It authenticates the request's origin. It
+does not prove the Intent faithfully interprets the request, and it
+is never approval or authority.
+
+--- middle
+
+# Introduction {#introduction}
+
+The OAuth binding {{I-D.draft-mcguinness-oauth-mission}} commits the
+submitted Mission Intent as `intent_hash`, and Mission Intent Shaping
+{{I-D.draft-mcguinness-mission-shaping}} records how a client turned a
+request into that Intent. Neither authenticates the request itself:
+who asked, through which authenticated channel, and when. A
+deployment that requires that fact before derivation needs evidence
+from a party that captured the request, not from the shaper that
+interpreted it.
+
+This document defines that evidence as an Intent Submission Evidence
+type under the framework of
+{{I-D.draft-mcguinness-oauth-mission-submission-evidence}}. A trusted
+request intake captures the instruction and its authenticated origin
+before shaping. Once the candidate Intent exists, the intake signs an
+assertion binding the captured origin to the authorization server
+(AS), the exact provisional `intent_hash`, and the presenter. The
+assertion carries an HMAC {{RFC2104}} digest of the instruction under
+a per-request secret that never leaves the intake, so a holder of the
+assertion cannot test guesses at the instruction.
+
+The AS verifies the signer, its authorization for the claimed
+originator and channel, and the bindings. It does not recompute the
+digest, does not learn the instruction, and does not judge whether
+the Intent says what the person meant. A verified assertion is
+authenticated input to admission and derivation policy; the approval
+event remains the only activation of authority
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Intent Submission
+Evidence").
+
+The Mission Evidence Envelope's Intent Admission Assertion
+{{I-D.draft-mcguinness-mission-evidence-envelope}} asserts an
+admission decision for an Intent. This document asserts the capture
+of the request behind it; the two are distinct and neither depends on
+the other.
+
+
+# Conventions and Terminology {#conventions}
+
+{::boilerplate bcp14-tagged}
+
+This document uses the terms Mission Intent, Submission envelope,
+Intent Submission Evidence, Mission Record, approval event, Mission
+Subject, Approver, and `intent_hash` from
+{{I-D.draft-mcguinness-oauth-mission}}, and evidence type and
+presenter from
+{{I-D.draft-mcguinness-oauth-mission-submission-evidence}}.
+
+Request intake:
+: The component that authenticates a person, receives their
+  instruction, and signs the provenance assertion. It runs before the
+  shaper and outside the shaper's control ({{intake-isolation}}).
+
+Originator:
+: The authenticated principal who submitted the instruction, as an
+  issuer-qualified identifier. The originator is distinct from the
+  assertion's signer, the presenter, the Mission Subject, and the
+  Approver; equality or delegation between any of them holds only
+  where the AS verifies an explicit mapping.
+
+Capture record:
+: The intake's retained record of one captured instruction
+  ({{capture}}).
+
+Request digest:
+: The HMAC-SHA-256 digest of one captured instruction under that
+  capture's secret ({{request-digest}}).
+
+
+# Trust Configuration {#trust-configuration}
+
+The AS accepts this evidence only from signers its own configuration
+authorizes. For each authorized signer, the configuration states:
+
+- the signer identifier, which the assertion's `iss` carries;
+- the signer's verification keys, scoped specifically to this
+  evidence type, for example by `use` or `key_ops` or a
+  deployment-registered key purpose; a key not scoped to this usage
+  does not satisfy the configuration;
+- the originators the signer may attest for: one or more originator
+  issuers and, where the deployment narrows further, the principals
+  or principal classes within them; and
+- the channel types the signer may attest ({{assertion}}).
+
+A user-device signer is a key the AS has bound to one originator in
+its own records, such as through enrollment. Its scope is that
+originator alone, and the AS validates the binding from those
+records. A self-declared device key, a key the agent holds, and a
+shaper's signing key are not authorized signers.
+
+Trust never comes from the assertion. The AS MUST NOT resolve or
+accept a key from the assertion's `jku`, `x5u`, `jwk`, or `x5c`
+header parameters, and refuses an assertion that carries any of them
+({{verification}}). This document defines no signer discovery or key
+distribution endpoint.
+
+## Intake Isolation {#intake-isolation}
+
+The intake may run in the same deployment as the client or the
+shaper only if the shaper can neither create or alter capture records
+nor ask the intake to sign for a request the intake did not capture
+itself. A deployment that cannot provide that isolation does not
+satisfy this document: a signature over shaper-chosen facts would
+authenticate nothing about the request.
+
+
+# The Evidence Entry {#entry}
+
+The entry's `type` is `mission-request-provenance`. The entry is
+closed to exactly two members:
+
+`type`:
+: REQUIRED. The string `mission-request-provenance`.
+
+`assertion`:
+: REQUIRED. A string: the provenance assertion as a JSON Web Token
+  {{RFC7519}} in JWS Compact Serialization {{RFC7515}}.
+
+
+# The Provenance Assertion {#assertion}
+
+The assertion's protected header MUST carry:
+
+- `typ` with the value `mission-request-provenance+jwt`;
+- `alg`: `ES256` {{RFC7518}} is mandatory to implement, and an
+  implementation MAY support other JWS algorithms; and
+- `kid`, identifying a key the AS configuration scopes to this signer
+  ({{trust-configuration}}).
+
+The header MUST NOT carry `jku`, `x5u`, `jwk`, or `x5c`.
+
+The assertion's claims are:
+
+`iss`:
+: REQUIRED. A string. The signer identifier.
+
+`aud`:
+: REQUIRED. A string, not an array: the issuer identifier of the AS
+  the Intent is submitted to.
+
+`iat`, `exp`:
+: REQUIRED. NumericDate values {{RFC7519}}: when the assertion was
+  issued and when it expires.
+
+`jti`:
+: REQUIRED. A string unique among the signer's assertions.
+
+`intent_hash`:
+: REQUIRED. A string. The exact provisional `intent_hash` of the
+  candidate Mission Intent ({{I-D.draft-mcguinness-oauth-mission}},
+  Section "Integrity Anchors").
+
+`presenter`:
+: REQUIRED. An object with `client_id` (REQUIRED, a string) and `cnf`
+  (a confirmation-method object {{RFC7800}}, REQUIRED where the
+  presenter uses proof of possession): the presenter of the
+  workflow in which the instruction was captured.
+
+`originator`:
+: REQUIRED. An object with `iss` and `sub`, both strings: the
+  originator.
+
+`channel`:
+: REQUIRED. An object describing how the intake authenticated the
+  originator: `type` (REQUIRED, a string naming the channel, using a
+  collision-resistant name), and, where known, `acr` (a string),
+  `amr` (an array of strings), and `auth_time` (a NumericDate), with
+  the meanings OpenID Connect gives them {{OpenID.Core}}.
+
+`captured_at`:
+: REQUIRED. A NumericDate: when the intake captured the instruction.
+
+`request_digest`:
+: REQUIRED. A string: the request digest ({{request-digest}}).
+
+`capture_id`:
+: OPTIONAL. A string: an identifier the intake generates for the
+  capture record so an authorized audit can retrieve it ({{audit}}).
+  It MUST be generated from at least 128 bits of output of a
+  cryptographically secure random source {{RFC4086}} and MUST NOT be
+  derived from the instruction or any other request content.
+
+A producer MUST NOT emit any other claim that carries or commits,
+directly or through a hash, to request content: the instruction, its
+media type, the capture secret, Shaping Evidence, or any artifact
+that commits one of them ({{privacy-considerations}}). A verifier
+ignores claims this document does not define, as {{RFC7519}}
+requires, and records no fact from them.
+
+
+# Capture and Signing {#capture-and-signing}
+
+## Capture {#capture}
+
+Before any shaping, the intake authenticates the originator through
+the channel, receives the instruction, and creates a capture record
+holding:
+
+- the exact instruction bytes and their media type, as received, with
+  no normalization or exclusion of instruction content;
+- the originator and the channel facts;
+- `captured_at`;
+- a fresh 256-bit secret from a cryptographically secure random source
+  {{RFC4086}}, generated for this capture alone and separate from any
+  signing key;
+- the request digest computed with that secret; and
+- the `capture_id`, if one is used, and the identifiers of assertions
+  issued from this capture.
+
+The capture record stays with the intake. Neither the secret nor the
+instruction leaves it in any assertion or recorded fact.
+
+## Signing {#signing}
+
+Once a candidate Intent exists, the intake issues an assertion from a
+capture record it created in the same authenticated workflow that
+received the instruction. The intake computes `intent_hash` itself
+over the candidate Intent, for the AS that `aud` names; it does not
+accept an `intent_hash`, a digest, an originator, or channel facts
+from the shaper. It MUST NOT sign for a capture record from another
+workflow or for a request it did not capture.
+
+Signing binds the captured request to the submitted proposal. It
+does not certify that the Intent interprets the request faithfully,
+that consent is sufficient, or that admission should succeed.
+
+Each assertion is bound to one exact Intent. When shaping or approval
+revision changes `intent_hash`, the intake issues a fresh assertion
+with a fresh `jti`; this document defines no evidence-lineage
+exception
+({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, Section
+"Evidence Binds One Exact Intent"). The capture's request digest MAY
+be reused in assertions for the same capture, only within the
+workflow authorized to submit and revise that request.
+
+
+# The Request Digest {#request-digest}
+
+The request digest is HMAC-SHA-256 ({{RFC2104}}, {{RFC6234}}) under the
+capture's secret, over this exact input:
+
+1. the US-ASCII bytes of `mission-request-provenance/v1`, then one
+   zero byte;
+2. the length of the media type, as a 4-byte unsigned big-endian
+   integer, then the media type's US-ASCII bytes exactly as the
+   intake recorded them, with no case folding or parameter
+   reordering; and
+3. the length of the instruction, as an 8-byte unsigned big-endian
+   integer, then the instruction's exact bytes.
+
+The `request_digest` value is `hmac-sha-256:` followed by the base64url
+encoding without padding ({{Section 5 of RFC4648}}) of the 32-byte
+HMAC output. The `hmac-sha-256:` prefix names this construction only;
+the value is not an integrity anchor of
+{{I-D.draft-mcguinness-oauth-mission}} and does not use its
+`sha-256:` prefix.
+
+{{vectors}} gives test vectors.
+
+
+# Verification {#verification}
+
+The AS processes an entry of this type under the framework
+({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}) and the
+OAuth binding's dispatch rules. It refuses the submission with
+`invalid_mission_intent_evidence` on any failure below, and counts
+the signature verification against the framework's verification-cost
+bound:
+
+1. Confirm the entry carries exactly `type` and `assertion`, and that
+   `assertion` is a string.
+2. Decode the JWS. Confirm the protected `typ` is exactly
+   `mission-request-provenance+jwt`, `alg` is not `none`, `kid` is
+   present, and none of `jku`, `x5u`, `jwk`, or `x5c` is present.
+3. Look up the signer by the `iss` claim and `kid` in the AS's
+   configuration ({{trust-configuration}}); refuse an unknown signer
+   or a key not scoped to this evidence type. Confirm `alg` is
+   permitted for that key.
+4. Verify the signature, following {{RFC8725}}.
+5. Confirm every required claim is present with its defined type.
+6. Confirm `aud` equals this AS's issuer identifier.
+7. Within the deployment's clock-skew allowance, confirm `iat` is not
+   in the future, `exp` has not passed, `exp` minus `iat` does not
+   exceed the deployment's maximum assertion lifetime, `captured_at`
+   is not later than `iat`, and `iat` minus `captured_at` does not
+   exceed the deployment's maximum capture age.
+8. Confirm the configuration authorizes this signer for `originator`
+   and for `channel.type`; for a user-device signer, confirm the AS's
+   own binding of the key to that originator.
+9. Confirm `intent_hash` equals the provisional `intent_hash` of the
+   submitted Intent, and `presenter` agrees with the presenter the
+   containing exchange established
+   ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}).
+10. Reserve the pair (`iss`, `jti`) ({{replay}}).
+
+The deployment declares its maximum assertion lifetime, maximum
+capture age, and clock-skew allowance, and keeps each bounded.
+
+
+# Replay and Recovery {#replay}
+
+The AS keeps a store of (`iss`, `jti`) pairs and changes it
+atomically, with single-writer-wins semantics:
+
+- **Reserve.** Step 10 of {{verification}} reserves the pair, and
+  succeeds only if no other submission has reserved or committed it.
+  A submission that loses the race is refused as replay and does not
+  verify the assertion again in parallel.
+- **Commit.** When the AS accepts the containing submission (for a
+  Pushed Authorization Request {{RFC9126}}, when it returns the
+  `request_uri`; for a token-endpoint carriage, when that request
+  succeeds), it commits the reservation. A committed pair is retained
+  at least until `exp` plus the clock-skew allowance.
+- **Release.** When the AS refuses the containing submission for any
+  reason, including another evidence entry failing, it releases the
+  reservation. A reservation never outlives `exp` plus the clock-skew
+  allowance.
+
+A client that retries after losing the response to an accepted
+submission presents a fresh assertion: the committed `jti` is refused
+as replay. The intake issues the fresh assertion from the same
+capture record ({{signing}}).
+
+On a surface that carries a Mission-creation idempotency fingerprint,
+recovery of a completed operation returns the recorded outcome
+without verifying the presented evidence again
+({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, Section
+"Evidence on Idempotent Creation Surfaces"). That recovery applies
+only to the completed operation; any other submission follows
+{{verification}} in full, including the replay check.
+
+
+# Recorded Facts {#recorded-facts}
+
+On acceptance, the AS records the entry as a `submission_evidence`
+element ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
+Record") whose `facts` are exactly:
+
+`signer`:
+: An object with the assertion's `iss` and the protected `kid`.
+
+`originator`:
+: The assertion's `originator`.
+
+`channel`:
+: The assertion's `channel`.
+
+`captured_at`:
+: The assertion's `captured_at`, as an RFC 3339 {{RFC3339}} timestamp.
+
+`request_digest`:
+: The assertion's `request_digest`.
+
+`assertion_id`:
+: The assertion's `jti`.
+
+`capture_id`:
+: The assertion's `capture_id`, when present.
+
+These facts are material verified provenance, rendered for approval
+under the OAuth binding's submission steps
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Submission
+Processing Order"). They carry no instruction text and no secret.
+
+
+# What Verification Establishes {#verification-scope}
+
+Accepting an assertion establishes that a signer the AS authorizes
+attested the stated originator, channel, and capture time for a
+request whose digest it holds, bound to this AS, this exact Intent,
+and this presenter. It does not establish:
+
+- what the instruction said: the AS holds neither the instruction nor
+  the secret and does not recompute the digest;
+- that the Intent faithfully interprets the instruction, or that the
+  shaper consumed the captured instruction rather than another; or
+- approval, consent, or authority.
+
+AS policy decides whether verified provenance is acceptable for the
+request. A policy MAY require this evidence before derivation
+({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, Section
+"Required Evidence Is Resolved Before Derivation").
+
+
+# Audit and Retention {#audit}
+
+An authorized audit can recompute a request digest from a capture
+record, which holds the instruction, its media type, and the secret.
+The intake restricts access to capture records to authorized audit
+roles and declares how long it retains them. Deleting a capture's
+secret or instruction ends the ability to recompute its digest; it
+does not alter a Mission Record's recorded facts. This document
+defines no audit-retrieval endpoint.
+
+Where a deployment associates an assertion with the Shaping Evidence
+of the same request, it keeps that association in access-controlled
+audit storage, never in the assertion. The capture record may list
+the assertions issued from it; no assertion commits to its capture
+record.
+
+
+# Conformance {#conformance}
+
+A request intake conforming to this document:
+
+- captures before shaping and keeps the capture record as {{capture}}
+  describes;
+- computes the request digest exactly as {{request-digest}} specifies,
+  with a fresh secret per capture;
+- signs only from its own capture record in the same authenticated
+  workflow, computing `intent_hash` itself ({{signing}});
+- emits the claims of {{assertion}} and no claim that commits to
+  request content; and
+- issues a fresh assertion for each changed Intent and for each
+  submission retry.
+
+An AS conforming to this document conforms to
+{{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, holds the
+trust configuration of {{trust-configuration}}, and implements
+{{verification}}, {{replay}}, and {{recorded-facts}}.
+
+
+# Security Considerations {#security-considerations}
+
+## Signer Scope {#sec-signer-scope}
+
+A compromised signer can attest any originator and channel within its
+configured scope. Narrow scopes, keys scoped to this evidence type,
+and prompt removal of a signer from the AS configuration limit that
+exposure. A signer key is never accepted from the assertion
+({{trust-configuration}}).
+
+## Shaper Influence {#sec-shaper}
+
+The shaper is outside the trust boundary
+({{I-D.draft-mcguinness-mission-shaping}}). Intake isolation
+({{intake-isolation}}) keeps it from fabricating capture records or
+obtaining signatures over claimed requests; without that isolation,
+the evidence authenticates only what the shaper chose to present.
+
+## Replay and Presenter Substitution {#sec-replay}
+
+Reservation of (`iss`, `jti`) refuses reuse of one assertion, and the
+presenter binding refuses another client presenting it
+({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, Section
+"The Exchange Establishes the Presenter"). The capture-age bound
+limits how long a captured instruction can back new assertions.
+
+## Evidence Is Not Authority {#sec-not-authority}
+
+Verified provenance is policy input. It never substitutes for the
+approval event, and its absence or presence never widens authority.
+
+
+# Privacy Considerations {#privacy-considerations}
+
+Instructions are often short and predictable. Any deterministic
+commitment to one that a holder can compute without a secret, such as
+an unsalted hash or a hash with a disclosed salt, lets the holder test
+guessed wordings until one matches. The request digest resists that
+only because its secret never leaves the intake. The privacy claim is
+correspondingly limited: an assertion holder who lacks the secret
+cannot test guesses against the digest. The intake, an authorized
+auditor holding the secret, and any service that answers digest
+queries can.
+
+The same exposure arises indirectly. A hash over any artifact that
+contains an unsalted digest of the instruction, such as Shaping
+Evidence, whose `input_digest` is unsalted, is as testable as that
+digest when the artifact's other content is predictable. This is why
+the assertion carries no such hash ({{assertion}}) and why any
+association with Shaping Evidence stays in access-controlled audit
+storage ({{audit}}).
+
+A JWS authenticates its payload without encrypting it. The originator
+identifier, channel facts, and capture time are personal data visible
+to every holder of the assertion and recorded on the Mission Record;
+an intake includes only what AS policy needs, and channel facts stay
+coarse. Retention and deletion of capture records follow {{audit}}.
+
+
+# IANA Considerations {#iana}
+
+This document has no IANA actions. The value
+`mission-request-provenance+jwt` identifies the JOSE object type and
+is not registered as a media type, and the claims of {{assertion}}
+are meaningful only in an assertion carrying that type.
+
+
+--- back
+
+# Example {#example}
+
+An entry, with the assertion abbreviated:
+
+~~~ json
+{
+  "type": "mission-request-provenance",
+  "assertion": "eyJhbGciOiJFUzI1NiIsImtpZCI6...<signature>"
+}
+~~~
+
+The assertion's protected header and claims (line breaks for display
+only):
+
+~~~ json
+{
+  "typ": "mission-request-provenance+jwt",
+  "alg": "ES256",
+  "kid": "intake-2026-10"
+}
+~~~
+
+~~~ json
+{
+  "iss": "https://intake.example.com",
+  "aud": "https://as.example.com",
+  "iat": 1791016200,
+  "exp": 1791016500,
+  "jti": "rp_4bW3n9Zq1vT8cK2xHs6Lgd",
+  "intent_hash":
+    "sha-256:2ZWl5Kk8c8yQm3x1v0Q0oZ8p7e4mR1sN3tY6uB9dCfE",
+  "presenter": {
+    "client_id": "ap-agent",
+    "cnf": {
+      "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I"
+    }
+  },
+  "originator": {
+    "iss": "https://idp.example.com",
+    "sub": "248289761001"
+  },
+  "channel": {
+    "type": "https://intake.example.com/ch/web",
+    "acr": "phr",
+    "auth_time": 1791016100
+  },
+  "captured_at": 1791016140,
+  "request_digest":
+    "hmac-sha-256:-xVlEjxrMKqRGHbUOS2YvZhW7uN-RpRrfV-BsTIUDu0"
+}
+~~~
+
+# Request Digest Test Vectors {#vectors}
+
+These vectors use a fixed secret for testing only; an intake MUST NOT
+use it. The secret is the 32 bytes `00` through `1f`:
+
+~~~
+000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
+~~~
+
+Media type `text/plain;charset=utf-8` and the UTF-8 instruction
+`Pay this week's Acme invoices.` give this 96-byte HMAC input, in
+hexadecimal:
+
+~~~
+6d697373696f6e2d726571756573742d70726f76656e616e63652f7631000000
+0018746578742f706c61696e3b636861727365743d7574662d38000000000000
+001e5061792074686973207765656b27732041636d6520696e766f696365732e
+~~~
+
+and this request digest:
+
+~~~
+hmac-sha-256:-xVlEjxrMKqRGHbUOS2YvZhW7uN-RpRrfV-BsTIUDu0
+~~~
+
+Changing one input changes the digest. With the instruction
+`Pay this week's Acme invoice.` (one character removed):
+
+~~~
+hmac-sha-256:DXLpPDrfm1W53Z-nniGK1j2NdqvUjPCL-ha82mt5pms
+~~~
+
+With the media type `text/markdown;charset=utf-8`:
+
+~~~
+hmac-sha-256:VTGuqTNNdu6Q780TwU9cVUVlMbJlzDa_M-iWMteLoi8
+~~~
+
+With the secret bytes `01` through `20`:
+
+~~~
+hmac-sha-256:NGW2Oglh0SHnmQJaPUBHXG0LTjHwBoY67TokgLxS_g8
+~~~
+
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+-00
+
+- Initial version. Defines the `mission-request-provenance` Intent
+  Submission Evidence type: the trust configuration and intake
+  isolation, the closed entry and signed assertion, capture before
+  shaping and signing from the same workflow's capture record, the
+  secret-keyed request digest with test vectors, verification, replay
+  reservation with commit on acceptance, recorded facts, the limits of
+  what verification establishes, audit and retention, and the privacy
+  treatment of direct and indirect commitments to the instruction.
