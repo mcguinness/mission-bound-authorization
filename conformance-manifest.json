@@ -113,6 +113,10 @@
    "draft-mcguinness-oauth-mission-submission-evidence.md": {
     "revision": "dd16dd544da103729cc5380bb11e860796a95643",
     "content_sha256": "78fa453b80921a5898aa47c2453be8c86cf81d74a5a5a87e95ed0c2a4a06637e"
+   },
+   "draft-mcguinness-mission-aauth-management.md": {
+    "revision": "622d072fd453603bd406bd39ea0f11b43c6384e4",
+    "content_sha256": "be36c6e41489638f056832d274a9daadb25837ede6b13b5963fa76c5fc14c33c"
    }
   }
  },
@@ -28401,6 +28405,132 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Review finding on #1031 (owner ruling D241): narrowing between adjudication and activation. No implementation yet."
+  },
+  {
+   "id": "aauth-management.person-path.authorize-as-person",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "person-caller",
+   "text": "Either way the PS MUST authorize the action as the authenticated Person under the rules above, MUST record that Person as the principal, and MUST NOT apply a management service's administrative privilege to it.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an action the PS's interface submits for a Person, by internal invocation or through a management-service backend, is refused when it exceeds that Person's own caller authorization for the target mission, even though the interface or service could otherwise perform it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#839 specification slice (PR #1063). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.person-path.record-person",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "person-caller",
+   "text": "Either way the PS MUST authorize the action as the authenticated Person under the rules above, MUST record that Person as the principal, and MUST NOT apply a management service's administrative privilege to it.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the mission log entry for an action submitted through the PS's interface names the authenticated Person as the principal"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#839 specification slice (PR #1063). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.person-path.no-service-privilege",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "person-caller",
+   "text": "Either way the PS MUST authorize the action as the authenticated Person under the rules above, MUST record that Person as the principal, and MUST NOT apply a management service's administrative privilege to it.",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an action submitted for a Person through a management-service backend never succeeds on the service's administrative privilege; a reason or scope only an administrator holds, such as administrative, is refused"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#839 specification slice (PR #1063). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.service-for-human.authorize-as-human",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "management-service",
+   "text": "For such a call the PS MUST authorize the action as that human under the human's own caller rules, MUST record the human as the principal and the service as the channel, and MUST NOT apply the service's administrative privilege.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a management-service call made for a human is refused when it exceeds that human's own caller authorization for the target mission, even when the service's own registration would permit it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#839 specification slice (PR #1063). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.service-for-human.record-human-and-channel",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "management-service",
+   "text": "For such a call the PS MUST authorize the action as that human under the human's own caller rules, MUST record the human as the principal and the service as the channel, and MUST NOT apply the service's administrative privilege.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the mission log entry for a management-service call made for a human names that human as the principal and the service as the channel"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#839 specification slice (PR #1063). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.service-for-human.no-service-privilege",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "management-service",
+   "text": "For such a call the PS MUST authorize the action as that human under the human's own caller rules, MUST record the human as the principal and the service as the channel, and MUST NOT apply the service's administrative privilege.",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a management-service call made for a human never succeeds on the service's administrative privilege; a reason or scope only an administrator holds is refused"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#839 specification slice (PR #1063). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
   }
  ]
 }
