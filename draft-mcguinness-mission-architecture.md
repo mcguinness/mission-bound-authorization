@@ -2364,8 +2364,8 @@ architecture, not only its binding. Three patterns cover the bindings:
   the association at the decision point (the standalone MAS); and
 - **context-carried**: AAuth carries its native Mission Reference
   (`mission_s256`) while authority remains in resource scopes and
-  policy. The PS gates the PS-gated modes ({{components}}), while agent
-  identity and resource-managed access bypass the PS.
+  policy. The PS-gated modes ({{components}}) pass through the PS,
+  while agent identity and resource-managed access bypass it.
 
 The differences that decide a design:
 
