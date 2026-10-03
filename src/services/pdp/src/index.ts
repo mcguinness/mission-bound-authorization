@@ -24,7 +24,7 @@ export {
   type PrincipalMappingResolver,
 } from "./evaluate.js";
 export { PAYMENTS_RELATIONS, relationForAction, stalenessBound } from "./policy.js";
-export { RUNTIME_POSTURE, RUNTIME_CLASSES, LEASE_REQUIRED_CLASSES, executionLeaseMaxSeconds, loadRuntimePosture, PostureConfigError, postureStalenessBound, reversibleWriteKeyControl, reversibleWritePermitMaxSeconds, type RuntimePosture, type StalenessBound } from "./runtime-posture.js";
+export { RUNTIME_POSTURE, RUNTIME_CLASSES, LEASE_REQUIRED_CLASSES, executionLeaseMaxSeconds, loadRuntimePosture, PostureConfigError, postureStalenessBound, reversibleWriteKeyControl, reversibleWritePermitMaxSeconds, stateSourcePlacement, type RuntimePosture, type StalenessBound, type StateSourcePlacement } from "./runtime-posture.js";
 export { executionLeaseMs, permitDeadline, type PermitCeiling, type PermitDeadline, type PermitDeadlineInput } from "./permit-deadline.js";
 export {
   type ClaimChannel,

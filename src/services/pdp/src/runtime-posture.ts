@@ -18,8 +18,19 @@ type ActionClass = typeof RUNTIME_CLASSES[number];
 type BoundedClass = { freshness_posture: "bounded"; max_staleness_seconds: number; recovery_objective_seconds: number; beyond_bound: "deny" };
 type UnboundedClass = { freshness_posture: "none" };
 type ClassDeclaration = BoundedClass | UnboundedClass;
+
+/**
+ * @spec authzen#context-audience-freshness, authzen#pdp-request rule 1: the
+ * deployment's declared state-source placement. `pep`: the PEP establishes
+ * Mission state from the declared source and supplies it in
+ * `context.mission_state_observation`. `pdp`: the PDP establishes state from
+ * its own read of the source, and the request carries no observation.
+ */
+export type StateSourcePlacement = "pep" | "pdp";
+
 export type RuntimePosture = EnforcementScopeStatement & {
   state_source: EnforcementScopeStatement["state_source"] & {
+    placement: StateSourcePlacement;
     mission_max_stale_seconds: number;
     per_class: Record<ActionClass, ClassDeclaration>;
     unknown_action_class: "deny";
@@ -95,6 +106,10 @@ export function loadRuntimePosture(
   const state = (input as EnforcementScopeStatement).state_source as unknown as Record<string, unknown>;
   const fail = (why: string): never => { throw new PostureConfigError(why); };
   if (state.pdp_unavailability_posture !== "deny") fail("only deny is implemented; bounded permit reuse is not available");
+  // Both components read the placement: the PEP to know whether it supplies
+  // the observation, the PDP to know which observation it relies on. An
+  // undeclared placement leaves neither able to tell.
+  if (state.placement !== "pep" && state.placement !== "pdp") fail("state-source placement must be pep or pdp");
   if (!positive(state.mission_max_stale_seconds)) fail("mission_max_stale_seconds must be a positive integer");
   if (!positive(state.max_staleness_seconds) || state.max_staleness_seconds > (state.mission_max_stale_seconds as number)) fail("state bound exceeds issuer ceiling");
   if (state.unknown_action_class !== "deny" || state.replication !== "none" || state.break_glass !== "absent") fail("unsupported unknown-class, replication, or emergency mode");
@@ -194,6 +209,15 @@ export function reversibleWritePermitMaxSeconds(
   action: string,
 ): number | undefined {
   return reversibleWriteDeclarationFor(posture, actionClass, action)?.permit_validity_max_seconds;
+}
+
+/**
+ * @spec authzen#context-audience-freshness: the published state-source
+ * placement, read from the same statement object the resource metadata
+ * publishes.
+ */
+export function stateSourcePlacement(posture: RuntimePosture): StateSourcePlacement {
+  return posture.state_source.placement;
 }
 
 export function postureStalenessBound(posture: RuntimePosture, actionClass: string | undefined): StalenessBound {
