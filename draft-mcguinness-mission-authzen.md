@@ -2843,6 +2843,11 @@ registered by {{I-D.draft-mcguinness-oauth-mission}}.
 
 \[\[ To be removed from the final specification ]]
 
+- The RAR remediation grain cites the working-group successor
+  draft-ietf-oauth-rar-metadata-remediation and defers its routing to
+  the issuance profile's remediation routing instead of restating it.
+  No requirement changed.
+
 - Mission-to-Policy Materialization describes the materialized policy
   view as one evaluation path: a PDP that evaluates the Mission's
   recorded authority directly meets the runtime profile's authority
