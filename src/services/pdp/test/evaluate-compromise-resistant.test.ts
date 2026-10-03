@@ -73,7 +73,7 @@ const optsFor = (actionClass: string) => ({
   requiresActionApproval: (_action: string, ac: string | undefined) => ac === actionClass,
   maxApprovalAgeSeconds: 300,
   relationForAction,
-  stateSourcePlacement: "pep",
+  stateSourcePlacement: "pep" as const,
   claims: CLAIMS,
 });
 

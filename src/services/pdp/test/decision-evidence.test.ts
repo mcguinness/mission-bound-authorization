@@ -276,7 +276,7 @@ describe("evaluate() emits the Decision Evidence it decided (@spec runtime-evide
       request.context.mission_state_observation = { state: "active", mode: "fresh", freshness_at: NOW.toISOString() };
       // @spec runtime#idempotency (#917): a high-consequence permit is claimed first.
       request.action.properties = { idempotency_key: freshKey() };
-      const decision = await evaluate(request, opts({ evidence: emitter, stateSourcePlacement: "pep", claims }));
+      const decision = await evaluate(request, opts({ evidence: emitter, stateSourcePlacement: "pep" as const, claims }));
       expect(decision.decision, JSON.stringify(decision.context)).toBe(true);
       const record = decision.context.decision_evidence as DecisionEvidenceObject;
       expect(record.action_class).toBe(actionClass ?? "consequential_read");

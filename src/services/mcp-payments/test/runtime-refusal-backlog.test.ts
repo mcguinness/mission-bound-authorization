@@ -92,7 +92,7 @@ function buildStack(missionView: MissionView, fga: Fga) {
   const connectors = new Connectors();
   const engine = new TransactionEngine("epoch-1");
   // @spec runtime#state-freshness: a synchronous live read, freshness-
-  // stamped at this read (Finding 1); "load_view" declared trusted below.
+  // stamped at this read (Finding 1), under the published `pep` placement.
   const loadView = (ref: { id: string; issuer: string }) =>
     ref.id === missionView.id && ref.issuer === missionView.issuer
       ? { view: missionView, observation: { state: missionView.state, version: missionView.version, mode: "fresh", freshness_at: new Date().toISOString() } }

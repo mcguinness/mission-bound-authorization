@@ -51,7 +51,7 @@ const baseOpts = (extra: Partial<EvaluateOptions> = {}): EvaluateOptions => ({
   now: () => NOW,
   stalenessBound,
   relationForAction,
-  stateSourcePlacement: "pep",
+  stateSourcePlacement: "pep" as const,
   ...extra,
 });
 

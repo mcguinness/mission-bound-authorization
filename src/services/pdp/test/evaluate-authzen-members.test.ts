@@ -201,7 +201,7 @@ describe("AuthZEN profile members (@spec authzen#pdp-request, authzen#context-au
       const { privateKey, keys } = await statusKeys();
       const dec = await evaluate(
         observedRequest({ actionClass: "irreversible_action", observation: withAssertion(await signStatus({ privateKey })) }),
-        options({ stateSourcePlacement: "pep", stateAssertionKeys: keys }),
+        options({ stateSourcePlacement: "pep" as const, stateAssertionKeys: keys }),
       );
       expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
     });
@@ -228,7 +228,7 @@ describe("AuthZEN profile members (@spec authzen#pdp-request, authzen#context-au
         for (const actionClass of ["consequential_write", "irreversible_action"]) {
           const dec = await evaluate(
             observedRequest({ actionClass, observation }),
-            options({ stateSourcePlacement: "pep", ...(keyed ? { stateAssertionKeys: keys } : {}) }),
+            options({ stateSourcePlacement: "pep" as const, ...(keyed ? { stateAssertionKeys: keys } : {}) }),
           );
           expect(dec.decision, `${label} (${actionClass})`).toBe(false);
           expect(dec.context.denial_reason, `${label} (${actionClass})`).toBe("stale_state");

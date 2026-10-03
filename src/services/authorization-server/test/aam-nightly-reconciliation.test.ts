@@ -356,14 +356,15 @@ function viewFor(missionId: string): MissionView {
 }
 
 // @spec runtime#state-freshness: a synchronous live read, freshness-stamped
-// at this read (Finding 1); "load_view" declared trusted at the Pep below.
+// at this read (Finding 1), supplied under the published `pep` placement.
 // Implements the canonical (issuer, id) tuple contract (@spec
 // authority-server#reference-tuple, #685 review): a same-id record under a
 // different issuer is a miss, not a match.
 const loadView = (ref: { id: string; issuer: string }) => {
   const r = as.kernel.get(ref.id);
   if (!r || r.issuer !== ref.issuer) return undefined;
-  return { view: viewFor(ref.id), observation: { state: viewFor(ref.id).state, version: viewFor(ref.id).version, mode: "fresh", freshness_at: new Date().toISOString() } };
+  const view = viewFor(ref.id);
+  return { view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } };
 };
 
 /** A raw PDP decision for one Mission action (the Task-Scoped Access Engine). */

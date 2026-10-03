@@ -103,7 +103,7 @@ d("M6 ARAP reevaluate (scenario 5)", () => {
       fga,
       modelId,
       // @spec runtime#state-freshness: a synchronous live read, freshness-
-      // stamped at this read (Finding 1); "load_view" declared trusted below.
+      // stamped at this read (Finding 1), under the published `pep` placement.
       // Implements the canonical (issuer, id) tuple contract (@spec
       // authority-server#reference-tuple, #685 review).
       loadView: (ref) =>

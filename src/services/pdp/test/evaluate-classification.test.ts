@@ -65,7 +65,7 @@ const opts = {
   now: () => NOW,
   stalenessBound,
   relationForAction,
-  stateSourcePlacement: "pep",
+  stateSourcePlacement: "pep" as const,
   // @spec runtime#idempotency (#917): a fixture domain that also mediates
   // privileged administration, which the shipped deployment does not offer.
   claims: openTestClaims({ now: () => NOW }),

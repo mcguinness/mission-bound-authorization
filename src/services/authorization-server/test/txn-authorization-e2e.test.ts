@@ -312,7 +312,7 @@ d("transaction authorization end to end (@spec txn-authorization#challenge-redem
       ],
     );
     // @spec runtime#state-freshness: a synchronous live read, freshness-
-    // stamped at this read (Finding 1); "load_view" declared trusted below.
+    // stamped at this read (Finding 1), under the published `pep` placement.
     // Implements the canonical (issuer, id) tuple contract (@spec
     // authority-server#reference-tuple, #685 review).
     const loadView = (ref: { id: string; issuer: string }) => {

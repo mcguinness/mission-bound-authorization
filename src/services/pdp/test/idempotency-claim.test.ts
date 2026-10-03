@@ -174,7 +174,7 @@ function options(claims: IdempotencyClaimDomain, c: Clock, over: Partial<Evaluat
     now: c.now,
     stalenessBound,
     relationForAction: fixtureRelation,
-    stateSourcePlacement: "pep",
+    stateSourcePlacement: "pep" as const,
     evidence: EMITTER,
     claims,
     requester: REQUESTER,

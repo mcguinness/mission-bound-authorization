@@ -68,7 +68,7 @@ const opts = (v: MissionView) => ({
   now: () => NOW,
   stalenessBound,
   relationForAction,
-  stateSourcePlacement: "pep",
+  stateSourcePlacement: "pep" as const,
   // @spec runtime#idempotency (#917): every high-consequence permit is claimed;
   // a fixture domain that also mediates privileged administration.
   claims: CLAIMS,

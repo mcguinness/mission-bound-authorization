@@ -89,7 +89,7 @@ async function startServer(
       now: () => NOW,
       stalenessBound,
       relationForAction,
-      stateSourcePlacement: "pep",
+      stateSourcePlacement: "pep" as const,
     }),
     evaluateFn: countingEvaluate,
     replayWindowSeconds: 30,
@@ -398,7 +398,7 @@ describe("Remote Decision Channel (@spec runtime#decision-channel)", () => {
       now: () => NOW,
       stalenessBound,
       relationForAction,
-      stateSourcePlacement: "pep",
+      stateSourcePlacement: "pep" as const,
     });
     expect(dec.decision).toBe(true);
   });
@@ -432,7 +432,7 @@ describe("the remote channel binds the claim requester (@spec runtime#idempotenc
         now: () => NOW,
         stalenessBound,
         relationForAction,
-        stateSourcePlacement: "pep",
+        stateSourcePlacement: "pep" as const,
       }),
       claims,
       consumptionStatus: (pepId) => (pepId === PEP_ID ? () => "unconsumed" : undefined),

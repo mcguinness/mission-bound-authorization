@@ -94,7 +94,7 @@ const opts = (v: MissionView) => ({
   now: () => NOW,
   stalenessBound,
   relationForAction,
-  stateSourcePlacement: "pep",
+  stateSourcePlacement: "pep" as const,
   claims: CLAIMS,
 });
 

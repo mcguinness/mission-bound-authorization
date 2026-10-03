@@ -81,7 +81,7 @@ let server: McpPaymentsServer;
 
 /**
  * @spec runtime#state-freshness: a synchronous live read, freshness-stamped
- * at this read (Finding 1); "load_view" declared trusted below. Implements
+ * at this read (Finding 1), under the published `pep` placement. Implements
  * the canonical (issuer, id) tuple contract (@spec
  * authority-server#reference-tuple, #685 review).
  */

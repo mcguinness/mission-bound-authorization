@@ -85,7 +85,7 @@ const opts = {
   now: () => NOW,
   stalenessBound,
   relationForAction,
-  stateSourcePlacement: "pep",
+  stateSourcePlacement: "pep" as const,
   claims: unreachableClaims as never,
 };
 

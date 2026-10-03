@@ -149,7 +149,7 @@ async function build(): Promise<{
   const connectors = new Connectors();
   const engine = new TransactionEngine("epoch-1");
   // @spec runtime#state-freshness: a synchronous live read, freshness-
-  // stamped at this read (Finding 1); "load_view" declared trusted below.
+  // stamped at this read (Finding 1), under the published `pep` placement.
   // Deliberately NONCONFORMING (@spec authority-server#reference-tuple,
   // #685 review): matches on `id` alone so the issuer-conflict tests below
   // exercise enforceInner's OWN view-issuer check (mission_reference_conflict)
