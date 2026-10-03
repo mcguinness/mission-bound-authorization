@@ -3043,6 +3043,16 @@ shows the denial:
 
 \[\[ To be removed from the final specification ]]
 
+- Join inputs on the wire (#972). Mission Status discloses the
+  Mission's `subject`, `client_id`, and entry `delegation` members to
+  PDPs enrolled for its enforcement scope, and enrollment is
+  deployment configuration. The `context.mission_join` decision-request
+  member carries the join inputs, including a Join Assertion with the
+  presented credential's digest and thumbprint. The assertion carries
+  the join result (`join`) the PDP narrows with, and supports
+  certificate-bound tokens (`x5t#S256`). A Join Assertion that fails
+  validation is denied, and `mission_max_stale_seconds` is required.
+
 - Density and OAuth register, with no change to the party, behavior,
   or keyword of any requirement; two conditions the preceding sentence
   carried are stated in the requirement itself. The abstract opens
