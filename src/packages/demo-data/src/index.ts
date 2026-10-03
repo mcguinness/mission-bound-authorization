@@ -1396,7 +1396,7 @@ export function aamReconciliationTemplate(
  * Policies: the exact snapshot the Mission Issuer holds and evaluates for each,
  * by policy id. A template commits the named policy's `digest` at consent, and
  * Dispatch refuses once the snapshot no longer matches it. Each policy here
- * dispatches only single-Agent templates, so it carries no selection rule.
+ * dispatches only single-Agent templates, so its snapshot names no `select_agent`.
  */
 export const DEMO_DISPATCH_POLICIES: Readonly<
   Record<string, { version: string; content_type: string; content: string }>

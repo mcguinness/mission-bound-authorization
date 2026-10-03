@@ -341,10 +341,12 @@ export interface DispatchInput {
   /** The dispatching actor; MUST be in the template's `dispatchers`. */
   dispatcher: string;
   /**
-   * @spec mission-template#the-mission-template — the deployment's Dispatch
-   * Policies, consulted for the Agent selection rule of a template that lists
-   * several Agents. The caller never names the Agent: the Mission Issuer
-   * selects it ({@link selectDispatchAgent}).
+   * @spec mission-template#the-mission-template, mission#standing-consent-bases
+   * — the deployment's held Dispatch Policy snapshots. Dispatch verifies the
+   * template's committed digest against the named snapshot and reads the Agent
+   * selection rule of a template that lists several Agents from that snapshot
+   * alone. The caller never names the Agent: the Mission Issuer selects it
+   * ({@link selectDispatchAgent}).
    */
   dispatchPolicies?: DispatchPolicies;
   /** The instance's OWN Mission Intent (untrusted, derived under policy first). */
@@ -387,19 +389,15 @@ export interface DispatchResult {
 }
 
 /**
- * @spec mission-template#the-mission-template — a deployment Dispatch Policy:
- * its Agent selection rule, for a template whose `allowed_recipients` lists
- * more than one Agent. The rule sees only Issuer-held facts (the listed
- * Agents, the established Subject, the template), never Dispatcher input, and
- * returns one Agent, or undefined when it cannot select.
+ * @spec mission-template#the-mission-template, mission#standing-consent-bases
+ * — a deployment Dispatch Policy: the exact snapshot the Mission Issuer holds
+ * and evaluates, whose digest a template commits. The policy IS its snapshot:
+ * no rule is evaluated from anywhere else, so a change to what Dispatch does
+ * is a change to the committed bytes. Its Agent selection rule, for a template
+ * whose `allowed_recipients` lists more than one Agent, is the JSON snapshot's
+ * `select_agent` member: the `client_id` it names ({@link selectDispatchAgent}).
  */
-export interface DispatchPolicy extends RegisteredActivationPolicy {
-  selectAgent?: (context: {
-    agents: readonly string[];
-    subject: { iss: string; sub: string };
-    templateId: string;
-  }) => string | undefined;
-}
+export type DispatchPolicy = RegisteredActivationPolicy;
 
 /** The deployment's Dispatch Policies, keyed by a template's `dispatch_policy.id`. */
 export type DispatchPolicies = Readonly<Record<string, DispatchPolicy>>;
@@ -408,19 +406,32 @@ export type DispatchPolicies = Readonly<Record<string, DispatchPolicy>>;
  * @spec mission-template#the-mission-template — select a dispatched
  * instance's Agent: the one listed Agent directly; with several, the Agent the
  * template's Dispatch Policy selection rule names. `agents` is an allowlist,
- * not a selection rule, so its order is never consulted. Undefined when no
- * Agent can be selected.
+ * not a selection rule, so its order is never consulted. The rule is read only
+ * from the held snapshot whose digest the template committed
+ * (@spec mission#standing-consent-bases): a snapshot that no longer matches
+ * selects nothing. The rule sees only that snapshot, never Dispatcher input.
+ * Undefined when no Agent can be selected.
  */
-export function selectDispatchAgent(
-  template: MissionTemplate,
-  subject: { iss: string; sub: string },
-  policies?: DispatchPolicies,
-): string | undefined {
+export function selectDispatchAgent(template: MissionTemplate, policies?: DispatchPolicies): string | undefined {
   const { agents } = template.recipients;
   if (agents.length === 1) return agents[0];
-  const policyId = template.dispatch_policy.id;
-  const policy = policies && Object.hasOwn(policies, policyId) ? policies[policyId] : undefined;
-  return policy?.selectAgent?.({ agents: [...agents], subject: { ...subject }, templateId: template.id });
+  if (!activationPolicyMatches(template.issuer, policies, template.dispatch_policy)) return undefined;
+  const policy = (policies as DispatchPolicies)[template.dispatch_policy.id] as DispatchPolicy;
+  return selectionRuleOf(policy);
+}
+
+/** The JSON snapshot's `select_agent` member, when it is a non-empty string. */
+function selectionRuleOf(policy: DispatchPolicy): string | undefined {
+  if (policy.content_type !== "application/json") return undefined;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(policy.content);
+  } catch {
+    return undefined;
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return undefined;
+  const agent = (parsed as { select_agent?: unknown }).select_agent;
+  return nonEmptyString(agent) ? agent : undefined;
 }
 
 /**
@@ -513,7 +524,7 @@ export function dispatchFromTemplate(
   // input. It is committed below as the instance's `client_id`; a retried
   // Dispatch returns the committed instance at the idempotency check above
   // and never selects again.
-  const recipient = selectDispatchAgent(template, input.subject, input.dispatchPolicies);
+  const recipient = selectDispatchAgent(template, input.dispatchPolicies);
   if (recipient === undefined) {
     throw new DispatchError(
       "agent_not_selected",

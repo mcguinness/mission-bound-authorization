@@ -634,10 +634,11 @@ export async function buildAuthorizationServer(opts: {
   /**
    * @spec mission-template#the-mission-template, mission#standing-consent-bases
    * — the deployment's Dispatch Policies, keyed by `dispatch_policy.id`: each
-   * policy's version and the exact snapshot the issuer evaluates, and the Agent
-   * selection rule for a template that lists several Agents. Merged over the
-   * demo policies ({@link DEMO_DISPATCH_POLICIES}); a template commits the
-   * named policy's digest at consent and Dispatch verifies it.
+   * policy's version and the exact snapshot the issuer evaluates, whose JSON
+   * `select_agent` member is the Agent selection rule for a template that
+   * lists several Agents. Merged over the demo policies
+   * ({@link DEMO_DISPATCH_POLICIES}); a template commits the named policy's
+   * digest at consent and Dispatch verifies it before evaluating anything.
    */
   dispatchPolicies?: DispatchPolicies;
   /**

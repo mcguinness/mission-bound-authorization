@@ -10,11 +10,11 @@ import {
   DispatchError,
   type DispatchInput,
   type DispatchPolicies,
-  type DispatchPolicy,
   dispatchFromTemplate,
   IntentError,
   MissionKernel,
   type MissionRecord,
+  selectDispatchAgent,
   TemplateError,
   TemplateStore,
 } from "../src/index.js";
@@ -50,21 +50,23 @@ beforeEach(() => {
 /**
  * @spec mission#standing-consent-bases — the Dispatch Policy snapshots this
  * suite's issuer holds, by id. A template commits the named snapshot's digest;
- * a Dispatch evaluates the registry it is handed.
+ * a Dispatch evaluates the registry it is handed, and a multi-Agent template's
+ * selection rule is the snapshot's own `select_agent` member.
  */
 const snapshotOf = (id: string, content = JSON.stringify({ id, rule: "dispatch within the template ceiling" })) => ({
   version: "1",
   content_type: "application/json",
   content,
 });
-const REGISTRY: DispatchPolicies = Object.fromEntries(
-  ["test-policy", "names-unlisted", "route-extractor", "route"].map((id) => [id, snapshotOf(id)]),
-);
+/** A held snapshot whose selection rule names `agent`. */
+const selecting = (id: string, agent: string) => snapshotOf(id, JSON.stringify({ id, select_agent: agent }));
+const REGISTRY: DispatchPolicies = {
+  "test-policy": snapshotOf("test-policy"),
+  "names-unlisted": selecting("names-unlisted", "intruder"),
+  "route-extractor": selecting("route-extractor", "subagent-invoice-extractor"),
+  route: selecting("route", "subagent-invoice-extractor"),
+};
 const policyRef = (id: string) => ({ id, version: "1" });
-/** The registered policy `id` with an Agent selection rule; same snapshot, so its digest still matches. */
-const withRule = (id: string, selectAgent: DispatchPolicy["selectAgent"]): DispatchPolicies => ({
-  [id]: { ...(REGISTRY[id] as DispatchPolicy), ...(selectAgent ? { selectAgent } : {}) },
-});
 
 /** A template ceiling entry on the payments resource (constraints restated so
  *  the double intersection is constraint-attributable). */
@@ -367,7 +369,7 @@ describe("dispatch gates (@spec mission-template#dispatch-refusals)", () => {
     // through a Dispatch Policy that names it; the membership check refuses it.
     const multi = mkTemplate({ recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents: ["worker", "subagent-invoice-extractor"] }, dispatch_policy: policyRef("names-unlisted") });
     try {
-      dispatch(multi.id, { dispatchPolicies: withRule("names-unlisted", () => "intruder") });
+      dispatch(multi.id);
       expect.unreachable();
     } catch (e) {
       expect((e as DispatchError).reason).toBe("recipient_not_allowed");
@@ -410,51 +412,67 @@ describe("dispatch gates (@spec mission-template#dispatch-refusals)", () => {
     expect(dispatch(t.id, { recipient: "intruder" } as Partial<DispatchInput>).mission.client_id).toBe("worker");
   });
 
-  it("with several listed Agents, selects the Agent the Dispatch Policy names, and refuses agent_not_selected when no rule selects one", () => {
+  it("with several listed Agents, selects the Agent the committed Dispatch Policy snapshot names, and refuses agent_not_selected when it names none", () => {
     const agents = ["worker", "subagent-invoice-extractor"];
     const t = mkTemplate({ recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents }, dispatch_policy: policyRef("route-extractor") });
-    const seen: Array<{ agents: readonly string[]; subject: { iss: string; sub: string } }> = [];
-    const routeExtractor = withRule("route-extractor", (c) => {
-      seen.push(c);
-      return c.agents.find((a) => a === "subagent-invoice-extractor");
-    });
-    const { mission } = dispatch(t.id, { dispatchPolicies: routeExtractor });
-    // Not the first listed Agent: the policy, not array order, selected it.
+    const { mission } = dispatch(t.id);
+    // Not the first listed Agent: the snapshot's rule, not array order, selected it.
     expect(mission.client_id).toBe("subagent-invoice-extractor");
-    expect(seen).toEqual([{ agents, subject: { iss: ISS, sub: "alice" }, templateId: t.id }]);
 
+    // A held, matching policy whose snapshot names no Agent selects none.
+    const none = mkTemplate({ recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents }, dispatch_policy: policyRef("test-policy") });
     const before = kernel.allMissions().length;
-    // The committed policy is held, but no rule selects: the registry's own
-    // snapshot (no selection rule) and the same snapshot with a rule that
-    // selects nothing.
-    for (const dispatchPolicies of [undefined, withRule("route-extractor", () => undefined)]) {
-      try {
-        dispatch(t.id, dispatchPolicies ? { dispatchPolicies } : {});
-        expect.unreachable();
-      } catch (e) {
-        expect((e as DispatchError).reason).toBe("agent_not_selected");
-      }
-      expect(kernel.allMissions().length).toBe(before);
-      expect(store.dispatchesSince(t.id, "1970-01-01T00:00:00.000Z")).toBe(1);
+    try {
+      dispatch(none.id);
+      expect.unreachable();
+    } catch (e) {
+      expect((e as DispatchError).reason).toBe("agent_not_selected");
     }
+    expect(kernel.allMissions().length).toBe(before);
+    expect(store.dispatchesSince(none.id, "1970-01-01T00:00:00.000Z")).toBe(0);
+  });
+
+  // @spec mission#standing-consent-bases — the selection rule Dispatch
+  // evaluates is the committed snapshot itself: re-pointing it, even under an
+  // unchanged version, is a changed policy, never a new selection.
+  it("a selection rule changed after consent is dispatch_policy_changed, never a new selection", () => {
+    const agents = ["worker", "subagent-invoice-extractor"];
+    const t = mkTemplate({ recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents }, dispatch_policy: policyRef("test-policy") });
+    const before = kernel.allMissions().length;
+    // Consented under a snapshot that selects no Agent.
+    try {
+      dispatch(t.id);
+      expect.unreachable();
+    } catch (e) {
+      expect((e as DispatchError).reason).toBe("agent_not_selected");
+    }
+    // The held policy now names an allowed Agent, under the same id and version.
+    const repointed: DispatchPolicies = { "test-policy": selecting("test-policy", "worker") };
+    expect(selectDispatchAgent(store.get(t.id) as never, repointed)).toBeUndefined();
+    try {
+      dispatch(t.id, { dispatchPolicies: repointed });
+      expect.unreachable();
+    } catch (e) {
+      expect((e as DispatchError).reason).toBe("dispatch_policy_changed");
+    }
+    expect(kernel.allMissions().length).toBe(before);
+    expect(store.dispatchesSince(t.id, "1970-01-01T00:00:00.000Z")).toBe(0);
   });
 
   // @spec mission-template#dispatch — the selected Agent is part of the
   // committed instance: a retried Dispatch returns it and never selects again.
   it("a retried Dispatch returns the committed Agent without selecting again", () => {
     const t = mkTemplate({ recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents: ["worker", "subagent-invoice-extractor"] }, dispatch_policy: policyRef("route") });
-    let calls = 0;
-    const select = (agent: string) => withRule("route", () => { calls++; return agent; });
-    const first = dispatch(t.id, { dispatchEventId: "evt-agent-retry", dispatchPolicies: select("subagent-invoice-extractor") });
+    const first = dispatch(t.id, { dispatchEventId: "evt-agent-retry" });
     expect(first.mission.client_id).toBe("subagent-invoice-extractor");
-    expect(calls).toBe(1);
-    const changed = dispatch(t.id, { dispatchEventId: "evt-agent-retry", dispatchPolicies: select("worker") });
+    // A retry under a policy that would now select differently, or under none
+    // at all, returns the committed instance: it never selects (or verifies) again.
+    const changed = dispatch(t.id, { dispatchEventId: "evt-agent-retry", dispatchPolicies: { route: selecting("route", "worker") } });
     expect(changed.mission.id).toBe(first.mission.id);
     expect(changed.mission.client_id).toBe("subagent-invoice-extractor");
-    const unresolvable = dispatch(t.id, { dispatchEventId: "evt-agent-retry" });
+    const unresolvable = dispatch(t.id, { dispatchEventId: "evt-agent-retry", dispatchPolicies: {} });
     expect(unresolvable.mission.id).toBe(first.mission.id);
     expect(unresolvable.mission.client_id).toBe("subagent-invoice-extractor");
-    expect(calls).toBe(1);
   });
 
   it("refuses a Subject that matches a listed subject in only one of iss and sub (@spec mission-template#the-mission-template)", () => {

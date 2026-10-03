@@ -157,8 +157,12 @@ async function dispatch(params: {
   });
 }
 
-/** A held Dispatch Policy snapshot (@spec mission#standing-consent-bases). */
-const heldPolicy = (id: string) => ({ version: "1", content_type: "application/json", content: JSON.stringify({ id }) });
+/** A held Dispatch Policy snapshot; `select_agent` is its Agent selection rule (@spec mission#standing-consent-bases). */
+const heldPolicy = (id: string, rule: { select_agent?: string } = {}) => ({
+  version: "1",
+  content_type: "application/json",
+  content: JSON.stringify({ id, ...rule }),
+});
 
 beforeAll(async () => {
   as = await buildAuthorizationServer({
@@ -168,11 +172,8 @@ beforeAll(async () => {
     // — deployment Dispatch Policies: each held snapshot (whose digest a
     // template commits) and, for multi-Agent templates, an Agent selection rule.
     dispatchPolicies: {
-      "test-route-a1": {
-        ...heldPolicy("test-route-a1"),
-        selectAgent: ({ agents }) => (agents.includes("agent-A1") ? "agent-A1" : undefined),
-      },
-      "test-route-unlisted": { ...heldPolicy("test-route-unlisted"), selectAgent: () => "governed-agent" },
+      "test-route-a1": heldPolicy("test-route-a1", { select_agent: "agent-A1" }),
+      "test-route-unlisted": heldPolicy("test-route-unlisted", { select_agent: "governed-agent" }),
       "test-no-rule": heldPolicy("test-no-rule"),
       "wide-reconciliation": heldPolicy("wide-reconciliation"),
     },
