@@ -101,11 +101,10 @@ const evalAction = async (missionId: string, action: string) => {
   return evaluate(
     {
       subject: { id: "alice" },
-      resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
+      resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
       action: { name: action },
       context: {
         ...capabilityPresentationFor(action),
-        audience: RESOURCE,
         mission: { id: view.id, issuer: view.issuer, authority_hash: view.authority_hash },
         // The matched Authority Set entry (authority() above) binds a
         // max_amount, for invoice.read and remittance.send alike, so the

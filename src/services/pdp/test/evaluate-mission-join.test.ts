@@ -51,19 +51,23 @@ const baseOpts = (extra: Partial<EvaluateOptions> = {}): EvaluateOptions => ({
   now: () => NOW,
   stalenessBound,
   relationForAction,
-  allowedFreshnessSources: new Set(["load_view"]),
+  stateSourcePlacement: "pep" as const,
   ...extra,
 });
 
+/** A `fresh` Mission state observation read at the decision instant. */
+const OBSERVED = { state: "active", mode: "fresh", freshness_at: NOW.toISOString() };
+
 const joinReq = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => ({
   subject: { id: SUBJECT.sub, properties: { iss: SUBJECT.iss } },
-  resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
+  resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
   action: { name: READ },
   context: {
-    audience: RESOURCE,
     mission: { id: view.id, issuer: view.issuer },
     actor: { client_id: "ap-agent" },
     mission_join: {},
+    // REQUIRED under the declared pep placement (#1049 owner ruling).
+    mission_state_observation: OBSERVED,
   },
   ...over,
 });
@@ -79,9 +83,9 @@ describe("evaluate(): baseline MAS Join, direct client (@spec authority-server#m
     const decision = await evaluate(
       joinReq({
         context: {
-          audience: RESOURCE,
           mission: { id: view.id, issuer: view.issuer },
           actor: { client_id: "ap-agent" },
+          mission_state_observation: OBSERVED,
         },
       }),
       baseOpts(),

@@ -49,7 +49,7 @@ describe("permit deadline (@spec runtime#state-freshness)", () => {
   it("caps a bounded class with no freshness available at the class bound from the decision instant", () => {
     // Reachable today below the high-consequence floor, where the draft
     // treats credential-lifetime expiry as itself a conforming state source
-    // and an absent `context.freshness` is not by itself a refusal. With no
+    // and an absent state observation is not by itself a refusal. With no
     // observation there is no state valid-through to measure from, so the
     // class's published bound caps from now: never later than the permit
     // lifetime alone, so it can only narrow.

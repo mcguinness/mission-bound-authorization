@@ -195,10 +195,9 @@ const view = (over: Partial<MissionView> = {}): MissionView => ({
 
 const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => ({
   subject: { id: "alice" },
-  resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
+  resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
   action: { name: "payments:invoice.read" },
   context: {
-    audience: RESOURCE,
     mission: { id: "msn_evd_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
   },
   ...over,
@@ -238,7 +237,7 @@ describe("evaluate() emits the Decision Evidence it decided (@spec runtime-evide
     const request = req();
     const secret = "RAW-CLAIM-OR-PARAMETER-MUST-NOT-BE-SIGNED";
     request.subject = { id: "alice", properties: { iss: "https://as.test", raw_claims: { secret } }, secret } as never;
-    request.resource = { type: "invoice", id: "inv-1", properties: { vendor_id: "acme", secret }, secret } as never;
+    request.resource = { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme", secret }, secret } as never;
     request.action = { name: "payments:invoice.read", properties: { parameters: { secret } }, renamed_parameters: { secret } } as never;
     request.context.actor = { client_id: "ap-agent", secret, act: [
       { iss: "https://as.test", sub: "root", sub_profile: "service", cnf: { secret }, secret },
@@ -274,10 +273,10 @@ describe("evaluate() emits the Decision Evidence it decided (@spec runtime-evide
       const request = req();
       request.context.action_class = actionClass;
       request.context.parameter_digest = canonicalDigest({ invoice_id: "inv-1" });
-      request.context.freshness = { observed_at: NOW.toISOString(), source: "load_view" };
+      request.context.mission_state_observation = { state: "active", mode: "fresh", freshness_at: NOW.toISOString() };
       // @spec runtime#idempotency (#917): a high-consequence permit is claimed first.
       request.action.properties = { idempotency_key: freshKey() };
-      const decision = await evaluate(request, opts({ evidence: emitter, allowedFreshnessSources: new Set(["load_view"]), claims }));
+      const decision = await evaluate(request, opts({ evidence: emitter, stateSourcePlacement: "pep" as const, claims }));
       expect(decision.decision, JSON.stringify(decision.context)).toBe(true);
       const record = decision.context.decision_evidence as DecisionEvidenceObject;
       expect(record.action_class).toBe(actionClass ?? "consequential_read");
@@ -458,7 +457,7 @@ describe("evaluate() emits the Decision Evidence it decided (@spec runtime-evide
     // A different Mission counts separately; the first Mission's counter is
     // unaffected and keeps climbing afterwards.
     const otherMission = await evaluate(
-      req({ context: { audience: RESOURCE, mission: { id: "msn_evd_2", issuer: "https://as.test" } } }),
+      req({ context: { mission: { id: "msn_evd_2", issuer: "https://as.test" } } }),
       opts({ evidence: emitter, view: view({ id: "msn_evd_2" }) }),
     );
     const third = await evaluate(req(), o);

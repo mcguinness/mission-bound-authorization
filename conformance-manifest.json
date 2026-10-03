@@ -12890,31 +12890,31 @@
     },
     {
      "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
-     "name": "evaluateInner fail-closed gaps (#608) > GAP 2: freshness absence fails closed for high-consequence classes (@spec runtime#state-freshness) > every high-consequence action_class with context.freshness absent -> deny stale_state, Mission state cannot be established, never a bypass",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 2: freshness absence fails closed for high-consequence classes (@spec runtime#state-freshness) > every high-consequence action_class with context.mission_state_observation absent -> deny stale_state, Mission state cannot be established, never a bypass",
      "level": "endpoint",
      "surface": "decision-request"
     },
     {
      "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
-     "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > the reported repro -- a non-parseable observed_at with an unrecognized source -- denies stale_state, never permits, for every high-consequence class",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > the reported repro -- a non-parseable freshness_at -- denies stale_state, never permits, for every high-consequence class",
      "level": "endpoint",
      "surface": "decision-request"
     },
     {
      "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
-     "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > a future observed_at beyond the skew tolerance denies stale_state, for every high-consequence class",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > a future freshness_at beyond the skew tolerance denies stale_state, for every high-consequence class",
      "level": "endpoint",
      "surface": "decision-request"
     },
     {
      "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
-     "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > a well-formed, fresh observation from a source outside the deployment's allowed set denies stale_state, for every high-consequence class",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > a well-formed, fresh observation the deployment's declared state source does not place with the PEP denies stale_state, for every high-consequence class",
      "level": "endpoint",
      "surface": "decision-request"
     },
     {
      "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
-     "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > a future observed_at within the skew tolerance still permits (boundary control: the tolerance itself is not itself a denial)",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > a future freshness_at within the skew tolerance still permits (boundary control: the tolerance itself is not itself a denial)",
      "level": "endpoint",
      "surface": "decision-request"
     },
@@ -12929,9 +12929,27 @@
      "name": "consequential freshness floor (@spec runtime#state-freshness) > refuses an injected no-freshness posture for consequential, undeclared and default classes",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > under PDP placement the observation is absent and the PDP establishes state from its own read > with no read of its own, denies stale_state below the high-consequence floor too: a consequential write and a read",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > a present assertion is verified against the declared state source's key > a verified assertion whose signed fresh_until has already passed denies stale_state, in fresh mode too",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > under PEP placement the PDP reads context.mission_state_observation > a missing observation denies stale_state at every class below the high-consequence floor too, audit_only included",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "Three arms of \"cannot establish ... within the bound\": state present but beyond the bound (the pre-existing, OpenFGA-gated mapping above), state absent entirely for a class that requires an active source (#608 GAP 2, unconditional), and state PRESENT but not actually establishable from it (author-review finding 2, GAP 3, unconditional): a non-finite observed_at, an observed_at dated beyond the deployment's configured future-skew tolerance, or a source outside the deployment's configured allowed set. Each of the three GAP 3 mappings is asserted for all three high-consequence classes in one case; a fourth case is the boundary control proving the skew tolerance itself (default 5s, configurable via EvaluateOptions.freshnessSkewToleranceSeconds) is not itself a denial. GAP 2's sibling unconditional cases (same file) cover the fresh-present and stale-present arms, plus a boundary control that a non-high-consequence class stays a permit when freshness is absent, since token-lifetime expiry conforms below that floor per @spec runtime#state-freshness. #793: a no-freshness declaration cannot disable consequential-class checks: configuration load refuses it, and the PDP separately refuses an injected none posture as out_of_authority before consulting freshness."
+   "notes": "Three arms of \"cannot establish ... within the bound\": state present but beyond the bound (the pre-existing, OpenFGA-gated mapping above), state absent entirely for a class that requires an active source (#608 GAP 2, unconditional), and state PRESENT but not actually establishable from it (author-review finding 2, GAP 3, unconditional): a non-finite freshness_at, a freshness_at dated beyond the deployment's configured future-skew tolerance, or an observation the enforcement scope's declared state-source placement does not rely on (no declared placement, or pdp placement with no read of the PDP's own; #1004 retired the request-named source). Each of the three GAP 3 mappings is asserted for all three high-consequence classes in one case; a fourth case is the boundary control proving the skew tolerance itself (default 5s, configurable via EvaluateOptions.freshnessSkewToleranceSeconds) is not itself a denial. GAP 2's sibling unconditional cases (same file) cover the fresh-present and stale-present arms, plus a boundary control that a non-high-consequence class stays a permit when freshness is absent, since token-lifetime expiry conforms below that floor per @spec runtime#state-freshness. #793: a no-freshness declaration cannot disable consequential-class checks: configuration load refuses it, and the PDP separately refuses an injected none posture as out_of_authority before consulting freshness."
   },
   {
    "id": "runtime.state-freshness.state-source-expiry-or-observation-rule",
@@ -12986,6 +13004,24 @@
     {
      "file": "src/services/pdp/test/evaluate-decision.test.ts",
      "name": "a permit expires no later than the state view it was decided against (@spec runtime#state-freshness) > denies stale_state rather than issuing a permit whose window has already closed",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > under PEP placement the permit is capped at the accepted observation's state valid-through > caps valid_until at mission_status_expires_at when the observation reports one, earlier or later than the observation plus the class bound",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > under PEP placement the permit is capped at the accepted observation's state valid-through > a reported expiry already reached yields no permit: stale_state",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > a present assertion is verified against the declared state source's key > a verified assertion's signed fresh_until caps the permit in fresh mode, though the observation does not repeat it",
      "level": "unit",
      "surface": "decision-request"
     }
@@ -15412,8 +15448,21 @@
     "normative": "the PDP matches the approved Authority Set entry's resource against resource.properties.audience, never against the AuthZEN resource object's type/id identity"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > the entry match reads resource.properties.audience > matches the approved entry's resource against resource.properties.audience, with no context.audience and a resource id that names an object",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > the entry match reads resource.properties.audience > never matches on the resource object's id or type: an id naming the entry's resource under another audience is out_of_authority",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ]
   },
   {
    "id": "authzen.pdp-request.no-downgrade-to-non-mission-policy",
@@ -15463,8 +15512,27 @@
      "name": "PDP decisions against OpenFGA (@spec authzen) > revoked mission -> deny mission_inactive within the bound",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > the PEP-supplied state is exactly active, and the PDP's own view wins on disagreement (@spec authzen#pdp-request rule 1) > the PDP's own active view against a PEP-supplied revoked state denies mission_inactive",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > the PEP-supplied state is exactly active, and the PDP's own view wins on disagreement (@spec authzen#pdp-request rule 1) > an unknown PEP-supplied state, against the PDP's own active view, denies mission_inactive",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > the PEP-supplied state is exactly active, and the PDP's own view wins on disagreement (@spec authzen#pdp-request rule 1) > the PDP's own revoked view against a PEP-supplied active state denies mission_inactive: the PDP's view wins",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
-   ]
+   ],
+   "notes": "Both disagreement directions under the PDP role (#1004): the PDP's active view against a PEP-supplied revoked state, and the PDP's revoked view against a PEP-supplied active state, each deny mission_inactive; an unrecognized PEP-supplied value (case, whitespace, an unknown state) is non-active. This PDP always holds its own view (the loaded view's state)."
   },
   {
    "id": "authzen.pdp-request.consistency-id-and-issuer-equal",
@@ -15581,9 +15649,22 @@
     "normative": "a supplied context.mission_state_observation.version that disagrees with the PDP's own tracked state version is treated as staleness (stale_state), and version is never compared against policy_view_id"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#594 wave 3: not unlocked by the 2026-09-04 Decision Evidence batch. state_version appears nowhere under services/pdp/src: the PDP tracks no Mission state version to compare a presented one against, and its DecisionEvidenceObject (services/pdp/src/decision-evidence.ts) has no member to record the comparison in. The row needs PDP code, not a test."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > an observation version the PDP does not track is staleness (@spec authzen#pdp-request rule 4) > an observation version other than the PDP's tracked Mission state version denies stale_state",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > an observation version the PDP does not track is staleness (@spec authzen#pdp-request rule 4) > the version is compared against the tracked version, never against policy_view_id: a matching version permits beside the view's policy_view_id",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "The PDP's tracked version is the loaded view's version (#1004); a mismatching observation version denies stale_state. The never-against-policy_view_id clause is witnessed only by a positive control (a matching version permits beside the view's policy_view_id) that is unproven (no fail-before evidence). Recording the comparison in Decision Evidence (the row's text) is not implemented: DecisionEvidenceObject has no member for it."
   },
   {
    "id": "authzen.pdp-request.consistency-no-fail-on-optional-omission",
@@ -16227,8 +16308,28 @@
     "normative": "context.mission_state_observation is REQUIRED when the deployment's declared state-source placement has the PEP supply state, and absent when state establishment is placed with the PDP instead"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/authzen-members.test.ts",
+     "name": "the PEP sends the AuthZEN profile's members (@spec authzen#context-audience-freshness, #1004) > under PEP placement, carries the loader's observation at context.mission_state_observation, with state, mode and freshness_at, and no context.freshness",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authzen-members.test.ts",
+     "name": "the PEP sends the AuthZEN profile's members (@spec authzen#context-audience-freshness, #1004) > under PDP placement, omits context.mission_state_observation, and the co-resident PDP establishes state from its own read",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authzen-members.test.ts",
+     "name": "the PEP sends the AuthZEN profile's members (@spec authzen#context-audience-freshness, #1004) > under PEP placement, refuses state_unavailable without asking the PDP when the loader's observation lacks a member its mode requires or carries a malformed one",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "The placement is the Enforcement Scope Statement's state_source.placement (pep in the shipped statement). Under pep the PEP sends the observation, and refuses state_unavailable rather than send a request without a well-formed one; under pdp it omits the member."
   },
   {
    "id": "authzen.context-audience-freshness.state-observation-members-required",
@@ -16249,8 +16350,22 @@
     "normative": "when present, mission_state_observation carries state (string, REQUIRED) and mode (string, REQUIRED, one of fresh/cached/event_driven) and freshness_at (timestamp, REQUIRED in every mode); it also carries mission_status_issued_at and mission_status_expires_at (timestamps, REQUIRED for cached and event_driven modes, OPTIONAL for fresh), version (integer, OPTIONAL), and assertion (string, OPTIONAL)"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/authzen-members.test.ts",
+     "name": "the PEP sends the AuthZEN profile's members (@spec authzen#context-audience-freshness, #1004) > under PEP placement, carries the loader's observation at context.mission_state_observation, with state, mode and freshness_at, and no context.freshness",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authzen-members.test.ts",
+     "name": "the PEP sends the AuthZEN profile's members (@spec authzen#context-audience-freshness, #1004) > under PEP placement, refuses state_unavailable without asking the PDP when the loader's observation lacks a member its mode requires or carries a malformed one",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "E2 shows a sent observation carries state, mode and freshness_at; E4 shows the PEP never sends one missing a member its mode requires (state, mode, freshness_at; mission_status_issued_at and mission_status_expires_at for cached and event_driven) or carrying a mode outside the three, a non-integer version or a non-string assertion. The shipped loader is a live read, so it emits fresh observations only."
   },
   {
    "id": "authzen.context-external-communication.required-for-pdp-enforced-taint-classes",
