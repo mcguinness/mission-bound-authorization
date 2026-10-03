@@ -115,8 +115,8 @@
     "content_sha256": "78fa453b80921a5898aa47c2453be8c86cf81d74a5a5a87e95ed0c2a4a06637e"
    },
    "draft-mcguinness-oauth-mission-request-provenance.md": {
-    "revision": "b57d9100e803e72cc808c25f61ee420070265644",
-    "content_sha256": "41e0bda90ea09eb1a7f7351aebe4f84dbb93fe0470496b0c10b51843b2b67927"
+    "revision": "361a5a709a9271b27a1ef66540f1ed6582c0d54f",
+    "content_sha256": "759cea98bdc11d5f6409fe020eefa1f501e812693c77bd4f11cf7e808dff51a2"
    }
   }
  },
@@ -28192,6 +28192,28 @@
    "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
   },
   {
+   "id": "request-provenance.trust.key-purpose-mapping",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "trust-configuration",
+   "text": "name cryptographic operations, not authority to sign provenance, and never establish that mapping alone",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "An assertion verified under a configured signer's key that the AS configuration does not map to this evidence type is refused with invalid_mission_intent_evidence, even when the key's use is sig and its key_ops include verify."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+  },
+  {
    "id": "request-provenance.verification.entry-shape",
    "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
    "anchor": "verification",
@@ -28253,7 +28275,7 @@
    "surface": "par",
    "assertion": "refusal",
    "observation": {
-    "normative": "An assertion from a signer the AS configuration does not authorize, under a kid not scoped to this evidence type, or with an alg the key does not permit, is refused with invalid_mission_intent_evidence; an assertion with an invalid signature is refused likewise."
+    "normative": "An assertion from a signer the AS configuration does not authorize, under a kid the configuration does not map to this evidence type, or with an alg the key does not permit, is refused with invalid_mission_intent_evidence; an assertion with an invalid signature is refused likewise."
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -28422,7 +28444,7 @@
    "id": "request-provenance.replay.committed-refused",
    "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
    "anchor": "replay",
-   "text": "A client that retries after losing the response to an accepted submission presents a fresh assertion: the committed `jti` is refused as replay.",
+   "text": "a client that retries after losing the response to an accepted submission presents a fresh assertion: the committed `jti` is refused as replay.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -28433,7 +28455,51 @@
    "surface": "par",
    "assertion": "replay",
    "observation": {
-    "normative": "Presenting an assertion whose (iss, jti) an accepted submission committed is refused as replay with invalid_mission_intent_evidence until at least exp plus the clock-skew allowance."
+    "normative": "On a surface without a creation idempotency fingerprint, such as PAR, presenting an assertion whose (iss, jti) an accepted submission committed is refused as replay with invalid_mission_intent_evidence until at least exp plus the clock-skew allowance."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+  },
+  {
+   "id": "request-provenance.replay.creation-recovery-original-evidence",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "replay",
+   "text": "A client retrying an operation on such a surface after a lost response MUST re-present the original evidence entry unchanged, including the original assertion",
+   "role": "client",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A client retrying an expansion or child-creation exchange with the same creation_request_id after a lost response presents the same evidence array, including the original assertion string, as the first attempt."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+  },
+  {
+   "id": "request-provenance.replay.creation-recovery-exact-retry",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "replay",
+   "text": "The AS resolves an exact retry by its fingerprint and returns the recorded outcome or continuation without verifying the assertion again, so the committed `jti` does not refuse it.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "On an expansion or child-creation exchange, a retry with the same creation_request_id that re-presents the original assertion recovers the recorded outcome or continuation and is not refused as replay, even after the assertion's exp; a retry presenting a fresh assertion is refused with invalid_request on the fingerprint mismatch and creates nothing."
    },
    "level": "endpoint",
    "coverage": "todo",
