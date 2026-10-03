@@ -2426,126 +2426,136 @@ for another:
 | Deployment Profile | Where a deployment declares all of the above | {{deployment-profile}} |
 {: title="Assurance frames"}
 
-The levels are **adoption bundles**: which documents a deployment
-runs, named so a deployment, a procurement, or a review can cite one
-bundle. They are guidance, never a conformance class, an earned
-label, or a ladder a deployment must climb; a deployment adopts the
-bundle its risk warrants and stops there. A level does not determine
-any action class's containment property. The proof obligations noted
-with each level are the claims that become available at that bundle,
-not properties the level name asserts.
-
-A relying party compares claims, not levels
-({{assurance-claims-axis}}), because the family's strongest
-properties are deployment properties, not protocol properties:
-complete PEP placement, a trusted freshness source, and credential
-custody are things a deployment does, not things a token proves.
+The levels are **adoption bundles**: named sets of the documents a
+deployment runs, so a deployment, a procurement, or a review can cite
+one bundle. They are guidance, never a conformance class, an earned
+label, or a ladder a deployment must climb. A deployment adopts the
+bundle its risk warrants and stops there.
 
 The levels build on one another in the order deployments build:
 recording and governing the approved task (Baseline Issuance), then
 per-action enforcement (Runtime-Enforced), then agent governance and
 compromise resistance (Governed Agent and High-Assurance Agent).
 
-The binding is an orthogonal axis, and a binding is not a level. The
-authority-bearing bindings name their level separately from their
-binding. The standalone MAS is the case that matters most: it
-provides the Mission record, lifecycle, and authority but no
-Mission-bound credential and no issuance gating. Under the standalone
-MAS, the kill switch is the runtime layer alone, not the token gate,
-and a deployment states that.
+A level does not determine any action class's containment property.
+The proof obligations noted with each level are the claims that
+become available at that bundle, not properties the level name
+asserts. A relying party compares claims, not levels
+({{assurance-claims-axis}}), because the family's strongest
+properties are deployment properties, not protocol properties:
+complete PEP placement, a trusted freshness source, and credential
+custody are things a deployment does, not things a token proves.
+
+The binding is an orthogonal axis, not a level: the authority-bearing
+bindings name their level separately from their binding. The
+standalone MAS provides the Mission record, lifecycle, and authority
+but no Mission-bound credential and no issuance gating. Under the
+standalone MAS, the kill switch is the runtime layer alone, not the
+token gate, and a deployment states that.
 
 An AAuth deployment reports the Mission Context capabilities and
-resource access modes it actually uses instead of a level. Selecting
-the AAuth binding does not by itself satisfy structured-authority,
-subset, portable-evidence, or runtime proof obligations. Its
-lifecycle gate covers person identity, PS authorization, and federated
-authorization but not agent identity or resource-managed access, and
-its native auth token
-is Mission-referenced, not Mission-bound ({{token-classes}}).
+resource access modes it uses instead of a level. Selecting the AAuth
+binding does not by itself satisfy structured-authority, subset,
+portable-evidence, or runtime proof obligations. The AAuth binding's
+lifecycle gate covers the PS-gated modes but not agent identity or
+resource-managed access, and the binding's native auth token is
+Mission-referenced, not Mission-bound ({{token-classes}}).
 
 ## The Four Levels {#assurance-level-definitions}
 
-The levels, cumulative:
+Each level includes the one before it:
 
 **Baseline Issuance**:
 : the approved, anchored Mission record and its lifecycle: authority
   derived and committed at the approval event with the integrity
   anchors (the OAuth binding).
 
-  Where a structured-authority binding issues Mission-bound
-  credentials, issuance is bounded by the subset rule and gated on
-  Mission state. That gated issuance grants task-bound, auditable
-  authority and a possession-independent kill switch at the issuance
-  gate. It grants no per-action control, and outstanding tokens run
-  to their own expiry.
+  **Structured-authority bindings**: where such a binding issues
+  Mission-bound credentials, issuance is bounded by the subset rule
+  and gated on Mission state. That gated issuance grants task-bound,
+  auditable authority and a possession-independent kill switch at the
+  issuance gate. It grants no per-action control, and outstanding
+  tokens run to their own expiry.
 
-  Sized deliberately, that expiry is the level's revocation bound:
-  **lifetime-bounded reliance**, access-token lifetimes no longer
-  than the deployment's tolerated staleness
-  ({{I-D.draft-mcguinness-oauth-mission-status}}), gives a
-  quantified cutoff, revocation within one token lifetime, with no
-  Resource Server changes and no status traffic. Expiry closes the
-  temporal bound by the clock alone and observes no revocation,
-  suspension, completion, or containment, which is why the lifetime
-  must not exceed the tolerated staleness. Revocation latency is a
-  number, not a level: what the higher levels add is per-action
-  enforcement, parameter binding, and evidence, not a faster clock.
+  Sized deliberately, that expiry is the level's revocation bound.
+  **Lifetime-bounded reliance**, access-token lifetimes no longer than
+  the deployment's tolerated staleness
+  ({{I-D.draft-mcguinness-oauth-mission-status}}), gives a quantified
+  cutoff: revocation within one token lifetime, with no Resource
+  Server changes and no status traffic. Expiry closes the temporal
+  bound by the clock alone and observes no revocation, suspension,
+  completion, or containment, so the lifetime must not exceed the
+  tolerated staleness. Revocation latency is a number, not a level:
+  the higher levels add per-action enforcement, parameter binding,
+  and evidence, not a faster clock.
 
-  Under a binding without credential-carried authority (the standalone
-  MAS), Baseline grants governance and audit. No kill switch of any kind
-  exists under such a binding until a freshness surface and runtime
-  enforcement (the next level) arrive, and a deployment states that. The
-  issuance join ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}})
-  restores gated issuance at each consuming Authorization Server, and
-  Baseline with it.
+  **Standalone MAS**: under a binding without credential-carried
+  authority, Baseline grants governance and audit. No kill switch of
+  any kind exists under such a binding until a freshness surface and
+  runtime enforcement (the next level) arrive, and a deployment states
+  that. The issuance join
+  ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) restores
+  gated issuance at each consuming Authorization Server, and Baseline
+  with it.
 
-  The nearest AAuth comparison, stated as capabilities rather than a
-  level: native approval, exact-byte commitment, active or terminated
-  state, and the ordered mission log. The possession-independent
-  issuance cutoff applies only to person-token issuance and to PS
-  authorization and federated requests whose resource token carries the
-  validated Mission Reference; no
-  Authority Set or subset proof is implied.
+  **AAuth**: the nearest comparison, stated as capabilities rather
+  than a level, is native approval, exact-byte commitment, active or
+  terminated state, and the ordered mission log. The
+  possession-independent issuance cutoff applies only to person-token
+  issuance and to PS authorization and federated requests whose
+  resource token carries the validated Mission Reference. No Authority
+  Set or subset proof is implied.
 
-  Proof obligations: the anchored approval and, where credentials are
-  issued, the subset rule. Where the binding gates issuance, a
-  deployment that adds only a freshness surface, Mission Status or
-  introspection with a published staleness bound
-  ({{I-D.draft-mcguinness-oauth-mission-status}}), gains state-aware
-  reliance, a revocation cutoff within that bound, without per-action
-  enforcement: a half-step into the next level, not a level of its own.
+  **Proof obligations**: the anchored approval and, where credentials
+  are issued, the subset rule.
 
-  Illustrative verification scenarios for this level, each traced to
-  the rule its home document states, are in {{verification-guidance}}.
+  Where the binding gates issuance, a deployment that adds only a
+  freshness surface (Mission Status or introspection with a published
+  staleness bound, {{I-D.draft-mcguinness-oauth-mission-status}})
+  gains state-aware reliance: a revocation cutoff within that bound,
+  without per-action enforcement. That is a half-step into the next
+  level, not a level of its own.
+
+  **Verification**: illustrative scenarios for this level, each traced
+  to the rule its home document states, are in
+  {{verification-guidance}}.
 
 **Runtime-Enforced**:
 : adds a PEP/PDP decision on every consequential action, a trusted
   state source with a published staleness bound, parameter binding,
   and runtime evidence ({{I-D.draft-mcguinness-mission-runtime}} and
-  its AuthZEN profile). Grants per-action enforcement and bounded
-  revocation: for gated classes, within the staleness bound plus the
-  permit window plus the class's execution bound; for paths no
-  runtime gate reaches, within token lifetime where issuance is gated.
+  its AuthZEN profile).
+
+  **Grants**: per-action enforcement and bounded revocation: for
+  gated classes, within the staleness bound plus the permit window
+  plus the class's execution bound; for paths no runtime gate
+  reaches, within token lifetime where issuance is gated.
 
   Runtime-Enforced is the smallest deployment that turns a Mission
-  from governed issuance into action-time defense, and every
-  normative dependency it needs is a family document intended for the
-  Standards Track. It is a substantial build, not a wedge: a
-  deployment sizes the effort from the runtime profile's conformance
-  section rather than from this level's one-line summary.
+  from governed issuance into action-time defense. Every normative
+  dependency it needs is a family document intended for the Standards
+  Track. It is a substantial build, not a wedge: a deployment sizes
+  the effort from the runtime profile's conformance section rather
+  than from this level's one-line summary.
 
-  Proof obligations: PEP-placement completeness and the declared
-  freshness source and bound. Documents: Baseline plus the substrate
-  contract (the kernel that runtime and AuthZEN consume normatively),
-  runtime, its AuthZEN profile, runtime evidence, and a concrete
-  freshness source, Status being the reference choice.
+  **Proof obligations**: PEP-placement completeness and the declared
+  freshness source and bound.
+
+  **Documents**: Baseline plus the substrate contract (the kernel that
+  runtime and AuthZEN consume normatively), runtime, its AuthZEN
+  profile, runtime evidence, and a concrete freshness source (Status
+  is the reference choice).
 
 **Governed Agent** (recommended for AI agents):
-: adds Consent Evidence and the harness, growing with Child Delegation,
-  Expansion, Orchestration, and Discovery (experimental, with
-  Progressive) as needed. Grants consent-rendering evidence and
-  session-continuity discipline. Documents: Runtime-Enforced plus
-  consent-evidence and the harness.
+: adds Consent Evidence and the harness, growing with Child
+  Delegation, Expansion, Orchestration, and Discovery (experimental,
+  with Progressive) as needed.
+
+  **Grants**: consent-rendering evidence and session-continuity
+  discipline.
+
+  **Documents**: Runtime-Enforced plus consent-evidence and the
+  harness.
 
 **High-Assurance Agent**:
 : adds the guarantees that resist a compromised agent. Two named
@@ -2568,20 +2578,14 @@ The levels, cumulative:
   With both, an injected agent cannot egress on the strength of
   untrusted content alone.
 
-  These are named high bars, never implied by basic adoption; a
+  Both claims are named high bars, never implied by basic adoption. A
   deployment can bind its Enforcement Scope Statement to
   execution-environment attestation so a claim is technical rather
   than organizational ({{I-D.draft-mcguinness-mission-runtime}},
   {{I-D.draft-mcguinness-mission-harness}}).
 
 Read in adoption order, each level makes a broader class of agent
-work defensible to grant. The mapping is informative: the action
-classes are the runtime profile's
-({{I-D.draft-mcguinness-mission-runtime}}), resource policy remains
-authoritative for its own objects, and what a level grants varies
-with the binding. A deployment states its own
-`mediated_action_classes` and exclusions in the Mission Deployment
-Profile ({{deployment-profile}}).
+work defensible to grant.
 
 | Level | What a deployment can defensibly grant |
 | --- | --- |
@@ -2590,6 +2594,13 @@ Profile ({{deployment-profile}}).
 | Governed Agent | Unattended operation and delegation, with Consent Evidence binding each approval event |
 | High-Assurance Agent | The high-consequence classes ({{I-D.draft-mcguinness-mission-runtime}}), under mediated custody and action-bound approval |
 {: title="What each level makes defensible to grant"}
+
+The mapping is informative: the action classes are the runtime
+profile's ({{I-D.draft-mcguinness-mission-runtime}}), resource policy
+remains authoritative for its own objects, and what a level grants
+varies with the binding. A deployment states its own
+`mediated_action_classes` and exclusions in the Mission Deployment
+Profile ({{deployment-profile}}).
 
 Every level above Baseline Issuance also carries the cross-cutting
 obligations its mechanisms imply:
@@ -2607,12 +2618,11 @@ what was never recorded present.
 
 ## The Reference Architecture {#reference-architecture}
 
-The four levels are also the four reference stacks deployments
-actually take, each containing the previous. The stacks are expressed
-in the OAuth realization; a peer binding realizes the levels per its
-own document, and peer standing does not imply identical rungs or
-capabilities. The family manifest records each stack's exact
-membership.
+The four levels are also the four reference stacks deployments take,
+each containing the previous. The stacks are expressed in the OAuth
+realization. A peer binding realizes the levels per its own document,
+and peer standing does not imply identical rungs or capabilities. The
+family manifest records each stack's exact membership.
 
 - **Protocol core** (Baseline Issuance): the OAuth binding alone, the
   standardizable primitive of approved, anchored, state-gated
@@ -2620,14 +2630,9 @@ membership.
 - **Reference security architecture** (Runtime-Enforced): the
   protocol core plus runtime enforcement, its AuthZEN profile,
   runtime evidence (the decision and execution objects AuthZEN
-  consumes), and a freshness source, Status being the reference
-  choice. The substrate contract arrives with them by adoption
-  closure, as the normative kernel of runtime and AuthZEN. When this
-  document says a Mission is enforced, it means this architecture,
-  and an evaluation should picture it by default. The architecture
-  presumes an authority-bearing binding; under AAuth the analogous
-  per-action control is the Person Server's contextual gate on
-  PS-mediated paths ({{I-D.draft-mcguinness-mission-aauth}}).
+  consumes), and a freshness source (Status is the reference choice).
+  Adoption closure brings in the substrate contract, the normative
+  kernel of runtime and AuthZEN.
 - **Recommended agent architecture** (Governed Agent): what a
   deployment running autonomous AI agents should build.
 - **High-assurance architecture** (High-Assurance Agent): the
@@ -2635,23 +2640,28 @@ membership.
   path, action-bound approval, active freshness, and agent-isolated
   approval rendering.
 
+When this document says a Mission is enforced, it means the reference
+security architecture, and an evaluation should picture it by
+default. That architecture presumes an authority-bearing binding.
+Under AAuth, the analogous per-action control is the Person Server's
+contextual gate on PS-mediated paths
+({{I-D.draft-mcguinness-mission-aauth}}).
+
 ## Assurance Claims {#assurance-claims-axis}
 
-The levels are adoption bundles: what a deployment has built, in
-the order deployments build it. What a deployment can prove is an
-orthogonal axis, claimed as named **assurance claims**, each with a
-proof obligation an existing profile fixes, and listed in the
-Deployment Profile ({{deployment-profile}}) rather than implied by a
-level:
+What a deployment can prove is an axis orthogonal to the levels:
+named **assurance claims**, each with a proof obligation an existing
+profile fixes, listed in the Deployment Profile
+({{deployment-profile}}) rather than implied by a level:
 
 - **Approved-record integrity**: the anchors reproduce from the
   record alone (the OAuth binding's integrity anchors).
-- **Bounded revocation latency**, per path and mechanism, the claim
-  naming the paths it covers: for a runtime-gated class, the
-  published staleness bound plus the permit window plus the class's
-  execution bound ({{I-D.draft-mcguinness-mission-runtime}}); for a
-  lifecycle-gated path, the outstanding credential lifetime; an
-  ungated path has no bound to claim.
+- **Bounded revocation latency**, per path and mechanism, naming the
+  paths it covers: for a runtime-gated class, the published staleness
+  bound plus the permit window plus the class's execution bound
+  ({{I-D.draft-mcguinness-mission-runtime}}); for a lifecycle-gated
+  path, the outstanding credential lifetime; an ungated path has no
+  bound to claim.
 - **Action-time enforcement**: PEP coverage for the Enforcement Scope
   Statement's mediated set, and nothing outside it.
 - **Parameter-bound enforcement**: permits bound to concrete
@@ -2666,8 +2676,8 @@ level:
 
 Two deployments at the same level under different bindings can hold
 different claims; the MAS modes are the worked case
-({{I-D.draft-mcguinness-mission-authority-server}}). The claims, not
-the level, are what a relying party compares.
+({{I-D.draft-mcguinness-mission-authority-server}}). A relying party
+compares the claims, not the level.
 
 ## Mission Binding Properties {#binding-properties}
 
