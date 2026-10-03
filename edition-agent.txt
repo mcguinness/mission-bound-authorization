@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-03T15:16:25Z
-Source repository commit: e53946070f912326cb7e789145aa63400a90319c
+Generated: 2026-10-03T20:36:54Z
+Source repository commit: 56a6e9d1ea2a9249796a2be996a4549961c07239
 Member count: 9
 
 Reading order:
@@ -453,6 +453,50 @@ Table of Contents
    every state other than the exact value active, including one it does
    not recognize, as non-active, so an unrecognized state fails safe
    (the OAuth binding's Mission Lifecycle and Gating section).
+
+   In OAuth's names, authority then moves along one path from the
+   approval event to an action, and no stage holds more than the stage
+   before it:
+
+    approval basis
+          |
+          | adjudication
+          v
+    approval event
+          |
+          v
+    Approved Authority Set (anchored, immutable)
+          |
+          | containment, discharge: subtract only
+          v
+    Effective Authority Set --child creation--> new approval event
+          |               |                     for a Child Mission
+          | derivation:   |
+          | subset rule   | current set
+          v               |
+    derived credential    |
+          |               |
+          v               v
+    runtime decision, where deployed
+    (with action parameters and lifecycle state)
+          |
+          v
+    action
+
+               Figure 1: The authority path, in OAuth's names
+
+   The lifecycle gate sits beside the path, not on it: only active
+   permits issuance, refresh, and a new positive governance decision,
+   and resume reopens a suspended Mission's gate without changing either
+   set ([I-D.draft-mcguinness-oauth-mission-status]).  Widening and
+   restoration never happen in place; a new approval event creates a
+   successor ([I-D.draft-mcguinness-oauth-mission-expansion]).  The
+   runtime decision takes the current Effective Authority Set as its own
+   input, so narrowing applied after issuance binds there
+   ([I-D.draft-mcguinness-mission-runtime]).  Where no runtime decision
+   is deployed, a resource relies on the credential alone, and the
+   materialized-credential residual remains (Section 10.4).  Table 2
+   places each mechanism on this path.
 
    AAuth realizes the separation differently.  Its exact-byte s256
    commits the private approved mission blob.  The approving PS and s256
@@ -1054,6 +1098,120 @@ Table of Contents
 
            Table 1: The verb spine: owning documents and packages
 
+   The same mechanisms, placed on the authority path (Figure 1) by the
+   transition each acts on:
+
+   +=============+=================+==================================+
+   |Mechanism    |What it changes  | Home                             |
+   +=============+=================+==================================+
+   |Direct       |a proposal to an | oauth-mission                    |
+   |approval     |approval event   |                                  |
+   |             |(direct basis)   |                                  |
+   +-------------+-----------------+----------------------------------+
+   |Template     |a template       | oauth-mission-template           |
+   |dispatch     |ceiling to an    |                                  |
+   |             |approval event   |                                  |
+   |             |(template basis) |                                  |
+   +-------------+-----------------+----------------------------------+
+   |Expansion    |a freshly        | oauth-mission-expansion          |
+   |             |adjudicated      |                                  |
+   |             |successor        |                                  |
+   |             |Authority Set,   |                                  |
+   |             |for widening or  |                                  |
+   |             |restoration      |                                  |
+   +-------------+-----------------+----------------------------------+
+   |Progressive  |an Expansion     | oauth-mission-progressive        |
+   |authorization|successor        |                                  |
+   |             |adjudicated by   |                                  |
+   |             |policy within a  |                                  |
+   |             |pre-consented    |                                  |
+   |             |ceiling          |                                  |
+   |             |(ceiling_drawdown|                                  |
+   |             |basis)           |                                  |
+   +-------------+-----------------+----------------------------------+
+   |Containment  |narrows the      | oauth-mission-containment        |
+   |             |Effective        |                                  |
+   |             |Authority Set;   |                                  |
+   |             |restored only    |                                  |
+   |             |through an       |                                  |
+   |             |Expansion        |                                  |
+   |             |successor        |                                  |
+   +-------------+-----------------+----------------------------------+
+   |Discharge    |narrows the      | oauth-mission-discharge          |
+   |             |Effective        |                                  |
+   |             |Authority Set;   |                                  |
+   |             |the entry is     |                                  |
+   |             |spent            |                                  |
+   +-------------+-----------------+----------------------------------+
+   |Suspend and  |closes and       | oauth-mission-status             |
+   |resume       |reopens the      |                                  |
+   |             |lifecycle gate;  |                                  |
+   |             |neither set      |                                  |
+   |             |changes          |                                  |
+   +-------------+-----------------+----------------------------------+
+   |Revoke,      |closes the       | oauth-mission, oauth-mission-    |
+   |complete,    |lifecycle gate   | status                           |
+   |expire       |terminally       |                                  |
+   +-------------+-----------------+----------------------------------+
+   |Issuance and |the Effective    | oauth-mission                    |
+   |refresh      |Authority Set to |                                  |
+   |             |a derived        |                                  |
+   |             |credential       |                                  |
+   +-------------+-----------------+----------------------------------+
+   |Issuance     |an Effective     | oauth-mission-issuance-grant     |
+   |grant        |subset handed to |                                  |
+   |             |a consuming AS   |                                  |
+   +-------------+-----------------+----------------------------------+
+   |Derivation   |bounds how many  | oauth-mission-derivation-limits  |
+   |limits       |derivations the  |                                  |
+   |             |Effective        |                                  |
+   |             |Authority Set    |                                  |
+   |             |yields           |                                  |
+   +-------------+-----------------+----------------------------------+
+   |Attenuation  |a derived        | oauth-mission-attenuation        |
+   |             |credential to a  |                                  |
+   |             |narrower one,    |                                  |
+   |             |offline          |                                  |
+   +-------------+-----------------+----------------------------------+
+   |Child        |a new Child      | oauth-mission-child-delegation   |
+   |delegation   |Mission approval |                                  |
+   |             |event bounded by |                                  |
+   |             |the parent's     |                                  |
+   |             |Effective        |                                  |
+   |             |Authority Set    |                                  |
+   |             |(direct or       |                                  |
+   |             |policy_drawdown  |                                  |
+   |             |basis)           |                                  |
+   +-------------+-----------------+----------------------------------+
+   |Cross-domain |a derived subset | oauth-mission-cross-domain       |
+   |projection   |honored as a     |                                  |
+   |             |destination-local|                                  |
+   |             |credential       |                                  |
+   +-------------+-----------------+----------------------------------+
+   |Runtime      |credential       | mission-runtime, mission-authzen |
+   |decision     |authority, the   |                                  |
+   |             |current Effective|                                  |
+   |             |Authority Set,   |                                  |
+   |             |and state to a   |                                  |
+   |             |per-action       |                                  |
+   |             |decision         |                                  |
+   +-------------+-----------------+----------------------------------+
+   |Deferred     |how an approval  | oauth-mission-approval, oauth-   |
+   |approval,    |event is reached;| mission-approval-revision,       |
+   |approval     |no transition of | mission-approval-governance      |
+   |revision,    |their own        |                                  |
+   |approval     |                 |                                  |
+   |governance   |                 |                                  |
+   +-------------+-----------------+----------------------------------+
+   |Evidence,    |record or carry a| oauth-mission-consent-evidence,  |
+   |continuation,|transition; move | mission-runtime-evidence,        |
+   |work products|no authority     | mission-audit, oauth-mission-    |
+   |             |                 | continuation, oauth-mission-     |
+   |             |                 | work-products                    |
+   +-------------+-----------------+----------------------------------+
+
+              Table 2: The transition each mechanism acts on
+
 7.1.  Propose
 
    The question: how does a user's request become a candidate approved
@@ -1352,10 +1510,10 @@ Table of Contents
       ([I-D.draft-mcguinness-mission-aauth]).
 
    *Authority only narrows*:  Derived tokens, delegated child Missions,
-      attenuated tokens, and cross-domain projections carry subsets;
-      widening exists only as an approved successor: a fresh approval
-      ([I-D.draft-mcguinness-oauth-mission-expansion]), or policy
-      drawdown within a ceiling a human pre-consented
+      attenuated tokens, and cross-domain projections carry subsets
+      (Figure 1); widening exists only as an approved successor: a fresh
+      approval ([I-D.draft-mcguinness-oauth-mission-expansion]), or
+      policy drawdown within a ceiling a human pre-consented
       ([I-D.draft-mcguinness-oauth-mission-progressive]).  Within a live
       Mission, issuer-held narrowing such as containment or discharge
       only subtracts: each mechanism feeds a single Effective Authority
@@ -1663,7 +1821,7 @@ Table of Contents
    |                                     | admission                  |
    +-------------------------------------+----------------------------+
 
-                                 Table 2
+                                 Table 3
 
    A deployment seeking interoperable authority uses narrowing; a model-
    assisted extension stays local policy unless a profile pins it with a
@@ -1832,7 +1990,7 @@ Table of Contents
    |              |                        |                |analysis      |
    +--------------+------------------------+----------------+--------------+
 
-          Table 3: Substrate primitives in their OAuth realization
+          Table 4: Substrate primitives in their OAuth realization
 
    The anchors in the envelope row are *commitment anchors*, not
    enforcement proofs (Section 9.2): a narrowed-token Resource Server
@@ -2095,11 +2253,25 @@ Table of Contents
    |            |         |          |              |              |Status       |
    +------------+---------+----------+--------------+--------------+-------------+
 
-                                  Table 4
+                                  Table 5
 
    A MAS deployment does not provide AS-native semantics just because
    both hold the same Mission, so a comparison of deployments compares
    their architectures first.
+
+   One Mission can govern authority issued by several authorization
+   servers.  Its Controller need not issue each credential, and each
+   server may know the same participant by its own client identifier.
+   The owning Mission Issuer records how those identifiers relate: the
+   MAS in its mapping contract, and each issuance grant's client_id as
+   the consuming AS knows it
+   ([I-D.draft-mcguinness-mission-authority-server],
+   [I-D.draft-mcguinness-oauth-mission-issuance-grant]).  Identifier
+   equality is therefore neither required nor sufficient for participant
+   continuity: the kernel requires no client_id and no subset relation
+   across administrative or protocol boundaries
+   ([I-D.draft-mcguinness-mission-substrate]), and a client_id shared by
+   several workloads is a join residual the MAS states.
 
    The OAuth binding stacks two independent chokepoints.  Issuance
    gating acts at the token layer: a revoked or expired Mission stops
@@ -2189,7 +2361,7 @@ Table of Contents
      | Profile     | the above                             | 12.6    |
      +-------------+---------------------------------------+---------+
 
-                         Table 5: Assurance frames
+                         Table 6: Assurance frames
 
    The levels are *adoption bundles*: which documents a deployment runs,
    named so a deployment, a procurement, or a review can cite one
@@ -2373,7 +2545,7 @@ Table of Contents
      |                  | approval                                  |
      +------------------+-------------------------------------------+
 
-                                 Table 6
+                                 Table 7
 
    Every level above Baseline Issuance also carries the cross-cutting
    obligations its mechanisms imply:
@@ -2535,7 +2707,7 @@ Table of Contents
    |           |projection   |                                                  |
    +-----------+-------------+--------------------------------------------------+
 
-                    Table 7: Mission binding properties
+                    Table 8: Mission binding properties
 
    The properties are claimed per covered Authorization Server,
    resource, and action path, never as a product-wide maximum: a mixed
@@ -2721,7 +2893,7 @@ Table of Contents
     | permit      |                                                   |
     +-------------+---------------------------------------------------+
 
-                    Table 8: Mission binding mechanisms
+                    Table 9: Mission binding mechanisms
 
    The property names above are stable identifiers, and a claim is a
    per-path declaration, not prose: each claimed property or composition
@@ -2818,7 +2990,7 @@ Table of Contents
    |          |path         |                                                       |
    +----------+-------------+-------------------------------------------------------+
 
-                                  Table 9
+                                  Table 10
 
    Mission termination participates in incident response; it does not
    replace it.  Revoking the Mission stops issuance at once where the
@@ -2917,7 +3089,7 @@ Table of Contents
    |        |(note 6)    |                                                  |                                                     |                                                     |
    +--------+------------+--------------------------------------------------+-----------------------------------------------------+-----------------------------------------------------+
 
-                                  Table 10
+                                  Table 11
 
    Notes:
 
@@ -3028,7 +3200,7 @@ Table of Contents
     |              | committed facts     | facts      | none)        |
     +--------------+---------------------+------------+--------------+
 
-                                 Table 11
+                                 Table 12
 
    The pattern is uniform: the family commits and checks what a party
    was shown, decided, or did; it does not make the human attentive, the
@@ -3099,7 +3271,7 @@ Table of Contents
    |             |needs it  |                                                     |
    +-------------+----------+-----------------------------------------------------+
 
-                                  Table 12
+                                  Table 13
 
    Every row shares the record, anchors, and lifecycle, so a ramp is an
    entry point, not a fork: Missions carry unchanged from any row to the
@@ -3915,7 +4087,7 @@ Appendix B.  Comparison to a Conventional Stack
    |           |issuance     |                                     |             |
    +-----------+-------------+-------------------------------------+-------------+
 
-     Table 13: Where a conventional stack meets Mission standardization
+     Table 14: Where a conventional stack meets Mission standardization
 
    Past these crossovers, a conventional deployment often accumulates a
    durable task record, a stable join key, lifecycle checks, narrowing
@@ -3955,7 +4127,7 @@ Appendix C.  A Worked Composition
      | PEP/PDP    |                       | routes                  |
      +------------+-----------------------+-------------------------+
 
-           Table 14: Provider claims in the worked composition
+           Table 15: Provider claims in the worked composition
 
    Action-time enforcement and decision evidence are supplied by the
    runtime profile and its evidence companion at the gateway
@@ -4022,7 +4194,7 @@ Appendix C.  A Worked Composition
       |             | gateway    | evidence                         |
       +-------------+------------+----------------------------------+
 
-                        Table 15: Composition result
+                        Table 16: Composition result
 
    The payment authority's fresh decision is decide_anew in the
    substrate's transition classification, never an attenuation of AAuth
@@ -4342,7 +4514,7 @@ Appendix G.  Mission Document Map
         |             | defines no binding or mechanism.         |
         +-------------+------------------------------------------+
 
-                                 Table 16
+                                 Table 17
 
    *The substrate and the bindings:*
 
@@ -4389,7 +4561,7 @@ Appendix G.  Mission Document Map
     |                               | than OAuth publish Statements.  |
     +-------------------------------+---------------------------------+
 
-                                  Table 17
+                                  Table 18
 
    *Approval time:*
 
@@ -4432,7 +4604,7 @@ Appendix G.  Mission Document Map
     |                                   | instantiated Mission.       |
     +-----------------------------------+-----------------------------+
 
-                                  Table 18
+                                  Table 19
 
    *Lifecycle:*
 
@@ -4508,7 +4680,7 @@ Appendix G.  Mission Document Map
      |                                 | termination.               |
      +---------------------------------+----------------------------+
 
-                                 Table 19
+                                 Table 20
 
    *Cross-domain projection and continuity:*
 
@@ -4538,7 +4710,7 @@ Appendix G.  Mission Document Map
    |                                    | hop.                        |
    +------------------------------------+-----------------------------+
 
-                                 Table 20
+                                 Table 21
 
    *Runtime enforcement:*
 
@@ -4586,7 +4758,7 @@ Appendix G.  Mission Document Map
    |                                         | domain decision.        |
    +-----------------------------------------+-------------------------+
 
-                                  Table 21
+                                  Table 22
 
    *Agent runtime:*
 
@@ -4606,7 +4778,7 @@ Appendix G.  Mission Document Map
     |                            | compensation after a stop.        |
     +----------------------------+-----------------------------------+
 
-                                 Table 22
+                                 Table 23
 
    *Sub-agents:*
 
@@ -4623,7 +4795,7 @@ Appendix G.  Mission Document Map
     |                                | preserved by runtime re-check. |
     +--------------------------------+--------------------------------+
 
-                                  Table 23
+                                  Table 24
 
    *Proof and portability:*
 
@@ -4656,7 +4828,7 @@ Appendix G.  Mission Document Map
    |                                         | kinds.                 |
    +-----------------------------------------+------------------------+
 
-                                 Table 24
+                                 Table 25
 
    *Security model:*
 
@@ -4674,11 +4846,21 @@ Appendix G.  Mission Document Map
       |                             | compromise costs.             |
       +-----------------------------+-------------------------------+
 
-                                  Table 25
+                                  Table 26
 
 Appendix H.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The authority path, with no change to any profile's requirements.
+      The Mission adds a figure from approval basis to action, with the
+      lifecycle gate beside the path, child creation as a new approval
+      event, and the current Effective Authority Set as a separate
+      runtime input; the Mission Verbs adds a table placing each
+      mechanism on the transition it acts on; and Binding Security
+      Architectures states that one Mission can span authorization
+      servers whose client identifiers differ, related through the
+      owning Mission Issuer's recorded mappings.
 
    *  The RAR metadata citation names the working-group successor draft-
       ietf-oauth-rar-metadata-remediation and separates an authorization
@@ -14772,10 +14954,10 @@ Table of Contents
 
    A Mission revocation through this endpoint cascades to credentials
    derived from the Mission per the AS's advertised revocation
-   propagation (Section 6).  The AS MAY additionally invoke [RFC7009]
-   token revocation for specific outstanding tokens when it knows their
-   jti.  [RFC7009] alone does NOT revoke a Mission; the lifecycle
-   endpoint is the authoritative Mission state change.
+   propagation (Section 6).  The AS MAY additionally revoke specific
+   outstanding tokens it knows by jti, with the same effect as [RFC7009]
+   revocation of each token.  [RFC7009] alone does NOT revoke a Mission;
+   the lifecycle endpoint is the authoritative Mission state change.
 
 5.9.  Deferred Lifecycle Capabilities
 

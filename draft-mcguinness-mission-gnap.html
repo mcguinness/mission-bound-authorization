@@ -1398,10 +1398,8 @@ prospective Mission carries the whole task as a Mission Intent, and
 the authorization server derives and obtains approval for the full
 Authority Set (<a href="#mission-intent" class="auto internal xref">Section 5</a>). The access tokens requested in
 that grant request, and in every later modification of it, locate
-drawdowns within the approved ceiling, not the Mission's extent: the
-shape the progressive companion names
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>), run on GNAP's
-own negotiation surface (<a href="#drawdown" class="auto internal xref">Section 10.3</a>).<a href="#section-1.1-1" class="pilcrow">¶</a></p>
+drawdowns within the approved Authority Set, not the Mission's extent,
+on GNAP's own negotiation surface (<a href="#drawdown" class="auto internal xref">Section 10.3</a>).<a href="#section-1.1-1" class="pilcrow">¶</a></p>
 <p id="section-1.1-2">The tension GNAP adds is the inverse of UMA's. Where the UMA binding
 had to assemble intent-first behavior on an attempt-first substrate,
 GNAP's grant request is mutable by design: <span>[<a href="#RFC9635" class="cite xref">RFC9635</a>]</span> lets a client
@@ -1579,9 +1577,9 @@ committed, and Consent Evidence is recorded (<a href="#approval" class="auto int
 callback with an interaction reference, integrity-bound by the
 finish hash. The agent continues the grant with <code>interact_ref</code>;
 the grant reaches <em>approved</em>, and the response carries the
-finance-service access token, the first drawdown of the approved
-ceiling, plus the Mission Reference in the <code>mission</code> response
-member (<a href="#mission-claim" class="auto internal xref">Section 10.1</a>).<a href="#section-4-2.4.1" class="pilcrow">¶</a></p>
+finance-service access token, the first drawdown within the
+approved Authority Set, plus the Mission Reference in the
+<code>mission</code> response member (<a href="#mission-claim" class="auto internal xref">Section 10.1</a>).<a href="#section-4-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-4-2.5">
           <p id="section-4-2.5.1">Later the agent needs the document service. It modifies the grant
@@ -2150,17 +2148,18 @@ that layer untouched (<a href="#limitations" class="auto internal xref">Section 
         <h3 id="name-drawdown-and-modification">
 <a href="#section-10.3" class="section-number selfRef">10.3. </a><a href="#name-drawdown-and-modification" class="section-name selfRef">Drawdown and Modification</a>
         </h3>
-<p id="section-10.3-1">The approved Authority Set is a pre-consented ceiling, and each
-token issuance is a drawdown within it: the model the progressive
-companion defines for the OAuth binding
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>), run natively
-on GNAP's grant modification. When the client instance modifies the
+<p id="section-10.3-1">Each token issuance under the grant is a drawdown: a derivation
+within the approved Authority Set, run natively on GNAP's grant
+modification. When the client instance modifies the
 grant with requested rights within the Authority Set, the
 authorization server <span class="bcp14">MAY</span> approve by policy without waking the
 Approver: that adjudication is a drawdown, not a new approval, and
 the anchors do not change. Modification never alters previously
 issued tokens, per <span>[<a href="#RFC9635" class="cite xref">RFC9635</a>]</span>; each newly issued token is a fresh
-derivation gated per <a href="#gating" class="auto internal xref">Section 9.1</a>.<a href="#section-10.3-1" class="pilcrow">¶</a></p>
+derivation gated per <a href="#gating" class="auto internal xref">Section 9.1</a>. A drawdown never widens the Authority
+Set, unlike in-ceiling widening under the progressive companion
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>), which creates a
+successor Mission.<a href="#section-10.3-1" class="pilcrow">¶</a></p>
 <p id="section-10.3-2">A requested right outside the Authority Set is an expansion, not a
 drawdown. The authorization server <span class="bcp14">MUST NOT</span> widen by policy: it
 routes the modification to the Approver through interaction or the
