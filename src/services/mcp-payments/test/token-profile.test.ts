@@ -104,7 +104,7 @@ function payments(): PaymentsStore {
 }
 
 /** A PEP whose decision function records each request it is asked, and declines to decide. */
-function pepRecording() {
+function pepRecording(extra: { requiresActionApproval?: (action: string, actionClass: string | undefined) => boolean } = {}) {
   const decided: unknown[] = [];
   const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
   const pep = new Pep({
@@ -122,6 +122,7 @@ function pepRecording() {
         : undefined,
     instanceEpoch: "epoch-825",
     allowedFreshnessSources: new Set(["load_view"]),
+    ...extra,
   });
   return { pep, decided, evidence };
 }
@@ -253,6 +254,43 @@ describe("the credential authority bounds the action the PEP resolved (@spec run
       id: "acme",
     });
     expect((await attempt([entry(["payments:invoice.list"], { vendors: ["acme", "globex"] })], "list_invoices", {})).decided).toHaveLength(1);
+  });
+
+  it("resolves a vendor lookup's target from store state, so a vendor-bound credential covers only its own vendors", async () => {
+    // The credential also names `initech`, which this resource does not hold.
+    const bound = [entry(["payments:vendor.read"], { vendors: ["acme", "initech"] })];
+    expect((await attempt(bound, "lookup_vendor", { vendor_id: "acme" })).decided).toHaveLength(1);
+    refusedBeforePdp(await attempt(bound, "lookup_vendor", { vendor_id: "globex" }), { type: "server", id: CANONICAL_RESOURCE });
+    // The target comes from store state, never the argument: a vendor id the
+    // store does not hold resolves to no vendor, which a vendor-bound
+    // credential never covers, even one that lists that id.
+    refusedBeforePdp(await attempt(bound, "lookup_vendor", { vendor_id: "initech" }), { type: "server", id: CANONICAL_RESOURCE });
+  });
+
+  it("honors an approval requirement only with a verified transaction credential's approval, whatever the local approval callback says", async () => {
+    const facts = await overHttp(
+      await mint({ authorization_details: [entry(["payments:invoice.read"], { requires_action_approval: true })] }),
+    );
+    // The callback would make a co-resident PDP require approval; a remote
+    // PDP never receives it, so it establishes nothing at this PEP.
+    const local = { requiresActionApproval: () => true };
+    const now = Math.floor(Date.now() / 1000);
+    const txn = { txn: "txn_825", jti: "jti_825", iatS: now, expS: now + 60, parameterDigest: "sha-256:op" };
+    const approval = { id: "apr_825", approved_at: new Date().toISOString(), parameter_digest: "sha-256:op" };
+
+    for (const [presented, approvalInput] of [
+      [facts, undefined],
+      [facts, approval],
+      [{ ...facts, txn }, undefined],
+    ] as const) {
+      const x = pepRecording(local);
+      const result = await x.pep.enforce("get_invoice", { invoice_id: "inv-1" }, presented as TokenFacts, approvalInput);
+      expect(result).toMatchObject({ permitted: false, denial_reason: "out_of_authority" });
+      expect(x.decided).toHaveLength(0);
+    }
+    const x = pepRecording(local);
+    await x.pep.enforce("get_invoice", { invoice_id: "inv-1" }, { ...facts, txn } as TokenFacts, approval);
+    expect(x.decided).toHaveLength(1);
   });
 
   it("applies the same bound to a token validated over the mediated channel", async () => {

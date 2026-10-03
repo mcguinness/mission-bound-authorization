@@ -268,6 +268,13 @@ export interface ActionMapping {
    * {@link Pep.enforceInner}).
    */
   bindsVendorScope?: boolean;
+  /**
+   * @spec runtime#input-authority (#825) — the operation targets one vendor,
+   * named by its `vendor_id` argument. The PEP resolves that vendor from
+   * authoritative store state, so the credential bound sees the vendor the
+   * operation reaches; an argument naming no stored vendor resolves to none.
+   */
+  targetsVendor?: true;
 }
 
 /**
@@ -286,7 +293,7 @@ export interface ActionMapping {
 const TOOL_ACTIONS: Record<string, ActionMapping> = {
   list_invoices: { action: "payments:invoice.list", actionClass: "consequential_read", needsInvoice: false, bindsVendorScope: true },
   get_invoice: { action: "payments:invoice.read", actionClass: "consequential_read", needsInvoice: true },
-  lookup_vendor: { action: "payments:vendor.read", actionClass: "consequential_read", needsInvoice: false },
+  lookup_vendor: { action: "payments:vendor.read", actionClass: "consequential_read", needsInvoice: false, targetsVendor: true },
   schedule_payment: { action: "payments:payment.schedule", actionClass: "consequential_write", needsInvoice: true, idempotencyKey: true },
   cancel_scheduled_payment: { action: "payments:payment.schedule.cancel", actionClass: "consequential_write", needsInvoice: true, idempotencyKey: true },
   check_transfer: { action: "payments:payment.execute", phase: "preflight", actionClass: "consequential_read", needsInvoice: true },
@@ -1193,6 +1200,10 @@ export class Pep {
     let amount: { amount: string; currency: string } | undefined;
     let resourceObj: EvaluationRequest["resource"] = { type: "server", id: CANONICAL_RESOURCE };
     let listVendorScope: string[] | undefined;
+    let targetVendorId: string | undefined;
+    if (mapping.targetsVendor && args.vendor_id !== undefined) {
+      targetVendorId = this.deps.payments.getVendor(String(args.vendor_id))?.id;
+    }
     if (mapping.needsInvoice) {
       const invoiceId = String(args.invoice_id ?? "");
       const invoice = this.deps.payments.getInvoice(invoiceId);
@@ -1279,7 +1290,9 @@ export class Pep {
     if (token.mission !== undefined) {
       const vendorIds: readonly string[] = effective
         ? [effective.vendor_id]
-        : resourceObj.type === "vendor" && resourceObj.id !== UNSCOPED_VENDOR_OBJECT
+        : targetVendorId !== undefined
+          ? [targetVendorId]
+          : resourceObj.type === "vendor" && resourceObj.id !== UNSCOPED_VENDOR_OBJECT
           ? ((resourceObj.properties?.vendor_ids as readonly string[] | undefined) ?? [resourceObj.id])
           : [];
       const covered =
@@ -1289,7 +1302,13 @@ export class Pep {
           action: mapping.action,
           vendorIds,
           ...(amount ? { amount } : {}),
-          approvalEnforced: this.deps.requiresActionApproval?.(mapping.action, mapping.actionClass) === true,
+          // An approval requirement on the credential is honored only where
+          // this resource has itself established the approval: a verified
+          // transaction credential matched to the operation it retained, with
+          // the approval derived from it. The deployment's approval callback
+          // configures a co-resident PDP and never reaches a remote one, so it
+          // establishes nothing here.
+          approvalEnforced: token.txn !== undefined && actionApproval !== undefined,
         });
       if (!covered) {
         await this.recordRefusal(token, "out_of_authority", mapping.action, view, undefined, { resource: resourceObj });
