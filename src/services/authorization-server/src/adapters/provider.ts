@@ -118,38 +118,60 @@ export class InvalidMissionIntentEvidence extends errors.CustomOIDCProviderError
 export class MissionGrantError extends errors.InvalidGrant {
   constructor(
     message: string,
-    readonly missionError?: "mission_revoked" | "mission_expired" | "derivations_exhausted",
+    readonly missionError?: MissionErrorValue,
   ) {
     super(message);
   }
 }
 
 /**
- * @spec mission#issuance-gating — map a kernel {@link GateError} onto the
- * `mission_error` diagnostic value, where one applies. `reason` alone is not
- * enough: `mission_not_active` also covers a companion state (Mission
- * Status's `suspended`) with no core `mission_error` value, and the
- * ancestor-lineage-walk refusal (also `mission_not_active`) names an
- * ancestor's state, not `missionId`'s own. `currentState`, the FRESH
- * persisted state of `missionId` itself (read after the throw, since
- * `applyExpiry` may have just committed an `expired` transition), resolves
- * both: only an own-state of exactly `revoked` yields `mission_revoked`, so a
- * suspended or lineage-refused Mission correctly gets no `mission_error`
- * rather than a misleading one. `authority_contained` and
- * `authority_exhausted` are not core `mission_error` values (the former rides
- * the Containment companion's own `mission_denial_reason`; the latter has no
- * core diagnostic), so both also fall through to plain `invalid_grant`, which
- * this document's SHOULD permits.
+ * The `mission_error` values this deployment emits: the OAuth binding's own,
+ * Derivation Limits' `derivations_exhausted`, and Mission Status's
+ * `mission_suspended` and `mission_completed`.
+ */
+export type MissionErrorValue =
+  | "mission_revoked"
+  | "mission_expired"
+  | "derivations_exhausted"
+  | "mission_suspended"
+  | "mission_completed";
+
+/**
+ * @spec mission#issuance-gating, status#mission-lifecycle-endpoint — map a
+ * kernel {@link GateError} onto the `mission_error` diagnostic value, where
+ * one applies. `reason` alone is not enough: `mission_not_active` covers
+ * `revoked` and Mission Status's `suspended` and `completed`, each with its
+ * own value, and the ancestor-lineage-walk refusal (also
+ * `mission_not_active`) names an ancestor's state, not `missionId`'s own.
+ * `currentState`, the FRESH persisted state of `missionId` itself (read
+ * after the throw, since `applyExpiry` may have just committed an `expired`
+ * transition), resolves both: the value names `missionId`'s own state, so a
+ * lineage-refused Mission whose own state is still `active` gets no
+ * `mission_error` rather than a misleading one. A child that a parent's
+ * suspension projects to `suspended` holds that state as its own, so it gets
+ * `mission_suspended`. `authority_contained` and `authority_exhausted` are
+ * not `mission_error` values (the former rides the Containment companion's
+ * own `mission_denial_reason`; the latter has no diagnostic), so both also
+ * fall through to plain `invalid_grant`, which the SHOULD permits.
  */
 export function gateErrorToMissionError(
   reason: GateError["reason"],
   currentState: string | undefined,
-): "mission_revoked" | "mission_expired" | "derivations_exhausted" | undefined {
+): MissionErrorValue | undefined {
   switch (reason) {
     case "mission_expired":
       return "mission_expired";
     case "mission_not_active":
-      return currentState === "revoked" ? "mission_revoked" : undefined;
+      switch (currentState) {
+        case "revoked":
+          return "mission_revoked";
+        case "suspended":
+          return "mission_suspended";
+        case "completed":
+          return "mission_completed";
+        default:
+          return undefined;
+      }
     case "derivation_cap_exhausted":
       return "derivations_exhausted";
     default:
