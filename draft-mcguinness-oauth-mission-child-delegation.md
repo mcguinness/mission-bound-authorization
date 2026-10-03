@@ -172,6 +172,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-progressive:
+    title: "Mission Progressive Authorization for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -604,11 +612,15 @@ commit:
 
 The child-creation token exchange completes in one of three modes,
 the family's shared completion pattern for Mission-creating
-exchanges. Child creation keeps the synchronous mode that Mission
-Expansion does not define: an expansion always widens and always
-takes fresh consent, so it completes only deferred or interactively
-({{I-D.draft-mcguinness-oauth-mission-expansion}}), while a Child
-Mission is always a creation and a strict subset of its parent, so a
+exchanges. Child creation keeps the synchronous mode that an
+ordinary, fresh-consent Mission Expansion does not define: such an
+expansion always widens and takes fresh consent, so it completes only
+deferred or interactively
+({{I-D.draft-mcguinness-oauth-mission-expansion}}). The one
+synchronous expansion is the progressive authorization companion's
+policy-adjudicated drawdown
+({{I-D.draft-mcguinness-oauth-mission-progressive}}). A Child Mission
+is always a creation and a strict subset of its parent, so a
 policy-permitted synchronous completion is unambiguous
 ({{strict-subset}}). The deferred token
 response is a completion mode, not a replacement:
