@@ -562,6 +562,11 @@ and returns HTTP 202 with a pending-submission reference:
 : REQUIRED. A string. An RFC 3339 {{RFC3339}} date-time after which an
   undecided submission lapses to `expired`.
 
+`interval`:
+: OPTIONAL. An integer. The minimum number of seconds the client
+  SHOULD wait between submission-status requests. If it is absent, the
+  client MUST use 5 seconds.
+
 The following example shows a submission and its response:
 
 ~~~ http-message
@@ -612,6 +617,10 @@ A submission is in one of four states:
 Only `approved` delivers a Mission. A consumer MUST treat every other
 `status` value, recognized or not, as not approved, mirroring the
 OAuth binding's only-`active` rule.
+
+A `pending` status response MAY carry `interval`, which replaces the
+pacing in force. A client that polls faster than the interval in force
+may receive the `rate_limited` error code ({{submission-errors}}).
 
 A resolved submission MUST remain resolvable for a deployment-defined
 window. The reference is never reused.
