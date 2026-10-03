@@ -563,9 +563,9 @@ and returns HTTP 202 with a pending-submission reference:
   undecided submission lapses to `expired`.
 
 `interval`:
-: OPTIONAL. An integer. The minimum number of seconds the client
-  SHOULD wait between submission-status requests. If it is absent, the
-  client MUST use 5 seconds.
+: OPTIONAL. A positive integer. The minimum number of seconds between
+  submission-status requests for this submission
+  ({{submission-status}}).
 
 The following example shows a submission and its response:
 
@@ -619,9 +619,16 @@ Only `approved` delivers a Mission. A consumer MUST treat every other
 `status` value, recognized or not, as not approved, mirroring the
 OAuth binding's only-`active` rule.
 
-A `pending` status response MAY carry `interval`, which replaces the
-pacing in force. A client that polls faster than the interval in force
-may receive the `rate_limited` error code ({{submission-errors}}).
+The interval in force for a submission is the most recent `interval`
+the client received for it, or 5 seconds if it has received none. A
+`pending` status response that carries `interval` replaces the
+interval in force; one that omits it leaves it unchanged, and a value
+that is not a positive integer is ignored. The client MUST wait at
+least the interval in force between submission-status requests for a
+submission, measured from its receipt of the preceding response for
+that submission (the 202 or a status response). A client that polls
+faster may receive the `rate_limited` error code
+({{submission-errors}}).
 
 A resolved submission MUST remain resolvable for a deployment-defined
 window. The reference is never reused.
@@ -3087,8 +3094,9 @@ shows the denial:
 \[\[ To be removed from the final specification ]]
 
 - Submission polling and Join Assertion outcomes (#972). The 202 and
-  `pending` status responses carry an `interval`, defaulting to 5
-  seconds; the status request parameter is `submission_id`. The
+  `pending` status responses carry an `interval`; the client waits at
+  least the interval in force (5 seconds by default) between status
+  requests; the status request parameter is `submission_id`. The
   join-assertion endpoint mints only for an `active` Mission and
   defines its outcomes: `invalid_join_request` (400) for a malformed
   body, `not_found` (404) for an unknown or invisible Mission, and
