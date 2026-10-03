@@ -806,7 +806,9 @@ async function evaluateInner(
   // established-but-stale: it MUST fail closed the same way, never pass
   // through as if no staleness bound applied. Below the high-consequence
   // floor the draft treats token-lifetime expiry as itself a conforming
-  // state source, so an absent member there is not by itself a refusal.
+  // state source, so an absent PEP-supplied member there is not by itself a
+  // refusal; under `pdp` placement the PDP's own read is required at every
+  // bounded class (authzen rule 1).
   //
   // The posture is a declaration, not a number. A class the deployment
   // declares with no active freshness requirement (the draft's Audit-only
@@ -872,7 +874,13 @@ async function evaluateInner(
       // valid-through; under `pdp` placement the PDP's own read reports none.
       acceptedObservationMs = observedAtMs;
       acceptedValidThroughMs = "validThroughMs" in relied ? relied.validThroughMs : undefined;
-    } else if (actionClass !== undefined && HIGH_CONSEQUENCE_ACTION_CLASSES.has(actionClass)) {
+    } else if (pdpPlaced || (actionClass !== undefined && HIGH_CONSEQUENCE_ACTION_CLASSES.has(actionClass))) {
+      // @spec authzen#pdp-request rule 1 (#1049 review P2-b): where state
+      // establishment is placed with the PDP, the PDP "MUST establish state
+      // from its own source or deny with `stale_state`", for every class
+      // under a bound, not only above the high-consequence floor. Under
+      // `pep` placement the floor below stands: token-lifetime freshness
+      // conforms for a class beneath it.
       return deny("stale_state");
     }
   }

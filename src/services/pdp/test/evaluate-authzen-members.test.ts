@@ -348,6 +348,26 @@ describe("AuthZEN profile members (@spec authzen#pdp-request, authzen#context-au
       }
     });
 
+    // #1049 review P2-b: the requirement is rule 1's, not the high-consequence
+    // floor's, so it holds for every class that reaches a permit under a bound.
+    it("with no read of its own, denies stale_state below the high-consequence floor too: a consequential write and a read", async () => {
+      for (const actionClass of ["consequential_write", "consequential_read", undefined]) {
+        const label = actionClass ?? "no class (consequential_read)";
+        const denied = await evaluate(
+          observedRequest({ ...(actionClass !== undefined ? { actionClass } : {}), observation: null }),
+          options({ stateSourcePlacement: "pdp" }),
+        );
+        expect(denied.decision, label).toBe(false);
+        expect(denied.context.denial_reason, label).toBe("stale_state");
+        // Control: the PDP's own read within the bound establishes state.
+        const permitted = await evaluate(
+          observedRequest({ ...(actionClass !== undefined ? { actionClass } : {}), observation: null }),
+          options({ stateSourcePlacement: "pdp", stateObservedAt: NOW.toISOString() }),
+        );
+        expect(permitted.decision, `${label}: ${JSON.stringify(permitted.context)}`).toBe(true);
+      }
+    });
+
     it("relies on its own read, never the PEP's telemetry, and caps the permit at that read plus the class bound", async () => {
       // A PEP-supplied observation an hour old does not make the PDP's own
       // fresh read stale, and a fresher one does not lengthen the permit.
