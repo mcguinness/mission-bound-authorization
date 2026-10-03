@@ -1509,10 +1509,12 @@ Table of Contents
    composes the resource-authored material, and the declaration's digest
    rides the derived authority (the progressive companion's
    resource_declaration_digest,
-   [I-D.draft-mcguinness-oauth-mission-progressive]).  Proposed RAR-type
-   metadata ([I-D.draft-zehavi-oauth-rar-metadata]), a resource
-   publishing the authorization_details types and fields it understands,
-   is the OAuth-native descriptive surface the direction builds on.
+   [I-D.draft-mcguinness-oauth-mission-progressive]).  The OAuth-native
+   descriptive surfaces the direction builds on are an authorization
+   server's RAR type metadata, the schema and documentation of each type
+   it supports ([I-D.draft-ietf-oauth-rar-metadata-remediation]), and a
+   protected resource's authorization_details_types_supported
+   ([RFC9728]).
 
    In AAuth, R3 can describe deterministic resource authorization
    independently of mission approval; the PS considers the resource
@@ -3351,6 +3353,13 @@ Table of Contents
               <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
               attestation-based-client-auth-11>.
 
+   [I-D.draft-ietf-oauth-rar-metadata-remediation]
+              Zehavi, Y., "OAuth 2.0 RAR Metadata and Error
+              Remediation", Work in Progress, Internet-Draft, draft-
+              ietf-oauth-rar-metadata-remediation-00, 23 August 2026,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
+              rar-metadata-remediation-00>.
+
    [I-D.draft-ietf-oauth-spiffe-client-auth]
               Schwenkschuster, A., Kasselman, P., Rose, S., Thorgersen,
               S., and N. Cam-Winget, "OAuth SPIFFE Client
@@ -3607,13 +3616,6 @@ Table of Contents
               authorization/draft-mcguinness-oauth-mission-work-
               products.html>.
 
-   [I-D.draft-zehavi-oauth-rar-metadata]
-              Zehavi, Y., "OAuth 2.0 RAR Metadata and Error
-              Remediation", Work in Progress, Internet-Draft, draft-
-              zehavi-oauth-rar-metadata-06, 9 August 2026,
-              <https://datatracker.ietf.org/doc/html/draft-zehavi-oauth-
-              rar-metadata-06>.
-
    [I-D.draft-zhu-oauth-async-delegation]
               Zhu, L. and Z. Berg, "Delegated Refresh Tokens for OAuth
               2.0 Token Exchange", Work in Progress, Internet-Draft,
@@ -3639,6 +3641,11 @@ Table of Contents
               Rich Authorization Requests", RFC 9396,
               DOI 10.17487/RFC9396, May 2023,
               <https://www.rfc-editor.org/rfc/rfc9396>.
+
+   [RFC9728]  Jones, M.B., Hunt, P., and A. Parecki, "OAuth 2.0
+              Protected Resource Metadata", RFC 9728,
+              DOI 10.17487/RFC9728, April 2025,
+              <https://www.rfc-editor.org/rfc/rfc9728>.
 
    [RFC9943]  Birkholz, H., Delignat-Lavaud, A., Fournet, C., Deshpande,
               Y., and S. Lasker, "An Architecture for Trustworthy and
@@ -4646,6 +4653,11 @@ Appendix G.  Mission Document Map
 Appendix H.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The RAR metadata citation names the working-group successor draft-
+      ietf-oauth-rar-metadata-remediation and separates an authorization
+      server's type metadata from a protected resource's RFC 9728
+      authorization_details_types_supported.
 
    *  Approve and Record names the three approval roles (derivation,
       adjudication, accountability) and summarizes the OAuth binding's

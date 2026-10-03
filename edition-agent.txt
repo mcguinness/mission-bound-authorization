@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-03T04:28:12Z
-Source repository commit: decadbd1a549219de2073bc30518ecd42dc56160
+Generated: 2026-10-03T05:12:14Z
+Source repository commit: 64d93afa2cf2185465c370ef696efdbd6b8c5c48
 Member count: 9
 
 Reading order:
@@ -1535,10 +1535,12 @@ Table of Contents
    composes the resource-authored material, and the declaration's digest
    rides the derived authority (the progressive companion's
    resource_declaration_digest,
-   [I-D.draft-mcguinness-oauth-mission-progressive]).  Proposed RAR-type
-   metadata ([I-D.draft-zehavi-oauth-rar-metadata]), a resource
-   publishing the authorization_details types and fields it understands,
-   is the OAuth-native descriptive surface the direction builds on.
+   [I-D.draft-mcguinness-oauth-mission-progressive]).  The OAuth-native
+   descriptive surfaces the direction builds on are an authorization
+   server's RAR type metadata, the schema and documentation of each type
+   it supports ([I-D.draft-ietf-oauth-rar-metadata-remediation]), and a
+   protected resource's authorization_details_types_supported
+   ([RFC9728]).
 
    In AAuth, R3 can describe deterministic resource authorization
    independently of mission approval; the PS considers the resource
@@ -3377,6 +3379,13 @@ Table of Contents
               <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
               attestation-based-client-auth-11>.
 
+   [I-D.draft-ietf-oauth-rar-metadata-remediation]
+              Zehavi, Y., "OAuth 2.0 RAR Metadata and Error
+              Remediation", Work in Progress, Internet-Draft, draft-
+              ietf-oauth-rar-metadata-remediation-00, 23 August 2026,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
+              rar-metadata-remediation-00>.
+
    [I-D.draft-ietf-oauth-spiffe-client-auth]
               Schwenkschuster, A., Kasselman, P., Rose, S., Thorgersen,
               S., and N. Cam-Winget, "OAuth SPIFFE Client
@@ -3633,13 +3642,6 @@ Table of Contents
               authorization/draft-mcguinness-oauth-mission-work-
               products.html>.
 
-   [I-D.draft-zehavi-oauth-rar-metadata]
-              Zehavi, Y., "OAuth 2.0 RAR Metadata and Error
-              Remediation", Work in Progress, Internet-Draft, draft-
-              zehavi-oauth-rar-metadata-06, 9 August 2026,
-              <https://datatracker.ietf.org/doc/html/draft-zehavi-oauth-
-              rar-metadata-06>.
-
    [I-D.draft-zhu-oauth-async-delegation]
               Zhu, L. and Z. Berg, "Delegated Refresh Tokens for OAuth
               2.0 Token Exchange", Work in Progress, Internet-Draft,
@@ -3665,6 +3667,11 @@ Table of Contents
               Rich Authorization Requests", RFC 9396,
               DOI 10.17487/RFC9396, May 2023,
               <https://www.rfc-editor.org/rfc/rfc9396>.
+
+   [RFC9728]  Jones, M.B., Hunt, P., and A. Parecki, "OAuth 2.0
+              Protected Resource Metadata", RFC 9728,
+              DOI 10.17487/RFC9728, April 2025,
+              <https://www.rfc-editor.org/rfc/rfc9728>.
 
    [RFC9943]  Birkholz, H., Delignat-Lavaud, A., Fournet, C., Deshpande,
               Y., and S. Lasker, "An Architecture for Trustworthy and
@@ -4672,6 +4679,11 @@ Appendix G.  Mission Document Map
 Appendix H.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The RAR metadata citation names the working-group successor draft-
+      ietf-oauth-rar-metadata-remediation and separates an authorization
+      server's type metadata from a protected resource's RFC 9728
+      authorization_details_types_supported.
 
    *  Approve and Record names the three approval roles (derivation,
       adjudication, accountability) and summarizes the OAuth binding's
@@ -15806,14 +15818,15 @@ Table of Contents
       (Section 7).
 
    For the high-consequence classes (Section 5.3) the profile goes
-   further: action-bound approval re-consents the concrete parameters
-   (Section 5.4), and mediated custody keeps the credential's sender-
-   constraint key in the enforcing component rather than the agent
-   (Section 5.6).  Those mechanisms compose into the two named claims of
-   Section 9.5, agent-compromise-resistant enforcement and trifecta
-   containment: the bar a deployment meets before representing itself as
-   resistant to a compromised or injected agent, and the High-Assurance
-   Agent level of the Mission Assurance Levels
+   further: the acting credential is sender-constrained with a verified
+   proof of possession (Section 5.6), action-bound approval re-consents
+   the concrete parameters (Section 5.4), and mediated custody keeps the
+   credential's sender-constraint key in the enforcing component rather
+   than the agent (Section 5.6).  Those mechanisms compose into the two
+   named claims of Section 9.5, agent-compromise-resistant enforcement
+   and trifecta containment: the bar a deployment meets before
+   representing itself as resistant to a compromised or injected agent,
+   and the High-Assurance Agent level of the Mission Assurance Levels
    ([I-D.draft-mcguinness-mission-architecture]).
 
 2.3.  Mission Binding Establishment
@@ -16544,6 +16557,13 @@ Table of Contents
     | fails, including       | evaluation                             |
     | sender-constraint      |                                        |
     | verification           |                                        |
+    +------------------------+----------------------------------------+
+    | A high-consequence     | Refuse                                 |
+    | action whose acting    |                                        |
+    | credential carries no  |                                        |
+    | verified sender-       |                                        |
+    | constraint binding     |                                        |
+    | (Section 5.6)          |                                        |
     +------------------------+----------------------------------------+
     | Mission governance is  | Refuse before runtime Mission          |
     | required but the       | evaluation, unless the Mission binding |
@@ -17411,6 +17431,20 @@ Table of Contents
    mediated custody, because a bearer token can be presented by whoever
    holds it, including the agent, so the mediating PEP could not be the
    sole holder of the authority.
+
+   Independently of mediation, the acting credential for an action in a
+   high-consequence class (Section 5.3) MUST be sender-constrained,
+   whether the Mission reference is credential-carried or externally
+   established (Section 2.3).  The PEP MUST NOT supply a confirmation
+   key as a decision input unless it verified the binding with a current
+   proof of possession of that key; a confirmation member alone is not a
+   verified binding.  The PDP MUST deny a high-consequence action whose
+   decision request carries no confirmation key.  The credential profile
+   defines the binding and its proof
+   ([I-D.draft-mcguinness-mission-runtime-oauth] for OAuth).  Sender-
+   constraint makes a stolen credential unusable on its own; it does not
+   protect against compromise of the bound key or of a component that
+   can use it.
 
    For an action class it mediates, a deployment SHOULD hold the sender-
    constraint private key for the Mission-bound credential in the
@@ -19231,6 +19265,9 @@ Table of Contents
       (Section 2.11) remains the base rule when state cannot be
       established;
 
+   *  cross-PDP history composition other than through the deployment's
+      evidence store or registered transparency records (Section 2.7.8);
+
    *  action-hierarchy and resource-containment subset extensions (this
       profile uses the flat subset rule of
       [I-D.draft-mcguinness-oauth-mission]);
@@ -19881,6 +19918,17 @@ Appendix C.  Runtime Evidence Worked Examples
 Appendix D.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Credential Custody: the acting credential for a high-consequence
+      action is sender-constrained in either Mission-establishment mode.
+      The PEP supplies a confirmation key only from a binding it
+      verified with a current proof of possession, and the PDP denies a
+      high-consequence action without one.  Enforcement Invariants and
+      Failure Modes point to the rule.
+
+   *  Out of Scope lists cross-PDP history composition other than
+      through the deployment's evidence store or registered transparency
+      records, matching History.  No requirement changed.
 
    *  Authority input: for every issuer-held narrowing mechanism the
       deployment runs, the PDP establishes current effective authority
@@ -24659,16 +24707,16 @@ Table of Contents
 
    Not a lane, the RAR remediation grain:  insufficient_authorization
       and authorization_remediation of
-      [I-D.draft-zehavi-oauth-rar-metadata], as adopted into the
-      family's remediation by the issuance profile
+      [I-D.draft-ietf-oauth-rar-metadata-remediation], as adopted into
+      the family's remediation by the issuance profile
       ([I-D.draft-mcguinness-oauth-mission]).  It is PAYLOAD, not a
       lane: it DESCRIBES authority that could be requested, MAY travel
       as payload within an ARAP request, and confers nothing by itself.
       The RAR-details grain and the AuthZEN grain are not competing
       carriers, and a deployment MAY expose both on the same denial: the
-      RAR-details grain names what authority to propose, carrying
-      actionable authorization_details the client proposes back on the
-      standard authorization_details parameter alongside a fresh Intent
+      RAR-details grain names what authority to request, carrying
+      actionable authorization_details the client requests as the
+      issuance profile's remediation routing describes
       ([I-D.draft-mcguinness-oauth-mission]); the AuthZEN grain names
       how the denial is escalated, routing it into a governed access
       request that an independent approver or policy adjudicates before
@@ -25545,6 +25593,13 @@ Table of Contents
               1.0", 2026, <https://openid.github.io/authzen/authzen-
               obligations-profile-1_0.html>.
 
+   [I-D.draft-ietf-oauth-rar-metadata-remediation]
+              Zehavi, Y., "OAuth 2.0 RAR Metadata and Error
+              Remediation", Work in Progress, Internet-Draft, draft-
+              ietf-oauth-rar-metadata-remediation-00, 23 August 2026,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
+              rar-metadata-remediation-00>.
+
    [I-D.draft-mcguinness-mission-runtime]
               McGuinness, K., "Mission-Bound Runtime Enforcement", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
@@ -25584,13 +25639,6 @@ Table of Contents
               McGuinness, K., "Mission Status and Lifecycle for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-status.html>.
-
-   [I-D.draft-zehavi-oauth-rar-metadata]
-              Zehavi, Y., "OAuth 2.0 RAR Metadata and Error
-              Remediation", Work in Progress, Internet-Draft, draft-
-              zehavi-oauth-rar-metadata-06, 9 August 2026,
-              <https://datatracker.ietf.org/doc/html/draft-zehavi-oauth-
-              rar-metadata-06>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
@@ -25697,6 +25745,11 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The RAR remediation grain cites the working-group successor draft-
+      ietf-oauth-rar-metadata-remediation and defers its routing to the
+      issuance profile's remediation routing instead of restating it.
+      No requirement changed.
 
    *  Mission-to-Policy Materialization describes the materialized
       policy view as one evaluation path: a PDP that evaluates the

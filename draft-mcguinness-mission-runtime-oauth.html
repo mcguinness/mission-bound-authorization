@@ -1214,10 +1214,13 @@ semantics are defined by Mission-Bound Authorization for OAuth 2.0.<a href="#sec
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
-            <p id="section-toc.1-1.12.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+            <p id="section-toc.1-1.12.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-document-history" class="internal xref">Document History</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
-            <p id="section-toc.1-1.13.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+            <p id="section-toc.1-1.13.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -1364,7 +1367,24 @@ Consumption").<a href="#section-3-3.2.1" class="pilcrow">¶</a></p>
       </ul>
 <p id="section-3-4">Each value the runtime decision uses is read from the resulting
 validated credential context (<a href="#claims-mapping" class="auto internal xref">Section 4</a>).<a href="#section-3-4" class="pilcrow">¶</a></p>
-<p id="section-3-5">Under the issuance profile alone, introspection freshness is per use:
+<p id="section-3-5">For an action in a high-consequence class, the runtime core requires a
+sender-constrained acting credential
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>, Section "Credential Custody
+and Mediated Execution"). The <code>cnf</code> claim of a validated JWT, or the
+<code>cnf</code> member of the introspection response for an opaque token
+(<span><a href="https://rfc-editor.org/rfc/rfc9449#section-6.2" class="relref">Section 6.2</a> of [<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>, <span><a href="https://rfc-editor.org/rfc/rfc8705#section-3.2" class="relref">Section 3.2</a> of [<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>), supplies the
+sender-constraint binding: a DPoP key (<code>jkt</code>), proved with a DPoP proof
+checked per <span><a href="https://rfc-editor.org/rfc/rfc9449#section-7.1" class="relref">Section 7.1</a> of [<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>, or a client certificate
+thumbprint (<code>x5t#S256</code>), proved over mutual TLS per
+<span><a href="https://rfc-editor.org/rfc/rfc8705#section-3" class="relref">Section 3</a> of [<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>. An access token whose validated credential
+context carries no such binding is a bearer token and does not meet that
+requirement, and a binding whose proof the PEP has not verified for the
+request supplies no confirmation key to the decision. The requirement
+attaches to the action's class, not to issuance: the issuance profile's
+level for the primary access token is unchanged
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission-Bound Access
+Tokens").<a href="#section-3-5" class="pilcrow">¶</a></p>
+<p id="section-3-6">Under the issuance profile alone, introspection freshness is per use:
 each response is an observation for one decision, not a cacheable state
 assertion (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission
 State via Token Introspection"). A deployment that runs the Mission
@@ -1376,14 +1396,14 @@ state only. Token validation and the credential authority are not
 cached: an opaque token is resolved by introspection before each use,
 and each response remains one observation, never a cacheable authority
 record (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Introspected
-Token Consumption").<a href="#section-3-5" class="pilcrow">¶</a></p>
-<p id="section-3-6">A PEP <span class="bcp14">MUST NOT</span> ask a PDP to authorize an action from unverified token
+Token Consumption").<a href="#section-3-6" class="pilcrow">¶</a></p>
+<p id="section-3-7">A PEP <span class="bcp14">MUST NOT</span> ask a PDP to authorize an action from unverified token
 claims. If token validation fails, the PEP <span class="bcp14">MUST</span> refuse before runtime
 Mission evaluation. When the PEP is an OAuth Resource Server, it uses
 the normal OAuth error behavior for the protected resource (for
 example, Bearer token errors under <span>[<a href="#RFC6750" class="cite xref">RFC6750</a>]</span>); this document defines
-no new OAuth error code.<a href="#section-3-6" class="pilcrow">¶</a></p>
-<p id="section-3-7">A Mission reference reaches the decision in one of two ways. A
+no new OAuth error code.<a href="#section-3-7" class="pilcrow">¶</a></p>
+<p id="section-3-8">A Mission reference reaches the decision in one of two ways. A
 credential-carried reference is the <code>mission</code> claim of a validated JWT,
 or the <code>mission</code> member of the introspection response for an opaque
 token. An externally established reference is supplied outside the
@@ -1400,7 +1420,7 @@ requires Mission-bound tokens: a resource that advertises
 <code>mission_bound_authorization_required</code> rejects a token that lacks the
 <code>mission</code> claim (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
 "Protected Resource Metadata"), whatever reference the deployment could
-establish externally.<a href="#section-3-7" class="pilcrow">¶</a></p>
+establish externally.<a href="#section-3-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="claims-mapping">
@@ -1987,9 +2007,17 @@ action identifiers to minimum runtime action classes.<a href="#section-10.1-2.2.
         <dd>
 <span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="RFC8705">[RFC8705]</dt>
+        <dd>
+<span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Sakimura, N.</span>, and <span class="refAuthor">T. Lodderstedt</span>, <span class="refTitle">"OAuth 2.0 Mutual-TLS Client Authentication and Certificate-Bound Access Tokens"</span>, <span class="seriesInfo">RFC 8705</span>, <span class="seriesInfo">DOI 10.17487/RFC8705</span>, <time datetime="2020-02" class="refDate">February 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8705">https://www.rfc-editor.org/rfc/rfc8705</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="RFC9068">[RFC9068]</dt>
         <dd>
 <span class="refAuthor">Bertocci, V.</span>, <span class="refTitle">"JSON Web Token (JWT) Profile for OAuth 2.0 Access Tokens"</span>, <span class="seriesInfo">RFC 9068</span>, <span class="seriesInfo">DOI 10.17487/RFC9068</span>, <time datetime="2021-10" class="refDate">October 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9068">https://www.rfc-editor.org/rfc/rfc9068</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9449">[RFC9449]</dt>
+        <dd>
+<span class="refAuthor">Fett, D.</span>, <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Jones, M.</span>, and <span class="refAuthor">D. Waite</span>, <span class="refTitle">"OAuth 2.0 Demonstrating Proof of Possession (DPoP)"</span>, <span class="seriesInfo">RFC 9449</span>, <span class="seriesInfo">DOI 10.17487/RFC9449</span>, <time datetime="2023-09" class="refDate">September 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9449">https://www.rfc-editor.org/rfc/rfc9449</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC9700">[RFC9700]</dt>
         <dd>
@@ -2037,21 +2065,39 @@ action identifiers to minimum runtime action classes.<a href="#section-10.1-2.2.
 </div>
 </section>
 </div>
-<div id="acknowledgments">
+<div id="document-history">
 <section id="appendix-A">
+      <h2 id="name-document-history">
+<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
+      </h2>
+<p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="appendix-A-2.1">
+          <p id="appendix-A-2.1.1">Establishing Validated Credential Context: the OAuth realization of
+the runtime core's sender-constraint requirement for high-consequence
+actions: the <code>cnf</code> binding of the validated credential context (a
+JWT's claim, or an opaque token's introspection response), with a
+proof the PEP verified; a context with no binding is a bearer token.
+Adds RFC 8705 and RFC 9449 as normative references.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-B">
       <h2 id="name-acknowledgments">
 <a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
       </h2>
-<p id="appendix-A-1">This document extracts the OAuth-specific realization of
+<p id="appendix-B-1">This document extracts the OAuth-specific realization of
 Mission-Bound Runtime Enforcement so that document can state a
 binding-neutral contract. The author thanks reviewers of the runtime
 core for pressing on the substrate-neutrality claim until it was true.
 It builds on the OAuth 2.0 Rich Authorization Requests and JWT access
-token specifications.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+token specifications.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authors-addresses">
-<section id="appendix-B">
+<section id="appendix-C">
       <h2 id="name-authors-address">
 <a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
       </h2>

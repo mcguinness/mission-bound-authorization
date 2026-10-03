@@ -2062,16 +2062,16 @@ Table of Contents
 
    Not a lane, the RAR remediation grain:  insufficient_authorization
       and authorization_remediation of
-      [I-D.draft-zehavi-oauth-rar-metadata], as adopted into the
-      family's remediation by the issuance profile
+      [I-D.draft-ietf-oauth-rar-metadata-remediation], as adopted into
+      the family's remediation by the issuance profile
       ([I-D.draft-mcguinness-oauth-mission]).  It is PAYLOAD, not a
       lane: it DESCRIBES authority that could be requested, MAY travel
       as payload within an ARAP request, and confers nothing by itself.
       The RAR-details grain and the AuthZEN grain are not competing
       carriers, and a deployment MAY expose both on the same denial: the
-      RAR-details grain names what authority to propose, carrying
-      actionable authorization_details the client proposes back on the
-      standard authorization_details parameter alongside a fresh Intent
+      RAR-details grain names what authority to request, carrying
+      actionable authorization_details the client requests as the
+      issuance profile's remediation routing describes
       ([I-D.draft-mcguinness-oauth-mission]); the AuthZEN grain names
       how the denial is escalated, routing it into a governed access
       request that an independent approver or policy adjudicates before
@@ -2948,6 +2948,13 @@ Table of Contents
               1.0", 2026, <https://openid.github.io/authzen/authzen-
               obligations-profile-1_0.html>.
 
+   [I-D.draft-ietf-oauth-rar-metadata-remediation]
+              Zehavi, Y., "OAuth 2.0 RAR Metadata and Error
+              Remediation", Work in Progress, Internet-Draft, draft-
+              ietf-oauth-rar-metadata-remediation-00, 23 August 2026,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
+              rar-metadata-remediation-00>.
+
    [I-D.draft-mcguinness-mission-runtime]
               McGuinness, K., "Mission-Bound Runtime Enforcement", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
@@ -2987,13 +2994,6 @@ Table of Contents
               McGuinness, K., "Mission Status and Lifecycle for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-status.html>.
-
-   [I-D.draft-zehavi-oauth-rar-metadata]
-              Zehavi, Y., "OAuth 2.0 RAR Metadata and Error
-              Remediation", Work in Progress, Internet-Draft, draft-
-              zehavi-oauth-rar-metadata-06, 9 August 2026,
-              <https://datatracker.ietf.org/doc/html/draft-zehavi-oauth-
-              rar-metadata-06>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
@@ -3100,6 +3100,11 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The RAR remediation grain cites the working-group successor draft-
+      ietf-oauth-rar-metadata-remediation and defers its routing to the
+      issuance profile's remediation routing instead of restating it.
+      No requirement changed.
 
    *  Mission-to-Policy Materialization describes the materialized
       policy view as one evaluation path: a PDP that evaluates the

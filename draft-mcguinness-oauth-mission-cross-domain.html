@@ -1799,8 +1799,8 @@ rules (<a href="#validation-at-resource-as" class="auto internal xref">Section 9
 and the Origin Principal profile standardizes the mapping input and
 its invariants, <a href="#origin-principal" class="auto internal xref">Section 10</a>).<a href="#section-8-14" class="pilcrow">¶</a></p>
 <p id="section-8-15">Sender-constraining is <span class="bcp14">REQUIRED</span> for the cross-domain grant, stronger
-than the <span class="bcp14">RECOMMENDED</span> level the issuance profile sets for the primary
-access token (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
+than the <span>[<a href="#RFC9700" class="cite xref">RFC9700</a>]</span> recommendation the issuance profile adopts for the
+primary access token (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
 "Mission-Bound Access Tokens"): the grant's position at the trust
 boundary demands it (<a href="#grant-at-boundary" class="auto internal xref">Section 15.2</a>), and the underlying grant
 provides no replay backstop of its own.<a href="#section-8-15" class="pilcrow">¶</a></p>
@@ -2851,8 +2851,12 @@ defined by that profile's Mission Resource Access Profile
 <span class="refAuthor">Model Context Protocol Project</span>, <span class="refTitle">"Model Context Protocol: Enterprise-Managed Authorization"</span>, <time datetime="2025" class="refDate">2025</time>, <span>&lt;<a href="https://modelcontextprotocol.io/extensions/auth/enterprise-managed-authorization">https://modelcontextprotocol.io/extensions/auth/enterprise-managed-authorization</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="OIDF-FED">[OIDF-FED]</dt>
-      <dd>
+        <dd>
 <span class="refAuthor">OpenID Foundation</span>, <span class="refTitle">"OpenID Federation for OpenID Connect 1.1"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://openid.net/specs/openid-federation-connect-1_1-final.html">https://openid.net/specs/openid-federation-connect-1_1-final.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9700">[RFC9700]</dt>
+      <dd>
+<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Labunets, A.</span>, and <span class="refAuthor">D. Fett</span>, <span class="refTitle">"Best Current Practice for OAuth 2.0 Security"</span>, <span class="seriesInfo">BCP 240</span>, <span class="seriesInfo">RFC 9700</span>, <span class="seriesInfo">DOI 10.17487/RFC9700</span>, <time datetime="2025-01" class="refDate">January 2025</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9700">https://www.rfc-editor.org/rfc/rfc9700</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>
@@ -3187,15 +3191,21 @@ exceeds the Mission's <code>expires_at</code>. The ID-JAG carried identity
 <p id="appendix-B-2">-01<a href="#appendix-B-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-3.1">
-          <p id="appendix-B-3.1.1">Controls taxonomy retirement (#636): <code>max_derivations</code> renamed
+          <p id="appendix-B-3.1.1">Issuing the Cross-Domain Grant: the comparison with the primary
+access token names the RFC 9700 recommendation the issuance profile
+adopts; the issuance profile sets no BCP 14 level of its own there.
+No requirement changed.<a href="#appendix-B-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-3.2">
+          <p id="appendix-B-3.2.1">Controls taxonomy retirement (#636): <code>max_derivations</code> renamed
 <code>derivation_limit</code> at its one normative reference (Issuing the
 Cross-Domain Grant). The Document History entry below is left
 unchanged: it is a historical record of the disclosure pattern this
 document mirrored at the time, under that pattern's then-current
-name.<a href="#appendix-B-3.1.1" class="pilcrow">¶</a></p>
+name.<a href="#appendix-B-3.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-3.2">
-          <p id="appendix-B-3.2.1">Reshaped Per-Domain Delegation Depth's disclosure from a flat
+        <li class="normal" id="appendix-B-3.3">
+          <p id="appendix-B-3.3.1">Reshaped Per-Domain Delegation Depth's disclosure from a flat
 <span class="bcp14">SHOULD</span> to a conditional, interface-addressed <span class="bcp14">MUST</span>, mirroring the
 child delegation profile's <code>max_derivations</code> disclosure pattern,
 and corrected the composed-bound arithmetic: the disclosed bound is
@@ -3203,18 +3213,18 @@ the sum of each distinct Resource AS domain's applicable
 <code>max_depth</code> (or a conservative per-domain maximum), not one
 per-domain <code>max_depth</code> times a flat domain count, and domains are
 counted by distinct Resource AS from the resource-to-AS mapping,
-never by resource count (<a href="#pre-established-trust" class="auto internal xref">Section 7</a>).<a href="#appendix-B-3.2.1" class="pilcrow">¶</a></p>
+never by resource count (<a href="#pre-established-trust" class="auto internal xref">Section 7</a>).<a href="#appendix-B-3.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-3.3">
-          <p id="appendix-B-3.3.1">Editorial density pass: split several overlong paragraphs (no BCP-14
+        <li class="normal" id="appendix-B-3.4">
+          <p id="appendix-B-3.4.1">Editorial density pass: split several overlong paragraphs (no BCP-14
 keyword sentence changed) and merged a duplicated sentence in
 Per-Domain Delegation Depth (the unconditional "a Resource AS of
 this document begins its delegation depth at 0" restated what the
 preceding, correctly conditioned sentence already said; the
-citation moved onto that sentence and the duplicate was dropped).<a href="#appendix-B-3.3.1" class="pilcrow">¶</a></p>
+citation moved onto that sentence and the duplicate was dropped).<a href="#appendix-B-3.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-3.4">
-          <p id="appendix-B-3.4.1">Added an explicit Resource AS requirement to authenticate the
+        <li class="normal" id="appendix-B-3.5">
+          <p id="appendix-B-3.5.1">Added an explicit Resource AS requirement to authenticate the
 redeeming client at redemption, distinct from the cross-domain
 grant's sender-constraint, and restated local-token client
 identification as a property-level requirement bound to that
@@ -3224,7 +3234,7 @@ the RFC 9068 case) rather than naming <code>client_id</code> directly (S-12).
 Scoped the origin-identity-carriage sentence to the Origin
 Principal profile when claimed, and separately barred reinterpreting
 the cross-domain grant's own <code>client_id</code> claim as the local
-identifier under any profile.<a href="#appendix-B-3.4.1" class="pilcrow">¶</a></p>
+identifier under any profile.<a href="#appendix-B-3.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

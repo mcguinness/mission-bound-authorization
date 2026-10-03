@@ -1677,8 +1677,10 @@ a governance operation, never a runtime one (<a href="#decision" class="auto int
         <dd class="break"></dd>
 </dl>
 <p id="section-2.2-3">For the high-consequence classes (<a href="#classification" class="auto internal xref">Section 5.3</a>) the profile
-goes further: action-bound approval re-consents the concrete
-parameters (<a href="#action-approval" class="auto internal xref">Section 5.4</a>), and mediated custody keeps the
+goes further: the acting credential is sender-constrained with a
+verified proof of possession (<a href="#custody" class="auto internal xref">Section 5.6</a>), action-bound approval
+re-consents the concrete parameters (<a href="#action-approval" class="auto internal xref">Section 5.4</a>), and
+mediated custody keeps the
 credential's sender-constraint key in the enforcing component rather
 than the agent (<a href="#custody" class="auto internal xref">Section 5.6</a>). Those mechanisms compose into the two
 named claims of <a href="#named-claims" class="auto internal xref">Section 9.5</a>, agent-compromise-resistant
@@ -2520,6 +2522,10 @@ refusal.<a href="#section-2.11-1" class="pilcrow">¶</a></p>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Credential validation fails, including sender-constraint verification</td>
               <td class="text-left" rowspan="1" colspan="1">Refuse before runtime Mission evaluation</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">A high-consequence action whose acting credential carries no verified sender-constraint binding (<a href="#custody" class="auto internal xref">Section 5.6</a>)</td>
+              <td class="text-left" rowspan="1" colspan="1">Refuse</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Mission governance is required but the credential carries no Mission reference</td>
@@ -3534,90 +3540,103 @@ be sender-constrained: a bearer token is incompatible with mediated
 custody, because a bearer token can be presented by whoever holds it,
 including the agent, so the mediating PEP could not be the sole holder
 of the authority.<a href="#section-5.6-5" class="pilcrow">¶</a></p>
-<p id="section-5.6-6">For an action class it mediates, a deployment <span class="bcp14">SHOULD</span> hold the
+<p id="section-5.6-6">Independently of mediation, the acting credential for an action in a
+high-consequence class (<a href="#classification" class="auto internal xref">Section 5.3</a>) <span class="bcp14">MUST</span> be sender-constrained,
+whether the Mission reference is credential-carried or externally
+established (<a href="#mission-binding" class="auto internal xref">Section 2.3</a>). The PEP <span class="bcp14">MUST NOT</span> supply a
+confirmation key as a decision input unless it verified the binding
+with a current proof of possession of that key; a confirmation member
+alone is not a verified binding. The PDP <span class="bcp14">MUST</span> deny a high-consequence
+action whose decision request carries no confirmation key. The
+credential profile defines the binding and its proof
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-oauth" class="cite xref">I-D.draft-mcguinness-mission-runtime-oauth</a>]</span> for OAuth).
+Sender-constraint makes a stolen credential unusable on its own; it
+does not protect against compromise of the bound key or of a component
+that can use it.<a href="#section-5.6-6" class="pilcrow">¶</a></p>
+<p id="section-5.6-7">For an action class it mediates, a deployment <span class="bcp14">SHOULD</span> hold the
 sender-constraint private key for the Mission-bound credential in the
 mediating PEP rather than in the agent component, and <span class="bcp14">SHOULD</span> do so for
 the irreversible-action, external-commitment, and
-privileged-administration classes.<a href="#section-5.6-6" class="pilcrow">¶</a></p>
-<p id="section-5.6-7">Two properties follow:<a href="#section-5.6-7" class="pilcrow">¶</a></p>
+privileged-administration classes.<a href="#section-5.6-7" class="pilcrow">¶</a></p>
+<p id="section-5.6-8">Two properties follow:<a href="#section-5.6-8" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-5.6-8.1">
-            <p id="section-5.6-8.1.1">a credential exfiltrated from a compromised agent is
-unusable without the key; and<a href="#section-5.6-8.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-5.6-9.1">
+            <p id="section-5.6-9.1.1">a credential exfiltrated from a compromised agent is
+unusable without the key; and<a href="#section-5.6-9.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.6-8.2">
-            <p id="section-5.6-8.2.1">a compromised agent cannot reach a
+          <li class="normal" id="section-5.6-9.2">
+            <p id="section-5.6-9.2.1">a compromised agent cannot reach a
 mediated action without passing the per-action check, because it never
-holds a usable credential for that class.<a href="#section-5.6-8.2.1" class="pilcrow">¶</a></p>
+holds a usable credential for that class.<a href="#section-5.6-9.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-5.6-9">Mediated execution depends on
+<p id="section-5.6-10">Mediated execution depends on
 the agent having no unmediated path to the resource; a Mission-aware
 harness establishes that execution environment
-(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>).<a href="#section-5.6-9" class="pilcrow">¶</a></p>
-<p id="section-5.6-10">Mediated custody's realizable form today is <strong>gateway custody</strong>: a
+(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>).<a href="#section-5.6-10" class="pilcrow">¶</a></p>
+<p id="section-5.6-11">Mediated custody's realizable form today is <strong>gateway custody</strong>: a
 server-side gateway, an LLM gateway, an MCP gateway, or an egress
 proxy, holds the sender-constraint key and the Mission-bound credentials,
 and the agent receives no bearer credential at all. That shape is the
 claim's home: the custody properties above belong to a deployment
 built this way, and a developer laptop with a shell is outside them
-by construction, not by configuration.<a href="#section-5.6-10" class="pilcrow">¶</a></p>
-<p id="section-5.6-11">Where the deployment attributes presentations to client instances
+by construction, not by configuration.<a href="#section-5.6-11" class="pilcrow">¶</a></p>
+<p id="section-5.6-12">Where the deployment attributes presentations to client instances
 (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>), the
 sender-constraint key is instance-specific: that profile attributes a
 presentation to an instance only under a key unique to it
 (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>, Section 7.3).
-Mediated custody composes with that rule in either of two shapes:<a href="#section-5.6-11" class="pilcrow">¶</a></p>
+Mediated custody composes with that rule in either of two shapes:<a href="#section-5.6-12" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-5.6-12.1">
-            <p id="section-5.6-12.1.1">the mediating PEP holds
+<li class="normal" id="section-5.6-13.1">
+            <p id="section-5.6-13.1.1">the mediating PEP holds
 per-instance keys, taking custody of each instance's key rather than
-one shared key; or<a href="#section-5.6-12.1.1" class="pilcrow">¶</a></p>
+one shared key; or<a href="#section-5.6-13.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.6-12.2">
-            <p id="section-5.6-12.2.1">the mediating PEP is itself the attested instance that obtained the
+          <li class="normal" id="section-5.6-13.2">
+            <p id="section-5.6-13.2.1">the mediating PEP is itself the attested instance that obtained the
 token, presenting its own Client Attestation and holding the instance
-key.<a href="#section-5.6-12.2.1" class="pilcrow">¶</a></p>
+key.<a href="#section-5.6-13.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-5.6-13">In both shapes that profile's instance-unique key and this section's
-custody rules are satisfied together.<a href="#section-5.6-13" class="pilcrow">¶</a></p>
-<p id="section-5.6-14">Attestation-based client authentication and SPIFFE
+<p id="section-5.6-14">In both shapes that profile's instance-unique key and this section's
+custody rules are satisfied together.<a href="#section-5.6-14" class="pilcrow">¶</a></p>
+<p id="section-5.6-15">Attestation-based client authentication and SPIFFE
 (<span>[<a href="#I-D.draft-ietf-oauth-attestation-based-client-auth" class="cite xref">I-D.draft-ietf-oauth-attestation-based-client-auth</a>]</span>,
 <span>[<a href="#I-D.draft-ietf-oauth-spiffe-client-auth" class="cite xref">I-D.draft-ietf-oauth-spiffe-client-auth</a>]</span>) can supply the
 client-instance authentication and workload credentials beneath this
 custody layer; they do not define the Mission actor, delegation,
-intent, lifecycle, or evidence semantics.<a href="#section-5.6-14" class="pilcrow">¶</a></p>
-<p id="section-5.6-15">This narrows, and does not eliminate, the compromised-agent exposure.
+intent, lifecycle, or evidence semantics.<a href="#section-5.6-15" class="pilcrow">¶</a></p>
+<p id="section-5.6-16">This narrows, and does not eliminate, the compromised-agent exposure.
 The mediating PEP becomes a trusted component whose compromise is
 out of scope here (<a href="#security-considerations" class="auto internal xref">Section 17</a>); a compromised agent can
 still request mediated actions, which are gated, and can still misuse
 any low-consequence authority it legitimately holds directly. The aim is
 that the agent is structurally unable to take a high-consequence action
-unilaterally, not that the agent is trusted.<a href="#section-5.6-15" class="pilcrow">¶</a></p>
-<p id="section-5.6-16">The set of action classes a deployment mediates is the load-bearing
+unilaterally, not that the agent is trusted.<a href="#section-5.6-16" class="pilcrow">¶</a></p>
+<p id="section-5.6-17">The set of action classes a deployment mediates is the load-bearing
 parameter here: a deployment that mediates nothing gains nothing from
 this section, however it labels itself. A deployment that relies on this
 profile to protect against agent compromise therefore <span class="bcp14">MUST</span> include the
 high-consequence classes in its mediated set; the protection is only as
-broad as that set.<a href="#section-5.6-16" class="pilcrow">¶</a></p>
-<p id="section-5.6-17">Custody has a lifecycle. A deployment <span class="bcp14">SHOULD</span> prefer per-class
+broad as that set.<a href="#section-5.6-17" class="pilcrow">¶</a></p>
+<p id="section-5.6-18">Custody has a lifecycle. A deployment <span class="bcp14">SHOULD</span> prefer per-class
 credentials with distinct sender-constraint keys over sharing one key
 across mediating PEPs, so that compromise of one mediating PEP does not
 expose the authority of another. On compromise of a mediating PEP's
 key, the deployment revokes the affected credentials and re-derives. A
 sender-constraint private key is never published; rotation is
 re-derivation with a new sender-constraint binding plus revocation or
-expiry of the credentials bound to the old key.<a href="#section-5.6-17" class="pilcrow">¶</a></p>
-<p id="section-5.6-18">The Enforcement Scope Statement
+expiry of the credentials bound to the old key.<a href="#section-5.6-18" class="pilcrow">¶</a></p>
+<p id="section-5.6-19">The Enforcement Scope Statement
 <span class="bcp14">SHOULD</span> state the custody replica topology (a shared HSM-held key
 versus per-replica keys): replicating one sender-constraint key across
-a PEP fleet widens the exposure custody exists to shrink.<a href="#section-5.6-18" class="pilcrow">¶</a></p>
-<p id="section-5.6-19">Mediated execution also places a controllable chokepoint on the
+a PEP fleet widens the exposure custody exists to shrink.<a href="#section-5.6-19" class="pilcrow">¶</a></p>
+<p id="section-5.6-20">Mediated execution also places a controllable chokepoint on the
 egress path itself: content-level controls this profile does not
 define (data-loss prevention, redaction, payload policy) compose
 naturally at the mediating PEP, the one component that sees the full
-payload after the decision and before presentation.<a href="#section-5.6-19" class="pilcrow">¶</a></p>
+payload after the decision and before presentation.<a href="#section-5.6-20" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="agent-isolated-evidence-emission">
@@ -5526,19 +5545,24 @@ disconnected from its Mission state source); fail-closed
 established;<a href="#section-16-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-16-2.7">
-          <p id="section-16-2.7.1">action-hierarchy and resource-containment subset extensions (this
-profile uses the flat subset rule of
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>);<a href="#section-16-2.7.1" class="pilcrow">¶</a></p>
+          <p id="section-16-2.7.1">cross-PDP history composition other than through the deployment's
+evidence store or registered transparency records
+(<a href="#input-history" class="auto internal xref">Section 2.7.8</a>);<a href="#section-16-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-16-2.8">
-          <p id="section-16-2.8.1">risk-signal and semantic intent-alignment inputs to the decision,
-which are advisory and deployment-defined (<a href="#inspection-controls" class="auto internal xref">Section 17.4</a>);
-and<a href="#section-16-2.8.1" class="pilcrow">¶</a></p>
+          <p id="section-16-2.8.1">action-hierarchy and resource-containment subset extensions (this
+profile uses the flat subset rule of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>);<a href="#section-16-2.8.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-16-2.9">
-          <p id="section-16-2.9.1">integrity of the result a tool returns as the application relays it to
+          <p id="section-16-2.9.1">risk-signal and semantic intent-alignment inputs to the decision,
+which are advisory and deployment-defined (<a href="#inspection-controls" class="auto internal xref">Section 17.4</a>);
+and<a href="#section-16-2.9.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-16-2.10">
+          <p id="section-16-2.10.1">integrity of the result a tool returns as the application relays it to
 the agent's model, and binding an executed action to the model's own
-decision (<a href="#inspection-controls" class="auto internal xref">Section 17.4</a>).<a href="#section-16-2.9.1" class="pilcrow">¶</a></p>
+decision (<a href="#inspection-controls" class="auto internal xref">Section 17.4</a>).<a href="#section-16-2.10.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-16-3">Structured per-argument attenuation of tool grants
@@ -6208,49 +6232,62 @@ worked example shows the concrete record
 <p id="appendix-D-1">[[ To be removed from the final specification ]]<a href="#appendix-D-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-D-2.1">
-          <p id="appendix-D-2.1.1">Authority input: for every issuer-held narrowing mechanism the
-deployment runs, the PDP establishes current effective authority from
-a source reporting it and refuses when it cannot; the PDP refuses an
-action within a discharged entry (formerly <span class="bcp14">SHOULD</span>).<a href="#appendix-D-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-2.1.1">Credential Custody: the acting credential for a high-consequence
+action is sender-constrained in either Mission-establishment mode.
+The PEP supplies a confirmation key only from a binding it verified
+with a current proof of possession, and the PDP denies a
+high-consequence action without one. Enforcement Invariants and
+Failure Modes point to the rule.<a href="#appendix-D-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.2">
-          <p id="appendix-D-2.2.1">A materialized policy view is one way to evaluate the authority
+          <p id="appendix-D-2.2.1">Out of Scope lists cross-PDP history composition other than through
+the deployment's evidence store or registered transparency records,
+matching History. No requirement changed.<a href="#appendix-D-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.3">
+          <p id="appendix-D-2.3.1">Authority input: for every issuer-held narrowing mechanism the
+deployment runs, the PDP establishes current effective authority from
+a source reporting it and refuses when it cannot; the PDP refuses an
+action within a discharged entry (formerly <span class="bcp14">SHOULD</span>).<a href="#appendix-D-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.4">
+          <p id="appendix-D-2.4.1">A materialized policy view is one way to evaluate the authority
 input, not the only one: the Materialized Policy View section
 governs a PDP that uses one, and the authority input requires
 whatever the PDP evaluates to be no broader than the current
 effective authority and bound to the Mission, with mutable state
 from a state source; the policy-view version names whichever basis
-the PDP evaluated.<a href="#appendix-D-2.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-D-2.3">
-          <p id="appendix-D-2.3.1">The Operation Profile's items are grouped as the operation's binding
-and its declarations, with no change to any requirement or to which
-operations it applies to; a declaration is stated even where the
-answer is no.<a href="#appendix-D-2.3.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-D-2.4">
-          <p id="appendix-D-2.4.1">The record minimum's evaluation request digest is over the input
-the runtime evidence companion defines (#971).<a href="#appendix-D-2.4.1" class="pilcrow">¶</a></p>
+the PDP evaluated.<a href="#appendix-D-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.5">
-          <p id="appendix-D-2.5.1">Security Considerations notes that an idempotency key identifies a
-request, not the business event it carries out, and that the
-Operation Profile and the resource own event-level deduplication.<a href="#appendix-D-2.5.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-2.5.1">The Operation Profile's items are grouped as the operation's binding
+and its declarations, with no change to any requirement or to which
+operations it applies to; a declaration is stated even where the
+answer is no.<a href="#appendix-D-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.6">
-          <p id="appendix-D-2.6.1">The Enforcement Scope Statement is what a deployment adopting the
-Runtime-Enforced bundle publishes, not what earns the level; the
-level stays guidance, matching the architecture's assurance levels,
-and the statement's named claims are what a relying party compares.<a href="#appendix-D-2.6.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-2.6.1">The record minimum's evaluation request digest is over the input
+the runtime evidence companion defines (#971).<a href="#appendix-D-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.7">
-          <p id="appendix-D-2.7.1">The Introduction states this profile as the per-action decision for
-the action classes it covers, composed over the issuance profile's
-bounds, and Deployment Considerations names introspection as a
-cutoff on the issuance-only path.<a href="#appendix-D-2.7.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-2.7.1">Security Considerations notes that an idempotency key identifies a
+request, not the business event it carries out, and that the
+Operation Profile and the resource own event-level deduplication.<a href="#appendix-D-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.8">
-          <p id="appendix-D-2.8.1">Client-instance references follow their successors:
+          <p id="appendix-D-2.8.1">The Enforcement Scope Statement is what a deployment adopting the
+Runtime-Enforced bundle publishes, not what earns the level; the
+level stays guidance, matching the architecture's assurance levels,
+and the statement's named claims are what a relying party compares.<a href="#appendix-D-2.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.9">
+          <p id="appendix-D-2.9.1">The Introduction states this profile as the per-action decision for
+the action classes it covers, composed over the issuance profile's
+bounds, and Deployment Considerations names introspection as a
+cutoff on the issuance-only path.<a href="#appendix-D-2.9.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.10">
+          <p id="appendix-D-2.10.1">Client-instance references follow their successors:
 draft-mcguinness-oauth-client-instance-assertion is replaced by
 {I-D.draft-mcguinness-oauth-client-instance-id}, and the
 deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
@@ -6258,37 +6295,37 @@ cited. Attester-verified
 context is instance identity that grants no authority, custody's
 per-instance key follows the successor's instance-unique key for
 attribution, and EAT evidence is no longer tied to a carrier
-profile. No requirement changed.<a href="#appendix-D-2.8.1" class="pilcrow">¶</a></p>
+profile. No requirement changed.<a href="#appendix-D-2.10.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-2.9">
-          <p id="appendix-D-2.9.1">Added approval-resolution rule 5, the agent-invokable approval bypass,
+        <li class="normal" id="appendix-D-2.11">
+          <p id="appendix-D-2.11.1">Added approval-resolution rule 5, the agent-invokable approval bypass,
 and its negative-conformance case (#759). Observing or requesting an
-independent approval is distinct from resolving it.<a href="#appendix-D-2.9.1" class="pilcrow">¶</a></p>
+independent approval is distinct from resolving it.<a href="#appendix-D-2.11.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-2.10">
-          <p id="appendix-D-2.10.1">Defined compound-action phases, one Decision per consequential
+        <li class="normal" id="appendix-D-2.12">
+          <p id="appendix-D-2.12.1">Defined compound-action phases, one Decision per consequential
 phase, a PEP-derived phase binding verified at permit use,
 phase-scoped idempotency where phases share an action identifier,
 and compensation correlation (#252). Strength change:
 <code>compensates_evaluation_id</code> on Decision Evidence moves from <span class="bcp14">OPTIONAL</span>
 to <span class="bcp14">REQUIRED</span> for a compensate-phase decision, <span class="bcp14">OPTIONAL</span> otherwise. The
 AuthZEN condition, the evidence member, and conformance coverage are
-specified separately.<a href="#appendix-D-2.10.1" class="pilcrow">¶</a></p>
+specified separately.<a href="#appendix-D-2.12.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-2.11">
-          <p id="appendix-D-2.11.1">Added per-entry perimeter dispositions inside the existing
+        <li class="normal" id="appendix-D-2.13">
+          <p id="appendix-D-2.13.1">Added per-entry perimeter dispositions inside the existing
 mediated-scope declaration, its compatibility rule, and the
-prohibition on claiming reconstruction as mediation (#758).<a href="#appendix-D-2.11.1" class="pilcrow">¶</a></p>
+prohibition on claiming reconstruction as mediation (#758).<a href="#appendix-D-2.13.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-2.12">
-          <p id="appendix-D-2.12.1">Operational Considerations added (#310): a dependency-conditional outage
+        <li class="normal" id="appendix-D-2.14">
+          <p id="appendix-D-2.14.1">Operational Considerations added (#310): a dependency-conditional outage
 blast-radius table indexed by action class, the remaining-window
 ride-through, the declared positive break-glass mode with truthful
 emergency evidence, and the replication disclosure. The three operator
-declarations carry no implementation coverage.<a href="#appendix-D-2.12.1" class="pilcrow">¶</a></p>
+declarations carry no implementation coverage.<a href="#appendix-D-2.14.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-2.13">
-          <p id="appendix-D-2.13.1">Added the Evaluation-Context Binding named assurance extension (#773),
+        <li class="normal" id="appendix-D-2.15">
+          <p id="appendix-D-2.15.1">Added the Evaluation-Context Binding named assurance extension (#773),
 claimed per mediated action class: a versioned descriptor of
 decision-relevant resource-resolved facts, a salted PEP-computed
 context digest committed with that descriptor, reverification at use,
@@ -6296,7 +6333,7 @@ and the declared verified and enforced properties. The deferred
 evaluation-context bullet is struck and the TOCTOU considerations point
 at the extension, keeping the residual for uncovered facts and
 non-adopters. The wire condition, the evidence members, and conformance
-coverage are specified separately.<a href="#appendix-D-2.13.1" class="pilcrow">¶</a></p>
+coverage are specified separately.<a href="#appendix-D-2.15.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

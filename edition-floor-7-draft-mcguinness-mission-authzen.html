@@ -3716,16 +3716,16 @@ defined by this profile; see the non-goal below.<a href="#section-7.7-2.6.1" cla
 <dt id="section-7.7-2.7">Not a lane, the RAR remediation grain:</dt>
           <dd style="margin-left: 1.5em" id="section-7.7-2.8">
             <p id="section-7.7-2.8.1"><code>insufficient_authorization</code> and <code>authorization_remediation</code> of
-<span>[<a href="#I-D.draft-zehavi-oauth-rar-metadata" class="cite xref">I-D.draft-zehavi-oauth-rar-metadata</a>]</span>, as adopted into the family's
-remediation by the issuance profile
+<span>[<a href="#I-D.draft-ietf-oauth-rar-metadata-remediation" class="cite xref">I-D.draft-ietf-oauth-rar-metadata-remediation</a>]</span>, as adopted
+into the family's remediation by the issuance profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). It is PAYLOAD, not a lane:
 it DESCRIBES authority that could be requested, <span class="bcp14">MAY</span> travel as
 payload within an ARAP request, and confers nothing by itself. The
 RAR-details grain and the AuthZEN grain are not competing carriers,
 and a deployment <span class="bcp14">MAY</span> expose both on the same denial: the
-RAR-details grain names what authority to propose, carrying
-actionable <code>authorization_details</code> the client proposes back on the
-standard <code>authorization_details</code> parameter alongside a fresh Intent
+RAR-details grain names what authority to request, carrying
+actionable <code>authorization_details</code> the client requests as the
+issuance profile's remediation routing describes
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); the AuthZEN grain names
 how the denial is escalated, routing it into a governed access
 request that an independent approver or policy adjudicates before
@@ -4832,6 +4832,10 @@ registered by <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite x
         <dd>
 <span class="refAuthor">OpenID AuthZEN Working Group</span>, <span class="refTitle">"AuthZEN Obligations Profile 1.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://openid.github.io/authzen/authzen-obligations-profile-1_0.html" class="reader-edition-ext-link" target="_blank" rel="noopener">https://openid.github.io/authzen/authzen-obligations-profile-1_0.html</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-ietf-oauth-rar-metadata-remediation">[I-D.draft-ietf-oauth-rar-metadata-remediation]</dt>
+        <dd>
+<span class="refAuthor">Zehavi, Y.</span>, <span class="refTitle">"OAuth 2.0 RAR Metadata and Error Remediation"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-rar-metadata-remediation-00</span>, <time datetime="2026-08-23" class="refDate">23 August 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-rar-metadata-remediation-00" class="reader-edition-ext-link" target="_blank" rel="noopener">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-rar-metadata-remediation-00</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="edition-floor-5-draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
@@ -4859,10 +4863,6 @@ registered by <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite x
 <dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Status and Lifecycle for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="edition-floor-4-draft-mcguinness-oauth-mission-status.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.draft-zehavi-oauth-rar-metadata">[I-D.draft-zehavi-oauth-rar-metadata]</dt>
-        <dd>
-<span class="refAuthor">Zehavi, Y.</span>, <span class="refTitle">"OAuth 2.0 RAR Metadata and Error Remediation"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-zehavi-oauth-rar-metadata-06</span>, <time datetime="2026-08-09" class="refDate">9 August 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-zehavi-oauth-rar-metadata-06" class="reader-edition-ext-link" target="_blank" rel="noopener">https://datatracker.ietf.org/doc/html/draft-zehavi-oauth-rar-metadata-06</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC2119">[RFC2119]</dt>
         <dd>
@@ -4966,26 +4966,32 @@ registered by <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite x
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Mission-to-Policy Materialization describes the materialized policy
+          <p id="appendix-A-2.1.1">The RAR remediation grain cites the working-group successor
+draft-ietf-oauth-rar-metadata-remediation and defers its routing to
+the issuance profile's remediation routing instead of restating it.
+No requirement changed.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">Mission-to-Policy Materialization describes the materialized policy
 view as one evaluation path: a PDP that evaluates the Mission's
 recorded authority directly meets the runtime profile's authority
 input without a view and omits <code>policy_view_id</code>. The PDP-side
 consistency checks compare the request against the loaded view or
 the directly evaluated Mission record, and the <code>policy_view_id</code>
-check applies only where a view is used.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">Defined the input to <code>evaluation_request_digest</code>: the complete
-request body as submitted, extension members included, before any
-default or enrichment, with header fields and transport framing
-excluded; a batch carries the one digest of its body (#971).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+check applies only where a view is used.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">The state observation's <code>mission_status_issued_at</code> is the RFC 3339
+          <p id="appendix-A-2.3.1">Defined the input to <code>evaluation_request_digest</code>: the complete
+request body as submitted, extension members included, before any
+default or enrichment, with header fields and transport framing
+excluded; a batch carries the one digest of its body (#971).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1">The state observation's <code>mission_status_issued_at</code> is the RFC 3339
 form of a Mission Status Response's <code>iat</code>, which <code>freshness_at</code>
 precedes by no more than the published maximum clock skew, and
 <code>mission_status_expires_at</code> and the state valid-through are its
-<code>mission.fresh_until</code>, not its <code>exp</code>, or a lease's end.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+<code>mission.fresh_until</code>, not its <code>exp</code>, or a lease's end.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

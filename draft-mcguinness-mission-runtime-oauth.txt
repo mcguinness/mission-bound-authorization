@@ -84,6 +84,7 @@ Table of Contents
    11. References
      11.1.  Normative References
      11.2.  Informative References
+   Appendix A.  Document History
    Acknowledgments
    Author's Address
 
@@ -207,6 +208,24 @@ Table of Contents
 
    Each value the runtime decision uses is read from the resulting
    validated credential context (Section 4).
+
+   For an action in a high-consequence class, the runtime core requires
+   a sender-constrained acting credential
+   ([I-D.draft-mcguinness-mission-runtime], Section "Credential Custody
+   and Mediated Execution").  The cnf claim of a validated JWT, or the
+   cnf member of the introspection response for an opaque token
+   (Section 6.2 of [RFC9449], Section 3.2 of [RFC8705]), supplies the
+   sender-constraint binding: a DPoP key (jkt), proved with a DPoP proof
+   checked per Section 7.1 of [RFC9449], or a client certificate
+   thumbprint (x5t#S256), proved over mutual TLS per Section 3 of
+   [RFC8705].  An access token whose validated credential context
+   carries no such binding is a bearer token and does not meet that
+   requirement, and a binding whose proof the PEP has not verified for
+   the request supplies no confirmation key to the decision.  The
+   requirement attaches to the action's class, not to issuance: the
+   issuance profile's level for the primary access token is unchanged
+   ([I-D.draft-mcguinness-oauth-mission], Section "Mission-Bound Access
+   Tokens").
 
    Under the issuance profile alone, introspection freshness is per use:
    each response is an observation for one decision, not a cacheable
@@ -751,9 +770,20 @@ Table of Contents
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
 
+   [RFC8705]  Campbell, B., Bradley, J., Sakimura, N., and T.
+              Lodderstedt, "OAuth 2.0 Mutual-TLS Client Authentication
+              and Certificate-Bound Access Tokens", RFC 8705,
+              DOI 10.17487/RFC8705, February 2020,
+              <https://www.rfc-editor.org/rfc/rfc8705>.
+
    [RFC9068]  Bertocci, V., "JSON Web Token (JWT) Profile for OAuth 2.0
               Access Tokens", RFC 9068, DOI 10.17487/RFC9068, October
               2021, <https://www.rfc-editor.org/rfc/rfc9068>.
+
+   [RFC9449]  Fett, D., Campbell, B., Bradley, J., Lodderstedt, T.,
+              Jones, M., and D. Waite, "OAuth 2.0 Demonstrating Proof of
+              Possession (DPoP)", RFC 9449, DOI 10.17487/RFC9449,
+              September 2023, <https://www.rfc-editor.org/rfc/rfc9449>.
 
    [RFC9700]  Lodderstedt, T., Bradley, J., Labunets, A., and D. Fett,
               "Best Current Practice for OAuth 2.0 Security", BCP 240,
@@ -800,6 +830,18 @@ Table of Contents
               2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-issuance-
               grant.html>.
+
+Appendix A.  Document History
+
+   [[ To be removed from the final specification ]]
+
+   *  Establishing Validated Credential Context: the OAuth realization
+      of the runtime core's sender-constraint requirement for high-
+      consequence actions: the cnf binding of the validated credential
+      context (a JWT's claim, or an opaque token's introspection
+      response), with a proof the PEP verified; a context with no
+      binding is a bearer token.  Adds RFC 8705 and RFC 9449 as
+      normative references.
 
 Acknowledgments
 
