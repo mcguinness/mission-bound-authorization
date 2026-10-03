@@ -212,6 +212,7 @@
    "issuance-grant.state-integration",
    "mas.enterprise",
    "mas.baseline-join",
+   "mas.join-assertion",
    "core.standing-consent",
    "core.standing-consent-recency",
    "core.governance-record",
@@ -27410,6 +27411,337 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Specification-only instance-context composition. Optional capability; not claimed by the reference deployment. Positive and negative implementation coverage remains to be added."
+  },
+  {
+   "id": "mas.join-disclosure.members",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-disclosure",
+   "text": "When the authenticated caller is a PDP enrolled for the Mission's enforcement scope, the MAS MUST include `subject` and `client_id`, and MUST disclose each `authorization_details` entry in the response with its `delegation` member as recorded",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.baseline-join"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission Status response to an enrolled joining PDP carries mission.subject, mission.client_id, and each disclosed entry with its delegation member"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No standalone MAS service exists in the reference composition; the reference PEP loads the same facts through its MissionView loader. Todo until a MAS Mission Status surface exists (#972)."
+  },
+  {
+   "id": "mas.join-disclosure.not-to-others",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-disclosure",
+   "text": "For any other caller, the MAS MUST NOT include `subject` or `client_id`",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.baseline-join"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "a Mission Status response to a caller not enrolled as a joining PDP carries neither mission.subject nor mission.client_id"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No standalone MAS service exists in the reference composition; the reference PEP loads the same facts through its MissionView loader. Todo until a MAS Mission Status surface exists (#972)."
+  },
+  {
+   "id": "mas.join-inputs.pep-carries-member",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-authzen",
+   "text": "On a joined decision, the PEP MUST carry the join inputs in the `context.mission_join` member of the AuthZEN decision request",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.baseline-join"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a joined decision request carries context.mission_join, with the actor-record depth as delegate_depth for a delegate"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: context.mission_join carriage (@spec authority-server#join-authzen) > carries context.mission_join on a joined delegate decision, with the actor-record depth as delegate_depth",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "mas.join-inputs.mission-bound-never-carries",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-authzen",
+   "text": "a Mission-bound decision never carries it",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.baseline-join"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission-bound decision request carries no context.mission_join"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: context.mission_join carriage (@spec authority-server#join-authzen) > carries no context.mission_join on a Mission-bound decision",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "mas.join-inputs.presence-marks-join",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-authzen",
+   "text": "Its presence marks the decision as joined",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.baseline-join"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the PDP runs the join, and stamps join_view_id, exactly when context.mission_join is present"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-mission-join.test.ts",
+     "name": "evaluate(): baseline MAS Join, direct client (@spec authority-server#mission-join rules 1-4, 7, #557 review point 1) > permits and stamps join_view_id when context.mission_join is present and the subject/client match directly",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-mission-join.test.ts",
+     "name": "evaluate(): baseline MAS Join, direct client (@spec authority-server#mission-join rules 1-4, 7, #557 review point 1) > never carries join_view_id for an ORDINARY Mission-bound request (context.mission_join absent): the existing path is untouched",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "mas.join-assertion.token-digest-required",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-authzen",
+   "text": "A string. REQUIRED when `assertion` is present. The presented credential's digest",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a decision request carrying an assertion also carries token_sha256"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+  },
+  {
+   "id": "mas.join-assertion.one-thumbprint",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-authzen",
+   "text": "When `assertion` is present, exactly one is REQUIRED, matching the presented credential's confirmation method",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a decision request carrying an assertion carries exactly one of token_jkt and token_x5t, matching the credential"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+  },
+  {
+   "id": "mas.join-assertion.pdp-checks-reported-binding",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-pdp",
+   "text": "`context.mission_join.token_sha256` equals `token.sha256`, and the reported thumbprint equals the assertion's confirmation member of the same method",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an assertion whose token binding differs from the PEP-reported digest or thumbprint is denied mission_mismatch"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+  },
+  {
+   "id": "mas.join-assertion.join-claim",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-artifact",
+   "text": "REQUIRED. An object carrying the result of the MAS's client and delegate evaluation",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every minted assertion carries join.client_id and join.disposition, and join.depth for a delegate"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+  },
+  {
+   "id": "mas.join-assertion.pdp-uses-join-claim",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-pdp",
+   "text": "The PDP takes the joining client identifier, the disposition, and a delegate's depth from the assertion's `join` claim, not from its own mappings",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "on the assertion path, rule 5 narrowing and the rule 9 commitment use the join claim"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+  },
+  {
+   "id": "mas.join-assertion.depth-disagreement-denies",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-pdp",
+   "text": "When `context.mission_join` also carries `delegate_depth` and it differs from `join.depth`, the PDP MUST deny with `mission_mismatch`",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a PEP-reported delegate_depth that disagrees with join.depth is denied mission_mismatch"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+  },
+  {
+   "id": "mas.join-assertion.one-confirmation-member",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-artifact",
+   "text": "exactly one confirmation member matching the token's confirmation method",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the token claim carries exactly one of jkt and x5t#S256, matching the token"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+  },
+  {
+   "id": "mas.join-assertion.failed-validation-denies",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-pdp",
+   "text": "denies with `mission_mismatch` when any check above fails",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an assertion failing any PDP Consumption check is denied mission_mismatch, never treated as absent"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+  },
+  {
+   "id": "mas.metadata.max-stale-required",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "discovery",
+   "text": "REQUIRED. An integer. Semantics per {{I-D.draft-mcguinness-oauth-mission-status}}. A MAS has no other state surface",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "MAS metadata always carries mission_max_stale_seconds"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference composition publishes no MAS metadata document. Todo (#972)."
   },
   {
    "id": "authzen.instance-context.no-upstream-actor",
