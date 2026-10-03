@@ -77,7 +77,6 @@ function pepDeps(): PepDeps {
     modelId: "unit-test-model",
     loadView: () => undefined,
     instanceEpoch: "epoch-1",
-    allowedFreshnessSources: new Set(["load_view"]),
     requiresActionApproval: (action) => action === "payments:remittance.send",
     observe: () => {},
   };

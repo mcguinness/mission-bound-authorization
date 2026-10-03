@@ -11,7 +11,7 @@ function build() {
     evidence, payments: new PaymentsStore(), decide: keys.decide,
     fga: { checkWithContext: async () => true } as unknown as Fga,
     modelId: "test", loadView: () => undefined, instanceEpoch: "test-759",
-    allowedFreshnessSources: new Set(["load_view"]), requiresActionApproval: () => false, observe: () => {},
+    requiresActionApproval: () => false, observe: () => {},
   };
   return { pep: new Pep(deps), evidence };
 }

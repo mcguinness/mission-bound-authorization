@@ -25,6 +25,8 @@ describe("published runtime posture (@spec runtime#runtime-operational, status#s
     }
     expect(published.state_source.availability_consequence).toContain("outage never restarts observation age");
     expect(published.state_source.pdp_unavailability_posture).toBe("deny");
+    // @spec authzen#context-audience-freshness: the PEP supplies state.
+    expect(published.state_source.placement).toBe("pep");
     expect(published.remote_decision_channels).toEqual([]);
     expect(published.state_source.replication).toBe("none");
     expect(published.state_source.break_glass).toBe("absent");
@@ -85,7 +87,7 @@ describe("published runtime posture (@spec runtime#runtime-operational, status#s
       changed.state_source.per_class.irreversible_action.max_staleness_seconds = bad;
       expect(() => loadRuntimePosture(changed), String(bad)).toThrow("invalid runtime posture");
     }
-    for (const [key, value] of [["pdp_unavailability_posture", "permit_within_bounds"], ["pdp_unavailability_posture", "allow"], ["unknown_action_class", "default"], ["replication", "replica"], ["break_glass", "enabled"], ["per_class", null], ["availability_consequence", ""], ["mission_max_stale_seconds", 29]]) {
+    for (const [key, value] of [["pdp_unavailability_posture", "permit_within_bounds"], ["pdp_unavailability_posture", "allow"], ["unknown_action_class", "default"], ["replication", "replica"], ["break_glass", "enabled"], ["per_class", null], ["availability_consequence", ""], ["mission_max_stale_seconds", 29], ["placement", undefined], ["placement", "both"]]) {
       const changed = structuredClone(RUNTIME_POSTURE) as any;
       changed.state_source[key as string] = value;
       expect(() => loadRuntimePosture(changed), String(key)).toThrow();

@@ -32,6 +32,7 @@ import {
   openIdempotencyClaimDomain,
   RUNTIME_POSTURE,
   stalenessBound,
+  stateSourcePlacement,
   deriveJoinDelegation,
   Fga,
   type MissionView,
@@ -647,23 +648,27 @@ export async function composeStack(opts: {
     };
   };
 
-  // @spec runtime#state-freshness: this deployment's trusted state sources
-  // (published in config/enforcement-scope.json and resource metadata).
-  // The demo stack has exactly
-  // one: `loadView`'s own synchronous live read of the kernel via `viewFor`,
-  // named after the `loadView` dependency it fulfills. A deployment adding
-  // Mission Status or Lifecycle Signals would list those sources here too.
-  const ALLOWED_FRESHNESS_SOURCES = new Set(["load_view"]);
-
-  // The PDP's dependency-injected loader (@spec runtime#state-freshness):
-  // pairs `viewFor`'s live read with the freshness of THIS read. `viewFor` is
-  // synchronous with no caching layer, so this call's own wall-clock time is
-  // the honest `observed_at` -- the loader asserts it, and the PEP only ever
-  // propagates what it asserts, never re-stamping its own clock (Finding 1).
+  // @spec runtime#state-freshness, authzen#context-audience-freshness: this
+  // deployment's trusted state source is the one config/enforcement-scope.json
+  // publishes ("kernel-committed load_view"): `loadView`'s own synchronous
+  // live read of the kernel via `viewFor`, placed with the PEP
+  // (`state_source.placement: "pep"`). The PEP supplies that read as
+  // `context.mission_state_observation`; the PDP accepts it because the
+  // declared placement says the authenticated PEP supplies state from this
+  // source, never because the request names a source.
+  //
+  // The loader pairs `viewFor`'s live read with the observation of THIS read.
+  // `viewFor` is synchronous with no caching layer, so this call's own
+  // wall-clock time is the honest `freshness_at` in `fresh` mode -- the
+  // loader asserts it, and the PEP only ever propagates what it asserts,
+  // never re-stamping its own clock (Finding 1).
   const loadView = (ref: MissionReference): LoadedView | undefined => {
     const view = viewFor(ref.id);
     if (!view || view.issuer !== ref.issuer) return undefined;
-    return { view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } };
+    return {
+      view,
+      observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() },
+    };
   };
 
   /**
@@ -689,7 +694,7 @@ export async function composeStack(opts: {
   const runtimeDecisionPolicy = {
     requiresActionApproval: (action: string) => action === "payments:remittance.send",
     maxApprovalAgeSeconds: TOPOLOGY.ttls.maxApprovalAgeSeconds,
-    allowedFreshnessSources: ALLOWED_FRESHNESS_SOURCES,
+    stateSourcePlacement: stateSourcePlacement(RUNTIME_POSTURE),
     delegatePolicy: {
       delegates: Object.fromEntries(Object.entries(MAS_JOIN.delegates).map(([id, d]) => [id, { maxDepth: d.max_depth }])),
     },
@@ -707,7 +712,19 @@ export async function composeStack(opts: {
       const ref = request.context.mission;
       const loaded = ref ? loadView(ref) : undefined;
       if (!loaded) throw new Error("PDP cannot establish the Mission view");
-      return { view: loaded.view, fga, modelId, now: () => new Date(), stalenessBound, relationForAction, ...runtimeDecisionPolicy };
+      // @spec authzen#pdp-request rule 1: the PDP side's own read, the one a
+      // `pdp` placement relies on; under the published `pep` placement the
+      // PEP's observation is relied on instead.
+      return {
+        view: loaded.view,
+        stateObservedAt: loaded.observation.freshness_at,
+        fga,
+        modelId,
+        now: () => new Date(),
+        stalenessBound,
+        relationForAction,
+        ...runtimeDecisionPolicy,
+      };
     },
   });
   const enforcementScopeStatement = loadRuntimePosture({ ...RUNTIME_POSTURE, remote_decision_channels: decisionChannel.remoteDecisionChannels });
