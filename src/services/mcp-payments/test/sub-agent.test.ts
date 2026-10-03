@@ -18,6 +18,7 @@ import {
   Pep,
   type TokenFacts,
 } from "../src/index.js";
+import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 
 // @spec runtime-evidence#decision-evidence-object (#741): one bundle per
 // test module. `signing`/`resolver` wire the PEP's store; `decide` is the
@@ -76,6 +77,7 @@ const orchestratorToken = (): TokenFacts => ({
   act: ORCH,
   mission: { id: "msn_m12", issuer: "https://as.test", authority_hash: "sha-256:m12hash" },
   cnfJkt: "jkt-orch",
+  credentialAuthority: ALL_ACTIONS_CREDENTIAL,
 });
 const subAgentToken = (): TokenFacts => ({
   sub: "alice",
@@ -84,6 +86,7 @@ const subAgentToken = (): TokenFacts => ({
   act: SUBAGENT_ACT,
   mission: { id: "msn_m12", issuer: "https://as.test", authority_hash: "sha-256:m12hash" },
   cnfJkt: "jkt-sub",
+  credentialAuthority: ALL_ACTIONS_CREDENTIAL,
 });
 
 let fga: Fga;

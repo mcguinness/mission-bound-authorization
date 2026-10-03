@@ -51,6 +51,7 @@ import {
   TOOL_ACTIONS,
   TransactionEngine,
 } from "../src/index.js";
+import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 
 const BASE_MS = Date.parse("2026-10-02T12:00:00.000Z");
 /** irreversible_action: the 30 s staleness bound caps the permit; the published lease is 30 s more. */
@@ -63,6 +64,7 @@ const TOKEN: TokenFacts = {
   clientId: "ap-agent",
   mission: { id: "msn_917", issuer: "https://as.test", authority_hash: "sha-256:m917" },
   cnfJkt: "jkt-917",
+  credentialAuthority: ALL_ACTIONS_CREDENTIAL,
 };
 
 const view = (): MissionView => ({

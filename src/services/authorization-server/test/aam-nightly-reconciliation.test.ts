@@ -46,6 +46,7 @@ import {
   PaymentsStore,
   Pep,
   type TokenFacts,
+  credentialAuthorityFrom
 } from "@mission/mcp-payments";
 import {
   evaluate,
@@ -401,6 +402,8 @@ function tokenFactsFor(missionId: string): TokenFacts {
     clientInstanceId: "aam-reconciler-inst",
     mission: { id: r.id, issuer: r.issuer, authority_hash: r.authority_hash },
     cnfJkt: dispatcherJkt,
+    // @spec runtime#input-authority (#825) — as issued for this Mission.
+    credentialAuthority: credentialAuthorityFrom(r.authority_set),
   };
 }
 

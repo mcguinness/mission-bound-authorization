@@ -7,9 +7,10 @@ import type { EvaluationRequest, Fga, MissionView } from "@mission/pdp";
 import { describe, expect, it } from "vitest";
 import { CANONICAL_RESOURCE, createEphemeralEvidenceKeys, EvidenceStore, McpPaymentsServer, openEphemeralWriteReservationStore, PaymentsStore, PaymentsToolCatalog, Pep, TOOLS, parameterDigest, type TokenFacts } from "../src/index.js";
 import { startResourceMetadataServer } from "../src/resource-metadata.js";
+import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 
 const text = TRUSTED_TOOL_CATALOGS.find(c => c.service_id === "payments")!.text;
-const token: TokenFacts = { sub: "alice", clientId: "ap-agent", mission: { id: "msn_catalog", issuer: "https://as.test", authority_hash: "sha-256:test" }, cnfJkt: "key" };
+const token: TokenFacts = { sub: "alice", clientId: "ap-agent", mission: { id: "msn_catalog", issuer: "https://as.test", authority_hash: "sha-256:test" }, cnfJkt: "key", credentialAuthority: ALL_ACTIONS_CREDENTIAL };
 function fixture(source: () => string = () => text) {
   const payments = new PaymentsStore();
   payments.seed([{ id: "acme", name: "Acme", status: "approved" }], [{ id: "inv-1", vendor_id: "acme", amount: "100.00", currency: "USD", payee_account: "acct", status: "payable" }]);

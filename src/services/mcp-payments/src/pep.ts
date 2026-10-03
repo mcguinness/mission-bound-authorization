@@ -14,6 +14,8 @@ import { randomUUID } from "node:crypto";
 import { type ActObject, buildContextActor, flattenActChain } from "@mission/actor-chain";
 import {
   type ActionPhase,
+  type CredentialAuthorityEntry,
+  credentialAuthorityPermits,
   type IdempotencyScope,
   idempotencyScopeDigest,
   isActionPhase,
@@ -116,14 +118,6 @@ export interface CommonTokenFacts {
    */
   identityContinuationHandle?: string;
   /**
-   * @spec attenuation#mission-binding-check: present when the credential was a
-   * Mission-bound Attenuating Agent Token chain. The effective authority is the
-   * leaf's narrowed tools, expressed as {resource, actions}; an action within
-   * the Mission but outside this leaf is denied `out_of_authority` (below).
-   * Absent for an ordinary Mission-bound token (no leaf narrowing).
-   */
-  leafAuthority?: ReadonlyArray<{ resource: string; actions: readonly string[] }>;
-  /**
    * @spec txn-authorization#offline-verification — present when the credential
    * for this request was a transaction token (see {@link TxnCredential}).
    * Absent for every ordinary Mission-bound credential.
@@ -162,6 +156,16 @@ export interface MissionBoundTokenFacts extends CommonTokenFacts {
    * profiled shape; the resource then issues no challenge.
    */
   missionClaim?: TxnMissionClaim;
+  /**
+   * @spec runtime#input-authority, runtime-oauth#authorization-details-mapping
+   * (#825) — the authority the VERIFIED credential itself carries: an access
+   * token's `authorization_details`, an attenuation chain's leaf `tools` with
+   * every restriction they carry, a transaction token's pinned operation
+   * entry. It is its own bound, checked before the PDP is asked: a broader
+   * Mission never repairs it, and its absence never falls back to the
+   * Mission.
+   */
+  credentialAuthority: readonly CredentialAuthorityEntry[];
 }
 
 /**
@@ -1172,22 +1176,6 @@ export class Pep {
       );
     }
 
-    // @spec attenuation#mission-binding-check: when the credential is an
-    // Attenuating Agent Token chain, the effective authority is the leaf's
-    // narrowed tools. An action within the Mission but OUTSIDE the leaf is
-    // denied here, reusing the existing out_of_authority DenialReason, before
-    // the Mission-level PDP check (which still enforces the Mission and, via
-    // view.state, the kill switch). Absent leafAuthority, this is a no-op.
-    if (
-      token.leafAuthority &&
-      !token.leafAuthority.some(
-        (e) => e.resource === CANONICAL_RESOURCE && e.actions.includes(mapping.action),
-      )
-    ) {
-      await this.recordRefusal(token, "out_of_authority", mapping.action, view);
-      return { permitted: false, denial_reason: "out_of_authority" };
-    }
-
     // Per-instance revocation (M12): refuse if any actor in the chain is
     // revoked, keyed on (act.iss, act.sub). Kills one instance, not the chain.
     if (this.deps.revokedInstances?.size) {
@@ -1277,6 +1265,35 @@ export class Pep {
         // so the read is bound to that full, documented scope, not an
         // accident of the tool's default arguments.
         resourceObj = { type: "vendor", id: UNSCOPED_VENDOR_OBJECT, properties: {} };
+      }
+    }
+
+    // @spec runtime#input-authority, runtime-oauth#authorization-details-mapping
+    // (#825) — the credential bound, on the target this PEP resolved: the
+    // action must fall within the verified credential's own authority, one
+    // whole entry at a time, before the PDP evaluates the Mission bound. A
+    // broader Mission or an allowing resource policy never repairs a narrower
+    // credential, and a Mission-bound credential that carries no authority
+    // never falls back to the Mission's. The ordinary-token (MAS Join) path
+    // keeps its own authority resolver.
+    if (token.mission !== undefined) {
+      const vendorIds: readonly string[] = effective
+        ? [effective.vendor_id]
+        : resourceObj.type === "vendor" && resourceObj.id !== UNSCOPED_VENDOR_OBJECT
+          ? ((resourceObj.properties?.vendor_ids as readonly string[] | undefined) ?? [resourceObj.id])
+          : [];
+      const covered =
+        Array.isArray(token.credentialAuthority) &&
+        credentialAuthorityPermits(token.credentialAuthority, {
+          resource: CANONICAL_RESOURCE,
+          action: mapping.action,
+          vendorIds,
+          ...(amount ? { amount } : {}),
+          approvalEnforced: this.deps.requiresActionApproval?.(mapping.action, mapping.actionClass) === true,
+        });
+      if (!covered) {
+        await this.recordRefusal(token, "out_of_authority", mapping.action, view, undefined, { resource: resourceObj });
+        return { permitted: false, denial_reason: "out_of_authority" };
       }
     }
 

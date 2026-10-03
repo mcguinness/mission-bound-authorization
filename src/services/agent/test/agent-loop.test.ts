@@ -100,12 +100,15 @@ async function signMissionToken(): Promise<string> {
     client_instance_id: "inst-1",
     mission: { id: VIEW.id, issuer: ISSUER, authority_hash: AUTHORITY_HASH },
     cnf: { jkt: CNF_JKT },
+    // @spec runtime#input-authority (#825) — as issued for this Mission.
+    authorization_details: VIEW.authority_set,
   })
-    .setProtectedHeader({ alg: "ES256", kid: "mission-key" })
+    .setProtectedHeader({ alg: "ES256", kid: "mission-key", typ: "at+jwt" })
     .setIssuer(ISSUER)
     .setAudience(CANONICAL_RESOURCE)
     .setSubject("alice")
     .setIssuedAt()
+    .setJti(crypto.randomUUID())
     .setExpirationTime("5m")
     .sign(signKey);
 }
@@ -243,7 +246,10 @@ d("agent loop (increment 2): the LLM planner reaches tools ONLY through the medi
     const outputs = toolOutputs(res);
     expect(outputs).toHaveLength(1);
     expect(outputs[0]?.ok, JSON.stringify(outputs[0])).toBe(false);
-    expect(outputs[0]?.denial_reason).toBe("parameter_violation");
+    // @spec runtime#input-authority (#825): the credential carries the
+    // Mission's own amount bound, so the over-cap wire is refused at the
+    // credential bound, before the PDP is asked.
+    expect(outputs[0]?.denial_reason).toBe("out_of_authority");
     // The planner could not escape the channel -> no unauthorized side effect.
     expect(connectors.ledgerEntries()).toHaveLength(0);
   });

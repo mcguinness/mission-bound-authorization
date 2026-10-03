@@ -98,6 +98,15 @@ export {
   type SigningKeyStatus,
 } from "./compromise-boundary.js";
 export {
+  type CredentialAuthorityEntry,
+  CredentialAuthorityError,
+  type CredentialTarget,
+  credentialAuthorityPermits,
+  credentialEntriesFromAatTools,
+  credentialEntriesFromAuthority,
+  parseCredentialAuthority,
+} from "./credential-authority.js";
+export {
   type ActorCredentialEntry,
   CHAIN_DIGEST_TYP,
   CHAIN_MEDIA_TYPE,
@@ -108,15 +117,6 @@ export {
   type PresentationBounds,
   parseChainPresentation,
 } from "./cross-org-presentation.js";
-export {
-  type CredentialAuthorityEntry,
-  CredentialAuthorityError,
-  type CredentialTarget,
-  credentialAuthorityPermits,
-  credentialEntriesFromAatTools,
-  credentialEntriesFromAuthority,
-  parseCredentialAuthority,
-} from "./credential-authority.js";
 export { compareAmounts, InvalidAmountError, isValidAmount } from "./decimal-amount.js";
 export {
   DPOP_PROOF_REPLAY_WINDOW_S,

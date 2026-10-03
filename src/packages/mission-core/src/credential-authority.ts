@@ -41,35 +41,53 @@ export class CredentialAuthorityError extends Error {}
  */
 const IGNORED_ENTRY_MEMBERS = new Set(["delegation", "capability_sources"]);
 const EVALUATED_ENTRY_MEMBERS = new Set(["type", "resource", "actions", "constraints"]);
-const CONSTRAINT_KEYS = new Set(["max_amount", "vendors", "requires_action_approval", "terminal_when"]);
+const CONSTRAINT_KEYS = new Set([
+  "max_amount",
+  "vendors",
+  "requires_action_approval",
+  "terminal_when",
+]);
 
 const nonEmptyString = (v: unknown): v is string => typeof v === "string" && v.length > 0;
 const isObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
 
-function parseConstraints(value: unknown, at: string): CredentialAuthorityEntry["constraints"] | undefined {
+function parseConstraints(
+  value: unknown,
+  at: string,
+): CredentialAuthorityEntry["constraints"] | undefined {
   if (value === undefined) return undefined;
   if (!isObject(value)) throw new CredentialAuthorityError(`${at}.constraints must be an object`);
   const out: NonNullable<CredentialAuthorityEntry["constraints"]> = {};
   for (const key of Object.keys(value)) {
-    if (!CONSTRAINT_KEYS.has(key)) throw new CredentialAuthorityError(`${at}.constraints.${key} is not enforceable here`);
+    if (!CONSTRAINT_KEYS.has(key))
+      throw new CredentialAuthorityError(`${at}.constraints.${key} is not enforceable here`);
   }
   if (value.max_amount !== undefined) {
     const cap = value.max_amount;
-    if (!isObject(cap) || typeof cap.amount !== "string" || !isValidAmount(cap.amount) || !nonEmptyString(cap.currency)) {
+    if (
+      !isObject(cap) ||
+      typeof cap.amount !== "string" ||
+      !isValidAmount(cap.amount) ||
+      !nonEmptyString(cap.currency)
+    ) {
       throw new CredentialAuthorityError(`${at}.constraints.max_amount is malformed`);
     }
     out.max_amount = { amount: cap.amount, currency: cap.currency };
   }
   if (value.vendors !== undefined) {
     if (!Array.isArray(value.vendors) || !value.vendors.every(nonEmptyString)) {
-      throw new CredentialAuthorityError(`${at}.constraints.vendors must be an array of vendor identifiers`);
+      throw new CredentialAuthorityError(
+        `${at}.constraints.vendors must be an array of vendor identifiers`,
+      );
     }
     out.vendors = [...value.vendors];
   }
   if (value.requires_action_approval !== undefined) {
     if (typeof value.requires_action_approval !== "boolean") {
-      throw new CredentialAuthorityError(`${at}.constraints.requires_action_approval must be a boolean`);
+      throw new CredentialAuthorityError(
+        `${at}.constraints.requires_action_approval must be a boolean`,
+      );
     }
     out.requires_action_approval = value.requires_action_approval;
   }
@@ -77,7 +95,10 @@ function parseConstraints(value: unknown, at: string): CredentialAuthorityEntry[
     if (
       !Array.isArray(value.terminal_when) ||
       !value.terminal_when.every(
-        (c) => isObject(c) && nonEmptyString(c.event_type) && (c.discharge_authority === undefined || nonEmptyString(c.discharge_authority)),
+        (c) =>
+          isObject(c) &&
+          nonEmptyString(c.event_type) &&
+          (c.discharge_authority === undefined || nonEmptyString(c.discharge_authority)),
       )
     ) {
       throw new CredentialAuthorityError(`${at}.constraints.terminal_when is malformed`);
@@ -93,22 +114,32 @@ function parseConstraints(value: unknown, at: string): CredentialAuthorityEntry[
  * enforcement point cannot evaluate refuses the whole credential.
  */
 export function parseCredentialAuthority(value: unknown): readonly CredentialAuthorityEntry[] {
-  if (!Array.isArray(value)) throw new CredentialAuthorityError("authorization_details must be an array");
+  if (!Array.isArray(value))
+    throw new CredentialAuthorityError("authorization_details must be an array");
   return Object.freeze(
     value.map((raw, i) => {
       const at = `authorization_details[${i}]`;
       if (!isObject(raw)) throw new CredentialAuthorityError(`${at} must be an object`);
       if (raw.type !== "mission_resource_access") {
-        throw new CredentialAuthorityError(`${at}.type ${JSON.stringify(raw.type)} is not understood`);
+        throw new CredentialAuthorityError(
+          `${at}.type ${JSON.stringify(raw.type)} is not understood`,
+        );
       }
       for (const key of Object.keys(raw)) {
         if (!EVALUATED_ENTRY_MEMBERS.has(key) && !IGNORED_ENTRY_MEMBERS.has(key)) {
           throw new CredentialAuthorityError(`${at}.${key} is not understood`);
         }
       }
-      if (!nonEmptyString(raw.resource)) throw new CredentialAuthorityError(`${at}.resource must be a non-empty string`);
-      if (!Array.isArray(raw.actions) || raw.actions.length === 0 || !raw.actions.every(nonEmptyString)) {
-        throw new CredentialAuthorityError(`${at}.actions must be a non-empty array of action identifiers`);
+      if (!nonEmptyString(raw.resource))
+        throw new CredentialAuthorityError(`${at}.resource must be a non-empty string`);
+      if (
+        !Array.isArray(raw.actions) ||
+        raw.actions.length === 0 ||
+        !raw.actions.every(nonEmptyString)
+      ) {
+        throw new CredentialAuthorityError(
+          `${at}.actions must be a non-empty array of action identifiers`,
+        );
       }
       const constraints = parseConstraints(raw.constraints, at);
       const entry: CredentialAuthorityEntry = {
@@ -122,13 +153,18 @@ export function parseCredentialAuthority(value: unknown): readonly CredentialAut
   );
 }
 
-function amountCapFromRange(name: string, c: AATConstraint, at: string): { amount: string; currency: string } {
+function amountCapFromRange(
+  name: string,
+  c: AATConstraint,
+  at: string,
+): { amount: string; currency: string } {
   if (c.constraint_type !== "range" || typeof c.max !== "number" || c.min !== undefined) {
     throw new CredentialAuthorityError(`${at}.${name} must be a range carrying only max`);
   }
   const amount = String(c.max);
   const currency = name.slice("amount_".length).toUpperCase();
-  if (!currency || !isValidAmount(amount)) throw new CredentialAuthorityError(`${at}.${name} is malformed`);
+  if (!currency || !isValidAmount(amount))
+    throw new CredentialAuthorityError(`${at}.${name} is malformed`);
   return { amount, currency };
 }
 
@@ -138,7 +174,9 @@ function amountCapFromRange(name: string, c: AATConstraint, at: string): { amoun
  * enforcement point cannot evaluate (an unknown argument, a `min` bound, an
  * `exact` constraint) refuses, so a narrowing never disappears in mapping.
  */
-export function credentialEntriesFromAatTools(tools: AATTools): readonly CredentialAuthorityEntry[] {
+export function credentialEntriesFromAatTools(
+  tools: AATTools,
+): readonly CredentialAuthorityEntry[] {
   return Object.freeze(
     Object.entries(tools).map(([toolId, args]) => {
       const at = `tools[${JSON.stringify(toolId)}]`;
@@ -146,12 +184,19 @@ export function credentialEntriesFromAatTools(tools: AATTools): readonly Credent
       const constraints: NonNullable<CredentialAuthorityEntry["constraints"]> = {};
       for (const [name, c] of Object.entries(args)) {
         if (name === "vendor") {
-          if (c.constraint_type !== "enum" || !Array.isArray(c.values) || !c.values.every(nonEmptyString)) {
-            throw new CredentialAuthorityError(`${at}.vendor must be an enum of vendor identifiers`);
+          if (
+            c.constraint_type !== "enum" ||
+            !Array.isArray(c.values) ||
+            !c.values.every(nonEmptyString)
+          ) {
+            throw new CredentialAuthorityError(
+              `${at}.vendor must be an enum of vendor identifiers`,
+            );
           }
           constraints.vendors = [...c.values];
         } else if (name.startsWith("amount_")) {
-          if (constraints.max_amount) throw new CredentialAuthorityError(`${at} carries more than one amount bound`);
+          if (constraints.max_amount)
+            throw new CredentialAuthorityError(`${at} carries more than one amount bound`);
           constraints.max_amount = amountCapFromRange(name, c, at);
         } else {
           throw new CredentialAuthorityError(`${at}.${name} is not enforceable here`);
@@ -221,6 +266,15 @@ export function credentialAuthorityPermits(
 }
 
 /** A Mission Authority Set entry read as credential authority (for fixtures and projections). */
-export function credentialEntriesFromAuthority(entries: readonly AuthorityEntry[]): readonly CredentialAuthorityEntry[] {
-  return parseCredentialAuthority(entries.map(({ type, resource, actions, constraints }) => ({ type, resource, actions, ...(constraints ? { constraints } : {}) })));
+export function credentialEntriesFromAuthority(
+  entries: readonly AuthorityEntry[],
+): readonly CredentialAuthorityEntry[] {
+  return parseCredentialAuthority(
+    entries.map(({ type, resource, actions, constraints }) => ({
+      type,
+      resource,
+      actions,
+      ...(constraints ? { constraints } : {}),
+    })),
+  );
 }
