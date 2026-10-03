@@ -1285,7 +1285,7 @@ document can serve more than one package, and the document map
 
 | Verb | Owning documents | Packages |
 | --- | --- | --- |
-| propose | `mission-shaping`, `oauth-mission-submission-evidence` | Agent Execution Governance |
+| propose | `mission-shaping`, `oauth-mission-submission-evidence`, `oauth-mission-request-provenance` | Agent Execution Governance |
 | approve and record | `oauth-mission`, `mission-authority-server`, `mission-aauth`, `mission-uma`, `mission-gnap`, `mission-substrate`, `oauth-mission-resource-access`, `oauth-mission-issuance-grant`, `oauth-mission-consent-evidence`, `oauth-mission-approval`, `oauth-mission-approval-revision`, `oauth-mission-template`, `mission-approval-governance` | Mission Control; Authority Distribution; Evidence and Accountability |
 | govern | `oauth-mission-status`, `oauth-mission-status-list`, `oauth-mission-signals`, `oauth-mission-management`, `oauth-mission-discharge`, `oauth-mission-expansion`, `oauth-mission-progressive`, `oauth-mission-containment`, `oauth-mission-derivation-limits`, `mission-control-plane`, `mission-discovery`, `mission-metering`, `mission-aauth-management`, `aauth-mission-expiry` | Mission Control; Runtime Enforcement (metering); Agent Execution Governance (discovery) |
 | enforce each action | `mission-runtime`, `mission-runtime-oauth`, `mission-authzen`, `mission-runtime-evidence`, `mission-capability-binding`, `oauth-mission-transaction-authorization` | Runtime Enforcement; Evidence and Accountability |
@@ -3734,6 +3734,7 @@ bound profiled by `aauth-mission-expiry`.
 |---|---|
 | `mission-shaping` | Client-side shaping of a user's request into a candidate Mission Intent, as untrusted proposal. |
 | `oauth-mission-submission-evidence` | The Intent Submission Evidence framework: entry convention, binding, and verification bounds; defines no types. |
+| `oauth-mission-request-provenance` | Optional evidence type: a trusted intake's signed record of who originated the request behind an Intent, with a secret-keyed request digest. |
 | `oauth-mission-consent-evidence` | The `consent_rendering_hash` anchor and signed evidence of what the Approver was shown. |
 | `oauth-mission-approval` | Asynchronous approval over the deferred substrate. |
 | `mission-approval-governance` | The Approval Governance Record: authenticated assertions behind an approval, committed atomically with activation. |
