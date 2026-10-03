@@ -480,7 +480,8 @@ that a companion profile may add a named member coordinated with it:
   a consequential action whose resource equals `resource` and, when
   `actions` is present, whose invoked action is within it. Within a
   group, the selectors name authority the Approver consents MUST NOT
-  be combined under this Mission ({{exclusivity}}).
+  be combined under this Mission or any Mission derived from it,
+  absent an explicitly approved relaxation ({{exclusivity}}).
 
 The bounds are carried on the Mission and committed by `intent_hash`.
 They are not enforced by the Authorization Server at issuance; they are
@@ -654,19 +655,25 @@ The `exclusive` control ({{bounds}}) is not a consumption bound: it
 is a stateful separation-of-duty rule enforced with the same
 machinery. Within an exclusivity group, the first permitted
 consequential action matching a selector latches the group to that
-selector, atomically with the permit; for the Mission's remaining
-lifetime the PDP MUST refuse a consequential action matching any
-other selector of the same group. The latch is per group and per
-Mission and is PDP-side operational state like a consumption counter
+selector, atomically with the permit. From then on the PDP MUST
+refuse a consequential action matching any other selector of the
+same group, under any Mission bound to the group
+({{exclusivity-across-missions}}). The latch is per group, not per
+Mission, and is PDP-side operational state like a consumption counter
 ({{metering}}).
 
 The latch tracks execution, not permit issuance: a permit whose
 action is affirmatively not executed never combined the group's
-authority, so when Execution Evidence reports that outcome within the
-strongly consistent latch domain the PDP releases the latch,
-restoring monotonic narrowing rather than breaking it. Absent that
-affirmative non-execution the latch does not unlatch: narrowing by
-exercise is monotonic, like every other narrowing in the family.
+authority. The PDP releases the latch only when Execution Evidence,
+within the strongly consistent latch domain, reports affirmative
+non-execution for every permitted action that matched the latched
+selector under any Mission bound to the group. One action's
+non-execution never releases a group another action exercised, and an
+outstanding or indeterminate action keeps the latch. Absent that, the
+latch does not unlatch: narrowing by exercise is monotonic, like every
+other narrowing in the family. This settlement release is distinct
+from a relaxation ({{exclusivity-across-missions}}), which never
+unlatches the group.
 
 The latch is exempt from the Bounded-consistency enforcement profile
 of {{topology}}. A counter degrades gracefully under a per-PDP
@@ -675,10 +682,13 @@ permanently, and two PDPs can latch the same group to opposite
 selectors within the window. Therefore:
 
 - An exclusivity group MUST be enforced under the Exact enforcement
-  profile of {{topology}}, in a single strongly consistent
-  per-Mission latch domain (the runtime profile's
-  Mission-sharding guidance makes the Mission the consistency unit,
-  {{I-D.draft-mcguinness-mission-runtime}}).
+  profile of {{topology}}, in a single strongly consistent latch
+  domain that spans every Mission bound to the group. The runtime
+  profile's Mission-sharding guidance does not partition it
+  ({{I-D.draft-mcguinness-mission-runtime}}).
+- A group MUST NOT be divided into independently enforced allocations
+  across Missions or PDPs, as a consumption bound may be: opposite
+  branches never receive competing permits.
 - The Bounded-consistency enforcement profile MUST NOT be applied to
   `exclusive`.
 - The deployment MUST name the latch domain in its Enforcement Scope
@@ -687,7 +697,9 @@ selectors within the window. Therefore:
 Exclusivity turns the quarantine deployment pattern
 ({{I-D.draft-mcguinness-mission-architecture}}) into consented,
 enforceable structure: an Approver can approve a Mission that may
-read a sensitive store or communicate externally, but never both.
+read a sensitive store or communicate externally, but never both
+without an explicitly approved relaxation
+({{exclusivity-across-missions}}).
 The groups are consented at the approval event, committed by
 `intent_hash` with the other Mission Intent members this document
 defines, and rendered in the consent disclosure ({{consent}} applies
@@ -700,6 +712,63 @@ under the AuthZEN profile's coordinated-extension conventions
 `denial_reason` in Decision Evidence. A PDP that cannot establish a
 group's latch state fails closed for the actions the group covers,
 per the runtime profile's availability posture.
+
+## Exclusivity Across Missions {#exclusivity-across-missions}
+
+An exclusivity group binds the delegation it is approved for, as a
+consumption bound does ({{capacity-across-missions}}), but it cannot
+be divided: a group is one restriction with one live latch state,
+never a set of independent copies.
+
+- **Shared binding.** A group has a stable identity, fixed by the
+  Mission whose approval created it. Every Mission derived from a
+  Mission bound to the group is bound to it as well: Child Missions
+  and their descendants, Expansion successors, and Child Delegation
+  carryover replacements. A derived Mission is bound to the group's
+  authoritative latch state, not to a snapshot of it: two children
+  created while the group is unlatched share it, so the first
+  matching action under either latches one selector for both. A
+  derived Mission whose authority matches only one selector is still
+  bound. Renaming, reordering, splitting, or omitting a group in a
+  derived Intent does not create a new group; a group a derived Intent
+  adds is an additional restriction and never replaces an inherited
+  one.
+- **Atomic establishment.** The Mission Issuer MUST establish a
+  derived Mission's binding to every inherited group before that
+  Mission can issue usable authority: at child creation, and at
+  successor activation in the same atomic step as the expansion
+  profile's activation check
+  ({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section
+  "Concurrent Expansion Reconciliation"), including a group that
+  latched while the successor's approval was pending. A Mission
+  Issuer that cannot establish and consistently enforce the binding
+  MUST refuse the creation or activation.
+- **Retention.** A latch persists while any Mission bound to the group
+  holds usable authority, beyond the lifetime of the Mission whose
+  approval created the group.
+- **Relaxation.** An approval does not undo an action already
+  executed. A group stays latched unless an Approver authorized to
+  relax the originating group explicitly approves a relaxation scoped
+  to named Missions or branches. The relaxation's consent disclosure
+  MUST name the group and its latched selector, the relevant
+  execution history and any unresolved permits, the additional
+  authority the relaxation enables, and the Missions or branches it
+  affects. The relaxation is recorded for those Missions or branches
+  only; the historical latch remains, and every other Mission bound
+  to the group stays restricted. An ordinary approval of a child, an
+  approval of unrelated authority, a ceiling renewal, or an approval of
+  only part of the affected authority relaxes the group for nothing it
+  does not name.
+- **Template instances.** A Mission dispatched from a Mission
+  Template ({{I-D.draft-mcguinness-oauth-mission-template}}) is a
+  separately scoped standing-consent instance: its groups bind that
+  instance and the Missions derived from it, not sibling instances.
+  The template's consent rendering MUST state that the exclusion
+  holds per instance.
+
+The consent promise is therefore "never both without an explicitly
+approved relaxation", across the delegated work the Approver
+approved.
 
 # Capacity Across Missions {#capacity-across-missions}
 
@@ -1155,9 +1224,9 @@ Their enforcement, however, is only as good as the metering:
 - **Latch burning.** Because the first matching action latches an
   exclusivity group, an injected agent can try to burn a group by
   driving the side it wants foreclosed, denying the Mission the other
-  side. Releasing the latch on affirmative non-execution
-  ({{exclusivity}}) keeps an unexecuted attempt from foreclosing the
-  group permanently.
+  side. Releasing the latch when every participating action is
+  affirmatively not executed ({{exclusivity}}) keeps unexecuted
+  attempts from foreclosing the group permanently.
 
 # Privacy Considerations {#privacy-considerations}
 
