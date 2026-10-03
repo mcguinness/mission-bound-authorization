@@ -114,6 +114,82 @@ describe("resolveCoResolvedLocalPrincipal: complete-mapping validation propagate
     expect(resolved).toBeUndefined();
   });
 
+  // @spec cross-domain#origin-principal-mapping (#832): the summary is as old
+  // as its oldest required observation and expires with its earliest bound.
+  it("summarizes with the oldest observation and the earliest validity bound, chosen independently, in both argument orders", () => {
+    // The oldest observation (A) and the earliest bound (B) sit on different
+    // mappings, so each minimum is chosen on its own.
+    const table = policy([
+      entry({
+        origin: ORIGIN_A,
+        observed_at: "2025-05-01T00:00:00Z",
+        valid_until: "2025-09-01T00:00:00Z",
+      }),
+      entry({
+        origin: ORIGIN_B,
+        observed_at: "2025-05-16T00:00:00Z",
+        valid_until: "2025-07-01T00:00:00Z",
+      }),
+    ]);
+    for (const [primary, secondary] of [
+      [ORIGIN_A, ORIGIN_B],
+      [ORIGIN_B, ORIGIN_A],
+    ] as const) {
+      expect(resolveCoResolvedLocalPrincipal(table, primary, secondary, AUDIENCE, NOW)).toEqual({
+        local_sub: "local-alice",
+        policy: { id: "test-map", version: "v1" },
+        observed_at: "2025-05-01T00:00:00Z",
+        valid_until: "2025-07-01T00:00:00Z",
+      });
+    }
+  });
+
+  it("compares by parsed instant across UTC offsets and returns the selected value as recorded", () => {
+    // 09:00+02:00 is 07:00Z, older than 08:00Z though its text sorts later;
+    // 00:30-01:00 is 01:30Z, later than 01:00Z though its text sorts earlier.
+    const table = policy([
+      entry({
+        origin: ORIGIN_A,
+        observed_at: "2025-05-10T09:00:00+02:00",
+        valid_until: "2025-07-01T00:30:00-01:00",
+      }),
+      entry({
+        origin: ORIGIN_B,
+        observed_at: "2025-05-10T08:00:00Z",
+        valid_until: "2025-07-01T01:00:00Z",
+      }),
+    ]);
+    for (const [primary, secondary] of [
+      [ORIGIN_A, ORIGIN_B],
+      [ORIGIN_B, ORIGIN_A],
+    ] as const) {
+      const resolved = resolveCoResolvedLocalPrincipal(table, primary, secondary, AUDIENCE, NOW);
+      expect(resolved?.observed_at).toBe("2025-05-10T09:00:00+02:00");
+      expect(resolved?.valid_until).toBe("2025-07-01T01:00:00Z");
+    }
+  });
+
+  it("returns the shared value when both observations and bounds are equal", () => {
+    const table = policy([
+      entry({
+        origin: ORIGIN_A,
+        observed_at: "2025-05-10T08:00:00Z",
+        valid_until: "2025-07-01T00:00:00Z",
+      }),
+      entry({
+        origin: ORIGIN_B,
+        observed_at: "2025-05-10T08:00:00Z",
+        valid_until: "2025-07-01T00:00:00Z",
+      }),
+    ]);
+    expect(resolveCoResolvedLocalPrincipal(table, ORIGIN_A, ORIGIN_B, AUDIENCE, NOW)).toMatchObject(
+      {
+        observed_at: "2025-05-10T08:00:00Z",
+        valid_until: "2025-07-01T00:00:00Z",
+      },
+    );
+  });
+
   it("denies co-resolution when the shared policy's version is empty", () => {
     const table = policy([entry({ origin: ORIGIN_A }), entry({ origin: ORIGIN_B })], {
       version: "",
