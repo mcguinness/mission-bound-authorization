@@ -374,11 +374,10 @@ const evalAction = async (missionId: string, action: string) => {
   return evaluate(
     {
       subject: { id: as.kernel.get(missionId)?.subject.sub ?? "unknown" },
-      resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
+      resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
       action: { name: action },
       context: {
         ...capabilityPresentationFor(action),
-        audience: RESOURCE,
         mission: { id: view.id, issuer: view.issuer, authority_hash: view.authority_hash },
         // The reconciliation ceiling/proposal entries bind a max_amount across
         // invoice.read and remittance.send alike (@spec runtime#input-parameters:
