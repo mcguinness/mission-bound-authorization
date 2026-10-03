@@ -254,7 +254,6 @@ import {
   type StatusListPublisher,
 } from "../kernel/status-list.js";
 
-import { authoritySourceOf } from "../kernel/authority-source.js";
 import type {
   AuthorityEntry,
   AuthoritySource,
@@ -2400,10 +2399,18 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // draws on. Resolved from the deployment's trusted catalog at render
       // time; a catalog change before the decision re-enters `kernel.approve`
       // with the changed inputs, which re-establishes the source and refuses
-      // rather than committing what was never rendered.
+      // rather than committing what was never rendered. The Subject the
+      // decision binds is `login_hint` when present (#827), so the rendering
+      // resolves for it; without one it shows only a provenance every source
+      // of this client shares.
       let authoritySource: AuthoritySource;
       try {
-        authoritySource = authoritySourceOf(kernel.authoritySourceEntry(String(params.client_id)));
+        authoritySource = kernel.renderAuthoritySource({
+          clientId: String(params.client_id),
+          ...(typeof params.login_hint === "string"
+            ? { subject: { iss: opts.issuer, sub: params.login_hint } }
+            : {}),
+        });
       } catch (e) {
         if (e instanceof IntentError) {
           ctx.status = 400;

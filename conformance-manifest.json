@@ -3661,6 +3661,12 @@
      "name": "issuer-qualified principals at the source gates (@spec mission#authority-sources, mission#approval-event, #829) > refuses a template-consent retry whose approver is foreign or malformed before returning the template its event created, and still returns it for a legitimate retry after revocation",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > lets an authorized reviewer activate workload authority it does not hold, and refuses one who may not",
+     "level": "unit",
+     "surface": "derivation"
     }
    ]
   },
@@ -3694,6 +3700,30 @@
     {
      "file": "src/services/authorization-server/test/authority-source.test.ts",
      "name": "authority source drawdown (@spec mission#authority-sources, child-delegation#child-creation) > a drawdown refuses access_denied when the source narrowed since approval",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > holds two Subjects sharing one client to their own source ceilings, never the union",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > holds two workloads sharing one client to their own source ceilings",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > resolves once per approval completion, so gate 3 asserts the resolution gates 1, 2, 4 and 5 ran on",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > refuses at the creation funnel a record whose source is not the one its approval resolved",
      "level": "unit",
      "surface": "derivation"
     }
@@ -3778,6 +3808,30 @@
      "name": "authority source on the approval surface (@spec mission#authority-sources) > refuses access_denied when the Approver may not activate the source",
      "level": "endpoint",
      "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > refuses an absent root, an undeclared client, an overlapping selection, another deployment's catalog, an unavailable resolver and an inconsistent one, before any record or commit",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > refuses an inherited source whose provenance denotes more than one root, rather than drawing on the first",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > establishes a template's source for every recipient Subject through every recipient Agent, refusing recipients whose roots differ",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > refuses a drawdown under a configured resolver rather than checking a catalog the approval never consulted",
+     "level": "unit",
+     "surface": "derivation"
     }
    ]
   },
@@ -3813,6 +3867,18 @@
      "name": "authority source on the approval surface (@spec mission#authority-sources) > renders the organizational source with the governed policy it draws on",
      "level": "endpoint",
      "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source-render.test.ts",
+     "name": "authority source rendering for a shared agent registration (@spec mission#approval-event, mission#authority-sources, #827) > renders the source of the Subject login_hint names, and refuses to render one that depends on an unnamed Subject",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > renders through the configured resolver the decision consults, never the static catalog behind it",
+     "level": "unit",
+     "surface": "derivation"
     }
    ]
   },

@@ -141,12 +141,15 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
   // path), so step 3 applies verbatim: establish the source from trusted
   // configuration and assert the successor's derived set against it, both
   // before any anchor is computed.
-  const authoritySource = kernel.establishAuthoritySource({
+  // One resolution (#827) for the predecessor's Subject through its client
+  // feeds every gate, so the ceiling asserted is the one the source resolved.
+  const resolvedSource = kernel.establishAuthoritySource({
     clientId: predecessor.client_id,
     subject: predecessor.subject,
     approver: input.approver,
   });
-  kernel.assertAuthorityWithinSource(predecessor.client_id, authoritySet);
+  kernel.assertAuthorityWithinSource(resolvedSource, authoritySet);
+  const authoritySource = resolvedSource.provenance;
   // @spec expansion#successor-expiry — ONE creation instant for the successor:
   // the record's `created_at` and the instant every lifetime ceiling is
   // measured from are the same read.
@@ -218,7 +221,7 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
     status_list_idx: null,
     predecessor: input.predecessorId,
   };
-  kernel.insertRecord(record);
+  kernel.insertRecord(record, undefined, { source: resolvedSource });
 
   // @spec containment#restoration — the anti-laundering MUST: surface a
   // non-empty predecessor containment history at expansion consent, rather
