@@ -366,10 +366,8 @@ prospective Mission carries the whole task as a Mission Intent, and
 the authorization server derives and obtains approval for the full
 Authority Set ({{mission-intent}}). The access tokens requested in
 that grant request, and in every later modification of it, locate
-drawdowns within the approved ceiling, not the Mission's extent: the
-shape the progressive companion names
-({{I-D.draft-mcguinness-oauth-mission-progressive}}), run on GNAP's
-own negotiation surface ({{drawdown}}).
+drawdowns within the approved Authority Set, not the Mission's extent,
+on GNAP's own negotiation surface ({{drawdown}}).
 
 The tension GNAP adds is the inverse of UMA's. Where the UMA binding
 had to assemble intent-first behavior on an attempt-first substrate,
@@ -497,9 +495,9 @@ the authorization server at `https://as.example.com/gnap`.
    callback with an interaction reference, integrity-bound by the
    finish hash. The agent continues the grant with `interact_ref`;
    the grant reaches _approved_, and the response carries the
-   finance-service access token, the first drawdown of the approved
-   ceiling, plus the Mission Reference in the `mission` response
-   member ({{mission-claim}}).
+   finance-service access token, the first drawdown within the
+   approved Authority Set, plus the Mission Reference in the
+   `mission` response member ({{mission-claim}}).
 5. Later the agent needs the document service. It modifies the grant
    with a request for that service's access. The requested rights
    are within the Authority Set, so the authorization server
@@ -963,17 +961,18 @@ that layer untouched ({{limitations}}).
 
 ## Drawdown and Modification {#drawdown}
 
-The approved Authority Set is a pre-consented ceiling, and each
-token issuance is a drawdown within it: the model the progressive
-companion defines for the OAuth binding
-({{I-D.draft-mcguinness-oauth-mission-progressive}}), run natively
-on GNAP's grant modification. When the client instance modifies the
+Each token issuance under the grant is a drawdown: a derivation
+within the approved Authority Set, run natively on GNAP's grant
+modification. When the client instance modifies the
 grant with requested rights within the Authority Set, the
 authorization server MAY approve by policy without waking the
 Approver: that adjudication is a drawdown, not a new approval, and
 the anchors do not change. Modification never alters previously
 issued tokens, per {{RFC9635}}; each newly issued token is a fresh
-derivation gated per {{gating}}.
+derivation gated per {{gating}}. A drawdown never widens the Authority
+Set, unlike in-ceiling widening under the progressive companion
+({{I-D.draft-mcguinness-oauth-mission-progressive}}), which creates a
+successor Mission.
 
 A requested right outside the Authority Set is an expansion, not a
 drawdown. The authorization server MUST NOT widen by policy: it
