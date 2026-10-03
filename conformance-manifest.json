@@ -27488,7 +27488,7 @@
    "id": "mas.join-inputs.mission-bound-never-carries",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "join-authzen",
-   "text": "a Mission-bound decision never carries it",
+   "text": "The PEP never carries it on a Mission-bound decision",
    "role": "PEP",
    "strength": "stated",
    "applicability": {
