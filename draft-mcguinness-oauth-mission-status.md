@@ -1361,10 +1361,11 @@ conforming.
 
 A Mission revocation through this endpoint cascades to credentials
 derived from the Mission per the AS's advertised revocation
-propagation ({{revocation-enforcement-classes}}). The AS MAY additionally invoke
-{{RFC7009}} token revocation for specific outstanding tokens when it
-knows their `jti`. {{RFC7009}} alone does NOT revoke a Mission; the
-lifecycle endpoint is the authoritative Mission state change.
+propagation ({{revocation-enforcement-classes}}). The AS MAY
+additionally revoke specific outstanding tokens it knows by `jti`,
+with the same effect as {{RFC7009}} revocation of each token.
+{{RFC7009}} alone does NOT revoke a Mission; the lifecycle endpoint is
+the authoritative Mission state change.
 
 ## Deferred Lifecycle Capabilities {#deferred-lifecycle}
 
