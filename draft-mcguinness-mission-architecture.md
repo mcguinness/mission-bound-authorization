@@ -1675,11 +1675,11 @@ Owner:
 
 # Mission Invariants {#invariants}
 
-The following seven invariants define the family's portable-authority
-model and are stated normatively by their home documents. They apply to
-the OAuth binding and to companions and bindings that explicitly adopt
-the corresponding Authority Set capabilities. A change that would break
-one in those bindings is a change to that model, not to a profile.
+Seven invariants define the family's portable-authority model; their
+home documents state them normatively. They apply to the OAuth binding
+and to companions and bindings that explicitly adopt the corresponding
+Authority Set capabilities. A change that would break one in those
+bindings is a change to that model, not to a profile.
 
 The AAuth binding adopts the context-level invariants: durable approval,
 stable attribution, exact-byte integrity, an active-state gate at the
@@ -1687,19 +1687,21 @@ PS, and termination. It does not adopt the OAuth Authority Set, the
 OAuth integrity anchors, or universal subset derivation. AAuth resource
 authority is decided afresh in the vocabulary and policy of each
 Resource or Access Server, with contextual PS governance when the PS is
-on path. Read as shared capabilities rather than universal wire
-semantics, all the bindings carry durability, attribution, and
-termination; narrowing and containment require a structured-authority
-capability, so they are not baseline AAuth Mission Context properties.
+on path.
+
+Read as shared capabilities rather than universal wire semantics, all
+the bindings carry durability, attribution, and termination; narrowing
+and containment require a structured-authority capability, so they are
+not baseline AAuth Mission Context properties.
 
 **Authority serves an approved task**:
 : No Mission-bound authority exists except by derivation for a
   Mission, and a Mission is created only when rooted in an approved
   authorization basis that commits `intent_hash` and `authority_hash`
   (the OAuth binding). Fields an agent can influence shape authority
-  only through the pre-approval derivation the Approver consents to;
-  once the Mission is approved they are inert and never derive,
-  widen, or gate authority.
+  only through the pre-approval derivation the Approver consents to.
+  Once the Mission is approved, those fields are inert and never
+  derive, widen, or gate authority.
 
 **Only `active` permits**:
 : Issuance, refresh, and every new positive governance decision require
@@ -1708,30 +1710,29 @@ capability, so they are not baseline AAuth Mission Context properties.
   section). A state-aware consumer relies only while it observes
   `active`; a state-unaware consumer retains the bounded
   materialized-credential residual ({{validity-model}}). In AAuth, only
-  PS operations are structurally gated, and agent identity and
+  PS operations are structurally gated; agent identity and
   resource-managed access do not pass through the PS. In person
-  identity access the gate is person-token issuance (Section 7.1 of
+  identity access, the gate is person-token issuance (Section 7.1 of
   {{I-D.draft-hardt-oauth-aauth-protocol}}). In PS authorization and
-  federated authorization access it covers auth-token issuance and
-  federated brokering for requests whose resource token carries the
-  validated Mission Reference; a stripped or mismatched reference
+  federated authorization access, the gate covers auth-token issuance
+  and federated brokering for requests whose resource token carries
+  the validated Mission Reference; a stripped or mismatched reference
   fails the request, which is never evaluated as missionless
   ({{I-D.draft-mcguinness-mission-aauth}}).
 
 **Authority only narrows**:
 : Derived tokens, delegated child Missions, attenuated tokens, and
-  cross-domain projections carry subsets ({{authority-path}}); widening
-  exists only as an
-  approved successor: a fresh approval
+  cross-domain projections carry subsets ({{authority-path}}). Widening
+  exists only as an approved successor: a fresh approval
   ({{I-D.draft-mcguinness-oauth-mission-expansion}}), or policy drawdown
   within a ceiling a human pre-consented
   ({{I-D.draft-mcguinness-oauth-mission-progressive}}). Within a live
   Mission, issuer-held narrowing such as containment or discharge only
   subtracts: each mechanism feeds a single Effective Authority Set,
   every derivation reads it, and none restores authority
-  ({{I-D.draft-mcguinness-oauth-mission-status}}). The relation is
-  typed: a type's specification defines its subset relation, and an
-  issuer narrows, delegates, or projects an entry only under a
+  ({{I-D.draft-mcguinness-oauth-mission-status}}). The subset relation
+  is typed: a type's specification defines its own subset relation,
+  and an issuer narrows, delegates, or projects an entry only under a
   capability it declares for that type (for example, on the OAuth
   binding, `mission_resource_access` and its Common Constraints,
   {{I-D.draft-mcguinness-oauth-mission-resource-access}}). Without that
@@ -1769,50 +1770,59 @@ capability, so they are not baseline AAuth Mission Context properties.
   the `s256` commitment over exact mission-blob bytes, not the OAuth
   integrity anchors.
 
-Three readings follow from the seven invariants and add no eighth:
+Three readings follow from the invariants without adding to them:
 
 Authorization bases:
 : "Approved" in the first invariant has more than one basis. The OAuth
   binding fully defines one, `direct`, a human's own approval. It also
   provides the extension point, an authorization-basis `type` string,
-  that companion profiles use to define others: `template`, a
-  dispatch drawing on a ceiling the human consented to once;
-  `policy_drawdown`, a child instance a policy adjudicates within a
-  bound the parent's human already consented to; and
-  `ceiling_drawdown`, a successor a policy adjudicates within an
-  authority ceiling the Approver consented to at the initial
-  approval. Every basis fixes
-  the same accountable human as `consent_principal`; the bases differ
-  only in what activated this instance and what root that activation
-  traces to (the OAuth binding).
+  that companion profiles use to define others:
+
+  - `template`: a dispatch drawing on a ceiling the human consented
+    to once.
+  - `policy_drawdown`: a child instance a policy adjudicates within a
+    bound the parent's human already consented to.
+  - `ceiling_drawdown`: a successor a policy adjudicates within an
+    authority ceiling the Approver consented to at the initial
+    approval.
+
+  Every basis fixes the same accountable human as `consent_principal`;
+  the bases differ only in what activated this instance and what root
+  that activation traces to (the OAuth binding).
 
 Work products:
 : Authority never rides a work product. Crossing into a Mission, a
   work product is input the receiving Mission re-evaluates under its
   own Authority Set, never a source of authority itself. The Mission
-  Work Products companion carries this through non-transitive
+  Work Products companion carries the rule through non-transitive
   Mission-to-Mission handoff
   ({{I-D.draft-mcguinness-oauth-mission-work-products}}), and the
-  OAuth binding states the rule in its "Authority Does Not Propagate
-  With Information" section ({{I-D.draft-mcguinness-oauth-mission}}).
+  OAuth binding states it in its "Authority Does Not Propagate With
+  Information" section ({{I-D.draft-mcguinness-oauth-mission}}).
 
 Composition:
 : An approval bounds the authority each derivation under the Mission
   carries; it does not bound the aggregate effect of a body of work.
   The invariants bound one Mission's own Authority Set, not the surface
   a delegation tree, a cross-domain hop, or a chain of child
-  generations reaches together. The per-Mission figures differ in kind
-  and do not multiply into a lifetime total: in the child-delegation
-  profile, `max_children` limits concurrently non-terminal children,
-  so a completed child frees its slot; `max_child_depth` limits
-  generations; and each Child Mission's derivation cap is its own,
-  independent of its parent's. Delegation depth also resets at each
-  cross-domain hop and child generation. Disclosing what these figures
-  bound at the consent surface is the cross-domain and child-delegation
-  profiles' role. An aggregate bound holds only where a deployment
-  enforces one, the metering profile's lineage budget, and is never
-  rendered as in force otherwise
-  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}},
+  generations reaches together.
+
+  The per-Mission figures differ in kind and do not multiply into a
+  lifetime total:
+
+  - In the child-delegation profile, `max_children` limits
+    concurrently non-terminal children, so a completed child frees its
+    slot.
+  - `max_child_depth` limits generations.
+  - Each Child Mission's derivation cap is its own, independent of its
+    parent's.
+
+  Delegation depth also resets at each cross-domain hop and child
+  generation. Disclosing what these figures bound at the consent
+  surface is the cross-domain and child-delegation profiles' role. An
+  aggregate bound holds only where a deployment enforces one (the
+  metering profile's lineage budget) and is never rendered as in force
+  otherwise ({{I-D.draft-mcguinness-oauth-mission-cross-domain}},
   {{I-D.draft-mcguinness-oauth-mission-child-delegation}},
   {{I-D.draft-mcguinness-mission-metering}}). The OAuth binding
   states the same property in its "Composition and the Effective
@@ -1821,16 +1831,18 @@ Composition:
 # Meaning and Derivation {#meaning-and-derivation}
 
 Three questions sit between a proposed task and enforced authority:
-who owns what an operation means ({{ontology-contract}}), who commits
-the authority derived from the task ({{derivation-boundary}}), and
-what the approval event fixes ({{approval-fidelity}}).
+
+- who owns what an operation means ({{ontology-contract}});
+- who commits the authority derived from the task
+  ({{derivation-boundary}}); and
+- what the approval event fixes ({{approval-fidelity}}).
 
 ## The Ontology Contract {#ontology-contract}
 
 The capability envelope ({{capability-envelope}}) meets its hardest case
-in the open world. The OAuth model starts with authority client-proposed
-and enumerated at approval; an agent that discovers resources at
-encounter time breaks that premise, and some authorization mechanisms
+in the open world. The OAuth model starts with authority the client
+proposes and the approval enumerates. An agent that discovers resources
+at encounter time breaks that premise, and some authorization mechanisms
 invert it: the resource declares its own operations and consequences.
 
 The derivation boundary ({{derivation-boundary}}) settles who commits
@@ -1844,8 +1856,8 @@ registered cross-resource constraint vocabulary, which a resource
 explicitly advertises and adopts before it binds
 ({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
 
-The consuming contract is that meaning binds at approval and is enforced
-at the point of use. Any translation between the resource's vocabulary
+The consuming contract: meaning binds at approval and is enforced at
+the point of use. Any translation between the resource's vocabulary
 and another party's is trusted, verified, or separately approved, never
 a place where authority widens.
 
@@ -1875,9 +1887,9 @@ Operation Profiles:
 The encounter contract:
 : What is submitted, adjudicated, and recorded when an agent meets a
   resource the approval could not enumerate, so meaning that arrives
-  late still binds before use: the encounter's routing through drawdown,
-  catalog binding, projection, or fresh approval, and its identity
-  pinning and floors. Home: the discovery companion
+  late still binds before use. It covers the encounter's routing
+  (through drawdown, catalog binding, projection, or fresh approval),
+  identity pinning, and floors. Home: the discovery companion
   ({{I-D.draft-mcguinness-mission-discovery}}).
 
 Resource-Declared Semantics:
@@ -1885,36 +1897,39 @@ Resource-Declared Semantics:
   meaning, and their consequences. Under the OAuth discovery
   composition, the declaration can be content-addressed by `r3_s256` as
   an additional commitment beside the Mission's integrity anchors,
-  recording what the resource claimed to be at the moment authority
-  bound to it; the declared operations become candidate vocabulary that
-  derivation narrows against. AAuth can instead use R3 as a
-  resource-owned deterministic authorization vocabulary while the
+  recording what the resource claimed to be when authority bound to
+  it. In that composition, the declared operations become candidate
+  vocabulary that derivation narrows against. AAuth can instead use R3
+  as a resource-owned deterministic authorization vocabulary while the
   private mission blob remains contextual PS governance. R3 content
   addressing is not a baseline AAuth mission anchor. Home: the discovery
   and R3 compositions, informative.
 
 Behind the five mechanisms sits one direction axis, chosen per
 encounter, not fixed by binding. The family inherits OAuth's
-client-proposed default: the client names the authority it wants and the
-resource's meaning arrives through metadata, catalogs, and profiles.
+client-proposed default: the client names the authority it wants, and
+the resource's meaning arrives through metadata, catalogs, and profiles.
 Resource-Declared Semantics is the inversion, where the resource speaks
 first. Where a structured-authority binding commits that meaning at
 approval, it is enforced at use and translation never widens.
 
-Under the OAuth binding the resource-declared direction runs entirely
-through seams the family already has: the encounter contract routes the
-declaration ({{I-D.draft-mcguinness-mission-discovery}}), narrowing-mode
-derivation consumes the declared operations as candidate vocabulary
-({{I-D.draft-mcguinness-oauth-mission}}), consent composes the
-resource-authored material, and the declaration's digest rides the
-derived authority (the progressive companion's
-`resource_declaration_digest`,
-{{I-D.draft-mcguinness-oauth-mission-progressive}}). The OAuth-native
-descriptive surfaces the direction builds on are an authorization
-server's RAR type metadata, the schema and documentation of each type
-it supports ({{I-D.draft-ietf-oauth-rar-metadata-remediation}}), and a
-protected resource's `authorization_details_types_supported`
-({{RFC9728}}).
+Under the OAuth binding, the resource-declared direction runs entirely
+through existing family seams:
+
+- the encounter contract routes the declaration
+  ({{I-D.draft-mcguinness-mission-discovery}});
+- narrowing-mode derivation consumes the declared operations as
+  candidate vocabulary ({{I-D.draft-mcguinness-oauth-mission}});
+- consent composes the resource-authored material; and
+- the declaration's digest rides the derived authority (the
+  progressive companion's `resource_declaration_digest`,
+  {{I-D.draft-mcguinness-oauth-mission-progressive}}).
+
+The OAuth-native descriptive surfaces the resource-declared direction
+builds on are an authorization server's RAR type metadata, the schema
+and documentation of each type it supports
+({{I-D.draft-ietf-oauth-rar-metadata-remediation}}), and a protected
+resource's `authorization_details_types_supported` ({{RFC9728}}).
 
 In AAuth, R3 can describe deterministic resource authorization
 independently of mission approval; the PS considers the resource request
@@ -1924,36 +1939,36 @@ Authority Set.
 Where a deployed semantic-binding mechanism is in force, both directions
 close the same loop: the meaning source's digest becomes part of the
 derived authority. A catalog-sourced capability pins its
-`source_digest`; a resource declaration pins `r3_s256`; in each case the
-Authority Set carries the version of the meaning it was derived under,
-and the point of use compares against the meaning in force. An ordinary
-registered `authorization_details` type can carry stable semantics with
-neither digest; the loop is closed by the mechanism a deployment runs,
-not by the family universally. Under such a mechanism, meaning is not
-consulted at approval and assumed at enforcement; it is committed at
-approval and re-verified at use.
+`source_digest`, and a resource declaration pins `r3_s256`. In each
+case the Authority Set carries the version of the meaning it was
+derived under, and the point of use compares against the meaning in
+force. Under such a mechanism, meaning is not consulted at approval and
+assumed at enforcement; it is committed at approval and re-verified at
+use. An ordinary registered `authorization_details` type can carry
+stable semantics with neither digest; the loop is closed by the
+mechanism a deployment runs, not by the family universally.
 
-The contract's failure mode is stated in each home: a consumer facing
-an operation meaning it cannot resolve, a constraint it cannot evaluate,
-a drifted capability definition, or an unrecognized declaration refuses
-rather than guesses. Meaning, like state, fails closed.
+Meaning, like state, fails closed. Each home states the contract's
+failure mode: a consumer facing an operation meaning it cannot resolve,
+a constraint it cannot evaluate, a drifted capability definition, or an
+unrecognized declaration refuses rather than guesses.
 
 The contract has a dual of equal force. The resource owns what an action
 means; the Mission owns why it is happening and where the undertaking
 stands, and that context exists nowhere else in the stack. A resource
 evaluates each request at perfect local resolution and zero task
-resolution: it can price every consequence its ontology names and cannot
-see the undertaking the request belongs to. A risk decision composes
-both sides of this context asymmetry: semantics without purpose prices
-every delete the same, and purpose without semantics cannot read the
-call.
+resolution: it can price every consequence its ontology names but
+cannot see the undertaking the request belongs to. A risk decision
+composes both sides of this context asymmetry. Semantics without
+purpose prices every delete the same; purpose without semantics cannot
+read the call.
 
 "Delete database" in isolation is indistinguishable from catastrophe.
 "Delete database" inside an approved migration whose copy steps already
 completed is a priced, checkable step. That judgment needs the
-undertaking's history, and no resource-local view contains it. The join
-of Decision and Execution Evidence on the Mission's identity is where
-that history is reconstructible after the fact; at decision time, a
+undertaking's history, and no resource-local view contains it. After
+the fact, that history is reconstructible from the join of Decision and
+Execution Evidence on the Mission's identity. At decision time, a
 task-aware decision point can draw the same history from trusted prior
 workflow state or another authoritative source. The runtime profile
 names the mechanism: sequence-aware evaluation over the undertaking's
@@ -1963,10 +1978,12 @@ decision and never widens one
 
 ## The Authority Derivation Boundary {#derivation-boundary}
 
-In the authority-bearing bindings, all of which derive under the OAuth
+In the authority-bearing bindings, the Approver consents to the
+Authority Set the Mission Issuer renders and commits, not to the
+Mission Intent. All of these bindings derive under the OAuth
 binding's rules ({{I-D.draft-mcguinness-oauth-mission}}, Section
-"Mission Authority"), the Approver consents to the Authority Set the
-Mission Issuer renders and commits, not to the Mission Intent.
+"Mission Authority").
+
 Derivation is mechanical: the Mission Issuer narrows a submitted
 authority proposal to policy, or looks up candidate entries in a
 configured mapping keyed on structured Intent members and narrows
@@ -1977,14 +1994,13 @@ Translating a user's words into structure is the shaper's job, before
 admission and outside the trust boundary
 ({{I-D.draft-mcguinness-mission-shaping}}).
 
-What stays local is derivation policy: what the Mission Issuer narrows
-to, and what its mappings contain. The consequence is a trust
-boundary: interoperability begins at the committed result, not at the
-Intent. A Mission Intent has no portable semantics; two conforming
-Mission Issuers can derive different Authority Sets from the same
-submission, and audit can establish what was derived (against
-`intent_hash` and `policy_version`), never whether it was the right
-reading of the task.
+Derivation policy stays local: what the Mission Issuer narrows to, and
+what its mappings contain. The consequence is a trust boundary:
+interoperability begins at the committed result, not at the Intent. A
+Mission Intent has no portable semantics; two conforming Mission
+Issuers can derive different Authority Sets from the same submission.
+Audit can establish what was derived (against `intent_hash` and
+`policy_version`), never whether it was the right reading of the task.
 
 Narrowing mode is the interoperable path: each derived entry is a
 subset of a proposed entry, so the result is reproducible and the
@@ -1992,19 +2008,21 @@ client can check it against its proposal. A deployment whose partners
 must reason about its derivations can publish a derivation policy
 identifier and test fixtures that pin Intent-to-Authority-Set
 outcomes, making the local policy reviewable even though it does not
-travel.
-
-The OAuth binding's informative Derivation Policy appendix
+travel. The OAuth binding's informative Derivation Policy appendix
 ({{I-D.draft-mcguinness-oauth-mission}}) illustrates that policy
 artifact: a worked narrowing rule, fixtures, and ownership.
 
-The ceiling the derivation narrows against is itself a composition, not
-a single object. The derived Authority Set sits inside every bound on
-the task: the issuer's derivation policy, the ceiling of the Mission's
-established authority source, and, at enforcement time, the resource
-owner's and deployment's live policy at the decision point. The
-derivation step intersects the first two and commits the result; the
-runtime contract re-checks the rest on every action, which is why a
+The ceiling the derivation narrows against is a composition, not a
+single object. The derived Authority Set sits inside every bound on the
+task:
+
+- the issuer's derivation policy;
+- the ceiling of the Mission's established authority source; and
+- at enforcement time, the resource owner's and deployment's live
+  policy at the decision point.
+
+The derivation step intersects the first two and commits the result.
+The runtime contract re-checks the rest on every action, which is why a
 permit is never implied by the Authority Set alone. A deployment adding
 further sources (a tenant boundary, an environment-specific floor) adds
 them as derivation-policy inputs or as decision-point policy, never as
@@ -2013,7 +2031,7 @@ agent-negotiated widening.
 The established authority source is a delegating person's own authority,
 a workload's provisioned authority, or governed organizational policy.
 Approval activates authority the source already holds and grants nothing
-beyond it, and the Approver needs authority to activate the source, not
+beyond it. The Approver needs authority to activate the source, not
 personal possession of its permissions.
 
 The derivation modes rank by how portable their result is:
