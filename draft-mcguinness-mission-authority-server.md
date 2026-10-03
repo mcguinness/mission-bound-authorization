@@ -32,6 +32,7 @@ normative:
   RFC6838:
   RFC7519:
   RFC7638:
+  RFC8705:
   RFC7662:
   RFC8259:
   RFC8615:
@@ -797,6 +798,39 @@ signals are supported, `mission_event_stream_endpoint`) in its
 discovery document ({{discovery}}) with the semantics those profiles
 define for the members of the same names.
 
+## Join Disclosure {#join-disclosure}
+
+A Mission-joining PDP compares a presented credential with the
+Mission's Subject and client ({{join-rules}}). The MAS discloses both
+in its Mission Status responses, as members of the `mission` object,
+which the Mission Status profile lets a companion add
+({{I-D.draft-mcguinness-oauth-mission-status}}):
+
+`subject`:
+: An object carrying the Mission's `iss` and `sub`: the Subject the
+  MAS established at approval ({{mission-approval}}).
+
+`client_id`:
+: A string. The Mission's `client_id` ({{mission-submission}}).
+
+When the authenticated caller is a PDP enrolled for the Mission's
+enforcement scope, the MAS MUST include `subject` and `client_id`, and
+MUST disclose each `authorization_details` entry in the response with
+its `delegation` member as recorded. For any other caller, the MAS
+MUST NOT include `subject` or `client_id`. These members describe the
+Mission; the response envelope's `sub` still identifies the
+requesting caller. The PDP reads them from the Mission Status response
+it resolves (rule 2 of {{join-rules}}). A PEP does not copy them into
+`context.mission`, whose `subject` member the AuthZEN profile populates
+only from a verified token or delegation chain
+({{I-D.draft-mcguinness-mission-authzen}}).
+
+The PEPs and PDPs enrolled for a Mission's enforcement scope are
+deployment configuration that the MAS holds. This document defines no
+enrollment protocol: the MAS authenticates the caller and checks it
+against that configuration. The same set bounds visibility at the
+join-assertion endpoint ({{join-assertion-request}}).
+
 # Mission Join {#mission-join}
 
 In MAS mode the acting access token is an ordinary OAuth token from
@@ -833,7 +867,9 @@ A Mission-joining PDP and its PEPs MUST observe the following:
    runtime profile's state and freshness rules
    ({{I-D.draft-mcguinness-mission-runtime}}): fail closed when state
    cannot be established within the published staleness bound, and use
-   an active freshness mechanism for the high-consequence classes.
+   an active freshness mechanism for the high-consequence classes. The
+   Mission's `subject`, `client_id`, and entry `delegation` members
+   come from that response's join disclosure ({{join-disclosure}}).
 3. **Subject join.** The PDP MUST verify that the presented
    credential's authenticated subject equals the Mission's
    `subject.sub` under the deployment's account mapping. Where the
@@ -924,10 +960,13 @@ the enforcement boundary and populates the decision request from it;
 the PDP neither receives nor inspects the credential. Baseline join
 integrity therefore rests wholly within the PEP trust base, and a PEP
 that misattests the subject or client widens the join. The
-credential-bound join, in which the acting token itself is inspected,
-is the Mission Join Assertion ({{join-assertion}}): the MAS resolves
-the token centrally and binds its assertion to that token's digest
-and key.
+credential-bound join is the Mission Join Assertion
+({{join-assertion}}): the MAS inspects the acting token when it mints
+the assertion and binds the assertion to that token's digest and key.
+The PDP then compares that binding with the digest and thumbprint the
+PEP reports in `context.mission_join` ({{join-authzen}}), so it relies
+on the PEP for the presented credential's identity, as the baseline
+join relies on it for the subject and client.
 
 A deployment MAY move the join's verification from each PDP to the
 MAS with the Mission Join Assertion ({{join-assertion}}). That
@@ -989,6 +1028,45 @@ evidence ({{I-D.draft-mcguinness-mission-runtime}}).
 
 ## AuthZEN Encoding {#join-authzen}
 
+On a joined decision, the PEP MUST carry the join inputs in the
+`context.mission_join` member of the AuthZEN decision request. It is a
+context member that this document adds under the AuthZEN profile's
+companion extension rule, so it is part of the authorization binding
+and the decision cache key ({{I-D.draft-mcguinness-mission-authzen}}).
+Its presence marks the decision as joined. The PEP never carries it on
+a Mission-bound decision, so a join never re-points a Mission-bound
+credential ({{high-consequence-binding}}). It is a JSON object with
+the following members:
+
+`delegate_depth`:
+: An integer. The joining client's depth under the Mission, from the
+  deployment's actor records, which rule 5 of {{join-rules}} evaluates.
+  Present when the joining client is a delegate. On the assertion
+  path, the assertion's `join` claim governs ({{join-assertion-pdp}}).
+
+`assertion`:
+: A string. A Mission Join Assertion ({{join-assertion-artifact}}) for
+  the presented credential.
+
+`token_sha256`:
+: A string. REQUIRED when `assertion` is present. The presented
+  credential's digest, computed as in {{join-assertion-request}}.
+
+`token_jkt`, `token_x5t`:
+: Strings. When `assertion` is present, exactly one is REQUIRED,
+  matching the presented credential's confirmation method: the
+  thumbprint of its confirmation key or certificate, computed as in
+  {{join-assertion-request}}.
+
+The PEP computes the digest and thumbprint from the credential it
+authenticated, so the PDP checks the assertion's token binding without
+receiving the credential ({{join-scope}}). The PEP reports `token_jkt`
+only for a key against which it verified the request's proof of
+possession, and `token_x5t` only for the certificate it authenticated
+on the request's mutual-TLS connection. A PDP that does not consume
+Join Assertions ignores `assertion` and the token members and joins
+under the mapping rules.
+
 The following example shows a decision request for a successful join
 in the AuthZEN profile. The PEP supplies `context.mission` populated
 from its Mission binding, with `state` (and `authority_hash` where
@@ -1011,7 +1089,8 @@ the other decision inputs per {{I-D.draft-mcguinness-mission-authzen}}:
       "authority_hash":
         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
       "state": "active"
-    }
+    },
+    "mission_join": {}
   }
 }
 ~~~
@@ -1311,10 +1390,17 @@ is a JSON object with the following members:
 
 `token_jkt`:
 : A string. The JWK thumbprint {{RFC7638}}, using SHA-256, of the
-  token's `cnf` public key.
+  token's `cnf` public key, for a token whose confirmation is a `jkt`
+  member.
+
+`token_x5t`:
+: A string. The base64url SHA-256 thumbprint of the certificate a
+  certificate-bound token is bound to: the value of its `x5t#S256`
+  confirmation member ({{Section 3.1 of RFC8705}}).
 
 The caller presents `access_token`, or `token_sha256` together with
-`token_jkt`. The digest pair keeps the credential itself off this
+exactly one of `token_jkt` and `token_x5t`, matching the token's
+confirmation method. The digest pair keeps the credential itself off this
 wire, but it is usable only where the deployment's introspection
 surface can resolve a token by digest. `access_token` is the
 interoperable form.
@@ -1345,7 +1431,9 @@ The MAS verifies the join centrally, as follows:
 2. The MAS verifies the subject and client joins of {{mission-join}}
    against the introspection response or the validated token claims,
    under its own documented account and client mappings and delegate
-   policy.
+   policy. For a delegate, the MAS also establishes the delegate's
+   depth from the deployment's actor records; a delegate with no actor
+   record under the Mission does not join (rule 5 of {{join-rules}}).
 
 If the acting token does not join, the MAS rejects the request with
 the `join_failed` error code (HTTP 403), in the error format of
@@ -1404,8 +1492,21 @@ implements the substitution defense of Sections 3.11 and 3.12 of
 
 `token`:
 : REQUIRED. An object containing `sha256`, the token digest as in
-  {{join-assertion-request}}, and `jkt`, the thumbprint of the token's
-  `cnf` public key {{RFC7638}}.
+  {{join-assertion-request}}, and exactly one confirmation member
+  matching the token's confirmation method: `jkt`, the thumbprint of
+  the token's `cnf` public key {{RFC7638}}, or `x5t#S256`, the
+  thumbprint of the certificate the token is bound to
+  ({{Section 3.1 of RFC8705}}).
+
+`join`:
+: REQUIRED. An object carrying the result of the MAS's client and
+  delegate evaluation. Its `client_id` member (a string, REQUIRED) is
+  the joining client's identifier in the Mission's client namespace.
+  Its `disposition` member (a string, REQUIRED) is `client` when that
+  identifier is the Mission's own `client_id`, and `delegate`
+  otherwise. Its `depth` member (an integer) is the delegate's depth
+  from the deployment's actor records, REQUIRED when `disposition` is
+  `delegate`.
 
 `iat`:
 : REQUIRED. Issuance time.
@@ -1444,6 +1545,7 @@ retained for the audit horizon:
 
 - the Mission reference;
 - the token digest and thumbprint;
+- the `join` result;
 - the authenticated caller;
 - the mapping version, where one is published ({{mapping-contract}});
 - the token's Instance Context, where the MAS validated it as a
@@ -1472,6 +1574,10 @@ Assertion:
     "sha256": "rN2kQ4mZ7tP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2n",
     "jkt": "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs"
   },
+  "join": {
+    "client_id": "client_erp-recon-agent",
+    "disposition": "client"
+  },
   "iat": 1793606400,
   "exp": 1793608200
 }
@@ -1479,8 +1585,9 @@ Assertion:
 
 ## PDP Consumption {#join-assertion-pdp}
 
-A PDP presented with a Join Assertion verifies the following, in
-place of the mapping checks of rules 3 and 4 of {{join-rules}}:
+When `context.mission_join` carries a Join Assertion
+({{join-authzen}}), the PDP verifies the following, in place of the
+mapping checks of rules 3 and 4 of {{join-rules}}:
 
 - the signature, under a key from the MAS's `jwks_uri`, and the `typ`
   header parameter value `mission-join+jwt`;
@@ -1489,8 +1596,18 @@ place of the mapping checks of rules 3 and 4 of {{join-rules}}:
   `authority_hash`, that it matches the referenced Mission's
   `authority_hash` too;
 - that `exp` has not passed and any `aud` names this PDP; and
-- the token binding: the presented credential's digest equals
-  `token.sha256` and its `cnf` key's thumbprint equals `token.jkt`.
+- the token binding: `context.mission_join.token_sha256` equals
+  `token.sha256`, and the reported thumbprint equals the assertion's
+  confirmation member of the same method (`token_jkt` to `token.jkt`,
+  or `token_x5t` to `token.x5t#S256`).
+
+The PDP takes the joining client identifier, the disposition, and a
+delegate's depth from the assertion's `join` claim, not from its own
+mappings. It applies rule 5 of {{join-rules}} with them, and they are
+the joining client identifier and disposition that rule 9's
+commitment changes with. When `context.mission_join` also carries
+`delegate_depth` and it differs from `join.depth`, the PDP MUST deny
+with `mission_mismatch`.
 
 Every other join rule holds unchanged: the PDP resolves Mission state
 at the MAS under the runtime profile's freshness rules, denies with
@@ -1642,11 +1759,7 @@ and can prove control of ({{sec-native-binding}}).
 
 Where the deployment authenticates client instances
 ({{I-D.draft-mcguinness-oauth-client-instance-id}}), the MAS SHOULD
-bind at instance granularity rather than at the bare `client_id`. In
-such a deployment, a Mission Join Assertion for the predecessor or
-parent ({{join-assertion}}), presented with the submission,
-strengthens the proof to a named runtime instance holding a
-sender-constrained credential that verifiably joins to that Mission.
+bind at instance granularity rather than at the bare `client_id`.
 
 ## Expansion Semantics {#native-expansion}
 
@@ -1870,8 +1983,10 @@ resolved from the MAS metadata document instead:
   {{I-D.draft-mcguinness-oauth-mission-signals}}.
 
 `mission_max_stale_seconds`:
-: OPTIONAL. An integer. Semantics per
-  {{I-D.draft-mcguinness-oauth-mission-status}}.
+: REQUIRED. An integer. Semantics per
+  {{I-D.draft-mcguinness-oauth-mission-status}}. A MAS has no other
+  state surface, so this bound is the one join rule 2 fails closed
+  against ({{join-rules}}).
 
 `jwks_uri`:
 : REQUIRED. A string containing a URL. The MAS's JSON Web Key Set:
@@ -2170,7 +2285,8 @@ provides:
   token without a `cnf` key ({{join-assertion-request}}).
 - **`cnf` in introspection or token claims.** Introspection responses,
   or validated JWT claims, that report the token's `cnf` confirmation,
-  since the assertion binds the key thumbprint they report.
+  since the assertion binds the key or certificate thumbprint they
+  report.
 
 An estate whose Authorization Server cannot provide these capabilities
 still joins under the mapping join at the conformance floor
@@ -2399,9 +2515,9 @@ Failure behavior is uniformly fail-closed. An unresolvable Mission, a
 stale or failed Status response, a join failure (`mission_mismatch`,
 never a fallback), an unknown or malformed authority-detail type, and
 an incomparable or invalid constraint each refuse the evaluation
-rather than comparing best-effort. A Join Assertion that fails
-validation is an absent assertion, never a downgrade to an unverified
-join.
+rather than comparing best-effort. A PDP that consumes a Join
+Assertion and finds it invalid denies with `mission_mismatch`
+({{join-assertion-pdp}}), never falling back to the mapping join.
 
 The following qualifications apply to individual rows:
 
@@ -2500,7 +2616,8 @@ residuals remain:
   authority bounds what the choice yields. The party that attaches
   the reference bounds it further: the strong form is a trusted
   harness attaching from its recorded binding, or a Mission Join
-  Assertion presented alongside. The Enforcement Scope Statement
+  Assertion carried with the decision ({{join-authzen}}). The
+  Enforcement Scope Statement
   records the attachment provenance.
 
 The Mission Join Assertion ({{join-assertion}}) mitigates the
@@ -2517,6 +2634,12 @@ digest and key thumbprint, so a replay without that token and its
 sender-constraint key proves nothing. The `exp` claim, capped at the
 token's remaining lifetime, bounds the window in which the proof is
 live.
+
+The PDP checks the token binding against the digest and thumbprint the
+PEP reports ({{join-authzen}}). It relies on the PEP for those values
+under the decision API's trust boundary, the same trust the baseline
+join places in the PEP's subject and client attestation
+({{join-scope}}).
 
 The introspection call creates a trust relationship specific to this
 upgrade. The MAS relies on the deployment's AS for the token's
@@ -2543,9 +2666,8 @@ whose token it holds and can prove control of. The mitigations are:
 
 - Instance-grade binding
   ({{I-D.draft-mcguinness-oauth-client-instance-id}}) narrows the
-  `client_id` equivalence class to one runtime instance, and a Mission
-  Join Assertion presented with the submission makes that instance a
-  verified, token-bound party ({{native-binding}}).
+  `client_id` equivalence class to one runtime instance
+  ({{native-binding}}).
 - The expansion profile's fresh-approval requirement means no widening
   activates without the Approver, so a forged expansion request yields
   an approval prompt, not authority.
@@ -2636,6 +2758,10 @@ minimization guidance applies: collect only the Intent members the
 task needs, audience-filter every disclosure surface per the status
 profile's rules, and treat submission, status, and lifecycle logs as
 PII sinks.
+
+The join disclosure ({{join-disclosure}}) reveals a Mission's Subject
+and client only to the PDPs enrolled for its enforcement scope. A
+deployment enrolls only the PDPs that enforce that scope.
 
 Retention is anchored on the OAuth binding's audit horizon. A MAS
 retains records at least that long and SHOULD NOT retain them
@@ -2930,6 +3056,16 @@ shows the denial:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Join inputs on the wire (#972). Mission Status discloses the
+  Mission's `subject`, `client_id`, and entry `delegation` members to
+  PDPs enrolled for its enforcement scope, and enrollment is
+  deployment configuration. The `context.mission_join` decision-request
+  member carries the join inputs, including a Join Assertion with the
+  presented credential's digest and thumbprint. The assertion carries
+  the join result (`join`) the PDP narrows with, and supports
+  certificate-bound tokens (`x5t#S256`). A Join Assertion that fails
+  validation is denied, and `mission_max_stale_seconds` is required.
 
 - Density and OAuth register, with no change to the party, behavior,
   or keyword of any requirement; two conditions the preceding sentence

@@ -321,11 +321,10 @@ describe("M1 tracer slice", () => {
     };
     expect(res.status).toBe(400);
     expect(body.error).toBe("invalid_grant");
-    // @spec mission#error-mapping — a suspended Mission is a companion
-    // (Mission Status) state with no core `mission_error` value of its own;
-    // this deployment omits the diagnostic rather than misreport it as
-    // `mission_revoked` (@see gateErrorToMissionError).
-    expect(body.mission_error).toBeUndefined();
+    // @spec status#mission-lifecycle-endpoint — a suspended Mission's refusal
+    // carries Mission Status's `mission_suspended`, never `mission_revoked`,
+    // so the client can tell a `resume` lifts it (@see gateErrorToMissionError).
+    expect(body.mission_error).toBe("mission_suspended");
 
     expect((await (await lifecycle("resume")).json() as { state: string }).state).toBe("active");
     res = await tokenRequest({ grant_type: "refresh_token", refresh_token: refreshToken });

@@ -602,13 +602,15 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     // gate at the authorization rule, i.e. AFTER validation.
     as.kernel.transition(missionId, "suspend");
     const refused = await tokenExchange({ subjectToken: ica });
-    const refusedBody = (await refused.json()) as { error?: string; error_description?: string };
+    const refusedBody = (await refused.json()) as { error?: string; error_description?: string; mission_error?: string };
     expect(refused.status, JSON.stringify(refusedBody)).toBe(400);
     // A suspended Mission is reversible, so the chain has not ended: never
-    // invalid_continuation (ICA -02 5.5.6; owner ruling 2026-10-01).
+    // invalid_continuation (ICA -02 5.5.6; owner ruling 2026-10-01). The
+    // issuance profile's mission_error still applies under the profile's
+    // code, with Mission Status's value for a suspended Mission.
     expect(refusedBody.error).toBe("unauthorized_client");
     expect(refusedBody.error_description).toMatch(/gate refused issuance/);
-    expect(refusedBody).not.toHaveProperty("mission_error");
+    expect(refusedBody.mission_error).toBe("mission_suspended");
 
     // Nothing was issued, so nothing was consumed: the assertion is still
     // single-use-unspent. (Recording at validation, the prior behavior, burned
