@@ -155,7 +155,7 @@ function harness(
   // (observation plus the class staleness bound) is deterministic here.
   const loadView = (ref: { id: string; issuer: string }) =>
     ref.id === "msn_252" && ref.issuer === "https://as.test"
-      ? { view: view(), freshness: { observed_at: new Date(pepNowMs).toISOString(), source: "load_view" } }
+      ? { view: view(), observation: { state: view().state, version: view().version, mode: "fresh", freshness_at: new Date(pepNowMs).toISOString() } }
       : undefined;
 
   const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
@@ -181,7 +181,6 @@ function harness(
     modelId: "unit-test-model",
     loadView,
     instanceEpoch: "epoch-252",
-    allowedFreshnessSources: new Set(["load_view"]),
     now: () => new Date(pepNowMs),
     operationProfile: () =>
       Object.fromEntries(

@@ -55,6 +55,15 @@ export interface PermitDeadlineInput {
    * none was presented; never a value the freshness gate rejected.
    */
   stateObservedAtMs?: number;
+  /**
+   * The explicit expiry or lease end the state source reported for that same
+   * accepted observation (@spec authzen#context-audience-freshness
+   * `mission_status_expires_at`). Present, it is the state view's
+   * valid-through in place of the observation time plus the bound: "the
+   * reported expiry or lease end, or, absent one, the observation time plus
+   * the published staleness bound."
+   */
+  stateValidThroughMs?: number;
   /** Additional named ceilings (#594 W4-13's authority/credential/policy bounds). */
   ceilings?: readonly PermitCeiling[];
 }
@@ -88,7 +97,7 @@ export function permitDeadline(input: PermitDeadlineInput): PermitDeadline {
         // A bounded class the deployment mediates with no observation to cap
         // against. Reachable today only below the high-consequence floor,
         // where the draft treats the credential's own lifetime as a
-        // conforming state source and an absent `context.freshness` is not
+        // conforming state source and an absent state observation is not
         // itself a refusal. The class's published bound is still the longest
         // any reliance on state may run, so it caps the permit measured from
         // the decision instant: never later than the permit lifetime alone,
@@ -99,6 +108,15 @@ export function permitDeadline(input: PermitDeadlineInput): PermitDeadline {
       }
       if (!Number.isFinite(stateObservedAtMs)) {
         return { kind: "elapsed", source: "state_observation_unparseable" };
+      }
+      if (input.stateValidThroughMs !== undefined) {
+        // The source reported the state's own expiry or lease end: that is
+        // the valid-through, never the observation time alone.
+        if (!Number.isFinite(input.stateValidThroughMs)) {
+          return { kind: "elapsed", source: "state_valid_through_unparseable" };
+        }
+        candidates.push({ name: "state_view", atMs: input.stateValidThroughMs });
+        break;
       }
       // Clock skew: the freshness gate tolerates an observation dated
       // slightly in the future, but a future-dated observation MUST NOT buy a

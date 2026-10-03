@@ -41,18 +41,17 @@ const view: MissionView = {
 
 const reqFor = (actionClass: string): EvaluationRequest => ({
   subject: { id: "alice" },
-  resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
+  resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
   // Not in the entry's actions, regardless of class: an entry-match failure
   // is the gate a low or unrecognized classification could try to evade.
   action: { name: "payments:payment.execute" },
   context: {
-    audience: RESOURCE,
     mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
     action_class: actionClass,
     // Fresh state so a high-consequence class clears step 3 and this test
     // keeps exercising the gate it names (step 5's entry match), never the
     // freshness gate (@spec runtime#state-freshness).
-    freshness: { observed_at: NOW.toISOString(), source: "status" },
+    mission_state_observation: { state: "active", mode: "fresh", freshness_at: NOW.toISOString() },
   },
 });
 
@@ -66,7 +65,7 @@ const opts = {
   now: () => NOW,
   stalenessBound,
   relationForAction,
-  allowedFreshnessSources: new Set(["status"]),
+  stateSourcePlacement: "pep" as const,
   // @spec runtime#idempotency (#917): a fixture domain that also mediates
   // privileged administration, which the shipped deployment does not offer.
   claims: openTestClaims({ now: () => NOW }),
@@ -81,21 +80,24 @@ describe("classification cannot be used to evade the floor or a Resource-policy 
     const permit = await evaluate(request, opts);
     expect(permit.decision).toBe(true);
     expect((permit.context.conditions as Record<string, unknown>).use_limit).toBe(1);
-    request.context.freshness!.observed_at = new Date(NOW.getTime() - 31_000).toISOString();
+    request.context.mission_state_observation!.freshness_at = new Date(NOW.getTime() - 31_000).toISOString();
     expect((await evaluate(request, opts)).context.denial_reason).toBe("stale_state");
   });
 
   it("a class declared with no active freshness requirement is evaluated with no observation window, never refused as stale", async () => {
     // @spec runtime#state-freshness — the draft's Audit-only row: "No active
     // freshness required". The remaining gates still run, so the refusal is
-    // the entry-match one and never `stale_state`.
+    // the entry-match one and never `stale_state`. The observation stays
+    // present, as the pep placement REQUIRES (#1049 owner ruling), but an
+    // hour old: no window applies to it, so its age refuses nothing.
+    const hourOld = new Date(NOW.getTime() - 3_600_000).toISOString();
     const request = reqFor("audit_only");
-    delete request.context.freshness;
+    request.context.mission_state_observation!.freshness_at = hourOld;
     const dec = await evaluate(request, opts);
     expect(dec.decision).toBe(false);
     expect(dec.context.denial_reason).toBe("out_of_authority");
     const permitted = reqFor("audit_only");
-    delete permitted.context.freshness;
+    permitted.context.mission_state_observation!.freshness_at = hourOld;
     permitted.action.name = "payments:invoice.read";
     expect((await evaluate(permitted, opts)).decision).toBe(true);
   });
@@ -108,8 +110,8 @@ describe("classification cannot be used to evade the floor or a Resource-policy 
     // established.
     for (const mutate of [
       (_r: EvaluationRequest) => {},
-      (r: EvaluationRequest) => { delete r.context.freshness; },
-      (r: EvaluationRequest) => { r.context.freshness = { observed_at: new Date(NOW.getTime() - 10_000_000).toISOString(), source: "status" }; },
+      (r: EvaluationRequest) => { delete r.context.mission_state_observation; },
+      (r: EvaluationRequest) => { r.context.mission_state_observation = { state: "active", mode: "fresh", freshness_at: new Date(NOW.getTime() - 10_000_000).toISOString() }; },
     ]) {
       const request = reqFor("some_unrecognized_label");
       // An action inside the entry, so only the class rule can refuse it.

@@ -11,6 +11,7 @@
   "pdps": ["mcp-payments-pdp"],
   "state_source": {
     "source": "kernel-committed load_view",
+    "placement": "pep",
     "max_staleness_seconds": 300,
     "mission_max_stale_seconds": 300,
     "pdp_unavailability_posture": "deny",

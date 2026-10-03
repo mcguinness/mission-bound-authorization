@@ -629,7 +629,9 @@ describe("terminal tombstones and identifier nonreuse", () => {
       kernel.db.prepare("DELETE FROM missions").run();
       expect(kernel.get(record.id)).toBeUndefined();
       expect(() =>
-        kernel.insertRecord({ ...record, approval_event_id: "second-approval" }),
+        kernel.insertRecord({ ...record, approval_event_id: "second-approval" }, undefined, {
+          source: { inherited: kernel.committedSourceBinding(record.id) },
+        }),
       ).toThrow(MissionIdReuseError);
 
       // Consumer 2: past the composed detailed horizon the DETAIL is pruned and
@@ -642,7 +644,9 @@ describe("terminal tombstones and identifier nonreuse", () => {
       expect(pruned?.finalVersion).toBeUndefined();
       expect(kernel.tombstones.exists(ISSUER, record.id)).toBe(true);
       expect(() =>
-        kernel.insertRecord({ ...record, approval_event_id: "third-approval" }),
+        kernel.insertRecord({ ...record, approval_event_id: "third-approval" }, undefined, {
+          source: { inherited: kernel.committedSourceBinding(record.id) },
+        }),
       ).toThrow(MissionIdReuseError);
       // Pruning is idempotent and never resurrects the identifier.
       expect(kernel.tombstones.pruneDetails()).toBe(0);
@@ -693,7 +697,11 @@ describe("terminal tombstones and identifier nonreuse", () => {
       expect(kernel.tombstones.pruneDetails()).toBe(1);
       expect(kernel.tombstones.find(ISSUER, record.id)?.terminalState).toBeUndefined();
       expect(kernel.tombstones.exists(ISSUER, record.id)).toBe(true);
-      expect(() => kernel.insertRecord({ ...record, approval_event_id: "after-prune" })).toThrow(
+      expect(() =>
+        kernel.insertRecord({ ...record, approval_event_id: "after-prune" }, undefined, {
+          source: { inherited: kernel.committedSourceBinding(record.id) },
+        }),
+      ).toThrow(
         MissionIdReuseError,
       );
     } finally {
@@ -737,12 +745,12 @@ describe("terminal tombstones and identifier nonreuse", () => {
       a.kernel.transition(record.id, "revoke");
       expect(a.kernel.tombstones.exists("https://issuer-a.test", record.id)).toBe(true);
       expect(b.kernel.tombstones.exists("https://issuer-b.test", record.id)).toBe(false);
-      b.kernel.insertRecord({
-        ...b.approve({ approvalEventId: "b-approval" }),
-        id: record.id,
-        approval_event_id: "b-second",
-        status_list_idx: null,
-      });
+      const bRecord = b.approve({ approvalEventId: "b-approval" });
+      b.kernel.insertRecord(
+        { ...bRecord, id: record.id, approval_event_id: "b-second", status_list_idx: null },
+        undefined,
+        { source: { inherited: b.kernel.committedSourceBinding(bRecord.id) } },
+      );
       expect(b.kernel.get(record.id)?.issuer).toBe("https://issuer-b.test");
     } finally {
       a.kernel.db.close();

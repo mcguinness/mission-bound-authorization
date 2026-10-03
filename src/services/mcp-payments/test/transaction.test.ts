@@ -70,10 +70,10 @@ const VIEW: MissionView = {
 };
 
 /** @spec runtime#state-freshness: a synchronous live read, freshness-stamped
- *  at this read (Finding 1); `allowedFreshnessSources` below declares "load_view" as trusted. */
+ *  at this read (Finding 1), under the published `pep` placement. */
 const loadView = (ref: { id: string; issuer: string }) =>
   ref.id === VIEW.id && ref.issuer === VIEW.issuer
-    ? { view: VIEW, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+    ? { view: VIEW, observation: { state: VIEW.state, version: VIEW.version, mode: "fresh", freshness_at: new Date().toISOString() } }
     : undefined;
 /**
  * @spec RFC 9449 — the presenter's REAL key. A transaction credential is only
@@ -181,7 +181,6 @@ function build(
     modelId,
     loadView,
     instanceEpoch: "epoch-1",
-    allowedFreshnessSources: new Set(["load_view"]),
     ...(gated
       ? { requiresActionApproval: (action: string) => action === "payments:remittance.send", maxApprovalAgeSeconds: 300 }
       : {}),

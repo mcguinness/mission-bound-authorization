@@ -2085,7 +2085,7 @@ The derivation modes rank by how portable their result is:
 |---|---|
 | Client proposes concrete authority; Mission Issuer narrows it to policy | Interoperable default |
 | Configured mapping keyed on structured Intent members | Conforming; the mapping is deployment-specific |
-| Model-assisted derivation over the structured inputs | Local-policy extension, bound by the Intent bounds |
+| Model-assisted derivation over the structured inputs | Local-policy extension: the model's output is a recorded input that can refuse or narrow, never supply or widen |
 | Derivation from the prose members | Not a mode: prose is disclosure, shaped before admission |
 {: title="Derivation modes by portability"}
 
@@ -4082,6 +4082,11 @@ bound profiled by `aauth-mission-expiry`.
   where the delegation chooser names token exchange, two stale uses of
   "Completion" name the Entry Discharge companion, and the assurance
   levels are called levels throughout, never rungs.
+
+- The derivation-modes table follows the OAuth binding: a model's
+  output in derivation is a recorded input that can refuse or narrow,
+  never supply or widen, with no change to any profile's
+  requirements.
 
 - The authority path, with no change to any profile's requirements.
   The Mission adds a figure from approval basis to action, with the
