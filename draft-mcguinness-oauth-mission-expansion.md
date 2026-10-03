@@ -792,14 +792,35 @@ Issuer:
   pushed request.
 
 The `request_uri` is a temporary front-channel reference; the
-continuation names the durable operation. When a `request_uri`
-expires, the user agent consumes it, or the authorization response is
-lost, the client pushes again with the same `mission_continuation` and
-continues the same operation. Redemption of the authorization code
-verifies the PKCE or DPoP binding and activates the successor under
-the checks of {{reconciliation}}, atomically with the predecessor's
-supersession; `subject_token` expiry during the window does not gate
-it ({{deferred-window}}). After activation the Mission Issuer MUST
+continuation names the durable operation, which has one approval
+ceremony and one outcome. The Mission Issuer MUST serialize
+adjudication per operation and record at most one approval outcome
+for it: the first ceremony to conclude records approval or denial, and
+every other ceremony or pushed request for the continuation resumes
+from that recorded outcome instead of adjudicating again. When a
+`request_uri` expires, the user agent consumes it, or the authorization
+response is lost, the client pushes again with the same
+`mission_continuation`:
+
+- before an outcome is recorded, the push starts no second
+  adjudication; it continues the operation's one ceremony;
+- after approval, the Mission Issuer issues a fresh authorization code
+  for the recorded approval, bound to that push's PKCE or DPoP input,
+  without prompting again; and
+- after denial, the operation has failed: the Mission Issuer MUST
+  refuse the push with `access_denied`, and a `creation_request_id`
+  retry receives `access_denied`.
+
+Redemption of an authorization code verifies the PKCE or DPoP binding
+and, in the same atomic step as activation, that the continuation has
+not expired and the recorded outcome is approval; it then activates
+the successor under the checks of {{reconciliation}}, atomically with
+the predecessor's supersession. The continuation's expiry is the
+operation's deadline, a clock separate from the authorization code's
+own lifetime ({{Section 4.1.2 of RFC6749}}): the Mission Issuer MUST
+refuse redemption at or after it with `invalid_grant`, and nothing
+activates. `subject_token` expiry during the window does not gate
+redemption ({{deferred-window}}). After activation the Mission Issuer MUST
 refuse a further pushed request for the continuation and MUST refuse
 redemption of any other code issued for the operation with
 `invalid_grant`. A lost redemption response is recovered by repeating
@@ -1269,10 +1290,12 @@ select, and because the existing single-use artifacts do not close
 the retry fault. DPoP proof `jti` single-use ({{request-binding}})
 prevents replay of one captured proof; a client that loses the
 response retries with a fresh, valid proof, and without the
-identifier that retry is a second creation. The retained interactive
-path's single-use artifacts prevent only duplicate redemption within
-one ceremony; the reservation made at initiation is what prevents a
-retry from starting a second ceremony ({{creation-recovery}}).
+identifier that retry is a second creation. The interactive path's
+single-use artifacts prevent only duplicate redemption within one
+ceremony; the reservation made at initiation, and the single recorded
+approval outcome of {{interactive-handoff}}, prevent a retry or a
+repeated pushed request from starting a second ceremony
+({{creation-recovery}}).
 
 The child delegation profile
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) carries the
@@ -1426,7 +1449,8 @@ delivery-artifact metadata. A revalidated retry
   second deferral.
 - A pending interactive completion returns the same
   `mission_continuation` ({{interactive-handoff}}). The reservation is
-  made at initiation, so a retry cannot open a second operation.
+  made at initiation, so a retry cannot start a second approval
+  ceremony.
 - A completed operation whose delivery credential is still valid
   returns that credential.
 - A completed operation whose delivery credential has expired is
