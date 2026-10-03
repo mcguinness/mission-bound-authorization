@@ -1778,24 +1778,28 @@ Table of Contents
 
    The derivation modes rank by how portable their result is:
 
-   +=====================================+============================+
-   | Derivation mode                     | Portability status         |
-   +=====================================+============================+
-   | Client proposes concrete authority; | Interoperable default      |
-   | Mission Issuer narrows it to policy |                            |
-   +-------------------------------------+----------------------------+
-   | Configured mapping keyed on         | Conforming; the mapping is |
-   | structured Intent members           | deployment-specific        |
-   +-------------------------------------+----------------------------+
-   | Model-assisted derivation over the  | Local-policy extension,    |
-   | structured inputs                   | bound by the Intent bounds |
-   +-------------------------------------+----------------------------+
-   | Derivation from the prose members   | Not a mode: prose is       |
-   |                                     | disclosure, shaped before  |
-   |                                     | admission                  |
-   +-------------------------------------+----------------------------+
+       +===========================+===============================+
+       | Derivation mode           | Portability status            |
+       +===========================+===============================+
+       | Client proposes concrete  | Interoperable default         |
+       | authority; Mission Issuer |                               |
+       | narrows it to policy      |                               |
+       +---------------------------+-------------------------------+
+       | Configured mapping keyed  | Conforming; the mapping is    |
+       | on structured Intent      | deployment-specific           |
+       | members                   |                               |
+       +---------------------------+-------------------------------+
+       | Model-assisted derivation | Local-policy extension: the   |
+       | over the structured       | model's output is a recorded  |
+       | inputs                    | input that can refuse or      |
+       |                           | narrow, never supply or widen |
+       +---------------------------+-------------------------------+
+       | Derivation from the prose | Not a mode: prose is          |
+       | members                   | disclosure, shaped before     |
+       |                           | admission                     |
+       +---------------------------+-------------------------------+
 
-                                 Table 3
+                                  Table 3
 
    A deployment seeking interoperable authority uses narrowing; a model-
    assisted extension stays local policy unless a profile pins it with a
@@ -4825,6 +4829,11 @@ Appendix G.  Mission Document Map
 Appendix H.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The derivation-modes table follows the OAuth binding: a model's
+      output in derivation is a recorded input that can refuse or
+      narrow, never supply or widen, with no change to any profile's
+      requirements.
 
    *  The authority path, with no change to any profile's requirements.
       The Mission adds a figure from approval basis to action, with the

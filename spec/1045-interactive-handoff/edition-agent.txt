@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-03T21:20:00Z
-Source repository commit: d63dfb253286642a21626a4640f19bc534340087
+Generated: 2026-10-03T21:39:30Z
+Source repository commit: 8cfad3e787a5b4a5ce003efabbaef0524e4f990f
 Member count: 9
 
 Reading order:
@@ -1804,24 +1804,28 @@ Table of Contents
 
    The derivation modes rank by how portable their result is:
 
-   +=====================================+============================+
-   | Derivation mode                     | Portability status         |
-   +=====================================+============================+
-   | Client proposes concrete authority; | Interoperable default      |
-   | Mission Issuer narrows it to policy |                            |
-   +-------------------------------------+----------------------------+
-   | Configured mapping keyed on         | Conforming; the mapping is |
-   | structured Intent members           | deployment-specific        |
-   +-------------------------------------+----------------------------+
-   | Model-assisted derivation over the  | Local-policy extension,    |
-   | structured inputs                   | bound by the Intent bounds |
-   +-------------------------------------+----------------------------+
-   | Derivation from the prose members   | Not a mode: prose is       |
-   |                                     | disclosure, shaped before  |
-   |                                     | admission                  |
-   +-------------------------------------+----------------------------+
+       +===========================+===============================+
+       | Derivation mode           | Portability status            |
+       +===========================+===============================+
+       | Client proposes concrete  | Interoperable default         |
+       | authority; Mission Issuer |                               |
+       | narrows it to policy      |                               |
+       +---------------------------+-------------------------------+
+       | Configured mapping keyed  | Conforming; the mapping is    |
+       | on structured Intent      | deployment-specific           |
+       | members                   |                               |
+       +---------------------------+-------------------------------+
+       | Model-assisted derivation | Local-policy extension: the   |
+       | over the structured       | model's output is a recorded  |
+       | inputs                    | input that can refuse or      |
+       |                           | narrow, never supply or widen |
+       +---------------------------+-------------------------------+
+       | Derivation from the prose | Not a mode: prose is          |
+       | members                   | disclosure, shaped before     |
+       |                           | admission                     |
+       +---------------------------+-------------------------------+
 
-                                 Table 3
+                                  Table 3
 
    A deployment seeking interoperable authority uses narrowing; a model-
    assisted extension stays local policy unless a profile pins it with a
@@ -4852,6 +4856,11 @@ Appendix H.  Document History
 
    [[ To be removed from the final specification ]]
 
+   *  The derivation-modes table follows the OAuth binding: a model's
+      output in derivation is a recorded input that can refuse or
+      narrow, never supply or widen, with no change to any profile's
+      requirements.
+
    *  The authority path, with no change to any profile's requirements.
       The Mission adds a figure from approval basis to action, with the
       lifecycle gate beside the path, child creation as a new approval
@@ -7622,10 +7631,14 @@ Table of Contents
    (Section 7), an opaque audit correlator; the policy itself is not
    conveyed.
 
-   Generative derivation, with model assistance over the structured
-   inputs above, is not one of this document's modes; a deployment that
-   uses it as a local-policy extension stays bound by the Intent bounds,
-   the prose boundary below, and the recording rule above.
+   Generative derivation is not one of this document's modes.  As a
+   local-policy extension, a model's output can be a recorded input to
+   the AS's deterministic derivation policy, together with the model's
+   identifier and version.  That input can cause refusal or further
+   narrow the candidate authority the selected mode and policy otherwise
+   permit.  The AS MUST NOT let it supply or widen authority.  Each
+   type's subset rule (Section 5.1), the Intent bounds, and the prose
+   boundary below still apply.
 
    A target_resources entry the deployment does not recognize is, by
    deployment policy, either omitted from the Authority Set or refused
@@ -12502,26 +12515,28 @@ D.1.  The Policy as an Artifact
    configured mappings, and issuance limits.  Its inputs include a
    validated Mission Intent, the client's authority proposal in
    narrowing mode (or configured candidates when there is no proposal),
-   the applicable authority source ceiling, and the capability catalog's
-   per-action properties.  The output is the Authority Set committed by
-   authority_hash; policy_version identifies the policy used.  The
-   policy is not transmitted; its identifier and published Intent-to-
-   Authority-Set fixtures let a partner review outcomes.
+   the applicable authority source ceiling, the capability catalog's
+   per-action properties, and any recorded model output.  The output is
+   the Authority Set committed by authority_hash; policy_version
+   identifies the policy used.  The policy is not transmitted; its
+   identifier and published Intent-to-Authority-Set fixtures let a
+   partner review outcomes.
 
    Reproducing a derivation requires the same inputs and the retained
    policy and catalog versions, not just the identifier of a mutable
-   configuration.  Derivation is mechanical: a model may suggest an
-   Intent or a proposal, and does not make the approval-time narrowing
-   decision.
+   configuration.  Replay uses a model's retained output and never
+   reruns the model.  Derivation is mechanical: a model may suggest an
+   Intent or a proposal, or contribute a recorded input that refuses or
+   narrows, and does not make the approval-time narrowing decision.
 
 D.2.  Properties a Derivation Policy Holds
 
    The five properties below restate, for a policy author, what
    Section 5 and the rules it cites require of a derivation.
 
-   *  *Deterministic.* The same Intent, proposal, ceiling, and catalog
-      derive the same Authority Set, so policy_version can serve as an
-      audit correlator (Section 5).
+   *  *Deterministic.* The same Intent, proposal, ceiling, catalog, and
+      recorded model output derive the same Authority Set, so
+      policy_version can serve as an audit correlator (Section 5).
 
    *  *Narrowing only.* Every derived entry is a subset of some proposed
       entry of the same type, under that type's own relation
@@ -13028,6 +13043,13 @@ Appendix G.  Document History
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  Stated that a model's output in derivation is a recorded input to
+      the AS's deterministic derivation policy that can refuse or narrow
+      and never supplies or widens authority: candidate authority keeps
+      a proposal or configured-mapping origin, deterministic policy
+      validates every resulting entry, and replay uses the retained
+      output.  This adds a requirement.
 
    *  Stated why the primary access token's confirmation member stays
       optional rather than mandatory: compatibility with bearer-only
