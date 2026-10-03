@@ -1909,9 +1909,9 @@ satisfy step 5. The transaction token transports a bounded,
 action-bound approval and never substitutes for the Mission's current
 authority, applicable Resource policy, or consumption state.<a href="#section-7-3" class="pilcrow">¶</a></p>
 <p id="section-7-4">Consumption of <code>txn</code> <span class="bcp14">MUST</span> be linearizable across every replica capable
-of executing the same operation, meeting the metering companion's
-Exact enforcement profile
-(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>): the record commits before
+of executing the same operation, meeting the Exact enforcement profile
+the runtime profile defines (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>,
+Section "Idempotency"): the record commits before
 the irreversible effect, or atomically with it where the operation
 store supports that transaction. If the consumption store is
 unavailable, the resource <span class="bcp14">MUST</span> fail closed for this profile.<a href="#section-7-4" class="pilcrow">¶</a></p>
@@ -2121,8 +2121,9 @@ lifetime.<a href="#section-10-2.6.1" class="pilcrow">¶</a></p>
 <dt id="section-10-2.7">Consumption-store availability, and the fail-closed posture generally:</dt>
         <dd style="margin-left: 1.5em" id="section-10-2.8">
           <p id="section-10-2.8.1">The at-most-once property this profile claims exists only while the
-consumption store meets the Exact enforcement profile of
-<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>; a deployment that
+consumption store meets the Exact enforcement profile the runtime
+profile defines (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); a
+deployment that
 degrades to a merely local cache during partition no longer has
 that property and <span class="bcp14">MUST NOT</span> claim it. Every failure path of
 <a href="#failure-semantics" class="auto internal xref">Section 9</a> resolves to denial, refusal, or a fail-closed
@@ -2664,8 +2665,13 @@ through exactly one execution or terminal refusal.<a href="#section-15-7" class=
 <p id="section-16-1">[[ To be removed from the final specification ]]<a href="#section-16-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-16-2.1">
-          <p id="section-16-2.1.1">Linked applicability to the runtime compound-action model: a
-transaction token authorizes one commit-phase operation (#252).<a href="#section-16-2.1.1" class="pilcrow">¶</a></p>
+          <p id="section-16-2.1.1"><code>txn</code> consumption meets the Exact enforcement profile the runtime
+profile defines, rather than the metering companion's, which is no
+longer referenced.<a href="#section-16-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-16-2.2">
+          <p id="section-16-2.2.1">Linked applicability to the runtime compound-action model: a
+transaction token authorizes one commit-phase operation (#252).<a href="#section-16-2.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
@@ -2787,10 +2793,6 @@ cross-organizational, execution-time approval.<a href="#section-17-1" class="pil
 <dt id="I-D.draft-mcguinness-mission-authzen">[I-D.draft-mcguinness-mission-authzen]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement: AuthZEN Profile"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-mission-metering">[I-D.draft-mcguinness-mission-metering]</dt>
-        <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consumption Metering"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-runtime-evidence">[I-D.draft-mcguinness-mission-runtime-evidence]</dt>
         <dd>

@@ -4363,38 +4363,55 @@ observes it.<a href="#section-9.3-2.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-9.3-3">The claim's exactly-one-winner property has the same non-degradable
-shape as the metering companion's <code>exclusive</code> latch and reuses that
-companion's Topology framework (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>):<a href="#section-9.3-3" class="pilcrow">¶</a></p>
+shape as the metering companion's <code>exclusive</code> latch
+(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>). Two enforcement profiles
+describe how single-winner state is held across replicas:<a href="#section-9.3-3" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-9.3-4">
+          <dt id="section-9.3-4.1">Exact enforcement profile:</dt>
+          <dd style="margin-left: 1.5em" id="section-9.3-4.2">
+            <p id="section-9.3-4.2.1">The check and the update are atomic against one authoritative
+record: a single serializing PDP, a shared linearizable store, or
+claim domains that are structurally exact by construction.<a href="#section-9.3-4.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-9.3-4.3">Bounded-consistency enforcement profile:</dt>
+          <dd style="margin-left: 1.5em" id="section-9.3-4.4">
+            <p id="section-9.3-4.4.1">Replicas share the state without linearizable coordination and
+converge within a published bound, so two of them can each accept
+the same claim before they converge.<a href="#section-9.3-4.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-9.3-5">The metering companion applies the same two profiles to its counters
+(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-9.3-5" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-9.3-4.1">
-            <p id="section-9.3-4.1.1">The idempotency claim <span class="bcp14">MUST</span> be enforced under the Exact enforcement
-profile of the metering companion's Topology framework
-(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>): a single serializing
-PDP, a shared linearizable store, or claim domains that are
-structurally exact by construction.<a href="#section-9.3-4.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-9.3-6.1">
+            <p id="section-9.3-6.1.1">The idempotency claim <span class="bcp14">MUST</span> be enforced under the Exact enforcement
+profile: a single serializing PDP, a shared linearizable store, or
+claim domains that are structurally exact by construction.<a href="#section-9.3-6.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-9.3-4.2">
-            <p id="section-9.3-4.2.1">The Bounded-consistency enforcement profile <span class="bcp14">MUST NOT</span> be applied to
+          <li class="normal" id="section-9.3-6.2">
+            <p id="section-9.3-6.2.1">The Bounded-consistency enforcement profile <span class="bcp14">MUST NOT</span> be applied to
 the idempotency claim: an exactly-one-winner claim cannot degrade
 gracefully, the same reason the metering companion bars <code>exclusive</code>
-from Bounded consistency (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-9.3-4.2.1" class="pilcrow">¶</a></p>
+from Bounded consistency (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-9.3-6.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-9.3-4.3">
-            <p id="section-9.3-4.3.1">A PDP or store that cannot reach its declared Exact domain <span class="bcp14">MUST</span> fail
-closed rather than issue a permit.<a href="#section-9.3-4.3.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-9.3-6.3">
+            <p id="section-9.3-6.3.1">A PDP or store that cannot reach its declared Exact domain <span class="bcp14">MUST</span> fail
+closed rather than issue a permit.<a href="#section-9.3-6.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-9.3-4.4">
-            <p id="section-9.3-4.4.1">The deployment <span class="bcp14">MUST</span> name the Exact claim domain per mediated action
+          <li class="normal" id="section-9.3-6.4">
+            <p id="section-9.3-6.4.1">The deployment <span class="bcp14">MUST</span> name the Exact claim domain per mediated action
 class or idempotency scope in its Enforcement Scope Statement
 (<a href="#runtime-conformance" class="auto internal xref">Section 5.2</a>), not as an enumeration of individual
-dynamic claims.<a href="#section-9.3-4.4.1" class="pilcrow">¶</a></p>
+dynamic claims.<a href="#section-9.3-6.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<span class="break"></span><dl class="dlParallel" id="section-9.3-5">
-          <dt id="section-9.3-5.1">
+<span class="break"></span><dl class="dlParallel" id="section-9.3-7">
+          <dt id="section-9.3-7.1">
 <strong>Evaluation retransmission (PDP)</strong>:</dt>
-          <dd style="margin-left: 1.5em" id="section-9.3-5.2">
-            <p id="section-9.3-5.2.1">For a re-presentation whose cache key is equal to the prior
+          <dd style="margin-left: 1.5em" id="section-9.3-7.2">
+            <p id="section-9.3-7.2.1">For a re-presentation whose cache key is equal to the prior
 decision's and whose claim matches (same idempotency scope and key,
 same operation identity), while the prior permit is unexpired and
 its <code>evaluation_id</code> unconsumed, the PDP <span class="bcp14">SHOULD</span> return the prior
@@ -4402,13 +4419,13 @@ decision, so a permit response lost in transit does not lock the
 action out for the reconciliation window. This is the only same-key
 path that returns a permit: the PDP claim's purpose is narrowed to
 preventing concurrent double-permits before completion, never to
-replaying a completed result.<a href="#section-9.3-5.2.1" class="pilcrow">¶</a></p>
+replaying a completed result.<a href="#section-9.3-7.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-9.3-5.3">
+<dt id="section-9.3-7.3">
 <strong>Permit replay prevention (PEP)</strong>:</dt>
-          <dd style="margin-left: 1.5em" id="section-9.3-5.4">
-            <p id="section-9.3-5.4.1">Unchanged: the single-use rule of <a href="#single-use-identifiers" class="auto internal xref">Section 9.2</a> is
+          <dd style="margin-left: 1.5em" id="section-9.3-7.4">
+            <p id="section-9.3-7.4.1">Unchanged: the single-use rule of <a href="#single-use-identifiers" class="auto internal xref">Section 9.2</a> is
 itself atomic. Before releasing the effect of a
 <code>use_limit</code>-bearing permit, the enforcement scope <span class="bcp14">MUST</span> atomically
 consume, or atomically reserve and then confirm, the
@@ -4418,26 +4435,26 @@ consuming the same identifier; a replica that instead observes an
 already-consumed identifier treats the presentation as consumed,
 not as a fresh single use, a decision-API binding's
 <code>permit_consumed</code> classification
-(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-9.3-5.4.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-9.3-7.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-9.3-5.5">
+<dt id="section-9.3-7.5">
 <strong>Operation idempotency (Resource Server / Operation Profile)</strong>:</dt>
-          <dd style="margin-left: 1.5em" id="section-9.3-5.6">
-            <p id="section-9.3-5.6.1">The resource, not the PDP, owns the key's lifecycle and the prior
+          <dd style="margin-left: 1.5em" id="section-9.3-7.6">
+            <p id="section-9.3-7.6.1">The resource, not the PDP, owns the key's lifecycle and the prior
 result once an operation completes: for a COMPLETED duplicate the
 resource returns the prior operation result under the Operation
 Profile's rules. A fresh authorization denial is not the vehicle
 for result replay; the claim states below govern only whether a
 new permit issues, never what the resource returns for a completed
-key.<a href="#section-9.3-5.6.1" class="pilcrow">¶</a></p>
+key.<a href="#section-9.3-7.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-9.3-6">The claim resolves per state, keyed on whether the presented
+<p id="section-9.3-8">The claim resolves per state, keyed on whether the presented
 (idempotency scope, <code>idempotency_key</code>) pair matches an existing claim
 and whether the request's operation identity equals the one the claim
-was made under:<a href="#section-9.3-6" class="pilcrow">¶</a></p>
+was made under:<a href="#section-9.3-8" class="pilcrow">¶</a></p>
 <span id="name-idempotency-claim-state-res"></span><table class="center" id="table-6">
           <caption>
 <a href="#table-6" class="selfRef">Table 6</a>:
@@ -4491,7 +4508,7 @@ was made under:<a href="#section-9.3-6" class="pilcrow">¶</a></p>
             </tr>
           </tbody>
         </table>
-<p id="section-9.3-8">A different operation identity under the same key is always a
+<p id="section-9.3-10">A different operation identity under the same key is always a
 conflict, never a new execution: an idempotency key identifies one
 intended execution of one normalized request, the same discipline
 HTTP's own Idempotency-Key handling applies, restated here in the
@@ -4501,30 +4518,30 @@ result is replayed by the resource, not re-executed. An intentional
 re-execution of the same normalized action is a new operation under a
 new idempotency key, never a retry under the consumed one, and an
 action-bound approval (<a href="#action-approval" class="auto internal xref">Section 5.4</a>) authorizes that new
-operation as such, never re-execution under the consumed key.<a href="#section-9.3-8" class="pilcrow">¶</a></p>
+operation as such, never re-execution under the consumed key.<a href="#section-9.3-10" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-9.3-9.1">
-            <p id="section-9.3-9.1.1">The idempotency scope is, at minimum, the Mission, the subject and
+<li class="normal" id="section-9.3-11.1">
+            <p id="section-9.3-11.1.1">The idempotency scope is, at minimum, the Mission, the subject and
 the actor, the audience, the action, and the resource; a deployment
 <span class="bcp14">MAY</span> narrow it further and <span class="bcp14">MUST</span> publish the scope in its Enforcement
-Scope Statement. Volatile members <span class="bcp14">MUST NOT</span> be added to the scope.<a href="#section-9.3-9.1.1" class="pilcrow">¶</a></p>
+Scope Statement. Volatile members <span class="bcp14">MUST NOT</span> be added to the scope.<a href="#section-9.3-11.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-9.3-9.2">
-            <p id="section-9.3-9.2.1">Where compound-action phases share an action identifier, the
-idempotency scope <span class="bcp14">MUST</span> include the phase (<a href="#compound-actions" class="auto internal xref">Section 2.10</a>).<a href="#section-9.3-9.2.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-9.3-11.2">
+            <p id="section-9.3-11.2.1">Where compound-action phases share an action identifier, the
+idempotency scope <span class="bcp14">MUST</span> include the phase (<a href="#compound-actions" class="auto internal xref">Section 2.10</a>).<a href="#section-9.3-11.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-9.3-9.3">
-            <p id="section-9.3-9.3.1">For the high-consequence classes the deployment <span class="bcp14">MUST</span> retain a
+          <li class="normal" id="section-9.3-11.3">
+            <p id="section-9.3-11.3.1">For the high-consequence classes the deployment <span class="bcp14">MUST</span> retain a
 durable consumed-key record (a tombstone) for at least its declared
 idempotency horizon, published in the Enforcement Scope Statement.
 Tombstones are enforced, not merely retained: within that horizon a
 claim against a tombstoned key <span class="bcp14">MUST</span> be refused, never treated as a
 fresh claim. Outside those classes a deployment <span class="bcp14">MAY</span> scope the
 guarantee to the reconciliation window (<a href="#evidence" class="auto internal xref">Section 11</a>), and it <span class="bcp14">MUST</span>
-publish which posture applies.<a href="#section-9.3-9.3.1" class="pilcrow">¶</a></p>
+publish which posture applies.<a href="#section-9.3-11.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-9.3-10">The PDP makes no claim for a reversible consequential write's
+<p id="section-9.3-12">The PDP makes no claim for a reversible consequential write's
 idempotency-key control (<a href="#permit-binding" class="auto internal xref">Section 2.9</a>): that control is not one
 of the classes above. Narrowing the PDP claim to those classes does
 not narrow this guarantee; it moves the enforcement point. The
@@ -4536,7 +4553,7 @@ outside the high-consequence classes, so a duplicate arriving after
 the permit's own short validity window still resolves against the
 recorded key rather than executing again. This is the same
 single-winner discipline as <a href="#single-use-identifiers" class="auto internal xref">Section 9.2</a>, applied to the
-key instead of the decision identifier.<a href="#section-9.3-10" class="pilcrow">¶</a></p>
+key instead of the decision identifier.<a href="#section-9.3-12" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="execution-reverification">
@@ -6232,62 +6249,68 @@ worked example shows the concrete record
 <p id="appendix-D-1">[[ To be removed from the final specification ]]<a href="#appendix-D-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-D-2.1">
-          <p id="appendix-D-2.1.1">Credential Custody: the acting credential for a high-consequence
+          <p id="appendix-D-2.1.1">Idempotency defines the Exact and Bounded-consistency enforcement
+profiles for its own claim, so the idempotency requirements no longer
+depend on the experimental metering companion, which is cited only as
+applying the same profiles to its counters.<a href="#appendix-D-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.2">
+          <p id="appendix-D-2.2.1">Credential Custody: the acting credential for a high-consequence
 action is sender-constrained in either Mission-establishment mode.
 The PEP supplies a confirmation key only from a binding it verified
 with a current proof of possession, and the PDP denies a
 high-consequence action without one. Enforcement Invariants and
-Failure Modes point to the rule.<a href="#appendix-D-2.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-D-2.2">
-          <p id="appendix-D-2.2.1">Out of Scope lists cross-PDP history composition other than through
-the deployment's evidence store or registered transparency records,
-matching History. No requirement changed.<a href="#appendix-D-2.2.1" class="pilcrow">¶</a></p>
+Failure Modes point to the rule.<a href="#appendix-D-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.3">
-          <p id="appendix-D-2.3.1">Authority input: for every issuer-held narrowing mechanism the
-deployment runs, the PDP establishes current effective authority from
-a source reporting it and refuses when it cannot; the PDP refuses an
-action within a discharged entry (formerly <span class="bcp14">SHOULD</span>).<a href="#appendix-D-2.3.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-2.3.1">Out of Scope lists cross-PDP history composition other than through
+the deployment's evidence store or registered transparency records,
+matching History. No requirement changed.<a href="#appendix-D-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.4">
-          <p id="appendix-D-2.4.1">A materialized policy view is one way to evaluate the authority
+          <p id="appendix-D-2.4.1">Authority input: for every issuer-held narrowing mechanism the
+deployment runs, the PDP establishes current effective authority from
+a source reporting it and refuses when it cannot; the PDP refuses an
+action within a discharged entry (formerly <span class="bcp14">SHOULD</span>).<a href="#appendix-D-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.5">
+          <p id="appendix-D-2.5.1">A materialized policy view is one way to evaluate the authority
 input, not the only one: the Materialized Policy View section
 governs a PDP that uses one, and the authority input requires
 whatever the PDP evaluates to be no broader than the current
 effective authority and bound to the Mission, with mutable state
 from a state source; the policy-view version names whichever basis
-the PDP evaluated.<a href="#appendix-D-2.4.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-D-2.5">
-          <p id="appendix-D-2.5.1">The Operation Profile's items are grouped as the operation's binding
-and its declarations, with no change to any requirement or to which
-operations it applies to; a declaration is stated even where the
-answer is no.<a href="#appendix-D-2.5.1" class="pilcrow">¶</a></p>
+the PDP evaluated.<a href="#appendix-D-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.6">
-          <p id="appendix-D-2.6.1">The record minimum's evaluation request digest is over the input
-the runtime evidence companion defines (#971).<a href="#appendix-D-2.6.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-2.6.1">The Operation Profile's items are grouped as the operation's binding
+and its declarations, with no change to any requirement or to which
+operations it applies to; a declaration is stated even where the
+answer is no.<a href="#appendix-D-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.7">
-          <p id="appendix-D-2.7.1">Security Considerations notes that an idempotency key identifies a
-request, not the business event it carries out, and that the
-Operation Profile and the resource own event-level deduplication.<a href="#appendix-D-2.7.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-2.7.1">The record minimum's evaluation request digest is over the input
+the runtime evidence companion defines (#971).<a href="#appendix-D-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.8">
-          <p id="appendix-D-2.8.1">The Enforcement Scope Statement is what a deployment adopting the
-Runtime-Enforced bundle publishes, not what earns the level; the
-level stays guidance, matching the architecture's assurance levels,
-and the statement's named claims are what a relying party compares.<a href="#appendix-D-2.8.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-2.8.1">Security Considerations notes that an idempotency key identifies a
+request, not the business event it carries out, and that the
+Operation Profile and the resource own event-level deduplication.<a href="#appendix-D-2.8.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.9">
-          <p id="appendix-D-2.9.1">The Introduction states this profile as the per-action decision for
-the action classes it covers, composed over the issuance profile's
-bounds, and Deployment Considerations names introspection as a
-cutoff on the issuance-only path.<a href="#appendix-D-2.9.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-2.9.1">The Enforcement Scope Statement is what a deployment adopting the
+Runtime-Enforced bundle publishes, not what earns the level; the
+level stays guidance, matching the architecture's assurance levels,
+and the statement's named claims are what a relying party compares.<a href="#appendix-D-2.9.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.10">
-          <p id="appendix-D-2.10.1">Client-instance references follow their successors:
+          <p id="appendix-D-2.10.1">The Introduction states this profile as the per-action decision for
+the action classes it covers, composed over the issuance profile's
+bounds, and Deployment Considerations names introspection as a
+cutoff on the issuance-only path.<a href="#appendix-D-2.10.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.11">
+          <p id="appendix-D-2.11.1">Client-instance references follow their successors:
 draft-mcguinness-oauth-client-instance-assertion is replaced by
 {I-D.draft-mcguinness-oauth-client-instance-id}, and the
 deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
@@ -6295,37 +6318,37 @@ cited. Attester-verified
 context is instance identity that grants no authority, custody's
 per-instance key follows the successor's instance-unique key for
 attribution, and EAT evidence is no longer tied to a carrier
-profile. No requirement changed.<a href="#appendix-D-2.10.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-D-2.11">
-          <p id="appendix-D-2.11.1">Added approval-resolution rule 5, the agent-invokable approval bypass,
-and its negative-conformance case (#759). Observing or requesting an
-independent approval is distinct from resolving it.<a href="#appendix-D-2.11.1" class="pilcrow">¶</a></p>
+profile. No requirement changed.<a href="#appendix-D-2.11.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.12">
-          <p id="appendix-D-2.12.1">Defined compound-action phases, one Decision per consequential
+          <p id="appendix-D-2.12.1">Added approval-resolution rule 5, the agent-invokable approval bypass,
+and its negative-conformance case (#759). Observing or requesting an
+independent approval is distinct from resolving it.<a href="#appendix-D-2.12.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.13">
+          <p id="appendix-D-2.13.1">Defined compound-action phases, one Decision per consequential
 phase, a PEP-derived phase binding verified at permit use,
 phase-scoped idempotency where phases share an action identifier,
 and compensation correlation (#252). Strength change:
 <code>compensates_evaluation_id</code> on Decision Evidence moves from <span class="bcp14">OPTIONAL</span>
 to <span class="bcp14">REQUIRED</span> for a compensate-phase decision, <span class="bcp14">OPTIONAL</span> otherwise. The
 AuthZEN condition, the evidence member, and conformance coverage are
-specified separately.<a href="#appendix-D-2.12.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-D-2.13">
-          <p id="appendix-D-2.13.1">Added per-entry perimeter dispositions inside the existing
-mediated-scope declaration, its compatibility rule, and the
-prohibition on claiming reconstruction as mediation (#758).<a href="#appendix-D-2.13.1" class="pilcrow">¶</a></p>
+specified separately.<a href="#appendix-D-2.13.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.14">
-          <p id="appendix-D-2.14.1">Operational Considerations added (#310): a dependency-conditional outage
+          <p id="appendix-D-2.14.1">Added per-entry perimeter dispositions inside the existing
+mediated-scope declaration, its compatibility rule, and the
+prohibition on claiming reconstruction as mediation (#758).<a href="#appendix-D-2.14.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.15">
+          <p id="appendix-D-2.15.1">Operational Considerations added (#310): a dependency-conditional outage
 blast-radius table indexed by action class, the remaining-window
 ride-through, the declared positive break-glass mode with truthful
 emergency evidence, and the replication disclosure. The three operator
-declarations carry no implementation coverage.<a href="#appendix-D-2.14.1" class="pilcrow">¶</a></p>
+declarations carry no implementation coverage.<a href="#appendix-D-2.15.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-2.15">
-          <p id="appendix-D-2.15.1">Added the Evaluation-Context Binding named assurance extension (#773),
+        <li class="normal" id="appendix-D-2.16">
+          <p id="appendix-D-2.16.1">Added the Evaluation-Context Binding named assurance extension (#773),
 claimed per mediated action class: a versioned descriptor of
 decision-relevant resource-resolved facts, a salted PEP-computed
 context digest committed with that descriptor, reverification at use,
@@ -6333,7 +6356,7 @@ and the declared verified and enforced properties. The deferred
 evaluation-context bullet is struck and the TOCTOU considerations point
 at the extension, keeping the residual for uncovered facts and
 non-adopters. The wire condition, the evidence members, and conformance
-coverage are specified separately.<a href="#appendix-D-2.15.1" class="pilcrow">¶</a></p>
+coverage are specified separately.<a href="#appendix-D-2.16.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
