@@ -906,17 +906,17 @@ Deployment Profile ({{deployment-profile}}) rather than claimed.
 The family does not define:
 
 - **A new grant protocol.** Rich Authorization Requests {{RFC9396}} and
-  kindred mechanisms already fill the authority-expression role; the
-  family leaves the grant exchange to them and defines its own
+  kindred mechanisms already fill the authority-expression role, and the
+  family leaves the grant exchange to them. It defines its own
   cross-resource `authorization_details` type only where {{RFC9396}}
   leaves type semantics to the type, in the OAuth binding's Mission
   Resource Access Profile
   ({{I-D.draft-mcguinness-oauth-mission-resource-access}}). The same
-  restraint holds against GNAP and the capability-system lineage
-  (macaroons, Biscuit, UCAN, object-capability narrowing): this family
+  restraint applies to GNAP and the capability-system lineage
+  (macaroons, Biscuit, UCAN, object-capability narrowing): the family
   composes with deployed grant protocols and attenuation primitives
-  rather than introducing a competing one of its own; the OAuth binding
-  states the comparison ({{I-D.draft-mcguinness-oauth-mission}}).
+  rather than adding a competing one. The OAuth binding states the
+  comparison ({{I-D.draft-mcguinness-oauth-mission}}).
 - **A policy language.** The PDP evaluates the Mission's Authority Set,
   constraints, and state; how a deployment authors policy beyond them is
   local ({{I-D.draft-mcguinness-mission-runtime}}).
@@ -941,30 +941,16 @@ The family does not define:
 
 # Mission Roles and Components {#components}
 
-What each component's compromise costs is the security model's
-subject ({{I-D.draft-mcguinness-mission-security-model}}).
+The parties and components below take part in a Mission, and the
+figure after them sets the bindings side by side. What each
+component's compromise costs is the security model's subject
+({{I-D.draft-mcguinness-mission-security-model}}).
 
 Agent (client):
-: Proposes the Mission Intent and executes the task; in the OAuth
-  binding it holds derived Mission-bound tokens; outside the trusted
-  base and assumed compromisable
+: Proposes the Mission Intent and executes the task. In the OAuth
+  binding it holds derived Mission-bound tokens. It sits outside the
+  trusted base and is assumed compromisable
   ({{I-D.draft-mcguinness-oauth-mission}}).
-
-  A deployment may authenticate concrete agent instances with client
-  instance identification, which extends attestation-based client
-  authentication
-  ({{I-D.draft-ietf-oauth-attestation-based-client-auth}}), and endorse
-  its attesters in client metadata
-  ({{I-D.draft-mcguinness-oauth-client-instance-id}},
-  {{I-D.draft-mcguinness-oauth-client-attesters}}), sharpening joins and
-  evidence attribution to instance granularity without touching the
-  Mission model. Instance evidence alone identifies no actor or delegate
-  ({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 5); SPIFFE
-  workload credentials ({{I-D.draft-ietf-oauth-spiffe-client-auth}}) on
-  their own convey no instance identity under that profile
-  ({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 8.2); and
-  none of these mechanisms defines the Mission actor, delegation,
-  intent, lifecycle, or evidence semantics defined here.
 
 Subject:
 : The user or system on whose behalf the Mission is approved, an
@@ -1005,36 +991,38 @@ Mission Issuer:
   runtime and MAS profiles define
   ({{I-D.draft-mcguinness-mission-runtime}},
   {{I-D.draft-mcguinness-mission-authority-server}}). The AAuth binding
-  does not define such a view from the mission blob; deterministic
+  defines no such view from the mission blob; its deterministic
   resource authorization remains in scopes, resource tokens, Resource
   and Access Server policy, and optionally R3.
 
 AAuth Person Server:
 : The controlling authority for the native Mission Context rather than
-  an OAuth-style Mission Issuer. The mission blob is committed by
-  AAuth's `s256`. In person identity the PS gates person-token
-  issuance but does not decide at the resource; it gates PS
-  authorization (three-party) and federated authorization
-  (four-party). It does not gate agent identity or resource-managed
-  access (Section 4.2 of {{I-D.draft-hardt-oauth-aauth-protocol}},
+  an OAuth-style Mission Issuer; AAuth's `s256` commits the mission
+  blob. The PS gates three of AAuth's resource access modes, the
+  *PS-gated modes* (person identity, PS authorization, and federated
+  authorization). In person identity it gates person-token issuance
+  but does not decide at the resource; PS authorization is
+  three-party, and federated authorization four-party. It does not
+  gate agent identity or resource-managed access (Section 4.2 of
+  {{I-D.draft-hardt-oauth-aauth-protocol}},
   {{I-D.draft-mcguinness-mission-aauth}}).
 
 Resource Server:
 : The protected resource. In the OAuth binding it enforces
   statelessly from the token and can check the `mission` claim (the
-  OAuth binding's Resource Server Enforcement section); in the
+  OAuth binding's Resource Server Enforcement section). In the
   standalone binding the token carries no Mission signal, and Mission
   properties reach it only through the enforcement path.
 
 PEP and PDP:
 : The PEP sits at the last controllable boundary before an action and
-  obtains a permit for each consequential action; under mediated
+  obtains a permit for each consequential action. Under mediated
   custody it, not the agent, holds the sender-constraint key.
 
   The PDP evaluates the action against the Mission's authority,
   constraints, actor chain, and current state, and fails closed
   ({{I-D.draft-mcguinness-mission-runtime}},
-  {{I-D.draft-mcguinness-mission-authzen}}); in the standalone
+  {{I-D.draft-mcguinness-mission-authzen}}). In the standalone
   binding it also verifies the subject and client join (the MAS's
   Mission Join section).
 
@@ -1097,14 +1085,14 @@ authority carriage and enforcement remain binding-dependent:
 
 ## The Actor Chain {#actor-chain}
 
-One material action splits across these roles, and the family keeps
+One material action splits across the roles below. The family keeps
 each distinct and attributable rather than collapsing them into one
 "agent" identity. Each binding carries the same distinctions in its
 own vocabulary; AAuth does so natively with its `agent` identifier,
 the Person at the PS, `parent_agent` for a parent-mediated sub-agent,
 and the call chain for a service hop
-({{I-D.draft-mcguinness-mission-aauth}}). The identifiers below are
-shown in the OAuth binding's instantiation:
+({{I-D.draft-mcguinness-mission-aauth}}). The entries below show the
+OAuth binding's instantiation:
 
 Principal:
 : the Subject, the token `sub` (the OAuth binding).
@@ -1157,35 +1145,51 @@ exists to close.
 
 ## Agent Identity, Agent Deployment, and Mission {#three-objects}
 
-Separately from the authorization flow's four objects
-({{the-mission}}), a deployment that runs agents under both an agent
-identity system and this family governs three independently
-lifecycle-bearing objects. Each has its own owner, lifecycle, and
-revocation, and the model stays clean only while none absorbs
-another's job:
+A deployment that runs agents under both an agent identity system and
+this family governs three independently lifecycle-bearing objects,
+separate from the authorization flow's four objects ({{the-mission}}).
+Each has its own owner, lifecycle, and revocation, and the model stays
+clean only while none absorbs another's job:
 
 Agent identity (who is acting):
 : The logical agent and, where client instance identification is
-  deployed, the concrete instance ({{components}}). Owned by the
-  deployment's agent IAM, a registry or directory outside this family,
-  and consumed, in the OAuth binding, as the `client_id`, the
-  client-instance attestation, and validated Instance Context.
+  deployed, the concrete instance. Owned by the deployment's agent
+  IAM, a registry or directory outside this family, and consumed, in
+  the OAuth binding, as the `client_id`, the client-instance
+  attestation, and validated Instance Context.
+
+  A deployment may authenticate concrete agent instances with client
+  instance identification, which extends attestation-based client
+  authentication
+  ({{I-D.draft-ietf-oauth-attestation-based-client-auth}}), and endorse
+  its attesters in client metadata
+  ({{I-D.draft-mcguinness-oauth-client-instance-id}},
+  {{I-D.draft-mcguinness-oauth-client-attesters}}). Doing so sharpens
+  joins and evidence attribution to instance granularity without
+  touching the Mission model. Instance evidence alone identifies no
+  actor or delegate ({{I-D.draft-mcguinness-oauth-client-instance-id}},
+  Section 5). SPIFFE workload credentials
+  ({{I-D.draft-ietf-oauth-spiffe-client-auth}}) on their own convey no
+  instance identity under that profile
+  ({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 8.2).
+  None of these mechanisms defines the Mission actor, delegation,
+  intent, lifecycle, or evidence semantics defined here.
 
 Agent Deployment (what is running):
 : The approved behavioral version of the agent: its code, model,
   system prompt, tool allowlist, data scope, and runtime
-  configuration. Owned by the deployment's change governance; a
-  change to any of these is a new Agent Deployment, and which
-  changes require re-approving standing Missions is policy that
-  governance records.
+  configuration. Owned by the deployment's change governance. A
+  change to any of these is a new Agent Deployment; which changes
+  require re-approving standing Missions is policy that governance
+  records.
 
   A Mission may be pinned to a named Agent Deployment where a
-  companion Agent Deployment Binding profile realizes that pin
-  ({{I-D.draft-mcguinness-oauth-mission}} names the profile and its
-  required properties but defines none of its wire mechanics itself).
-  This object is distinct from the Mission Deployment Profile
-  ({{deployment-profile}}), which is the estate's published claims
-  manifest, not a property of an agent.
+  companion Agent Deployment Binding profile realizes that pin;
+  {{I-D.draft-mcguinness-oauth-mission}} names the profile and its
+  required properties but defines none of its wire mechanics itself.
+  An Agent Deployment is distinct from the Mission Deployment Profile
+  ({{deployment-profile}}), the estate's published claims manifest,
+  not a property of an agent.
 
 Mission (why the authority exists):
 : This family's object: the approved task, its lifecycle, and, where
@@ -1220,29 +1224,36 @@ credential never overrides a revoked agent or a non-active Mission, and
 a live agent under an active Mission still fails on an expired
 credential.
 
-Binding strength accumulates as a deployment adds it: authority is
-issued to an authenticated client; sender-constraint keys pin
-possession; client-instance attestation over an instance-unique key pins
-the concrete instance; attested runtimes pin the execution environment;
-and an Agent Deployment pin holds the behavioral version. The key and
-instance steps are the `presenter-key-bound` and `instance-bound`
-binding properties ({{binding-properties}}); none of these steps is an
-assurance level.
+Binding strength accumulates as a deployment adds it:
 
-In the division of labor with agent IAM, agent identity preserves who is
-acting, and the Mission preserves why their authority exists. The
-registry and workload identity authenticate an approved agent instance;
-the Mission and, where the binding derives one, its Authority Set say
-what sanctioned work that instance carries; per-hop credentials narrow;
-the runtime layer enforces each action and parameter; and the evidence
-layer joins what was approved, decided, and done.
+- authority is issued to an authenticated client;
+- sender-constraint keys pin possession;
+- client-instance attestation over an instance-unique key pins the
+  concrete instance;
+- attested runtimes pin the execution environment; and
+- an Agent Deployment pin holds the behavioral version.
+
+The key and instance steps are the `presenter-key-bound` and
+`instance-bound` binding properties ({{binding-properties}}); none of
+these steps is an assurance level.
+
+In the division of labor with agent IAM, agent identity preserves who
+is acting, and the Mission preserves why their authority exists:
+
+- the registry and workload identity authenticate an approved agent
+  instance;
+- the Mission and, where the binding derives one, its Authority Set
+  say what sanctioned work that instance carries;
+- per-hop credentials narrow;
+- the runtime layer enforces each action and parameter; and
+- the evidence layer joins what was approved, decided, and done.
 
 # The Mission Verbs {#layers}
 
-The family organizes along a verb spine: each verb answers one
+The family organizes along a verb spine. Each verb answers one
 question, sits on one trust boundary, and is owned by named
-documents; the levers of {{capability-envelope}} sort onto this
-spine by the question each answers.
+documents; the levers of {{capability-envelope}} sort onto the spine
+by the question each answers.
 
 ~~~
  propose      OAuth Intent Shaping or AAuth native proposal
@@ -1280,13 +1291,18 @@ spine by the question each answers.
 ~~~
 
 The family manifest records each verb's owning documents. The
-Packages column gives the product architect's view of the same
-system: five architecture packages a deployment builds, independent
-of how the drafts are cut for standardization. They are Mission
-Control; Authority Distribution, which includes the four Mission
-Issuer bindings (OAuth, the MAS, UMA, and GNAP); Runtime Enforcement;
-Agent Execution Governance; and Evidence and Accountability. A
-document can serve more than one package, and the document map
+Packages column gives the product architect's view: the five
+architecture packages a deployment builds, independent of how the
+drafts are cut for standardization.
+
+- Mission Control;
+- Authority Distribution, including the four Mission Issuer bindings
+  (OAuth, the MAS, UMA, and GNAP);
+- Runtime Enforcement;
+- Agent Execution Governance; and
+- Evidence and Accountability.
+
+A document can serve more than one package, and the document map
 ({{document-map}}) names every draft.
 
 | Verb | Owning documents | Packages |
@@ -1377,26 +1393,28 @@ authorization companion is used, the initial approval also consents an
 authority ceiling for later staged widening
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}).
 
-Who holds the deciding side is a spectrum, not a species: the approval
+Who holds the deciding side is a spectrum, not a species. The approval
 event requires an accountable principal deciding against committed
 inputs before any authority exists, and the proposer is never the
-approver. A deterministic, versioned policy can approve at machine
-speed within a ceiling a human consented to (the `template`,
-`policy_drawdown`, and `ceiling_drawdown` authorization bases that
-companion profiles define on the OAuth binding's extension point,
-{{invariants}}). Policy approves
-the instance because a human approved the policy or the template, with
-`policy_version` keeping that chain re-checkable. Derivation fixes the
-authority, the adjudicator (a human or such a policy) decides
-activation, and a human is accountable. A model's judgment, over risk
-signals or enterprise context, enters adjudication only as a recorded
-input to the policy: it can refuse or narrow, never grant or widen.
-Neither the policy nor a model input to it gates on the Intent's
-prose members, which stay the human Approver's check
-({{I-D.draft-mcguinness-oauth-mission}}). A generated approver
-reading attacker-influenced proposals is itself an injection surface.
-The high-consequence classes stay on a fresh human
-decision, per the progressive profile's prohibited set
+approver.
+
+A deterministic, versioned policy can approve at machine speed within
+a ceiling a human consented to (the `template`, `policy_drawdown`, and
+`ceiling_drawdown` authorization bases that companion profiles define
+on the OAuth binding's extension point, {{invariants}}). Policy
+approves the instance because a human approved the policy or the
+template; `policy_version` keeps that chain re-checkable. Derivation
+fixes the authority, the adjudicator (a human or such a policy)
+decides activation, and a human is accountable.
+
+A model's judgment, over risk signals or enterprise context, enters
+adjudication only as a recorded input to the policy: it can refuse or
+narrow, never grant or widen. Neither the policy nor a model input to
+it gates on the Intent's prose members, which stay the human
+Approver's check ({{I-D.draft-mcguinness-oauth-mission}}). A generated
+approver reading attacker-influenced proposals is itself an injection
+surface. The high-consequence classes stay on a fresh human decision,
+per the progressive profile's prohibited set
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}).
 
 ## Govern
@@ -1452,12 +1470,15 @@ Owners:
     Evidence, and Refusal Record objects
     ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
-The runtime decision composes conjunctively with the other gates:
-Effective Authority Set membership, every applicable
-cumulative-consumption or stateful operational gate, and a required
-action-bound approval are each independently necessary, and none grants,
-widens, or restores another ({{I-D.draft-mcguinness-mission-runtime}},
-Section "The Runtime Decision").
+The runtime decision composes conjunctively with the other gates. Each
+of the following is independently necessary, and none grants, widens,
+or restores another ({{I-D.draft-mcguinness-mission-runtime}},
+Section "The Runtime Decision"):
+
+- Effective Authority Set membership;
+- every applicable cumulative-consumption or stateful operational
+  gate; and
+- a required action-bound approval.
 
 ## Run and Wind Down
 
@@ -1495,13 +1516,17 @@ Both build on the actor chain of the OAuth binding's Delegation Within
 a Mission section. Offline attenuation requires the runtime
 enforcement layer: its kill switch is the runtime state re-check.
 
-The chooser: the OAuth binding's token-exchange delegation ({{RFC8693}})
-for an execution hop living and dying with the parent's lifecycle; a
-Child Mission when the delegate needs its own lifecycle, approval, or
-audit identity; attenuation, experimental, only where offline minting is
-the constraint. The same principal exercising the same authority
-concurrently is not delegation but swarm execution
-({{swarm-execution}}).
+The chooser:
+
+- the OAuth binding's token-exchange delegation ({{RFC8693}}), for an
+  execution hop that lives and dies with the parent's lifecycle;
+- a Child Mission, when the delegate needs its own lifecycle,
+  approval, or audit identity; and
+- offline attenuation, experimental, only where offline minting is the
+  constraint.
+
+The same principal exercising the same authority concurrently is not
+delegation but swarm execution ({{swarm-execution}}).
 
 AAuth delegates natively: a parent-mediated sub-agent under
 `parent_agent`, distinct from the call chain of a service hop, with
@@ -1510,16 +1535,18 @@ no Authority Set machinery imported
 
 ## Swarm Execution: Multiplication, Not Delegation {#swarm-execution}
 
-Swarm execution is a composition of the three lifecycle-bearing objects
+Swarm execution composes the three lifecycle-bearing objects
 ({{three-objects}}): a Mission pinned to an Agent Deployment class or
 version, executed concurrently by N attested instances of that
 Deployment. It is multiplication, not delegation: no `act` hop, no
 Child Mission, no attenuation chain, because authority never moves
-between principals. This pin is a named architectural pattern, not a
-wire member the OAuth binding defines: that document reserves no
-Intent member for it and points forward to a dedicated Agent
-Deployment Binding profile that a deployment wanting this pin
-implements ({{I-D.draft-mcguinness-oauth-mission}}).
+between principals.
+
+The Agent Deployment pin is a named architectural pattern, not a wire
+member the OAuth binding defines. That document reserves no Intent
+member for it and points to a dedicated Agent Deployment Binding
+profile, which a deployment wanting the pin implements
+({{I-D.draft-mcguinness-oauth-mission}}).
 
 Late binding is attestation: an instance joins the work by
 authenticating as the pinned Deployment with its own Client
@@ -1534,9 +1561,9 @@ instance only under a sender-constraint key unique to it
 
 The derivation limits profile's `derivation_limit`
 ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}) is not a
-fan-out or concurrency ceiling: it counts issuance events, not
-instances, and a single instance refreshing N times consumes it
-exactly as N instances deriving once each would. What bounds a
+fan-out or concurrency ceiling. It counts issuance events, not
+instances: a single instance refreshing N times consumes it exactly
+as N instances deriving once each would. What bounds a
 swarm's aggregate consumption is the metering profile's Mission-grain
 budget: consumption bounds attach to the Mission, not to any one
 instance, so a swarm of instances shares one budget
@@ -1584,9 +1611,9 @@ Owner:
 
 The profile keeps three easily conflated things apart:
 
-- Identity continuity, who is acting and how that identity
-  legitimately continues, rides a transport rather than this profile.
-  The transports are Identity Continuation
+- Identity continuity (who is acting, and how that identity
+  legitimately continues) rides a transport, not this profile:
+  Identity Continuation
   ({{I-D.draft-mcguinness-oauth-id-continuation-assertion}}) for
   short-lived, sender-constrained hops among Resource Authorization
   Servers that trust a common identity provider; async delegation
@@ -1594,8 +1621,8 @@ The profile keeps three easily conflated things apart:
   disconnected task; and the cross-domain grant
   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) across a trust
   boundary.
-- Authorization continuity, what work remains authorized under which
-  constraints on whose approval, is the Mission's. Every continued
+- Authorization continuity (what work remains authorized, under which
+  constraints, on whose approval) is the Mission's. Every continued
   grant derives a subset of the Mission's Authority Set, is
   state-gated at issuance, and is bounded by the Mission's expiry.
   When the Mission goes terminal, new continued grants end; authority
@@ -1606,7 +1633,7 @@ The profile keeps three easily conflated things apart:
 
 A continuation handle grants nothing: it names an accepted hop, and
 every continued grant re-passes the Mission's `active` gate.
-Continuity is therefore never authority, the rule the harness applies
+Continuity is never authority, the rule the harness applies
 to session continuity ({{I-D.draft-mcguinness-mission-harness}}).
 
 Continue differs from Delegate, which narrows authority to a sub-actor.
