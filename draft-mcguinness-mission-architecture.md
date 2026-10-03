@@ -3253,8 +3253,8 @@ This document makes no IANA request.
 
 The requirements the family answers are stated implementation-neutrally;
 each names its answering documents by short form ({{document-map}}).
-They stand on their own as a checklist, but conformance is capability-
-layered rather than measured by resemblance to the OAuth wire model
+They stand on their own as a checklist, but conformance is
+capability-layered rather than measured by resemblance to the OAuth wire model
 ({{I-D.draft-mcguinness-mission-substrate}}).
 
 A design provides the shared **Mission Context** capabilities when the
