@@ -15276,7 +15276,7 @@
     "normative": "the PDP treats context.mission_state_observation.state as exactly active or else non-active, prefers its own directly-consulted state view over a PEP-supplied one, and returns mission_inactive on disagreement"
    },
    "level": "endpoint",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/pdp/test/evaluate.test.ts",
@@ -15284,7 +15284,8 @@
      "level": "endpoint",
      "surface": "decision-request"
     }
-   ]
+   ],
+   "notes": "The one citation (OpenFGA-gated) exercises only the PDP's own view: a revoked view denies mission_inactive with no PEP-supplied state on the request. The disagreement clause (a PEP-supplied state other than exactly active, and the PDP's view winning over it) has no assertion yet (#1004)."
   },
   {
    "id": "authzen.pdp-request.consistency-id-and-issuer-equal",
