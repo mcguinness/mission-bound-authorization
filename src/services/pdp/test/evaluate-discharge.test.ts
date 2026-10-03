@@ -70,10 +70,9 @@ const view = (over: Partial<MissionView> = {}): MissionView => ({
 
 const req = (action: string): EvaluationRequest => ({
   subject: { id: "alice" },
-  resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
+  resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
   action: { name: action },
   context: {
-    audience: RESOURCE,
     mission: { id: "msn_discharge_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
     amount: { amount: "125.00", currency: "USD" },
   },

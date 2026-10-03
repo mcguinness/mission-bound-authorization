@@ -16,6 +16,7 @@ import {
   Connectors,
   createEphemeralEvidenceKeys,
   EvidenceStore,
+  type LoadedView,
   McpPaymentsServer,
   type MissionReference,
   openEphemeralWriteReservationStore,
@@ -76,19 +77,21 @@ export interface HarnessDeps {
   revokedInstances?: Set<string>;
 }
 
-/** @spec runtime#state-freshness: this harness's one declared state source. */
-const EVAL_FRESHNESS_SOURCE = "eval_harness";
-
 /**
- * The harness's own loader: a synchronous live read of `deps.view`,
- * freshness-stamped at this read (@spec runtime#state-freshness, Finding 1).
+ * The harness's own loader: a synchronous live read of `deps.view`, observed
+ * at this read in `fresh` mode (@spec runtime#state-freshness,
+ * authzen#context-audience-freshness, Finding 1). The PEP supplies it as
+ * `context.mission_state_observation` under the published `pep` placement.
  * Implements the canonical (issuer, id) tuple contract itself (@spec
  * authority-server#reference-tuple, #685 review): an ordinary fixture keys
  * on both, never `id` alone.
  */
-function loadHarnessView(view: MissionView, ref: MissionReference) {
+function loadHarnessView(view: MissionView, ref: MissionReference): LoadedView | undefined {
   if (ref.id !== view.id || ref.issuer !== view.issuer) return undefined;
-  return { view, freshness: { observed_at: new Date().toISOString(), source: EVAL_FRESHNESS_SOURCE } };
+  return {
+    view,
+    observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() },
+  };
 }
 
 /** Run one case against a fresh composed stack; measure side effects + evidence. */
@@ -110,7 +113,6 @@ export async function runCase(c: EvalCase, deps: HarnessDeps): Promise<CaseResul
     modelId: deps.modelId,
     loadView: (ref) => loadHarnessView(deps.view, ref),
     instanceEpoch: "epoch-eval",
-    allowedFreshnessSources: new Set([EVAL_FRESHNESS_SOURCE]),
     ...(deps.revokedInstances ? { revokedInstances: deps.revokedInstances } : {}),
   });
   // @spec runtime#idempotency (#918): the PEP's write-reservation store, on

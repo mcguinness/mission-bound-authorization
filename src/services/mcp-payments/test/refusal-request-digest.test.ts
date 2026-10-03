@@ -60,9 +60,9 @@ describe("Refusal Record request digest input (@spec runtime-evidence#request-di
   it("a refusal after an evaluation request digests that request as submitted and names decision_request", async () => {
     const request = {
       subject: { type: "user", id: "user_3p2q8mN1a0kV7tR" },
-      resource: { type: "journal-entry", id: "je_2026Q3_inv_8421" },
+      resource: { type: "journal-entry", id: "je_2026Q3_inv_8421", properties: { audience: CANONICAL_RESOURCE } },
       action: { name: "journal-entries.read" },
-      context: { audience: CANONICAL_RESOURCE, mission: { id: MISSION.id, issuer: MISSION.issuer }, deployment_extension: null },
+      context: { mission: { id: MISSION.id, issuer: MISSION.issuer }, deployment_extension: null },
     };
     const refusal = await store().recordRefusal(CANONICAL_RESOURCE, "pep", { ...base, mission: MISSION, evaluation_request: request });
     expect(refusal.content).toMatchObject({ request_digest_input: "decision_request", evaluation_request_digest: canonicalDigest(request) });

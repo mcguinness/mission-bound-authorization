@@ -251,7 +251,9 @@ describe("child-creation idempotency (@spec child-delegation#creation-request-id
     const parent = await issueMission(["payments:invoice.read", "payments:remittance.send"]);
     const requestId = crypto.randomUUID();
     const originalInsert = as.kernel.insertRecord.bind(as.kernel);
-    const insert = vi.spyOn(as.kernel, "insertRecord").mockImplementationOnce(record => originalInsert({ ...record, created_at: record.expires_at }));
+    const insert = vi.spyOn(as.kernel, "insertRecord").mockImplementationOnce((record, precondition, options) =>
+      originalInsert({ ...record, created_at: record.expires_at }, precondition, options),
+    );
     const derive = vi.spyOn(as.kernel, "derive");
     try {
       const first = await tokenRequest(childParams(parent.accessToken, requestId));

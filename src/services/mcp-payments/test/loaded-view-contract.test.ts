@@ -70,7 +70,7 @@ const WRONG_ISSUER_TOKEN: TokenFacts = {
  */
 const nonconformingLoadView = (ref: { id: string }) =>
   ref.id === REAL_VIEW.id
-    ? { view: REAL_VIEW, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+    ? { view: REAL_VIEW, observation: { state: REAL_VIEW.state, version: REAL_VIEW.version, mode: "fresh", freshness_at: new Date().toISOString() } }
     : undefined;
 
 function build(): { pep: Pep; server: McpPaymentsServer } {
