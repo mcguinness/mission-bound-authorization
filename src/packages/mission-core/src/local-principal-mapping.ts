@@ -48,7 +48,14 @@ export interface LocalMappingPolicy {
 export interface ResolvedLocalPrincipal {
   local_sub: string;
   policy: { id: string; version: string };
+  /**
+   * RFC 3339: the timestamp of the oldest required mapping observation (for
+   * a single resolution, that mapping's own `observed_at`). It is not an age
+   * and not the time the lookup ran, so an observation-age bound applied to
+   * it covers every mapping the resolution required.
+   */
   observed_at: string;
+  /** RFC 3339: the earliest validity bound among the required mappings. */
   valid_until: string;
 }
 
@@ -124,12 +131,14 @@ export function resolveCoResolvedLocalPrincipal(
   const b = resolveLocalPrincipal(policy, secondary, audience, now);
   if (!b) return undefined;
   if (a.local_sub !== b.local_sub) return undefined;
-  // The more conservative (earlier) validity bound and (later) observation
-  // time of the two independently-resolved facts.
+  // The summary is as old as its oldest required fact and expires with its
+  // earliest bound: confirming one mapping does not reconfirm the other. Each
+  // is the earlier of the two by parsed instant, chosen independently, and
+  // returned as recorded.
   const validUntil =
     Date.parse(a.valid_until) <= Date.parse(b.valid_until) ? a.valid_until : b.valid_until;
   const observedAt =
-    Date.parse(a.observed_at) >= Date.parse(b.observed_at) ? a.observed_at : b.observed_at;
+    Date.parse(a.observed_at) <= Date.parse(b.observed_at) ? a.observed_at : b.observed_at;
   return {
     local_sub: a.local_sub,
     policy: a.policy,
