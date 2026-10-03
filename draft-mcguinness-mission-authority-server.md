@@ -1029,8 +1029,10 @@ On a joined decision, the PEP MUST carry the join inputs in the
 context member that this document adds under the AuthZEN profile's
 companion extension rule, so it is part of the authorization binding
 and the decision cache key ({{I-D.draft-mcguinness-mission-authzen}}).
-Its presence marks the decision as joined; a Mission-bound decision
-never carries it. It is a JSON object with the following members:
+Its presence marks the decision as joined. The PEP never carries it on
+a Mission-bound decision, so a join never re-points a Mission-bound
+credential ({{high-consequence-binding}}). It is a JSON object with
+the following members:
 
 `delegate_depth`:
 : An integer. The joining client's depth under the Mission, from the
