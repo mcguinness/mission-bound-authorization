@@ -13185,8 +13185,34 @@
     "normative": "a reversible consequential write's permit carries either a single-use decision identifier or a short validity window plus an idempotency key"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/reversible-write-key-control.test.ts",
+     "name": "the PDP refuses a declared reversible write that carries no idempotency key (@spec runtime#permit-binding, #918) > without a well-formed key a declared operation is refused parameter_violation; with one it is permitted under the short validity window, no use limit, and no claim",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/reversible-write-key-control.test.ts",
+     "name": "the reversible-write key control the statement declares (@spec runtime#permit-binding, #918) > covers exactly the operations it names, or the whole reversible-write class when it names the class, and never a high-consequence class",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/reversible-write-key-control.test.ts",
+     "name": "the PDP refuses a declared reversible write that carries no idempotency key (@spec runtime#permit-binding, #918) > caps the permit at the operation's published permit_validity_max_seconds: 30 s under a 30 s maximum, and the shipped 300 s posture is unchanged",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > the permit never outlives its reservation's retention (@spec runtime#permit-binding, #1028 review) > with a 30 s permit maximum and a 60 s retention, the original permit replayed after the record expired is refused permit_expired and nothing executes",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Partial (#918). Witnessed for the reversible writes the statement declares under the idempotency-key control (schedule_payment, cancel_scheduled_payment): the PDP refuses a request carrying no well-formed idempotency_key parameter_violation, and permits a keyed one with the short validity window and no use_limit, making no claim; the window is the operation's published permit_validity_max_seconds, which caps valid_until (30 s under a 30 s maximum, 300 s as shipped; #1028 review), so a permit replayed after its reservation's shorter-than-retention record expired is refused permit_expired and executes nothing; the PEP reserves the key (runtime.idempotency.reversible-write-pep-reserve-and-retain). Not witnessed: hold_transfer, the prepare phase of payments:payment.execute, is a consequential_write since #1015 and its permit carries neither control (no use_limit and no key), so the row's observation does not hold for every reversible consequential write the deployment serves. The cited tests are unit-level PDP tests; no endpoint-level mapping at the resource operation is cited."
   },
   {
    "id": "runtime.single-use.record-and-refuse-second-presentation",
@@ -13387,9 +13413,27 @@
      "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the idempotency scope is the published namespace > an instance-profiled leaf with no client to key it on has no stable actor and is refused actor_invalid",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/runtime-posture-metadata.test.ts",
+     "name": "runtime posture publication on the resource metadata surface > publishes the reservation domain, its owner and the retention posture for every keyed write outside the high-consequence classes",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/reversible-write-key-control.test.ts",
+     "name": "the reversible-write key control the statement declares (@spec runtime#permit-binding, #918) > refuses a declaration whose retention is not longer than the permit, whose owner is not a PEP location, whose scope is not the fixed-member one, or that covers another class",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > the reservation scope keys on a stable actor (@spec runtime#idempotency, #1016 review) > another instance of the same client, carried as an instance-profiled leaf, retries into the same scope and executes nothing new",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "Witnessed (#917): the statement publishes idempotency_scope [mission, subject, actor, audience, action, resource, phase] per high-consequence class; a statement adding a volatile member (client_instance_id, the act chain above the leaf, freshness, approvals, timestamps) or omitting a dimension is refused at load; and the scope the PDP encodes is exactly the published one: pairs differing in any one dimension, a different delegate leaf included, never collide under the fixed-member JCS encoding, and a new client_instance_id does not split it. The actor dimension is a stable identity (@mission/core idempotencyScopeActor, #1016 review): a leaf act entry whose sub_profile carries client_instance names a volatile instance, so the scope keys on its client instead and another instance of the same client gets no second permit; an instance-profiled leaf with no client to key on is refused actor_invalid."
+   "notes": "Witnessed (#917): the statement publishes idempotency_scope [mission, subject, actor, audience, action, resource, phase] per high-consequence class; a statement adding a volatile member (client_instance_id, the act chain above the leaf, freshness, approvals, timestamps) or omitting a dimension is refused at load; and the scope the PDP encodes is exactly the published one: pairs differing in any one dimension, a different delegate leaf included, never collide under the fixed-member JCS encoding, and a new client_instance_id does not split it. The actor dimension is a stable identity (@mission/core idempotencyScopeActor, #1016 review): a leaf act entry whose sub_profile carries client_instance names a volatile instance, so the scope keys on its client instead and another instance of the same client gets no second permit; an instance-profiled leaf with no client to key on is refused actor_invalid. The reversible-write declarations (#918) publish the same fixed-member scope for the PEP-reserved keys, and a declaration whose scope adds a volatile member or omits a dimension is refused at load. The PEP's reservation scope uses the same stable actor: another instance of the same client does not split it."
   },
   {
    "id": "runtime.idempotency.tombstone-retention-and-refusal",
@@ -13409,7 +13453,7 @@
     "normative": "for the high-consequence classes, the deployment retains a durable consumed-key tombstone for at least its declared idempotency horizon, a claim against it inside that horizon is refused, never treated as fresh, and outside the high-consequence classes the deployment publishes which retention posture applies"
    },
    "level": "concurrency",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/idempotency-claim.test.ts",
@@ -13458,9 +13502,15 @@
      "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > a failure settles only from the attempt that redeemed the permit > a suppression from any other attempt never settles: the claim stays unresolved, closes indeterminate, and is never purged",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/reversible-write-key-control.test.ts",
+     "name": "the reversible-write key control the statement declares (@spec runtime#permit-binding, #918) > the statement this PDP loads publishes, for every keyed operation outside the high-consequence classes, its reservation owner and a retention longer than the permit",
+     "level": "unit",
+     "surface": "deployment-documentation"
     }
    ],
-   "notes": "High-consequence conjuncts witnessed (#917): the PDP's claim domain is a durable single-writer SQLite file; a completed or failed key is refused (duplicate_suppressed, next_action none) through terminal_at plus the declared idempotency_horizon_seconds (604800) and is new only after it; an indeterminate key carries no horizon and stays refused past it; a terminal row compacted after the reconciliation window (its stored decision dropped, its commitments kept) still refuses; restart, crash-before-persist and missing consumption knowledge all suppress rather than treat the key as fresh; and a failed or suppressed record that the redemption owner does not name as the redeeming attempt's never settles a claim, so an unknown outcome cannot become a purgeable failed tombstone (#1016 review round 2). Partial because the final conjunct is not witnessed: the shipped Enforcement Scope Statement publishes no retention posture for keys outside the high-consequence classes; that posture belongs to the reversible-write reservation (#918)."
+   "notes": "High-consequence conjuncts witnessed (#917): the PDP's claim domain is a durable single-writer SQLite file; a completed or failed key is refused (duplicate_suppressed, next_action none) through terminal_at plus the declared idempotency_horizon_seconds (604800) and is new only after it; an indeterminate key carries no horizon and stays refused past it; a terminal row compacted after the reconciliation window (its stored decision dropped, its commitments kept) still refuses; restart, crash-before-persist and missing consumption knowledge all suppress rather than treat the key as fresh; and a failed or suppressed record that the redemption owner does not name as the redeeming attempt's never settles a claim, so an unknown outcome cannot become a purgeable failed tombstone (#1016 review round 2). Final conjunct witnessed PDP-side (#918): outside the high-consequence classes, the statement this PDP loads (RUNTIME_POSTURE) publishes, per keyed operation (payments:payment.schedule and payments:payment.schedule.cancel), the declared_horizon posture with a P7D retention longer than the 300 s permit, and loadRuntimePosture refuses a declaration that names no posture. Only PDP citations are kept on this PDP row; the resource-metadata publication test is cited on the PEP and AS rows it proves."
   },
   {
    "id": "runtime.idempotency.claim-exact-enforcement-only",
@@ -13624,10 +13674,94 @@
     "normative": "for a reversible consequential write electing the idempotency-key permit-lifetime control, the enforcing PEP or resource atomically reserves the key against a concurrent duplicate and retains the record for the declared non-high-consequence retention posture, so a duplicate presented after the permit's own short validity window still resolves against the recorded key instead of executing again"
    },
    "level": "concurrency",
-   "coverage": "blocked",
-   "blocked_by": "#918",
-   "tests": [],
-   "notes": "This is a distinct reservation/retention duty from the high-consequence transaction-assurance store (src/services/mcp-payments/src/transaction.ts covers the txn class, not the reversible-write class's lighter control); no implementation of it exists yet. Do not satisfy this row with the existing resource-consumption transaction test, which exercises a different class's store under a different (already-atomic) mechanism. Blocked on #918 (PEP-owned reservation and retention, option A ruled; #648 is closed)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > concurrent duplicates execute once > eight concurrent schedules under one key: one schedule and one reservation; seven get the winner's result, deduped, and record operation_already_claimed",
+     "level": "concurrency",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > the persisted store reopens with the record > a key scheduled before the store closed resolves against its record from a new server on the same file",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > retrieval is separate from admission and is authorized by the retry's own Decision > after the original permit expired, a retry with a valid new Decision retrieves the retained result without reaching admission; the expired original attempt replayed into the effect step is refused permit_expired; past the horizon the key is new",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > a changed operation under the same key is a conflict > a retry under the same key after the invoice changed is refused operation_identity_conflict, with one schedule and the conflict recorded through the post-permit writer",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > an unresolved outcome is never executed again > a fault inside the transaction leaves neither the schedule nor the reservation, and the retry executes once",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > an unresolved outcome is never executed again > a fault after the commit, before the response, resolves the retry against the retained result",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > an unresolved outcome is never executed again > a reserved record is refused duplicate_suppressed and never executed, and time never purges it",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > an unresolved outcome is never executed again > an unreachable store refuses consumption_unavailable and executes nothing",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > retrieval is separate from admission and is authorized by the retry's own Decision > a new Decision that expires before release discloses nothing: held after the Decision, the at-use check suppresses permit_expired; held at the disposition write, the release-time check refuses",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > the persisted store reopens with the record > refuses a second handle on a held file, an absent or in-memory file, another owner's file, a newer schema, and a store the statement does not name as the domain",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/runtime-posture-metadata.test.ts",
+     "name": "runtime posture publication on the resource metadata surface > publishes the reservation domain, its owner and the retention posture for every keyed write outside the high-consequence classes",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > the reservation scope keys on a stable actor (@spec runtime#idempotency, #1016 review) > another instance of the same client, carried as an instance-profiled leaf, retries into the same scope and executes nothing new",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > the reservation scope keys on a stable actor (@spec runtime#idempotency, #1016 review) > an instance-profiled leaf with no client to key it on has no stable actor: the write is refused after its permit, executes nothing, and leaves no reservation",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > the permit never outlives its reservation's retention (@spec runtime#permit-binding, #1028 review) > with a 30 s permit maximum and a 60 s retention, the original permit replayed after the record expired is refused permit_expired and nothing executes",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Witnessed (#918): schedule_payment and cancel_scheduled_payment elect the idempotency-key control, and the enforcing PEP (mcp-payments-pep) reserves (idempotency scope, idempotency_key) in its own durable single-writer SQLite file (stores.pepWriteReservations.file), separate from the PDP claim domain and from transaction.ts. The schedule effect and its completed reservation and result commit in one local transaction, so eight concurrent attempts under one key that all found the pair free execute once and the other seven read the winner's record (concurrency). The record survives a close and reopen of the file, and is retained for the published P7D horizon: a retry after the 300 s permit expired resolves against it through its own fresh Decision, held to verifyPermitAtUse before release, without reaching admission, while the expired permit replayed into the effect step admits nothing; past the horizon the key is new. A changed operation conflicts, a fault inside the transaction leaves neither row, a fault after the commit resolves to the retained result, a reserved record is refused and never purged by time, and an unreachable store suppresses consumption_unavailable. This is a different store and mechanism from the high-consequence transaction-assurance tier; no transaction.ts test is cited. The reservation scope's actor is the shared stable identity (@mission/core idempotencyScopeActor, #1016 review): another instance of the same client, carried as an instance-profiled leaf, retries into the same scope and executes nothing new, and an instance-profiled leaf with no client to key on yields no scope, so the write is refused after its permit with no effect and no reservation, recorded under the deployment-defined error https://payments.demo/execution-errors/actor_unkeyable (caller-visible actor_unkeyable). The PDP caps each keyed write's permit at the published permit_validity_max_seconds, which the loader holds shorter than the retention, so no permit outlives its record: with a 30 s maximum and a 60 s retention, the original permit replayed after the record expired is refused permit_expired and nothing executes (#1028 review)."
   },
   {
    "id": "runtime.execution-reverification.mismatch-refusal",

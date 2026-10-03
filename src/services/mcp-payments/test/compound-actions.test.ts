@@ -32,6 +32,7 @@ import {
   EvidenceStore,
   type ExecutionEvidence,
   McpPaymentsServer,
+  openEphemeralWriteReservationStore,
   operationKey,
   parameterDigest,
   PaymentsStore,
@@ -196,6 +197,7 @@ function harness(
     jwks: { keys: [] },
     issuer: "https://as.test",
     transaction: { engine, connectors, evidence },
+    writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
   });
 
   self = {
@@ -300,7 +302,8 @@ describe("compound-action phases (@spec runtime#compound-actions)", () => {
     }
     // An operation the Operation Profile places at no phase carries no
     // condition at all, so the member is not merely defaulted everywhere.
-    await h.server.callWriteTool("schedule_payment", { invoice_id: "inv-1" }, TOKEN);
+    await h.server.callWriteTool("schedule_payment", { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` }, TOKEN);
+    expect(h.lastDecision()?.decision).toBe(true);
     expect(conditionsOf(h.lastDecision())?.action_phase).toBeUndefined();
   });
 
@@ -387,7 +390,11 @@ describe("compound-action phases (@spec runtime#compound-actions)", () => {
     h.replay(h.lastDecision());
     // schedule_payment is no phase of a compound action, so a phase condition
     // is unrecognized there and the permit is invalid at that crossing.
-    const refused = await h.server.callWriteTool("schedule_payment", { invoice_id: "inv-1" }, TOKEN);
+    const refused = await h.server.callWriteTool(
+      "schedule_payment",
+      { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` },
+      TOKEN,
+    );
     expect(refused.ok).toBe(false);
     expect(refused.refusal_reason).toBe("phase_mismatch");
   });

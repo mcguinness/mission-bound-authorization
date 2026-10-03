@@ -7,6 +7,7 @@ import type { TokenFacts } from "@mission/mcp-payments";
 import { approveDemoMission, composeStack } from "../src/stack.js";
 /** @spec runtime#idempotency (#917): each stack gets its own single-writer claim file. */
 const tempClaimsFile = (): string => join(mkdtempSync(join(tmpdir(), "demo-claims-")), "claims.sqlite");
+const tempReservationsFile = (): string => join(mkdtempSync(join(tmpdir(), "demo-reservations-")), "write-reservations.sqlite");
 
 
 describe("demo configured remote PDP route", () => {
@@ -14,7 +15,7 @@ describe("demo configured remote PDP route", () => {
     // Only the unrelated FGA dependency is stubbed. Kernel approval, catalogs,
     // decision channel, PDP evidence, PEP retention and resource dispatch are real.
     const connect = vi.spyOn(Fga, "connect").mockResolvedValue({ fga: { checkWithContext: async () => true } as unknown as Fga, modelId: "test" });
-    const stack = await composeStack({ openfgaUrl: "http://unused.test", presharedKey: "unused", pdpMode: "remote", claimsFile: tempClaimsFile() });
+    const stack = await composeStack({ openfgaUrl: "http://unused.test", presharedKey: "unused", pdpMode: "remote", claimsFile: tempClaimsFile(), writeReservationsFile: tempReservationsFile() });
     try {
       const mission = approveDemoMission(stack);
       const view = stack.viewFor(mission.id)!;

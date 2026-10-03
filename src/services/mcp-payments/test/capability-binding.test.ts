@@ -5,7 +5,7 @@ import { trustedCapabilityResolver } from "../../authorization-server/src/adapte
 import { generateKeyPair } from "jose";
 import type { EvaluationRequest, Fga, MissionView } from "@mission/pdp";
 import { describe, expect, it } from "vitest";
-import { CANONICAL_RESOURCE, createEphemeralEvidenceKeys, EvidenceStore, McpPaymentsServer, PaymentsStore, PaymentsToolCatalog, Pep, TOOLS, parameterDigest, type TokenFacts } from "../src/index.js";
+import { CANONICAL_RESOURCE, createEphemeralEvidenceKeys, EvidenceStore, McpPaymentsServer, openEphemeralWriteReservationStore, PaymentsStore, PaymentsToolCatalog, Pep, TOOLS, parameterDigest, type TokenFacts } from "../src/index.js";
 import { startResourceMetadataServer } from "../src/resource-metadata.js";
 
 const text = TRUSTED_TOOL_CATALOGS.find(c => c.service_id === "payments")!.text;
@@ -27,7 +27,7 @@ function fixture(source: () => string = () => text) {
   const pep = new Pep({ payments, evidence, capabilityCatalog: catalog, decide: async (...args) => {
     requests.push(args[0]); return keys.decide(...args);
   }, fga: { checkWithContext: async () => true } as unknown as Fga, modelId: "test", loadView, instanceEpoch: "epoch", allowedFreshnessSources: new Set(["load_view"]) });
-  const server = new McpPaymentsServer({ pep, payments, loadView, jwks: { keys: [] }, issuer: token.mission.issuer });
+  const server = new McpPaymentsServer({ pep, payments, loadView, jwks: { keys: [] }, issuer: token.mission.issuer, writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }) });
   return { pep, server, evidence, requests, catalog, view, payments };
 }
 
@@ -137,7 +137,7 @@ describe("one catalog snapshot from discovery to invocation", () => {
   it("carries the snapshot into write and list effective operations and refuses a post-decision change", async () => {
     let current = text;
     const f = fixture(() => current);
-    const write = await f.pep.enforce("schedule_payment", { invoice_id: "inv-1" }, token);
+    const write = await f.pep.enforce("schedule_payment", { invoice_id: "inv-1", idempotency_key: "idem_capability-write-1" }, token);
     const list = await f.pep.enforce("list_invoices", {}, token);
     expect(write.permitted).toBe(true); expect(list.permitted).toBe(true);
     expect(write.effective?.capability_snapshot).toEqual(write.capabilitySnapshot);
@@ -155,7 +155,7 @@ describe("one catalog snapshot from discovery to invocation", () => {
   it("names the moved snapshot, not a parameter mismatch, when a write is refused at invocation", async () => {
     let current = text;
     const f = fixture(() => current);
-    const result = await f.server.callWriteTool("schedule_payment", { invoice_id: "inv-1" }, token, () => {
+    const result = await f.server.callWriteTool("schedule_payment", { invoice_id: "inv-1", idempotency_key: "idem_capability-write-2" }, token, () => {
       current = text.replace("Read one invoice", "Changed after the decision");
     });
     expect(result).toEqual({ ok: false, refusal_reason: "capability_source_unresolvable" });

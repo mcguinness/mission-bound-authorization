@@ -2,6 +2,7 @@ import { AUDIT_HORIZON_SECONDS, RUNTIME_SCOPE_CONFIG } from "@mission/demo-data"
 import {
   type EnforcementScopeStatement,
   evidenceDeclarationFindings,
+  reversibleWriteDeclarationFor,
   validateEnforcementScopeStatement,
 } from "./enforcement-scope.js";
 
@@ -166,6 +167,33 @@ export function executionLeaseMaxSeconds(posture: RuntimePosture, actionClass: s
   if (actionClass === undefined) return undefined;
   return posture.extensions?.transaction_assurance?.find((d) => d.mediated_class_or_scope === actionClass)
     ?.execution_lease_max_seconds;
+}
+
+/**
+ * @spec runtime#permit-binding (#918): whether this statement declares that
+ * the request's operation elects the "short validity window combined with an
+ * idempotency key" control. Read from the same statement object the resource
+ * metadata publishes, so the PDP refuses a keyless request exactly where the
+ * deployment says a key is the control.
+ */
+export function reversibleWriteKeyControl(posture: RuntimePosture, actionClass: string | undefined, action: string): boolean {
+  return reversibleWriteDeclarationFor(posture, actionClass, action) !== undefined;
+}
+
+/**
+ * @spec runtime#permit-binding (#918, #1028 review P2): the "short validity
+ * window" half of the control, as the statement publishes it: the declared
+ * operation's `permit_validity_max_seconds`, or `undefined` when the
+ * operation elects no key control. The PDP caps the permit it issues by this
+ * value, and the loader holds the published retention longer than it, so a
+ * permit never outlives its reservation's record.
+ */
+export function reversibleWritePermitMaxSeconds(
+  posture: RuntimePosture,
+  actionClass: string | undefined,
+  action: string,
+): number | undefined {
+  return reversibleWriteDeclarationFor(posture, actionClass, action)?.permit_validity_max_seconds;
 }
 
 export function postureStalenessBound(posture: RuntimePosture, actionClass: string | undefined): StalenessBound {

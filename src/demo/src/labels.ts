@@ -15,6 +15,7 @@ export const TOOL_LABELS: Record<string, string> = {
   execute_wire_transfer: "Execute wire transfer",
   send_remittance_email: "Send remittance email",
   schedule_payment: "Schedule payment",
+  cancel_scheduled_payment: "Cancel scheduled payment",
   lookup_vendor: "Look up vendor",
 };
 
@@ -25,6 +26,7 @@ export const ACTION_LABELS: Record<string, string> = {
   "payments:payment.execute": "Execute payments",
   "payments:remittance.send": "Send remittances",
   "payments:payment.schedule": "Schedule payments",
+  "payments:payment.schedule.cancel": "Cancel scheduled payments",
   "payments:vendor.delete": "Delete vendors",
   "ledger:vendor.read": "Read ledger vendors",
   "ledger:journal.write": "Write ledger journal",
