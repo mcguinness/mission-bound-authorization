@@ -29,6 +29,7 @@
 import { randomBytes } from "node:crypto";
 import { type ActObject, ActorChainError, extendChain, validateActChain } from "@mission/actor-chain";
 import { authorityHash, canonicalize, intentHash, type JsonValue, proposalHash } from "@mission/core";
+import { activationPolicyMatches } from "./activation-policy.js";
 import { inheritCapabilitySources } from "./capability-binding.js";
 import { type DelegateCandidate, delegatePermitted } from "./delegate-matcher.js";
 import { isSubsetEntry, isSubsetSet } from "./derive.js";
@@ -63,8 +64,9 @@ export const CHILD_EVIDENCE_MEDIA_TYPE = "application/mission-child-evidence+jso
 /**
  * @spec child-delegation#denial-reasons — why child creation was refused.
  * `delegation_not_permitted` is the on-switch refusal (a justifying parent entry
- * carries no `delegation.children`); it is DISTINCT from `policy_denied`, which
- * is retained for a genuine `child_creation_policy` denial (not yet wired).
+ * carries no `delegation.children`); it is DISTINCT from `policy_denied`, the
+ * refusal when a carried `child_creation_policy` no longer matches its
+ * committed digest.
  */
 export type ChildDenialReason =
   | "parent_not_active"
@@ -370,6 +372,22 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
     }
   }
 
+  // @spec mission#standing-consent-bases, child-delegation#child-creation —
+  // every justifying entry that carries a `child_creation_policy` names a
+  // separate policy that adjudicates this creation; the snapshot this issuer
+  // would evaluate MUST match the committed `digest`, else creation is denied
+  // `policy_denied`. Content edited under an unchanged version is a mismatch.
+  for (const pi of drawnOn) {
+    const policyRef = childrenOf(parentEntry(pi))?.child_creation_policy;
+    if (policyRef && !activationPolicyMatches(parent.issuer, kernel.activationPolicies(), policyRef)) {
+      throw new ChildDelegationError(
+        "policy_denied",
+        `child creation policy ${policyRef.id} does not match its committed digest`,
+        makeEvidence("denied", "strict_subset", "policy_denied"),
+      );
+    }
+  }
+
   // @spec child-delegation#fanout — allowed_child_actors: the child actor MUST be
   // permitted by every justifying entry, under the SAME shared matcher as the
   // core's allowed_delegates ({@link delegatePermitted}). The child actor's
@@ -463,7 +481,7 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
   // `child_creation_policy`, when carried, is the drawdown policy reference.
   const primaryPi = justifying[0] as number;
   const primaryChildren = childrenOf(parentEntry(primaryPi));
-  const primaryPolicyId = primaryChildren?.child_creation_policy;
+  const primaryPolicy = primaryChildren?.child_creation_policy;
   const approvalEventId = `dlg_${randomBytes(12).toString("base64url")}`;
   // @spec mission#approval-basis, child-delegation#child-creation — every
   // child creation in this reference implementation is policy-adjudicated
@@ -471,21 +489,24 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
   // approval: consent_principal is the parent's accountable human (== the
   // inherited approver); activation_actor is the parent agent that requested
   // this child (the parent's own client_id, distinct from consent_principal);
-  // root_commitment is the justifying entry's `child_creation_policy`
-  // reference when carried, else the parent's own authority_hash (the
-  // integrity anchor of the consented root the drawdown draws against).
+  // root_commitment is the `digest` of the justifying entry's
+  // `child_creation_policy` when carried, else the parent's own
+  // authority_hash (the integrity anchor of the consented root the drawdown
+  // draws against). With a policy, `activation` carries its id, version, and
+  // digest; without one it carries only the event identifier.
   const approvalBasis: ApprovalBasis = {
     type: "policy_drawdown",
     consent_principal: parent.approver,
     activation: {
-      ...(primaryPolicyId ? { policy_id: primaryPolicyId } : {}),
-      policy_version: parent.policy_version,
+      ...(primaryPolicy
+        ? { policy_id: primaryPolicy.id, policy_version: primaryPolicy.version, policy_digest: primaryPolicy.digest }
+        : {}),
       activation_event_id: approvalEventId,
     },
     activation_actor: { iss: parent.issuer, sub: parent.client_id },
-    root_commitment: primaryPolicyId ?? parent.authority_hash,
+    root_commitment: primaryPolicy?.digest ?? parent.authority_hash,
     // @spec mission#mission-record (#580) — the consented root (the parent's
-    // authority_hash, or the entry-carried child_creation_policy reference
+    // authority_hash, or the entry-carried child_creation_policy digest
     // riding the committed entry) was approved at the PARENT's approval
     // event: retained state, never the child-creation request.
     approved_at: parent.created_at,

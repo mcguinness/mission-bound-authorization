@@ -84,6 +84,66 @@ export const MISSION_INTENT_EVIDENCE_TYP = "mission-intent-evidence";
  */
 export const GOVERNED_POLICY_TYP = "mission-governed-policy";
 
+/**
+ * @spec mission#standing-consent-bases — the integrity-anchor `typ` for an
+ * activation policy reference's `digest`: the content of a separate policy
+ * artifact (a dispatch, drawdown, or child-creation policy) that adjudicates a
+ * standing-consent activation. `iss` is the activating issuer.
+ */
+export const ACTIVATION_POLICY_TYP = "mission-activation-policy";
+
+/**
+ * @spec mission#standing-consent-bases — an activation policy reference: the
+ * policy's `id` and `version`, and the `digest` that commits its content.
+ */
+export interface ActivationPolicyRef {
+  id: string;
+  version: string;
+  digest: string;
+}
+
+/** A retained activation policy snapshot: its media type and exact bytes. */
+export interface ActivationPolicySnapshot {
+  content_type: string;
+  /** The snapshot's exact bytes; a string is taken as its UTF-8 encoding. */
+  content: string | Uint8Array;
+}
+
+/**
+ * @spec mission#standing-consent-bases — the activation policy `digest`: the
+ * integrity anchor with `typ` `mission-activation-policy`, `iss` the activating
+ * issuer, and `value` an object of `content_type` and `content` (the
+ * base64url, no-padding encoding of the snapshot's exact bytes).
+ */
+export function activationPolicyDigest(iss: string, snapshot: ActivationPolicySnapshot): string {
+  const bytes =
+    typeof snapshot.content === "string"
+      ? Buffer.from(snapshot.content, "utf8")
+      : Buffer.from(snapshot.content);
+  return computeAnchor(ACTIVATION_POLICY_TYP, iss, {
+    content_type: snapshot.content_type,
+    content: bytes.toString("base64url"),
+  });
+}
+
+const ANCHOR_RE = /^sha-256:[A-Za-z0-9_-]{43}$/;
+
+/** Shape guard: an object of exactly `id`, `version`, and a `sha-256:` `digest`. */
+export function isActivationPolicyRef(v: unknown): v is ActivationPolicyRef {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return false;
+  const o = v as Record<string, unknown>;
+  const keys = Object.keys(o);
+  return (
+    keys.length === 3 &&
+    typeof o.id === "string" &&
+    o.id.length > 0 &&
+    typeof o.version === "string" &&
+    o.version.length > 0 &&
+    typeof o.digest === "string" &&
+    ANCHOR_RE.test(o.digest)
+  );
+}
+
 export function computeAnchor(typ: string, iss: string, value: JsonValue): string {
   const envelope: JsonValue = { typ, iss, value };
   const canonical = canonicalize(envelope);

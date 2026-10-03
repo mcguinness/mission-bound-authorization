@@ -11,7 +11,7 @@
  * endpoint actually publishes.
  */
 
-import { SUPPORTED_CONSTRAINT_KEYS, type JsonValue } from "@mission/core";
+import { isActivationPolicyRef, SUPPORTED_CONSTRAINT_KEYS, type JsonValue } from "@mission/core";
 
 /** @spec mission#authorization-derivation — the sole type this AS derives. */
 export const MISSION_RESOURCE_ACCESS_TYPE = "mission_resource_access" as const;
@@ -117,7 +117,16 @@ export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
                 additionalProperties: true,
               },
             },
-            child_creation_policy: { type: "string" },
+            child_creation_policy: {
+              type: "object",
+              properties: {
+                id: { type: "string" },
+                version: { type: "string" },
+                digest: { type: "string", pattern: "^sha-256:[A-Za-z0-9_-]{43}$" },
+              },
+              required: ["id", "version", "digest"],
+              additionalProperties: false,
+            },
           },
           additionalProperties: true,
         },
@@ -284,8 +293,8 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
       ) {
         return "delegation.children.max_child_depth must be a positive integer";
       }
-      if (ch.child_creation_policy !== undefined && typeof ch.child_creation_policy !== "string") {
-        return "delegation.children.child_creation_policy must be a string";
+      if (ch.child_creation_policy !== undefined && !isActivationPolicyRef(ch.child_creation_policy)) {
+        return "delegation.children.child_creation_policy must be an activation policy reference (id, version, digest)";
       }
       if (ch.allowed_child_actors !== undefined) {
         const err = validateMatcherList(ch.allowed_child_actors, "delegation.children.allowed_child_actors");

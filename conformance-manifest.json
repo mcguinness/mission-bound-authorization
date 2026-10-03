@@ -23,8 +23,8 @@
     "content_sha256": "9c8386a66e90b87bed75b4d34f8a295401777b9bd61a358ee60de3757174354b"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
-    "revision": "0eba2cac95618596018d16ba525b5cefdd22d261",
-    "content_sha256": "20fed99609633d69a287725514c81c999df0c71e1e1488a7b30e7b10a835578e"
+    "revision": "2b422bf1c54a64ae5cdf4440f041a0d27f2a0e05",
+    "content_sha256": "dc736dd837d52eb258039dfaa393dedfb3c41852f1c171fcb776af3f72196aec"
    },
    "draft-mcguinness-mission-substrate.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
@@ -99,8 +99,8 @@
     "content_sha256": "3d99176b70a7d440c8588863dc35d0f33defd7a5e3807947003767b93166168e"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "7bb182b0caae732be5813431f4c5ad6406eafaf7",
-    "content_sha256": "ca64142309f66877d2142dd8e049e53d31688dc4bad707e726a07090694088db"
+    "revision": "4b1ac7e9be5fb4097bcc8b50ddb173ea34aeb85e",
+    "content_sha256": "77a833399499f8151e64e14656ceb6ddc13e573af4f7d9499a489492d4f68b04"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "02c1fcf62e9f4fd3aad0df84d6ccabd6ebd7ce0d",
@@ -3138,12 +3138,26 @@
    "surface": "commitment",
    "assertion": "output-bound",
    "observation": {
-    "normative": "where a separate policy artifact adjudicates standing-consent activation (Template dispatch_policy, Progressive drawdown_policy, Child Delegation child_creation_policy), the consented object carries it as {id, version, digest} with the mission-activation-policy digest, inside the commitment that covers that object"
+    "normative": "where a separate policy artifact adjudicates standing-consent activation (Template dispatch_policy, Progressive drawdown_policy, Child Delegation child_creation_policy), the consented object carries it as {id, version, digest} with the mission-activation-policy digest, inside the commitment that covers that object",
+    "local": "Template: template_hash commits dispatch_policy {id, version, digest}, the digest computed from the issuer's held snapshot (content change changes the digest and template_hash; a request-body digest is ignored; an unheld id or version refuses). Child Delegation: the entry carries child_creation_policy {id, version, digest} and root_commitment is its digest. Progressive's ceiling drawdown is not implemented in the reference, so the drawdown_policy clause has no witness; the Template and Child Delegation clauses are asserted."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#985 (D219 ruling). No implementation witness yet: template dispatch, ceiling drawdown, and child-creation adjudication do not compute or verify the activation policy digest."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "createTemplate (@spec mission-template) > commits the Dispatch Policy's content digest in template_hash and refuses a policy the issuer does not hold",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "approval basis (@spec mission#approval-basis, child-delegation#child-creation) > uses the justifying entry's child_creation_policy digest as root_commitment when the entry carries one",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ],
+   "notes": "#985 (D219); reference implementation (template dispatch, child creation)."
   },
   {
    "id": "core.standing-consent.activation-policy-verify",
@@ -3163,12 +3177,32 @@
    "surface": "derivation",
    "assertion": "refusal",
    "observation": {
-    "normative": "an activation under a policy snapshot whose digest differs from the committed digest does not activate under that policy: Template refuses with dispatch_policy_changed, Progressive falls back to a fresh human approval, Child Delegation denies with policy_denied"
+    "normative": "an activation under a policy snapshot whose digest differs from the committed digest does not activate under that policy: Template refuses with dispatch_policy_changed, Progressive falls back to a fresh human approval, Child Delegation denies with policy_denied",
+    "local": "Template: a held snapshot edited under the same version, a changed version, or no snapshot refuses dispatch_policy_changed with no instance and no dispatch row committed; the committed snapshot still dispatches. The Agent selection rule is read only from the verified snapshot (its `select_agent` member), so a rule re-pointed under the same version refuses dispatch_policy_changed and never selects. Child Delegation: the same three changes deny policy_denied (with deny Child Evidence) and commit no child; restoring the snapshot admits creation. Progressive's ceiling drawdown is not implemented in the reference, so the drawdown_policy clause has no witness; the Template and Child Delegation clauses are asserted."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#985 (D219 ruling). No implementation witness yet: template dispatch, ceiling drawdown, and child-creation adjudication do not compute or verify the activation policy digest."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "dispatch gates (@spec mission-template#dispatch-refusals) > refuses dispatch_policy_changed when the held policy's content, version, or presence changes, committing nothing",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "dispatch gates (@spec mission-template#dispatch-refusals) > a selection rule changed after consent is dispatch_policy_changed, never a new selection",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "approval basis (@spec mission#approval-basis, child-delegation#child-creation) > uses the justifying entry's child_creation_policy digest as root_commitment when the entry carries one",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#985 (D219); reference implementation (template dispatch, child creation)."
   },
   {
    "id": "core.standing-consent.activation-policy-retain",
@@ -3193,7 +3227,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#985 (D219 ruling). No implementation witness yet: template dispatch, ceiling drawdown, and child-creation adjudication do not compute or verify the activation policy digest."
+   "notes": "#985 (D219). No implementation witness: the reference registry holds the current snapshot per policy id, not the history an audit horizon needs once a policy is edited."
   },
   {
    "id": "core.approval-basis.adjudication-governance-record-override",
@@ -24399,7 +24433,7 @@
     },
     {
      "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "dispatch gates (@spec mission-template#dispatch-refusals) > with several listed Agents, selects the Agent the Dispatch Policy names, and refuses agent_not_selected when no rule selects one",
+     "name": "dispatch gates (@spec mission-template#dispatch-refusals) > with several listed Agents, selects the Agent the committed Dispatch Policy snapshot names, and refuses agent_not_selected when it names none",
      "level": "unit",
      "surface": "token-endpoint"
     }
@@ -24433,7 +24467,7 @@
     },
     {
      "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "dispatch gates (@spec mission-template#dispatch-refusals) > with several listed Agents, selects the Agent the Dispatch Policy names, and refuses agent_not_selected when no rule selects one",
+     "name": "dispatch gates (@spec mission-template#dispatch-refusals) > with several listed Agents, selects the Agent the committed Dispatch Policy snapshot names, and refuses agent_not_selected when it names none",
      "level": "unit",
      "surface": "token-endpoint"
     }

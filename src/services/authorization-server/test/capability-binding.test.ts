@@ -553,6 +553,8 @@ describe("template dispatch inherits the ceiling's recorded bindings", () => {
     },
   ];
 
+  // @spec mission#standing-consent-bases — the Dispatch Policy snapshot held.
+  const CAP_POLICIES = { "capability-binding-test": { version: "1", content_type: "application/json", content: '{"id":"capability-binding-test"}' } };
   let store: TemplateStore;
   let templateId: string;
   let seq = 0;
@@ -563,7 +565,7 @@ describe("template dispatch inherits the ceiling's recorded bindings", () => {
       issuer: ISS,
       approver: { iss: ISS, sub: "bob" },
       ceiling: CEILING,
-      dispatch_policy: "capability-binding-test",
+      dispatch_policy: { id: "capability-binding-test", version: "1" },
       dispatchers: ["orchestrator"],
       recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents: ["worker"] },
       per_instance_lifetime_s: 3600,
@@ -572,12 +574,13 @@ describe("template dispatch inherits the ceiling's recorded bindings", () => {
       review_cadence_s: 86400,
       approval_event_id: "tmpl-cap-consent",
       expires_at: EXP,
-    }, kernel.authoritySourceOptions()).id;
+    }, { ...kernel.authoritySourceOptions(), dispatchPolicies: CAP_POLICIES }).id;
   });
 
   const dispatch = (actions: string[]) =>
     dispatchFromTemplate(kernel, store, {
       templateId,
+      dispatchPolicies: CAP_POLICIES,
       dispatchEventId: `dsp-cap-${(seq += 1)}`,
       dispatcher: "orchestrator",
       intent: intentOf("reconcile Acme"),
