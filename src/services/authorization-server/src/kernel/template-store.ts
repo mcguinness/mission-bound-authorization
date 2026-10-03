@@ -22,7 +22,7 @@
 
 import type { ActivationPolicyRef } from "@mission/core";
 import { openStore, UniqueViolationError, withTransaction, type Database } from "@mission/store";
-import { parseAuthoritySource } from "./authority-source.js";
+import { type AuthoritySourceBinding, parseAuthoritySource } from "./authority-source.js";
 import type { AuthorityEntry, AuthoritySource } from "./types.js";
 
 /**
@@ -59,6 +59,14 @@ CREATE TABLE templates (
   expires_at TEXT NOT NULL,
   state TEXT NOT NULL,
   created_at TEXT NOT NULL
+) STRICT;
+CREATE TABLE template_source_bindings (
+  template_id TEXT NOT NULL,
+  subject_iss TEXT NOT NULL,
+  subject_sub TEXT NOT NULL,
+  agent TEXT NOT NULL,
+  binding_json TEXT NOT NULL,
+  PRIMARY KEY (template_id, subject_iss, subject_sub, agent)
 ) STRICT;
 CREATE TABLE dispatch_events (
   dispatch_event_id TEXT PRIMARY KEY,
@@ -118,6 +126,19 @@ export interface MissionTemplate {
   created_at: string;
 }
 
+/**
+ * @spec mission#authority-sources (#827): the root one recipient pair (a
+ * listed Subject through a listed Agent) resolved at template consent. A
+ * dispatch for that Subject through that Agent inherits exactly this root,
+ * never another recipient's through a shared registration. Provenance, like
+ * `authority_source`, so it is outside `template_hash`.
+ */
+export interface TemplateSourceBinding {
+  subject: { iss: string; sub: string };
+  agent: string;
+  binding: AuthoritySourceBinding;
+}
+
 /** The fields {@link createTemplate} computes and persists; the store stamps
  *  `state` (`active`) and `created_at`. */
 export interface TemplateCreate {
@@ -126,6 +147,8 @@ export interface TemplateCreate {
   issuer: string;
   approver: { iss: string; sub: string };
   authority_source: AuthoritySource;
+  /** One committed root per recipient pair (#827). */
+  source_bindings: TemplateSourceBinding[];
   ceiling: AuthorityEntry[];
   dispatch_policy: ActivationPolicyRef;
   dispatchers: string[];
@@ -239,6 +262,18 @@ export class TemplateStore {
             input.expires_at,
             this.now().toISOString(),
           );
+        // @spec mission#authority-sources (#827): every recipient pair's
+        // root, in the same transaction as the template it was consented for.
+        // A recipient listed twice is one pair, resolved to one root, so a
+        // repeat is the same row (ON CONFLICT DO NOTHING keeps the first).
+        const bind = this.db.prepare(
+          `INSERT INTO template_source_bindings (template_id, subject_iss, subject_sub, agent, binding_json)
+           VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT DO NOTHING`,
+        );
+        for (const pair of input.source_bindings) {
+          bind.run(input.id, pair.subject.iss, pair.subject.sub, pair.agent, JSON.stringify(pair.binding));
+        }
       });
     } catch (e) {
       if (e instanceof UniqueViolationError) {
@@ -265,6 +300,29 @@ export class TemplateStore {
       .prepare("SELECT * FROM templates WHERE approval_event_id = ?")
       .get(approvalEventId) as TemplateRow | undefined;
     return row ? rowToTemplate(row) : undefined;
+  }
+
+  /**
+   * @spec mission#authority-sources (#827): the root a recipient pair
+   * committed at consent, or undefined for a pair the template never listed.
+   */
+  sourceBinding(
+    templateId: string,
+    subject: { iss: string; sub: string },
+    agent: string,
+  ): AuthoritySourceBinding | undefined {
+    const row = this.db
+      .prepare(
+        `SELECT binding_json FROM template_source_bindings
+         WHERE template_id = ? AND subject_iss = ? AND subject_sub = ? AND agent = ?`,
+      )
+      .get(templateId, subject.iss, subject.sub, agent) as { binding_json: string } | undefined;
+    if (!row) return undefined;
+    const raw = JSON.parse(row.binding_json) as AuthoritySourceBinding;
+    return Object.freeze({
+      ...raw,
+      provenance: parseAuthoritySource(raw.provenance, `template ${templateId} recipient binding`),
+    });
   }
 
   /** Withdraw consent: a revoked template refuses every subsequent dispatch. */

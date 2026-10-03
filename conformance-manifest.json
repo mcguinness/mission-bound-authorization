@@ -3417,6 +3417,12 @@
      "name": "issuer-qualified principals at the source gates (@spec mission#authority-sources, mission#approval-event, #829) > refuses a dispatch retry whose Subject is foreign or malformed before returning the instance its dispatch id created, and still returns it for a legitimate retry after revocation",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > runs gate 4 at dispatch on the recipient's own root, refusing a human Subject of a workload source",
+     "level": "unit",
+     "surface": "derivation"
     }
    ]
   },
@@ -3577,6 +3583,18 @@
      "name": "shipped authority-source catalog (@spec mission#authority-sources) > the real AS assembly runs with the shipped catalog and refuses an undeclared client",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > records a fresh root for an Expansion successor, never the predecessor's",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > refuses construction on reconciliation evidence it cannot trust",
+     "level": "unit",
+     "surface": "derivation"
     }
    ]
   },
@@ -3702,6 +3720,12 @@
      "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > lets an authorized reviewer activate workload authority it does not hold, and refuses one who may not",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > records each recipient's own root at template consent, and dispatch draws on the dispatching Subject's root, never another recipient's",
+     "level": "unit",
+     "surface": "derivation"
     }
    ]
   },
@@ -3759,6 +3783,18 @@
     {
      "file": "src/services/authorization-server/test/authority-source.test.ts",
      "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > refuses at the creation funnel a record whose source is not the one its approval resolved",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > draws down under a configured resolver from that resolver's committed root, never the catalog behind the kernel",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > recovers the parent's committed root for a child, never the first root of that provenance, with the root's own context",
      "level": "unit",
      "surface": "derivation"
     }
@@ -3852,19 +3888,43 @@
     },
     {
      "file": "src/services/authorization-server/test/authority-source.test.ts",
-     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > refuses an inherited source whose provenance denotes more than one root, rather than drawing on the first",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > draws down under a configured resolver from that resolver's committed root, never the catalog behind the kernel",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/authority-source.test.ts",
-     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > establishes a template's source for every recipient Subject through every recipient Agent, refusing recipients whose roots differ",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > recovers the parent's committed root for a child, never the first root of that provenance, with the root's own context",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/authority-source.test.ts",
-     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > refuses a drawdown under a configured resolver rather than checking a catalog the approval never consulted",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > records each recipient's own root at template consent, and dispatch draws on the dispatching Subject's root, never another recipient's",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > binds a pre-binding row only from a reconciliation mapping or a declared historical catalog, and a derived row from its origin",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > never binds a pre-binding row to a replacement root that merely matches it in the current catalog",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > refuses a committed-root answer whose client or Subject selector no longer selects the binding's context",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > reconciles a template instance by its template's consent instant, never its dispatch instant",
      "level": "unit",
      "surface": "derivation"
     }
