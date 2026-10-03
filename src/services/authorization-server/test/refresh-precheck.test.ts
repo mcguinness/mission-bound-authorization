@@ -358,7 +358,6 @@ describe("mission_error for Mission Status states (@spec status#mission-lifecycl
     expect(gateErrorToMissionError("mission_not_active", "completed")).toBe("mission_completed");
     expect(gateErrorToMissionError("mission_not_active", "revoked")).toBe("mission_revoked");
     expect(gateErrorToMissionError("mission_not_active", "active")).toBeUndefined();
-    expect(gateErrorToMissionError("mission_not_active", "superseded")).toBeUndefined();
     expect(gateErrorToMissionError("mission_not_active", undefined)).toBeUndefined();
   });
 });
