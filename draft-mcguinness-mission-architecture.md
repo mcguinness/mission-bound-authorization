@@ -2743,12 +2743,15 @@ path has.
 | --- | --- | --- |
 | `mission-reference-selected` | A Mission tuple was supplied for routing and selection | The canonical (issuer, mission id) pair; grants nothing and makes no security claim |
 | `work-item-bound` | A trusted component bound that tuple to this session, queue, or task item | An authenticated attacher, a tamper-resistant work-item identifier, and stated inheritance and retry rules |
-| `credential-correlated` | The presented credential is correlated to the Mission's parties | A mapping join or Mission Join Assertion ({{I-D.draft-mcguinness-mission-authority-server}}), with its stated ceiling |
+| `credential-correlated` | The presented credential is correlated to the Mission's parties | A mapping join or Mission Join Assertion, with its stated ceiling |
 | `credential-mission-bound` | The credential's authority was issued or derived for the Mission | The six equivalence properties below |
 | `presenter-key-bound` | The presenter proves possession of the key the credential is constrained to | Issuance-time key targeting (`cnf` or an equivalent confirmation) plus presentation-time proof of possession |
 | `instance-bound` | The concrete acting instance is identified and holds the bound key | `presenter-key-bound` plus the instance requirements below |
 | `action-bound` | An authenticated permit authorizes one operation, resource, and input projection | One of the two proof forms below |
 {: title="Mission binding properties"}
+
+The mapping join and the Mission Join Assertion are the MAS's
+({{I-D.draft-mcguinness-mission-authority-server}}).
 
 The properties are claimed per covered Authorization Server,
 resource, and action path, never as a product-wide maximum. A mixed
@@ -2929,14 +2932,19 @@ needs the whole matrix:
 
 | Control | Stops | Home |
 |---|---|---|
-| Capability kill | one capability within one Mission and the Child Missions it justifies: new derivation at once at commit; credentials already materialized under it run to their own bound unless a containment-aware action-time gate reaches them first ({{kill-switch-composition}}); the body of work still runs | the issuer-held containment overlay ({{I-D.draft-mcguinness-oauth-mission-containment}}) |
-| Mission kill | one body of work: new derivation at once, and residual credentials at the earliest of revocation, re-check, or their own expiry ({{validity-model}}) | the OAuth binding's revocation; cascades to Child Missions ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) |
+| Capability kill | one capability within one Mission and the Child Missions it justifies: new derivation at once at commit; credentials already materialized under it run to their own bound unless a containment-aware action-time gate reaches them first ({{kill-switch-composition}}); the body of work still runs | the issuer-held containment overlay |
+| Mission kill | one body of work: new derivation at once, and residual credentials at the earliest of revocation, re-check, or their own expiry ({{validity-model}}) | the OAuth binding's revocation; cascades to Child Missions |
 | Agent kill | all work by one agent, across its Missions | the deployment's agent IAM ({{three-objects}}) |
 | Agent Deployment kill | every instance running a compromised version | the deployment's change governance ({{three-objects}}) |
 | Credential kill | credentials already issued | the binding's substrate, where it supports revocation; otherwise expiry ({{validity-model}}) |
 | Workload kill | the running compute itself | the platform |
 | Egress kill | the communication path | gateway and network controls |
 {: title="The containment matrix"}
+
+The issuer-held containment overlay is defined by
+{{I-D.draft-mcguinness-oauth-mission-containment}}, and cascade
+revocation to Child Missions by
+{{I-D.draft-mcguinness-oauth-mission-child-delegation}}.
 
 Mission termination participates in incident response; it does not
 replace it. Revoking the Mission:
@@ -2984,24 +2992,29 @@ state-observable substrate per class, not per deployment
 a Runtime-Enforced rung and a Baseline property together without
 contradiction.
 
-Each row below assumes a deployment that runs the containment
-profile, at the row's rung and under its binding. A rung and a
-binding alone confer neither containment property: containment is an
-overlay a deployment adopts separately
+Each row below assumes a deployment that runs the containment profile,
+at the row's rung and under its binding. A rung and a binding alone
+confer neither containment property: containment is an overlay a
+deployment adopts separately
 ({{I-D.draft-mcguinness-oauth-mission-containment}}). In the table,
 "Stops at commit" is what a contain transition's own state-version
 commit reaches immediately
-({{I-D.draft-mcguinness-oauth-mission-containment}},
-Section "The Contain Transition"), and "Runs to its own bound" is the
-residual the transition does not reach.
+({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "The
+Contain Transition"), and "Runs to its own bound" is the residual the
+transition does not reach. In the cells, a quoted name is a section of
+the containment profile
+({{I-D.draft-mcguinness-oauth-mission-containment}}), or of the issuance
+grant ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) where the
+cell says so; "runtime profile" is
+{{I-D.draft-mcguinness-mission-runtime}}.
 
 | Rung | Binding | Property | Stops at commit | Runs to its own bound |
 |---|---|---|---|---|
-| Baseline Issuance | OAuth binding, structured-authority | Baseline, a new-derivation kill ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Containment Properties") | New derivation, delegation, and cross-domain projection minted after the transition ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Derivation Gating") | Tokens already issued, to `exp`, and a consequential read under the token-lifetime default, the same bound ({{I-D.draft-mcguinness-mission-runtime}}); pre-transition projection grants (note 1) |
-| Baseline Issuance | Standalone MAS, no credential-carried authority | Neither; the runtime layer is the only cutoff, and it is absent at this rung | Nothing at the resource; the transition commits and is visible on the Mission Status Response and the introspection projection ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Visibility") | Every action, to the resource's own bound, if any (note 2) |
-| Runtime-Enforced | Any binding, a class using a containment-aware state source within its published bound (note 3) | Runtime-Enforced for that class ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Containment Properties"); Baseline only for the classes in note 4 | The contained capability, denied at the class's next gated action once the source reflects the overlay, within the staleness bound plus the permit window plus the class's execution bound ({{I-D.draft-mcguinness-mission-runtime}}) | Paths no action-time gate reaches: token lifetime where issuance is gated, otherwise no bound |
-| Baseline Issuance | MAS as estate control plane, issuance join at each consuming AS | Baseline, from Derivation Gating at the Mission Issuer ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Derivation Gating") and, at a consuming AS with a Mission-state integration, from projecting each redemption and refresh through the Effective Authority Set (note 5) | New grant minting: the Mission Issuer's Derivation Gating evaluates the Effective Authority Set, so a grant minted after the transition excludes contained authority ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Derivation Gating"); and, at a consuming AS with a Mission-state integration, each redemption and refresh once its state source reflects the transition ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}, Section "Effective Authority Set Projection") | An outstanding grant redeems once, within its 300-second lifetime, at a consuming AS without a Mission-state integration, which checks no Mission state at redemption and issues no refresh tokens; tokens already issued run to their own `exp` ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}, Section "Redemption") |
-| Runtime-Enforced | OAuth binding with offline attenuation, a consumer whose check is active-state only (note 6) | Baseline ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Containment Properties"): a contained Mission stays `active` | New attenuation roots, which exclude contained authority ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "Derivation Gating") | Roots minted before the transition, to their own lifetime (note 6) |
+| Baseline Issuance | OAuth binding, structured-authority | Baseline, a new-derivation kill ("Containment Properties") | New derivation, delegation, and cross-domain projection minted after the transition ("Derivation Gating") | Tokens already issued, to `exp`, and a consequential read under the token-lifetime default, the same bound (runtime profile); pre-transition projection grants (note 1) |
+| Baseline Issuance | Standalone MAS, no credential-carried authority | Neither; the runtime layer is the only cutoff, and it is absent at this rung | Nothing at the resource; the transition commits and is visible on the Mission Status Response and the introspection projection ("Visibility") | Every action, to the resource's own bound, if any (note 2) |
+| Runtime-Enforced | Any binding, a class using a containment-aware state source within its published bound (note 3) | Runtime-Enforced for that class ("Containment Properties"); Baseline only for the classes in note 4 | The contained capability, denied at the class's next gated action once the source reflects the overlay, within the staleness bound plus the permit window plus the class's execution bound (runtime profile) | Paths no action-time gate reaches: token lifetime where issuance is gated, otherwise no bound |
+| Baseline Issuance | MAS as estate control plane, issuance join at each consuming AS | Baseline, from Derivation Gating at the Mission Issuer ("Derivation Gating") and, at a consuming AS with a Mission-state integration, from projecting each redemption and refresh through the Effective Authority Set (note 5) | New grant minting: the Mission Issuer's Derivation Gating evaluates the Effective Authority Set, so a grant minted after the transition excludes contained authority ("Derivation Gating"); and, at a consuming AS with a Mission-state integration, each redemption and refresh once its state source reflects the transition (issuance grant, "Effective Authority Set Projection") | An outstanding grant redeems once, within its 300-second lifetime, at a consuming AS without a Mission-state integration, which checks no Mission state at redemption and issues no refresh tokens; tokens already issued run to their own `exp` (issuance grant, "Redemption") |
+| Runtime-Enforced | OAuth binding with offline attenuation, a consumer whose check is active-state only (note 6) | Baseline ("Containment Properties"): a contained Mission stays `active` | New attenuation roots, which exclude contained authority ("Derivation Gating") | Roots minted before the transition, to their own lifetime (note 6) |
 {: title="What a capability kill reaches, by level and binding"}
 
 Notes:
@@ -3112,13 +3125,15 @@ condition:
 | AS changeable; PAR, RAR, and JWT access tokens in place | The OAuth binding | AS adds intent intake, derivation, approval, record, and gating; a Mission-creating client changes with it, submitting `mission_intent` through PAR and handling Mission responses and lifecycle refusals; scope-only Resource Servers continue unchanged at scope grain, per-entry constraints reaching them only through a projection or a PEP |
 | AS changeable; RAR absent or tokens opaque | MAS first; the OAuth binding once the AS gains the token plane (a peer move, not an upgrade) | A MAS beside the AS; tokens are unchanged, while governance requires approval integration and Mission correlation, and enforcement waits on PEP/PDP coverage with a trustworthy join |
 | AS cannot change (shared, third-party, SaaS) | Standalone MAS, phase by phase | Records and approvals first; enforcement arrives with PEP/PDP coverage |
-| Many Authorization Servers, one governance point | MAS as estate control plane; issuance join per consuming AS | Each AS adds grant redemption only ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) |
+| Many Authorization Servers, one governance point | MAS as estate control plane; issuance join per consuming AS | Each AS adds grant redemption only |
 | No PEP/PDP over consequential paths | The OAuth binding where the AS allows; the runtime layer where a class needs it | Lifetime-bounded reliance (short tokens, gated refresh); the runtime overlay added later, where the high-consequence classes live |
 {: title="Entry ramps by estate"}
 
-Every row shares the record, anchors, and lifecycle, so a ramp is an
-entry point, not a fork: Missions carry unchanged from any row to the
-rows a deployment adopts later.
+The issuance join is defined by
+{{I-D.draft-mcguinness-oauth-mission-issuance-grant}}. Every row shares
+the record, anchors, and lifecycle, so a ramp is an entry point, not a
+fork: Missions carry unchanged from any row to the rows a deployment
+adopts later.
 
 ## The Issuance-Only Deployment {#issuance-only}
 
@@ -3535,7 +3550,7 @@ standardizes:
 
 | Requirement | Conventional OAuth+PDP realization | Mission standardization | Illustrative added Mission cost |
 |---|---|---|---|
-| Durable task semantics across tokens and restarts | OAuth grants, refresh families, or PDP records outlive the token | An independently addressable, lifecycle-bearing approved task with anchors consistently interpreted by the Authorization Server, PDP, agents, audiences, and evidence producers; it does not make persistence newly possible (the OAuth binding's Why a New Object and Relationship to Other Authorization Objects sections, {{I-D.draft-mcguinness-oauth-mission}}) | Durable-object and lifecycle storage |
+| Durable task semantics across tokens and restarts | OAuth grants, refresh families, or PDP records outlive the token | An independently addressable, lifecycle-bearing approved task with anchors consistently interpreted by the Authorization Server, PDP, agents, audiences, and evidence producers; it does not make persistence newly possible (the OAuth binding's Why a New Object and Relationship to Other Authorization Objects sections) | Durable-object and lifecycle storage |
 | Multi-credential, multi-actor join | A deployment-invented transaction, grant, or workflow identifier shared across credentials | Stable approved-task semantics for that join, bound to authority and carried through delegation and fan-out outside one private PDP schema ({{swarm-execution}}) | New claims and endpoints |
 | A second trust domain | The partner calls the origin PDP, shares state, or federates policy, trading synchronous coupling, availability, and disclosure | Bounded local credentials and common anchors carried by Cross-Domain Projection, accepting local-token revocation latency (the Project verb): a portability choice, not the only possible design | State consistency and distribution; privacy and correlation surface |
 | Approval as a first-class record | A local consent or grant database plus versioned decision logs | A standardized immutable snapshot, integrity anchors, and one reference portable evidence can cite (the OAuth binding's Why a New Object section; the Prove verb) | Evidence operations |
