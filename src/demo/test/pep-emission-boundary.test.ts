@@ -23,6 +23,7 @@ import type { Pep, PepDeps } from "@mission/mcp-payments";
 import { composeStack } from "../src/stack.js";
 /** @spec runtime#idempotency (#917): each stack gets its own single-writer claim file. */
 const tempClaimsFile = (): string => join(mkdtempSync(join(tmpdir(), "demo-claims-")), "claims.sqlite");
+const tempReservationsFile = (): string => join(mkdtempSync(join(tmpdir(), "demo-reservations-")), "write-reservations.sqlite");
 
 
 const API_URL = process.env.OPENFGA_HTTP_URL ?? "https://localhost:8080";
@@ -65,7 +66,7 @@ function reachableEmitters(root: unknown): string[] {
 
 d("the composed stack hands its PEP no PDP emission capability (#741, PR #753 review)", () => {
   it("no value at any depth of the real PepDeps exposes an `emit` function, and there is no `decisionEvidence` member", async () => {
-    const stack = await composeStack({ openfgaUrl: API_URL, presharedKey: KEY, ...(CA ? { caCertPath: CA } : {}), claimsFile: tempClaimsFile() });
+    const stack = await composeStack({ openfgaUrl: API_URL, presharedKey: KEY, ...(CA ? { caCertPath: CA } : {}), claimsFile: tempClaimsFile(), writeReservationsFile: tempReservationsFile() });
     const deps = (stack.pep as unknown as Pep & { deps: PepDeps }).deps;
     expect(reachableEmitters(deps)).toEqual([]);
     expect("decisionEvidence" in deps).toBe(false);

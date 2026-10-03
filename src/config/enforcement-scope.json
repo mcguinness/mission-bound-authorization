@@ -55,6 +55,28 @@
         "execution_lease_consumer": "mcp-payments-pep"
       }
     ],
+    "reversible_write_idempotency": [
+      {
+        "mediated_class_or_scope": "payments:payment.schedule",
+        "permit_lifetime_control": "validity_window_plus_idempotency_key",
+        "permit_validity_max_seconds": 300,
+        "reservation_domain": "pep-local: mcp-payments-pep, durable single-writer SQLite",
+        "reservation_owner": "mcp-payments-pep",
+        "idempotency_scope": ["mission", "subject", "actor", "audience", "action", "resource", "phase"],
+        "retention_posture": "declared_horizon",
+        "retention_horizon": "P7D"
+      },
+      {
+        "mediated_class_or_scope": "payments:payment.schedule.cancel",
+        "permit_lifetime_control": "validity_window_plus_idempotency_key",
+        "permit_validity_max_seconds": 300,
+        "reservation_domain": "pep-local: mcp-payments-pep, durable single-writer SQLite",
+        "reservation_owner": "mcp-payments-pep",
+        "idempotency_scope": ["mission", "subject", "actor", "audience", "action", "resource", "phase"],
+        "retention_posture": "declared_horizon",
+        "retention_horizon": "P7D"
+      }
+    ],
     "outcome_reconciliation": {
       "window": "PT15M",
       "responsible_component": "mcp-payments-pep",

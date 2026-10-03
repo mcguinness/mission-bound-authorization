@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { IDEMPOTENCY_SCOPE_DIMENSIONS, isVolatileScopeMember } from "@mission/core";
-import { openEphemeralClaimDomain, RUNTIME_POSTURE, stalenessBound } from "@mission/pdp";
+import { openEphemeralClaimDomain, reversibleWriteDeclarationFor, RUNTIME_POSTURE, stalenessBound } from "@mission/pdp";
 import { McpPaymentsServer } from "../src/server.js";
+import { TOOL_ACTIONS } from "../src/pep.js";
+import { openEphemeralWriteReservationStore } from "../src/write-reservations.js";
 import { startResourceMetadataServer, PROTECTED_RESOURCE_METADATA_PATH } from "../src/resource-metadata.js";
 
 describe("runtime posture publication on the resource metadata surface", () => {
@@ -50,6 +52,40 @@ describe("runtime posture publication on the resource metadata surface", () => {
       });
       // The PDP runs exactly what is published: the statement opens as its domain.
       expect(() => openEphemeralClaimDomain({ owner: statement.pdps[0] as string, statement }).close()).not.toThrow();
+    } finally { await listener.close(); }
+  });
+
+  // @spec runtime#idempotency (#918): "Outside those classes a deployment MAY
+  // scope the guarantee to the reconciliation window, and it MUST publish
+  // which posture applies", and the enforcing PEP retains the record "for at
+  // least the retention posture the deployment publishes above".
+  it("publishes the reservation domain, its owner and the retention posture for every keyed write outside the high-consequence classes", async () => {
+    const server = new McpPaymentsServer({ issuer: "https://as.test", jwks: { keys: [] } } as never);
+    const listener = await startResourceMetadataServer(() => server);
+    try {
+      const response = await fetch(`${listener.origin}${PROTECTED_RESOURCE_METADATA_PATH}`);
+      const statement = ((await response.json()) as { enforcement_scope_statement: typeof RUNTIME_POSTURE }).enforcement_scope_statement;
+      const keyedWrites = Object.values(TOOL_ACTIONS).filter(
+        (m) => m.idempotencyKey && !["irreversible_action", "external_commitment", "privileged_administration"].includes(m.actionClass),
+      );
+      expect(keyedWrites.map((m) => m.action).sort()).toEqual(["payments:payment.schedule", "payments:payment.schedule.cancel"]);
+      for (const mapping of keyedWrites) {
+        const d = reversibleWriteDeclarationFor(statement, mapping.actionClass, mapping.action);
+        expect(d, mapping.action).toBeDefined();
+        expect(d?.permit_lifetime_control).toBe("validity_window_plus_idempotency_key");
+        expect(d?.permit_validity_max_seconds).toBe(300);
+        expect(d?.retention_posture).toBe("declared_horizon");
+        expect(d?.retention_horizon).toBe("P7D");
+        expect(d?.reservation_owner).toBe("mcp-payments-pep");
+        expect(statement.mediated_scope.pep_locations).toContain(d?.reservation_owner);
+        expect(d?.reservation_domain).toMatch(/durable single-writer SQLite/);
+        expect(d?.idempotency_scope).toEqual([...IDEMPOTENCY_SCOPE_DIMENSIONS]);
+      }
+      // The PEP runs exactly what is published: a store owned by the
+      // published owner is accepted as the domain, and another owner's is not.
+      const store = openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" });
+      expect(() => new McpPaymentsServer({ issuer: "https://as.test", jwks: { keys: [] }, writeReservations: store } as never)).not.toThrow();
+      store.close();
     } finally { await listener.close(); }
   });
 });

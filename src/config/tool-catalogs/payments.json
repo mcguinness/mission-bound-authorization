@@ -24,8 +24,23 @@
       "description": "Schedule a payment",
       "inputSchema": {
         "type": "object",
-        "properties": { "invoice_id": { "type": "string" } },
-        "required": ["invoice_id"]
+        "properties": {
+          "invoice_id": { "type": "string" },
+          "idempotency_key": { "type": "string", "pattern": "^[A-Za-z0-9_-]{16,128}$" }
+        },
+        "required": ["invoice_id", "idempotency_key"]
+      }
+    },
+    {
+      "name": "cancel_scheduled_payment",
+      "description": "Cancel a scheduled payment",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "invoice_id": { "type": "string" },
+          "idempotency_key": { "type": "string", "pattern": "^[A-Za-z0-9_-]{16,128}$" }
+        },
+        "required": ["invoice_id", "idempotency_key"]
       }
     },
     {

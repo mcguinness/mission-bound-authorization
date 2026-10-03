@@ -53,6 +53,7 @@
     "presharedKey": "dev-preshared-key-change-me"
   },
   "stores": {
-    "pdpIdempotencyClaims": { "file": "var/pdp-idempotency-claims.sqlite" }
+    "pdpIdempotencyClaims": { "file": "var/pdp-idempotency-claims.sqlite" },
+    "pepWriteReservations": { "file": "var/pep-write-reservations.sqlite" }
   }
 }
