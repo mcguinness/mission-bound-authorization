@@ -2696,6 +2696,11 @@ a derived token:
   recommends, via a `cnf` claim {{RFC7800}}: DPoP {{RFC9449}}
   (`cnf.jkt`) or mTLS {{RFC8705}} (`cnf.x5t#S256`).
 
+The primary access token may be a bearer token, preserving
+compatibility with bearer-only Resource Servers while retaining
+{{Section 2.2.1 of RFC9700}}'s recommendation; the cost is the
+stolen-token exposure ({{token-theft}}).
+
 A delegated token is sender-constrained to the delegate's own key
 ({{delegation}}); the cross-domain companion requires sender-constraint
 for credentials that cross a trust domain
@@ -5877,6 +5882,12 @@ Cross-Domain:
   by Mission Cross-Organizational Delegation, added as an informative
   reference) and what is not (re-projecting a Mission into a further
   domain) (#1018). No requirement changed.
+
+- Stated why the primary access token's confirmation member stays
+  optional rather than mandatory: compatibility with bearer-only
+  Resource Servers, retaining the RFC 9700 Section 2.2.1
+  recommendation, at the cost of the stolen-token exposure Token Theft
+  already names (#1020). No requirement changed.
 
 - Routed RAR remediation by containment: entries that both a
   presented refresh grant and the active Mission's Authority Set
