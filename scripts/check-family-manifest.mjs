@@ -1271,7 +1271,10 @@ function main() {
   // tripwire runs under this entry point so it rides the existing CI step;
   // its own findings and exit code stand on their own.
   const sub = spawnSync(process.execPath, [path.join(path.dirname(fileURLToPath(import.meta.url)), "check-substrate-statements.mjs")], { stdio: "inherit" });
-  process.exit(sub.status ?? 1);
+  // Chained sub-check (#838): the AAuth management draft's JSON examples
+  // validate against the members its operations require.
+  const examples = spawnSync(process.execPath, [path.join(path.dirname(fileURLToPath(import.meta.url)), "check-aauth-management-examples.mjs")], { stdio: "inherit" });
+  process.exit((sub.status ?? 1) || (examples.status ?? 1));
 }
 
 // Guarded the same way as generate-drafts-index.mjs and
