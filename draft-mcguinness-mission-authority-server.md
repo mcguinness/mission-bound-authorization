@@ -1056,7 +1056,10 @@ the following members:
 
 The PEP computes the digest and thumbprint from the credential it
 authenticated, so the PDP checks the assertion's token binding without
-receiving the credential ({{join-scope}}). A PDP that does not consume
+receiving the credential ({{join-scope}}). The PEP reports `token_jkt`
+only for a key against which it verified the request's proof of
+possession, and `token_x5t` only for the certificate it authenticated
+on the request's mutual-TLS connection. A PDP that does not consume
 Join Assertions ignores `assertion` and the token members and joins
 under the mapping rules.
 
@@ -2274,7 +2277,8 @@ provides:
   token without a `cnf` key ({{join-assertion-request}}).
 - **`cnf` in introspection or token claims.** Introspection responses,
   or validated JWT claims, that report the token's `cnf` confirmation,
-  since the assertion binds the key thumbprint they report.
+  since the assertion binds the key or certificate thumbprint they
+  report.
 
 An estate whose Authorization Server cannot provide these capabilities
 still joins under the mapping join at the conformance floor
