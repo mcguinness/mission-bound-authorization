@@ -3730,6 +3730,11 @@ bound profiled by `aauth-mission-expiry`.
 
 \[\[ To be removed from the final specification ]]
 
+- The RAR metadata citation names the working-group successor
+  draft-ietf-oauth-rar-metadata-remediation and separates an
+  authorization server's type metadata from a protected resource's
+  RFC 9728 `authorization_details_types_supported`.
+
 - Approve and Record names the three approval roles (derivation,
   adjudication, accountability) and summarizes the OAuth binding's
   rule that a model's judgment enters adjudication only as a recorded
