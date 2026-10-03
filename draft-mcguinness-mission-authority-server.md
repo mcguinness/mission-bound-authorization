@@ -819,7 +819,11 @@ MUST disclose each `authorization_details` entry in the response with
 its `delegation` member as recorded. For any other caller, the MAS
 MUST NOT include `subject` or `client_id`. These members describe the
 Mission; the response envelope's `sub` still identifies the
-requesting caller.
+requesting caller. The PDP reads them from the Mission Status response
+it resolves (rule 2 of {{join-rules}}). A PEP does not copy them into
+`context.mission`, whose `subject` member the AuthZEN profile populates
+only from a verified token or delegation chain
+({{I-D.draft-mcguinness-mission-authzen}}).
 
 The PEPs and PDPs enrolled for a Mission's enforcement scope are
 deployment configuration that the MAS holds. This document defines no
