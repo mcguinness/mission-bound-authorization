@@ -63,8 +63,8 @@
     "content_sha256": "76ae8710dc0faf41220e947e05a4dc4a79440c0039746089a4b24e486c1d06de"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "91d63587ee517c333a14ad19241844bd05deb32d",
-    "content_sha256": "f1fbdd18be8a94ee432a34810920f76dbbaf0f1d5b5772d6dfbaae40e9a743ce"
+    "revision": "fa0b716347bbc04a21bb20080198cc217e1f2aca",
+    "content_sha256": "78a41f2661886614e1fa442a6e52bbacfd05309eedc04a4d7716c6ac7d39b55d"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
@@ -4763,6 +4763,30 @@
    "coverage": "todo",
    "tests": [],
    "notes": "The AS-side rule only: a human Approver reading the rendered prose and declining is the intended consent check, not issuance gating by the AS."
+  },
+  {
+   "id": "core.derivation.model-input-narrows-only",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "authorization-derivation",
+   "text": "The AS MUST NOT let it supply or widen authority",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for a fixed Intent, proposal or configured mapping, and policy version, the Authority Set derived with a recorded model output is no wider than the set derived without it: the model's output adds no entry and widens none, every resulting entry satisfies its type's subset rule against a candidate the selected mode produced, an Intent that matches no configured mapping is refused whatever the model output, and re-deriving over the retained inputs, model output included, reproduces the set without invoking the model"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "A prohibition every AS meets; one that uses no model in derivation meets it trivially, so the row is unconditional rather than gated on a capability. Candidate authority keeps a proposal or configured-mapping origin; model-generated proposals stay permitted through Shaping and ordinary admission (#1010)."
   },
   {
    "id": "core.approval-authentication.floor-and-requested-carriage-both-satisfied",
