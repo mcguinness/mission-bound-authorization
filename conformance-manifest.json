@@ -12875,6 +12875,18 @@
      "name": "consequential freshness floor (@spec runtime#state-freshness) > refuses an injected no-freshness posture for consequential, undeclared and default classes",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > under PDP placement the observation is absent and the PDP establishes state from its own read > with no read of its own, denies stale_state below the high-consequence floor too: a consequential write and a read",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > a present assertion is verified against the declared state source's key > a verified assertion whose signed fresh_until has already passed denies stale_state, in fresh mode too",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
    "notes": "Three arms of \"cannot establish ... within the bound\": state present but beyond the bound (the pre-existing, OpenFGA-gated mapping above), state absent entirely for a class that requires an active source (#608 GAP 2, unconditional), and state PRESENT but not actually establishable from it (author-review finding 2, GAP 3, unconditional): a non-finite freshness_at, a freshness_at dated beyond the deployment's configured future-skew tolerance, or an observation the enforcement scope's declared state-source placement does not rely on (no declared placement, or pdp placement with no read of the PDP's own; #1004 retired the request-named source). Each of the three GAP 3 mappings is asserted for all three high-consequence classes in one case; a fourth case is the boundary control proving the skew tolerance itself (default 5s, configurable via EvaluateOptions.freshnessSkewToleranceSeconds) is not itself a denial. GAP 2's sibling unconditional cases (same file) cover the fresh-present and stale-present arms, plus a boundary control that a non-high-consequence class stays a permit when freshness is absent, since token-lifetime expiry conforms below that floor per @spec runtime#state-freshness. #793: a no-freshness declaration cannot disable consequential-class checks: configuration load refuses it, and the PDP separately refuses an injected none posture as out_of_authority before consulting freshness."
@@ -12932,6 +12944,24 @@
     {
      "file": "src/services/pdp/test/evaluate-decision.test.ts",
      "name": "a permit expires no later than the state view it was decided against (@spec runtime#state-freshness) > denies stale_state rather than issuing a permit whose window has already closed",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > under PEP placement the permit is capped at the accepted observation's state valid-through > caps valid_until at mission_status_expires_at when the observation reports one, earlier or later than the observation plus the class bound",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > under PEP placement the permit is capped at the accepted observation's state valid-through > a reported expiry already reached yields no permit: stale_state",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > a present assertion is verified against the declared state source's key > a verified assertion's signed fresh_until caps the permit in fresh mode, though the observation does not repeat it",
      "level": "unit",
      "surface": "decision-request"
     }
