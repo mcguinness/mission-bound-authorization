@@ -146,6 +146,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-cross-org-delegation:
+    title: "Mission Cross-Organizational Delegation for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-org-delegation.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-derivation-limits:
     title: "Mission Derivation Limits for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-derivation-limits.html
@@ -5300,11 +5308,14 @@ The following are out of scope for this document:
   by Mission Status ({{I-D.draft-mcguinness-oauth-mission-status}});
   a pending-human-approval state and a holding-token pause-and-resume
   protocol are future lifecycle work.
-- **Multi-hop cross-domain provenance.** A single cross-domain hop is
-  specified by the companion
-  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}); chaining a
-  Mission across more than one trust-domain boundary, and the
-  verifiable provenance that would require, are future work.
+- **Multi-hop cross-domain projection.** A single projection hop is
+  specified by Cross-Domain Projection
+  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}); recursive
+  delegation across organizations is profiled by Mission
+  Cross-Organizational Delegation
+  ({{I-D.draft-mcguinness-oauth-mission-cross-org-delegation}}), whose
+  chain a destination verifies before projecting. Re-projecting a
+  Mission from one Resource AS into a further domain is future work.
 - **Decentralized agent identity.** Agent identity and credentialing
   are out of scope ({{I-D.draft-ietf-wimse-aims}} and the WIMSE
   architecture, {{I-D.draft-ietf-wimse-arch}}); this document governs
@@ -5860,6 +5871,12 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Non-Goals: the multi-hop entry names what is specified (one
+  projection hop; recursive cross-organizational delegation, profiled
+  by Mission Cross-Organizational Delegation, added as an informative
+  reference) and what is not (re-projecting a Mission into a further
+  domain) (#1018). No requirement changed.
 
 - Routed RAR remediation by containment: entries that both a
   presented refresh grant and the active Mission's Authority Set
