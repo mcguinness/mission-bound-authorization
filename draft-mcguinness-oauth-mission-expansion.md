@@ -27,6 +27,7 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  RFC6749:
   RFC9126:
   RFC9396:
   RFC8693:
@@ -331,9 +332,11 @@ Expansion request:
      |    ---- poll ------------> |     approval via DTR;
      |    <-- access token ------ |     token on approval
      |                            |
-     |    <-- (front channel) --> | (b) interactive: the
-     |                            |     deployment's front-
-     |                            |     channel approval
+     |    <-- interaction req. -- | (b) interactive: the
+     |    ---- PAR + handle ----> |     client pushes the
+     |    <-- (front channel) --> |     continuation; approval;
+     |    ---- code ------------> |     code redemption
+     |    <-- access token ------ |
      |                            |
      |         at activation: successor active,
      |         predecessor superseded (atomic)
@@ -688,12 +691,13 @@ Deferred:
   substrate and does not redefine it.
 
 Interactive:
-: When approval is interactive, the Mission Issuer runs the
-  deployment's existing front-channel approval event, the
-  issuance profile's own approval ceremony
-  ({{I-D.draft-mcguinness-oauth-mission}}), issuing an authorization
-  code the client redeems to obtain the successor's authority. This is
-  the interactive path retained from earlier revisions of this document.
+: When approval is interactive, the Mission Issuer answers the token
+  exchange with the interaction-required response of
+  {{interactive-handoff}}. The client pushes an authorization request
+  carrying the continuation, the user agent completes the issuance
+  profile's own approval ceremony
+  ({{I-D.draft-mcguinness-oauth-mission}}), and the client redeems the
+  resulting authorization code for the successor's authority.
 
 This document defines no synchronous exchange completion for an
 expansion that takes fresh consent. An expansion response is a
@@ -741,6 +745,67 @@ Whichever mode is selected, the exchange's `creation_request_id`
 reservation ({{creation-idempotency}}) makes completion recoverable:
 a client that loses the response recovers the one committed
 operation, never a second creation.
+
+## Interactive handoff {#interactive-handoff}
+
+An {{RFC8693}} success carries an issued token
+({{Section 2.2.1 of RFC8693}}), so interactive completion cannot use
+one. The Mission Issuer MUST answer the token exchange with an OAuth
+error response ({{Section 5.2 of RFC6749}}), HTTP status 400, carrying:
+
+`error`:
+: `mission_interaction_required`.
+
+`mission_continuation`:
+: A string: an opaque, unguessable handle naming the pending creation
+  operation ({{creation-idempotency}}), bound to the authenticated
+  client and the operation fingerprint ({{creation-fingerprint}}).
+
+`expires_in`:
+: A number: the handle's remaining lifetime in seconds, the approval
+  window of the operation.
+
+A client tells the outcomes apart from the response alone: an issued
+token is the {{RFC8693}} success, `authorization_pending` is deferred
+completion ({{completion-modes}}), and `mission_interaction_required`
+is this handoff.
+
+The client then sends a pushed authorization request
+({{Section 2 of RFC9126}}) carrying `mission_continuation`, with
+`response_type=code`, its `redirect_uri` and `state`, and the PKCE
+`S256` challenge or DPoP binding the issuance profile requires for an
+authorization code ({{I-D.draft-mcguinness-oauth-mission}}, Section
+"Mission Approval"). It carries no `mission_intent` and no
+`authorization_details`: the token exchange is this operation's
+carriage ({{submission}}). Client authentication at the pushed
+authorization request endpoint binds the handle to the client, so the
+handle alone does not give its holder the operation. The Mission
+Issuer:
+
+- MUST refuse a pushed request whose `mission_continuation` is unknown,
+  expired, or bound to another client, with `invalid_request`;
+- MUST take the predecessor, Intent, proposal, submission evidence,
+  presenter confirmation, and actor context only from the recorded
+  operation, and MUST refuse a pushed request that supplies any of
+  them with a different value; and
+- validates the other authorization request parameters as for any
+  pushed request.
+
+The `request_uri` is a temporary front-channel reference; the
+continuation names the durable operation. When a `request_uri`
+expires, the user agent consumes it, or the authorization response is
+lost, the client pushes again with the same `mission_continuation` and
+continues the same operation. Redemption of the authorization code
+verifies the PKCE or DPoP binding and activates the successor under
+the checks of {{reconciliation}}, atomically with the predecessor's
+supersession; `subject_token` expiry during the window does not gate
+it ({{deferred-window}}). After activation the Mission Issuer MUST
+refuse a further pushed request for the continuation and MUST refuse
+redemption of any other code issued for the operation with
+`invalid_grant`. A lost redemption response is recovered by repeating
+the token exchange with the same `creation_request_id`
+({{creation-recovery}}); an operation whose continuation expired
+before activation answers that retry with `expired_token`.
 
 ## The deferred window {#deferred-window}
 
@@ -1359,9 +1424,9 @@ delivery-artifact metadata. A revalidated retry
   `(client, creation_request_id)` resolves to the same deferred
   continuation, scoped to the authenticated client, never to a
   second deferral.
-- A pending interactive completion returns the same continuation
-  reference. The reservation is made at initiation, so a retry
-  cannot start a second approval ceremony.
+- A pending interactive completion returns the same
+  `mission_continuation` ({{interactive-handoff}}). The reservation is
+  made at initiation, so a retry cannot open a second operation.
 - A completed operation whose delivery credential is still valid
   returns that credential.
 - A completed operation whose delivery credential has expired is
@@ -1593,8 +1658,8 @@ A conforming **expansion-capable Mission Issuer** MUST:
   {{denial-reasons}});
 - complete the expansion in one of the modes of {{completion-modes}},
   obtaining new consent for the successor's authority through the
-  deferred token response or the retained interactive approval
-  ({{adjudication}}) and enforcing the successor-expiry rule
+  deferred token response or the interactive handoff
+  ({{adjudication}}, {{interactive-handoff}}) and enforcing the successor-expiry rule
   ({{successor-expiry}});
 - record the `predecessor` member on the successor's `mission` claim
   and Mission record ({{predecessor-member}});
@@ -1945,6 +2010,11 @@ Parameters" registry:
   child delegation profile
   ({{I-D.draft-mcguinness-oauth-mission-child-delegation}})
 
+- Name: `mission_continuation`
+- Parameter Usage Location: token response, authorization request
+- Change Controller: IETF
+- Reference: this document, {{interactive-handoff}}
+
 - Name: `creation_request_id`
 - Parameter Usage Location: token request
 - Change Controller: IETF
@@ -1959,6 +2029,17 @@ error response and, on the interactive path, the authorization error
 response. The `creation_request_id` identifier rides the token
 exchange request at the token endpoint in every completion mode and
 never appears on a front channel.
+
+## OAuth Extensions Error Registration {#iana-error-registration}
+
+This document registers the following value in the "OAuth Extensions
+Error Registry" ({{Section 11.4 of RFC6749}}):
+
+- Error name: `mission_interaction_required`
+- Error usage location: token error response
+- Related protocol extension: Mission Expansion
+- Change controller: IETF
+- Specification document(s): this document, {{interactive-handoff}}
 
 # Acknowledgments
 {:numbered="false"}
