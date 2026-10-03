@@ -88,7 +88,7 @@ normative:
       -
         org: OpenID Foundation
     date: 2026
-  I-D.draft-zehavi-oauth-rar-metadata:
+  I-D.draft-ietf-oauth-rar-metadata-remediation:
   ARAP:
     target: https://openid.github.io/authzen/authzen-access-request-approval-profile-1_0.html
     title: "AuthZEN Access Request and Approval Profile - Draft 1"
@@ -2167,16 +2167,16 @@ Lane 3, partial evaluation:
 
 Not a lane, the RAR remediation grain:
 : `insufficient_authorization` and `authorization_remediation` of
-  {{I-D.draft-zehavi-oauth-rar-metadata}}, as adopted into the family's
-  remediation by the issuance profile
+  {{I-D.draft-ietf-oauth-rar-metadata-remediation}}, as adopted
+  into the family's remediation by the issuance profile
   ({{I-D.draft-mcguinness-oauth-mission}}). It is PAYLOAD, not a lane:
   it DESCRIBES authority that could be requested, MAY travel as
   payload within an ARAP request, and confers nothing by itself. The
   RAR-details grain and the AuthZEN grain are not competing carriers,
   and a deployment MAY expose both on the same denial: the
-  RAR-details grain names what authority to propose, carrying
-  actionable `authorization_details` the client proposes back on the
-  standard `authorization_details` parameter alongside a fresh Intent
+  RAR-details grain names what authority to request, carrying
+  actionable `authorization_details` the client requests as the
+  issuance profile's remediation routing describes
   ({{I-D.draft-mcguinness-oauth-mission}}); the AuthZEN grain names
   how the denial is escalated, routing it into a governed access
   request that an independent approver or policy adjudicates before
@@ -2842,6 +2842,11 @@ registered by {{I-D.draft-mcguinness-oauth-mission}}.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The RAR remediation grain cites the working-group successor
+  draft-ietf-oauth-rar-metadata-remediation and defers its routing to
+  the issuance profile's remediation routing instead of restating it.
+  No requirement changed.
 
 - Mission-to-Policy Materialization describes the materialized policy
   view as one evaluation path: a PDP that evaluates the Mission's

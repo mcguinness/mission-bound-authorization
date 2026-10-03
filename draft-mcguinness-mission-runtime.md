@@ -429,8 +429,10 @@ failure-mode table ({{failure-modes}}) is their operational form.
   a governance operation, never a runtime one ({{decision}}).
 
 For the high-consequence classes ({{classification}}) the profile
-goes further: action-bound approval re-consents the concrete
-parameters ({{action-approval}}), and mediated custody keeps the
+goes further: the acting credential is sender-constrained with a
+verified proof of possession ({{custody}}), action-bound approval
+re-consents the concrete parameters ({{action-approval}}), and
+mediated custody keeps the
 credential's sender-constraint key in the enforcing component rather
 than the agent ({{custody}}). Those mechanisms compose into the two
 named claims of {{named-claims}}, agent-compromise-resistant
@@ -1107,6 +1109,7 @@ refusal.
 | Condition | Required behavior |
 |---|---|
 | Credential validation fails, including sender-constraint verification | Refuse before runtime Mission evaluation |
+| A high-consequence action whose acting credential carries no verified sender-constraint binding ({{custody}}) | Refuse |
 | Mission governance is required but the credential carries no Mission reference | Refuse before runtime Mission evaluation, unless the Mission binding is externally established ({{mission-binding}}) |
 | PEP-PDP channel authentication or integrity protection fails | Fail closed |
 | Mission state cannot be established within the staleness bound | Fail closed for consequential actions |
@@ -1814,6 +1817,20 @@ be sender-constrained: a bearer token is incompatible with mediated
 custody, because a bearer token can be presented by whoever holds it,
 including the agent, so the mediating PEP could not be the sole holder
 of the authority.
+
+Independently of mediation, the acting credential for an action in a
+high-consequence class ({{classification}}) MUST be sender-constrained,
+whether the Mission reference is credential-carried or externally
+established ({{mission-binding}}). The PEP MUST NOT supply a
+confirmation key as a decision input unless it verified the binding
+with a current proof of possession of that key; a confirmation member
+alone is not a verified binding. The PDP MUST deny a high-consequence
+action whose decision request carries no confirmation key. The
+credential profile defines the binding and its proof
+({{I-D.draft-mcguinness-mission-runtime-oauth}} for OAuth).
+Sender-constraint makes a stolen credential unusable on its own; it
+does not protect against compromise of the bound key or of a component
+that can use it.
 
 For an action class it mediates, a deployment SHOULD hold the
 sender-constraint private key for the Mission-bound credential in the
@@ -3312,6 +3329,9 @@ work and are not required to enforce it:
   disconnected from its Mission state source); fail-closed
   ({{failure-modes}}) remains the base rule when state cannot be
   established;
+- cross-PDP history composition other than through the deployment's
+  evidence store or registered transparency records
+  ({{input-history}});
 - action-hierarchy and resource-containment subset extensions (this
   profile uses the flat subset rule of
   {{I-D.draft-mcguinness-oauth-mission}});
@@ -3739,6 +3759,17 @@ worked example shows the concrete record
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Credential Custody: the acting credential for a high-consequence
+  action is sender-constrained in either Mission-establishment mode.
+  The PEP supplies a confirmation key only from a binding it verified
+  with a current proof of possession, and the PDP denies a
+  high-consequence action without one. Enforcement Invariants and
+  Failure Modes point to the rule.
+
+- Out of Scope lists cross-PDP history composition other than through
+  the deployment's evidence store or registered transparency records,
+  matching History. No requirement changed.
 
 - Authority input: for every issuer-held narrowing mechanism the
   deployment runs, the PDP establishes current effective authority from
