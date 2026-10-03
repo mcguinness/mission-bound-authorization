@@ -468,8 +468,8 @@ The endpoint serves two operations, dispatched by request media type:
 - **Intent submission**: an HTTPS POST whose `application/json` body
   is the Mission Intent Submission envelope ({{intent-submission}}).
 - **Submission status**: an HTTPS POST with an
-  `application/x-www-form-urlencoded` body containing a `submission`
-  parameter ({{submission-status}}).
+  `application/x-www-form-urlencoded` body containing a
+  `submission_id` parameter ({{submission-status}}).
 
 ## Intent Submission {#intent-submission}
 
@@ -562,6 +562,11 @@ and returns HTTP 202 with a pending-submission reference:
 : REQUIRED. A string. An RFC 3339 {{RFC3339}} date-time after which an
   undecided submission lapses to `expired`.
 
+`interval`:
+: OPTIONAL. A positive integer. The minimum number of seconds between
+  submission-status requests for this submission
+  ({{submission-status}}).
+
 The following example shows a submission and its response:
 
 ~~~ http-message
@@ -597,8 +602,9 @@ Cache-Control: no-store
 The client polls for the outcome with a form-urlencoded POST
 carrying:
 
-`submission`:
-: REQUIRED. A string. The `submission_id`.
+`submission_id`:
+: REQUIRED. A string. The `submission_id` the MAS returned on
+  acceptance.
 
 A submission is in one of four states:
 
@@ -612,6 +618,17 @@ A submission is in one of four states:
 Only `approved` delivers a Mission. A consumer MUST treat every other
 `status` value, recognized or not, as not approved, mirroring the
 OAuth binding's only-`active` rule.
+
+The interval in force for a submission is the most recent `interval`
+the client received for it, or 5 seconds if it has received none. A
+`pending` status response that carries `interval` replaces the
+interval in force; one that omits it leaves it unchanged, and a value
+that is not a positive integer is ignored. The client MUST wait at
+least the interval in force between submission-status requests for a
+submission, measured from its receipt of the preceding response for
+that submission (the 202 or a status response). A client that polls
+faster may receive the `rate_limited` error code
+({{submission-errors}}).
 
 A resolved submission MUST remain resolvable for a deployment-defined
 window. The reference is never reused.
@@ -697,7 +714,8 @@ A consumer MUST ignore members it does not recognize.
 | `invalid_authority` | 400 | submission | Well-formed Intent, but no valid Authority Set is derivable under policy. |
 | `invalid_mission_intent_evidence` | 400 | submission | An evidence entry of unsupported type or failing its type's verification, or a policy-required evidence type absent from the submission. |
 | `unauthorized` | 401 | submission, join assertion | Request not authenticated. |
-| `join_failed` | 403 | join assertion | The acting token does not join the referenced Mission ({{join-assertion-request}}). |
+| `invalid_join_request` | 400 | join assertion | The request body is not a JSON object carrying `mission_id` and exactly one token form ({{join-assertion-request}}). |
+| `join_failed` | 403 | join assertion | The referenced Mission is not `active`, or the acting token is inactive, carries no `cnf` confirmation, or does not join the referenced Mission ({{join-assertion-request}}). |
 | `not_found` | 404 | submission, join assertion | A referenced submission or Mission does not exist or is not visible to the caller. |
 | `conflict` | 409 | submission (expansion, child creation) | A resolved predecessor or parent whose state or serialization refuses the operation ({{native-carriage}}). |
 | `rate_limited` | 429 | submission, join assertion | Caller is rate-limited. |
@@ -1435,11 +1453,19 @@ The MAS verifies the join centrally, as follows:
    depth from the deployment's actor records; a delegate with no actor
    record under the Mission does not join (rule 5 of {{join-rules}}).
 
-If the acting token does not join, the MAS rejects the request with
-the `join_failed` error code (HTTP 403), in the error format of
-{{submission-errors}}. If the `mission_id` is unknown or not
-visible, the MAS returns the `not_found` error code, preserving the
-anti-oracle property.
+The MAS mints an assertion only for a Mission in the `active` state.
+It responds in the error format of {{submission-errors}}, as follows:
+
+- If the request body is not a JSON object carrying `mission_id` and
+  exactly one of the two token forms, the MAS rejects it with HTTP 400
+  and the `invalid_join_request` error code.
+- If the `mission_id` is unknown or not visible to the caller, the MAS
+  returns the `not_found` error code, preserving the anti-oracle
+  property.
+- If the Mission is visible but not `active`, the acting token is
+  inactive or carries no `cnf` confirmation, or the acting token does
+  not join, the MAS rejects the request with HTTP 403 and the
+  `join_failed` error code.
 
 Visibility on this endpoint is bounded: a Mission is visible to its
 `client_id`, its recorded delegates, and the PEPs and PDPs enrolled
@@ -1471,7 +1497,10 @@ evaluation rather than many.
 On success, the MAS mints a Mission Join Assertion, a signed JWT
 {{RFC7519}}. Its protected header carries the `typ` header parameter
 with the value `mission-join+jwt` and a `kid` header parameter
-resolvable in the MAS's `jwks_uri`. Exact validation of that `typ`,
+resolvable in the MAS's `jwks_uri`. The MAS MUST sign the assertion
+with an algorithm listed in its
+`mission_status_signing_alg_values_supported` metadata member
+({{discovery}}). Exact validation of that `typ`,
 with mutually exclusive validation rules for the artifact profiles,
 implements the substitution defense of Sections 3.11 and 3.12 of
 {{RFC8725}}. The assertion contains the following claims:
@@ -1591,6 +1620,10 @@ mapping checks of rules 3 and 4 of {{join-rules}}:
 
 - the signature, under a key from the MAS's `jwks_uri`, and the `typ`
   header parameter value `mission-join+jwt`;
+- that the `alg` header parameter is listed in the MAS's
+  `mission_status_signing_alg_values_supported`, is accepted by the
+  PDP's own algorithm policy, and suits the key that verifies it
+  (Section 3.1 of {{RFC8725}});
 - that `iss` and the `mission` claim match the referenced Mission's
   `issuer` and `id`; when the assertion's `mission` also carries
   `authority_hash`, that it matches the referenced Mission's
@@ -1957,7 +1990,10 @@ resolved from the MAS metadata document instead:
 
 `mission_status_signing_alg_values_supported`:
 : REQUIRED. A JSON array of strings. Semantics per
-  {{I-D.draft-mcguinness-oauth-mission-status}}.
+  {{I-D.draft-mcguinness-oauth-mission-status}}. At a MAS, the list
+  also governs Mission Join Assertions ({{join-assertion-artifact}}):
+  the MAS signs them only with a listed algorithm, and a PDP MUST
+  reject an assertion whose `alg` is `none` or is not listed.
 
 `mission_lifecycle_endpoint`:
 : REQUIRED. A string containing a URL. Semantics per
@@ -3056,6 +3092,18 @@ shows the denial:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Submission polling and Join Assertion outcomes (#972). The 202 and
+  `pending` status responses carry an `interval`; the client waits at
+  least the interval in force (5 seconds by default) between status
+  requests; the status request parameter is `submission_id`. The
+  join-assertion endpoint mints only for an `active` Mission and
+  defines its outcomes: `invalid_join_request` (400) for a malformed
+  body, `not_found` (404) for an unknown or invisible Mission, and
+  `join_failed` (403) for a non-active Mission, an inactive or unbound
+  token, or a failed join. Join Assertions are signed with an algorithm
+  listed in `mission_status_signing_alg_values_supported`, and a PDP
+  rejects `none` or an unlisted algorithm.
 
 - Join inputs on the wire (#972). Mission Status discloses the
   Mission's `subject`, `client_id`, and entry `delegation` members to
