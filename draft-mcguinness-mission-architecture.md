@@ -1329,36 +1329,52 @@ The same mechanisms, placed on the authority path
 
 ## Propose
 
-The question: how does a user's request become a candidate approved
-task? In OAuth, the boundary is the client side and Intent Shaping
-produces an untrusted Mission Intent
-({{I-D.draft-mcguinness-mission-shaping}}), entering through Pushed
-Authorization Requests {{RFC9126}} or the MAS submission endpoint,
-with any Intent Submission Evidence processed under
-{{I-D.draft-mcguinness-oauth-mission-submission-evidence}}. In
-AAuth, the agent sends the native description and requested tools to
-the Person Server's mission endpoint. The AAuth binding defines no
-Mission Intent or dependency on the shaping profile.
+Question:
+: How does a user's request become a candidate approved task?
+
+Boundary:
+: The client side, in OAuth.
+
+Owners:
+: * Intent Shaping, which produces an untrusted Mission Intent
+    ({{I-D.draft-mcguinness-mission-shaping}}); and
+  * the submission-evidence framework, under which any Intent
+    Submission Evidence is processed
+    ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}).
+
+The Intent enters through Pushed Authorization Requests {{RFC9126}} or
+the MAS submission endpoint. In AAuth, the agent sends the native
+description and requested tools to the Person Server's mission
+endpoint. The AAuth binding defines no Mission Intent or dependency on
+the shaping profile.
 
 ## Approve and Record
 
-The question: how does a proposed task become an approved, committed
-Mission? The boundary is the binding's control point; the approval
-event is where trust is created. Owners: the five bindings
-({{I-D.draft-mcguinness-oauth-mission}},
-{{I-D.draft-mcguinness-mission-authority-server}},
-{{I-D.draft-mcguinness-mission-aauth}},
-{{I-D.draft-mcguinness-mission-uma}},
-{{I-D.draft-mcguinness-mission-gnap}}), Consent Evidence
-({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}) committing
-the disclosure shown to the Approver, and Deferred Approval
-({{I-D.draft-mcguinness-oauth-mission-approval}}), the OAuth
-binding's asynchronous path, with an experimental companion adding an
-in-review narrowing negotiation. The standalone and AAuth bindings are
-natively asynchronous. AAuth's baseline approval commits its exact
-mission blob, not the family Consent Evidence object. Where the
-experimental progressive authorization companion is used, the initial
-approval also consents an authority ceiling for later staged widening
+Question:
+: How does a proposed task become an approved, committed Mission?
+
+Boundary:
+: The binding's control point; the approval event is where trust is
+  created.
+
+Owners:
+: * the five bindings ({{I-D.draft-mcguinness-oauth-mission}},
+    {{I-D.draft-mcguinness-mission-authority-server}},
+    {{I-D.draft-mcguinness-mission-aauth}},
+    {{I-D.draft-mcguinness-mission-uma}},
+    {{I-D.draft-mcguinness-mission-gnap}});
+  * Consent Evidence, committing the disclosure shown to the Approver
+    ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}); and
+  * Deferred Approval
+    ({{I-D.draft-mcguinness-oauth-mission-approval}}), the OAuth
+    binding's asynchronous path, with an experimental companion adding
+    an in-review narrowing negotiation.
+
+The standalone and AAuth bindings are natively asynchronous. AAuth's
+baseline approval commits its exact mission blob, not the family
+Consent Evidence object. Where the experimental progressive
+authorization companion is used, the initial approval also consents an
+authority ceiling for later staged widening
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}).
 
 Who holds the deciding side is a spectrum, not a species: the approval
@@ -1385,25 +1401,31 @@ decision, per the progressive profile's prohibited set
 
 ## Govern
 
-The question: how do consumers observe Mission state, and how does
-authority grow or retire mid-task? The boundary: between the issuer
-and every consumer relying on state. Owners: Status, the signed pull
-surface with a lifecycle endpoint
-({{I-D.draft-mcguinness-oauth-mission-status}}), extended by the
-Status List companion for fleet-scale reliance
-({{I-D.draft-mcguinness-oauth-mission-status-list}}) and by the
-Entry Discharge companion for per-entry completion discharge
-({{I-D.draft-mcguinness-oauth-mission-discharge}}); and Signals, the
-push complement ({{I-D.draft-mcguinness-oauth-mission-signals}}).
+Question:
+: How do consumers observe Mission state, and how does authority grow
+  or retire mid-task?
 
-Further owners: Expansion, widening only via an approved successor
-({{I-D.draft-mcguinness-oauth-mission-expansion}}); Containment,
-event-triggered monotonic narrowing of a live Mission's effective
-authority ({{I-D.draft-mcguinness-oauth-mission-containment}});
-Management, fleet enumeration and bulk lifecycle for operators
-({{I-D.draft-mcguinness-oauth-mission-management}}); and Discovery,
-experimental, binding encountered resources within a pre-consented
-ceiling ({{I-D.draft-mcguinness-mission-discovery}}).
+Boundary:
+: Between the issuer and every consumer relying on state.
+
+Owners:
+: * Status, the signed pull surface with a lifecycle endpoint
+    ({{I-D.draft-mcguinness-oauth-mission-status}}), extended by the
+    Status List companion for fleet-scale reliance
+    ({{I-D.draft-mcguinness-oauth-mission-status-list}}) and by the
+    Entry Discharge companion for per-entry completion discharge
+    ({{I-D.draft-mcguinness-oauth-mission-discharge}});
+  * Signals, the push complement
+    ({{I-D.draft-mcguinness-oauth-mission-signals}});
+  * Expansion, widening only via an approved successor
+    ({{I-D.draft-mcguinness-oauth-mission-expansion}});
+  * Containment, event-triggered monotonic narrowing of a live
+    Mission's effective authority
+    ({{I-D.draft-mcguinness-oauth-mission-containment}});
+  * Management, fleet enumeration and bulk lifecycle for operators
+    ({{I-D.draft-mcguinness-oauth-mission-management}}); and
+  * Discovery, experimental, binding encountered resources within a
+    pre-consented ceiling ({{I-D.draft-mcguinness-mission-discovery}}).
 
 The AAuth binding carries this verb natively through its management
 companion for status, termination, and delegation-tree queries
@@ -1413,44 +1435,65 @@ document ({{I-D.draft-mcguinness-aauth-mission-expiry}}).
 
 ## Enforce Each Action
 
-The question: is this specific action, with these parameters, permitted
-under this Mission now? The boundary: the last controllable point
-between agent and resource. Owners: the runtime profile, the decision
-contract with parameter binding, custody, and fail-closed behavior
-({{I-D.draft-mcguinness-mission-runtime}}); its AuthZEN profile, the
-concrete decision API ({{I-D.draft-mcguinness-mission-authzen}}); the
-runtime evidence companion, the Decision Evidence, Execution Evidence,
-and Refusal Record objects
-({{I-D.draft-mcguinness-mission-runtime-evidence}}). The runtime
-decision composes conjunctively with the other gates: Effective
-Authority Set membership, every applicable cumulative-consumption or
-stateful operational gate, and a required action-bound approval are each
-independently necessary, and none grants, widens, or restores another
-({{I-D.draft-mcguinness-mission-runtime}}, Section "The Runtime
-Decision").
+Question:
+: Is this specific action, with these parameters, permitted under this
+  Mission now?
+
+Boundary:
+: The last controllable point between agent and resource.
+
+Owners:
+: * the runtime profile, the decision contract with parameter binding,
+    custody, and fail-closed behavior
+    ({{I-D.draft-mcguinness-mission-runtime}});
+  * its AuthZEN profile, the concrete decision API
+    ({{I-D.draft-mcguinness-mission-authzen}}); and
+  * the runtime evidence companion, the Decision Evidence, Execution
+    Evidence, and Refusal Record objects
+    ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
+
+The runtime decision composes conjunctively with the other gates:
+Effective Authority Set membership, every applicable
+cumulative-consumption or stateful operational gate, and a required
+action-bound approval are each independently necessary, and none grants,
+widens, or restores another ({{I-D.draft-mcguinness-mission-runtime}},
+Section "The Runtime Decision").
 
 ## Run and Wind Down
 
-The question: how does governed work start, persist, pause, and
-unwind when Mission state changes? The boundary: the operator's
-execution environment around the agent. Owners: the harness, binding
-session continuity to Mission state
-({{I-D.draft-mcguinness-mission-harness}}); Orchestration, unwinding
-in-flight work through reversibility classes and recorded unwind
-plans ({{I-D.draft-mcguinness-mission-orchestration}}).
+Question:
+: How does governed work start, persist, pause, and unwind when Mission
+  state changes?
+
+Boundary:
+: The operator's execution environment around the agent.
+
+Owners:
+: * the harness, binding session continuity to Mission state
+    ({{I-D.draft-mcguinness-mission-harness}}); and
+  * Orchestration, unwinding in-flight work through reversibility
+    classes and recorded unwind plans
+    ({{I-D.draft-mcguinness-mission-orchestration}}).
 
 ## Delegate
 
-The question: how does authority reach a sub-agent without widening?
-The boundary: between principals acting under one approval. Owners:
-Child Delegation, child Missions with lineage, strict-subset
-authority, and cascade revocation
-({{I-D.draft-mcguinness-oauth-mission-child-delegation}}); Offline
-Attenuation, narrower Mission-bound tokens minted off the issuer's
-hot path ({{I-D.draft-mcguinness-oauth-mission-attenuation}}). Both
-build on the actor chain of the OAuth binding's Delegation Within a
-Mission section. Offline attenuation requires the runtime enforcement
-layer: its kill switch is the runtime state re-check.
+Question:
+: How does authority reach a sub-agent without widening?
+
+Boundary:
+: Between principals acting under one approval.
+
+Owners:
+: * Child Delegation, child Missions with lineage, strict-subset
+    authority, and cascade revocation
+    ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}); and
+  * Offline Attenuation, narrower Mission-bound tokens minted off the
+    issuer's hot path
+    ({{I-D.draft-mcguinness-oauth-mission-attenuation}}).
+
+Both build on the actor chain of the OAuth binding's Delegation Within
+a Mission section. Offline attenuation requires the runtime
+enforcement layer: its kill switch is the runtime state re-check.
 
 The chooser: the OAuth binding's token-exchange delegation for an
 execution hop living and dying with the parent's lifecycle; a Child
@@ -1506,27 +1549,40 @@ a durable sub-agent, and offline narrowing take the chooser's rungs.
 
 ## Project
 
-The question: how is one Mission honored in another trust domain? The
-boundary: a trust boundary the origin does not control, where the
-verifier holds no session with the issuer. Owner: Cross-Domain
-Projection, a single-hop grant that carries the Mission's identifier,
-issuer, and authority hash into a partner domain unchanged, where a
-Resource AS mints a local token bounded by the projected authority
-({{I-D.draft-mcguinness-oauth-mission-cross-domain}}). Projection
-preserves authority across the boundary rather than narrowing it to a
-sub-actor, which makes it a distinct verb from Delegate. Downstream
-revocation latency is the local token lifetime.
+Question:
+: How is one Mission honored in another trust domain?
+
+Boundary:
+: A trust boundary the origin does not control, where the verifier
+  holds no session with the issuer.
+
+Owner:
+: Cross-Domain Projection, a single-hop grant that carries the
+  Mission's identifier, issuer, and authority hash into a partner
+  domain unchanged, where a Resource AS mints a local token bounded by
+  the projected authority
+  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
+
+Projection preserves authority across the boundary rather than narrowing
+it to a sub-actor, which makes it a distinct verb from Delegate.
+Downstream revocation latency is the local token lifetime.
 
 ## Continue
 
-The question: how does a Mission's authorization continue, under the
-same approval and constraints, when the acting identity must be
-re-established at each hop or after the original credential is gone?
-The boundary: the seam between authorization continuity and identity
-continuity. Owner: Mission Continuation
-({{I-D.draft-mcguinness-oauth-mission-continuation}}), the
-authorization-continuity profile, which keeps three easily conflated
-things apart:
+Question:
+: How does a Mission's authorization continue, under the same approval
+  and constraints, when the acting identity must be re-established at
+  each hop or after the original credential is gone?
+
+Boundary:
+: The seam between authorization continuity and identity continuity.
+
+Owner:
+: Mission Continuation
+  ({{I-D.draft-mcguinness-oauth-mission-continuation}}), the
+  authorization-continuity profile.
+
+The profile keeps three easily conflated things apart:
 
 - Identity continuity, who is acting and how that identity
   legitimately continues, rides a transport rather than this profile.
@@ -1559,22 +1615,36 @@ rather than replacing it.
 
 ## Prove
 
-The question: what can a party outside the deployment verify about
-what was approved and done? The boundary: across trust domains and
-time; the verifier holds no session with the issuer. Owners: Consent
-Evidence ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}});
-the Mandate, a signed, portable statement that authorizes nothing
-({{I-D.draft-mcguinness-mission-mandate}}); the Mission Receipt,
-portable evidence of an action taken under a Mission
-({{I-D.draft-mcguinness-mission-runtime}}); Audit Transparency, the
-append-only evidence log ({{I-D.draft-mcguinness-mission-audit}}).
+Question:
+: What can a party outside the deployment verify about what was
+  approved and done?
+
+Boundary:
+: Across trust domains and time; the verifier holds no session with
+  the issuer.
+
+Owners:
+: * Consent Evidence
+    ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}});
+  * the Mandate, a signed, portable statement that authorizes nothing
+    ({{I-D.draft-mcguinness-mission-mandate}});
+  * the Mission Receipt, portable evidence of an action taken under a
+    Mission ({{I-D.draft-mcguinness-mission-runtime}}); and
+  * Audit Transparency, the append-only evidence log
+    ({{I-D.draft-mcguinness-mission-audit}}).
 
 ## Analyze
 
-The question: which components must be trusted, and what does each
-one's compromise cost? The boundary: the whole system. Owner: the
-Mission Security Model
-({{I-D.draft-mcguinness-mission-security-model}}).
+Question:
+: Which components must be trusted, and what does each one's
+  compromise cost?
+
+Boundary:
+: The whole system.
+
+Owner:
+: The Mission Security Model
+  ({{I-D.draft-mcguinness-mission-security-model}}).
 
 # Mission Invariants {#invariants}
 
