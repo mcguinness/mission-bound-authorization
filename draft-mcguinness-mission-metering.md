@@ -657,7 +657,8 @@ machinery. Within an exclusivity group, the first permitted
 consequential action matching a selector latches the group to that
 selector, atomically with the permit. From then on the PDP MUST
 refuse a consequential action matching any other selector of the
-same group, under any Mission bound to the group
+same group, under any Mission bound to the group, except an action
+within the scope of a relaxation recorded for that Mission
 ({{exclusivity-across-missions}}). The latch is per group, not per
 Mission, and is PDP-side operational state like a consumption counter
 ({{metering}}).
@@ -747,9 +748,12 @@ never a set of independent copies.
   holds usable authority, beyond the lifetime of the Mission whose
   approval created the group.
 - **Relaxation.** An approval does not undo an action already
-  executed. A group stays latched unless an Approver authorized to
-  relax the originating group explicitly approves a relaxation scoped
-  to named Missions or branches. The relaxation's consent disclosure
+  executed, and the latch remains. What a relaxation changes is
+  enforcement: an Approver authorized to relax the originating group
+  may explicitly approve a relaxation scoped to named Missions or
+  branches and to named authority, and the PDP then permits that
+  authority under those Missions despite the latch. The relaxation's
+  consent disclosure
   MUST name the group and its latched selector, the relevant
   execution history and any unresolved permits, the additional
   authority the relaxation enables, and the Missions or branches it
