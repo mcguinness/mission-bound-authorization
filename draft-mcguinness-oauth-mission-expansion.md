@@ -2054,6 +2054,11 @@ composition with the issuance flow.
 
 \[\[ To be removed from the final specification ]]
 
+- Interactive completion has a defined handoff: the token exchange
+  answers `mission_interaction_required` with a `mission_continuation`
+  handle, the client pushes an RFC 9126 request carrying it, and code
+  redemption activates the successor; the handle names the durable
+  operation and each `request_uri` is a temporary reference.
 - An in-ceiling drawdown under the progressive authorization companion
   completes synchronously in the token-exchange response, a third
   issuance point; fresh-consent expansion still completes deferred or
