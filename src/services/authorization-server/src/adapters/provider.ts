@@ -3339,11 +3339,10 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // established from the deployment's trusted catalog, keyed on the
         // recipients; a source member on the request body is ignored, exactly
         // as `authority_source` is never taken from client assertion.
-        const template = createTemplate(
-          opts.templateStore,
-          body as unknown as CreateTemplateInput,
-          kernel.authoritySourceOptions(),
-        );
+        const template = createTemplate(opts.templateStore, body as unknown as CreateTemplateInput, {
+          ...kernel.authoritySourceOptions(),
+          ...(opts.dispatchPolicies ? { dispatchPolicies: opts.dispatchPolicies } : {}),
+        });
         ctx.status = 201;
         ctx.body = {
           template_id: template.id,
@@ -3518,8 +3517,8 @@ export function childErrorCode(reason: ChildDenialReason): string {
  * @spec mission-template#dispatch-refusals — map a symbolic dispatch denial
  * reason to its layered OAuth error code: `dispatcher_not_allowed`/
  * `agent_not_selected`/`recipient_not_allowed`/`template_not_active`/
- * `review_overdue` ride `access_denied` (`agent_not_selected` and
- * `review_overdue` are implementation-local, D205);
+ * `review_overdue`/`dispatch_policy_changed` ride `access_denied`
+ * (`agent_not_selected` and `review_overdue` are implementation-local, D205);
  * `out_of_template_ceiling`/`dispatch_prohibited_class`/`max_active_exceeded`/
  * `rate_exceeded` ride `invalid_request`.
  */
@@ -3530,6 +3529,7 @@ function dispatchErrorCode(reason: DispatchReason): "invalid_request" | "access_
     case "recipient_not_allowed":
     case "template_not_active":
     case "review_overdue":
+    case "dispatch_policy_changed":
       return "access_denied";
     default: // out_of_template_ceiling, dispatch_prohibited_class, max_active_exceeded, rate_exceeded
       return "invalid_request";

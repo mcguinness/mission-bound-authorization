@@ -226,7 +226,7 @@ describe("activity-log task-run graph: template -> dispatched Mission -> hop -> 
       issuer: "https://as.test",
       template_version: "1",
       template_hash: "sha-256:tmpl",
-      dispatch_policy: "dp-1",
+      dispatch_policy: { id: "dp-1", version: "1", digest: `sha-256:${"A".repeat(43)}` },
     };
     const parentRef = {
       id: "msn_root",

@@ -157,15 +157,25 @@ async function dispatch(params: {
   });
 }
 
+/** A held Dispatch Policy snapshot; `select_agent` is its Agent selection rule (@spec mission#standing-consent-bases). */
+const heldPolicy = (id: string, rule: { select_agent?: string } = {}) => ({
+  version: "1",
+  content_type: "application/json",
+  content: JSON.stringify({ id, ...rule }),
+});
+
 beforeAll(async () => {
   as = await buildAuthorizationServer({
     issuer: ISSUER,
     allowHeadlessAdjudication: true,
-    // @spec mission-template#the-mission-template — deployment Dispatch
-    // Policies naming an Agent selection rule for multi-Agent templates.
+    // @spec mission-template#the-mission-template, mission#standing-consent-bases
+    // — deployment Dispatch Policies: each held snapshot (whose digest a
+    // template commits) and, for multi-Agent templates, an Agent selection rule.
     dispatchPolicies: {
-      "test-route-a1": { selectAgent: ({ agents }) => (agents.includes("agent-A1") ? "agent-A1" : undefined) },
-      "test-route-unlisted": { selectAgent: () => "governed-agent" },
+      "test-route-a1": heldPolicy("test-route-a1", { select_agent: "agent-A1" }),
+      "test-route-unlisted": heldPolicy("test-route-unlisted", { select_agent: "governed-agent" }),
+      "test-no-rule": heldPolicy("test-no-rule"),
+      "wide-reconciliation": heldPolicy("wide-reconciliation"),
     },
   });
   asServer = as.provider.listen(PORT);
@@ -337,7 +347,7 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
       issuer: ISSUER,
       approver: { iss: ISSUER, sub: "bob" },
       ceiling: DERIVATION_POLICY.ceiling,
-      dispatch_policy: "wide-reconciliation",
+      dispatch_policy: { id: "wide-reconciliation", version: "1" },
       dispatchers: ["ap-agent"],
       recipients: { subjects: [{ iss: ISSUER, sub: "bob" }], agents: ["subagent-invoice-extractor"] },
       per_instance_lifetime_s: 900,
@@ -419,7 +429,7 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
   it("with several listed Agents, the Dispatch Policy selects the Agent, a retry keeps it, and the token is bound to the Dispatcher", async () => {
     const created = await createTemplateAdmin({
       ...readOnlyTemplateBody(),
-      dispatch_policy: "test-route-a1",
+      dispatch_policy: { id: "test-route-a1", version: "1" },
       recipients: { subjects: [{ iss: ISSUER, sub: "bob" }], agents: ["subagent-invoice-extractor", "agent-A1"] },
     });
     const createdBody = (await created.json()) as { template_id: string };
@@ -441,9 +451,18 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
   });
 
   it("agent_not_selected: several listed Agents and no Dispatch Policy rule refuses the Dispatch with access_denied", async () => {
+    // @spec mission#standing-consent-bases — template consent naming a policy
+    // the issuer does not hold is refused: it cannot commit unheld content.
+    const unheld = await createTemplateAdmin({
+      ...readOnlyTemplateBody(),
+      dispatch_policy: { id: "no-such-policy", version: "1" },
+    });
+    const unheldBody = (await unheld.json()) as { error?: string };
+    expect(unheld.status, JSON.stringify(unheldBody)).toBe(400);
+    expect(unheldBody.error).toBe("invalid_request");
     const created = await createTemplateAdmin({
       ...readOnlyTemplateBody(),
-      dispatch_policy: "no-such-policy",
+      dispatch_policy: { id: "test-no-rule", version: "1" },
       recipients: { subjects: [{ iss: ISSUER, sub: "bob" }], agents: ["subagent-invoice-extractor", "agent-A1"] },
     });
     const { template_id } = (await created.json()) as { template_id: string };
@@ -458,7 +477,7 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
   it("recipient_not_allowed: a Dispatch Policy that selects an unlisted Agent is refused", async () => {
     const created = await createTemplateAdmin({
       ...readOnlyTemplateBody(),
-      dispatch_policy: "test-route-unlisted",
+      dispatch_policy: { id: "test-route-unlisted", version: "1" },
       recipients: { subjects: [{ iss: ISSUER, sub: "bob" }], agents: ["subagent-invoice-extractor", "agent-A1"] },
     });
     const { template_id } = (await created.json()) as { template_id: string };

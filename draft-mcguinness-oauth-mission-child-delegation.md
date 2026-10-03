@@ -172,6 +172,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-progressive:
+    title: "Mission Progressive Authorization for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -604,11 +612,15 @@ commit:
 
 The child-creation token exchange completes in one of three modes,
 the family's shared completion pattern for Mission-creating
-exchanges. Child creation keeps the synchronous mode that Mission
-Expansion does not define: an expansion always widens and always
-takes fresh consent, so it completes only deferred or interactively
-({{I-D.draft-mcguinness-oauth-mission-expansion}}), while a Child
-Mission is always a creation and a strict subset of its parent, so a
+exchanges. Child creation keeps the synchronous mode that an
+ordinary, fresh-consent Mission Expansion does not define: such an
+expansion always widens and takes fresh consent, so it completes only
+deferred or interactively
+({{I-D.draft-mcguinness-oauth-mission-expansion}}). The one
+synchronous expansion is the progressive authorization companion's
+policy-adjudicated drawdown
+({{I-D.draft-mcguinness-oauth-mission-progressive}}). A Child Mission
+is always a creation and a strict subset of its parent, so a
 policy-permitted synchronous completion is unambiguous
 ({{strict-subset}}). The deferred token
 response is a completion mode, not a replacement:
@@ -1096,8 +1108,9 @@ approval actually committed.
 
 Where the entry carries a
 `child_creation_policy`, `activation` carries that policy's `id`,
-`version`, and `digest` and this creation's own delegation event
-identifier (above) as `activation_event_id`. A policy snapshot that
+`version`, and `digest` as `policy_id`, `policy_version`, and
+`policy_digest`, and this creation's own delegation event identifier
+(above) as `activation_event_id`. A policy snapshot that
 does not match `digest` denies child creation with `policy_denied`
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Standing-Consent
 Bases"). Where the entry carries no `child_creation_policy`, the
@@ -2183,15 +2196,19 @@ apply unchanged.
 
 \[\[ To be removed from the final specification ]]
 
+- The completion comparison names the progressive authorization
+  companion's synchronous drawdown as the one synchronous expansion.
+
 - Child Missions and carryover replacements share their ancestors'
   exclusivity latches under the metering profile.
 
 - `child_creation_policy` is an activation policy reference (`id`,
   `version`, `digest`) under the issuance profile's Standing-Consent
-  Bases; `root_commitment` is its `digest`, `activation` carries the
-  digest, and a mismatched snapshot denies child creation with
-  `policy_denied`. Creation against the delegation entry itself, with
-  no `child_creation_policy`, is unchanged.
+  Bases; `root_commitment` is its `digest`, `activation` carries it as
+  `policy_id`, `policy_version`, and `policy_digest`, and a mismatched
+  snapshot denies child creation with `policy_denied`. Creation against
+  the delegation entry itself, with no `child_creation_policy`, is
+  unchanged.
 
 - Approval rendering of child creation shows `max_children` as a
   concurrency limit, `max_child_depth`, and the per-child derivation
