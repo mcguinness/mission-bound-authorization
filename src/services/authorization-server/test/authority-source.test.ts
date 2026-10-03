@@ -1248,6 +1248,9 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
     expect(template.authority_source).toEqual({ type: "user_delegated" });
     expect(store.sourceBinding(template.id, { iss: ISS, sub: "alice" }, "ap-agent")?.rootId).toBe("alice-delegated");
     expect(store.sourceBinding(template.id, { iss: ISS, sub: "bob" }, "ap-agent")?.rootId).toBe("bob-delegated");
+    // A recipient listed twice is one pair with one root, not a refusal.
+    const twice = consent(["alice", "alice"]);
+    expect(store.sourceBinding(twice.id, { iss: ISS, sub: "alice" }, "ap-agent")?.rootId).toBe("alice-delegated");
     const dispatch = (sub: string) =>
       dispatchFromTemplate(kernel, store, {
         templateId: template.id,

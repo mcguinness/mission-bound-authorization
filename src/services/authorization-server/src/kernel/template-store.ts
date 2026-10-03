@@ -259,9 +259,12 @@ export class TemplateStore {
           );
         // @spec mission#authority-sources (#827): every recipient pair's
         // root, in the same transaction as the template it was consented for.
+        // A recipient listed twice is one pair, resolved to one root, so a
+        // repeat is the same row (ON CONFLICT DO NOTHING keeps the first).
         const bind = this.db.prepare(
           `INSERT INTO template_source_bindings (template_id, subject_iss, subject_sub, agent, binding_json)
-           VALUES (?, ?, ?, ?, ?)`,
+           VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT DO NOTHING`,
         );
         for (const pair of input.source_bindings) {
           bind.run(input.id, pair.subject.iss, pair.subject.sub, pair.agent, JSON.stringify(pair.binding));
