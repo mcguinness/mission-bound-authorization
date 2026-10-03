@@ -5386,16 +5386,16 @@ validated Mission Intent, the client's authority proposal in
 narrowing mode (or configured candidates when there is no proposal),
 the applicable authority source ceiling, the capability catalog's
 per-action properties, and any recorded model output. The output is
-the Authority Set committed by
-`authority_hash`; `policy_version` identifies the policy used. The
-policy is not transmitted; its identifier and published
-Intent-to-Authority-Set fixtures let a partner review outcomes.
+the Authority Set committed by `authority_hash`; `policy_version`
+identifies the policy used. The policy is not transmitted; its
+identifier and published Intent-to-Authority-Set fixtures let a
+partner review outcomes.
 
 Reproducing a derivation requires the same inputs and the retained
 policy and catalog versions, not just the identifier of a mutable
 configuration. Replay uses a model's retained output and never reruns
 the model. Derivation is mechanical: a model may suggest an Intent or
-a proposal, or supply a recorded input that refuses or narrows, and
+a proposal, or contribute a recorded input that refuses or narrows, and
 does not make the approval-time narrowing decision.
 
 ## Properties a Derivation Policy Holds
@@ -5406,8 +5406,8 @@ derivation.
 
 - **Deterministic.** The same Intent, proposal, ceiling, catalog, and
   recorded model output derive the same Authority Set, so
-  `policy_version` can serve as an
-  audit correlator ({{authorization-derivation}}).
+  `policy_version` can serve as an audit correlator
+  ({{authorization-derivation}}).
 - **Narrowing only.** Every derived entry is a subset of some proposed
   entry of the same type, under that type's own relation
   ({{authority-proposal}}, {{subset}}); in configured-mapping mode the
