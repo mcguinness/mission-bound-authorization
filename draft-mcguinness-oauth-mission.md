@@ -1161,10 +1161,14 @@ The Mission records the policy version in force as `policy_version`
 ({{mission-record}}), an opaque audit correlator; the policy itself
 is not conveyed.
 
-Generative derivation, with model assistance over the structured
-inputs above, is not one of this document's modes; a deployment that
-uses it as a local-policy extension stays bound by the Intent
-bounds, the prose boundary below, and the recording rule above.
+Generative derivation is not one of this document's modes. As a
+local-policy extension, a model's output can be a recorded input to
+the AS's deterministic derivation policy, together with the model's
+identifier and version. That input can cause refusal or further
+narrow the candidate authority the selected mode and policy otherwise
+permit. The AS MUST NOT let it supply or widen authority. Each type's
+subset rule ({{subset}}), the Intent bounds, and the prose boundary
+below still apply.
 
 A `target_resources` entry the deployment does not recognize is, by
 deployment policy, either omitted from the Authority Set or refused
@@ -5380,16 +5384,19 @@ A deployment retains a versioned derivation policy with its ceiling,
 configured mappings, and issuance limits. Its inputs include a
 validated Mission Intent, the client's authority proposal in
 narrowing mode (or configured candidates when there is no proposal),
-the applicable authority source ceiling, and the capability catalog's
-per-action properties. The output is the Authority Set committed by
+the applicable authority source ceiling, the capability catalog's
+per-action properties, and any recorded model output. The output is
+the Authority Set committed by
 `authority_hash`; `policy_version` identifies the policy used. The
 policy is not transmitted; its identifier and published
 Intent-to-Authority-Set fixtures let a partner review outcomes.
 
 Reproducing a derivation requires the same inputs and the retained
 policy and catalog versions, not just the identifier of a mutable
-configuration. Derivation is mechanical: a model may suggest an Intent
-or a proposal, and does not make the approval-time narrowing decision.
+configuration. Replay uses a model's retained output and never reruns
+the model. Derivation is mechanical: a model may suggest an Intent or
+a proposal, or supply a recorded input that refuses or narrows, and
+does not make the approval-time narrowing decision.
 
 ## Properties a Derivation Policy Holds
 
@@ -5397,8 +5404,9 @@ The five properties below restate, for a policy author, what
 {{authorization-derivation}} and the rules it cites require of a
 derivation.
 
-- **Deterministic.** The same Intent, proposal, ceiling, and catalog
-  derive the same Authority Set, so `policy_version` can serve as an
+- **Deterministic.** The same Intent, proposal, ceiling, catalog, and
+  recorded model output derive the same Authority Set, so
+  `policy_version` can serve as an
   audit correlator ({{authorization-derivation}}).
 - **Narrowing only.** Every derived entry is a subset of some proposed
   entry of the same type, under that type's own relation
