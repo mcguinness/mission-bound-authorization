@@ -168,6 +168,49 @@ Coverage changes follow the same discipline:
 - A change to a clause a row quotes re-quotes that row in the same
   commit, and a changed draft is re-pinned in `source.specs`.
 
+## New Draft Admission
+
+This test applies to every proposed new draft, before its sketch PR.
+Existing drafts, including Lab drafts, stay under their own exit gates
+and the Consolidation Policy.
+
+Every proposal states:
+
+- the contract or distinct explanatory purpose it adds: a protocol
+  exchange, a validation rule, an observation surface, an evidence
+  format, or, for a guide, what it explains and for which audience;
+  and
+- why a separate document, rather than a section of an existing draft,
+  should host it.
+
+A proposal that adds a protocol mechanism also answers:
+
+1. Which independently implementable parties exchange it?
+2. What must cross their trust or interoperability boundary?
+3. Which existing Mission mechanism or underlying protocol was tried,
+   and why can it not express this?
+4. Which approval, authority, or lifecycle property does it change,
+   enforce, observe, or verify (the Architecture's transition table),
+   or why does it touch none?
+
+Outcomes differ by failure. A proposal that fails only the
+separate-document justification lands as a section of an existing
+draft, Architecture text, implementation guidance, or an example. A
+mechanism that duplicates an existing one or lacks a coherent contract
+is revised, deferred, or declined; moving it into another document does
+not resolve that.
+
+Examples:
+
+- A guide such as the Security Model passes on its explanatory purpose
+  and audience; the protocol questions do not apply.
+- A validation profile passes on its validation contract and names the
+  property it verifies.
+- An observation protocol, such as a status query, answers the protocol
+  questions with the property it observes and no state change.
+- A proposal that duplicates an existing mechanism is revised,
+  deferred, or declined, not relocated.
+
 ## Maintenance Classes Convention
 
 `family-manifest.json`'s `maintenance` field states how responsively
