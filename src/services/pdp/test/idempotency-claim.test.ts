@@ -34,6 +34,7 @@ import {
 } from "../src/idempotency-claims.js";
 import { MISSION_RESOURCE_ACCESS_TYPE, type MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
+import { decisionCacheKey } from "../src/projections.js";
 import { EXECUTION_EVIDENCE_MEDIA_TYPE, signEvidenceEnvelope } from "../src/runtime-evidence-integrity.js";
 import { RUNTIME_POSTURE } from "../src/runtime-posture.js";
 import { CLAIM_OWNER, freshKey, statementWithPrivilegedAdministration } from "./claim-fixture.js";
@@ -136,24 +137,27 @@ interface RequestOptions {
   subIss?: string;
   actor?: NonNullable<EvaluationRequest["context"]["actor"]>;
   audience?: string;
-  resource?: EvaluationRequest["resource"];
+  /** The target object; the request's `resource.properties.audience` comes from `audience`. */
+  resource?: { type: string; id: string; properties?: { vendor_id?: string } };
+  /** The PEP's Mission state observation; defaults to a `fresh` read at the clock's instant. */
+  observation?: NonNullable<EvaluationRequest["context"]["mission_state_observation"]>;
 }
 
 function request(c: Clock, o: RequestOptions = {}): EvaluationRequest {
+  const target = o.resource ?? { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } };
   return {
     subject: { id: o.sub ?? "alice", properties: { iss: o.subIss ?? "https://as.test" } },
-    resource: o.resource ?? { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
+    resource: { ...target, properties: { ...target.properties, audience: o.audience ?? RESOURCE } },
     action: {
       name: o.action ?? "payments:payment.execute",
       ...(o.key === null ? {} : { properties: { idempotency_key: o.key ?? freshKey() } }),
     },
     context: {
-      audience: o.audience ?? RESOURCE,
       mission: { id: o.missionId ?? "msn_917", issuer: "https://as.test" },
       actor: o.actor ?? { client_id: "ap-agent" },
       action_class: o.actionClass ?? "irreversible_action",
       parameter_digest: o.digest ?? "sha-256:operation-1",
-      freshness: { observed_at: c.now().toISOString(), source: "status" },
+      mission_state_observation: o.observation ?? { state: "active", mode: "fresh", freshness_at: c.now().toISOString() },
       ...(o.phase !== undefined ? { action_phase: o.phase } : {}),
     },
   };
@@ -170,7 +174,7 @@ function options(claims: IdempotencyClaimDomain, c: Clock, over: Partial<Evaluat
     now: c.now,
     stalenessBound,
     relationForAction: fixtureRelation,
-    allowedFreshnessSources: new Set(["status"]),
+    stateSourcePlacement: "pep" as const,
     evidence: EMITTER,
     claims,
     requester: REQUESTER,
@@ -528,6 +532,65 @@ describe("PDP idempotency claim (@spec runtime#idempotency, #917)", () => {
         expect(again.context.next_action, label).toBe("retry");
       }
       claims.close();
+    });
+  });
+
+  // @spec authzen#projections (#1004): "State generation is cache-relevant;
+  // observation telemetry never is." The PEP's observation contributes its
+  // state generation (`state`, `version`) to the cache key, never when or
+  // how it was read.
+  describe("the cache key excludes observation telemetry and keeps the state generation (@spec authzen#projections, #1004)", () => {
+    /** A `cached` observation read at `atMs`, relying on a status response issued then. */
+    const cachedAt = (atMs: number, over: Record<string, unknown> = {}) =>
+      ({
+        state: "active",
+        version: 1,
+        mode: "cached",
+        freshness_at: new Date(atMs).toISOString(),
+        mission_status_issued_at: new Date(atMs).toISOString(),
+        mission_status_expires_at: new Date(atMs + 60_000).toISOString(),
+        ...over,
+      }) as NonNullable<EvaluationRequest["context"]["mission_state_observation"]>;
+
+    it("a refreshed observation (new freshness_at, issued and expiry timestamps and assertion, same state and version) leaves the cache key unchanged", () => {
+      const c = clock();
+      const key = freshKey();
+      const first = request(c, { key, observation: cachedAt(T0, { assertion: "status-response-1" }) });
+      const refreshed = request(c, { key, observation: cachedAt(T0 + 1_000, { assertion: "status-response-2" }) });
+      expect(decisionCacheKey(refreshed, view(), "model-917")).toBe(decisionCacheKey(first, view(), "model-917"));
+      // `mode` says how the PEP obtained state, not which state: a retry that
+      // reads the source synchronously this time is still the same decision.
+      const synchronous = request(c, { key, observation: cachedAt(T0 + 1_000, { mode: "fresh" }) });
+      expect(decisionCacheKey(synchronous, view(), "model-917")).toBe(decisionCacheKey(first, view(), "model-917"));
+    });
+
+    it("so a retry carrying a refreshed observation is still #917's retransmission of the prior permit", async () => {
+      const c = clock();
+      const { open } = domainOnFile(c);
+      const claims = open();
+      const key = freshKey();
+      const first = await evaluate(
+        request(c, { key, observation: cachedAt(T0) }),
+        options(claims, c, { consumptionStatus: unconsumed }),
+      );
+      expect(first.decision, JSON.stringify(first.context)).toBe(true);
+      // The response was lost; the PEP retries one second later on a newer status response.
+      c.set(T0 + 1_000);
+      const again = await evaluate(
+        request(c, { key, observation: cachedAt(T0 + 1_000) }),
+        options(claims, c, { consumptionStatus: unconsumed }),
+      );
+      expect(JSON.stringify(again)).toBe(JSON.stringify(first));
+      claims.close();
+    });
+
+    it("a changed state generation changes the cache key: the observation's state or version, or the PDP's tracked version", () => {
+      const c = clock();
+      const key = freshKey();
+      const base = decisionCacheKey(request(c, { key, observation: cachedAt(T0) }), view(), "model-917");
+      expect(decisionCacheKey(request(c, { key, observation: cachedAt(T0, { version: 2 }) }), view(), "model-917")).not.toBe(base);
+      expect(decisionCacheKey(request(c, { key, observation: cachedAt(T0, { state: "suspended" }) }), view(), "model-917")).not.toBe(base);
+      expect(decisionCacheKey(request(c, { key, observation: cachedAt(T0) }), view({ version: 2 }), "model-917")).not.toBe(base);
     });
   });
 

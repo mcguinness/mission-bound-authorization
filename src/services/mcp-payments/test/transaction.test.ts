@@ -70,10 +70,10 @@ const VIEW: MissionView = {
 };
 
 /** @spec runtime#state-freshness: a synchronous live read, freshness-stamped
- *  at this read (Finding 1); `allowedFreshnessSources` below declares "load_view" as trusted. */
+ *  at this read (Finding 1), under the published `pep` placement. */
 const loadView = (ref: { id: string; issuer: string }) =>
   ref.id === VIEW.id && ref.issuer === VIEW.issuer
-    ? { view: VIEW, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+    ? { view: VIEW, observation: { state: VIEW.state, version: VIEW.version, mode: "fresh", freshness_at: new Date().toISOString() } }
     : undefined;
 /**
  * @spec RFC 9449 — the presenter's REAL key. A transaction credential is only
@@ -181,7 +181,6 @@ function build(
     modelId,
     loadView,
     instanceEpoch: "epoch-1",
-    allowedFreshnessSources: new Set(["load_view"]),
     ...(gated
       ? { requiresActionApproval: (action: string) => action === "payments:remittance.send", maxApprovalAgeSeconds: 300 }
       : {}),
@@ -1215,52 +1214,47 @@ d("M5 transaction-assurance tier", () => {
         }
       ).lease_expires_at;
 
-    let permit: Decision | undefined;
-    const bounded = build({
-      decide: async (req, options) => {
-        permit = await EVIDENCE_KEYS.decide(req, options);
-        return permit;
-      },
-    });
-    const started = Date.now();
-    const res = await bounded.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
-    expect(res.ok, JSON.stringify(res)).toBe(true);
-    const leaseEnd = leaseEndFor(bounded, (res.result as { op_key: string }).op_key);
-    const validUntil = Date.parse((permit?.context.conditions as { valid_until: string }).valid_until);
-    expect(leaseEnd).toBeLessThanOrEqual(validUntil);
-    expect(leaseEnd).toBeLessThanOrEqual(started + (published as number) * 1000);
-    expect(leaseEnd).toBeGreaterThan(started);
-
-    // A permit valid for less than the published maximum wins: the lease ends
-    // with the authorization, not the full 30 seconds after this crossing
-    // began.
-    let shortValidUntil = 0;
-    const shortLived = build({
-      decide: async (req, options) => {
-        const decided = await EVIDENCE_KEYS.decide(req, options);
-        shortValidUntil = Date.now() + 5_000;
-        return {
-          ...decided,
-          context: {
-            ...decided.context,
-            conditions: {
-              ...(decided.context.conditions as Record<string, unknown>),
-              valid_until: new Date(shortValidUntil).toISOString(),
+    // One injected instant for the engine and every assertion (#908): the
+    // lease starts at the engine's own clock read, so a reference instant
+    // read separately by the test can land in a different millisecond.
+    const clock = new Date();
+    const at = clock.getTime();
+    /** A permit whose `valid_until` is the given instant, otherwise the PDP's own. */
+    const permitValidUntil = (validUntilMs: number) =>
+      build({
+        now: () => clock,
+        decide: async (req, options) => {
+          const decided = await EVIDENCE_KEYS.decide(req, options);
+          return {
+            ...decided,
+            context: {
+              ...decided.context,
+              conditions: {
+                ...(decided.context.conditions as Record<string, unknown>),
+                valid_until: new Date(validUntilMs).toISOString(),
+              },
             },
-          },
-        } as Decision;
-      },
-    });
-    const shortStart = Date.now();
+          } as Decision;
+        },
+      });
+
+    // The published maximum wins: a permit valid well past it does not
+    // extend the lease beyond the published 30 seconds.
+    const longLived = permitValidUntil(at + 120_000);
+    const res = await longLived.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
+    expect(res.ok, JSON.stringify(res)).toBe(true);
+    expect(leaseEndFor(longLived, (res.result as { op_key: string }).op_key)).toBe(at + (published as number) * 1000);
+
+    // The permit's validity wins: a permit valid for less than the published
+    // maximum ends the lease with the authorization.
+    const shortLived = permitValidUntil(at + 5_000);
     const short = await shortLived.server.callTransactionTool(
       "execute_wire_transfer",
       { invoice_id: "inv-1", idempotency_key: idem() },
       TOKEN,
     );
     expect(short.ok, JSON.stringify(short)).toBe(true);
-    const shortLeaseEnd = leaseEndFor(shortLived, (short.result as { op_key: string }).op_key);
-    expect(shortLeaseEnd).toBeLessThanOrEqual(shortValidUntil);
-    expect(shortLeaseEnd).toBeLessThan(shortStart + (published as number) * 1000);
+    expect(leaseEndFor(shortLived, (short.result as { op_key: string }).op_key)).toBe(at + 5_000);
   });
 });
 

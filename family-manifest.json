@@ -211,6 +211,7 @@
    "role": "companion",
    "spec_maturity": "experimental",
    "maintenance": "frozen-until-upstream-release",
+   "maintenance_exception": "2026-10-02 (#838): the terminate response is the full status representation; status carries token_residual once terminated, with its members defined; idempotency equivalence covers caller, PS, mission path target and the parsed body, and a replay repeats the committed receipt with a fresh observation; examples are validated by scripts/check-aauth-management-examples.mjs. No AAuth wire member changed. The frozen-until-upstream-release text-fix policy is otherwise unchanged.",
    "group": "lifecycle",
    "verbs": [
     "govern"
@@ -280,7 +281,7 @@
    "verbs": [
     "analyze"
    ],
-   "summary": "The single structural view: the delegated-authority-layer thesis, a Mission's life end to end, the seven invariants, the substrate interface, the verb spine, the Mission Assurance Levels, and the Deployment Profile.",
+   "summary": "The single structural view: the delegated-authority-layer thesis, a Mission's life end to end, the authority path and the transition each mechanism acts on, the seven invariants, the substrate interface, the verb spine, the Mission Assurance Levels, and the Deployment Profile.",
    "pull_when": "Before adopting anything: the Mission model, invariants, and assurance levels the rest cite.",
    "normative_references": [],
    "adoption_requires": [],
@@ -1672,6 +1673,7 @@
     "draft-mcguinness-oauth-mission-discharge",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-issuance-grant",
+    "draft-mcguinness-oauth-mission-progressive",
     "draft-mcguinness-oauth-mission-signals",
     "draft-mcguinness-oauth-mission-status",
     "draft-mcguinness-oauth-mission-submission-evidence"

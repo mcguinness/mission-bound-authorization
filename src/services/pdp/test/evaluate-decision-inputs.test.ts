@@ -40,10 +40,9 @@ const view = (over: Partial<MissionView> = {}): MissionView => ({
 
 const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => ({
   subject: { id: "alice" },
-  resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
+  resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
   action: { name: "payments:invoice.read" },
   context: {
-    audience: RESOURCE,
     mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
   },
   ...over,
@@ -84,7 +83,7 @@ describe("Actor context: a malformed act chain entry is refused (@spec runtime#i
       act: [{ sub: "agent-1" }] as unknown as ContextActor["act"],
     };
     const dec = await evaluate(
-      req({ context: { audience: RESOURCE, mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" }, actor: malformedActor } }),
+      req({ context: { mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" }, actor: malformedActor } }),
       optsWith({ checkWithContext: async () => true } as unknown as Fga),
     );
     expect(dec.decision).toBe(false);

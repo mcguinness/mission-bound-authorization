@@ -1,5 +1,5 @@
 /**
- * @spec authzen#pdp-request (envelope binding, context.audience rule)
+ * @spec authzen#pdp-request (envelope binding, resource.properties.audience rule)
  * @spec authzen#denial-response, authzen#runtime-denial-classification
  * @spec runtime (abstract decision contract)
  *
@@ -31,7 +31,7 @@ import {
 } from "@mission/core";
 import { randomUUID } from "node:crypto";
 import { getTracer } from "@mission/telemetry";
-import { SignJWT, type CryptoKey } from "jose";
+import { SignJWT, type CryptoKey, type JWTVerifyGetKey } from "jose";
 import type {
   DecisionEvidenceEmitter,
   DecisionEvidenceObject,
@@ -62,7 +62,14 @@ import {
   vendorConstraintSatisfied,
 } from "./policy-view.js";
 import { permitDeadline } from "./permit-deadline.js";
-import { allowsNoActiveFreshness, RUNTIME_POSTURE, reversibleWritePermitMaxSeconds, type StalenessBound } from "./runtime-posture.js";
+import {
+  allowsNoActiveFreshness,
+  RUNTIME_POSTURE,
+  reversibleWritePermitMaxSeconds,
+  type StalenessBound,
+  type StateSourcePlacement,
+} from "./runtime-posture.js";
+import { type MissionStateObservation, parseStateObservation, rfc3339Ms, verifyStateAssertion } from "./state-observation.js";
 
 export type { EntitlementObservation, EntitlementResolver, OriginPrincipal, PrincipalMappingObservation, PrincipalMappingResolver } from "@mission/core";
 
@@ -73,13 +80,13 @@ export type { EntitlementObservation, EntitlementResolver, OriginPrincipal, Prin
  * the classes for which "the state source MUST be an active freshness
  * mechanism", never token-lifetime expiry alone; below this floor, token
  * expiry is itself a conforming state source, so absence of
- * `context.freshness` is not by itself a fail-closed signal there.
+ * `context.mission_state_observation` is not by itself a fail-closed signal there.
  */
 const HIGH_CONSEQUENCE_ACTION_CLASSES = new Set(["irreversible_action", "external_commitment", "privileged_administration"]);
 
 /**
  * @spec runtime#state-freshness: the default allowed future skew for
- * `observed_at`, seconds. Small enough to absorb ordinary clock drift
+ * `freshness_at`, seconds. Small enough to absorb ordinary clock drift
  * between a state source and the PDP without meaningfully widening even the
  * tightest published staleness bound (30s for irreversible_action);
  * configurable per deployment via `EvaluateOptions.freshnessSkewToleranceSeconds`.
@@ -94,21 +101,6 @@ export interface ActionApproval {
   approved_until?: string;
   parameter_digest: string;
   state?: string;
-}
-
-/**
- * @spec runtime#state-freshness: a Mission state observation, asserted by
- * whichever state source produced it (a status call, introspection, a
- * Lifecycle Signal, or a loader's own live read). `observed_at` MUST be the
- * time the source actually read authoritative state, never the time a later
- * consumer happened to use the observation; that is what keeps a cached or
- * relayed observation honestly stale instead of relabeled fresh at
- * consumption (Finding 1). `source` names the mechanism, checked against the
- * deployment's configured set (below).
- */
-export interface Freshness {
-  observed_at: string;
-  source: string;
 }
 
 export interface EvaluationRequest {
@@ -127,15 +119,29 @@ export interface EvaluationRequest {
     properties?: { iss?: string };
   };
   /**
-   * Fine-grained target object (Resource-policy only), NOT the entry match.
-   * `vendor_ids`, when present, names the FULL collection a bound bulk read
-   * resolves to (@spec runtime#read-binding): `id`/`vendor_id` above still
-   * name one REPRESENTATIVE member (so every existing single-object caller
-   * is unaffected), but Resource policy is checked against EVERY member of
-   * `vendor_ids`, not just the representative one (see evaluateInner's
-   * step 6a).
+   * `type`/`id`: the fine-grained target object (Resource-policy only), NOT
+   * the entry match. `vendor_ids`, when present, names the FULL collection a
+   * bound bulk read resolves to (@spec runtime#read-binding): `id`/`vendor_id`
+   * still name one REPRESENTATIVE member (so every existing single-object
+   * caller is unaffected), but Resource policy is checked against EVERY
+   * member of `vendor_ids`, not just the representative one (see
+   * evaluateInner's step 6a).
    */
-  resource: { type: string; id: string; properties?: { vendor_id?: string; vendor_ids?: string[] } };
+  resource: {
+    type: string;
+    id: string;
+    properties: {
+      /**
+       * @spec authzen#context-audience-freshness, authzen#pdp-request:
+       * REQUIRED, the PEP's audience or protected-resource identifier. The
+       * approved entry's `resource` is matched against this member, never
+       * against `type` or `id`.
+       */
+      audience: string;
+      vendor_id?: string;
+      vendor_ids?: string[];
+    };
+  };
   action: {
     name: string;
     /**
@@ -148,7 +154,6 @@ export interface EvaluationRequest {
     properties?: { idempotency_key?: string };
   };
   context: {
-    audience: string; // matched against the approved entry's resource
     mission: {
       id: string;
       issuer: string;
@@ -176,7 +181,15 @@ export interface EvaluationRequest {
     /** Already verified by the authenticated PEP; never populated from tool arguments. */
     credential?: RuntimeCredentialRef;
     capability_source?: RuntimeCapabilitySource;
-    freshness?: Freshness;
+    /**
+     * @spec authzen#context-audience-freshness: CONDITIONAL, present where
+     * the deployment's declared state-source placement has the PEP supply
+     * state, absent where it places state establishment with the PDP.
+     * `freshness_at` MUST be the time the source actually read authoritative
+     * state, never the time a later consumer happened to use it, so a cached
+     * or relayed observation stays honestly stale (Finding 1).
+     */
+    mission_state_observation?: MissionStateObservation;
     parameter_digest?: string;
     amount?: { amount: string; currency: string };
     action_class?: string;
@@ -207,6 +220,12 @@ export interface EvaluationRequest {
      * verify the authenticated credential inputs or tell whether the join
      * occurred" otherwise. Absent on every ordinary Mission-bound request;
      * this whole step is then a complete no-op, byte-for-byte unchanged.
+     *
+     * @spec authority-server#join-authzen (#972 item 2) — the draft's
+     * definition of this member. Its Join Assertion members (`assertion`,
+     * `token_sha256`, `token_jkt`, `token_x5t`) are not read here: this PDP
+     * does not consume Join Assertions, so it joins under the mapping rules,
+     * as the draft says a non-consuming PDP does.
      */
     mission_join?: {
       /**
@@ -328,17 +347,38 @@ export interface EvaluateOptions {
    */
   evidence?: DecisionEvidenceEmitter;
   /**
-   * @spec runtime#state-freshness: "A runtime deployment MUST define the
-   * Mission state source it trusts for each enforcement scope." A presented
-   * `context.freshness.source` outside this set is untrusted, denied the
-   * same way as a stale or malformed observation. Omitting this option
-   * denies every presented freshness: absent a declared set, no source is
-   * trusted, never the reverse (fail closed on missing config, not open).
+   * @spec runtime#state-freshness, authzen#context-audience-freshness: "A
+   * runtime deployment MUST define the Mission state source it trusts for
+   * each enforcement scope." The enforcement scope's declared state-source
+   * placement, from its Enforcement Scope Statement: `pep`, where the PDP
+   * relies on the authenticated PEP's `context.mission_state_observation`
+   * read from that source; `pdp`, where it relies on its own read. Absent,
+   * no placement is declared and no observation establishes state: a
+   * presented one is denied the same way as a stale or malformed one (fail
+   * closed on missing config, not open).
    */
-  allowedFreshnessSources?: ReadonlySet<string>;
+  stateSourcePlacement?: StateSourcePlacement;
+  /**
+   * @spec authzen#pdp-request rule 1, runtime#state-freshness: under `pdp`
+   * placement, when the PDP's own read of the declared state source produced
+   * `view` (RFC 3339): the Mission state this PDP establishes is `view.state`
+   * as of this instant. Read on the PDP's side of any channel. Absent or
+   * malformed, the PDP has established no state within any bound. Unused
+   * under `pep` placement.
+   */
+  stateObservedAt?: string;
+  /**
+   * @spec authzen#context-audience-freshness `assertion`: the declared state
+   * source's published Mission Status Response keys (the Mission issuer's
+   * status-response JWKS). A presented `assertion` is verified against these
+   * and must agree with the observation it rides in; absent, no assertion
+   * can be verified, and a request carrying one is denied rather than
+   * relied on unverified.
+   */
+  stateAssertionKeys?: JWTVerifyGetKey;
   /**
    * @spec runtime#state-freshness: allowed future clock skew for
-   * `observed_at`, seconds (default `DEFAULT_FRESHNESS_SKEW_TOLERANCE_SECONDS`).
+   * `freshness_at`, seconds (default `DEFAULT_FRESHNESS_SKEW_TOLERANCE_SECONDS`).
    * Beyond this, a future-dated observation denies rather than passing
    * through on the negative age it produces.
    */
@@ -348,7 +388,7 @@ export interface EvaluateOptions {
    * — resolves `context.mission.subject` to a destination-local mapping for
    * a request claiming the cross-domain Origin Principal profile ("The PDP
    * is authoritative for the mapping in the default placement"). Absent,
-   * the same fail-closed-on-unconfigured idiom as `allowedFreshnessSources`
+   * the same fail-closed-on-unconfigured idiom as `stateSourcePlacement`
    * applies: every request claiming the profile denies `principal_mapping_failed`;
    * a deployment not claiming the profile never sets `context.mission.subject`,
    * so it is unaffected either way.
@@ -375,7 +415,7 @@ export interface EvaluateOptions {
    * each one's own maxDepth. Consulted only when the request carries
    * `context.mission_join` (the baseline-Join path); absent there, no
    * delegate is authorized (rule 4's "never a default", the same
-   * fail-closed-on-unconfigured idiom as `allowedFreshnessSources`).
+   * fail-closed-on-unconfigured idiom as `stateSourcePlacement`).
    */
   delegatePolicy?: DelegatePolicy;
   /**
@@ -568,7 +608,7 @@ async function emitDecisionEvidence(
     },
     resource: { type: req.resource.type, id: req.resource.id },
     action: { name: req.action.name },
-    audience: req.context.audience,
+    audience: req.resource.properties?.audience,
     evaluation_id: decision.context.evaluation_id as string,
     evaluation_request_digest: requestDigest,
     decision: decision.decision ? "permit" : "deny",
@@ -609,6 +649,10 @@ async function evaluateInner(
   const { view, fga, modelId, now } = opts;
   const pvid = policyViewId(view, modelId);
   const actionClass = req.context.action_class;
+  // @spec authzen#pdp-request: "A PDP MUST perform the entry match against
+  // `resource.properties.audience`". Read once; a request lacking it matches
+  // no entry.
+  const audience = req.resource.properties?.audience;
   const decisionId = newDecisionId();
   // @spec cross-domain#origin-principal-mapping, runtime-evidence#principal_mapping
   // — set once step 4a below validates the mapping (before entitlement lookup,
@@ -618,10 +662,17 @@ async function evaluateInner(
   // the same binding without a temporal-dead-zone reference.
   let principalMapping: PrincipalMappingObservation | undefined;
   // @spec runtime#state-freshness — the accepted Mission-state observation
-  // (epoch ms) the permit cap is computed from; set only by the freshness gate
-  // in step 3, and left `undefined` when the class's declared posture needed
-  // no observation and none was presented.
+  // (epoch ms) the permit cap is computed from, and the expiry or lease end
+  // its source reported, if any; set only by the freshness gate in step 3,
+  // and left `undefined` when the class's declared posture needed no
+  // observation and none was presented.
   let acceptedObservationMs: number | undefined;
+  let acceptedValidThroughMs: number | undefined;
+  // @spec authzen#context-audience-freshness `assertion` (#1049 review P2-a):
+  // the signed `mission.fresh_until` of a verified Mission Status Response,
+  // set at step 2a, and one more ceiling on the permit regardless of the
+  // class's posture or of what the observation repeats.
+  let signedFreshUntilMs: number | undefined;
   // @spec authority-server#mission-join (#557 review point 1) — set once
   // step 4b below resolves the baseline Join, so `join_view_id` (below) is
   // present on the SAME decision's Decision Evidence/Refusal Record
@@ -697,23 +748,79 @@ async function evaluateInner(
   // 2. Mission state (@spec: mission_inactive).
   if (view.state !== "active") return deny("mission_inactive");
 
+  // 2a. The PEP-supplied Mission state observation, wherever it is present
+  // (@spec authzen#context-audience-freshness). A member its `mode` REQUIRES
+  // is missing, or one it carries is malformed: the PDP cannot establish
+  // Mission state from it, so it denies the way a stale observation does,
+  // before any rule reads the observation's state.
+  const skewToleranceMs = (opts.freshnessSkewToleranceSeconds ?? DEFAULT_FRESHNESS_SKEW_TOLERANCE_SECONDS) * 1000;
+  const presented = req.context.mission_state_observation;
+  const observation = presented === undefined ? undefined : parseStateObservation(presented);
+  if (presented !== undefined) {
+    if (observation === undefined) return deny("stale_state");
+    // @spec authzen#context-audience-freshness, authzen#clock-skew:
+    // `freshness_at` "can precede this value by no more than the published
+    // maximum clock skew", and an issuance dated past the skew in the future
+    // is not one the source has made yet.
+    if (
+      observation.issuedAtMs !== undefined &&
+      (observation.freshnessAtMs < observation.issuedAtMs - skewToleranceMs ||
+        observation.issuedAtMs - now().getTime() > skewToleranceMs)
+    ) {
+      return deny("stale_state");
+    }
+    // @spec authzen#pdp-request rule 1: the PEP-supplied state is "exactly
+    // `active`; every other value, recognized or not, is non-active". Step 2
+    // already held the PDP's own view active, so any other value here is also
+    // a disagreement with it, and the PDP's view is the floor either way:
+    // `mission_inactive`. PEP-supplied state can only narrow, never substitute.
+    if (observation.state !== "active") return deny("mission_inactive");
+    // @spec authzen#pdp-request rule 4: a presented `version` is compared
+    // against the PDP's own tracked Mission state version (the loaded view's
+    // `version`), never against `policy_view_id`, and a mismatch is
+    // staleness: one side has missed a committed change.
+    if (observation.version !== undefined && observation.version !== view.version) return deny("stale_state");
+    // @spec authzen#context-audience-freshness `assertion`: where the PEP
+    // carries the signed Mission Status Response, the PDP verifies it against
+    // the declared source's keys rather than trusting the unsigned snapshot.
+    // One it cannot verify, or one that disagrees with the observation,
+    // establishes nothing.
+    if (observation.assertion !== undefined) {
+      const freshUntilMs = await verifyStateAssertion(
+        { ...observation, assertion: observation.assertion },
+        { missionId: req.context.mission.id, issuer: req.context.mission.issuer, audience },
+        opts.stateAssertionKeys,
+        now(),
+        skewToleranceMs / 1000,
+      );
+      if (freshUntilMs === undefined) return deny("stale_state");
+      // #1049 review P2-a: the signed `mission.fresh_until` binds whether or
+      // not the observation repeats it as `mission_status_expires_at`
+      // (OPTIONAL in `fresh` mode). Already passed, the signed state is no
+      // longer relied on; otherwise it caps the permit below.
+      if (freshUntilMs <= now().getTime()) return deny("stale_state");
+      signedFreshUntilMs = freshUntilMs;
+    }
+  }
+
   // 3. Freshness against the staleness bound (@spec: stale_state).
   // @spec runtime#state-freshness: "The PDP MUST refuse a consequential
   // action when it cannot establish, within the deployment's published
-  // staleness bound, that the Mission is `active`." An absent
-  // `context.freshness` on a high-consequence action class means Mission
+  // staleness bound, that the Mission is `active`." An absent observation
+  // on a high-consequence action class means Mission
   // state cannot be established at all, which is not weaker than state
   // established-but-stale: it MUST fail closed the same way, never pass
-  // through as if no staleness bound applied. Below the high-consequence
-  // floor the draft treats token-lifetime expiry as itself a conforming
-  // state source, so an absent member there is not by itself a refusal.
+  // through as if no staleness bound applied. Under either declared
+  // placement the state input is required at every class (below); with no
+  // declared placement, the high-consequence floor still refuses an absent
+  // observation, and token-lifetime expiry is a conforming state source
+  // beneath it.
   //
   // The posture is a declaration, not a number. A class the deployment
   // declares with no active freshness requirement (the draft's Audit-only
   // row) runs the remaining gates with no observation window, and an action
   // class the policy does not declare at all is a request fault refused
   // below. Neither is `stale_state`, which asserts a freshness fact.
-  const skewToleranceMs = (opts.freshnessSkewToleranceSeconds ?? DEFAULT_FRESHNESS_SKEW_TOLERANCE_SECONDS) * 1000;
   const declaredStaleness = opts.stalenessBound(actionClass);
   // A custom/injected policy cannot opt a consequential class out of the
   // freshness floor even if it bypasses the deployment config loader.
@@ -730,34 +837,63 @@ async function evaluateInner(
       ? declaredStaleness.seconds * 1000
       : undefined;
   if (declaredStaleness.kind !== "none" && enforceableWindowMs === undefined) return deny("out_of_authority");
+  // @spec authzen#context-audience-freshness, authzen#pdp-request rule 1
+  // (#1049 owner rulings): the state input the declared placement names is
+  // present at every class that reaches a permit, whatever its freshness
+  // posture. Under `pep` placement the observation is REQUIRED; a lower
+  // class may rely on token-lifetime freshness as its state source, but
+  // that never excuses omitting the input. Under `pdp` placement the PDP
+  // "MUST establish state from its own source or deny with `stale_state`",
+  // with no class exception, `audit_only` included: no freshness window is
+  // not the same as no state.
+  const pdpPlaced = opts.stateSourcePlacement === "pdp";
+  if (opts.stateSourcePlacement === "pep" && observation === undefined) return deny("stale_state");
+  if (pdpPlaced && rfc3339Ms(opts.stateObservedAt) === undefined) return deny("stale_state");
   if (enforceableWindowMs !== undefined) {
-    if (req.context.freshness) {
-      const observedAtMs = Date.parse(req.context.freshness.observed_at);
+    // @spec authzen#context-audience-freshness, runtime#state-freshness: the
+    // trusted source is the enforcement scope's declared one. Under `pep`
+    // placement the authenticated PEP supplies its read of that source; under
+    // `pdp` placement the PDP's own read is the only one relied on, and a
+    // PEP-supplied observation's telemetry never counts; with no declared
+    // placement, no observation establishes state.
+    const relied = pdpPlaced
+      ? opts.stateObservedAt === undefined
+        ? undefined
+        : { observedAtMs: rfc3339Ms(opts.stateObservedAt) ?? Number.NaN }
+      : observation === undefined
+        ? undefined
+        : { observedAtMs: observation.freshnessAtMs, validThroughMs: observation.expiresAtMs };
+    if (relied !== undefined) {
+      const observedAtMs = relied.observedAtMs;
       const ageMs = now().getTime() - observedAtMs;
-      const sourceTrusted = opts.allowedFreshnessSources?.has(req.context.freshness.source) ?? false;
-      // A malformed timestamp (non-finite), one dated far enough in the future
-      // to be fabricated rather than ordinary clock drift, or a source outside
-      // the deployment's declared set: none of these let the PDP actually
-      // establish Mission state from this observation, so each denies the same
-      // way as present-but-stale (@spec runtime#state-freshness, "cannot
-      // establish ... within the staleness bound"), never permits on an
-      // unverifiable input.
+      // A malformed read time, an observation the declared placement does not
+      // rely on, or one dated far enough in the future to be fabricated rather
+      // than ordinary clock drift: none lets the PDP establish Mission state,
+      // so each denies the same way as present-but-stale (@spec
+      // runtime#state-freshness, "cannot establish ... within the staleness
+      // bound"), never permits on an unverifiable input. A malformed
+      // PEP-supplied observation was refused at step 2a.
       if (
         !Number.isFinite(observedAtMs) ||
+        (!pdpPlaced && opts.stateSourcePlacement !== "pep") ||
         ageMs < -skewToleranceMs ||
-        ageMs > enforceableWindowMs ||
-        !sourceTrusted
+        ageMs > enforceableWindowMs
       ) {
         return deny("stale_state");
       }
       // @spec runtime#state-freshness — the observation this Decision is
       // ACTUALLY taken against, recorded only now that it passed every gate
-      // above (parseable, inside the class window, from a declared source).
+      // above (parseable, inside the class window, from the declared source).
       // The permit cap below reads this and nothing else: request freshness
       // metadata the PDP rejected, or would have rejected, must never be able
-      // to buy a longer permit.
+      // to buy a longer permit. Under `pep` placement the source's reported
+      // expiry (`mission_status_expires_at`) is that observation's
+      // valid-through; under `pdp` placement the PDP's own read reports none.
       acceptedObservationMs = observedAtMs;
+      acceptedValidThroughMs = "validThroughMs" in relied ? relied.validThroughMs : undefined;
     } else if (actionClass !== undefined && HIGH_CONSEQUENCE_ACTION_CLASSES.has(actionClass)) {
+      // Reached only with no declared placement: both declared placements
+      // refused a missing state input above.
       return deny("stale_state");
     }
   }
@@ -795,7 +931,7 @@ async function evaluateInner(
     // takes the ordinary evidence path rather than escaping evaluate().
     let mappingResult: PrincipalMappingObservation | undefined;
     try {
-      mappingResult = await opts.principalMapping?.resolve({ origin, audience: req.context.audience });
+      mappingResult = await opts.principalMapping?.resolve({ origin, audience });
     } catch {
       mappingResult = undefined;
     }
@@ -825,7 +961,7 @@ async function evaluateInner(
     // result, `entitled !== true`, or entitlement staler than the bound each
     // deny the same way ("entitlement staleness beyond the declared bound
     // denies likewise"). The same skew floor step 3 applies to
-    // `context.freshness` applies here too (@spec runtime#state-freshness,
+    // `context.mission_state_observation` applies here too (@spec runtime#state-freshness,
     // GAP 3, #612): a bare `age <= bound` check alone lets a future-dated
     // `observed_at` produce a negative age that trivially satisfies any
     // bound, so a future timestamp must be rejected on its own, not merely
@@ -837,7 +973,7 @@ async function evaluateInner(
     let entitlement: EntitlementObservation | undefined;
     if (entitlementBoundS !== undefined) {
       try {
-        entitlement = await opts.entitlement?.resolve({ local: mappingResult.local, audience: req.context.audience });
+        entitlement = await opts.entitlement?.resolve({ local: mappingResult.local, audience });
       } catch {
         entitlement = undefined;
       }
@@ -850,7 +986,7 @@ async function evaluateInner(
     // intersected with this request's own (resource, action) pair, so an
     // entitlement gap on one action denies that action alone and leaves the
     // rest of the delegated set evaluable. The resource matched here is
-    // `context.audience`, the same member step 5 below matches an authority
+    // `resource.properties.audience`, the same member step 5 below matches an authority
     // entry's `resource` against; the AuthZEN `resource.id` names the
     // object instance, a different namespace the delegated set is not keyed
     // by.
@@ -862,7 +998,7 @@ async function evaluateInner(
       entitlementAgeMs >= -skewToleranceMs &&
       entitlementAgeMs <= entitlementBoundS * 1000 &&
       (entitlement.authority === undefined ||
-        entitlementPermits(entitlement.authority, req.context.audience, req.action.name));
+        entitlementPermits(entitlement.authority, audience, req.action.name));
     if (!entitlementCurrent) return deny("principal_mapping_failed");
   }
 
@@ -896,7 +1032,8 @@ async function evaluateInner(
   }
 
   // 5. Authority entry match: the approved entry's resource is matched
-  //    against context.audience (NOT the AuthZEN resource member). On the
+  //    against resource.properties.audience, never the AuthZEN resource
+  //    object's type/id (@spec authzen#pdp-request). On the
   //    baseline-Join path (4b above), matched against the JOINED authority
   //    set, never the Mission's raw view.authority_set.
   // @spec runtime#input-authority — "For any other `authorization_details`
@@ -914,7 +1051,7 @@ async function evaluateInner(
     (e) => {
       contributions.add(e.type);
       return e.type === MISSION_RESOURCE_ACCESS_TYPE &&
-      e.resource === req.context.audience &&
+      e.resource === audience &&
       e.actions.includes(req.action.name);
     },
   );
@@ -934,7 +1071,7 @@ async function evaluateInner(
     const unrecognizedTypeMatch = candidateAuthoritySet.some(
       (e) =>
         e.type !== MISSION_RESOURCE_ACCESS_TYPE &&
-        e.resource === req.context.audience &&
+        e.resource === audience &&
         e.actions.includes(req.action.name),
     );
     if (unrecognizedTypeMatch) return deny("unsupported_authorization_type");
@@ -1207,13 +1344,14 @@ async function evaluateInner(
     permitTtlSeconds: permitTtl,
     stalenessBound: declaredStaleness,
     ...(acceptedObservationMs !== undefined ? { stateObservedAtMs: acceptedObservationMs } : {}),
-    ...(reversibleWriteMaxSeconds !== undefined
-      ? {
-          ceilings: [
-            { name: "reversible_write_permit_max", atMs: decisionNowMs + reversibleWriteMaxSeconds * 1000 },
-          ],
-        }
-      : {}),
+    ...(acceptedValidThroughMs !== undefined ? { stateValidThroughMs: acceptedValidThroughMs } : {}),
+    ceilings: [
+      ...(reversibleWriteMaxSeconds !== undefined
+        ? [{ name: "reversible_write_permit_max", atMs: decisionNowMs + reversibleWriteMaxSeconds * 1000 }]
+        : []),
+      // #1049 review P2-a: a verified status response's signed state ceiling.
+      ...(signedFreshUntilMs !== undefined ? [{ name: "signed_state_fresh_until", atMs: signedFreshUntilMs }] : []),
+    ],
   });
   if (deadline.kind === "elapsed") return deny("stale_state");
   const validUntil = deadline.validUntil;

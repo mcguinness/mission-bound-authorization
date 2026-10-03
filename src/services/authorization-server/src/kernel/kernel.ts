@@ -106,6 +106,7 @@ import {
   MissionTombstoneStore,
   type TombstoneRetentionInputs,
 } from "./tombstones.js";
+import type { ActivationPolicyRegistry } from "./activation-policy.js";
 import { MissionBoundGrantStore } from "./mission-bound-grant-store.js";
 import { newMissionId } from "./mission-id.js";
 import {
@@ -424,6 +425,14 @@ export interface KernelOptions {
    * class for any actor, so only `{ "sub": ... }` matchers can admit a delegate.
    */
   actorProfiles?: Record<string, string>;
+  /**
+   * @spec mission#standing-consent-bases — the activation policies this issuer
+   * evaluates for a policy-adjudicated child creation, keyed by policy `id`
+   * ({@link ActivationPolicyRegistry}). An Authority Set entry's
+   * `child_creation_policy` is verified against it before each child creation;
+   * absent, no carried child-creation policy can match.
+   */
+  activationPolicies?: ActivationPolicyRegistry;
   /**
    * @spec mission#authority-sources, mission#approval-event — the deployment's
    * TRUSTED authority-source catalog. The approval event establishes
@@ -752,6 +761,15 @@ export class MissionKernel {
    */
   actorProfile(sub: string): string | undefined {
     return this.opts.actorProfiles?.[sub];
+  }
+
+  /**
+   * @spec mission#standing-consent-bases — the activation policy registry
+   * consulted before a policy-adjudicated child creation, or undefined when
+   * the deployment configures none.
+   */
+  activationPolicies(): ActivationPolicyRegistry | undefined {
+    return this.opts.activationPolicies;
   }
 
   /**
