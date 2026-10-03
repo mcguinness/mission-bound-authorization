@@ -1065,7 +1065,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 5 April 2027</td>
+<td class="center">Expires 6 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1078,12 +1078,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-discharge-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-02" class="published">2 October 2026</time>
+<time datetime="2026-10-03" class="published">3 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-05">5 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-06">6 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1142,7 +1142,7 @@ unaffected.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 5 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 6 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1291,21 +1291,24 @@ unaffected.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
-            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-document-history" class="internal xref">Document History</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
-            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref"></a><a href="#name-references" class="internal xref">References</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
-                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref"></a><a href="#name-normative-references" class="internal xref">Normative References</a></p>
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
 </li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2">
-                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="auto internal xref"></a><a href="#name-informative-references" class="internal xref">Informative References</a></p>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref"></a><a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.1">
+                <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref"></a><a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.2">
+                <p id="section-toc.1-1.11.2.2.1"><a href="#section-11.2" class="auto internal xref"></a><a href="#name-informative-references" class="internal xref">Informative References</a></p>
 </li>
             </ul>
 </li>
-          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
-            <p id="section-toc.1-1.11.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -1638,11 +1641,13 @@ finalized" is a completion condition.<a href="#section-3.6-3" class="pilcrow">¶
 <a href="#section-3.7" class="section-number selfRef">3.7. </a><a href="#name-relationship-to-runtime-enf" class="section-name selfRef">Relationship to Runtime Enforcement</a>
         </h3>
 <p id="section-3.7-1">Discharge is an issuance-gating signal and is fully meaningful at the
-issuance profile alone. It is also a natural input to the runtime layer
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>): a runtime Policy
-Enforcement Point that recognizes <code>terminal_when</code> <span class="bcp14">SHOULD</span> deny a
-discharged entry at the point of use, closing the window between
-discharge and token expiry the same way it denies a revoked Mission. A
+issuance profile alone: issuance-only discharge is a conforming
+posture, with the residual that a credential issued before a discharge
+stays valid until it expires (<a href="#discharge" class="auto internal xref">Section 3.3</a>). Where the deployment also
+runs the runtime profile, that profile requires its PDP to refuse a
+discharged entry at the point of use
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), closing the window between
+discharge and token expiry the same way it refuses a revoked Mission. A
 Policy Enforcement Point learns that an entry is discharged from the
 Status profile's Mission Status operation or the token introspection
 projection (<a href="#visibility" class="auto internal xref">Section 3.3.1</a>), the same way it learns a Mission is
@@ -1744,7 +1749,21 @@ state and <span class="bcp14">MUST NOT</span> revert: a later delivery presentin
 condition against an already-discharged entry is acknowledged
 <code>already_discharged</code> (<a href="#discharge-result" class="auto internal xref">Section 4.3.4</a>) and does not restore the
 entry's authority.<a href="#section-4.1-3" class="pilcrow">¶</a></p>
-<p id="section-4.1-4">A committed discharge is a committed metadata-only change for the
+<p id="section-4.1-4">A committed discharge also places a discharge restriction on the
+Mission's expansion chain, the successors linked to it through
+<code>predecessor</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>). The
+Mission Issuer <span class="bcp14">MUST</span> retain each restriction, with the discharged entry
+and the condition that discharged it, across every later successor in
+the chain. A restriction clears only for authority that a fresh human
+approval explicitly restores with the discharged entry and its
+condition disclosed; any authority that approval does not restore
+stays restricted. An intervening successor, an approval of unrelated
+authority, and a ceiling renewal under the progressive authorization
+profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>) do not
+clear it. Restoration grants authority through the successor's own
+approval: the discharge never reverts, and the predecessor's entry
+stays discharged.<a href="#section-4.1-4" class="pilcrow">¶</a></p>
+<p id="section-4.1-5">A committed discharge is a committed metadata-only change for the
 purposes of the state version
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Section "Response"):
 the Mission's state version increments at the commit, so a
@@ -1753,10 +1772,10 @@ materialized policy view that commits a state version
 after a discharge. Where Signals is deployed, the commit is carried by
 the generic <code>authority_changed</code> discriminator
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>); where Signals is not
-deployed, the version movement is what makes the change observable.<a href="#section-4.1-4" class="pilcrow">¶</a></p>
-<p id="section-4.1-5">Before the AS receives and commits a discharge, it continues issuing
+deployed, the version movement is what makes the change observable.<a href="#section-4.1-5" class="pilcrow">¶</a></p>
+<p id="section-4.1-6">Before the AS receives and commits a discharge, it continues issuing
 against the entry. The posture this implies is stated plainly in
-<a href="#completion-security" class="auto internal xref">Section 5.1</a>.<a href="#section-4.1-5" class="pilcrow">¶</a></p>
+<a href="#completion-security" class="auto internal xref">Section 5.1</a>.<a href="#section-4.1-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="condition-selectors">
@@ -2763,22 +2782,44 @@ entry carrying a <code>terminal_when</code> constraint it does not understand
 </div>
 </section>
 </div>
-<div id="acknowledgments">
+<div id="document-history">
 <section id="section-9">
+      <h2 id="name-document-history">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
+      </h2>
+<p id="section-9-1">[[ To be removed from the final specification ]]<a href="#section-9-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-9-2.1">
+          <p id="section-9-2.1.1">Discharge Commit (<a href="#discharge-commit" class="auto internal xref">Section 4.1</a>): a committed discharge places
+a restriction on the Mission's expansion chain, retained across later
+successors and cleared only for the authority a fresh human approval
+explicitly restores with the discharged entry and its condition
+disclosed. The discharge itself never reverts.<a href="#section-9-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-2.2">
+          <p id="section-9-2.2.1">Relationship to Runtime Enforcement (<a href="#runtime" class="auto internal xref">Section 3.7</a>): issuance-only
+discharge stays conforming; where the runtime profile runs, its PDP
+refuses a discharged entry.<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="section-10">
       <h2 id="name-acknowledgments">
 <a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
       </h2>
-<p id="section-9-1">The author thanks the implementers and reviewers of the Mission-Bound
-Authorization work for feedback that shaped this extension.<a href="#section-9-1" class="pilcrow">¶</a></p>
+<p id="section-10-1">The author thanks the implementers and reviewers of the Mission-Bound
+Authorization work for feedback that shaped this extension.<a href="#section-10-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="sec-combined-references">
-<section id="section-10">
+<section id="section-11">
       <h2 id="name-references">
 <a href="#name-references" class="section-name selfRef">References</a>
       </h2>
 <div id="sec-normative-references">
-<section id="section-10.1">
+<section id="section-11.1">
         <h3 id="name-normative-references">
 <a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
@@ -2831,7 +2872,7 @@ Authorization work for feedback that shaped this extension.<a href="#section-9-1
 </section>
 </div>
 <div id="sec-informative-references">
-<section id="section-10.2">
+<section id="section-11.2">
         <h3 id="name-informative-references">
 <a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
@@ -2847,6 +2888,14 @@ Authorization work for feedback that shaped this extension.<a href="#section-9-1
 <dt id="I-D.draft-mcguinness-oauth-mission-child-delegation">[I-D.draft-mcguinness-oauth-mission-child-delegation]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Child Delegation for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Expansion for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-progressive">[I-D.draft-mcguinness-oauth-mission-progressive]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Progressive Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-signals">[I-D.draft-mcguinness-oauth-mission-signals]</dt>
       <dd>

@@ -1066,7 +1066,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 5 April 2027</td>
+<td class="center">Expires 6 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1079,12 +1079,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-progressive-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-02" class="published">2 October 2026</time>
+<time datetime="2026-10-03" class="published">3 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Experimental</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-05">5 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-06">6 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1145,7 +1145,7 @@ ceiling: each is bounded incrementally.<a href="#section-abstract-1" class="pilc
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 5 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 6 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1579,14 +1579,20 @@ refused with <code>out_of_ceiling</code>; it falls back to an ordinary, freshly
 human-approved expansion. A drawdown policy snapshot that does not
 match <code>drawdown_policy.digest</code> authorizes nothing, so a request under
 it falls back the same way.<a href="#section-4.1-23" class="pilcrow">¶</a></p>
-<p id="section-4.1-24">The drawdown policy <span class="bcp14">MUST NOT</span> policy-adjudicate a successor Authority
-Set entry whose authority intersects a predecessor entry discharged
-under the Entry Discharge companion's completion machinery
+<p id="section-4.1-24">The drawdown policy <span class="bcp14">MUST NOT</span> policy-adjudicate a successor whose
+complete Authority Set, including authority carried forward from its
+predecessor, overlaps in authority the authority a discharge
+restriction of its expansion chain covers
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-discharge" class="cite xref">I-D.draft-mcguinness-oauth-mission-discharge</a>]</span>). The test is overlap
-in authority, not structural equality: any successor entry that
-overlaps a discharged predecessor entry in authority falls back to a
-fresh human approval. Completion-discharged authority therefore
-cannot be resurrected by policy.<a href="#section-4.1-24" class="pilcrow">¶</a></p>
+in authority, not structural equality or entry identity. Such a
+request falls back to a fresh human approval whose consent disclosure
+names the discharged entry and the condition that discharged it. The
+Mission Issuer <span class="bcp14">MUST</span> apply this test to every drawdown in the chain
+after the discharge, not only to one from the Mission that holds the
+discharged entry, and neither an approval of unrelated authority nor a
+ceiling review clears the restriction (<a href="#ceiling-review" class="auto internal xref">Section 4.3</a>).
+Completion-discharged authority therefore cannot be resurrected by
+policy.<a href="#section-4.1-24" class="pilcrow">¶</a></p>
 <p id="section-4.1-25">The drawdown policy <span class="bcp14">MUST NOT</span> policy-adjudicate a successor whose
 complete Authority Set, including authority carried forward from its
 predecessor, overlaps in authority capability under a containment
@@ -1601,7 +1607,11 @@ unrelated authority nor a ceiling review clears the restriction
 (<a href="#ceiling-review" class="auto internal xref">Section 4.3</a>). A drawdown whose authority overlaps no
 restricted capability remains eligible for policy adjudication under
 the other guards of this section. Contained authority therefore
-cannot be restored by policy.<a href="#section-4.1-25" class="pilcrow">¶</a></p>
+cannot be restored by policy. Both tests are re-applied at successor
+activation, so a containment or discharge that lands after
+adjudication is caught there
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>, Section "Concurrent
+Expansion Reconciliation").<a href="#section-4.1-25" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="progressive-limits">
@@ -1678,7 +1688,9 @@ render the chain's record since the prior review:<a href="#section-4.3-4" class=
 </li>
           <li class="normal" id="section-4.3-5.4">
             <p id="section-4.3-5.4.1">the entries discharged under the Entry Discharge companion's
-completion machinery (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-discharge" class="cite xref">I-D.draft-mcguinness-oauth-mission-discharge</a>]</span>);<a href="#section-4.3-5.4.1" class="pilcrow">¶</a></p>
+completion machinery (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-discharge" class="cite xref">I-D.draft-mcguinness-oauth-mission-discharge</a>]</span>),
+and the chain's outstanding discharge restrictions, which
+re-consenting the ceiling does not clear;<a href="#section-4.3-5.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-4.3-5.5">
             <p id="section-4.3-5.5.1">the chain's outstanding containment restrictions, each with its
@@ -1835,8 +1847,9 @@ predecessor has non-terminal Child Missions (<a href="#in-ceiling-expansion" cla
 </li>
         <li class="normal" id="section-7-2.6">
           <p id="section-7-2.6.1">require a fresh human approval for a drawdown whose complete
-Authority Set overlaps capability under a containment restriction
-of its chain, from any Mission in the chain (<a href="#in-ceiling-expansion" class="auto internal xref">Section 4.1</a>);<a href="#section-7-2.6.1" class="pilcrow">¶</a></p>
+Authority Set overlaps authority under a containment or discharge
+restriction of its chain, from any Mission in the chain
+(<a href="#in-ceiling-expansion" class="auto internal xref">Section 4.1</a>);<a href="#section-7-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-2.7">
           <p id="section-7-2.7.1">rate-bound policy-adjudicated drawdowns per expansion chain, keyed by
@@ -2030,36 +2043,42 @@ convention, none of which require registration.<a href="#section-10-1" class="pi
 <p id="appendix-A-2">-01<a href="#appendix-A-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-3.1">
-          <p id="appendix-A-3.1.1">In-ceiling expansion: a policy-adjudicated drawdown whose complete
+          <p id="appendix-A-3.1.1">In-ceiling expansion: the discharge guard tests the complete successor
+Authority Set against the chain's discharge restrictions, from any
+later Mission, and the ceiling review discloses outstanding discharge
+restrictions.<a href="#appendix-A-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-3.2">
+          <p id="appendix-A-3.2.1">In-ceiling expansion: a policy-adjudicated drawdown whose complete
 Authority Set overlaps capability under a containment restriction of
 its chain falls back to a fresh human approval naming the contained
 capability and its cause, from any later Mission in the chain; the
 ceiling review discloses outstanding restrictions and does not clear
-them.<a href="#appendix-A-3.1.1" class="pilcrow">¶</a></p>
+them.<a href="#appendix-A-3.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-3.2">
-          <p id="appendix-A-3.2.1"><code>drawdown_policy</code> is an activation policy reference (<code>id</code>,
+        <li class="normal" id="appendix-A-3.3">
+          <p id="appendix-A-3.3.1"><code>drawdown_policy</code> is an activation policy reference (<code>id</code>,
 <code>version</code>, <code>digest</code>) under the issuance profile's Standing-Consent
 Bases, replacing the string or URI and the <span class="bcp14">SHOULD</span> to commit the
 policy body; <code>ceiling_hash</code> covers the object, and a snapshot that
 does not match falls back to a fresh human approval. The
 <code>ceiling_drawdown</code> activation maps to <code>drawdown_policy.id</code> and
 <code>.version</code>, and the review cadence, part of the policy content, is
-anchored with it.<a href="#appendix-A-3.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-3.3">
-          <p id="appendix-A-3.3.1">The consumption-bound rationale rests on the metering profile's
-successor rule: a successor continues its predecessor's counters, and
-a policy-adjudicated successor cannot raise a bound.<a href="#appendix-A-3.3.1" class="pilcrow">¶</a></p>
+anchored with it.<a href="#appendix-A-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-3.4">
-          <p id="appendix-A-3.4.1">Editorial: disambiguated <code>authority_ceiling</code> from the template
-profile's Template Ceiling and the shaping companion's shaping
-ceiling at its first definition (<a href="#conventions-and-terminology" class="auto internal xref">Section 3</a>), no
-normative change.<a href="#appendix-A-3.4.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-3.4.1">The consumption-bound rationale rests on the metering profile's
+successor rule: a successor continues its predecessor's counters, and
+a policy-adjudicated successor cannot raise a bound.<a href="#appendix-A-3.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-3.5">
-          <p id="appendix-A-3.5.1">Mirrored the OAuth binding's Mission Template uncommitted-policy-body
+          <p id="appendix-A-3.5.1">Editorial: disambiguated <code>authority_ceiling</code> from the template
+profile's Template Ceiling and the shaping companion's shaping
+ceiling at its first definition (<a href="#conventions-and-terminology" class="auto internal xref">Section 3</a>), no
+normative change.<a href="#appendix-A-3.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-3.6">
+          <p id="appendix-A-3.6.1">Mirrored the OAuth binding's Mission Template uncommitted-policy-body
 pattern onto <code>drawdown_policy</code>: a <span class="bcp14">SHOULD</span> to additionally commit the
 policy body under an integrity anchor or disclose it under Consent
 Evidence (<a href="#progressive-authorization" class="auto internal xref">Section 4</a>). Reframed the ceiling
@@ -2067,7 +2086,7 @@ review cadence as a recency ceiling on the <code>ceiling_drawdown</code>
 approval basis's <code>approved_at</code>, reproducible from the drawdown
 policy's own versioned content identified by the existing
 <code>policy_id</code>/<code>policy_version</code> rather than a new commitment or a new,
-separately versioned member (<a href="#ceiling-review" class="auto internal xref">Section 4.3</a>, <a href="#audit-linkage" class="auto internal xref">Section 6</a>).<a href="#appendix-A-3.5.1" class="pilcrow">¶</a></p>
+separately versioned member (<a href="#ceiling-review" class="auto internal xref">Section 4.3</a>, <a href="#audit-linkage" class="auto internal xref">Section 6</a>).<a href="#appendix-A-3.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
