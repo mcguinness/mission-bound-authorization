@@ -62,7 +62,14 @@ import {
   vendorConstraintSatisfied,
 } from "./policy-view.js";
 import { permitDeadline } from "./permit-deadline.js";
-import { allowsNoActiveFreshness, RUNTIME_POSTURE, reversibleWritePermitMaxSeconds, type StalenessBound } from "./runtime-posture.js";
+import {
+  allowsNoActiveFreshness,
+  RUNTIME_POSTURE,
+  reversibleWritePermitMaxSeconds,
+  type StalenessBound,
+  type StateSourcePlacement,
+} from "./runtime-posture.js";
+import { type MissionStateObservation, rfc3339Ms } from "./state-observation.js";
 
 export type { EntitlementObservation, EntitlementResolver, OriginPrincipal, PrincipalMappingObservation, PrincipalMappingResolver } from "@mission/core";
 
@@ -73,13 +80,13 @@ export type { EntitlementObservation, EntitlementResolver, OriginPrincipal, Prin
  * the classes for which "the state source MUST be an active freshness
  * mechanism", never token-lifetime expiry alone; below this floor, token
  * expiry is itself a conforming state source, so absence of
- * `context.freshness` is not by itself a fail-closed signal there.
+ * `context.mission_state_observation` is not by itself a fail-closed signal there.
  */
 const HIGH_CONSEQUENCE_ACTION_CLASSES = new Set(["irreversible_action", "external_commitment", "privileged_administration"]);
 
 /**
  * @spec runtime#state-freshness: the default allowed future skew for
- * `observed_at`, seconds. Small enough to absorb ordinary clock drift
+ * `freshness_at`, seconds. Small enough to absorb ordinary clock drift
  * between a state source and the PDP without meaningfully widening even the
  * tightest published staleness bound (30s for irreversible_action);
  * configurable per deployment via `EvaluateOptions.freshnessSkewToleranceSeconds`.
@@ -94,21 +101,6 @@ export interface ActionApproval {
   approved_until?: string;
   parameter_digest: string;
   state?: string;
-}
-
-/**
- * @spec runtime#state-freshness: a Mission state observation, asserted by
- * whichever state source produced it (a status call, introspection, a
- * Lifecycle Signal, or a loader's own live read). `observed_at` MUST be the
- * time the source actually read authoritative state, never the time a later
- * consumer happened to use the observation; that is what keeps a cached or
- * relayed observation honestly stale instead of relabeled fresh at
- * consumption (Finding 1). `source` names the mechanism, checked against the
- * deployment's configured set (below).
- */
-export interface Freshness {
-  observed_at: string;
-  source: string;
 }
 
 export interface EvaluationRequest {
@@ -189,7 +181,15 @@ export interface EvaluationRequest {
     /** Already verified by the authenticated PEP; never populated from tool arguments. */
     credential?: RuntimeCredentialRef;
     capability_source?: RuntimeCapabilitySource;
-    freshness?: Freshness;
+    /**
+     * @spec authzen#context-audience-freshness: CONDITIONAL, present where
+     * the deployment's declared state-source placement has the PEP supply
+     * state, absent where it places state establishment with the PDP.
+     * `freshness_at` MUST be the time the source actually read authoritative
+     * state, never the time a later consumer happened to use it, so a cached
+     * or relayed observation stays honestly stale (Finding 1).
+     */
+    mission_state_observation?: MissionStateObservation;
     parameter_digest?: string;
     amount?: { amount: string; currency: string };
     action_class?: string;
@@ -341,17 +341,20 @@ export interface EvaluateOptions {
    */
   evidence?: DecisionEvidenceEmitter;
   /**
-   * @spec runtime#state-freshness: "A runtime deployment MUST define the
-   * Mission state source it trusts for each enforcement scope." A presented
-   * `context.freshness.source` outside this set is untrusted, denied the
-   * same way as a stale or malformed observation. Omitting this option
-   * denies every presented freshness: absent a declared set, no source is
-   * trusted, never the reverse (fail closed on missing config, not open).
+   * @spec runtime#state-freshness, authzen#context-audience-freshness: "A
+   * runtime deployment MUST define the Mission state source it trusts for
+   * each enforcement scope." The enforcement scope's declared state-source
+   * placement, from its Enforcement Scope Statement: `pep`, where the PDP
+   * relies on the authenticated PEP's `context.mission_state_observation`
+   * read from that source; `pdp`, where it relies on its own read. Absent,
+   * no placement is declared and no observation establishes state: a
+   * presented one is denied the same way as a stale or malformed one (fail
+   * closed on missing config, not open).
    */
-  allowedFreshnessSources?: ReadonlySet<string>;
+  stateSourcePlacement?: StateSourcePlacement;
   /**
    * @spec runtime#state-freshness: allowed future clock skew for
-   * `observed_at`, seconds (default `DEFAULT_FRESHNESS_SKEW_TOLERANCE_SECONDS`).
+   * `freshness_at`, seconds (default `DEFAULT_FRESHNESS_SKEW_TOLERANCE_SECONDS`).
    * Beyond this, a future-dated observation denies rather than passing
    * through on the negative age it produces.
    */
@@ -361,7 +364,7 @@ export interface EvaluateOptions {
    * — resolves `context.mission.subject` to a destination-local mapping for
    * a request claiming the cross-domain Origin Principal profile ("The PDP
    * is authoritative for the mapping in the default placement"). Absent,
-   * the same fail-closed-on-unconfigured idiom as `allowedFreshnessSources`
+   * the same fail-closed-on-unconfigured idiom as `stateSourcePlacement`
    * applies: every request claiming the profile denies `principal_mapping_failed`;
    * a deployment not claiming the profile never sets `context.mission.subject`,
    * so it is unaffected either way.
@@ -388,7 +391,7 @@ export interface EvaluateOptions {
    * each one's own maxDepth. Consulted only when the request carries
    * `context.mission_join` (the baseline-Join path); absent there, no
    * delegate is authorized (rule 4's "never a default", the same
-   * fail-closed-on-unconfigured idiom as `allowedFreshnessSources`).
+   * fail-closed-on-unconfigured idiom as `stateSourcePlacement`).
    */
   delegatePolicy?: DelegatePolicy;
   /**
@@ -717,8 +720,8 @@ async function evaluateInner(
   // 3. Freshness against the staleness bound (@spec: stale_state).
   // @spec runtime#state-freshness: "The PDP MUST refuse a consequential
   // action when it cannot establish, within the deployment's published
-  // staleness bound, that the Mission is `active`." An absent
-  // `context.freshness` on a high-consequence action class means Mission
+  // staleness bound, that the Mission is `active`." An absent observation
+  // on a high-consequence action class means Mission
   // state cannot be established at all, which is not weaker than state
   // established-but-stale: it MUST fail closed the same way, never pass
   // through as if no staleness bound applied. Below the high-consequence
@@ -748,28 +751,27 @@ async function evaluateInner(
       : undefined;
   if (declaredStaleness.kind !== "none" && enforceableWindowMs === undefined) return deny("out_of_authority");
   if (enforceableWindowMs !== undefined) {
-    if (req.context.freshness) {
-      const observedAtMs = Date.parse(req.context.freshness.observed_at);
-      const ageMs = now().getTime() - observedAtMs;
-      const sourceTrusted = opts.allowedFreshnessSources?.has(req.context.freshness.source) ?? false;
-      // A malformed timestamp (non-finite), one dated far enough in the future
-      // to be fabricated rather than ordinary clock drift, or a source outside
-      // the deployment's declared set: none of these let the PDP actually
-      // establish Mission state from this observation, so each denies the same
-      // way as present-but-stale (@spec runtime#state-freshness, "cannot
+    // @spec authzen#context-audience-freshness, runtime#state-freshness: the
+    // trusted source is the enforcement scope's declared one. Under `pep`
+    // placement the authenticated PEP supplies its read of that source; with
+    // no declared placement, no observation establishes state.
+    const presented = req.context.mission_state_observation;
+    if (presented !== undefined) {
+      const observedAtMs = opts.stateSourcePlacement === "pep" ? rfc3339Ms(presented?.freshness_at) : undefined;
+      const ageMs = now().getTime() - (observedAtMs ?? Number.NaN);
+      // A malformed timestamp, one dated far enough in the future to be
+      // fabricated rather than ordinary clock drift, or an observation the
+      // declared placement does not rely on: none of these let the PDP
+      // establish Mission state from this observation, so each denies the
+      // same way as present-but-stale (@spec runtime#state-freshness, "cannot
       // establish ... within the staleness bound"), never permits on an
       // unverifiable input.
-      if (
-        !Number.isFinite(observedAtMs) ||
-        ageMs < -skewToleranceMs ||
-        ageMs > enforceableWindowMs ||
-        !sourceTrusted
-      ) {
+      if (observedAtMs === undefined || ageMs < -skewToleranceMs || ageMs > enforceableWindowMs) {
         return deny("stale_state");
       }
       // @spec runtime#state-freshness — the observation this Decision is
       // ACTUALLY taken against, recorded only now that it passed every gate
-      // above (parseable, inside the class window, from a declared source).
+      // above (parseable, inside the class window, from the declared source).
       // The permit cap below reads this and nothing else: request freshness
       // metadata the PDP rejected, or would have rejected, must never be able
       // to buy a longer permit.
@@ -842,7 +844,7 @@ async function evaluateInner(
     // result, `entitled !== true`, or entitlement staler than the bound each
     // deny the same way ("entitlement staleness beyond the declared bound
     // denies likewise"). The same skew floor step 3 applies to
-    // `context.freshness` applies here too (@spec runtime#state-freshness,
+    // `context.mission_state_observation` applies here too (@spec runtime#state-freshness,
     // GAP 3, #612): a bare `age <= bound` check alone lets a future-dated
     // `observed_at` produce a negative age that trivially satisfies any
     // bound, so a future timestamp must be rejected on its own, not merely

@@ -169,7 +169,7 @@ describe("runtime decision gates are independently necessary (@spec runtime#deci
         context: {
           mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           action_class: "irreversible_action", // 30s staleness bound
-          freshness: { observed_at: "2026-07-22T11:58:00Z", source: "status" }, // 120s stale
+          mission_state_observation: { state: "active", mode: "fresh", freshness_at: "2026-07-22T11:58:00Z" }, // 120s stale
         },
       }),
       { view: view(), fga: alwaysAllowFga, modelId: "unit-test-model", now: () => NOW, stalenessBound, relationForAction },
@@ -318,7 +318,7 @@ describe("a permit expires no later than the state view it was decided against (
       mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
       action_class: "irreversible_action",
       parameter_digest: "sha-256:pd",
-      freshness: { observed_at: observedAt, source: "load_view" },
+      mission_state_observation: { state: "active", mode: "fresh", freshness_at: observedAt },
     },
   });
   const execOpts = (now: Date) => ({
@@ -328,7 +328,7 @@ describe("a permit expires no later than the state view it was decided against (
     now: () => now,
     stalenessBound,
     relationForAction,
-    allowedFreshnessSources: new Set(["load_view"]),
+    stateSourcePlacement: "pep" as const,
     // @spec runtime#idempotency (#917): the irreversible-action permit is claimed first.
     claims: openTestClaims({ now: () => now }),
   });

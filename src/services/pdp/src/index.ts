@@ -18,11 +18,11 @@ export {
   type EvaluateOptions,
   type EvaluationRequest,
   type ActionApproval,
-  type Freshness,
   type OriginPrincipal,
   type PrincipalMappingObservation,
   type PrincipalMappingResolver,
 } from "./evaluate.js";
+export { type MissionStateObservation } from "./state-observation.js";
 export { PAYMENTS_RELATIONS, relationForAction, stalenessBound } from "./policy.js";
 export { RUNTIME_POSTURE, RUNTIME_CLASSES, LEASE_REQUIRED_CLASSES, executionLeaseMaxSeconds, loadRuntimePosture, PostureConfigError, postureStalenessBound, reversibleWriteKeyControl, reversibleWritePermitMaxSeconds, stateSourcePlacement, type RuntimePosture, type StalenessBound, type StateSourcePlacement } from "./runtime-posture.js";
 export { executionLeaseMs, permitDeadline, type PermitCeiling, type PermitDeadline, type PermitDeadlineInput } from "./permit-deadline.js";

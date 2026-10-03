@@ -329,7 +329,7 @@ d("transaction authorization end to end (@spec txn-authorization#challenge-redem
         subject: fresh.subject,
         client_id: fresh.client_id,
       };
-      return { view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } };
+      return { view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } };
     };
     evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
     const pep = new Pep({
@@ -342,7 +342,6 @@ d("transaction authorization end to end (@spec txn-authorization#challenge-redem
       instanceEpoch: "e2e-epoch",
       requiresActionApproval: (action) => action === "payments:remittance.send",
       maxApprovalAgeSeconds: 300,
-      allowedFreshnessSources: new Set(["load_view"]),
       challengeSigner: { sign: rsTxnKeys.privateKey, kid: "rs-txn", alg: "ES256", asIssuer: ISSUER },
     });
     const asJwks = (await (await fetch(`${ISSUER}/jwks`)).json()) as { keys: Record<string, unknown>[] };

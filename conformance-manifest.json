@@ -12710,31 +12710,31 @@
     },
     {
      "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
-     "name": "evaluateInner fail-closed gaps (#608) > GAP 2: freshness absence fails closed for high-consequence classes (@spec runtime#state-freshness) > every high-consequence action_class with context.freshness absent -> deny stale_state, Mission state cannot be established, never a bypass",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 2: freshness absence fails closed for high-consequence classes (@spec runtime#state-freshness) > every high-consequence action_class with context.mission_state_observation absent -> deny stale_state, Mission state cannot be established, never a bypass",
      "level": "endpoint",
      "surface": "decision-request"
     },
     {
      "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
-     "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > the reported repro -- a non-parseable observed_at with an unrecognized source -- denies stale_state, never permits, for every high-consequence class",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > the reported repro -- a non-parseable freshness_at -- denies stale_state, never permits, for every high-consequence class",
      "level": "endpoint",
      "surface": "decision-request"
     },
     {
      "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
-     "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > a future observed_at beyond the skew tolerance denies stale_state, for every high-consequence class",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > a future freshness_at beyond the skew tolerance denies stale_state, for every high-consequence class",
      "level": "endpoint",
      "surface": "decision-request"
     },
     {
      "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
-     "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > a well-formed, fresh observation from a source outside the deployment's allowed set denies stale_state, for every high-consequence class",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > a well-formed, fresh observation the deployment's declared state source does not place with the PEP denies stale_state, for every high-consequence class",
      "level": "endpoint",
      "surface": "decision-request"
     },
     {
      "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
-     "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > a future observed_at within the skew tolerance still permits (boundary control: the tolerance itself is not itself a denial)",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > a future freshness_at within the skew tolerance still permits (boundary control: the tolerance itself is not itself a denial)",
      "level": "endpoint",
      "surface": "decision-request"
     },

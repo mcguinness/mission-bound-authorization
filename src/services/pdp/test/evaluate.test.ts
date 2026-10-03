@@ -94,7 +94,7 @@ const opts = (v: MissionView) => ({
   now: () => NOW,
   stalenessBound,
   relationForAction,
-  allowedFreshnessSources: new Set(["status"]),
+  stateSourcePlacement: "pep",
   claims: CLAIMS,
 });
 
@@ -135,7 +135,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
           amount: { amount: "125.00", currency: "USD" },
           action_class: "irreversible_action",
           parameter_digest: "sha-256:pd",
-          freshness: { observed_at: NOW.toISOString(), source: "status" },
+          mission_state_observation: { state: "active", mode: "fresh", freshness_at: NOW.toISOString() },
         },
       }),
       opts(view()),
@@ -155,7 +155,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
           mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           action_class: "external_commitment",
           parameter_digest: "sha-256:pd2",
-          freshness: { observed_at: NOW.toISOString(), source: "status" },
+          mission_state_observation: { state: "active", mode: "fresh", freshness_at: NOW.toISOString() },
         },
       }),
       opts(view()),
@@ -288,7 +288,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
           mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           amount: { amount: "100.00", currency: "USD" },
           action_class: "irreversible_action",
-          freshness: { observed_at: "2026-07-22T11:58:00Z", source: "status" }, // 120s > 30s bound
+          mission_state_observation: { state: "active", mode: "fresh", freshness_at: "2026-07-22T11:58:00Z" }, // 120s > 30s bound
         },
       }),
       opts(view()),
@@ -344,7 +344,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
           amount: { amount: "125.00", currency: "USD" },
           action_class: "irreversible_action",
           parameter_digest: "sha-256:pd",
-          freshness: { observed_at: NOW.toISOString(), source: "status" },
+          mission_state_observation: { state: "active", mode: "fresh", freshness_at: NOW.toISOString() },
         },
       }),
       {
@@ -373,7 +373,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
           amount: { amount: "125.00", currency: "USD" },
           action_class: "irreversible_action",
           parameter_digest: "sha-256:pd",
-          freshness: { observed_at: NOW.toISOString(), source: "status" },
+          mission_state_observation: { state: "active", mode: "fresh", freshness_at: NOW.toISOString() },
           action_approval: {
             id: "apr_expired",
             approved_at: NOW.toISOString(), // fresh (within max age)
@@ -397,7 +397,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
           amount: { amount: "125.00", currency: "USD" },
           action_class: "irreversible_action",
           parameter_digest: "sha-256:pd",
-          freshness: { observed_at: NOW.toISOString(), source: "status" },
+          mission_state_observation: { state: "active", mode: "fresh", freshness_at: NOW.toISOString() },
           action_approval: {
             id: "apr_ok",
             approved_at: NOW.toISOString(),

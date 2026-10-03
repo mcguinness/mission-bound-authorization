@@ -58,7 +58,7 @@ const baseOpts = (extra: Partial<EvaluateOptions> = {}): EvaluateOptions => ({
   now: () => NOW,
   stalenessBound,
   relationForAction,
-  allowedFreshnessSources: new Set(["status"]),
+  stateSourcePlacement: "pep",
   ...extra,
 });
 
@@ -115,7 +115,7 @@ describe("evaluateInner cross-domain Origin Principal dual-axis (#539 stage A)",
     });
   });
 
-  it("profile claimed, no principalMapping/entitlement resolver configured at all: denies principal_mapping_failed (fail-closed-on-unconfigured, same idiom as allowedFreshnessSources)", async () => {
+  it("profile claimed, no principalMapping/entitlement resolver configured at all: denies principal_mapping_failed (fail-closed-on-unconfigured, same idiom as stateSourcePlacement)", async () => {
     const dec = await evaluate(req(), baseOpts());
     expect(dec.decision).toBe(false);
     expect(dec.context.denial_reason).toBe("principal_mapping_failed");

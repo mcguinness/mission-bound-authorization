@@ -63,7 +63,7 @@ const request = (action: string, key?: unknown): EvaluationRequest => ({
     mission: { id: "msn_918", issuer: "https://as.test", authority_hash: "sha-256:m918" },
     action_class: "consequential_write",
     parameter_digest: "sha-256:params-918",
-    freshness: { observed_at: NOW.toISOString(), source: "status" },
+    mission_state_observation: { state: "active", mode: "fresh", freshness_at: NOW.toISOString() },
     actor: { client_id: "ap-agent" },
   },
 });
@@ -85,7 +85,7 @@ const opts = {
   now: () => NOW,
   stalenessBound,
   relationForAction,
-  allowedFreshnessSources: new Set(["status"]),
+  stateSourcePlacement: "pep",
   claims: unreachableClaims as never,
 };
 

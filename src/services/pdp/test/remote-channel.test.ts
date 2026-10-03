@@ -89,7 +89,7 @@ async function startServer(
       now: () => NOW,
       stalenessBound,
       relationForAction,
-      allowedFreshnessSources: new Set(["status"]),
+      stateSourcePlacement: "pep",
     }),
     evaluateFn: countingEvaluate,
     replayWindowSeconds: 30,
@@ -398,7 +398,7 @@ describe("Remote Decision Channel (@spec runtime#decision-channel)", () => {
       now: () => NOW,
       stalenessBound,
       relationForAction,
-      allowedFreshnessSources: new Set(["status"]),
+      stateSourcePlacement: "pep",
     });
     expect(dec.decision).toBe(true);
   });
@@ -419,7 +419,7 @@ describe("the remote channel binds the claim requester (@spec runtime#idempotenc
       mission: { id: "msn_test_1", issuer: "https://as.test" },
       action_class: "irreversible_action",
       parameter_digest: "sha-256:pd-917",
-      freshness: { observed_at: NOW.toISOString(), source: "status" },
+      mission_state_observation: { state: "active", mode: "fresh", freshness_at: NOW.toISOString() },
     },
   });
   async function startClaimServer(claims = openTestClaims({ now: () => NOW })): Promise<PdpHttpServerHandle> {
@@ -432,7 +432,7 @@ describe("the remote channel binds the claim requester (@spec runtime#idempotenc
         now: () => NOW,
         stalenessBound,
         relationForAction,
-        allowedFreshnessSources: new Set(["status"]),
+        stateSourcePlacement: "pep",
       }),
       claims,
       consumptionStatus: (pepId) => (pepId === PEP_ID ? () => "unconsumed" : undefined),

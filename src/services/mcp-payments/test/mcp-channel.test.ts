@@ -158,7 +158,7 @@ async function build(): Promise<{
   // negative-boundary loader that intentionally does not.
   const loadView = (ref: { id: string }) =>
     ref.id === VIEW.id
-      ? { view: VIEW, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+      ? { view: VIEW, observation: { state: VIEW.state, version: VIEW.version, mode: "fresh", freshness_at: new Date().toISOString() } }
       : undefined;
   const pep = new Pep({
     decide: EVIDENCE_KEYS.decide,
@@ -168,7 +168,6 @@ async function build(): Promise<{
     modelId,
     loadView,
     instanceEpoch: "epoch-1",
-    allowedFreshnessSources: new Set(["load_view"]),
   });
   const server = new McpPaymentsServer({
     pep,

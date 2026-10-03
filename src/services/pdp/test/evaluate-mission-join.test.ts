@@ -51,7 +51,7 @@ const baseOpts = (extra: Partial<EvaluateOptions> = {}): EvaluateOptions => ({
   now: () => NOW,
   stalenessBound,
   relationForAction,
-  allowedFreshnessSources: new Set(["load_view"]),
+  stateSourcePlacement: "pep",
   ...extra,
 });
 

@@ -64,7 +64,7 @@ const view: MissionView = {
 
 const loadViewFor = (v: MissionView) => (ref: { id: string; issuer: string }) =>
   ref.id === v.id && ref.issuer === v.issuer
-    ? { view: v, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+    ? { view: v, observation: { state: v.state, version: v.version, mode: "fresh", freshness_at: new Date().toISOString() } }
     : undefined;
 
 const FULL_AUTHORITY: () => AuthorityEntry[] | undefined = () => [
@@ -83,7 +83,6 @@ function build(overrides: Partial<PepDeps> = {}, viewOverride: MissionView = vie
     modelId: "unit-test-model",
     loadView: loadViewFor(viewOverride),
     instanceEpoch: "epoch-1",
-    allowedFreshnessSources: new Set(["load_view"]),
     ...overrides,
   });
 }

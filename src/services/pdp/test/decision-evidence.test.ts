@@ -273,10 +273,10 @@ describe("evaluate() emits the Decision Evidence it decided (@spec runtime-evide
       const request = req();
       request.context.action_class = actionClass;
       request.context.parameter_digest = canonicalDigest({ invoice_id: "inv-1" });
-      request.context.freshness = { observed_at: NOW.toISOString(), source: "load_view" };
+      request.context.mission_state_observation = { state: "active", mode: "fresh", freshness_at: NOW.toISOString() };
       // @spec runtime#idempotency (#917): a high-consequence permit is claimed first.
       request.action.properties = { idempotency_key: freshKey() };
-      const decision = await evaluate(request, opts({ evidence: emitter, allowedFreshnessSources: new Set(["load_view"]), claims }));
+      const decision = await evaluate(request, opts({ evidence: emitter, stateSourcePlacement: "pep", claims }));
       expect(decision.decision, JSON.stringify(decision.context)).toBe(true);
       const record = decision.context.decision_evidence as DecisionEvidenceObject;
       expect(record.action_class).toBe(actionClass ?? "consequential_read");

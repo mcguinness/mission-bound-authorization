@@ -18,11 +18,11 @@ async function build(mode: "co-resident" | "remote", override?: DecisionFn) {
     authority_set: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"], constraints: { vendors: ["acme"] }, capability_sources: [{ action: "payments:invoice.read", ...source.binding }] }],
   };
   const fga = { checkWithContext: async () => true } as unknown as Fga;
-  const loadView = () => ({ view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } });
-  const getOptions = vi.fn(() => ({ view, fga, modelId: "test", now: () => new Date(), stalenessBound, relationForAction, allowedFreshnessSources: new Set(["load_view"]) }));
+  const loadView = () => ({ view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } });
+  const getOptions = vi.fn(() => ({ view, fga, modelId: "test", now: () => new Date(), stalenessBound, relationForAction, stateSourcePlacement: "pep" as const }));
   const channel = await createDecisionChannel(point, { mode, pepId: "payments-pep", audience: CANONICAL_RESOURCE, getOptions });
   const observe = vi.fn();
-  const pep = new Pep({ payments, evidence, fga, modelId: "test", loadView, instanceEpoch: "epoch", decide: override ?? channel.decide, observe, allowedFreshnessSources: new Set(["load_view"]) });
+  const pep = new Pep({ payments, evidence, fga, modelId: "test", loadView, instanceEpoch: "epoch", decide: override ?? channel.decide, observe });
   const statement = loadRuntimePosture({ ...RUNTIME_POSTURE, remote_decision_channels: channel.remoteDecisionChannels });
   const server = new McpPaymentsServer({ pep, payments, loadView, issuer: view.issuer, jwks: { keys: [] }, enforcementScopeStatement: statement });
   const token: TokenFacts = { sub: "alice", clientId: "agent", cnfJkt: "jkt", mission: { id: view.id, issuer: view.issuer, authority_hash: view.authority_hash } };

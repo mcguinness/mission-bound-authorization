@@ -66,13 +66,27 @@ export function operationIdentity(req: EvaluationRequest): string {
  * @spec authzen#projections, "Authorization binding": the subject, the actor,
  * credential-derived facts, the Mission reference, the authority and view
  * identity, the approval, and every policy-relevant context input. The whole
- * validated request is carried except `context.freshness`, which is
- * observation telemetry (when and from where state was read); the authority
- * and view identity are the loaded view's authority commitment and the
- * policy model the decision ran under.
+ * validated request is carried except the observation telemetry in
+ * `context.mission_state_observation` (@spec authzen#context-audience-freshness):
+ * `freshness_at`, `mission_status_issued_at`, `mission_status_expires_at`, the
+ * `assertion` that carries them, and `mode`, which says how the PEP obtained
+ * state rather than which state it observed. The observation's state
+ * generation, its `state` and `version`, stays. The authority and view
+ * identity are the loaded view's authority commitment and the policy model
+ * the decision ran under.
  */
 export function authorizationBinding(req: EvaluationRequest, view: MissionView, modelId: string): JsonValue {
-  const { freshness: _observationTelemetry, ...context } = req.context;
+  const { mission_state_observation: observation, ...rest } = req.context;
+  const context =
+    observation === undefined
+      ? rest
+      : {
+          ...rest,
+          mission_state_observation: {
+            state: observation.state,
+            ...(observation.version !== undefined ? { version: observation.version } : {}),
+          },
+        };
   return {
     subject: req.subject,
     action: req.action,

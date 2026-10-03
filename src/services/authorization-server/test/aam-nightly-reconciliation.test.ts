@@ -363,7 +363,7 @@ function viewFor(missionId: string): MissionView {
 const loadView = (ref: { id: string; issuer: string }) => {
   const r = as.kernel.get(ref.id);
   if (!r || r.issuer !== ref.issuer) return undefined;
-  return { view: viewFor(ref.id), freshness: { observed_at: new Date().toISOString(), source: "load_view" } };
+  return { view: viewFor(ref.id), observation: { state: viewFor(ref.id).state, version: viewFor(ref.id).version, mode: "fresh", freshness_at: new Date().toISOString() } };
 };
 
 /** A raw PDP decision for one Mission action (the Task-Scoped Access Engine). */
@@ -431,7 +431,6 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
       modelId,
       loadView,
       instanceEpoch: "aam-epoch",
-      allowedFreshnessSources: new Set(["load_view"]),
     });
 
     // The gate's own evidence store; the gate is built in step 4 (needs the mission id).

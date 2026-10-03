@@ -56,7 +56,7 @@ const reqFor = (actionClass: string, approval?: ActionApproval): EvaluationReque
     // Fresh state so a high-consequence class clears step 3 and this test
     // keeps exercising the gate it names (step 8's action-bound approval),
     // never the freshness gate (@spec runtime#state-freshness).
-    freshness: { observed_at: NOW.toISOString(), source: "status" },
+    mission_state_observation: { state: "active", mode: "fresh", freshness_at: NOW.toISOString() },
     ...(approval ? { action_approval: approval } : {}),
   },
 });
@@ -73,7 +73,7 @@ const optsFor = (actionClass: string) => ({
   requiresActionApproval: (_action: string, ac: string | undefined) => ac === actionClass,
   maxApprovalAgeSeconds: 300,
   relationForAction,
-  allowedFreshnessSources: new Set(["status"]),
+  stateSourcePlacement: "pep",
   claims: CLAIMS,
 });
 

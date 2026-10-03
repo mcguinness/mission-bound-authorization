@@ -36,15 +36,18 @@ import {
   isDecisionChannelRefusal,
   type EvaluationRequest,
   type Fga,
-  type Freshness,
   idempotencyScopeOf,
+  type MissionStateObservation,
   type MissionView,
   newRecordId,
   operationIdentity,
   type OriginPrincipal,
   type PrincipalMappingResolver,
+  RUNTIME_POSTURE,
   relationForAction,
   stalenessBound,
+  stateSourcePlacement,
+  type StateSourcePlacement,
 } from "@mission/pdp";
 import {
   buildEffectiveParams,
@@ -441,18 +444,19 @@ const PERMIT_USE_CHECKS: readonly PermitUseCheck[] = [
 ];
 
 /**
- * @spec runtime#state-freshness: a loaded MissionView paired with the
- * authenticated freshness of the read that produced it. `freshness.observed_at`
- * MUST be the time the loader itself read authoritative state, not the time
- * of the `loadView` call that returns it; the two coincide for a synchronous
- * live read (the current production loader) and diverge the moment a cache
- * sits in front of one, in which case the cached observation time travels
- * with the data. The PEP propagates this verbatim; it never stamps its own
- * clock over it (Finding 1).
+ * @spec runtime#state-freshness, authzen#context-audience-freshness: a loaded
+ * MissionView paired with the Mission state observation of the read that
+ * produced it, in the AuthZEN profile's own members. `freshness_at` MUST be
+ * the time the loader itself read authoritative state, not the time of the
+ * `loadView` call that returns it; the two coincide for a synchronous live
+ * read (`mode: "fresh"`, the current production loader) and diverge the
+ * moment a cache sits in front of one, in which case the cached observation
+ * time travels with the data. The PEP propagates this verbatim; it never
+ * stamps its own clock over it (Finding 1).
  */
 export interface LoadedView {
   view: MissionView;
-  freshness: Freshness;
+  observation: MissionStateObservation;
 }
 
 /**
@@ -535,12 +539,12 @@ export interface PepDeps {
   requiresActionApproval?: (action: string, actionClass: string | undefined) => boolean;
   maxApprovalAgeSeconds?: number;
   /**
-   * @spec runtime#state-freshness: "A runtime deployment MUST define the
-   * Mission state source it trusts for each enforcement scope." The
-   * mechanisms this deployment trusts as `context.freshness.source`; forwarded
-   * to the PDP's `allowedFreshnessSources` unchanged.
+   * @spec runtime#state-freshness, authzen#context-audience-freshness: the
+   * enforcement scope's declared state-source placement. Defaults to the
+   * published Enforcement Scope Statement's; injectable so a test can stand up
+   * the other placement. Forwarded to the PDP's `stateSourcePlacement`.
    */
-  allowedFreshnessSources?: ReadonlySet<string>;
+  stateSourcePlacement?: StateSourcePlacement;
   /**
    * @spec cross-domain#origin-principal-mapping — resolves
    * `context.mission.subject` to a destination-local mapping; forwarded to
@@ -1015,9 +1019,12 @@ type TargetObject = { type: string; id: string; properties?: { vendor_id?: strin
 export class Pep {
   readonly capabilityCatalog: CapabilityCatalog;
   private readonly now: () => Date;
+  /** @spec authzen#context-audience-freshness: who supplies Mission state for this enforcement scope. */
+  private readonly placement: StateSourcePlacement;
   constructor(private readonly deps: PepDeps) {
     this.capabilityCatalog = deps.capabilityCatalog ?? new PaymentsToolCatalog();
     this.now = deps.now ?? (() => new Date());
+    this.placement = deps.stateSourcePlacement ?? stateSourcePlacement(RUNTIME_POSTURE);
   }
 
   /**
@@ -1076,7 +1083,7 @@ export class Pep {
     if (!mapping) return await this.refuse(token, "unknown_tool", tool);
 
     let view: MissionView;
-    let freshness: Freshness;
+    let observation: MissionStateObservation;
     // The governing Mission anchor for the AuthZEN envelope below: the
     // credential's own claim on the Mission-bound path, or the PEP-supplied
     // propagated reference (rule 1) on the baseline-Join path (never a raw
@@ -1121,7 +1128,7 @@ export class Pep {
         return await this.refuse(token, "mission_reference_conflict", mapping.action, loaded.view);
       }
       view = loaded.view;
-      freshness = loaded.freshness;
+      observation = loaded.observation;
       missionAnchor = token.mission;
     } else {
       // @spec authority-server#mission-join (#557): an ordinary credential
@@ -1169,7 +1176,7 @@ export class Pep {
       // can verify the credential inputs and tell whether the join actually
       // ran (#557 review point 1).
       view = { ...loaded.view, authority_set: boundAuthority };
-      freshness = loaded.freshness;
+      observation = loaded.observation;
       missionAnchor = { id: propagated.id, issuer: propagated.issuer };
       isBaselineJoin = true;
       delegateDepth = this.deps.masJoin.resolveDelegateDepth?.(
@@ -1351,16 +1358,17 @@ export class Pep {
           // never populated from `args` or any other unverified request value.
           ...(missionAnchor.subject !== undefined ? { subject: missionAnchor.subject } : {}),
         },
-        // @spec runtime#state-freshness: `freshness` is the loader's OWN
-        // assertion of when it read authoritative state, propagated exactly
-        // as `loadView` returned it. The PEP never stamps its own clock here
-        // (Finding 1): doing so would relabel a cached or relayed
-        // observation as fresh at the moment it happened to be consumed,
-        // rather than at the moment it was actually read. Supplying it keeps
-        // a high-consequence action class (irreversible_action,
-        // external_commitment) from being denied `stale_state` merely for
-        // omitting the member (the PDP's #608 GAP 2 fail-closed fix).
-        freshness,
+        // @spec runtime#state-freshness, authzen#context-audience-freshness:
+        // the observation is the loader's OWN assertion of the state it read
+        // and when, propagated exactly as `loadView` returned it. The PEP
+        // never stamps its own clock here (Finding 1): doing so would relabel
+        // a cached or relayed observation as fresh at the moment it happened
+        // to be consumed, rather than at the moment it was actually read.
+        // Supplying it keeps a high-consequence action class
+        // (irreversible_action, external_commitment) from being denied
+        // `stale_state` merely for omitting the member (the PDP's #608 GAP 2
+        // fail-closed fix).
+        mission_state_observation: observation,
         actor: contextActor,
         ...(token.credential ? { credential: {
           ...(typeof token.credential.issuer === "string" ? { issuer: token.credential.issuer } : {}),
@@ -1406,7 +1414,7 @@ export class Pep {
       ...(this.deps.requiresActionApproval ? { requiresActionApproval: this.deps.requiresActionApproval } : {}),
       ...(this.deps.maxApprovalAgeSeconds ? { maxApprovalAgeSeconds: this.deps.maxApprovalAgeSeconds } : {}),
       ...(this.deps.requestable ? { requestable: this.deps.requestable } : {}),
-      ...(this.deps.allowedFreshnessSources ? { allowedFreshnessSources: this.deps.allowedFreshnessSources } : {}),
+      stateSourcePlacement: this.placement,
       ...(this.deps.principalMapping ? { principalMapping: this.deps.principalMapping } : {}),
       ...(this.deps.entitlement ? { entitlement: this.deps.entitlement } : {}),
       ...(this.deps.entitlementStalenessBoundSeconds !== undefined

@@ -128,7 +128,7 @@ function buildServer(keys: ReturnType<typeof createEphemeralEvidenceKeys>, withD
   const missionView = view();
   const loadView = (ref: { id: string; issuer: string }) =>
     ref.id === missionView.id && ref.issuer === missionView.issuer
-      ? { view: missionView, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+      ? { view: missionView, observation: { state: missionView.state, version: missionView.version, mode: "fresh", freshness_at: new Date().toISOString() } }
       : undefined;
   const pep = new Pep({
     payments,
@@ -138,7 +138,6 @@ function buildServer(keys: ReturnType<typeof createEphemeralEvidenceKeys>, withD
     modelId: "unit-test-model",
     loadView,
     instanceEpoch: "epoch-1",
-    allowedFreshnessSources: new Set(["load_view"]),
   });
   const server = new McpPaymentsServer({
     pep,

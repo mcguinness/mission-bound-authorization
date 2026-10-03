@@ -51,7 +51,7 @@ const reqFor = (actionClass: string): EvaluationRequest => ({
     // Fresh state so a high-consequence class clears step 3 and this test
     // keeps exercising the gate it names (step 5's entry match), never the
     // freshness gate (@spec runtime#state-freshness).
-    freshness: { observed_at: NOW.toISOString(), source: "status" },
+    mission_state_observation: { state: "active", mode: "fresh", freshness_at: NOW.toISOString() },
   },
 });
 
@@ -65,7 +65,7 @@ const opts = {
   now: () => NOW,
   stalenessBound,
   relationForAction,
-  allowedFreshnessSources: new Set(["status"]),
+  stateSourcePlacement: "pep",
   // @spec runtime#idempotency (#917): a fixture domain that also mediates
   // privileged administration, which the shipped deployment does not offer.
   claims: openTestClaims({ now: () => NOW }),
@@ -80,7 +80,7 @@ describe("classification cannot be used to evade the floor or a Resource-policy 
     const permit = await evaluate(request, opts);
     expect(permit.decision).toBe(true);
     expect((permit.context.conditions as Record<string, unknown>).use_limit).toBe(1);
-    request.context.freshness!.observed_at = new Date(NOW.getTime() - 31_000).toISOString();
+    request.context.mission_state_observation!.freshness_at = new Date(NOW.getTime() - 31_000).toISOString();
     expect((await evaluate(request, opts)).context.denial_reason).toBe("stale_state");
   });
 
@@ -89,12 +89,12 @@ describe("classification cannot be used to evade the floor or a Resource-policy 
     // freshness required". The remaining gates still run, so the refusal is
     // the entry-match one and never `stale_state`.
     const request = reqFor("audit_only");
-    delete request.context.freshness;
+    delete request.context.mission_state_observation;
     const dec = await evaluate(request, opts);
     expect(dec.decision).toBe(false);
     expect(dec.context.denial_reason).toBe("out_of_authority");
     const permitted = reqFor("audit_only");
-    delete permitted.context.freshness;
+    delete permitted.context.mission_state_observation;
     permitted.action.name = "payments:invoice.read";
     expect((await evaluate(permitted, opts)).decision).toBe(true);
   });
@@ -107,8 +107,8 @@ describe("classification cannot be used to evade the floor or a Resource-policy 
     // established.
     for (const mutate of [
       (_r: EvaluationRequest) => {},
-      (r: EvaluationRequest) => { delete r.context.freshness; },
-      (r: EvaluationRequest) => { r.context.freshness = { observed_at: new Date(NOW.getTime() - 10_000_000).toISOString(), source: "status" }; },
+      (r: EvaluationRequest) => { delete r.context.mission_state_observation; },
+      (r: EvaluationRequest) => { r.context.mission_state_observation = { state: "active", mode: "fresh", freshness_at: new Date(NOW.getTime() - 10_000_000).toISOString() }; },
     ]) {
       const request = reqFor("some_unrecognized_label");
       // An action inside the entry, so only the class rule can refuse it.

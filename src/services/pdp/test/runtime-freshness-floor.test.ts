@@ -30,8 +30,8 @@ describe("consequential freshness floor (@spec runtime#state-freshness)", () => 
     };
     for (const actionClass of [undefined, "consequential_read", "consequential_write", "irreversible_action", "external_commitment", "privileged_administration", "unknown"]) {
       request.context.action_class = actionClass;
-      for (const freshness of [undefined, { source: "status", observed_at: "2026-07-22T12:00:00Z" }]) {
-        request.context.freshness = freshness;
+      for (const observation of [undefined, { state: "active", mode: "fresh", freshness_at: "2026-07-22T12:00:00Z" }]) {
+        request.context.mission_state_observation = observation;
         const result = await evaluate(request, options);
         expect(result.decision, actionClass).toBe(false);
         expect(result.context.denial_reason).toBe("out_of_authority");
