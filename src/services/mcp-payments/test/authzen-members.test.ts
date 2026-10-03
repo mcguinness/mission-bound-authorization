@@ -138,6 +138,9 @@ describe("the PEP sends the AuthZEN profile's members (@spec authzen#context-aud
       ["a malformed freshness_at", { state: "active", mode: "fresh", freshness_at: "now" }],
       ["cached with no mission_status_expires_at", { state: "active", mode: "cached", freshness_at: now, mission_status_issued_at: now }],
       ["event_driven with no mission_status_issued_at", { state: "active", mode: "event_driven", freshness_at: now, mission_status_expires_at: now }],
+      ["a mode outside the three", { state: "active", mode: "polled", freshness_at: now }],
+      ["a non-integer version", { state: "active", version: "7", mode: "fresh", freshness_at: now }],
+      ["a non-string assertion", { state: "active", mode: "fresh", freshness_at: now, assertion: { jws: "x" } }],
     ];
     for (const [label, observation] of malformed) {
       const f = fixture({ deps: { stateSourcePlacement: "pep" }, observation });
