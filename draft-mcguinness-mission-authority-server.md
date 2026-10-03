@@ -3086,6 +3086,17 @@ shows the denial:
 
 \[\[ To be removed from the final specification ]]
 
+- Submission polling and Join Assertion outcomes (#972). The 202 and
+  `pending` status responses carry an `interval`, defaulting to 5
+  seconds; the status request parameter is `submission_id`. The
+  join-assertion endpoint mints only for an `active` Mission and
+  defines its outcomes: `invalid_join_request` (400) for a malformed
+  body, `not_found` (404) for an unknown or invisible Mission, and
+  `join_failed` (403) for a non-active Mission, an inactive or unbound
+  token, or a failed join. Join Assertions are signed with an algorithm
+  listed in `mission_status_signing_alg_values_supported`, and a PDP
+  rejects `none` or an unlisted algorithm.
+
 - Join inputs on the wire (#972). Mission Status discloses the
   Mission's `subject`, `client_id`, and entry `delegation` members to
   PDPs enrolled for its enforcement scope, and enrollment is
