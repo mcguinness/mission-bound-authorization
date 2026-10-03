@@ -3177,7 +3177,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an activation under a policy snapshot whose digest differs from the committed digest does not activate under that policy: Template refuses with dispatch_policy_changed, Progressive falls back to a fresh human approval, Child Delegation denies with policy_denied",
-    "local": "Template: a held snapshot edited under the same version, a changed version, or no snapshot refuses dispatch_policy_changed with no instance and no dispatch row committed; the committed snapshot still dispatches. Child Delegation: the same three changes deny policy_denied (with deny Child Evidence) and commit no child; restoring the snapshot admits creation. Progressive's ceiling drawdown is not implemented in the reference, so the drawdown_policy clause has no witness; the Template and Child Delegation clauses are asserted."
+    "local": "Template: a held snapshot edited under the same version, a changed version, or no snapshot refuses dispatch_policy_changed with no instance and no dispatch row committed; the committed snapshot still dispatches. The Agent selection rule is read only from the verified snapshot (its `select_agent` member), so a rule re-pointed under the same version refuses dispatch_policy_changed and never selects. Child Delegation: the same three changes deny policy_denied (with deny Child Evidence) and commit no child; restoring the snapshot admits creation. Progressive's ceiling drawdown is not implemented in the reference, so the drawdown_policy clause has no witness; the Template and Child Delegation clauses are asserted."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -3185,6 +3185,12 @@
     {
      "file": "src/services/authorization-server/test/template.test.ts",
      "name": "dispatch gates (@spec mission-template#dispatch-refusals) > refuses dispatch_policy_changed when the held policy's content, version, or presence changes, committing nothing",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "dispatch gates (@spec mission-template#dispatch-refusals) > a selection rule changed after consent is dispatch_policy_changed, never a new selection",
      "level": "unit",
      "surface": "derivation"
     },
@@ -24334,7 +24340,7 @@
     },
     {
      "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "dispatch gates (@spec mission-template#dispatch-refusals) > with several listed Agents, selects the Agent the Dispatch Policy names, and refuses agent_not_selected when no rule selects one",
+     "name": "dispatch gates (@spec mission-template#dispatch-refusals) > with several listed Agents, selects the Agent the committed Dispatch Policy snapshot names, and refuses agent_not_selected when it names none",
      "level": "unit",
      "surface": "token-endpoint"
     }
@@ -24368,7 +24374,7 @@
     },
     {
      "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "dispatch gates (@spec mission-template#dispatch-refusals) > with several listed Agents, selects the Agent the Dispatch Policy names, and refuses agent_not_selected when no rule selects one",
+     "name": "dispatch gates (@spec mission-template#dispatch-refusals) > with several listed Agents, selects the Agent the committed Dispatch Policy snapshot names, and refuses agent_not_selected when it names none",
      "level": "unit",
      "surface": "token-endpoint"
     }
