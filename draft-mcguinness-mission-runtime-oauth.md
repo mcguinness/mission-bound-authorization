@@ -266,7 +266,11 @@ and Mediated Execution"). The `cnf` claim of a validated JWT, or the
 sender-constraint binding: a DPoP key (`jkt`), proved with a DPoP proof
 checked per {{Section 7.1 of RFC9449}}, or a client certificate
 thumbprint (`x5t#S256`), proved over mutual TLS per
-{{Section 3 of RFC8705}}. An access token whose validated credential
+{{Section 3 of RFC8705}}. Proof over mutual TLS means the certificate
+authenticated on the request's own TLS connection matches the bound
+thumbprint; a certificate merely received with the request, or a
+thumbprint match against a certificate the connection did not
+authenticate, establishes no possession. An access token whose validated credential
 context carries no such binding is a bearer token and does not meet that
 requirement, and a binding whose proof the PEP has not verified for the
 request supplies no confirmation key to the decision. The requirement
