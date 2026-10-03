@@ -235,6 +235,40 @@ describe("AuthZEN profile members (@spec authzen#pdp-request, authzen#context-au
         }
       }
     });
+
+    // #1049 review P2-a: `mission_status_expires_at` is OPTIONAL in `fresh`
+    // mode, so the signed `mission.fresh_until` must bind on its own: an
+    // observation that omits the repeat cannot discard the signed ceiling.
+    it("a verified assertion's signed fresh_until caps the permit in fresh mode, though the observation does not repeat it", async () => {
+      const { privateKey, keys } = await statusKeys();
+      const signedUntil = new Date(NOW.getTime() + 5_000);
+      const assertion = await signStatus({ privateKey, mission: { fresh_until: signedUntil.toISOString() } });
+      // irreversible_action (30 s bound, 120 s lifetime) and consequential_write
+      // (300 s bound and lifetime): both would otherwise outlive the signed state.
+      for (const actionClass of ["irreversible_action", "consequential_write"]) {
+        const dec = await evaluate(
+          observedRequest({ actionClass, observation: observed({ version: 3, assertion }) }),
+          options({ stateSourcePlacement: "pep", stateAssertionKeys: keys }),
+        );
+        expect(dec.decision, `${actionClass}: ${JSON.stringify(dec.context)}`).toBe(true);
+        const validUntil = (dec.context.conditions as { valid_until: string }).valid_until;
+        expect(Date.parse(validUntil), `${actionClass}: ${validUntil}`).toBeLessThanOrEqual(signedUntil.getTime());
+      }
+    });
+
+    it("a verified assertion whose signed fresh_until has already passed denies stale_state, in fresh mode too", async () => {
+      const { privateKey, keys } = await statusKeys();
+      // The JWS itself is unexpired; only the signed state ceiling has passed.
+      const assertion = await signStatus({ privateKey, mission: { fresh_until: new Date(NOW.getTime() - 1_000).toISOString() } });
+      for (const actionClass of ["irreversible_action", "consequential_write"]) {
+        const dec = await evaluate(
+          observedRequest({ actionClass, observation: observed({ version: 3, assertion }) }),
+          options({ stateSourcePlacement: "pep", stateAssertionKeys: keys }),
+        );
+        expect(dec.decision, actionClass).toBe(false);
+        expect(dec.context.denial_reason, actionClass).toBe("stale_state");
+      }
+    });
   });
 
   // @spec runtime#state-freshness, authzen#response-context: "A permit issued

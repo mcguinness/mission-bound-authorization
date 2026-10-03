@@ -103,11 +103,18 @@ const MISSION_STATUS_RESPONSE_TYP = "mission-status-response+jwt";
  *
  * Verified means: a JWS of the Status media type, signed by one of `keys`,
  * issued by the Mission's issuer, audienced to this enforcement scope, not
- * expired, naming this Mission, and agreeing with the observation it rides
- * in: the same `state`, the same `version` where the observation names one,
- * an `iat` equal to `mission_status_issued_at`, and a `fresh_until` no
- * earlier than `mission_status_expires_at` ("its `mission.fresh_until`,
- * never its `exp`, or an earlier end deployment policy sets").
+ * expired, naming this Mission, carrying a signed `mission.fresh_until`, and
+ * agreeing with the observation it rides in: the same `state`, the same
+ * `version` where the observation names one, an `iat` equal to
+ * `mission_status_issued_at`, and a `fresh_until` no earlier than
+ * `mission_status_expires_at` ("its `mission.fresh_until`, never its `exp`,
+ * or an earlier end deployment policy sets").
+ *
+ * Returns the signed `fresh_until` (epoch milliseconds) when verified, and
+ * `undefined` otherwise. The caller enforces it whether or not the
+ * observation repeats it (#1049 review P2-a): `mission_status_expires_at` is
+ * OPTIONAL in `fresh` mode, and omitting the repeat must never discard the
+ * signed ceiling.
  */
 export async function verifyStateAssertion(
   observation: ParsedStateObservation & { assertion: string },
@@ -115,8 +122,8 @@ export async function verifyStateAssertion(
   keys: JWTVerifyGetKey | undefined,
   now: Date,
   clockToleranceSeconds: number,
-): Promise<boolean> {
-  if (keys === undefined) return false;
+): Promise<number | undefined> {
+  if (keys === undefined) return undefined;
   try {
     const { payload } = await jwtVerify(observation.assertion, keys, {
       typ: MISSION_STATUS_RESPONSE_TYP,
@@ -126,22 +133,25 @@ export async function verifyStateAssertion(
       clockTolerance: clockToleranceSeconds,
     });
     const mission = payload.mission;
-    if (mission === null || typeof mission !== "object" || Array.isArray(mission)) return false;
+    if (mission === null || typeof mission !== "object" || Array.isArray(mission)) return undefined;
     const m = mission as Record<string, unknown>;
-    if (m.id !== expected.missionId || m.issuer !== expected.issuer || m.state !== observation.state) return false;
-    if (observation.version !== undefined && m.version !== observation.version) return false;
+    if (m.id !== expected.missionId || m.issuer !== expected.issuer || m.state !== observation.state) return undefined;
+    if (observation.version !== undefined && m.version !== observation.version) return undefined;
     if (
       observation.issuedAtMs !== undefined &&
       (typeof payload.iat !== "number" || payload.iat * 1000 !== observation.issuedAtMs)
     ) {
-      return false;
+      return undefined;
     }
+    // The signed state ceiling. A status response with none bounds nothing
+    // the PDP could rely on, so it does not verify.
     const freshUntilMs = rfc3339Ms(m.fresh_until);
-    if (observation.expiresAtMs !== undefined && (freshUntilMs === undefined || observation.expiresAtMs > freshUntilMs)) {
-      return false;
-    }
-    return true;
+    if (freshUntilMs === undefined) return undefined;
+    // A repeated expiry later than the signed one is a mismatch, as for state
+    // and version; an earlier one is a deployment-policy end and stands.
+    if (observation.expiresAtMs !== undefined && observation.expiresAtMs > freshUntilMs) return undefined;
+    return freshUntilMs;
   } catch {
-    return false;
+    return undefined;
   }
 }

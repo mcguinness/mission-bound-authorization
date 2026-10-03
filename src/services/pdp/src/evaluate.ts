@@ -662,6 +662,11 @@ async function evaluateInner(
   // observation and none was presented.
   let acceptedObservationMs: number | undefined;
   let acceptedValidThroughMs: number | undefined;
+  // @spec authzen#context-audience-freshness `assertion` (#1049 review P2-a):
+  // the signed `mission.fresh_until` of a verified Mission Status Response,
+  // set at step 2a, and one more ceiling on the permit regardless of the
+  // class's posture or of what the observation repeats.
+  let signedFreshUntilMs: number | undefined;
   // @spec authority-server#mission-join (#557 review point 1) — set once
   // step 4b below resolves the baseline Join, so `join_view_id` (below) is
   // present on the SAME decision's Decision Evidence/Refusal Record
@@ -774,17 +779,21 @@ async function evaluateInner(
     // the declared source's keys rather than trusting the unsigned snapshot.
     // One it cannot verify, or one that disagrees with the observation,
     // establishes nothing.
-    if (
-      observation.assertion !== undefined &&
-      !(await verifyStateAssertion(
+    if (observation.assertion !== undefined) {
+      const freshUntilMs = await verifyStateAssertion(
         { ...observation, assertion: observation.assertion },
         { missionId: req.context.mission.id, issuer: req.context.mission.issuer, audience },
         opts.stateAssertionKeys,
         now(),
         skewToleranceMs / 1000,
-      ))
-    ) {
-      return deny("stale_state");
+      );
+      if (freshUntilMs === undefined) return deny("stale_state");
+      // #1049 review P2-a: the signed `mission.fresh_until` binds whether or
+      // not the observation repeats it as `mission_status_expires_at`
+      // (OPTIONAL in `fresh` mode). Already passed, the signed state is no
+      // longer relied on; otherwise it caps the permit below.
+      if (freshUntilMs <= now().getTime()) return deny("stale_state");
+      signedFreshUntilMs = freshUntilMs;
     }
   }
 
@@ -1315,13 +1324,13 @@ async function evaluateInner(
     stalenessBound: declaredStaleness,
     ...(acceptedObservationMs !== undefined ? { stateObservedAtMs: acceptedObservationMs } : {}),
     ...(acceptedValidThroughMs !== undefined ? { stateValidThroughMs: acceptedValidThroughMs } : {}),
-    ...(reversibleWriteMaxSeconds !== undefined
-      ? {
-          ceilings: [
-            { name: "reversible_write_permit_max", atMs: decisionNowMs + reversibleWriteMaxSeconds * 1000 },
-          ],
-        }
-      : {}),
+    ceilings: [
+      ...(reversibleWriteMaxSeconds !== undefined
+        ? [{ name: "reversible_write_permit_max", atMs: decisionNowMs + reversibleWriteMaxSeconds * 1000 }]
+        : []),
+      // #1049 review P2-a: a verified status response's signed state ceiling.
+      ...(signedFreshUntilMs !== undefined ? [{ name: "signed_state_fresh_until", atMs: signedFreshUntilMs }] : []),
+    ],
   });
   if (deadline.kind === "elapsed") return deny("stale_state");
   const validUntil = deadline.validUntil;
