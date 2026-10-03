@@ -94,8 +94,9 @@ Table of Contents
    5.  Adjudication
      5.1.  Mission Issuer verification order
      5.2.  Completion modes
-     5.3.  The deferred window
-     5.4.  Successor expiry
+     5.3.  Interactive handoff
+     5.4.  The deferred window
+     5.5.  Successor expiry
    6.  The Predecessor Mission Reference
    7.  The Superseded Predecessor State
      7.1.  No implicit rollback
@@ -127,6 +128,7 @@ Table of Contents
    17. IANA Considerations
      17.1.  Mission Lifecycle States Registration
      17.2.  Mission Denial Reasons Registry
+     17.3.  OAuth Extensions Error Registration
    Acknowledgments
    References
      Normative References
@@ -291,9 +293,11 @@ Table of Contents
         |    ---- poll ------------> |     approval via DTR;
         |    <-- access token ------ |     token on approval
         |                            |
-        |    <-- (front channel) --> | (b) interactive: the
-        |                            |     deployment's front-
-        |                            |     channel approval
+        |    <-- interaction req. -- | (b) interactive: the
+        |    ---- PAR + handle ----> |     client pushes the
+        |    <-- (front channel) --> |     continuation; approval;
+        |    ---- code ------------> |     code redemption
+        |    <-- access token ------ |
         |                            |
         |         at activation: successor active,
         |         predecessor superseded (atomic)
@@ -536,7 +540,7 @@ Table of Contents
    The Mission Issuer MUST resolve the predecessor from subject_token
    and verify it is in the active state before adjudicating, and MUST
    re-verify it at completion when adjudication is deferred or
-   interactive (Section 5.3).  An expansion request against a
+   interactive (Section 5.4).  An expansion request against a
    predecessor that is not active MUST be refused with invalid_grant and
    a reconciliation status (Section 10):
 
@@ -606,7 +610,7 @@ Table of Contents
 
    8.  Complete per Section 5.2; at a deferred or interactive
        completion, re-verify the predecessor's Mission state before
-       issuing (Section 5.3).
+       issuing (Section 5.4).
 
    On any failure the Mission Issuer MUST refuse with invalid_request,
    invalid_grant, or invalid_token as appropriate, and MUST NOT create a
@@ -651,13 +655,13 @@ Table of Contents
       to access_denied or expired_token.  This document references that
       substrate and does not redefine it.
 
-   Interactive:  When approval is interactive, the Mission Issuer runs
-      the deployment's existing front-channel approval event, the
-      issuance profile's own approval ceremony
-      ([I-D.draft-mcguinness-oauth-mission]), issuing an authorization
-      code the client redeems to obtain the successor's authority.  This
-      is the interactive path retained from earlier revisions of this
-      document.
+   Interactive:  When approval is interactive, the Mission Issuer
+      answers the token exchange with the interaction-required response
+      of Section 5.3.  The client pushes an authorization request
+      carrying the continuation, the user agent completes the issuance
+      profile's own approval ceremony
+      ([I-D.draft-mcguinness-oauth-mission]), and the client redeems the
+      resulting authorization code for the successor's authority.
 
    This document defines no synchronous exchange completion for an
    expansion that takes fresh consent.  An expansion response is a
@@ -704,7 +708,90 @@ Table of Contents
    loses the response recovers the one committed operation, never a
    second creation.
 
-5.3.  The deferred window
+5.3.  Interactive handoff
+
+   An [RFC8693] success carries an issued token (Section 2.2.1 of
+   [RFC8693]), so interactive completion cannot use one.  The Mission
+   Issuer MUST answer the token exchange with an OAuth error response
+   (Section 5.2 of [RFC6749]), HTTP status 400, carrying:
+
+   error:  mission_interaction_required.
+
+   mission_continuation:  A string: an opaque, unguessable handle naming
+      the pending creation operation (Section 11), bound to the
+      authenticated client and the operation fingerprint (Section 11.1).
+
+   expires_in:  A number: the handle's remaining lifetime in seconds,
+      the approval window of the operation.
+
+   A client tells the outcomes apart from the response alone: an issued
+   token is the [RFC8693] success, authorization_pending is deferred
+   completion (Section 5.2), and mission_interaction_required is this
+   handoff.
+
+   The client then sends a pushed authorization request (Section 2 of
+   [RFC9126]) carrying mission_continuation, with response_type=code,
+   its redirect_uri and state, and the PKCE S256 challenge or DPoP
+   binding the issuance profile requires for an authorization code
+   ([I-D.draft-mcguinness-oauth-mission], Section "Mission Approval").
+   It carries no mission_intent and no authorization_details: the token
+   exchange is this operation's carriage (Section 4.1).  Client
+   authentication at the pushed authorization request endpoint binds the
+   handle to the client, so the handle alone does not give its holder
+   the operation.  The Mission Issuer:
+
+   *  MUST refuse a pushed request whose mission_continuation is
+      unknown, expired, or bound to another client, with
+      invalid_request;
+
+   *  MUST take the predecessor, Intent, proposal, submission evidence,
+      presenter confirmation, and actor context only from the recorded
+      operation, and MUST refuse a pushed request that supplies any of
+      them with a different value; and
+
+   *  validates the other authorization request parameters as for any
+      pushed request.
+
+   The request_uri is a temporary front-channel reference; the
+   continuation names the durable operation, which has one approval
+   ceremony and one outcome.  The Mission Issuer MUST serialize
+   adjudication per operation and record at most one approval outcome
+   for it: the first ceremony to conclude records approval or denial,
+   and every other ceremony or pushed request for the continuation
+   resumes from that recorded outcome instead of adjudicating again.
+   When a request_uri expires, the user agent consumes it, or the
+   authorization response is lost, the client pushes again with the same
+   mission_continuation:
+
+   *  before an outcome is recorded, the push starts no second
+      adjudication; it continues the operation's one ceremony;
+
+   *  after approval, the Mission Issuer issues a fresh authorization
+      code for the recorded approval, bound to that push's PKCE or DPoP
+      input, without prompting again; and
+
+   *  after denial, the operation has failed: the Mission Issuer MUST
+      refuse the push with access_denied, and a creation_request_id
+      retry receives access_denied.
+
+   Redemption of an authorization code verifies the PKCE or DPoP binding
+   and, in the same atomic step as activation, that the continuation has
+   not expired and the recorded outcome is approval; it then activates
+   the successor under the checks of Section 10, atomically with the
+   predecessor's supersession.  The continuation's expiry is the
+   operation's deadline, a clock separate from the authorization code's
+   own lifetime (Section 4.1.2 of [RFC6749]): the Mission Issuer MUST
+   refuse redemption at or after it with invalid_grant, and nothing
+   activates. subject_token expiry during the window does not gate
+   redemption (Section 5.4).  After activation the Mission Issuer MUST
+   refuse a further pushed request for the continuation and MUST refuse
+   redemption of any other code issued for the operation with
+   invalid_grant.  A lost redemption response is recovered by repeating
+   the token exchange with the same creation_request_id (Section 11.3);
+   an operation whose continuation expired before activation answers
+   that retry with expired_token.
+
+5.4.  The deferred window
 
    A completion may occur later than the request, across a deferred or
    interactive approval window.  Two rules govern that window:
@@ -765,7 +852,7 @@ Table of Contents
    the ordinary cascade notice and per-child re-creation above remain
    the floor.
 
-5.4.  Successor expiry
+5.5.  Successor expiry
 
    The successor's effective expires_at follows the issuance profile's
    requested-versus-effective rule
@@ -1087,7 +1174,7 @@ Table of Contents
 
    The Mission Issuer MUST apply compare-and-set semantics at successor
    activation (Section 5.2).  This is the completion-side re-
-   verification of the deferred window (Section 5.3).  In the same
+   verification of the deferred window (Section 5.4).  In the same
    atomic step that would activate the successor and supersede the
    predecessor, the Mission Issuer MUST verify:
 
@@ -1185,10 +1272,11 @@ Table of Contents
    the retry fault.  DPoP proof jti single-use (Section 4.2) prevents
    replay of one captured proof; a client that loses the response
    retries with a fresh, valid proof, and without the identifier that
-   retry is a second creation.  The retained interactive path's single-
-   use artifacts prevent only duplicate redemption within one ceremony;
-   the reservation made at initiation is what prevents a retry from
-   starting a second ceremony (Section 11.3).
+   retry is a second creation.  The interactive path's single-use
+   artifacts prevent only duplicate redemption within one ceremony; the
+   reservation made at initiation, and the single recorded approval
+   outcome of Section 5.3, prevent a retry or a repeated pushed request
+   from starting a second ceremony (Section 11.3).
 
    The child delegation profile
    ([I-D.draft-mcguinness-oauth-mission-child-delegation]) carries the
@@ -1328,9 +1416,9 @@ Table of Contents
       continuation, scoped to the authenticated client, never to a
       second deferral.
 
-   *  A pending interactive completion returns the same continuation
-      reference.  The reservation is made at initiation, so a retry
-      cannot start a second approval ceremony.
+   *  A pending interactive completion returns the same
+      mission_continuation (Section 5.3).  The reservation is made at
+      initiation, so a retry cannot start a second approval ceremony.
 
    *  A completed operation whose delivery credential is still valid
       returns that credential.
@@ -1562,8 +1650,9 @@ Table of Contents
 
    *  complete the expansion in one of the modes of Section 5.2,
       obtaining new consent for the successor's authority through the
-      deferred token response or the retained interactive approval
-      (Section 5) and enforcing the successor-expiry rule (Section 5.4);
+      deferred token response or the interactive handoff (Section 5,
+      Section 5.3) and enforcing the successor-expiry rule
+      (Section 5.5);
 
    *  record the predecessor member on the successor's mission claim and
       Mission record (Section 6);
@@ -1571,7 +1660,7 @@ Table of Contents
    *  activate the successor and transition the predecessor to
       superseded atomically when the successor's authority is issued,
       leaving the predecessor active until then, re-verifying
-      predecessor state at completion (Section 5.3), and refuse further
+      predecessor state at completion (Section 5.4), and refuse further
       derivation under a superseded Mission (Section 7); and
 
    *  serialize concurrent expansions against the same predecessor with
@@ -1640,7 +1729,7 @@ Table of Contents
    *  The short-lived subject_token bounds the window in which even a
       key-holding attacker could act, and the possession proof is bound
       and recorded at request time so a legitimate deferred completion
-      is not gated on that lifetime (Section 5.3).
+      is not gated on that lifetime (Section 5.4).
 
 15.3.  Authority comes only from new consent
 
@@ -1656,7 +1745,7 @@ Table of Contents
       predecessor member carries no authority and cannot widen the
       successor (Section 6).
 
-   *  The successor-expiry rule (Section 5.4) keeps the successor's
+   *  The successor-expiry rule (Section 5.5) keeps the successor's
       expires_at from silently exceeding the predecessor's, so expansion
       cannot launder a longer lifetime past the originally approved
       horizon.
@@ -1674,7 +1763,7 @@ Table of Contents
 
    *  The Mission Issuer verifies predecessor state and the no-existing-
       successor condition in the same atomic step that would activate
-      the successor (Section 5.3), and serializes the completions that
+      the successor (Section 5.4), and serializes the completions that
       activate a successor of the same predecessor (Section 10).
 
    *  A failed check refuses with invalid_grant and a reconciliation
@@ -1980,6 +2069,14 @@ Table of Contents
       delegation profile
       ([I-D.draft-mcguinness-oauth-mission-child-delegation])
 
+   *  Name: mission_continuation
+
+   *  Parameter Usage Location: token response, authorization request
+
+   *  Change Controller: IETF
+
+   *  Reference: this document, Section 5.3
+
    *  Name: creation_request_id
 
    *  Parameter Usage Location: token request
@@ -1997,6 +2094,21 @@ Table of Contents
    authorization error response.  The creation_request_id identifier
    rides the token exchange request at the token endpoint in every
    completion mode and never appears on a front channel.
+
+17.3.  OAuth Extensions Error Registration
+
+   This document registers the following value in the "OAuth Extensions
+   Error Registry" (Section 11.4 of [RFC6749]):
+
+   *  Error name: mission_interaction_required
+
+   *  Error usage location: token error response
+
+   *  Related protocol extension: Mission Expansion
+
+   *  Change controller: IETF
+
+   *  Specification document(s): this document, Section 5.3
 
 Acknowledgments
 
@@ -2023,6 +2135,10 @@ Normative References
               Requirement Levels", BCP 14, RFC 2119,
               DOI 10.17487/RFC2119, March 1997,
               <https://www.rfc-editor.org/rfc/rfc2119>.
+
+   [RFC6749]  Hardt, D., Ed., "The OAuth 2.0 Authorization Framework",
+              RFC 6749, DOI 10.17487/RFC6749, October 2012,
+              <https://www.rfc-editor.org/rfc/rfc6749>.
 
    [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
@@ -2157,6 +2273,12 @@ Informative References
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Interactive completion has a defined handoff: the token exchange
+      answers mission_interaction_required with a mission_continuation
+      handle, the client pushes an RFC 9126 request carrying it, and
+      code redemption activates the successor; the handle names the
+      durable operation and each request_uri is a temporary reference.
 
    *  An in-ceiling drawdown under the progressive authorization
       companion completes synchronously in the token-exchange response,

@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-03T21:58:34Z
-Source repository commit: 8e2bfacd2c26322ee74a47c2fc41eb65484e3939
+Generated: 2026-10-03T22:18:52Z
+Source repository commit: 90980ef45cc24e422684f87404cc87d6d577543b
 Member count: 7
 
 Reading order:
@@ -12263,6 +12263,12 @@ Table of Contents
               authorization/draft-mcguinness-oauth-mission-cross-
               domain.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-cross-org-delegation]
+              McGuinness, K., "Mission Cross-Organizational Delegation
+              for OAuth 2.0", 2026, <https://mcguinness.github.io/
+              mission-bound-authorization/draft-mcguinness-oauth-
+              mission-cross-org-delegation.html>.
+
    [I-D.draft-mcguinness-oauth-mission-derivation-limits]
               McGuinness, K., "Mission Derivation Limits for OAuth 2.0",
               2026, <https://mcguinness.github.io/mission-bound-
@@ -12779,11 +12785,14 @@ B.5.  Non-Goals
       pending-human-approval state and a holding-token pause-and-resume
       protocol are future lifecycle work.
 
-   *  *Multi-hop cross-domain provenance.* A single cross-domain hop is
-      specified by the companion
-      ([I-D.draft-mcguinness-oauth-mission-cross-domain]); chaining a
-      Mission across more than one trust-domain boundary, and the
-      verifiable provenance that would require, are future work.
+   *  *Multi-hop cross-domain projection.* A single projection hop is
+      specified by Cross-Domain Projection
+      ([I-D.draft-mcguinness-oauth-mission-cross-domain]); recursive
+      delegation across organizations is profiled by Mission Cross-
+      Organizational Delegation
+      ([I-D.draft-mcguinness-oauth-mission-cross-org-delegation]), whose
+      chain a destination verifies before projecting.  Re-projecting a
+      Mission from one Resource AS into a further domain is future work.
 
    *  *Decentralized agent identity.* Agent identity and credentialing
       are out of scope ([I-D.draft-ietf-wimse-aims] and the WIMSE
@@ -13456,6 +13465,12 @@ Appendix G.  Document History
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  Non-Goals: the multi-hop entry names what is specified (one
+      projection hop; recursive cross-organizational delegation,
+      profiled by Mission Cross-Organizational Delegation, added as an
+      informative reference) and what is not (re-projecting a Mission
+      into a further domain) (#1018).  No requirement changed.
 
    *  Stated that a model's output in derivation is a recorded input to
       the AS's deterministic derivation policy that can refuse or narrow
