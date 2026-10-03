@@ -93,7 +93,12 @@ describe("shared authority ceiling (#762)", () => {
 });
 
 describe("child_creation_policy in the lineage and ceiling comparison (#787)", () => {
-  const POLICY = "urn:policy:child-drawdown:v1";
+  // @spec mission#standing-consent-bases — an activation policy reference.
+  const POLICY = {
+    id: "urn:policy:child-drawdown",
+    version: "1",
+    digest: `sha-256:${"A".repeat(43)}`,
+  };
   const children = (extra: Record<string, unknown> = {}): AuthorityEntry => ({
     ...entry,
     delegation: {
@@ -108,7 +113,19 @@ describe("child_creation_policy in the lineage and ceiling comparison (#787)", (
 
   it("admits the recorded reference as supported input and refuses a malformed one", () => {
     expect(isAuthorityEntry(withPolicy)).toBe(true);
-    for (const child_creation_policy of [7, "", null, {}, ["p"]]) {
+    const malformed = [
+      7,
+      "",
+      "urn:policy:child-drawdown:v1",
+      null,
+      {},
+      ["p"],
+      { id: POLICY.id, version: POLICY.version },
+      { ...POLICY, digest: "sha-256:short" },
+      { ...POLICY, id: "" },
+      { ...POLICY, extra: "member" },
+    ];
+    for (const child_creation_policy of malformed) {
       expect(isAuthorityEntry(children({ child_creation_policy }))).toBe(false);
     }
   });
@@ -129,9 +146,15 @@ describe("child_creation_policy in the lineage and ceiling comparison (#787)", (
   });
 
   it("refuses a changed reference", () => {
-    const changed = children({ child_creation_policy: "urn:policy:child-drawdown:v2" });
-    expect(isSubsetSet([changed], [withPolicy])).toBe(false);
-    expect(narrowToCeiling([changed], [withPolicy])).toEqual([]);
+    for (const altered of [
+      { ...POLICY, version: "2" },
+      { ...POLICY, digest: `sha-256:${"B".repeat(43)}` },
+      { ...POLICY, id: "urn:policy:other" },
+    ]) {
+      const changed = children({ child_creation_policy: altered });
+      expect(isSubsetSet([changed], [withPolicy])).toBe(false);
+      expect(narrowToCeiling([changed], [withPolicy])).toEqual([]);
+    }
   });
 
   it("refuses dropping the reference while the children grant is retained", () => {

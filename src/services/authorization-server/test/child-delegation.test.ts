@@ -1,4 +1,4 @@
-import { authorityHash, canonicalize, intentHash, type JsonValue } from "@mission/core";
+import { activationPolicyDigest, authorityHash, canonicalize, intentHash, type JsonValue } from "@mission/core";
 import { DERIVATION_POLICY, TOPOLOGY } from "@mission/demo-data";
 import { type CryptoKey, generateKeyPair } from "jose";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -816,8 +816,9 @@ describe("approval basis (@spec mission#approval-basis, child-delegation#child-c
     expect(persisted?.approval_basis).toEqual({
       type: "policy_drawdown",
       consent_principal: { iss: ISS, sub: "bob" },
+      // Without a child_creation_policy, activation carries only the event
+      // identifier (@spec child-delegation#child-creation).
       activation: {
-        policy_version: parent.policy_version,
         activation_event_id: child.approval_event_id,
       },
       // The requesting principal: the PARENT's own agent, distinct from the
@@ -857,8 +858,11 @@ describe("approval basis (@spec mission#approval-basis, child-delegation#child-c
     expect(unprivileged.approval_basis).toBeUndefined();
   });
 
-  it("uses the justifying entry's child_creation_policy reference as root_commitment when the entry carries one", () => {
+  it("uses the justifying entry's child_creation_policy digest as root_commitment when the entry carries one", () => {
     const R = "https://basis.example/mcp";
+    const snapshot = { version: "1", content_type: "application/json", content: '{"rule":"one child per invoice"}' };
+    const policyRef = { id: "urn:policy:child-drawdown", version: "1", digest: activationPolicyDigest(ISS, snapshot) };
+    const registry: Record<string, typeof snapshot> = { "urn:policy:child-drawdown": snapshot };
     const policy = {
       policy_version: "basis-policy",
       ceiling: [
@@ -870,7 +874,7 @@ describe("approval basis (@spec mission#approval-basis, child-delegation#child-c
             max_depth: 1,
             children: {
               max_children: 5,
-              child_creation_policy: "urn:policy:child-drawdown:v1",
+              child_creation_policy: policyRef,
               allowed_child_actors: [{ sub_profile: "ai_agent" }],
             },
           },
@@ -885,6 +889,7 @@ describe("approval basis (@spec mission#approval-basis, child-delegation#child-c
       statusKid: "as-status",
       now,
       actorProfiles: aiAgents("basis-child"),
+      activationPolicies: registry,
     });
     const parent = basisKernel.approve({
       intent: validateMissionIntent(
@@ -904,10 +909,53 @@ describe("approval basis (@spec mission#approval-basis, child-delegation#child-c
     });
     const persisted = basisKernel.get(child.id);
     expect(persisted?.approval_basis.type).toBe("policy_drawdown");
-    expect(persisted?.approval_basis.root_commitment).toBe("urn:policy:child-drawdown:v1");
+    expect(persisted?.approval_basis.root_commitment).toBe(policyRef.digest);
+    expect(persisted?.approval_basis.activation).toEqual({
+      policy_id: policyRef.id,
+      policy_version: policyRef.version,
+      policy_digest: policyRef.digest,
+      activation_event_id: child.approval_event_id,
+    });
+
+    // @spec mission#standing-consent-bases, child-delegation#child-creation —
+    // the held snapshot no longer matching the committed digest (content
+    // edited under the same version, a new version, or no snapshot held)
+    // denies child creation with policy_denied, committing nothing.
+    const intent = validateMissionIntent(
+      JSON.stringify({ goal: "sub", target_resources: [R], expires_at: PARENT_EXP }),
+    );
+    const committed = basisKernel.allMissions().length;
+    const changes: Array<typeof snapshot | undefined> = [
+      { ...snapshot, content: '{"rule":"edited under the same version"}' },
+      { ...snapshot, version: "2" },
+      undefined,
+    ];
+    for (const held of changes) {
+      if (held) registry["urn:policy:child-drawdown"] = held;
+      else delete registry["urn:policy:child-drawdown"];
+      try {
+        createChildMission(basisKernel, {
+          parentId: parent.id,
+          intent,
+          childActor: { sub: "basis-child", sub_profile: "ai_agent" },
+        });
+        expect.unreachable();
+      } catch (e) {
+        expect(e).toBeInstanceOf(ChildDelegationError);
+        expect((e as ChildDelegationError).reason).toBe("policy_denied");
+        expect((e as ChildDelegationError).evidence?.denial_reason).toBe("policy_denied");
+      }
+      expect(basisKernel.allMissions().length).toBe(committed);
+    }
+    // Restoring the committed snapshot admits creation again.
+    registry["urn:policy:child-drawdown"] = snapshot;
     expect(
-      (persisted?.approval_basis as { activation: { policy_id?: string } }).activation.policy_id,
-    ).toBe("urn:policy:child-drawdown:v1");
+      createChildMission(basisKernel, {
+        parentId: parent.id,
+        intent,
+        childActor: { sub: "basis-child", sub_profile: "ai_agent" },
+      }).child.approval_basis.root_commitment,
+    ).toBe(policyRef.digest);
   });
 });
 

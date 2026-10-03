@@ -34,6 +34,7 @@ import {
   catalogAuthoritySourceResolver,
   resolveApprovalSource,
 } from "./authority-source.js";
+import { activationPolicyMatches, mintActivationPolicyRef, type RegisteredActivationPolicy } from "./activation-policy.js";
 import { inheritCapabilitySources, resolveFreshCapabilitySources, type CapabilitySourceResolver } from "./capability-binding.js";
 import { deriveAuthoritySet, isSubsetSet } from "./derive.js";
 import { IntentError } from "./intent.js";
@@ -76,12 +77,15 @@ export class TemplateError extends Error {}
  * template listing several Agents whose Dispatch Policy selects none; both are
  * implementation-local, with no registered wire value (D205). `out_of_template_ceiling` is the empty double
  * intersection; a policy-empty intent surfaces as {@link IntentError} instead
- * (matching `kernel.approve`), never as this reason.
+ * (matching `kernel.approve`), never as this reason. `dispatch_policy_changed`
+ * is a Dispatch Policy whose snapshot no longer matches the `digest` the
+ * template committed (@spec mission#standing-consent-bases).
  */
 export type DispatchReason =
   | "template_not_active"
   | "review_overdue"
   | "dispatcher_not_allowed"
+  | "dispatch_policy_changed"
   | "agent_not_selected"
   | "recipient_not_allowed"
   | "out_of_template_ceiling"
@@ -109,7 +113,14 @@ export interface CreateTemplateInput {
   /** The consenting human; the approver of record on every dispatched instance. */
   approver: { iss: string; sub: string };
   ceiling: AuthorityEntry[];
-  dispatch_policy: string;
+  /**
+   * @spec mission-template#the-mission-template, mission#standing-consent-bases
+   * — the Dispatch Policy the human consents to, named by `id` and `version`.
+   * The Mission Issuer commits it as an activation policy reference whose
+   * `digest` it computes from the snapshot it holds; a request-body digest is
+   * never a fact.
+   */
+  dispatch_policy: { id: string; version: string };
   /** `allowed_dispatchers`: a non-empty array of `client_id` strings. */
   dispatchers: string[];
   recipients: TemplateRecipients;
@@ -178,6 +189,11 @@ export function createTemplate(
     authoritySourceCatalog: BoundAuthoritySourceCatalog;
     authoritySourceResolver?: AuthoritySourceResolver;
     capabilityResolver?: CapabilitySourceResolver;
+    /**
+     * @spec mission#standing-consent-bases — the Dispatch Policies this issuer
+     * holds; the template commits the named policy's snapshot digest.
+     */
+    dispatchPolicies?: DispatchPolicies;
   },
 ): MissionTemplate {
   if (input.ceiling.length === 0) {
@@ -196,6 +212,15 @@ export function createTemplate(
     throw new TemplateError("review_cadence_s must be a positive integer number of seconds");
   }
   assertDispatchersAndRecipients(input);
+  const named = input.dispatch_policy as unknown;
+  if (
+    !named ||
+    typeof named !== "object" ||
+    !nonEmptyString((named as { id?: unknown }).id) ||
+    !nonEmptyString((named as { version?: unknown }).version)
+  ) {
+    throw new TemplateError("dispatch_policy must be an object with a non-empty id and version");
+  }
 
   // @spec mission#approval-event (step 3), mission#authority-sources (#829) ,
   // the approver is a principal of this deployment's issuer namespace, checked
@@ -221,10 +246,24 @@ export function createTemplate(
     ? resolveFreshCapabilitySources(input.ceiling.map(({ capability_sources: _drop, ...entry }) => entry), options.capabilityResolver)
     : input.ceiling;
 
+  // @spec mission#standing-consent-bases — the consented template commits the
+  // Dispatch Policy's content: the issuer mints the reference from the snapshot
+  // it holds for that id and version, and refuses a policy it does not hold.
+  const dispatch_policy = mintActivationPolicyRef(
+    input.issuer,
+    options.dispatchPolicies,
+    input.dispatch_policy.id,
+    input.dispatch_policy.version,
+  );
+  if (!dispatch_policy) {
+    throw new TemplateError(
+      `dispatch_policy ${input.dispatch_policy.id} version ${input.dispatch_policy.version} is not a Dispatch Policy this issuer holds`,
+    );
+  }
   const templateBody = {
     template_version: input.template_version,
     ceiling,
-    dispatch_policy: input.dispatch_policy,
+    dispatch_policy,
     dispatchers: input.dispatchers,
     recipients: input.recipients,
     per_instance_lifetime_s: input.per_instance_lifetime_s,
@@ -240,7 +279,7 @@ export function createTemplate(
     templateBody as unknown as JsonValue,
   );
   const id = `tmpl_${randomBytes(18).toString("base64url")}`;
-  const create: TemplateCreate = { ...input, ceiling, id, template_hash, authority_source, source_bindings };
+  const create: TemplateCreate = { ...input, ceiling, dispatch_policy, id, template_hash, authority_source, source_bindings };
   return store.create(create);
 }
 
@@ -319,10 +358,12 @@ export interface DispatchInput {
   /** The dispatching actor; MUST be in the template's `dispatchers`. */
   dispatcher: string;
   /**
-   * @spec mission-template#the-mission-template — the deployment's Dispatch
-   * Policies, consulted for the Agent selection rule of a template that lists
-   * several Agents. The caller never names the Agent: the Mission Issuer
-   * selects it ({@link selectDispatchAgent}).
+   * @spec mission-template#the-mission-template, mission#standing-consent-bases
+   * — the deployment's held Dispatch Policy snapshots. Dispatch verifies the
+   * template's committed digest against the named snapshot and reads the Agent
+   * selection rule of a template that lists several Agents from that snapshot
+   * alone. The caller never names the Agent: the Mission Issuer selects it
+   * ({@link selectDispatchAgent}).
    */
   dispatchPolicies?: DispatchPolicies;
   /** The instance's OWN Mission Intent (untrusted, derived under policy first). */
@@ -365,39 +406,49 @@ export interface DispatchResult {
 }
 
 /**
- * @spec mission-template#the-mission-template — a deployment Dispatch Policy:
- * its Agent selection rule, for a template whose `allowed_recipients` lists
- * more than one Agent. The rule sees only Issuer-held facts (the listed
- * Agents, the established Subject, the template), never Dispatcher input, and
- * returns one Agent, or undefined when it cannot select.
+ * @spec mission-template#the-mission-template, mission#standing-consent-bases
+ * — a deployment Dispatch Policy: the exact snapshot the Mission Issuer holds
+ * and evaluates, whose digest a template commits. The policy IS its snapshot:
+ * no rule is evaluated from anywhere else, so a change to what Dispatch does
+ * is a change to the committed bytes. Its Agent selection rule, for a template
+ * whose `allowed_recipients` lists more than one Agent, is the JSON snapshot's
+ * `select_agent` member: the `client_id` it names ({@link selectDispatchAgent}).
  */
-export interface DispatchPolicy {
-  selectAgent?: (context: {
-    agents: readonly string[];
-    subject: { iss: string; sub: string };
-    templateId: string;
-  }) => string | undefined;
-}
+export type DispatchPolicy = RegisteredActivationPolicy;
 
-/** The deployment's Dispatch Policies, keyed by a template's `dispatch_policy`. */
+/** The deployment's Dispatch Policies, keyed by a template's `dispatch_policy.id`. */
 export type DispatchPolicies = Readonly<Record<string, DispatchPolicy>>;
 
 /**
  * @spec mission-template#the-mission-template — select a dispatched
  * instance's Agent: the one listed Agent directly; with several, the Agent the
  * template's Dispatch Policy selection rule names. `agents` is an allowlist,
- * not a selection rule, so its order is never consulted. Undefined when no
- * Agent can be selected.
+ * not a selection rule, so its order is never consulted. The rule is read only
+ * from the held snapshot whose digest the template committed
+ * (@spec mission#standing-consent-bases): a snapshot that no longer matches
+ * selects nothing. The rule sees only that snapshot, never Dispatcher input.
+ * Undefined when no Agent can be selected.
  */
-export function selectDispatchAgent(
-  template: MissionTemplate,
-  subject: { iss: string; sub: string },
-  policies?: DispatchPolicies,
-): string | undefined {
+export function selectDispatchAgent(template: MissionTemplate, policies?: DispatchPolicies): string | undefined {
   const { agents } = template.recipients;
   if (agents.length === 1) return agents[0];
-  const policy = policies && Object.hasOwn(policies, template.dispatch_policy) ? policies[template.dispatch_policy] : undefined;
-  return policy?.selectAgent?.({ agents: [...agents], subject: { ...subject }, templateId: template.id });
+  if (!activationPolicyMatches(template.issuer, policies, template.dispatch_policy)) return undefined;
+  const policy = (policies as DispatchPolicies)[template.dispatch_policy.id] as DispatchPolicy;
+  return selectionRuleOf(policy);
+}
+
+/** The JSON snapshot's `select_agent` member, when it is a non-empty string. */
+function selectionRuleOf(policy: DispatchPolicy): string | undefined {
+  if (policy.content_type !== "application/json") return undefined;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(policy.content);
+  } catch {
+    return undefined;
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return undefined;
+  const agent = (parsed as { select_agent?: unknown }).select_agent;
+  return nonEmptyString(agent) ? agent : undefined;
 }
 
 /**
@@ -475,12 +526,22 @@ export function dispatchFromTemplate(
   if (!template.dispatchers.includes(input.dispatcher)) {
     throw new DispatchError("dispatcher_not_allowed", `dispatcher ${input.dispatcher} is not permitted`);
   }
+  // @spec mission-template#dispatch (step 3), mission#standing-consent-bases —
+  // verify the Dispatch Policy snapshot this issuer would evaluate against the
+  // `digest` the template committed: a policy edited after consent, even
+  // under an unchanged version, never adjudicates a Dispatch.
+  if (!activationPolicyMatches(template.issuer, input.dispatchPolicies, template.dispatch_policy)) {
+    throw new DispatchError(
+      "dispatch_policy_changed",
+      `template ${template.id} dispatch policy ${template.dispatch_policy.id} no longer matches its committed digest`,
+    );
+  }
   // @spec mission-template#the-mission-template — the Mission Issuer selects
   // the instance's Agent under the Dispatch Policy, never from Dispatcher
   // input. It is committed below as the instance's `client_id`; a retried
   // Dispatch returns the committed instance at the idempotency check above
   // and never selects again.
-  const recipient = selectDispatchAgent(template, input.subject, input.dispatchPolicies);
+  const recipient = selectDispatchAgent(template, input.dispatchPolicies);
   if (recipient === undefined) {
     throw new DispatchError(
       "agent_not_selected",

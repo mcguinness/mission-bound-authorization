@@ -1,3 +1,4 @@
+import type { ActivationPolicyRef } from "./anchors.js";
 import type { JsonValue } from "./canonicalize.js";
 import type { CapabilitySourceBinding } from "./capability-binding.js";
 
@@ -31,12 +32,13 @@ export type ChildFanoutControls = {
   /** Which actors / actor classes may receive a Child Mission from this entry. */
   allowed_child_actors?: DelegateMatcher[];
   /**
-   * @spec child-delegation#fanout — a policy reference evaluated before each
-   * child creation. When carried, it is the `root_commitment` of a
-   * policy-adjudicated child's {@link ApprovalBasis} (see
+   * @spec child-delegation#fanout, mission#standing-consent-bases — the
+   * activation policy reference (`id`, `version`, `digest`) of the policy
+   * evaluated before each child creation. When carried, its `digest` is the
+   * `root_commitment` of a policy-adjudicated child's approval basis (see
    * `ApprovalBasisPolicyDrawdown`).
    */
-  child_creation_policy?: string;
+  child_creation_policy?: ActivationPolicyRef;
 } & {
   [k: string]: JsonValue | undefined;
 };

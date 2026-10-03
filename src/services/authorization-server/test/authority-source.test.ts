@@ -31,6 +31,10 @@ import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 const ISS = "https://as.test";
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource as string;
 const READ_ACTIONS = ["payments:invoice.list", "payments:invoice.read"];
+/** @spec mission#standing-consent-bases — the Dispatch Policy snapshot this suite's issuer holds. */
+const READ_ONLY_POLICIES = {
+  "read-only": { version: "1", content_type: "application/json", content: '{"id":"read-only"}' },
+};
 
 let key: CryptoKey;
 beforeAll(async () => {
@@ -508,7 +512,7 @@ describe("authority source drawdown (@spec mission#authority-sources, child-dele
         issuer: ISS,
         approver: { iss: ISS, sub: "bob" },
         ceiling: [entry(READ_ACTIONS)],
-        dispatch_policy: "read-only",
+        dispatch_policy: { id: "read-only", version: "1" },
         dispatchers: ["ap-agent"],
         recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents: ["ap-agent"] },
         per_instance_lifetime_s: 900,
@@ -518,10 +522,11 @@ describe("authority source drawdown (@spec mission#authority-sources, child-dele
         approval_event_id: `tmpl-${seq++}`,
         expires_at: "2099-01-01T00:00:00Z",
       } as never,
-      kernel.authoritySourceOptions(),
+      { ...kernel.authoritySourceOptions(), dispatchPolicies: READ_ONLY_POLICIES },
     );
     expect(template.authority_source).toEqual({ type: "user_delegated" });
     const { mission } = dispatchFromTemplate(kernel, store, {
+      dispatchPolicies: READ_ONLY_POLICIES,
       templateId: template.id,
       dispatchEventId: `dsp-${seq++}`,
       dispatcher: "ap-agent",
@@ -543,7 +548,7 @@ describe("authority source drawdown (@spec mission#authority-sources, child-dele
           issuer: ISS,
           approver: { iss: ISS, sub: "bob" },
           ceiling: [entry(READ_ACTIONS)],
-          dispatch_policy: "read-only",
+          dispatch_policy: { id: "read-only", version: "1" },
           dispatchers: ["ap-agent"],
           recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents: ["ap-agent", "svc-agent"] },
           per_instance_lifetime_s: 900,
@@ -553,7 +558,7 @@ describe("authority source drawdown (@spec mission#authority-sources, child-dele
           approval_event_id: `tmpl-${seq++}`,
           expires_at: "2099-01-01T00:00:00Z",
         } as never,
-        kernel.authoritySourceOptions(),
+        { ...kernel.authoritySourceOptions(), dispatchPolicies: READ_ONLY_POLICIES },
       ),
     ).toThrow(TemplateError);
   });
@@ -781,7 +786,7 @@ describe("issuer-qualified principals at the source gates (@spec mission#authori
       issuer: ISS,
       approver,
       ceiling: [entry(READ_ACTIONS)],
-      dispatch_policy: "read-only",
+      dispatch_policy: { id: "read-only", version: "1" },
       dispatchers: ["ap-agent"],
       recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents: ["ap-agent"] },
       per_instance_lifetime_s: 900,
@@ -796,10 +801,10 @@ describe("issuer-qualified principals at the source gates (@spec mission#authori
     const kernel = makeKernel();
     const store = new TemplateStore();
     const eventId = `tmpl-829-${seq++}`;
-    const original = createTemplate(store, templateInput(eventId, { iss: ISS, sub: "bob" }), kernel.authoritySourceOptions());
+    const original = createTemplate(store, templateInput(eventId, { iss: ISS, sub: "bob" }), { ...kernel.authoritySourceOptions(), dispatchPolicies: READ_ONLY_POLICIES });
     for (const approver of [{ iss: FOREIGN, sub: "bob" }, { iss: "", sub: "bob" }, { sub: "bob" }]) {
       try {
-        createTemplate(store, templateInput(eventId, approver), kernel.authoritySourceOptions());
+        createTemplate(store, templateInput(eventId, approver), { ...kernel.authoritySourceOptions(), dispatchPolicies: READ_ONLY_POLICIES });
         expect.unreachable("a retry with a foreign or malformed approver must be refused");
       } catch (e) {
         expect(e).toBeInstanceOf(TemplateError);
@@ -807,17 +812,18 @@ describe("issuer-qualified principals at the source gates (@spec mission#authori
       }
     }
     store.revoke(original.id);
-    const retried = createTemplate(store, templateInput(eventId, { iss: ISS, sub: "bob" }), kernel.authoritySourceOptions());
+    const retried = createTemplate(store, templateInput(eventId, { iss: ISS, sub: "bob" }), { ...kernel.authoritySourceOptions(), dispatchPolicies: READ_ONLY_POLICIES });
     expect(retried.id).toBe(original.id);
   });
 
   it("refuses a dispatch retry whose Subject is foreign or malformed before returning the instance its dispatch id created, and still returns it for a legitimate retry after revocation", () => {
     const kernel = makeKernel();
     const store = new TemplateStore();
-    const template = createTemplate(store, templateInput(`tmpl-829-${seq++}`, { iss: ISS, sub: "bob" }), kernel.authoritySourceOptions());
+    const template = createTemplate(store, templateInput(`tmpl-829-${seq++}`, { iss: ISS, sub: "bob" }), { ...kernel.authoritySourceOptions(), dispatchPolicies: READ_ONLY_POLICIES });
     const dispatchEventId = `dsp-829-${seq++}`;
     const dispatchWith = (subject: unknown) =>
       dispatchFromTemplate(kernel, store, {
+      dispatchPolicies: READ_ONLY_POLICIES,
         templateId: template.id,
         dispatchEventId,
         dispatcher: "ap-agent",
@@ -1098,7 +1104,7 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
           issuer: ISS,
           approver: { iss: ISS, sub: "rita" },
           ceiling: [grant(READS, "acme")],
-          dispatch_policy: "read-only",
+          dispatch_policy: { id: "read-only", version: "1" },
           dispatchers: ["ap-agent"],
           recipients: { subjects: [foreign], agents: ["ap-agent"] },
           per_instance_lifetime_s: 900,
@@ -1108,7 +1114,7 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
           approval_event_id: `tmpl-827-${seq++}`,
           expires_at: "2099-01-01T00:00:00Z",
         } as never,
-        kernel.authoritySourceOptions(),
+        { ...kernel.authoritySourceOptions(), dispatchPolicies: READ_ONLY_POLICIES },
       ),
     ).toThrow(/subject is not a principal of this deployment's issuer namespace/);
     expect(calls).toBe(0);
@@ -1231,7 +1237,7 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
           issuer: ISS,
           approver: { iss: ISS, sub: "rita" },
           ceiling: [grant(READS, "acme")],
-          dispatch_policy: "read-only",
+          dispatch_policy: { id: "read-only", version: "1" },
           dispatchers: agents,
           recipients: { subjects: subjects.map((sub) => ({ iss: ISS, sub })), agents },
           per_instance_lifetime_s: 900,
@@ -1241,7 +1247,7 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
           approval_event_id: `tmpl-827-${seq++}`,
           expires_at: "2099-01-01T00:00:00Z",
         } as never,
-        kernel.authoritySourceOptions(),
+        { ...kernel.authoritySourceOptions(), dispatchPolicies: READ_ONLY_POLICIES },
       );
     // Two people sharing one agent registration: one provenance, two roots.
     const template = consent(["alice", "bob"]);
@@ -1253,6 +1259,7 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
     expect(store.sourceBinding(twice.id, { iss: ISS, sub: "alice" }, "ap-agent")?.rootId).toBe("alice-delegated");
     const dispatch = (sub: string) =>
       dispatchFromTemplate(kernel, store, {
+        dispatchPolicies: READ_ONLY_POLICIES,
         templateId: template.id,
         dispatchEventId: `dsp-827-${seq++}`,
         dispatcher: "ap-agent",
@@ -1282,7 +1289,7 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
           issuer: ISS,
           approver: { iss: ISS, sub: "rita" },
           ceiling: [grant(READS, "acme")],
-          dispatch_policy: "read-only",
+          dispatch_policy: { id: "read-only", version: "1" },
           dispatchers: ["ap-agent"],
           recipients: { subjects: [{ iss: ISS, sub: "alice" }, { iss: ISS, sub: "bob" }], agents: ["ap-agent"] },
           per_instance_lifetime_s: 900,
@@ -1292,7 +1299,7 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
           approval_event_id: `tmpl-827-${seq++}`,
           expires_at: "2099-01-01T00:00:00Z",
         } as never,
-        splitKernel.authoritySourceOptions(),
+        { ...splitKernel.authoritySourceOptions(), dispatchPolicies: READ_ONLY_POLICIES },
       ),
     ).toThrow(/approver 'rita' is not authorized to activate the user_delegated authority source 'bob-delegated'/);
   });
@@ -1358,7 +1365,7 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
         issuer: ISS,
         approver: { iss: ISS, sub: "bob" },
         ceiling: [entry(READ_ACTIONS)],
-        dispatch_policy: "read-only",
+        dispatch_policy: { id: "read-only", version: "1" },
         dispatchers: ["svc-agent"],
         recipients: { subjects: [{ iss: ISS, sub: "alice" }, { iss: ISS, sub: "svc-reconciler" }], agents: ["svc-agent"] },
         per_instance_lifetime_s: 900,
@@ -1368,11 +1375,12 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
         approval_event_id: `tmpl-827-${seq++}`,
         expires_at: "2099-01-01T00:00:00Z",
       } as never,
-      kernel.authoritySourceOptions(),
+      { ...kernel.authoritySourceOptions(), dispatchPolicies: READ_ONLY_POLICIES },
     );
     expect(template.authority_source).toEqual({ type: "service_owned" });
     const dispatch = (sub: string) =>
       dispatchFromTemplate(kernel, store, {
+        dispatchPolicies: READ_ONLY_POLICIES,
         templateId: template.id,
         dispatchEventId: `dsp-827-${seq++}`,
         dispatcher: "svc-agent",
@@ -1418,7 +1426,7 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
         issuer: ISS,
         approver: { iss: ISS, sub: "rita" },
         ceiling: [grant(["payments:invoice.list", "payments:invoice.read", "payments:vendor.read"], "acme")],
-        dispatch_policy: "read-only",
+        dispatch_policy: { id: "read-only", version: "1" },
         dispatchers: ["ap-agent"],
         recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents: ["ap-agent"] },
         per_instance_lifetime_s: 900,
@@ -1428,11 +1436,12 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
         approval_event_id: `tmpl-827-${seq++}`,
         expires_at: "2099-01-01T00:00:00Z",
       } as never,
-      kernel.authoritySourceOptions(),
+      { ...kernel.authoritySourceOptions(), dispatchPolicies: READ_ONLY_POLICIES },
     );
     refusedWith(
       () =>
         dispatchFromTemplate(kernel, store, {
+      dispatchPolicies: READ_ONLY_POLICIES,
           templateId: template.id,
           dispatchEventId: `dsp-827-${seq++}`,
           dispatcher: "ap-agent",
