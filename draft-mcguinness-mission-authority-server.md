@@ -1490,7 +1490,10 @@ evaluation rather than many.
 On success, the MAS mints a Mission Join Assertion, a signed JWT
 {{RFC7519}}. Its protected header carries the `typ` header parameter
 with the value `mission-join+jwt` and a `kid` header parameter
-resolvable in the MAS's `jwks_uri`. Exact validation of that `typ`,
+resolvable in the MAS's `jwks_uri`. The MAS MUST sign the assertion
+with an algorithm listed in its
+`mission_status_signing_alg_values_supported` metadata member
+({{discovery}}). Exact validation of that `typ`,
 with mutually exclusive validation rules for the artifact profiles,
 implements the substitution defense of Sections 3.11 and 3.12 of
 {{RFC8725}}. The assertion contains the following claims:
@@ -1610,6 +1613,10 @@ mapping checks of rules 3 and 4 of {{join-rules}}:
 
 - the signature, under a key from the MAS's `jwks_uri`, and the `typ`
   header parameter value `mission-join+jwt`;
+- that the `alg` header parameter is listed in the MAS's
+  `mission_status_signing_alg_values_supported`, is accepted by the
+  PDP's own algorithm policy, and suits the key that verifies it
+  (Section 3.1 of {{RFC8725}});
 - that `iss` and the `mission` claim match the referenced Mission's
   `issuer` and `id`; when the assertion's `mission` also carries
   `authority_hash`, that it matches the referenced Mission's
@@ -1976,7 +1983,10 @@ resolved from the MAS metadata document instead:
 
 `mission_status_signing_alg_values_supported`:
 : REQUIRED. A JSON array of strings. Semantics per
-  {{I-D.draft-mcguinness-oauth-mission-status}}.
+  {{I-D.draft-mcguinness-oauth-mission-status}}. At a MAS, the list
+  also governs Mission Join Assertions ({{join-assertion-artifact}}):
+  the MAS signs them only with a listed algorithm, and a PDP MUST
+  reject an assertion whose `alg` is `none` or is not listed.
 
 `mission_lifecycle_endpoint`:
 : REQUIRED. A string containing a URL. Semantics per
