@@ -235,7 +235,8 @@ the store.
   origin's root. Direct approval and Expansion resolve fresh. A drawdown
   resolves its origin's root through the resolver's `resolveCommittedRoot`,
   which never rebinds: a removed root, a changed provenance or policy digest,
-  or a root that no longer selects its own context refuses.
+  or a root whose client or Subject selector no longer selects its own
+  context refuses.
 - **Synchronous resolution.** The resolver is synchronous by contract: it runs
   inside an approval completion, whose record commit is one synchronous store
   transaction. A remote resolver answers from a snapshot and revalidates at
@@ -717,7 +718,9 @@ construction (#827). A row that predates them gains one only from trusted
 evidence: an explicit mapping (`authoritySourceReconciliation.mappings`,
 Mission ID to root ID), or a declared historical catalog in force at its
 approval (`.history`) in which exactly one root selected its client, Subject
-and provenance. A match in the current catalog is never evidence. A derived
+and provenance. The approval instant follows the approval basis: a template
+instance's is its template's consent (`approval_basis.approved_at`), not its
+dispatch. A match in the current catalog is never evidence. A derived
 row takes its origin's root; a row without evidence stays unbound and every
 drawdown from it refuses. Nothing else on this path is reconciled, because it
 has no reservations to settle.
