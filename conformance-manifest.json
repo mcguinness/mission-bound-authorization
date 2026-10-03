@@ -3915,6 +3915,18 @@
      "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > never binds a pre-binding row to a replacement root that merely matches it in the current catalog",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > refuses a committed-root answer whose client or Subject selector no longer selects the binding's context",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > reconciles a template instance by its template's consent instant, never its dispatch instant",
+     "level": "unit",
+     "surface": "derivation"
     }
    ]
   },
