@@ -16,6 +16,7 @@
  * wrong key) is rejected at the gate BEFORE the PEP: zero evidence, zero ledger.
  */
 
+import { randomUUID } from "node:crypto";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { calculateJwkThumbprint, exportJWK, generateKeyPair, SignJWT } from "jose";
@@ -39,6 +40,9 @@ import {
   type TokenFacts,
   TransactionEngine,
 } from "../src/index.js";
+
+/** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
+const idem = (): string => `idem_${randomUUID()}`;
 
 // @spec runtime-evidence#decision-evidence-object (#741): one bundle per
 // test module. `signing`/`resolver` wire the PEP's store; `decide` is the
@@ -215,7 +219,7 @@ d("HTTP mediated MCP channel (harness duty 2 + DPoP proof-of-possession over HTT
     expect(connectors.ledgerEntries()).toHaveLength(0);
     const jwt = await signMissionToken({});
     const client = await connect(url, jwt);
-    const res = await client.callTool("execute_wire_transfer", { invoice_id: "inv-1" });
+    const res = await client.callTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() });
     // Proves the canonical htu derivation + DPoP PoP happy path really work over HTTP.
     expect(res.ok, JSON.stringify(res)).toBe(true);
     expect((res.result as { executed: boolean }).executed).toBe(true);
@@ -292,7 +296,7 @@ d("HTTP mediated MCP channel (harness duty 2 + DPoP proof-of-possession over HTT
   it("4a: DISCRIMINATING token-without-a-DPoP-proof (valid token, no proof header; and the bearer scheme) is rejected at the gate BEFORE the PEP -- zero evidence/ledger; a valid DPoP client on the SAME server then permits", async () => {
     const { url, connectors, evidence } = await build();
     const jwt = await signMissionToken({});
-    const body = toolsCallBody("execute_wire_transfer", { invoice_id: "inv-1" });
+    const body = toolsCallBody("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() });
 
     // THE increment-1 -> increment-3 delta: a VALID token presented in the DPoP
     // scheme but with NO DPoP proof header. This passes the scheme check and is
@@ -333,7 +337,7 @@ d("HTTP mediated MCP channel (harness duty 2 + DPoP proof-of-possession over HTT
     // Non-vacuous: the same live server permits a valid DPoP-bound call, so the
     // zeros above are attributable to the missing proof, not a dead stack.
     const client = await connect(url, jwt);
-    const okRes = await client.callTool("execute_wire_transfer", { invoice_id: "inv-1" });
+    const okRes = await client.callTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() });
     expect(okRes.ok, JSON.stringify(okRes)).toBe(true);
     expect(connectors.ledgerEntries()).toHaveLength(1);
   });
@@ -349,7 +353,7 @@ d("HTTP mediated MCP channel (harness duty 2 + DPoP proof-of-possession over HTT
     const res = await fetch(url, {
       method: "POST",
       headers: { "content-type": "application/json", accept: "application/json, text/event-stream", authorization: `DPoP ${jwt}`, dpop: badProof },
-      body: toolsCallBody("execute_wire_transfer", { invoice_id: "inv-1" }),
+      body: toolsCallBody("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }),
     });
     await res.text();
     expect(res.status).toBe(401);
@@ -372,7 +376,7 @@ d("HTTP mediated MCP channel (harness duty 2 + DPoP proof-of-possession over HTT
 
     // Non-vacuous: the RIGHT key (matching cnf.jkt) on the SAME server permits.
     const client = await connect(url, jwt);
-    const okRes = await client.callTool("execute_wire_transfer", { invoice_id: "inv-1" });
+    const okRes = await client.callTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() });
     expect(okRes.ok, JSON.stringify(okRes)).toBe(true);
     expect(connectors.ledgerEntries()).toHaveLength(1);
   });
@@ -404,7 +408,7 @@ d("Mission-Reference propagation (gateway PEP)", () => {
       header === undefined ? {} : { "mission-reference": header },
     );
     cleanups.push(close);
-    return client.callTool("execute_wire_transfer", { invoice_id: "inv-1" });
+    return client.callTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() });
   }
 
   it("a matching propagated reference permits the governed call", async () => {

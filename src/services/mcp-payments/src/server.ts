@@ -62,6 +62,7 @@ import type { PaymentsStore } from "./payments-store.js";
 import type { CommitResult, Connectors } from "./connectors.js";
 import type { EvidenceStore } from "./evidence.js";
 import { operationKey, type TransactionEngine } from "./transaction.js";
+import { recordRedeemingAttempt } from "./redemption-status.js";
 import { buildEffectiveParams, type EffectiveParams, parameterDigest } from "./effective-params.js";
 
 /** Called only after this path's signature, issuer/chain and expiry checks. */
@@ -1062,6 +1063,12 @@ export class McpPaymentsServer {
       );
       return { ok: false, refusal_reason: "permit_consumed" };
     }
+    // @spec runtime#idempotency (#917): this attempt now holds the single
+    // use, so how it ends is the outcome of the permit's idempotency claim.
+    // The redemption store records WHICH attempt, in this same synchronous
+    // step, so only this attempt's failure can ever settle the claim (#1016).
+    attempt.redeemed = true;
+    recordRedeemingAttempt(tx.engine, permitId, attempt.executionId);
 
     beforeCommit?.();
 
@@ -1195,7 +1202,7 @@ export class McpPaymentsServer {
     // `resolvedMission.id`, never `token.mission.id` -- a baseline-Join
     // credential carries no `mission` claim at all, and this write path
     // (execute_wire_transfer / send_email) is reachable on that path too.
-    await tx.evidence.recordExecution(CANONICAL_RESOURCE, "executor", {
+    const executed = await tx.evidence.recordExecution(CANONICAL_RESOURCE, "executor", {
       permitId,
       opKey,
       // One execution identity per disposition attempt, the completed
@@ -1221,6 +1228,11 @@ export class McpPaymentsServer {
         : {}),
     });
     tx.engine.advance(opKey, "evidence_emitted");
+    // @spec runtime#idempotency (#917, owner ruling 2026-10-02): the completed
+    // record settles the PDP's claim, so the key stays refused as completed
+    // through the horizon. D36's state machine is unchanged by this: the
+    // settlement is a notification, not a step the effect waits on.
+    await this.deps.pep.settleClaim(executed.content);
     tx.engine.advance(opKey, "reconciled");
 
     return {

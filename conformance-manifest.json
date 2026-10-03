@@ -13268,8 +13268,28 @@
     "normative": "every non-idempotent high-consequence operation's Operation Profile defines an idempotency key"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "the Operation Profile defines an idempotency key for every non-idempotent high-consequence operation (@spec runtime#idempotency) > every high-consequence tool's Operation Profile defines a key, and its served schema requires one in the published format",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > every keyed high-consequence action requires a well-formed key > a missing or malformed key denies parameter_violation in all three classes",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "the Operation Profile defines an idempotency key for every non-idempotent high-consequence operation (@spec runtime#idempotency) > a keyed tool called without a key is refused by the PDP and executes nothing",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Witnessed (#917): every tool the Operation Profile places in a high-consequence class (execute_wire_transfer, send_remittance_email) defines an idempotency key and its served schema requires idempotency_key in the Operation Profile format (16 to 128 characters of ALPHA / DIGIT / \"-\" / \"_\"); the PDP refuses a missing or malformed key with parameter_violation in all three classes, privileged administration through a fixture statement and action because the shipped deployment offers none."
   },
   {
    "id": "runtime.idempotency.atomic-claim-and-linearizable-consumption",
@@ -13289,9 +13309,22 @@
     "normative": "the PDP's idempotency-scope claim and the PEP's use-limited permit consumption are each a single linearizable operation; two replicas never both succeed in claiming or consuming the same key"
    },
    "level": "concurrency",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Re-audited (#302): this row was tested against src/services/mcp-payments/test/transaction.test.ts \"M5 transaction-assurance tier > consumes a txn exactly once when two replicas are presented distinct token jtis simultaneously\", a PEP/resource-side test, which is not a witness for this row's PDP role. What that test establishes is single-winner consumption of a resource-issued txn across two replicas over one shared store; what this row demands, per its role, is the PDP's atomic claim of the (idempotency scope, `idempotency_key`) pair as a single linearizable operation before permit issuance. No PDP-side claim store exists: src/services/pdp has none, and enforcement-scope.ts:78's transaction_assurance/idempotency_claim_domain field is declared but never read. The misattribution arose because the quoted `text` is the sentence from the Permit replay prevention (PEP) paragraph while the row carries role PDP, and the observation conjoins both duties; the PEP conjunct is separately traced at runtime.single-use.store-durability-and-multi-instance-sharing (PEP, tested) and the resource-side conjunct at txn-authorization.consumption.linearizable-cross-replica and txn-authorization.consumption.two-jti-one-txn-rejected (RS, tested), so the citation moves nowhere: it already stands under the roles it proves. Nothing PDP-side is witnessed, so todo, not partial."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the claim is one linearizable operation > eight concurrent identical evaluations on one file store yield one permit, one row, and seven transient duplicate_suppressed",
+     "level": "concurrency",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > a key reused under a different operation identity is a conflict > denies idempotency_conflict to a concurrent different operation under the same key",
+     "level": "concurrency",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "PDP conjunct witnessed (#917): eight concurrent identical evaluations against one durable single-writer claim domain file, interleaved at the Decision Evidence signing await, yield exactly one permit and one claim row holding that permit's evaluation_id, and seven transient duplicate_suppressed denials; the claim's lookup-and-insert is one transaction with no await inside it (src/services/pdp/src/idempotency-claims.ts). The PEP conjunct (use-limited permit consumption across replicas) stays cited where it is proven, under its own role: runtime.single-use.store-durability-and-multi-instance-sharing (PEP) and the resource-side rows txn-authorization.consumption.linearizable-cross-replica and txn-authorization.consumption.two-jti-one-txn-rejected."
   },
   {
    "id": "runtime.idempotency.scope-published-and-no-volatile-members",
@@ -13311,8 +13344,52 @@
     "normative": "the idempotency scope is published in the Enforcement Scope Statement, and a volatile member is never added to it"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/runtime-posture-metadata.test.ts",
+     "name": "runtime posture publication on the resource metadata surface > publishes the Exact claim domain per high-consequence class, its scope and horizon, and the reconciliation window",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the claim runs under the Exact profile only, and an unsupported topology is refused at startup > refuses a volatile scope member",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the claim runs under the Exact profile only, and an unsupported topology is refused at startup > refuses a scope missing a required dimension",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the idempotency scope is the published namespace > pairs differing in mission, subject, actor, audience, resource or phase never collide, and a separator-ambiguous pair stays distinct",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the idempotency scope is the published namespace > a new client_instance_id does not split the scope",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the idempotency scope is the published namespace > another instance of the same client under the same key, carried as an instance-profiled leaf, never obtains a second permit",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the idempotency scope is the published namespace > an instance-profiled leaf with no client to key it on has no stable actor and is refused actor_invalid",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Witnessed (#917): the statement publishes idempotency_scope [mission, subject, actor, audience, action, resource, phase] per high-consequence class; a statement adding a volatile member (client_instance_id, the act chain above the leaf, freshness, approvals, timestamps) or omitting a dimension is refused at load; and the scope the PDP encodes is exactly the published one: pairs differing in any one dimension, a different delegate leaf included, never collide under the fixed-member JCS encoding, and a new client_instance_id does not split it. The actor dimension is a stable identity (@mission/core idempotencyScopeActor, #1016 review): a leaf act entry whose sub_profile carries client_instance names a volatile instance, so the scope keys on its client instead and another instance of the same client gets no second permit; an instance-profiled leaf with no client to key on is refused actor_invalid."
   },
   {
    "id": "runtime.idempotency.tombstone-retention-and-refusal",
@@ -13332,9 +13409,58 @@
     "normative": "for the high-consequence classes, the deployment retains a durable consumed-key tombstone for at least its declared idempotency horizon, a claim against it inside that horizon is refused, never treated as fresh, and outside the high-consequence classes the deployment publishes which retention posture applies"
    },
    "level": "concurrency",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Re-audited (#302): this row was tested against src/services/mcp-payments/test/transaction.test.ts \"the crash window between consumption and the effect (@spec txn-authorization#offline-verification) > refuses a DIFFERENT operation presented under an already-consumed txn\", a PEP/resource-side test, which is not a witness for this row's PDP role. That test asserts that a different operation presented under an in-window consumed txn is refused with duplicate_suppressed and leaves the stored consumption record untouched. It witnesses no part of this row: there is no durable consumed-key tombstone retained for a declared idempotency horizon, no PDP claim evaluated against one, and no published retention posture for keys outside the high-consequence classes. The consumed-txn refusal it does prove is traced at txn-authorization.consumption.two-jti-one-txn-rejected (RS, tested), so the citation stays where it belongs and is not carried here. The PDP-side claim store this row presupposes is unbuilt (src/services/pdp has no claim store; enforcement-scope.ts:78's idempotency_claim_domain field is declared but never read)."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > retention through the declared horizon > a completed key is refused at the horizon minus one second and is new after it",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > retention through the declared horizon > an indeterminate key is still refused past the horizon",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > a key reused under a different operation identity is a conflict > denies idempotency_conflict with next_action none in every claim state",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > crash boundaries and restart > a claim inserted with no persisted decision is adopted after restart and issues once; a different operation conflicts",
+     "level": "concurrency",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > crash boundaries and restart > a persisted permit is unknown after restart: suppressed, never returned, never fresh",
+     "level": "concurrency",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > crash boundaries and restart > a same-boot permit with no consumption answer is suppressed, never assumed unused",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > crash boundaries and restart > an unresolved claim closes indeterminate at the window's end and stays refused",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > a failure settles only from the attempt that redeemed the permit > a suppression from any other attempt never settles: the claim stays unresolved, closes indeterminate, and is never purged",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "High-consequence conjuncts witnessed (#917): the PDP's claim domain is a durable single-writer SQLite file; a completed or failed key is refused (duplicate_suppressed, next_action none) through terminal_at plus the declared idempotency_horizon_seconds (604800) and is new only after it; an indeterminate key carries no horizon and stays refused past it; a terminal row compacted after the reconciliation window (its stored decision dropped, its commitments kept) still refuses; restart, crash-before-persist and missing consumption knowledge all suppress rather than treat the key as fresh; and a failed or suppressed record that the redemption owner does not name as the redeeming attempt's never settles a claim, so an unknown outcome cannot become a purgeable failed tombstone (#1016 review round 2). Partial because the final conjunct is not witnessed: the shipped Enforcement Scope Statement publishes no retention posture for keys outside the high-consequence classes; that posture belongs to the reversible-write reservation (#918)."
   },
   {
    "id": "runtime.idempotency.claim-exact-enforcement-only",
@@ -13354,10 +13480,40 @@
     "normative": "the idempotency claim runs under the Exact enforcement profile only; a deployment never configures the Bounded-consistency profile for it even where that profile is used for consumption metering"
    },
    "level": "concurrency",
-   "coverage": "blocked",
-   "blocked_by": "#648",
-   "tests": [],
-   "notes": "No PDP-side idempotency claim store exists in this codebase (grep -rl idempotency src/services/pdp finds nothing): the claim mechanism this row governs is the transaction-assurance implementation #648 tracks, not a drop-in over the existing resource-side transaction store (src/services/mcp-payments/src/transaction.ts), which is Exact only by virtue of being single-process, not by a declared topology choice this row can observe. Blocked on #648's claim-store landing a PDP-side implementation to test against."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the claim runs under the Exact profile only, and an unsupported topology is refused at startup > refuses the Bounded enforcement profile",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the claim runs under the Exact profile only, and an unsupported topology is refused at startup > refuses an unsupported topology",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the claim runs under the Exact profile only, and an unsupported topology is refused at startup > refuses two PDPs in the statement",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the claim runs under the Exact profile only, and an unsupported topology is refused at startup > refuses a second handle on a file another domain holds",
+     "level": "concurrency",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the claim is one linearizable operation > eight concurrent identical evaluations on one file store yield one permit, one row, and seven transient duplicate_suppressed",
+     "level": "concurrency",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Witnessed against the PDP-owned claim domain (#917, D223): the domain opens only a statement declaring the Exact profile and the local-single-writer topology for every mediated high-consequence class, owned by the statement's one PDP; a Bounded declaration, another topology, or a second PDP is refused at startup, and the file itself admits one handle (locking_mode=EXCLUSIVE), so the single serializing PDP the Exact profile names is the only configuration that runs."
   },
   {
    "id": "runtime.idempotency.exact-domain-unavailable-fail-closed",
@@ -13377,10 +13533,28 @@
     "normative": "a PDP unable to reach the store or replica set that realizes its declared Exact claim domain refuses rather than issuing a permit without the claim"
    },
    "level": "unit",
-   "coverage": "blocked",
-   "blocked_by": "#648",
-   "tests": [],
-   "notes": "Same PDP-side claim store gap as runtime.idempotency.claim-exact-enforcement-only: there is no claim domain to be unreachable yet. Blocked on #648."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > an unreachable claim domain fails closed > a closed domain yields no decision and no permit",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > an unreachable claim domain fails closed > a failing store yields no decision and no permit",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/remote-channel.test.ts",
+     "name": "the remote channel binds the claim requester (@spec runtime#idempotency, #917) > answers 503 when the claim domain is unreachable, and the PEP obtains no decision",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Witnessed (#917): a closed or failing claim domain throws ClaimDomainUnavailableError out of evaluate(), so the PDP issues no decision at all (co-resident) or answers 503 (remote); there is no spec-owned PDP denial code for this case, and the PEP then records pdp_unreachable with zero effect (the end-to-end PEP cases in src/services/mcp-payments/test/idempotency-claim-pep.test.ts, not cited here because they are PEP witnesses)."
   },
   {
    "id": "runtime.idempotency.ess-must-name-exact-claim-domain",
@@ -13402,9 +13576,34 @@
     "normative": "the Enforcement Scope Statement names the Exact claim domain per mediated action class or idempotency scope, never as an enumeration of individual dynamic claims"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Corrected (#302): an Enforcement Scope Statement artifact does exist, src/config/enforcement-scope.json, read as RUNTIME_SCOPE_CONFIG by src/packages/demo-data/src/index.ts and validated at load by src/services/pdp/src/runtime-posture.ts's loadRuntimePosture, which applies validateEnforcementScopeStatement from src/services/pdp/src/enforcement-scope.ts (RUNTIME_POSTURE = loadRuntimePosture(RUNTIME_SCOPE_CONFIG) at runtime-posture.ts:100, asserted in src/services/pdp/test/runtime-posture.test.ts; the validator's own rules are tested in src/services/pdp/test/enforcement-scope.test.ts). The claim-domain member is declared at enforcement-scope.ts:78 as transaction_assurance[].idempotency_claim_domain. The row stays todo because none of that names an Exact claim domain: the artifact declares no claims or extensions at all, so it carries no transaction_assurance entry, nothing reads the field, and no test asserts a declaration per mediated action class or idempotency scope. Not specific to #648."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/runtime-posture-metadata.test.ts",
+     "name": "runtime posture publication on the resource metadata surface > publishes the Exact claim domain per high-consequence class, its scope and horizon, and the reconciliation window",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "the PDP idempotency claim through the executing PEP (@spec runtime#idempotency, #917) > a completed wire settles its claim over the co-resident channel: the same key is refused as completed and executes once",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the statement names the claim domain per class, never per key > refuses a mediated high-consequence class with no declaration at all",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the statement names the claim domain per class, never per key > refuses a declaration keyed to an individual claim rather than a mediated class",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Witnessed (#917): the shipped Enforcement Scope Statement, read from the resource's published metadata, carries exactly one transaction_assurance declaration per mediated high-consequence class naming the claim domain (owner, Exact profile, local-single-writer topology, scope, horizon) and the outcome_reconciliation window; the same statement is what the PDP opens as its domain, and the resource operation is governed by it per key. A mediated class with no declaration, and a declaration keyed to an individual claim, are refused at load."
   },
   {
    "id": "runtime.idempotency.reversible-write-pep-reserve-and-retain",
@@ -13426,9 +13625,9 @@
    },
    "level": "concurrency",
    "coverage": "blocked",
-   "blocked_by": "#648",
+   "blocked_by": "#918",
    "tests": [],
-   "notes": "This is a distinct reservation/retention duty from the high-consequence transaction-assurance store (src/services/mcp-payments/src/transaction.ts covers the txn class, not the reversible-write class's lighter control); no implementation of it exists yet. Do not satisfy this row with the existing resource-consumption transaction test, which exercises a different class's store under a different (already-atomic) mechanism. Blocked on #648."
+   "notes": "This is a distinct reservation/retention duty from the high-consequence transaction-assurance store (src/services/mcp-payments/src/transaction.ts covers the txn class, not the reversible-write class's lighter control); no implementation of it exists yet. Do not satisfy this row with the existing resource-consumption transaction test, which exercises a different class's store under a different (already-atomic) mechanism. Blocked on #918 (PEP-owned reservation and retention, option A ruled; #648 is closed)."
   },
   {
    "id": "runtime.execution-reverification.mismatch-refusal",
@@ -13901,6 +14100,18 @@
     {
      "file": "src/services/mcp-payments/test/transaction.test.ts",
      "name": "M5 transaction-assurance tier > scenario 4: wire transfer executes once with permit, evidence, and reconciliation",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "reconciliation settles a failure only from the attempt that redeemed the permit (#1016) > a committed wire with its completion evidence missing, beside a replay's permit_expired suppression, settles completed from the ledger, never failed",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "reconciliation settles a failure only from the attempt that redeemed the permit (#1016) > a genuine failure from the redeeming attempt still settles failed, live and through reconciliation",
      "level": "endpoint",
      "surface": "evidence-emission"
     }
@@ -14646,11 +14857,73 @@
    "surface": "resource-operation",
    "assertion": "replay",
    "observation": {
-    "normative": "a re-presentation matching the prior claim's idempotency scope, key, and operation identity, while the permit is unexpired and unconsumed, returns the prior decision rather than a fresh evaluation or an error"
+    "normative": "a re-presentation whose decision cache key equals the prior decision's and whose claim matches (same idempotency scope, key and operation identity), while the prior permit is unexpired and its evaluation_id unconsumed, returns the prior decision rather than a fresh evaluation or an error",
+    "local": "the reference PDP establishes unconsumed only from the executing PEP's explicit unconsumed answer for that evaluation_id, read from its D28 redemption store and asked of the PEP and epoch the permit was issued to; consumed, unknown, a failed or timed-out query, another epoch, a settled claim or a PDP restart suppresses with duplicate_suppressed (next_action retry); unexpired is judged on a clock read after that answer arrives, inside the transaction that returns the decision; and the stored decision is returned byte for byte with its stored Decision Evidence, never re-emitted"
    },
    "level": "concurrency",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > retransmission returns the prior decision only when every condition holds > returns the identical stored decision, its evidence included, when the PEP answers unconsumed",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > retransmission returns the prior decision only when every condition holds > does not return it when the cache key changed",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > retransmission returns the prior decision only when every condition holds > does not return it to another PEP epoch",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > retransmission returns the prior decision only when every condition holds > does not return it once the claim settled",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > retransmission returns the prior decision only when every condition holds > does not return it once the permit expired",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > retransmission returns the prior decision only when every condition holds > does not return a permit that expires while the PEP is answering",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > retransmission returns the prior decision only when every condition holds > does not return it when the PEP answers consumed or unknown, fails, or does not answer in time",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "the PDP idempotency claim through the executing PEP (@spec runtime#idempotency, #917) > returns the prior permit while the redemption store answers unconsumed, and refuses it once the permit is redeemed and its settlement is held",
+     "level": "concurrency",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "the PDP idempotency claim through the executing PEP (@spec runtime#idempotency, #917) > refuses the retry when the redemption store cannot answer, or answers for another epoch",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/remote-channel.test.ts",
+     "name": "the remote channel binds the claim requester (@spec runtime#idempotency, #917) > returns a prior permit only to the authenticated PEP epoch it was issued to",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ]
   },
   {
    "id": "runtime.execution-reverification.stop-or-renew-before-lease-expires",
@@ -15538,8 +15811,22 @@
     "normative": "an idempotency_key reused under a different operation identity than the claim it was made under always denies idempotency_conflict, terminal regardless of claim state"
    },
    "level": "concurrency",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > a key reused under a different operation identity is a conflict > denies idempotency_conflict with next_action none in every claim state",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > a key reused under a different operation identity is a conflict > denies idempotency_conflict to a concurrent different operation under the same key",
+     "level": "concurrency",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Witnessed (#917, #594 W4-14): the PDP holds the (scope, key) claim with its operation identity (AuthZEN's operation-identity projection) and denies idempotency_conflict, next_action none, in every claim state: claimed and in flight, permit_issued, unresolved, completed, failed, indeterminate, and a compacted terminal row, and to a concurrent different operation under the same key."
   },
   {
    "id": "authzen.parameter-digest.constraint-unevaluable-fail-closed",

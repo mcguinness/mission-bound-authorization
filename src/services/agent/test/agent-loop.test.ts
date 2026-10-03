@@ -16,6 +16,7 @@
  * mission-scoped (ungranted tools never reach the LLM).
  */
 
+import { randomUUID } from "node:crypto";
 import { exportJWK, generateKeyPair, SignJWT } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import { MockLanguageModelV3 } from "ai/test";
@@ -38,6 +39,9 @@ import {
   Pep,
   TransactionEngine,
 } from "@mission/mcp-payments";
+
+/** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
+const idem = (): string => `idem_${randomUUID()}`;
 
 // @spec runtime-evidence#decision-evidence-object (#741): one bundle per
 // test module. `signing`/`resolver` wire the PEP's store; `decide` is the
@@ -234,7 +238,7 @@ d("agent loop (increment 2): the LLM planner reaches tools ONLY through the medi
     const jwt = await signMissionToken();
     expect(connectors.ledgerEntries()).toHaveLength(0);
     // inv-2 is $900 > the $500 cap: the PEP must deny it at the mediated channel.
-    const model = toolThenText("execute_wire_transfer", { invoice_id: "inv-2" });
+    const model = toolThenText("execute_wire_transfer", { invoice_id: "inv-2", idempotency_key: idem() });
     const res = await runAgentLoop({ harness, missionToken: jwt, goal: GOAL, model });
     const outputs = toolOutputs(res);
     expect(outputs).toHaveLength(1);
@@ -249,7 +253,7 @@ d("agent loop (increment 2): the LLM planner reaches tools ONLY through the medi
     const harness = await createMediatedHarness(server, VIEW.id, active);
     const jwt = await signMissionToken();
     // inv-1 is $125 <= cap, acme: in authority.
-    const model = toolThenText("execute_wire_transfer", { invoice_id: "inv-1" });
+    const model = toolThenText("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() });
     const res = await runAgentLoop({ harness, missionToken: jwt, goal: GOAL, model });
     const outputs = toolOutputs(res);
     expect(outputs).toHaveLength(1);
@@ -269,7 +273,7 @@ d("agent loop (increment 2): the LLM planner reaches tools ONLY through the medi
     expect(spy.calls).toEqual([]);
     expect(res.text).toContain("stopping");
     // A direct attempt to act also fails closed before the channel (mirrors increment 1).
-    const direct = await harness.callTool("execute_wire_transfer", { invoice_id: "inv-1" }, jwt);
+    const direct = await harness.callTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, jwt);
     expect(direct.ok).toBe(false);
     expect(direct.refusal_reason).toBe("mission_not_active:revoked");
     expect(spy.calls).toEqual([]);

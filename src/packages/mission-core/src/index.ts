@@ -110,6 +110,21 @@ export {
   newDpopProofReplay,
 } from "./dpop-replay.js";
 export {
+  canonicalIdempotencyScope,
+  IDEMPOTENCY_KEY_PATTERN,
+  IDEMPOTENCY_SCOPE_DIMENSIONS,
+  type IdempotencyScope,
+  type IdempotencyScopeDimension,
+  idempotencyScopeActor,
+  idempotencyScopeDigest,
+  isIdempotencyKey,
+  isScopeDimension,
+  isVolatileScopeMember,
+  namesClientInstance,
+  type ScopeActorInput,
+  VOLATILE_SCOPE_MEMBERS,
+} from "./idempotency.js";
+export {
   type LocalApprovedSetRetrieval,
   LocalApprovedSetVerificationError,
   type LocalApprovedSetVerificationReason,

@@ -7,7 +7,7 @@
  */
 
 import { existsSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve as resolvePath } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   ACTION_PHASES,
@@ -234,6 +234,13 @@ export interface Topology {
     asContinuation: TopologyKey;
   };
   openfga: { url: string; presharedKey: string };
+  /**
+   * @spec runtime#idempotency (#917): the deployment's durable stores.
+   * `pdpIdempotencyClaims.file` is the PDP's Exact claim domain: one SQLite
+   * file one PDP process opens single-writer. A relative path resolves against
+   * the directory holding `config/`, so the loaded value is always absolute.
+   */
+  stores: { pdpIdempotencyClaims: { file: string } };
 }
 
 function reqTxnChallenge(
@@ -276,6 +283,8 @@ function loadTopology(): Topology {
   const ttls = asObject(file, root.ttls, "ttls");
   const keys = asObject(file, root.keys, "keys");
   const openfga = asObject(file, root.openfga, "openfga");
+  const stores = asObject(file, root.stores, "stores");
+  const claimStore = asObject(file, stores.pdpIdempotencyClaims, "stores.pdpIdempotencyClaims");
   return {
     resources: {
       payments: reqString(file, resources, "payments", "resources"),
@@ -323,6 +332,14 @@ function loadTopology(): Topology {
     openfga: {
       url: reqString(file, openfga, "url", "openfga"),
       presharedKey: reqString(file, openfga, "presharedKey", "openfga"),
+    },
+    stores: {
+      pdpIdempotencyClaims: {
+        file: resolvePath(
+          dirname(CONFIG_DIR),
+          reqString(file, claimStore, "file", "stores.pdpIdempotencyClaims"),
+        ),
+      },
     },
   };
 }

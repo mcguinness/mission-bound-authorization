@@ -48,12 +48,14 @@ import type { Fga } from "../src/fga.js";
 import { evaluate, type EvaluationRequest } from "../src/evaluate.js";
 import { MISSION_RESOURCE_ACCESS_TYPE, type AuthorityEntry, type MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
+import { freshKey, openTestClaims } from "./claim-fixture.js";
 
 const RESOURCE = "http://localhost:4403/mcp";
 const NOW = new Date("2026-07-22T12:00:00Z");
 
 /** Always permits at the FGA layer, so only evaluate()'s own steps decide the outcome. */
 const alwaysAllowFga = { checkWithContext: async () => true } as unknown as Fga;
+const CLAIMS = openTestClaims({ now: () => NOW });
 
 const opts = (v: MissionView) => ({
   view: v,
@@ -63,6 +65,9 @@ const opts = (v: MissionView) => ({
   stalenessBound,
   relationForAction,
   allowedFreshnessSources: new Set(["status"]),
+  // @spec runtime#idempotency (#917): every high-consequence permit is claimed;
+  // a fixture domain that also mediates privileged administration.
+  claims: CLAIMS,
 });
 
 const view = (entry: AuthorityEntry): MissionView => ({
@@ -79,7 +84,7 @@ const view = (entry: AuthorityEntry): MissionView => ({
 const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => ({
   subject: { id: "alice" },
   resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
-  action: { name: "payments:invoice.read" },
+  action: { name: "payments:invoice.read", properties: { idempotency_key: freshKey() } },
   context: {
     audience: RESOURCE,
     mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },

@@ -11,6 +11,7 @@ import { Fga } from "../src/fga.js";
 import { evaluate, type EvaluationRequest } from "../src/evaluate.js";
 import { type MissionView, policyViewId } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
+import { freshKey, openTestClaims } from "./claim-fixture.js";
 
 const API_URL = process.env.OPENFGA_HTTP_URL ?? "https://localhost:8080";
 const KEY = process.env.OPENFGA_PRESHARED_KEY ?? "dev-preshared-key-change-me";
@@ -69,16 +70,23 @@ const view = (over: Partial<MissionView> = {}): MissionView => ({
   ...over,
 });
 
-const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => ({
-  subject: { id: "alice" },
-  resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
-  action: { name: "payments:invoice.read" },
-  context: {
-    audience: RESOURCE,
-    mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
-  },
-  ...over,
-});
+// @spec runtime#idempotency (#917): every request carries a fresh key, so a
+// high-consequence permit below is claimed as one new intended execution.
+const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => {
+  const built: EvaluationRequest = {
+    subject: { id: "alice" },
+    resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
+    action: { name: "payments:invoice.read" },
+    context: {
+      audience: RESOURCE,
+      mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
+    },
+    ...over,
+  };
+  return { ...built, action: { ...built.action, properties: { idempotency_key: freshKey(), ...built.action.properties } } };
+};
+
+const CLAIMS = openTestClaims({ now: () => NOW });
 
 const opts = (v: MissionView) => ({
   view: v,
@@ -88,6 +96,7 @@ const opts = (v: MissionView) => ({
   stalenessBound,
   relationForAction,
   allowedFreshnessSources: new Set(["status"]),
+  claims: CLAIMS,
 });
 
 d("PDP decisions against OpenFGA (@spec authzen)", () => {

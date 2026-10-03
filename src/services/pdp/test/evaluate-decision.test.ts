@@ -26,6 +26,7 @@
 import { describe, expect, it } from "vitest";
 import type { Fga } from "../src/fga.js";
 import { evaluate, type ActionApproval, type EvaluationRequest, type MissionView, relationForAction, stalenessBound } from "../src/index.js";
+import { freshKey, openTestClaims } from "./claim-fixture.js";
 
 const RESOURCE = "http://localhost:4403/mcp";
 const NOW = new Date("2026-07-22T12:00:00Z");
@@ -318,7 +319,7 @@ describe("a permit expires no later than the state view it was decided against (
   const execReq = (observedAt: string): EvaluationRequest => ({
     subject: { id: "alice" },
     resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
-    action: { name: "payments:payment.execute" },
+    action: { name: "payments:payment.execute", properties: { idempotency_key: freshKey() } },
     context: {
       audience: EXEC_RESOURCE,
       mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
@@ -335,6 +336,8 @@ describe("a permit expires no later than the state view it was decided against (
     stalenessBound,
     relationForAction,
     allowedFreshnessSources: new Set(["load_view"]),
+    // @spec runtime#idempotency (#917): the irreversible-action permit is claimed first.
+    claims: openTestClaims({ now: () => now }),
   });
 
   it("caps valid_until at the state observation plus the class staleness bound", async () => {

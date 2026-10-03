@@ -6,10 +6,14 @@
  * `pnpm demo:trace`, then open Jaeger and pick service "mission-demo".
  */
 
+import { randomUUID } from "node:crypto";
 import { getTracer, initTelemetry } from "@mission/telemetry";
 import type { TokenFacts } from "@mission/mcp-payments";
 import { TOPOLOGY } from "@mission/demo-data";
 import { approveDemoMission, composeStack } from "./stack.js";
+
+/** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
+const idem = (): string => `idem_${randomUUID()}`;
 
 async function main() {
   const { shutdown } = initTelemetry("mission-demo");
@@ -41,13 +45,13 @@ async function main() {
   });
 
   await traced("flow.read", () => stack.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, token()));
-  await traced("flow.wire", () => stack.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1" }, token()));
+  await traced("flow.wire", () => stack.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, token()));
   // JIT gate: send_remittance_email is within the mission's authority but gated
   // on a per-action approval. This in-process trace has no AS transaction
   // endpoint wired, so it shows the gated denial; the full txn-challenge ->
   // approval -> txn-token -> permit chain runs over real HTTP in `pnpm exhibit`.
-  await traced("flow.jit", () => stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, token()));
-  await traced("flow.over_cap", () => stack.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-2" }, token()));
+  await traced("flow.jit", () => stack.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1", idempotency_key: idem() }, token()));
+  await traced("flow.over_cap", () => stack.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-2", idempotency_key: idem() }, token()));
   await traced("flow.revoke", async () => {
     stack.kernel.transition(mission.id, "revoke");
     return stack.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, token());

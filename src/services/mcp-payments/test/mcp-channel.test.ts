@@ -14,6 +14,7 @@
  * inline per run.
  */
 
+import { randomUUID } from "node:crypto";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { exportJWK, generateKeyPair, SignJWT } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -34,6 +35,9 @@ import {
   type TokenFacts,
   TransactionEngine,
 } from "../src/index.js";
+
+/** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
+const idem = (): string => `idem_${randomUUID()}`;
 
 // @spec runtime-evidence#decision-evidence-object (#741): one bundle per
 // test module. `signing`/`resolver` wire the PEP's store; `decide` is the
@@ -204,7 +208,7 @@ d("mediated MCP channel (harness duty 2: no bypass)", () => {
     const { client, connectors, evidence } = await build();
     expect(connectors.ledgerEntries()).toHaveLength(0);
     const jwt = await signMissionToken({});
-    const res = await client.callTool("execute_wire_transfer", { invoice_id: "inv-1" }, jwt);
+    const res = await client.callTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, jwt);
     expect(res.ok, JSON.stringify(res)).toBe(true);
     expect((res.result as { executed: boolean }).executed).toBe(true);
     // Side-effect oracle: exactly one authorized ledger entry.
@@ -229,7 +233,7 @@ d("mediated MCP channel (harness duty 2: no bypass)", () => {
     const JTI = "jag_hopref_e2e";
     const HANDLE = "ich_0123456789abcdefABCD";
     const jwt = await signMissionToken({ jti: JTI, identityContinuationHandle: HANDLE });
-    const res = await client.callTool("execute_wire_transfer", { invoice_id: "inv-1" }, jwt);
+    const res = await client.callTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, jwt);
     expect(res.ok, JSON.stringify(res)).toBe(true);
     const exec = evidence.forMission("msn_m4").find((e): e is ExecutionEvidence => e.kind === "execution");
     expect(exec?.content.hop_reference).toEqual({ jti: JTI, mission_id: "msn_m4", continuation_handle: HANDLE });
@@ -291,7 +295,7 @@ d("mediated MCP channel (harness duty 2: no bypass)", () => {
     const { client, connectors, evidence } = await build();
     const otherKey = (await generateKeyPair("ES256", { extractable: true })).privateKey;
     const forged = await signMissionToken({ key: otherKey }); // not the server's jwks key
-    const res = await client.callTool("execute_wire_transfer", { invoice_id: "inv-1" }, forged);
+    const res = await client.callTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, forged);
     expect(res.ok).toBe(false);
     expect(res.denial_reason).toBe("invalid_credential");
     // Never reached the PEP: no ledger entry, no evidence recorded.
@@ -323,11 +327,11 @@ d("mediated MCP channel (harness duty 2: no bypass)", () => {
   it("2b: the standard reasons match the known direct-path denials (over-cap, wrong-vendor)", async () => {
     const { client } = await build();
     const jwt = await signMissionToken({});
-    const overCap = await client.callTool("execute_wire_transfer", { invoice_id: "inv-2" }, jwt);
+    const overCap = await client.callTool("execute_wire_transfer", { invoice_id: "inv-2", idempotency_key: idem() }, jwt);
     expect(overCap.denial_reason).toBe("parameter_violation");
     // @spec authzen#runtime-denial-classification (#801): a vendor-constraint
     // exclusion is a parameter violation on a matched entry, not out_of_authority.
-    const wrongVendor = await client.callTool("execute_wire_transfer", { invoice_id: "inv-3" }, jwt);
+    const wrongVendor = await client.callTool("execute_wire_transfer", { invoice_id: "inv-3", idempotency_key: idem() }, jwt);
     expect(wrongVendor.denial_reason).toBe("parameter_violation");
   });
 });
@@ -391,7 +395,7 @@ d("MCP _meta Mission reference propagation", () => {
     const jwt = await signMissionToken({});
     const res = await client.callTool(
       "execute_wire_transfer",
-      { invoice_id: "inv-1" },
+      { invoice_id: "inv-1", idempotency_key: idem() },
       jwt,
       { mission_id: VIEW.id, issuer: ISSUER },
     );
@@ -403,7 +407,7 @@ d("MCP _meta Mission reference propagation", () => {
     const jwt = await signMissionToken({});
     const res = await client.callTool(
       "execute_wire_transfer",
-      { invoice_id: "inv-1" },
+      { invoice_id: "inv-1", idempotency_key: idem() },
       jwt,
       { mission_id: "msn_other", issuer: ISSUER },
     );
@@ -416,7 +420,7 @@ d("MCP _meta Mission reference propagation", () => {
     const jwt = await signMissionToken({});
     const res = await client.callTool(
       "execute_wire_transfer",
-      { invoice_id: "inv-1" },
+      { invoice_id: "inv-1", idempotency_key: idem() },
       jwt,
       { mission_id: VIEW.id, issuer: ISSUER, state: "active" },
     );

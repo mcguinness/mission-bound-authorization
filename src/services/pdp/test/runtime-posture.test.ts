@@ -43,10 +43,13 @@ describe("published runtime posture (@spec runtime#runtime-operational, status#s
       expect(published.mediated_scope.action_classes).toContain(declaration.mediated_class_or_scope);
       expect(published.mediated_scope.pep_locations).toContain(declaration.execution_lease_consumer);
       expect(declaration.execution_lease_max_seconds).toBeGreaterThan(0);
-      // The idempotency claim domain names the component that HOLDS the claim
-      // and says the PDP claims none, so the statement cannot be read as
-      // asserting a PDP-side domain this deployment does not implement.
-      expect(declaration.idempotency_claim_domain).toContain("PDP claims no idempotency-key domain");
+      // @spec runtime#idempotency (#917): the claim domain is named per
+      // class, never per key: the PDP that owns it (a declared PDP), the
+      // Exact profile and the single-writer topology it runs under.
+      expect(declaration.idempotency_claim_domain).toContain("pdp-local");
+      expect(published.pdps).toContain(declaration.idempotency_claim_owner);
+      expect(declaration.idempotency_enforcement_profile).toBe("exact");
+      expect(declaration.idempotency_claim_topology).toBe("local-single-writer");
     }
   });
 

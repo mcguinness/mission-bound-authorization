@@ -11,6 +11,7 @@
  * and over-blocking on the legitimate suite.
  */
 
+import { randomUUID } from "node:crypto";
 import {
   Connectors,
   createEphemeralEvidenceKeys,
@@ -130,7 +131,10 @@ export async function runCase(c: EvalCase, deps: HarnessDeps): Promise<CaseResul
   try {
     let res: { ok: boolean; denial_reason?: string; refusal_reason?: string };
     if (isTxn) {
-      res = await server.callTransactionTool(c.tool, c.args, token, () => c.beforeCommit?.(payments));
+      // @spec runtime#idempotency (#917): the harness acts as the agent, and
+      // each case is one intended execution under its own key.
+      const args = typeof c.args.idempotency_key === "string" ? c.args : { ...c.args, idempotency_key: `idem_${randomUUID()}` };
+      res = await server.callTransactionTool(c.tool, args, token, () => c.beforeCommit?.(payments));
     } else if (isWrite) {
       res = await server.callWriteTool(c.tool, c.args, token, () => c.beforeCommit?.(payments));
     } else {

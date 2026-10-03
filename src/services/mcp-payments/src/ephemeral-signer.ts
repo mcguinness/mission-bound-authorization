@@ -22,12 +22,18 @@
  * it signs.
  */
 
-import { generateKeyPairSync } from "node:crypto";
+import { generateKeyPairSync, randomUUID } from "node:crypto";
 import {
+  type ClaimChannel,
+  type ClaimRequester,
+  claimChannelFor,
   createEphemeralDecisionPoint,
   type DecisionEvidenceVerification,
   type DecisionFn,
+  type DecisionPoint,
   type EvidenceKeyResolver,
+  openEphemeralClaimDomain,
+  RUNTIME_POSTURE,
 } from "@mission/pdp";
 import {
   buildEvidenceKeyResolver,
@@ -52,6 +58,12 @@ export interface EphemeralEvidenceKeys {
    * decision point, so this member exposes no way to emit.
    */
   decide: DecisionFn;
+  /**
+   * @spec runtime#idempotency (#917): the claim channel for the same
+   * requester `decide` answers to: settlement and reconciliation, never a
+   * way to name another PEP or release a claim. Pass to `PepDeps.claims`.
+   */
+  claims: ClaimChannel;
 }
 
 export interface CreateEphemeralEvidenceKeysOptions {
@@ -82,7 +94,7 @@ export interface CreateEphemeralEvidenceKeysOptions {
    * Absent, a decision point is constructed here and its emission path is
    * unreachable from anywhere.
    */
-  decisionPoint?: { decide: DecisionFn; evidenceVerification: DecisionEvidenceVerification };
+  decisionPoint?: Pick<DecisionPoint, "decide" | "decideAs" | "claimsFor"> & { evidenceVerification: DecisionEvidenceVerification };
 }
 
 /**
@@ -109,13 +121,32 @@ export function createEphemeralEvidenceKeys(
         : { kid, publicKey, role, emitterId, audience },
     );
   }
-  const point: { decide: DecisionFn; evidenceVerification: DecisionEvidenceVerification } =
-    options.decisionPoint ?? createEphemeralDecisionPoint({ emitterId, audience });
+  // @spec runtime#idempotency (#917): a decision point constructed here gets
+  // an ephemeral Exact claim domain (a real file in a fresh temporary
+  // directory, over the shipped statement) that verifies settlement against
+  // exactly the enforcement keys generated above, the claim counterpart of
+  // these ephemeral keys. A deployment opens its configured file instead.
+  const point =
+    options.decisionPoint ??
+    createEphemeralDecisionPoint({
+      emitterId,
+      audience,
+      claims: openEphemeralClaimDomain({
+        owner: RUNTIME_POSTURE.pdps[0] as string,
+        statement: RUNTIME_POSTURE,
+        settlementKeys: buildEvidenceKeyResolver([...verification]),
+      }),
+    });
   verification.push({ ...point.evidenceVerification, role: "pdp" });
+  // One requester for this bundle: the PEP `decide` is issued to is the PEP
+  // that settles. Its epoch names no redemption store, so no retransmission
+  // is ever returned to it.
+  const requester: ClaimRequester = { pep_id: "mcp-payments-pep", pep_epoch: `ephemeral:${randomUUID()}` };
   return {
     signing,
     verification,
     resolver: buildEvidenceKeyResolver(verification),
-    decide: point.decide,
+    decide: point.decideAs ? point.decideAs(requester) : point.decide,
+    claims: point.claimsFor ? point.claimsFor(requester) : claimChannelFor(undefined, requester),
   };
 }

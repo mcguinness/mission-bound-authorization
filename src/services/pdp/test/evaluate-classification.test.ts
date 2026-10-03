@@ -19,6 +19,7 @@
 import { describe, expect, it } from "vitest";
 import type { Fga } from "../src/fga.js";
 import { evaluate, type EvaluationRequest, type MissionView, relationForAction, stalenessBound } from "../src/index.js";
+import { freshKey, openTestClaims } from "./claim-fixture.js";
 
 const RESOURCE = "http://localhost:4403/mcp";
 const NOW = new Date("2026-07-22T12:00:00Z");
@@ -66,6 +67,9 @@ const opts = {
   stalenessBound,
   relationForAction,
   allowedFreshnessSources: new Set(["status"]),
+  // @spec runtime#idempotency (#917): a fixture domain that also mediates
+  // privileged administration, which the shipped deployment does not offer.
+  claims: openTestClaims({ now: () => NOW }),
 };
 
 describe("classification cannot be used to evade the floor or a Resource-policy minimum (@spec runtime#classification)", () => {
@@ -73,6 +77,7 @@ describe("classification cannot be used to evade the floor or a Resource-policy 
     const request = reqFor("privileged_administration");
     request.action.name = "payments:invoice.read";
     request.context.parameter_digest = "sha-256:params";
+    request.action.properties = { idempotency_key: freshKey() };
     const permit = await evaluate(request, opts);
     expect(permit.decision).toBe(true);
     expect((permit.context.conditions as Record<string, unknown>).use_limit).toBe(1);
