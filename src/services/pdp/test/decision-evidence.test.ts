@@ -36,6 +36,7 @@ import {
   stalenessBound,
   verifyEvidenceEnvelope,
 } from "../src/index.js";
+import { freshKey, openTestClaims } from "./claim-fixture.js";
 
 const RESOURCE = "http://localhost:4403/mcp";
 const EMITTER = "http://localhost:4403/mcp";
@@ -268,12 +269,15 @@ describe("evaluate() emits the Decision Evidence it decided (@spec runtime-evide
 
   it("records the applied class, a permit entry digest and one matching parameter binding for every action class", async () => {
     const { emitter } = emitterFixture();
+    const claims = openTestClaims({ now: () => NOW });
     for (const actionClass of [undefined, "consequential_read", "consequential_write", "irreversible_action", "external_commitment", "privileged_administration"]) {
       const request = req();
       request.context.action_class = actionClass;
       request.context.parameter_digest = canonicalDigest({ invoice_id: "inv-1" });
       request.context.freshness = { observed_at: NOW.toISOString(), source: "load_view" };
-      const decision = await evaluate(request, opts({ evidence: emitter, allowedFreshnessSources: new Set(["load_view"]) }));
+      // @spec runtime#idempotency (#917): a high-consequence permit is claimed first.
+      request.action.properties = { idempotency_key: freshKey() };
+      const decision = await evaluate(request, opts({ evidence: emitter, allowedFreshnessSources: new Set(["load_view"]), claims }));
       expect(decision.decision, JSON.stringify(decision.context)).toBe(true);
       const record = decision.context.decision_evidence as DecisionEvidenceObject;
       expect(record.action_class).toBe(actionClass ?? "consequential_read");

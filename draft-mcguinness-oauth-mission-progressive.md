@@ -479,14 +479,20 @@ human-approved expansion. A drawdown policy snapshot that does not
 match `drawdown_policy.digest` authorizes nothing, so a request under
 it falls back the same way.
 
-The drawdown policy MUST NOT policy-adjudicate a successor Authority
-Set entry whose authority intersects a predecessor entry discharged
-under the Entry Discharge companion's completion machinery
+The drawdown policy MUST NOT policy-adjudicate a successor whose
+complete Authority Set, including authority carried forward from its
+predecessor, overlaps in authority the authority a discharge
+restriction of its expansion chain covers
 ({{I-D.draft-mcguinness-oauth-mission-discharge}}). The test is overlap
-in authority, not structural equality: any successor entry that
-overlaps a discharged predecessor entry in authority falls back to a
-fresh human approval. Completion-discharged authority therefore
-cannot be resurrected by policy.
+in authority, not structural equality or entry identity. Such a
+request falls back to a fresh human approval whose consent disclosure
+names the discharged entry and the condition that discharged it. The
+Mission Issuer MUST apply this test to every drawdown in the chain
+after the discharge, not only to one from the Mission that holds the
+discharged entry, and neither an approval of unrelated authority nor a
+ceiling review clears the restriction ({{ceiling-review}}).
+Completion-discharged authority therefore cannot be resurrected by
+policy.
 
 The drawdown policy MUST NOT policy-adjudicate a successor whose
 complete Authority Set, including authority carried forward from its
@@ -502,7 +508,11 @@ unrelated authority nor a ceiling review clears the restriction
 ({{ceiling-review}}). A drawdown whose authority overlaps no
 restricted capability remains eligible for policy adjudication under
 the other guards of this section. Contained authority therefore
-cannot be restored by policy.
+cannot be restored by policy. Both tests are re-applied at successor
+activation, so a containment or discharge that lands after
+adjudication is caught there
+({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "Concurrent
+Expansion Reconciliation").
 
 ## What it bounds, and what it does not {#progressive-limits}
 
@@ -569,7 +579,9 @@ render the chain's record since the prior review:
 - the guard exceptions escalated to human approval;
 - the `out_of_ceiling` refusals;
 - the entries discharged under the Entry Discharge companion's
-  completion machinery ({{I-D.draft-mcguinness-oauth-mission-discharge}});
+  completion machinery ({{I-D.draft-mcguinness-oauth-mission-discharge}}),
+  and the chain's outstanding discharge restrictions, which
+  re-consenting the ceiling does not clear;
 - the chain's outstanding containment restrictions, each with its
   contained capability and the event class that caused it
   ({{I-D.draft-mcguinness-oauth-mission-containment}}), which
@@ -687,8 +699,9 @@ Authorization** is a conforming expansion-capable Mission Issuer
 - require a fresh human approval for an in-ceiling drawdown while the
   predecessor has non-terminal Child Missions ({{in-ceiling-expansion}});
 - require a fresh human approval for a drawdown whose complete
-  Authority Set overlaps capability under a containment restriction
-  of its chain, from any Mission in the chain ({{in-ceiling-expansion}});
+  Authority Set overlaps authority under a containment or discharge
+  restriction of its chain, from any Mission in the chain
+  ({{in-ceiling-expansion}});
 - rate-bound policy-adjudicated drawdowns per expansion chain, keyed by
   the chain's root Mission and counted across `predecessor` links,
   publish the concrete rate bound in the Mission Deployment Profile, and
@@ -760,6 +773,10 @@ convention, none of which require registration.
 
 -01
 
+- In-ceiling expansion: the discharge guard tests the complete successor
+  Authority Set against the chain's discharge restrictions, from any
+  later Mission, and the ceiling review discloses outstanding discharge
+  restrictions.
 - In-ceiling expansion: a policy-adjudicated drawdown whose complete
   Authority Set overlaps capability under a containment restriction of
   its chain falls back to a fresh human approval naming the contained

@@ -8,6 +8,7 @@
 import {
   authorizationDetailsEqual,
   type DpopProofReplay,
+  isIdempotencyKey,
   MISSION_TXN_TOKEN_TYP,
   missionInvariantsEqual,
   newDpopProofReplay,
@@ -29,6 +30,9 @@ import {
   executionLeaseMaxSeconds,
   executionLeaseMs,
   loadRuntimePosture,
+  REVERSIBLE_WRITE_CLASS,
+  reversibleWriteDeclarationFor,
+  reversibleWriteRetentionSeconds,
   RUNTIME_POSTURE,
   type Decision,
   type MissionView,
@@ -37,8 +41,10 @@ import {
 
 import {
   type ActionApprovalInput,
+  type ActionMapping,
   CANONICAL_RESOURCE,
   type EnforceResult,
+  type ExecutionAttempt,
   type InsufficientAuthorization,
   type LoadedView,
   loadCheckedView,
@@ -50,6 +56,7 @@ import {
   type TokenFacts,
   TOOL_ACTIONS,
   type TxnCredential,
+  type WriteReservationScope,
 } from "./pep.js";
 import { type DpopPresentation, verifyDpopProof } from "./dpop.js";
 import {
@@ -62,7 +69,9 @@ import type { PaymentsStore } from "./payments-store.js";
 import type { CommitResult, Connectors } from "./connectors.js";
 import type { EvidenceStore } from "./evidence.js";
 import { operationKey, type TransactionEngine } from "./transaction.js";
+import { recordRedeemingAttempt } from "./redemption-status.js";
 import { buildEffectiveParams, type EffectiveParams, parameterDigest } from "./effective-params.js";
+import type { WriteEffectOutcome, WriteReservation, WriteReservationStore } from "./write-reservations.js";
 
 /** Called only after this path's signature, issuer/chain and expiry checks. */
 function verifiedCredentialRef(payload: JWTPayload): { issuer?: string; expires_at?: string } {
@@ -116,6 +125,7 @@ export const TOOLS: ToolDef[] = [
   { name: "get_invoice", description: "Read one invoice", action: "payments:invoice.read" },
   { name: "lookup_vendor", description: "Look up a vendor", action: "payments:vendor.read" },
   { name: "schedule_payment", description: "Schedule a payment", action: "payments:payment.schedule" },
+  { name: "cancel_scheduled_payment", description: "Cancel a scheduled payment", action: "payments:payment.schedule.cancel" },
   { name: "check_transfer", description: "Check whether a wire transfer is feasible, reserving nothing", action: "payments:payment.execute" },
   { name: "hold_transfer", description: "Place a hold for a wire transfer", action: "payments:payment.execute" },
   { name: "execute_wire_transfer", description: "Execute a wire transfer", action: "payments:payment.execute" },
@@ -166,6 +176,114 @@ const CONNECTOR_OPERATIONS: Record<
 /** The committing tools this server serves a connector operation for. */
 export const CONNECTOR_TOOLS: readonly string[] = Object.keys(CONNECTOR_OPERATIONS);
 
+/**
+ * @spec runtime#idempotency (#918): the reversible effect each keyed write
+ * releases, run inside the reservation's one local transaction. An explicit
+ * per-tool mapping, as for the connector operations: a keyed write with no
+ * entry throws before any state is taken. Neither effect calls a connector or
+ * moves money, and nothing reads a schedule to pay: `execute_wire_transfer`
+ * keeps its own Decision, single-use permit and D28 redemption.
+ */
+const REVERSIBLE_WRITE_EFFECTS: Record<
+  string,
+  (input: {
+    store: WriteReservationStore;
+    attempt: ExecutionAttempt;
+    token: TokenFacts;
+    effective: EffectiveParams;
+    invoiceVersion: number;
+    parameterDigest: string;
+    nowMs: number;
+  }) => WriteEffectOutcome
+> = {
+  schedule_payment: ({ store, attempt, token, effective, invoiceVersion, parameterDigest, nowMs }) =>
+    store.insertSchedule({
+      mission: attempt.mission,
+      subject: token.sub,
+      invoice: {
+        id: effective.invoice_id,
+        version: invoiceVersion,
+        vendor_id: effective.vendor_id,
+        payee_account: effective.payee_account,
+      },
+      amount: effective.amount,
+      parameterDigest,
+      evaluationId: attempt.evaluationId,
+      nowMs,
+    }),
+  cancel_scheduled_payment: ({ store, attempt, effective, nowMs }) =>
+    store.cancelActiveSchedule({
+      mission: attempt.mission,
+      invoiceId: effective.invoice_id,
+      evaluationId: attempt.evaluationId,
+      nowMs,
+    }),
+};
+
+/** The keyed reversible writes this server serves an effect for. */
+export const REVERSIBLE_WRITE_TOOLS: readonly string[] = Object.keys(REVERSIBLE_WRITE_EFFECTS);
+
+/**
+ * @spec runtime-evidence#execution-evidence-object `error`: deployment-
+ * defined values for the refusals a keyed reversible write makes before any
+ * effect: the two its effect makes before it changes anything, and
+ * `actor_unkeyable`, an actor with no stable identity to scope the key on
+ * (#1016 review). None is in the closed set, whose values each name a
+ * narrower condition (`consumption_unavailable` is an unreachable store), so
+ * each is a collision-resistant name under a namespace this deployment
+ * controls (the RFC 7519 Section 4.2 guidance the member cites). The
+ * caller-visible diagnostic is the short name.
+ */
+export const REVERSIBLE_WRITE_REFUSAL_ERRORS: Readonly<Record<string, string>> = Object.freeze({
+  schedule_not_found: "https://payments.demo/execution-errors/schedule_not_found",
+  schedule_exists: "https://payments.demo/execution-errors/schedule_exists",
+  actor_unkeyable: "https://payments.demo/execution-errors/actor_unkeyable",
+});
+
+/**
+ * Test-only failpoints on the keyed reversible-write path (#918): the awaited
+ * reverification, where concurrent in-process attempts interleave after each
+ * found the pair free; inside the one local transaction (a throw rolls the
+ * effect and the reservation back together); and after its commit but before
+ * the response.
+ */
+export interface ReversibleWriteFailpoints {
+  atReverification?: () => Promise<void>;
+  insideTransaction?: () => void;
+  afterCommit?: () => void;
+}
+
+/**
+ * The dispatch path a tool call takes, shared by both MCP transports so they
+ * cannot route differently. Only the `transaction-assurance` tier reaches the
+ * single-use permit, lease and connector path; a consequential write (a
+ * reservation, hold, draft or schedule, and its cancellation) takes the write
+ * path, whatever else it is; everything else takes the read path, where the
+ * PEP still refuses or denies an unknown or ungranted tool. A tier tool on a
+ * server with no transaction tier takes the write path, so it reaches a
+ * Decision rather than a read.
+ */
+export function dispatchPathFor(
+  mapping: ActionMapping | undefined,
+  hasTransactionTier: boolean,
+): "transaction" | "write" | "read" {
+  if (mapping?.tier === "transaction-assurance") return hasTransactionTier ? "transaction" : "write";
+  if (mapping?.actionClass === REVERSIBLE_WRITE_CLASS) return "write";
+  return "read";
+}
+
+/** A write-path verdict. `deduped` marks a retained result released to a retry under its key. */
+export interface WriteToolResult {
+  ok: boolean;
+  result?: unknown;
+  deduped?: boolean;
+  denial_reason?: string;
+  refusal_reason?: string;
+  /** Present on a refusal of a keyed write: whether a later retry under the same key can succeed. */
+  next_action?: "retry" | "none";
+  insufficient_authorization?: InsufficientAuthorization;
+}
+
 export interface McpServerDeps {
   /** Trusted assembly's effective topology declaration, never a tool input. */
   enforcementScopeStatement?: RuntimePosture;
@@ -213,6 +331,14 @@ export interface McpServerDeps {
    * to this replica's own (D27).
    */
   dpopReplay?: DpopProofReplay;
+  /**
+   * @spec runtime#idempotency (#918): this PEP's reservation and retention
+   * store for keyed reversible writes, a durable single-writer file named in
+   * configuration. Never defaulted: absent, every keyed reversible write is
+   * refused `consumption_unavailable` and executes nothing, since without the
+   * store exactly-once cannot be established.
+   */
+  writeReservations?: WriteReservationStore;
 }
 
 /**
@@ -263,6 +389,24 @@ export class McpPaymentsServer {
     this.txnPending = stores.pending;
     this.txnConsumption = stores.consumption;
     this.dpopReplay = deps.dpopReplay ?? newDpopProofReplay();
+    // @spec runtime#idempotency (#918): a reservation store this statement
+    // does not publish as the domain of every keyed reversible write it
+    // serves is an unsafe topology, refused at startup rather than discovered
+    // at the first duplicate.
+    if (deps.writeReservations) {
+      const statement = deps.enforcementScopeStatement ?? RUNTIME_POSTURE;
+      for (const [tool, mapping] of Object.entries(TOOL_ACTIONS)) {
+        if (!mapping.idempotencyKey || mapping.actionClass !== REVERSIBLE_WRITE_CLASS) continue;
+        const declared = reversibleWriteDeclarationFor(statement, mapping.actionClass, mapping.action);
+        if (!declared) throw new Error(`no reversible-write idempotency declaration covers ${tool}`);
+        if (declared.reservation_owner !== deps.writeReservations.owner) {
+          throw new Error(
+            `${tool}'s reservation domain is owned by ${declared.reservation_owner}, not ${deps.writeReservations.owner}`,
+          );
+        }
+        if (!REVERSIBLE_WRITE_EFFECTS[tool]) throw new Error(`no reversible effect is declared for tool ${tool}`);
+      }
+    }
   }
 
   /**
@@ -817,6 +961,10 @@ export class McpPaymentsServer {
     insufficient_authorization?: InsufficientAuthorization;
   }> {
     if (token.txn) return { ok: false, refusal_reason: "txn_action_mismatch" };
+    // @spec runtime#idempotency (#918): a keyed reversible write's effect is
+    // reachable only through its reservation, so a caller that sends one down
+    // the read path is served by the write path, never by an unreserved effect.
+    if (this.isKeyedReversibleWrite(tool)) return this.callWriteTool(tool, args, token, beforeReverify, signals);
     const res = await this.deps.pep.enforce(tool, args, token, undefined, signals);
     if (!res.permitted) {
       return {
@@ -871,10 +1019,22 @@ export class McpPaymentsServer {
     return { ok: true, result: this.execute(tool, args, res.list_vendor_scope) };
   }
 
+  /** @spec runtime#idempotency (#918): the Operation Profile keys this tool as a reversible write. */
+  private isKeyedReversibleWrite(tool: string): boolean {
+    const mapping = this.deps.pep.toolAction(tool);
+    return mapping?.idempotencyKey === true && mapping.actionClass === REVERSIBLE_WRITE_CLASS;
+  }
+
   /**
    * Write tool call, two-phase for TOCTOU (@spec operation-profile): enforce
    * (decision) -> reverify effective params against fresh store state -> execute.
    * `beforeReverify` is a test hook to mutate state in the decision->execute window.
+   *
+   * @spec runtime#idempotency (#918): a keyed reversible write adds two steps
+   * after the Decision, kept apart: retrieval of a retained result
+   * ({@link releaseRetained}), authorized by THIS attempt's own permit and never
+   * by the permit the result was first produced under, then admission and the
+   * effect ({@link admitReversibleWrite}). `failpoints` are test-only.
    */
   async callWriteTool(
     tool: string,
@@ -882,13 +1042,8 @@ export class McpPaymentsServer {
     token: TokenFacts,
     beforeReverify?: () => void,
     signals?: RequestSignals,
-  ): Promise<{
-    ok: boolean;
-    result?: unknown;
-    denial_reason?: string;
-    refusal_reason?: string;
-    insufficient_authorization?: InsufficientAuthorization;
-  }> {
+    failpoints?: ReversibleWriteFailpoints,
+  ): Promise<WriteToolResult> {
     if (token.txn) return { ok: false, refusal_reason: "txn_action_mismatch" };
     const res = await this.deps.pep.enforce(tool, args, token, undefined, signals);
     if (!res.permitted || !res.effective || !res.decision) {
@@ -898,6 +1053,9 @@ export class McpPaymentsServer {
         ...(res.refusal_reason ? { refusal_reason: res.refusal_reason } : {}),
         ...(res.insufficient_authorization ? { insufficient_authorization: res.insufficient_authorization } : {}),
       };
+    }
+    if (this.isKeyedReversibleWrite(tool)) {
+      return this.callKeyedReversibleWrite(tool, token, res, beforeReverify, failpoints);
     }
     const attempt = res.attempt;
     if (!attempt) return { ok: false, refusal_reason: "state_unavailable" };
@@ -922,6 +1080,210 @@ export class McpPaymentsServer {
     const live = await this.deps.pep.verifyPermitAtUse(attempt);
     if (!live.ok) return { ok: false, refusal_reason: live.error };
     return { ok: true, result: this.execute(tool, args) };
+  }
+
+  /**
+   * @spec runtime#idempotency (#918, D223): a keyed reversible write after
+   * its Decision. Retrieval first, read-only: a retained record of the
+   * (scope, key) pair is resolved by {@link releaseRetained} and admits
+   * nothing. With none, the attempt goes to admission and the effect.
+   */
+  private async callKeyedReversibleWrite(
+    tool: string,
+    token: TokenFacts,
+    res: EnforceResult,
+    beforeReverify: (() => void) | undefined,
+    failpoints: ReversibleWriteFailpoints | undefined,
+  ): Promise<WriteToolResult> {
+    const attempt = res.attempt;
+    if (!attempt) return { ok: false, refusal_reason: "state_unavailable" };
+    if (res.writeReservationUnkeyable) return this.actorUnkeyable(attempt);
+    const pair = this.reservationPair(res);
+    if (!pair) return this.reservationUnavailable(attempt);
+    let found: WriteReservation | undefined;
+    try {
+      found = pair.store.lookup(pair.scope.scopeDigest, pair.key);
+    } catch {
+      return this.reservationUnavailable(attempt);
+    }
+    if (found) return this.releaseRetained(attempt, pair.scope, found);
+    return this.admitReversibleWrite(tool, token, res, beforeReverify, failpoints);
+  }
+
+  /**
+   * @spec runtime#idempotency (#918): the store, the pair and the published
+   * retention a keyed reversible write needs. `undefined` when any is
+   * missing, which refuses: a key the PDP let through malformed, a store that
+   * is not configured, or a statement that publishes no retention for this
+   * operation all leave exactly-once unestablished. An actor with no stable
+   * identity is refused before this, as its own condition
+   * ({@link actorUnkeyable}).
+   */
+  private reservationPair(
+    res: EnforceResult,
+  ): { store: WriteReservationStore; scope: WriteReservationScope; key: string; retentionMs: number } | undefined {
+    const store = this.deps.writeReservations;
+    const scope = res.writeReservation;
+    const key = scope?.idempotencyKey;
+    const attempt = res.attempt;
+    if (!store || !scope || !attempt || !isIdempotencyKey(key)) return undefined;
+    const statement = this.deps.enforcementScopeStatement ?? RUNTIME_POSTURE;
+    const declared = reversibleWriteDeclarationFor(
+      statement,
+      this.deps.pep.toolAction(attempt.tool)?.actionClass,
+      attempt.action,
+    );
+    const seconds = declared ? reversibleWriteRetentionSeconds(statement, declared) : undefined;
+    if (!declared || declared.reservation_owner !== store.owner || seconds === undefined) return undefined;
+    return { store, scope, key, retentionMs: seconds * 1000 };
+  }
+
+  /**
+   * @spec runtime-evidence#execution-evidence-object `consumption_unavailable`:
+   * the store this PEP takes the single winner in could not be reached, so
+   * exactly-once could not be established. Nothing executes, and the PEP
+   * never retries the effect on its own.
+   */
+  private async reservationUnavailable(attempt: ExecutionAttempt): Promise<WriteToolResult> {
+    await this.deps.pep.suppressExecution(attempt, "consumption_unavailable");
+    return { ok: false, refusal_reason: "consumption_unavailable" };
+  }
+
+  /**
+   * @spec runtime#idempotency (#918, #1016 review): the attempt's actor has
+   * no stable identity to scope its key on (an instance-profiled leaf with no
+   * client), so no (scope, key) pair exists to reserve and the write is
+   * refused before any effect, through the one post-permit writer, under this
+   * deployment's own error name: the store was reachable, so this is not
+   * `consumption_unavailable`. Retrying the same request cannot succeed.
+   */
+  private async actorUnkeyable(attempt: ExecutionAttempt): Promise<WriteToolResult> {
+    await this.deps.pep.suppressExecution(attempt, REVERSIBLE_WRITE_REFUSAL_ERRORS.actor_unkeyable as string);
+    return { ok: false, refusal_reason: "actor_unkeyable", next_action: "none" };
+  }
+
+  /**
+   * @spec runtime#idempotency (#918, D223): retrieval, separate from
+   * admission. A retained record resolves without any effect:
+   *
+   * | Record | Disposition (#808 writer) | Caller sees |
+   * |---|---|---|
+   * | completed, same operation identity | `operation_already_claimed` | `{ok, deduped, result}`, the original response |
+   * | any, different operation identity | `operation_identity_conflict` | refusal, `next_action: none` |
+   * | reserved, same operation identity | `operation_already_claimed` | `duplicate_suppressed`, `next_action: retry` |
+   *
+   * What authorizes the release is THIS attempt's own permit: a current
+   * positive Decision for the same action and resource, whose (scope, key)
+   * pair matched, held to {@link Pep.verifyPermitAtUse} before anything is
+   * disclosed. The permit the record was first produced under is never
+   * consulted, so a retry after that permit expired retrieves through its own
+   * fresh Decision, and the expired permit itself admits nothing: an effect
+   * needs the current attempt's permit at {@link admitReversibleWrite}.
+   *
+   * The disposition record is awaited before anything is disclosed, so the
+   * permit is compared once more, synchronously and on a fresh clock read,
+   * after that write: an attempt whose permit expired during it discloses
+   * nothing, not the retained result and not which kind of record the key
+   * holds. Its one disposition is already recorded, so that last comparison
+   * records nothing further.
+   */
+  private async releaseRetained(
+    attempt: ExecutionAttempt,
+    scope: WriteReservationScope,
+    retained: WriteReservation,
+  ): Promise<WriteToolResult> {
+    const current = await this.deps.pep.verifyPermitAtUse(attempt);
+    if (!current.ok) return { ok: false, refusal_reason: current.error };
+    const conflict = retained.operationIdentity !== scope.operationIdentity;
+    await this.deps.pep.suppressExecution(attempt, conflict ? "operation_identity_conflict" : "operation_already_claimed");
+    const atRelease = this.deps.pep.permitUseFailure(attempt);
+    if (atRelease !== undefined) return { ok: false, refusal_reason: atRelease };
+    if (conflict) return { ok: false, refusal_reason: "operation_identity_conflict", next_action: "none" };
+    if (retained.state === "reserved") {
+      // An outcome this PEP cannot establish: never executed again, and only
+      // reconciliation resolves it.
+      return { ok: false, refusal_reason: "duplicate_suppressed", next_action: "retry" };
+    }
+    return { ok: true, deduped: true, result: retained.result };
+  }
+
+  /**
+   * @spec runtime#idempotency, runtime#execution-reverification (#918, D223):
+   * admission and the effect of a keyed reversible write, under the attempt
+   * `res` carries. The permit is held to {@link Pep.verifyPermitAtUse} before
+   * and after the awaited reverification, then reserve, effect and completion
+   * commit in one local transaction with no await inside it. An expired
+   * permit, this attempt's or one replayed from an earlier attempt, is
+   * refused `permit_expired` here and admits no effect.
+   *
+   * Public as the effect step's own seam: it is what an attempt replayed past
+   * its Decision reaches, and it re-checks everything that attempt needs.
+   */
+  async admitReversibleWrite(
+    tool: string,
+    token: TokenFacts,
+    res: EnforceResult,
+    beforeReverify?: () => void,
+    failpoints?: ReversibleWriteFailpoints,
+  ): Promise<WriteToolResult> {
+    const attempt = res.attempt;
+    if (!attempt || !res.effective || !res.decision) return { ok: false, refusal_reason: "state_unavailable" };
+    const effect = REVERSIBLE_WRITE_EFFECTS[tool];
+    if (!effect) throw new Error(`no reversible effect is declared for tool ${tool}`);
+    const admitted = await this.deps.pep.verifyPermitAtUse(attempt);
+    if (!admitted.ok) return { ok: false, refusal_reason: admitted.error };
+    if (res.writeReservationUnkeyable) return this.actorUnkeyable(attempt);
+    const pair = this.reservationPair(res);
+    if (!pair) return this.reservationUnavailable(attempt);
+    beforeReverify?.();
+    await failpoints?.atReverification?.();
+    const capability = await this.deps.pep.reverifyCapability(
+      res.capabilitySnapshot,
+      token,
+      res.effective.action,
+      attempt,
+    );
+    if (!capability.ok) return { ok: false, refusal_reason: capability.error };
+    const digest = permitConditions(res.decision)?.parameter_digest as string;
+    const bound = await this.deps.pep.reverify(res.effective, digest, token, attempt);
+    if (!bound.ok) return { ok: false, refusal_reason: bound.error };
+    const live = await this.deps.pep.verifyPermitAtUse(attempt);
+    if (!live.ok) return { ok: false, refusal_reason: live.error };
+
+    // One local transaction, and no await from here to its commit.
+    const effective = res.effective;
+    const invoiceVersion = this.deps.payments.getInvoice(effective.invoice_id)?.version;
+    let outcome: ReturnType<WriteReservationStore["reserve"]>;
+    try {
+      if (invoiceVersion === undefined) throw new Error("the permit's invoice no longer resolves");
+      outcome = pair.store.reserve(
+        {
+          scope: pair.scope.scope,
+          scopeDigest: pair.scope.scopeDigest,
+          idempotencyKey: pair.key,
+          action: attempt.action,
+          operationIdentity: pair.scope.operationIdentity,
+          evaluationId: attempt.evaluationId,
+          executionId: attempt.executionId,
+          retentionMs: pair.retentionMs,
+        },
+        (nowMs) =>
+          effect({ store: pair.store, attempt, token, effective, invoiceVersion, parameterDigest: digest, nowMs }),
+        failpoints?.insideTransaction ? { inside: failpoints.insideTransaction } : {},
+      );
+    } catch {
+      return this.reservationUnavailable(attempt);
+    }
+    if (outcome.kind === "existing") return this.releaseRetained(attempt, pair.scope, outcome.reservation);
+    if (outcome.kind === "refused") {
+      await this.deps.pep.suppressExecution(
+        attempt,
+        REVERSIBLE_WRITE_REFUSAL_ERRORS[outcome.refusal] ?? "consumption_unavailable",
+      );
+      return { ok: false, refusal_reason: outcome.refusal, next_action: "none" };
+    }
+    failpoints?.afterCommit?.();
+    return { ok: true, result: outcome.result };
   }
 
   /**
@@ -1062,6 +1424,12 @@ export class McpPaymentsServer {
       );
       return { ok: false, refusal_reason: "permit_consumed" };
     }
+    // @spec runtime#idempotency (#917): this attempt now holds the single
+    // use, so how it ends is the outcome of the permit's idempotency claim.
+    // The redemption store records WHICH attempt, in this same synchronous
+    // step, so only this attempt's failure can ever settle the claim (#1016).
+    attempt.redeemed = true;
+    recordRedeemingAttempt(tx.engine, permitId, attempt.executionId);
 
     beforeCommit?.();
 
@@ -1195,7 +1563,7 @@ export class McpPaymentsServer {
     // `resolvedMission.id`, never `token.mission.id` -- a baseline-Join
     // credential carries no `mission` claim at all, and this write path
     // (execute_wire_transfer / send_email) is reachable on that path too.
-    await tx.evidence.recordExecution(CANONICAL_RESOURCE, "executor", {
+    const executed = await tx.evidence.recordExecution(CANONICAL_RESOURCE, "executor", {
       permitId,
       opKey,
       // One execution identity per disposition attempt, the completed
@@ -1221,6 +1589,11 @@ export class McpPaymentsServer {
         : {}),
     });
     tx.engine.advance(opKey, "evidence_emitted");
+    // @spec runtime#idempotency (#917, owner ruling 2026-10-02): the completed
+    // record settles the PDP's claim, so the key stays refused as completed
+    // through the horizon. D36's state machine is unchanged by this: the
+    // settlement is a notification, not a step the effect waits on.
+    await this.deps.pep.settleClaim(executed.content);
     tx.engine.advance(opKey, "reconciled");
 
     return {
@@ -1319,8 +1692,6 @@ export class McpPaymentsServer {
         return this.deps.payments.getInvoice(String(args.invoice_id));
       case "lookup_vendor":
         return this.deps.payments.getVendor(String(args.vendor_id));
-      case "schedule_payment":
-        return { scheduled: true, invoice_id: String(args.invoice_id) };
       // @spec runtime#compound-actions — the preflight crossing: a
       // feasibility answer with no reservation and no external effect.
       case "check_transfer": {

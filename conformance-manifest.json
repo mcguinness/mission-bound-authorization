@@ -19,8 +19,8 @@
     "content_sha256": "a2a1f271328ddd5634a826cbf588eadcc514418fad0f4679fe1f31c647056ec0"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "0940aa14bf4a300fa5efdb755e99fc5f7ddd6f0f",
-    "content_sha256": "be3f31826ebdfebf1599a4832aa9af8615f7e811d2de81934c360a142250603c"
+    "revision": "5421debe04e26cdce67553b40da55a824f2c8e0e",
+    "content_sha256": "01cf91fabc56fab8f31a910009b14f8ccf59ab01d3133c4edbf2713cf0a2ee33"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "daadb45f36cd901f0d646ba0aa942dfec95844ee",
@@ -47,8 +47,8 @@
     "content_sha256": "e06bc60196934a5b5475d51884dd5627bf263cce0fa18973fd49a63f529b77f8"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
-    "revision": "175c6252b65d8fdca0347d3f214dd0282d6615fc",
-    "content_sha256": "e59ae5e78c3580b5736616705e0dd28acf25d0ae8a6123b057562b6fbc21674a"
+    "revision": "5421debe04e26cdce67553b40da55a824f2c8e0e",
+    "content_sha256": "544fd9439ba95abcfb530d84a834dd1532c136bce3ec5c32ea61bc152250cbcb"
    },
    "draft-mcguinness-oauth-mission-status.md": {
     "revision": "0eb61bec966fef8cfc5efbb20b42c78057b3d05c",
@@ -63,8 +63,8 @@
     "content_sha256": "873b64d56c1813874239d7c4e07d5e1cbc777809c05d725efbf79439038750f9"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "ad5950faa66f52d31791452c656a957810e32586",
-    "content_sha256": "d674de4cd0221ba436271d614771ac813740f10cdae1f2c6fe068f81c227b782"
+    "revision": "7d1fed45af9c9ca56175d0f20b6f62b1e50ce0a4",
+    "content_sha256": "626e0a2ac239dfbcc7abacc529c627e25d6f69451706c84b9aaa27853fd1f689"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
@@ -75,8 +75,8 @@
     "content_sha256": "055d460354f9c98d981f74ce661daa606685695bedd42d04a31981158f8389d7"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "a0ed2253257e1084af1a0ca8e9e4916a7a657906",
-    "content_sha256": "a3cf68f964225bf6908a62ad254a6b3494a0404bc04c6878b5be5cf92d612c31"
+    "revision": "22cd16a360c79d98439b2dce02dfa3c02dc22f1f",
+    "content_sha256": "c31083a7b057d7086cecae0ed7820085140b2e03e0d5744995424557801060c1"
    },
    "draft-mcguinness-mission-orchestration.md": {
     "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
@@ -95,8 +95,8 @@
     "content_sha256": "7747cec83e69020dce2611fd99172fbe14034d776ba68c9b64cdca9fd410d94f"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
-    "content_sha256": "adb2e8708f616b7504425b3134c2376ad3422d9c947b380645f54fb3e8db8f1d"
+    "revision": "22cd16a360c79d98439b2dce02dfa3c02dc22f1f",
+    "content_sha256": "08e29eee9728517c02ca3aa1e78ae6aadf19d059ebb701ea99645f40a1a15c9f"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
     "revision": "a27dab30b97ca4e07644a70d0b24f7acaafacfa2",
@@ -3661,6 +3661,12 @@
      "name": "issuer-qualified principals at the source gates (@spec mission#authority-sources, mission#approval-event, #829) > refuses a template-consent retry whose approver is foreign or malformed before returning the template its event created, and still returns it for a legitimate retry after revocation",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > lets an authorized reviewer activate workload authority it does not hold, and refuses one who may not",
+     "level": "unit",
+     "surface": "derivation"
     }
    ]
   },
@@ -3694,6 +3700,30 @@
     {
      "file": "src/services/authorization-server/test/authority-source.test.ts",
      "name": "authority source drawdown (@spec mission#authority-sources, child-delegation#child-creation) > a drawdown refuses access_denied when the source narrowed since approval",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > holds two Subjects sharing one client to their own source ceilings, never the union",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > holds two workloads sharing one client to their own source ceilings",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > resolves once per approval completion, so gate 3 asserts the resolution gates 1, 2, 4 and 5 ran on",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > refuses at the creation funnel a record whose source is not the one its approval resolved",
      "level": "unit",
      "surface": "derivation"
     }
@@ -3778,6 +3808,30 @@
      "name": "authority source on the approval surface (@spec mission#authority-sources) > refuses access_denied when the Approver may not activate the source",
      "level": "endpoint",
      "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > refuses an absent root, an undeclared client, an overlapping selection, another deployment's catalog, an unavailable resolver and an inconsistent one, before any record or commit",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > refuses an inherited source whose provenance denotes more than one root, rather than drawing on the first",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > establishes a template's source for every recipient Subject through every recipient Agent, refusing recipients whose roots differ",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > refuses a drawdown under a configured resolver rather than checking a catalog the approval never consulted",
+     "level": "unit",
+     "surface": "derivation"
     }
    ]
   },
@@ -3813,6 +3867,18 @@
      "name": "authority source on the approval surface (@spec mission#authority-sources) > renders the organizational source with the governed policy it draws on",
      "level": "endpoint",
      "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source-render.test.ts",
+     "name": "authority source rendering for a shared agent registration (@spec mission#approval-event, mission#authority-sources, #827) > renders the source of the Subject login_hint names, and refuses to render one that depends on an unnamed Subject",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > renders through the configured resolver the decision consults, never the static catalog behind it",
+     "level": "unit",
+     "surface": "derivation"
     }
    ]
   },
@@ -6961,6 +7027,50 @@
     }
    ],
    "notes": "Propagation walks only findChildren of the record that latched, so nothing moves upward or sideways. The test discharges one child's entry directly and asserts the parent and a sibling (both justified by the same parent entry) keep their entries, their versions and their derivation at gateDerivation, while the discharged child is refused. Observed at the kernel derivation gate the token endpoint calls."
+  },
+  {
+   "id": "status.discharge.chain-restriction-retained",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-commit",
+   "text": "The Mission Issuer MUST retain each restriction, with the discharged entry and the condition that discharged it, across every later successor in the chain",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A discharge restriction persists across every later successor in the expansion chain, so a later restoration of the discharged authority is gated on a fresh human approval that discloses the discharged entry and its condition, however many successors intervene."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Owner ruling on #1026 and #1000 (2026-10-02). No implementation yet."
+  },
+  {
+   "id": "status.discharge.partial-restoration-stays-restricted",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-commit",
+   "text": "any authority that approval does not restore stays restricted",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "After a fresh human approval restores part of a discharged entry's authority, a later policy drawdown overlapping the unrestored remainder still falls back to a fresh human approval; the restored part no longer does."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Owner ruling on #1026 and #1000 (2026-10-02). No implementation yet."
   },
   {
    "id": "status.discharge.selector-one-per-target",
@@ -12014,7 +12124,7 @@
    "id": "runtime.decision-inputs.containment-narrowing-source",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "input-authority",
-   "text": "Where the deployment enforces a narrowing mechanism at action time, the PDP MUST establish the current effective authority from a source that reports that mechanism's narrowing, within the staleness bound that governs the `active` check",
+   "text": "For every issuer-held narrowing mechanism the deployment runs, the PDP MUST establish the current effective authority from a source that reports that mechanism's narrowing",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -12027,7 +12137,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "a PDP enforcing containment at action time establishes it from a source that reports the containment narrowing within the staleness bound, and never treats an active lifecycle observation as reporting it"
+    "normative": "a PDP in a deployment running containment establishes current effective authority from a source that reports the containment narrowing within the staleness bound, and never treats an active lifecycle observation as reporting it"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -12038,7 +12148,7 @@
    "id": "runtime.decision-inputs.discharge-narrowing-source",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "input-authority",
-   "text": "Where the deployment enforces a narrowing mechanism at action time, the PDP MUST establish the current effective authority from a source that reports that mechanism's narrowing, within the staleness bound that governs the `active` check",
+   "text": "For every issuer-held narrowing mechanism the deployment runs, the PDP MUST establish the current effective authority from a source that reports that mechanism's narrowing",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -12051,7 +12161,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "a PDP enforcing discharge at action time establishes it from a source that reports the discharge narrowing within the staleness bound, and never treats an active lifecycle observation as reporting it"
+    "normative": "a PDP in a deployment running discharge establishes current effective authority from a source that reports the discharge narrowing within the staleness bound, and never treats an active lifecycle observation as reporting it"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -12059,12 +12169,56 @@
    "notes": "#846. The discharge facet of the narrowing-source rule, gated like its neighbour runtime.decision-inputs.discharge-excludes-authority; a deployment that does not run discharge carries no obligation from this row. That neighbour witnesses refusal on a reported discharge; no test yet shows a lifecycle-only source rejected as the discharge source."
   },
   {
+   "id": "runtime.decision-inputs.containment-narrowing-unavailable-fail-closed",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "input-authority",
+   "text": "A PDP that cannot establish it MUST refuse the action",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "containment.narrowing"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a PDP that cannot establish containment state within the staleness bound refuses the action; an active lifecycle observation alone never yields a permit"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Owner ruling on #1026 and #1000 (2026-10-02). No implementation yet."
+  },
+  {
+   "id": "runtime.decision-inputs.discharge-narrowing-unavailable-fail-closed",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "input-authority",
+   "text": "A PDP that cannot establish it MUST refuse the action",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a PDP that cannot establish discharge state within the staleness bound refuses the action; an active lifecycle observation alone never yields a permit"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Owner ruling on #1026 and #1000 (2026-10-02). No implementation yet."
+  },
+  {
    "id": "runtime.decision-inputs.discharge-excludes-authority",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "input-authority",
-   "text": "A PDP that recognizes an entry's discharge condition SHOULD refuse an action within a discharged entry at the point of use",
+   "text": "The PDP MUST refuse an action within a discharged entry at the point of use",
    "role": "PDP",
-   "strength": "SHOULD",
+   "strength": "MUST",
    "applicability": {
     "kind": "capability",
     "capability": "status.discharge"
@@ -12075,7 +12229,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "a PDP that recognizes terminal_when refuses an action within an entry the Mission has discharged"
+    "normative": "a PDP in a deployment running discharge refuses an action within an entry the Mission has discharged, denying authority_discharged"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -13031,8 +13185,34 @@
     "normative": "a reversible consequential write's permit carries either a single-use decision identifier or a short validity window plus an idempotency key"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/reversible-write-key-control.test.ts",
+     "name": "the PDP refuses a declared reversible write that carries no idempotency key (@spec runtime#permit-binding, #918) > without a well-formed key a declared operation is refused parameter_violation; with one it is permitted under the short validity window, no use limit, and no claim",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/reversible-write-key-control.test.ts",
+     "name": "the reversible-write key control the statement declares (@spec runtime#permit-binding, #918) > covers exactly the operations it names, or the whole reversible-write class when it names the class, and never a high-consequence class",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/reversible-write-key-control.test.ts",
+     "name": "the PDP refuses a declared reversible write that carries no idempotency key (@spec runtime#permit-binding, #918) > caps the permit at the operation's published permit_validity_max_seconds: 30 s under a 30 s maximum, and the shipped 300 s posture is unchanged",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > the permit never outlives its reservation's retention (@spec runtime#permit-binding, #1028 review) > with a 30 s permit maximum and a 60 s retention, the original permit replayed after the record expired is refused permit_expired and nothing executes",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Partial (#918). Witnessed for the reversible writes the statement declares under the idempotency-key control (schedule_payment, cancel_scheduled_payment): the PDP refuses a request carrying no well-formed idempotency_key parameter_violation, and permits a keyed one with the short validity window and no use_limit, making no claim; the window is the operation's published permit_validity_max_seconds, which caps valid_until (30 s under a 30 s maximum, 300 s as shipped; #1028 review), so a permit replayed after its reservation's shorter-than-retention record expired is refused permit_expired and executes nothing; the PEP reserves the key (runtime.idempotency.reversible-write-pep-reserve-and-retain). Not witnessed: hold_transfer, the prepare phase of payments:payment.execute, is a consequential_write since #1015 and its permit carries neither control (no use_limit and no key), so the row's observation does not hold for every reversible consequential write the deployment serves. The cited tests are unit-level PDP tests; no endpoint-level mapping at the resource operation is cited."
   },
   {
    "id": "runtime.single-use.record-and-refuse-second-presentation",
@@ -13114,8 +13294,28 @@
     "normative": "every non-idempotent high-consequence operation's Operation Profile defines an idempotency key"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "the Operation Profile defines an idempotency key for every non-idempotent high-consequence operation (@spec runtime#idempotency) > every high-consequence tool's Operation Profile defines a key, and its served schema requires one in the published format",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > every keyed high-consequence action requires a well-formed key > a missing or malformed key denies parameter_violation in all three classes",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "the Operation Profile defines an idempotency key for every non-idempotent high-consequence operation (@spec runtime#idempotency) > a keyed tool called without a key is refused by the PDP and executes nothing",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Witnessed (#917): every tool the Operation Profile places in a high-consequence class (execute_wire_transfer, send_remittance_email) defines an idempotency key and its served schema requires idempotency_key in the Operation Profile format (16 to 128 characters of ALPHA / DIGIT / \"-\" / \"_\"); the PDP refuses a missing or malformed key with parameter_violation in all three classes, privileged administration through a fixture statement and action because the shipped deployment offers none."
   },
   {
    "id": "runtime.idempotency.atomic-claim-and-linearizable-consumption",
@@ -13135,9 +13335,22 @@
     "normative": "the PDP's idempotency-scope claim and the PEP's use-limited permit consumption are each a single linearizable operation; two replicas never both succeed in claiming or consuming the same key"
    },
    "level": "concurrency",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Re-audited (#302): this row was tested against src/services/mcp-payments/test/transaction.test.ts \"M5 transaction-assurance tier > consumes a txn exactly once when two replicas are presented distinct token jtis simultaneously\", a PEP/resource-side test, which is not a witness for this row's PDP role. What that test establishes is single-winner consumption of a resource-issued txn across two replicas over one shared store; what this row demands, per its role, is the PDP's atomic claim of the (idempotency scope, `idempotency_key`) pair as a single linearizable operation before permit issuance. No PDP-side claim store exists: src/services/pdp has none, and enforcement-scope.ts:78's transaction_assurance/idempotency_claim_domain field is declared but never read. The misattribution arose because the quoted `text` is the sentence from the Permit replay prevention (PEP) paragraph while the row carries role PDP, and the observation conjoins both duties; the PEP conjunct is separately traced at runtime.single-use.store-durability-and-multi-instance-sharing (PEP, tested) and the resource-side conjunct at txn-authorization.consumption.linearizable-cross-replica and txn-authorization.consumption.two-jti-one-txn-rejected (RS, tested), so the citation moves nowhere: it already stands under the roles it proves. Nothing PDP-side is witnessed, so todo, not partial."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the claim is one linearizable operation > eight concurrent identical evaluations on one file store yield one permit, one row, and seven transient duplicate_suppressed",
+     "level": "concurrency",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > a key reused under a different operation identity is a conflict > denies idempotency_conflict to a concurrent different operation under the same key",
+     "level": "concurrency",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "PDP conjunct witnessed (#917): eight concurrent identical evaluations against one durable single-writer claim domain file, interleaved at the Decision Evidence signing await, yield exactly one permit and one claim row holding that permit's evaluation_id, and seven transient duplicate_suppressed denials; the claim's lookup-and-insert is one transaction with no await inside it (src/services/pdp/src/idempotency-claims.ts). The PEP conjunct (use-limited permit consumption across replicas) stays cited where it is proven, under its own role: runtime.single-use.store-durability-and-multi-instance-sharing (PEP) and the resource-side rows txn-authorization.consumption.linearizable-cross-replica and txn-authorization.consumption.two-jti-one-txn-rejected."
   },
   {
    "id": "runtime.idempotency.scope-published-and-no-volatile-members",
@@ -13157,8 +13370,70 @@
     "normative": "the idempotency scope is published in the Enforcement Scope Statement, and a volatile member is never added to it"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/runtime-posture-metadata.test.ts",
+     "name": "runtime posture publication on the resource metadata surface > publishes the Exact claim domain per high-consequence class, its scope and horizon, and the reconciliation window",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the claim runs under the Exact profile only, and an unsupported topology is refused at startup > refuses a volatile scope member",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the claim runs under the Exact profile only, and an unsupported topology is refused at startup > refuses a scope missing a required dimension",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the idempotency scope is the published namespace > pairs differing in mission, subject, actor, audience, resource or phase never collide, and a separator-ambiguous pair stays distinct",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the idempotency scope is the published namespace > a new client_instance_id does not split the scope",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the idempotency scope is the published namespace > another instance of the same client under the same key, carried as an instance-profiled leaf, never obtains a second permit",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the idempotency scope is the published namespace > an instance-profiled leaf with no client to key it on has no stable actor and is refused actor_invalid",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/runtime-posture-metadata.test.ts",
+     "name": "runtime posture publication on the resource metadata surface > publishes the reservation domain, its owner and the retention posture for every keyed write outside the high-consequence classes",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/reversible-write-key-control.test.ts",
+     "name": "the reversible-write key control the statement declares (@spec runtime#permit-binding, #918) > refuses a declaration whose retention is not longer than the permit, whose owner is not a PEP location, whose scope is not the fixed-member one, or that covers another class",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > the reservation scope keys on a stable actor (@spec runtime#idempotency, #1016 review) > another instance of the same client, carried as an instance-profiled leaf, retries into the same scope and executes nothing new",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Witnessed (#917): the statement publishes idempotency_scope [mission, subject, actor, audience, action, resource, phase] per high-consequence class; a statement adding a volatile member (client_instance_id, the act chain above the leaf, freshness, approvals, timestamps) or omitting a dimension is refused at load; and the scope the PDP encodes is exactly the published one: pairs differing in any one dimension, a different delegate leaf included, never collide under the fixed-member JCS encoding, and a new client_instance_id does not split it. The actor dimension is a stable identity (@mission/core idempotencyScopeActor, #1016 review): a leaf act entry whose sub_profile carries client_instance names a volatile instance, so the scope keys on its client instead and another instance of the same client gets no second permit; an instance-profiled leaf with no client to key on is refused actor_invalid. The reversible-write declarations (#918) publish the same fixed-member scope for the PEP-reserved keys, and a declaration whose scope adds a volatile member or omits a dimension is refused at load. The PEP's reservation scope uses the same stable actor: another instance of the same client does not split it."
   },
   {
    "id": "runtime.idempotency.tombstone-retention-and-refusal",
@@ -13178,9 +13453,64 @@
     "normative": "for the high-consequence classes, the deployment retains a durable consumed-key tombstone for at least its declared idempotency horizon, a claim against it inside that horizon is refused, never treated as fresh, and outside the high-consequence classes the deployment publishes which retention posture applies"
    },
    "level": "concurrency",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Re-audited (#302): this row was tested against src/services/mcp-payments/test/transaction.test.ts \"the crash window between consumption and the effect (@spec txn-authorization#offline-verification) > refuses a DIFFERENT operation presented under an already-consumed txn\", a PEP/resource-side test, which is not a witness for this row's PDP role. That test asserts that a different operation presented under an in-window consumed txn is refused with duplicate_suppressed and leaves the stored consumption record untouched. It witnesses no part of this row: there is no durable consumed-key tombstone retained for a declared idempotency horizon, no PDP claim evaluated against one, and no published retention posture for keys outside the high-consequence classes. The consumed-txn refusal it does prove is traced at txn-authorization.consumption.two-jti-one-txn-rejected (RS, tested), so the citation stays where it belongs and is not carried here. The PDP-side claim store this row presupposes is unbuilt (src/services/pdp has no claim store; enforcement-scope.ts:78's idempotency_claim_domain field is declared but never read)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > retention through the declared horizon > a completed key is refused at the horizon minus one second and is new after it",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > retention through the declared horizon > an indeterminate key is still refused past the horizon",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > a key reused under a different operation identity is a conflict > denies idempotency_conflict with next_action none in every claim state",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > crash boundaries and restart > a claim inserted with no persisted decision is adopted after restart and issues once; a different operation conflicts",
+     "level": "concurrency",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > crash boundaries and restart > a persisted permit is unknown after restart: suppressed, never returned, never fresh",
+     "level": "concurrency",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > crash boundaries and restart > a same-boot permit with no consumption answer is suppressed, never assumed unused",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > crash boundaries and restart > an unresolved claim closes indeterminate at the window's end and stays refused",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > a failure settles only from the attempt that redeemed the permit > a suppression from any other attempt never settles: the claim stays unresolved, closes indeterminate, and is never purged",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/reversible-write-key-control.test.ts",
+     "name": "the reversible-write key control the statement declares (@spec runtime#permit-binding, #918) > the statement this PDP loads publishes, for every keyed operation outside the high-consequence classes, its reservation owner and a retention longer than the permit",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "High-consequence conjuncts witnessed (#917): the PDP's claim domain is a durable single-writer SQLite file; a completed or failed key is refused (duplicate_suppressed, next_action none) through terminal_at plus the declared idempotency_horizon_seconds (604800) and is new only after it; an indeterminate key carries no horizon and stays refused past it; a terminal row compacted after the reconciliation window (its stored decision dropped, its commitments kept) still refuses; restart, crash-before-persist and missing consumption knowledge all suppress rather than treat the key as fresh; and a failed or suppressed record that the redemption owner does not name as the redeeming attempt's never settles a claim, so an unknown outcome cannot become a purgeable failed tombstone (#1016 review round 2). Final conjunct witnessed PDP-side (#918): outside the high-consequence classes, the statement this PDP loads (RUNTIME_POSTURE) publishes, per keyed operation (payments:payment.schedule and payments:payment.schedule.cancel), the declared_horizon posture with a P7D retention longer than the 300 s permit, and loadRuntimePosture refuses a declaration that names no posture. Only PDP citations are kept on this PDP row; the resource-metadata publication test is cited on the PEP and AS rows it proves."
   },
   {
    "id": "runtime.idempotency.claim-exact-enforcement-only",
@@ -13200,10 +13530,40 @@
     "normative": "the idempotency claim runs under the Exact enforcement profile only; a deployment never configures the Bounded-consistency profile for it even where that profile is used for consumption metering"
    },
    "level": "concurrency",
-   "coverage": "blocked",
-   "blocked_by": "#648",
-   "tests": [],
-   "notes": "No PDP-side idempotency claim store exists in this codebase (grep -rl idempotency src/services/pdp finds nothing): the claim mechanism this row governs is the transaction-assurance implementation #648 tracks, not a drop-in over the existing resource-side transaction store (src/services/mcp-payments/src/transaction.ts), which is Exact only by virtue of being single-process, not by a declared topology choice this row can observe. Blocked on #648's claim-store landing a PDP-side implementation to test against."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the claim runs under the Exact profile only, and an unsupported topology is refused at startup > refuses the Bounded enforcement profile",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the claim runs under the Exact profile only, and an unsupported topology is refused at startup > refuses an unsupported topology",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the claim runs under the Exact profile only, and an unsupported topology is refused at startup > refuses two PDPs in the statement",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the claim runs under the Exact profile only, and an unsupported topology is refused at startup > refuses a second handle on a file another domain holds",
+     "level": "concurrency",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the claim is one linearizable operation > eight concurrent identical evaluations on one file store yield one permit, one row, and seven transient duplicate_suppressed",
+     "level": "concurrency",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Witnessed against the PDP-owned claim domain (#917, D223): the domain opens only a statement declaring the Exact profile and the local-single-writer topology for every mediated high-consequence class, owned by the statement's one PDP; a Bounded declaration, another topology, or a second PDP is refused at startup, and the file itself admits one handle (locking_mode=EXCLUSIVE), so the single serializing PDP the Exact profile names is the only configuration that runs."
   },
   {
    "id": "runtime.idempotency.exact-domain-unavailable-fail-closed",
@@ -13223,10 +13583,28 @@
     "normative": "a PDP unable to reach the store or replica set that realizes its declared Exact claim domain refuses rather than issuing a permit without the claim"
    },
    "level": "unit",
-   "coverage": "blocked",
-   "blocked_by": "#648",
-   "tests": [],
-   "notes": "Same PDP-side claim store gap as runtime.idempotency.claim-exact-enforcement-only: there is no claim domain to be unreachable yet. Blocked on #648."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > an unreachable claim domain fails closed > a closed domain yields no decision and no permit",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > an unreachable claim domain fails closed > a failing store yields no decision and no permit",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/remote-channel.test.ts",
+     "name": "the remote channel binds the claim requester (@spec runtime#idempotency, #917) > answers 503 when the claim domain is unreachable, and the PEP obtains no decision",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Witnessed (#917): a closed or failing claim domain throws ClaimDomainUnavailableError out of evaluate(), so the PDP issues no decision at all (co-resident) or answers 503 (remote); there is no spec-owned PDP denial code for this case, and the PEP then records pdp_unreachable with zero effect (the end-to-end PEP cases in src/services/mcp-payments/test/idempotency-claim-pep.test.ts, not cited here because they are PEP witnesses)."
   },
   {
    "id": "runtime.idempotency.ess-must-name-exact-claim-domain",
@@ -13248,9 +13626,34 @@
     "normative": "the Enforcement Scope Statement names the Exact claim domain per mediated action class or idempotency scope, never as an enumeration of individual dynamic claims"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Corrected (#302): an Enforcement Scope Statement artifact does exist, src/config/enforcement-scope.json, read as RUNTIME_SCOPE_CONFIG by src/packages/demo-data/src/index.ts and validated at load by src/services/pdp/src/runtime-posture.ts's loadRuntimePosture, which applies validateEnforcementScopeStatement from src/services/pdp/src/enforcement-scope.ts (RUNTIME_POSTURE = loadRuntimePosture(RUNTIME_SCOPE_CONFIG) at runtime-posture.ts:100, asserted in src/services/pdp/test/runtime-posture.test.ts; the validator's own rules are tested in src/services/pdp/test/enforcement-scope.test.ts). The claim-domain member is declared at enforcement-scope.ts:78 as transaction_assurance[].idempotency_claim_domain. The row stays todo because none of that names an Exact claim domain: the artifact declares no claims or extensions at all, so it carries no transaction_assurance entry, nothing reads the field, and no test asserts a declaration per mediated action class or idempotency scope. Not specific to #648."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/runtime-posture-metadata.test.ts",
+     "name": "runtime posture publication on the resource metadata surface > publishes the Exact claim domain per high-consequence class, its scope and horizon, and the reconciliation window",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "the PDP idempotency claim through the executing PEP (@spec runtime#idempotency, #917) > a completed wire settles its claim over the co-resident channel: the same key is refused as completed and executes once",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the statement names the claim domain per class, never per key > refuses a mediated high-consequence class with no declaration at all",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the statement names the claim domain per class, never per key > refuses a declaration keyed to an individual claim rather than a mediated class",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Witnessed (#917): the shipped Enforcement Scope Statement, read from the resource's published metadata, carries exactly one transaction_assurance declaration per mediated high-consequence class naming the claim domain (owner, Exact profile, local-single-writer topology, scope, horizon) and the outcome_reconciliation window; the same statement is what the PDP opens as its domain, and the resource operation is governed by it per key. A mediated class with no declaration, and a declaration keyed to an individual claim, are refused at load."
   },
   {
    "id": "runtime.idempotency.reversible-write-pep-reserve-and-retain",
@@ -13271,10 +13674,94 @@
     "normative": "for a reversible consequential write electing the idempotency-key permit-lifetime control, the enforcing PEP or resource atomically reserves the key against a concurrent duplicate and retains the record for the declared non-high-consequence retention posture, so a duplicate presented after the permit's own short validity window still resolves against the recorded key instead of executing again"
    },
    "level": "concurrency",
-   "coverage": "blocked",
-   "blocked_by": "#648",
-   "tests": [],
-   "notes": "This is a distinct reservation/retention duty from the high-consequence transaction-assurance store (src/services/mcp-payments/src/transaction.ts covers the txn class, not the reversible-write class's lighter control); no implementation of it exists yet. Do not satisfy this row with the existing resource-consumption transaction test, which exercises a different class's store under a different (already-atomic) mechanism. Blocked on #648."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > concurrent duplicates execute once > eight concurrent schedules under one key: one schedule and one reservation; seven get the winner's result, deduped, and record operation_already_claimed",
+     "level": "concurrency",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > the persisted store reopens with the record > a key scheduled before the store closed resolves against its record from a new server on the same file",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > retrieval is separate from admission and is authorized by the retry's own Decision > after the original permit expired, a retry with a valid new Decision retrieves the retained result without reaching admission; the expired original attempt replayed into the effect step is refused permit_expired; past the horizon the key is new",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > a changed operation under the same key is a conflict > a retry under the same key after the invoice changed is refused operation_identity_conflict, with one schedule and the conflict recorded through the post-permit writer",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > an unresolved outcome is never executed again > a fault inside the transaction leaves neither the schedule nor the reservation, and the retry executes once",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > an unresolved outcome is never executed again > a fault after the commit, before the response, resolves the retry against the retained result",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > an unresolved outcome is never executed again > a reserved record is refused duplicate_suppressed and never executed, and time never purges it",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > an unresolved outcome is never executed again > an unreachable store refuses consumption_unavailable and executes nothing",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > retrieval is separate from admission and is authorized by the retry's own Decision > a new Decision that expires before release discloses nothing: held after the Decision, the at-use check suppresses permit_expired; held at the disposition write, the release-time check refuses",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > the persisted store reopens with the record > refuses a second handle on a held file, an absent or in-memory file, another owner's file, a newer schema, and a store the statement does not name as the domain",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/runtime-posture-metadata.test.ts",
+     "name": "runtime posture publication on the resource metadata surface > publishes the reservation domain, its owner and the retention posture for every keyed write outside the high-consequence classes",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > the reservation scope keys on a stable actor (@spec runtime#idempotency, #1016 review) > another instance of the same client, carried as an instance-profiled leaf, retries into the same scope and executes nothing new",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > the reservation scope keys on a stable actor (@spec runtime#idempotency, #1016 review) > an instance-profiled leaf with no client to key it on has no stable actor: the write is refused after its permit, executes nothing, and leaves no reservation",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/write-reservation.test.ts",
+     "name": "the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > the permit never outlives its reservation's retention (@spec runtime#permit-binding, #1028 review) > with a 30 s permit maximum and a 60 s retention, the original permit replayed after the record expired is refused permit_expired and nothing executes",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Witnessed (#918): schedule_payment and cancel_scheduled_payment elect the idempotency-key control, and the enforcing PEP (mcp-payments-pep) reserves (idempotency scope, idempotency_key) in its own durable single-writer SQLite file (stores.pepWriteReservations.file), separate from the PDP claim domain and from transaction.ts. The schedule effect and its completed reservation and result commit in one local transaction, so eight concurrent attempts under one key that all found the pair free execute once and the other seven read the winner's record (concurrency). The record survives a close and reopen of the file, and is retained for the published P7D horizon: a retry after the 300 s permit expired resolves against it through its own fresh Decision, held to verifyPermitAtUse before release, without reaching admission, while the expired permit replayed into the effect step admits nothing; past the horizon the key is new. A changed operation conflicts, a fault inside the transaction leaves neither row, a fault after the commit resolves to the retained result, a reserved record is refused and never purged by time, and an unreachable store suppresses consumption_unavailable. This is a different store and mechanism from the high-consequence transaction-assurance tier; no transaction.ts test is cited. The reservation scope's actor is the shared stable identity (@mission/core idempotencyScopeActor, #1016 review): another instance of the same client, carried as an instance-profiled leaf, retries into the same scope and executes nothing new, and an instance-profiled leaf with no client to key on yields no scope, so the write is refused after its permit with no effect and no reservation, recorded under the deployment-defined error https://payments.demo/execution-errors/actor_unkeyable (caller-visible actor_unkeyable). The PDP caps each keyed write's permit at the published permit_validity_max_seconds, which the loader holds shorter than the retention, so no permit outlives its record: with a 30 s maximum and a 60 s retention, the original permit replayed after the record expired is refused permit_expired and nothing executes (#1028 review)."
   },
   {
    "id": "runtime.execution-reverification.mismatch-refusal",
@@ -13747,6 +14234,18 @@
     {
      "file": "src/services/mcp-payments/test/transaction.test.ts",
      "name": "M5 transaction-assurance tier > scenario 4: wire transfer executes once with permit, evidence, and reconciliation",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "reconciliation settles a failure only from the attempt that redeemed the permit (#1016) > a committed wire with its completion evidence missing, beside a replay's permit_expired suppression, settles completed from the ledger, never failed",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "reconciliation settles a failure only from the attempt that redeemed the permit (#1016) > a genuine failure from the redeeming attempt still settles failed, live and through reconciliation",
      "level": "endpoint",
      "surface": "evidence-emission"
     }
@@ -14492,11 +14991,73 @@
    "surface": "resource-operation",
    "assertion": "replay",
    "observation": {
-    "normative": "a re-presentation matching the prior claim's idempotency scope, key, and operation identity, while the permit is unexpired and unconsumed, returns the prior decision rather than a fresh evaluation or an error"
+    "normative": "a re-presentation whose decision cache key equals the prior decision's and whose claim matches (same idempotency scope, key and operation identity), while the prior permit is unexpired and its evaluation_id unconsumed, returns the prior decision rather than a fresh evaluation or an error",
+    "local": "the reference PDP establishes unconsumed only from the executing PEP's explicit unconsumed answer for that evaluation_id, read from its D28 redemption store and asked of the PEP and epoch the permit was issued to; consumed, unknown, a failed or timed-out query, another epoch, a settled claim or a PDP restart suppresses with duplicate_suppressed (next_action retry); unexpired is judged on a clock read after that answer arrives, inside the transaction that returns the decision; and the stored decision is returned byte for byte with its stored Decision Evidence, never re-emitted"
    },
    "level": "concurrency",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > retransmission returns the prior decision only when every condition holds > returns the identical stored decision, its evidence included, when the PEP answers unconsumed",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > retransmission returns the prior decision only when every condition holds > does not return it when the cache key changed",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > retransmission returns the prior decision only when every condition holds > does not return it to another PEP epoch",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > retransmission returns the prior decision only when every condition holds > does not return it once the claim settled",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > retransmission returns the prior decision only when every condition holds > does not return it once the permit expired",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > retransmission returns the prior decision only when every condition holds > does not return a permit that expires while the PEP is answering",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > retransmission returns the prior decision only when every condition holds > does not return it when the PEP answers consumed or unknown, fails, or does not answer in time",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "the PDP idempotency claim through the executing PEP (@spec runtime#idempotency, #917) > returns the prior permit while the redemption store answers unconsumed, and refuses it once the permit is redeemed and its settlement is held",
+     "level": "concurrency",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "the PDP idempotency claim through the executing PEP (@spec runtime#idempotency, #917) > refuses the retry when the redemption store cannot answer, or answers for another epoch",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/remote-channel.test.ts",
+     "name": "the remote channel binds the claim requester (@spec runtime#idempotency, #917) > returns a prior permit only to the authenticated PEP epoch it was issued to",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ]
   },
   {
    "id": "runtime.execution-reverification.stop-or-renew-before-lease-expires",
@@ -15384,8 +15945,22 @@
     "normative": "an idempotency_key reused under a different operation identity than the claim it was made under always denies idempotency_conflict, terminal regardless of claim state"
    },
    "level": "concurrency",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > a key reused under a different operation identity is a conflict > denies idempotency_conflict with next_action none in every claim state",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > a key reused under a different operation identity is a conflict > denies idempotency_conflict to a concurrent different operation under the same key",
+     "level": "concurrency",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Witnessed (#917, #594 W4-14): the PDP holds the (scope, key) claim with its operation identity (AuthZEN's operation-identity projection) and denies idempotency_conflict, next_action none, in every claim state: claimed and in flight, permit_issued, unresolved, completed, failed, indeterminate, and a compacted terminal row, and to a concurrent different operation under the same key."
   },
   {
    "id": "authzen.parameter-digest.constraint-unevaluable-fail-closed",
@@ -23962,7 +24537,7 @@
    "surface": "lifecycle-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "While the chain carries a containment restriction, a drawdown whose complete successor Authority Set overlaps no restricted capability is still adjudicated by policy under the other in-ceiling guards; a non-empty overlay alone does not force a human approval."
+    "normative": "While the chain carries a containment or discharge restriction, a drawdown whose complete successor Authority Set overlaps no restricted authority is still adjudicated by policy under the other in-ceiling guards; a restriction alone does not force a human approval."
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -23990,6 +24565,50 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Binds where containment.narrowing also runs (Containment Section \"Restoration Through Expansion\"). The negative test waits for a Progressive implementation (#999)."
+  },
+  {
+   "id": "progressive.in-ceiling.discharged-overlap-falls-back",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "in-ceiling-expansion",
+   "text": "The drawdown policy MUST NOT policy-adjudicate a successor whose complete Authority Set, including authority carried forward from its predecessor, overlaps in authority the authority a discharge restriction of its expansion chain covers",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A policy-adjudicated drawdown whose complete successor Authority Set overlaps authority the predecessor discharged produces no successor by policy; it falls back to a fresh human approval naming the discharged entry and the condition that discharged it."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Owner ruling on #1026 and #1000 (2026-10-02). No implementation yet."
+  },
+  {
+   "id": "progressive.in-ceiling.discharge-restriction-survives-intervening-successor",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "in-ceiling-expansion",
+   "text": "The Mission Issuer MUST apply this test to every drawdown in the chain after the discharge, not only to one from the Mission that holds the discharged entry",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "After Mission A discharges entry X and an unrelated policy drawdown creates successor B without X, a drawdown from B whose Authority Set overlaps X falls back to a fresh human approval disclosing the discharge; an unrelated approval or a ceiling review in between does not clear the restriction."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Owner ruling on #1026 and #1000 (2026-10-02). No implementation yet."
   },
   {
    "id": "cross-domain.delegation-depth.composed-bound-disclosure",
@@ -26835,6 +27454,72 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#901 review: make the AS-binding check explicit in the optional Submission Evidence companion. No supported evidence type currently exercises this check; verification must include absent, wrong-AS, invalid, and valid bindings when a concrete type is implemented."
+  },
+  {
+   "id": "expansion.restoration.discharge-disclosed",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "verification-order",
+   "text": "An expansion that restores authority under a discharge restriction of the chain MUST authorize that authority explicitly, and its consent disclosure MUST name the discharged entry and the condition that discharged it",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The fresh-consent approval of an expansion restoring discharged authority authorizes that authority explicitly, and its consent disclosure names the discharged entry and the condition that discharged it."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Owner ruling on #1026 and #1000 (2026-10-02). No implementation yet."
+  },
+  {
+   "id": "expansion.reconciliation.discharge-between-adjudication-and-activation",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "reconciliation",
+   "text": "the successor's complete Authority Set, including authority carried forward from the predecessor, overlaps in authority no authority under a current containment or discharge restriction of the chain",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "When the predecessor discharges authority X after a successor carrying X was adjudicated (by policy or by a human approval that did not disclose the discharge) and before activation, the completion is refused with invalid_grant and authority_restricted_since_approval and activates no successor; X returns only through a new expansion adjudicated against the current restriction."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Review finding on #1031 (owner ruling D241): narrowing between adjudication and activation. No implementation yet."
+  },
+  {
+   "id": "expansion.reconciliation.containment-between-adjudication-and-activation",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "reconciliation",
+   "text": "the successor's complete Authority Set, including authority carried forward from the predecessor, overlaps in authority no authority under a current containment or discharge restriction of the chain",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "containment.narrowing"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "When the predecessor contains authority X after a successor carrying X was adjudicated and before activation, the completion is refused with invalid_grant and authority_restricted_since_approval and activates no successor; X returns only through a new expansion adjudicated against the current restriction."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Review finding on #1031 (owner ruling D241): narrowing between adjudication and activation. No implementation yet."
   }
  ]
 }

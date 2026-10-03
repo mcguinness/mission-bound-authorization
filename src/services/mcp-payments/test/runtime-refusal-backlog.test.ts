@@ -14,6 +14,7 @@
  * gate the *.test.ts files with a live PDP use.
  */
 
+import { randomUUID } from "node:crypto";
 import { SignJWT, generateKeyPair, exportJWK } from "jose";
 import { describe, expect, it } from "vitest";
 import type { Fga, MissionView } from "@mission/pdp";
@@ -26,6 +27,7 @@ import {
   createMediatedClient,
   EvidenceStore,
   McpPaymentsServer,
+  openEphemeralWriteReservationStore,
   parameterDigest,
   PaymentsStore,
   Pep,
@@ -35,6 +37,9 @@ import {
   type DecisionEvidence,
   type TokenFacts,
 } from "../src/index.js";
+
+/** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
+const idem = (): string => `idem_${randomUUID()}`;
 
 // @spec runtime-evidence#decision-evidence-object (#741): one bundle per
 // test module. `signing`/`resolver` wire the PEP's store; `decide` is the
@@ -109,6 +114,7 @@ function buildStack(missionView: MissionView, fga: Fga) {
     jwks: { keys: [] },
     issuer: ISSUER,
     transaction: { engine, connectors, evidence },
+    writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
   });
   return { payments, evidence, connectors, engine, pep, server };
 }
@@ -123,7 +129,7 @@ describe("a tool-catalog filter is not a substitute for the runtime gate (@spec 
     // Calling it anyway reaches the SAME runtime gate as a listed tool would,
     // not a side door: refused, zero ledger effect, FGA never consulted
     // (poisonFga would throw if the gate were bypassed into an FGA check).
-    const res = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1" }, TOKEN);
+    const res = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
     expect(res.ok).toBe(false);
     expect(res.denial_reason).toBe("out_of_authority");
     expect(res.result).toBeUndefined();
@@ -137,7 +143,7 @@ describe("the PEP sits at the last controllable boundary before the action (@spe
 
     const res = await server.callTransactionTool(
       "execute_wire_transfer",
-      { invoice_id: "inv-1" },
+      { invoice_id: "inv-1", idempotency_key: idem() },
       TOKEN,
       () => payments.bumpInvoiceAmount("inv-1", "999.00"), // mutate exactly in the decision->commit window
     );
@@ -153,7 +159,7 @@ describe("the PEP sits at the last controllable boundary before the action (@spe
 describe("every consequential operation passes through a PEP that can refuse it after token validation and before execution (@spec runtime#rs-runtime-profile)", () => {
   it("a denied consequential operation never executes: zero connector side effects", async () => {
     const { server, connectors } = buildStack(view([]), poisonFga);
-    const res = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1" }, TOKEN);
+    const res = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
     expect(res.ok).toBe(false);
     expect(res.result).toBeUndefined();
     expect(connectors.ledgerEntries()).toHaveLength(0);
@@ -161,7 +167,7 @@ describe("every consequential operation passes through a PEP that can refuse it 
 
   it("a permitted consequential operation is preceded by an actual PDP decision, not a bypass into a permit", async () => {
     const { server, evidence, connectors } = buildStack(view(["payments:payment.execute"]), alwaysAllowFga);
-    const res = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1" }, TOKEN);
+    const res = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
     expect(res.ok, JSON.stringify(res)).toBe(true);
     expect(connectors.ledgerEntries()).toHaveLength(1);
     expect(
@@ -180,12 +186,12 @@ describe("every consequential operation passes through a PEP that can refuse it 
 describe("high-consequence actions are always gated by a PDP permit, never left ungated by classification (@spec runtime#classification)", () => {
   it("execute_wire_transfer (irreversible_action) always reaches a PDP decision: refused without authority, permitted-with-decision-evidence with it", async () => {
     const denied = buildStack(view([]), poisonFga);
-    const deny = await denied.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1" }, TOKEN);
+    const deny = await denied.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
     expect(deny.ok).toBe(false);
     expect(deny.result).toBeUndefined();
 
     const granted = buildStack(view(["payments:payment.execute"]), alwaysAllowFga);
-    const permit = await granted.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1" }, TOKEN);
+    const permit = await granted.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
     expect(permit.ok, JSON.stringify(permit)).toBe(true);
     const dec = granted.evidence
       .all()
@@ -195,12 +201,12 @@ describe("high-consequence actions are always gated by a PDP permit, never left 
 
   it("send_remittance_email (external_commitment) always reaches a PDP decision: refused without authority, permitted-with-decision-evidence with it", async () => {
     const denied = buildStack(view([]), poisonFga);
-    const deny = await denied.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN);
+    const deny = await denied.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
     expect(deny.ok).toBe(false);
     expect(deny.result).toBeUndefined();
 
     const granted = buildStack(view(["payments:remittance.send"]), alwaysAllowFga);
-    const permit = await granted.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN);
+    const permit = await granted.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
     expect(permit.ok, JSON.stringify(permit)).toBe(true);
     const dec = granted.evidence
       .all()
@@ -226,7 +232,8 @@ describe("an action-bound approval is reverified against the concrete parameters
     };
 
     // The approval matches the CURRENT record: the gate is satisfied.
-    const before = await pep.enforce("schedule_payment", { invoice_id: "inv-1" }, TOKEN, approval);
+    const args = { invoice_id: "inv-1", idempotency_key: idem() };
+    const before = await pep.enforce("schedule_payment", args, TOKEN, approval);
     expect(before.permitted, JSON.stringify(before)).toBe(true);
 
     // Reparameterization: the record changes after approval. The SAME
@@ -238,7 +245,7 @@ describe("an action-bound approval is reverified against the concrete parameters
     // no public server API drives an approval-gated action through that
     // two-phase path; see the manifest row's notes.)
     payments.bumpInvoiceAmount("inv-1", "999.00");
-    const after = await pep.enforce("schedule_payment", { invoice_id: "inv-1" }, TOKEN, approval);
+    const after = await pep.enforce("schedule_payment", args, TOKEN, approval);
     expect(after.permitted).toBe(false);
     expect(after.denial_reason).toBe("action_approval_required");
     // Nothing executed on either call: enforce() alone never commits an
@@ -413,6 +420,7 @@ describe("every mediated crossing carries the class the deployment assigns it (@
       get_invoice: "consequential_read",
       lookup_vendor: "consequential_read",
       schedule_payment: "consequential_write",
+      cancel_scheduled_payment: "consequential_write",
       check_transfer: "consequential_read",
       hold_transfer: "consequential_write",
       execute_wire_transfer: "irreversible_action",
@@ -422,7 +430,7 @@ describe("every mediated crossing carries the class the deployment assigns it (@
 
   it("schedule_payment reaches the PDP as a consequential write and is parameter-bound: its Decision Evidence records the deployment's class and the parameter digest", async () => {
     const { server, evidence } = buildStack(view(["payments:payment.schedule"]), alwaysAllowFga);
-    const result = await server.callWriteTool("schedule_payment", { invoice_id: "inv-1" }, TOKEN);
+    const result = await server.callWriteTool("schedule_payment", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
     expect(result.ok, JSON.stringify(result)).toBe(true);
     const dec = evidence
       .all()

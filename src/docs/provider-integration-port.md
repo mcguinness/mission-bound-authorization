@@ -203,12 +203,37 @@ the store.
   in `decide()`. `kernel.approve` derives once more, attaches and resolves
   capability sources (`attachCapabilitySources`, `resolveFreshCapabilities`),
   runs `establishAuthoritySource` (gates 1, 2, 4 and 5) and
-  `assertAuthorityWithinSource` (gate 3), and computes `authority_hash`,
-  `intent_hash` and, with a proposal, `proposal_hash`. `insertRecord`
-  re-asserts the source ceiling (`assertInheritedAuthoritySource`) and the
+  `assertAuthorityWithinSource` (gate 3) on one resolution, and computes
+  `authority_hash`, `intent_hash` and, with a proposal, `proposal_hash`.
+  `insertRecord` re-asserts the source ceiling against that resolution (a
+  drawdown has none, so it uses `assertInheritedAuthoritySource`) and the
   discharge mappings (`assertDischargePoliciesResolvable`). Each refusal is an
   `IntentError`; `decide()` finishes the interaction with its code
   (`access_denied` for the source gates).
+- **Per-principal resolution (#827).** Gate 1 selects one root for the
+  authenticated client and the issuer-qualified Subject, through the
+  `authoritySourceResolver` in `KernelOptions` (default: the resolver over the
+  trusted catalog). Catalog entries may share a client when each declares
+  disjoint `subjects`; a duplicate root id or an overlapping selection refuses
+  construction. The kernel holds the Subject to its namespace before the
+  resolver runs, and refuses `access_denied` when the resolver is unavailable
+  or answers for a different Subject, client, deployment or source.
+  `kernel.approve`, Expansion and template consent each resolve once per
+  completion. The render consults the same resolver: for the `login_hint`
+  Subject, or with none through `resolveForRendering`, which answers only a
+  provenance every Subject of the client shares and otherwise refuses.
+  Drawdowns (child, template dispatch, carryover) re-resolve from provenance
+  and refuse when it denotes more than one root. Under a configured
+  replacement resolver they refuse outright, since the catalog behind the
+  kernel is not what the approval consulted. The committed-root binding is
+  #827's second part. Gate 4's human-principal list stays kernel
+  configuration; it can only refuse.
+- **Synchronous resolution.** The resolver is synchronous by contract: it runs
+  inside an approval completion, whose record commit is one synchronous store
+  transaction. A remote resolver answers from a snapshot and revalidates at
+  commit, never awaiting network I/O inside the transaction. Source authority
+  is consulted at each approval completion and drawdown; nothing monitors it
+  in between (#830).
 - **Boundary.** Computation over configuration and the pushed parameters,
   before the record transaction (§4.1). The two re-assertions in
   `insertRecord` run before its transaction opens.
@@ -220,10 +245,12 @@ the store.
   - `authority source on the approval surface (@spec mission#authority-sources) > refuses access_denied when the Approver may not activate the source`
   - `derivation refusal at the authorization decision (@spec mission#error-mapping) > configured-mapping mode (no proposal) that derives nothing is access_denied`
   - `derivation refusal at the authorization decision (@spec mission#error-mapping) > a submitted proposal that derives nothing is invalid_authorization_details`
+  - `authority source rendering for a shared agent registration (@spec mission#approval-event, mission#authority-sources, #827) > renders the source of the Subject login_hint names, and refuses to render one that depends on an unnamed Subject` (`authority-source-render.test.ts`)
 - **Tests (kernel-level, not the public surface):**
   - `authority source establishment (@spec mission#authority-sources, mission#approval-event) > refuses access_denied when the derived Authority Set exceeds the source ceiling` (`authority-source.test.ts`)
   - `authority source establishment (@spec mission#authority-sources, mission#approval-event) > establishes the source from configuration alone: ApproveInput carries no source member` (same file)
   - `authority source drawdown (@spec mission#authority-sources, child-delegation#child-creation) > a drawdown refuses access_denied when the source narrowed since approval` (same file)
+  - `principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827)`, every case (same file)
 - **Residual.** The decision-time `scope` check in `decide()` projects
   `kernel.derive`'s output, which has no `capability_sources`; `kernel.approve`
   attaches them afterwards. `scopeValueSafeForEntry`

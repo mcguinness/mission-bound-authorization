@@ -14,6 +14,8 @@ import { randomUUID } from "node:crypto";
 import { type ActObject, buildContextActor, flattenActChain } from "@mission/actor-chain";
 import {
   type ActionPhase,
+  type IdempotencyScope,
+  idempotencyScopeDigest,
   isActionPhase,
   type JsonValue,
   type PropagatedMissionReference,
@@ -23,6 +25,7 @@ import {
 import { getTracer } from "@mission/telemetry";
 import {
   type AuthorityEntry,
+  type ClaimChannel,
   type DecisionEvidenceObject,
   type DecisionFn,
   type DecisionOptions,
@@ -34,8 +37,10 @@ import {
   type EvaluationRequest,
   type Fga,
   type Freshness,
+  idempotencyScopeOf,
   type MissionView,
   newRecordId,
+  operationIdentity,
   type OriginPrincipal,
   type PrincipalMappingResolver,
   relationForAction,
@@ -238,6 +243,18 @@ export interface ActionMapping {
   phase?: ActionPhase;
   needsInvoice: boolean;
   /**
+   * @spec runtime#idempotency, authzen#parameter-digest (#917, #918): the
+   * Operation Profile defines an idempotency key for this operation: a
+   * non-idempotent high-consequence one, whose key the PDP claims, or a
+   * reversible write electing the "short validity window combined with an
+   * idempotency key" control (@spec runtime#permit-binding), whose key this
+   * PEP reserves. The caller supplies `idempotency_key` (one key per intended
+   * execution) and this PEP forwards it unchanged as
+   * `action.properties.idempotency_key`; it never enters `parameter_digest`,
+   * which is built from store state alone.
+   */
+  idempotencyKey?: true;
+  /**
    * @spec runtime#read-binding — this action's unfiltered form requests a
    * bulk, cross-vendor result, which the read-binding floor MUST bind: a
    * supplied `vendor_id` binds through the ordinary vendor-constraint check
@@ -266,11 +283,12 @@ const TOOL_ACTIONS: Record<string, ActionMapping> = {
   list_invoices: { action: "payments:invoice.list", actionClass: "consequential_read", needsInvoice: false, bindsVendorScope: true },
   get_invoice: { action: "payments:invoice.read", actionClass: "consequential_read", needsInvoice: true },
   lookup_vendor: { action: "payments:vendor.read", actionClass: "consequential_read", needsInvoice: false },
-  schedule_payment: { action: "payments:payment.schedule", actionClass: "consequential_write", needsInvoice: true },
+  schedule_payment: { action: "payments:payment.schedule", actionClass: "consequential_write", needsInvoice: true, idempotencyKey: true },
+  cancel_scheduled_payment: { action: "payments:payment.schedule.cancel", actionClass: "consequential_write", needsInvoice: true, idempotencyKey: true },
   check_transfer: { action: "payments:payment.execute", phase: "preflight", actionClass: "consequential_read", needsInvoice: true },
   hold_transfer: { action: "payments:payment.execute", phase: "prepare", actionClass: "consequential_write", needsInvoice: true },
-  execute_wire_transfer: { action: "payments:payment.execute", phase: "commit", actionClass: "irreversible_action", tier: "transaction-assurance", needsInvoice: true },
-  send_remittance_email: { action: "payments:remittance.send", actionClass: "external_commitment", tier: "transaction-assurance", needsInvoice: true },
+  execute_wire_transfer: { action: "payments:payment.execute", phase: "commit", actionClass: "irreversible_action", tier: "transaction-assurance", needsInvoice: true, idempotencyKey: true },
+  send_remittance_email: { action: "payments:remittance.send", actionClass: "external_commitment", tier: "transaction-assurance", needsInvoice: true, idempotencyKey: true },
 };
 
 /**
@@ -622,6 +640,14 @@ export interface PepDeps {
    */
   decide?: DecisionFn;
   /**
+   * @spec runtime#idempotency (#917, owner ruling 2026-10-02): the claim
+   * channel the same decision channel offers this PEP: settlement of a
+   * redeemed attempt's outcome from its signed Execution Evidence, and the
+   * reconciliation reads. Absent, nothing settles and the PDP keeps every
+   * claim this PEP's permits hold suppressed until its window closes.
+   */
+  claims?: ClaimChannel;
+  /**
    * @spec txn-authorization#resource-challenge — this resource's txn-challenge
    * signing key (the key published at its `txn_challenge_jwks_uri`). When
    * configured AND the client signalled `Accept-Txn-Challenge`, an
@@ -752,6 +778,33 @@ export interface EnforceResult {
    * never assembles a record of its own.
    */
   attempt?: ExecutionAttempt;
+  /**
+   * @spec runtime#idempotency (#918): present on a permit for a keyed
+   * reversible write. The (idempotency scope, `idempotency_key`) pair this
+   * PEP reserves, and the operation identity it is reserved under, projected
+   * from the same evaluation request the PDP decided, so the scope is built
+   * from this PEP's verified credential and governing Mission and never from
+   * an agent argument. `idempotencyKey` is the key that request carried, absent
+   * when it carried none. Absent as a whole when the actor has no stable
+   * identity to scope the key on, which {@link writeReservationUnkeyable}
+   * then marks.
+   */
+  writeReservation?: WriteReservationScope;
+  /**
+   * @spec runtime#idempotency (#918, #1016 review): present on a permit for a
+   * keyed reversible write whose actor has no stable identity (an
+   * instance-profiled leaf with no client), so no pair exists to reserve. The
+   * write path refuses it before any effect.
+   */
+  writeReservationUnkeyable?: true;
+}
+
+/** @spec runtime#idempotency (#918): the pair a keyed reversible write reserves. */
+export interface WriteReservationScope {
+  scope: IdempotencyScope;
+  scopeDigest: string;
+  operationIdentity: string;
+  idempotencyKey?: string;
 }
 
 /**
@@ -804,6 +857,14 @@ export interface ExecutionAttempt {
   authorizedParameterDigest?: string;
   /** One execution identity per disposition attempt; reused for emission retries. */
   executionId: string;
+  /**
+   * @spec runtime#idempotency (#917, owner ruling 2026-10-02): set once this
+   * attempt's single-use redemption succeeded (D28). Only a redeeming
+   * attempt settles the PDP's idempotency claim: an attempt that never held
+   * the redemption, a duplicate refused as `permit_consumed` included, says
+   * nothing about what the permit did.
+   */
+  redeemed?: boolean;
   /** Payments-domain join keys (reconcile.ts), not spec members. */
   permitId: string;
   joinKey: string;
@@ -1242,7 +1303,16 @@ export class Pep {
       // client-supplied.
       subject: { id: token.sub, ...(token.iss !== undefined ? { properties: { iss: token.iss } } : {}) },
       resource: resourceObj,
-      action: { name: mapping.action },
+      // @spec authzen#parameter-digest `idempotency_key` (#917): forwarded
+      // exactly as the caller supplied it, distinct from `parameter_digest`.
+      // A missing or malformed key is the PDP's to refuse; this PEP neither
+      // mints one nor repairs one.
+      action: {
+        name: mapping.action,
+        ...(mapping.idempotencyKey && typeof args.idempotency_key === "string"
+          ? { properties: { idempotency_key: args.idempotency_key } }
+          : {}),
+      },
       context: {
         audience: CANONICAL_RESOURCE,
         mission: {
@@ -1632,10 +1702,33 @@ export class Pep {
       return { permitted: false, refusal_reason: "unfulfillable_obligation" };
     }
 
+    // @spec runtime#idempotency (#918): the pair a keyed reversible write
+    // reserves, from the request exactly as the PDP received it, through the
+    // shared scope projection (its actor is `idempotencyScopeActor`'s stable
+    // identity, never the raw leaf). An actor with no stable identity (an
+    // instance-profiled leaf with no client) yields no scope and so no pair,
+    // which is marked: the write path then refuses before any effect, since a
+    // key it cannot scope cannot be reserved. Nothing here throws after the
+    // permit.
+    let writeReservation: WriteReservationScope | undefined;
+    const keyedWrite = mapping.idempotencyKey === true && mapping.actionClass === "consequential_write";
+    const scope = keyedWrite ? idempotencyScopeOf(req) : undefined;
+    if (scope) {
+      const key = req.action.properties?.idempotency_key;
+      writeReservation = {
+        scope,
+        scopeDigest: idempotencyScopeDigest(scope),
+        operationIdentity: operationIdentity(req),
+        ...(typeof key === "string" ? { idempotencyKey: key } : {}),
+      };
+    }
+
     return {
       permitted: true,
       decision,
       attempt,
+      ...(writeReservation ? { writeReservation } : {}),
+      ...(keyedWrite && !scope ? { writeReservationUnkeyable: true as const } : {}),
       resolvedMission: {
         id: missionAnchor.id,
         issuer: missionAnchor.issuer,
@@ -1703,7 +1796,10 @@ export class Pep {
     };
     for (let tries = 0; tries < 2; tries += 1) {
       try {
-        await this.deps.evidence.recordExecution(CANONICAL_RESOURCE, "pep", input);
+        const recorded = await this.deps.evidence.recordExecution(CANONICAL_RESOURCE, "pep", input);
+        // A suppression after redemption is the redeeming attempt's proof of
+        // no effect: it settles the claim `failed`.
+        if (attempt.redeemed) await this.settleClaim(recorded.content);
         return { recorded: true };
       } catch {
         /* one retry, on the SAME execution identity: a retained record is
@@ -1711,6 +1807,24 @@ export class Pep {
       }
     }
     return { recorded: false, gap: "emission_failed" };
+  }
+
+  /**
+   * @spec runtime#idempotency (#917, owner ruling 2026-10-02): tell the
+   * PDP's claim domain how a REDEEMED attempt ended, with the attempt's own
+   * PEP-signed Execution Evidence over the authenticated decision channel.
+   * Redemption, the lease and the effect stay here (D28); the PDP is told,
+   * never asked to redeem. Best effort by design: a settlement that fails to
+   * arrive leaves the claim suppressed, and reconciliation resolves it from
+   * the same evidence later.
+   */
+  async settleClaim(record: ExecutionEvidenceObject): Promise<void> {
+    if (!this.deps.claims) return;
+    try {
+      await this.deps.claims.settle(record);
+    } catch {
+      /* resolved by reconciliation */
+    }
   }
 
   /**
@@ -1755,14 +1869,28 @@ export class Pep {
    * another row rather than a competing check on another path.
    */
   async verifyPermitAtUse(attempt: ExecutionAttempt): Promise<ReverifyOutcome> {
-    for (const check of PERMIT_USE_CHECKS) {
-      const error = check.failure(attempt, { now: this.now(), profile: this.toolAction(attempt.tool) });
-      if (error !== undefined) {
-        const disposition = await this.suppressExecution(attempt, error);
-        return { ok: false, error, disposition };
-      }
+    const error = this.permitUseFailure(attempt);
+    if (error !== undefined) {
+      const disposition = await this.suppressExecution(attempt, error);
+      return { ok: false, error, disposition };
     }
     return { ok: true };
+  }
+
+  /**
+   * The same table {@link verifyPermitAtUse} runs, in the same order, with
+   * nothing recorded: the first failing comparison's error, or `undefined`
+   * when every row holds. For a boundary whose attempt already holds its one
+   * disposition (#918's release of a retained result, after its
+   * `operation_already_claimed` record was written), where a second record
+   * under the same execution identity would be refused.
+   */
+  permitUseFailure(attempt: ExecutionAttempt): string | undefined {
+    for (const check of PERMIT_USE_CHECKS) {
+      const error = check.failure(attempt, { now: this.now(), profile: this.toolAction(attempt.tool) });
+      if (error !== undefined) return error;
+    }
+    return undefined;
   }
 
   /**

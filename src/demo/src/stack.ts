@@ -5,6 +5,8 @@
  * surfaces exercise the identical enforcement path.
  */
 
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
 import { createRemoteJWKSet, exportJWK, generateKeyPair } from "jose";
 import {
   type AuthorityEntry,
@@ -25,7 +27,9 @@ import {
   type AuthorityEntry as PdpAuthorityEntry,
   createDecisionPoint,
   createDecisionChannel,
+  type IdempotencyClaimDomain,
   loadRuntimePosture,
+  openIdempotencyClaimDomain,
   RUNTIME_POSTURE,
   stalenessBound,
   deriveJoinDelegation,
@@ -56,9 +60,13 @@ import {
   Pep,
   type PepDeps,
   type ReceiptIssuerScope,
+  redemptionStatusFor,
   type ResourceMetadataServer,
   startResourceMetadataServer,
   type TokenFacts,
+  TransactionEngine,
+  openWriteReservationStore,
+  type WriteReservationStore,
 } from "@mission/mcp-payments";
 import { ResourceAuthorizationServer } from "@mission/ras";
 import { SaasMcpServer } from "@mission/mcp-saas";
@@ -155,6 +163,19 @@ export interface DemoStack {
   masGovernedChannel?: HttpMcpChannel;
   /** Trusted operator shutdown/fault-injection seam, never agent-accessible. */
   decisionChannel: { close: () => Promise<void> };
+  /**
+   * @spec runtime#idempotency (#917): the PDP's Exact claim domain, open
+   * single-writer on its configured file for this stack's lifetime. Trusted
+   * operator seam: `close()` releases the file (and makes the domain
+   * unreachable, so the PDP issues no high-consequence permit after it).
+   */
+  pdpClaims: IdempotencyClaimDomain;
+  /**
+   * @spec runtime#idempotency (#918): the PEP's reservation and retention
+   * store for keyed reversible writes, open single-writer on its configured
+   * file for this stack's lifetime, beside (never inside) the PDP's claims.
+   */
+  writeReservations: WriteReservationStore;
   /** The issuer this stack's kernel/tokens use (ISS, or the AS URL). */
   issuer: string;
   viewFor: (missionId: string) => MissionView | undefined;
@@ -180,6 +201,18 @@ export async function composeStack(opts: {
   asPort?: number;
   /** Default co-resident; MISSION_PDP_MODE=remote selects a real loopback hop. */
   pdpMode?: "co-resident" | "remote";
+  /**
+   * @spec runtime#idempotency (#917): the claim domain's file. Defaults to
+   * `topology.json` `stores.pdpIdempotencyClaims.file`; a test passes its own
+   * so concurrent stacks never contend for one single-writer file.
+   */
+  claimsFile?: string;
+  /**
+   * @spec runtime#idempotency (#918): the PEP's write-reservation file.
+   * Defaults to `topology.json` `stores.pepWriteReservations.file`; a test
+   * passes its own, as for `claimsFile`.
+   */
+  writeReservationsFile?: string;
 }): Promise<DemoStack> {
   const mode = opts.pdpMode ?? process.env.MISSION_PDP_MODE ?? "co-resident";
   if (mode !== "co-resident" && mode !== "remote") throw new Error("MISSION_PDP_MODE must be co-resident or remote");
@@ -488,6 +521,20 @@ export async function composeStack(opts: {
   // emitter is constructed inside `createDecisionPoint` and closed over by
   // `decide`. This wiring, and the PEP it wires, hold the decision function
   // and the published verification material, and nothing that can emit.
+  const evidenceKeys = createEphemeralEvidenceKeys();
+  // @spec runtime#idempotency (#917, D223): the PDP's Exact claim domain, a
+  // durable single-writer SQLite file named in configuration and owned by the
+  // statement's one PDP. It verifies settlement against exactly the
+  // enforcement keys this PEP signs Execution Evidence with. A file another
+  // process holds, or a statement it cannot run, refuses the stack at boot.
+  const claimsFile = opts.claimsFile ?? TOPOLOGY.stores.pdpIdempotencyClaims.file;
+  mkdirSync(dirname(claimsFile), { recursive: true });
+  const pdpClaims = openIdempotencyClaimDomain({
+    file: claimsFile,
+    owner: RUNTIME_POSTURE.pdps[0] as string,
+    statement: RUNTIME_POSTURE,
+    settlementKeys: buildEvidenceKeyResolver(evidenceKeys.verification.filter((k) => k.role !== "pdp")),
+  });
   const decisionPoint = createDecisionPoint({
     evidence: {
       signer: { kid: decisionEvidenceKey.kid, key: decisionEvidenceKeys.privateKey },
@@ -495,8 +542,19 @@ export async function composeStack(opts: {
       emitterId: CANONICAL_RESOURCE,
       audience: CANONICAL_RESOURCE,
     },
+    claims: pdpClaims,
   });
-  const evidenceKeys = createEphemeralEvidenceKeys();
+  // @spec runtime#idempotency (#918, D223): the PEP's own durable,
+  // single-writer reservation store for keyed reversible writes, named in
+  // configuration and owned by the statement's PEP location. The server
+  // refuses it at construction unless the statement publishes it as the
+  // domain of every keyed reversible write.
+  const writeReservationsFile = opts.writeReservationsFile ?? TOPOLOGY.stores.pepWriteReservations.file;
+  mkdirSync(dirname(writeReservationsFile), { recursive: true });
+  const writeReservations = openWriteReservationStore({
+    file: writeReservationsFile,
+    owner: RUNTIME_POSTURE.mediated_scope.pep_locations[0] as string,
+  });
   // @spec runtime-evidence#execution-evidence-object (Retention),
   // #evidence-integrity-signing-keys (#594 W4-8): this deployment's durable
   // retention store, and the key sets it publishes at its own key-set
@@ -636,8 +694,15 @@ export async function composeStack(opts: {
       delegates: Object.fromEntries(Object.entries(MAS_JOIN.delegates).map(([id, d]) => [id, { maxDepth: d.max_depth }])),
     },
   };
+  // D28: the PEP owns redemption. Its store's epoch is the requester epoch
+  // the channel binds, and its read-only answer is retransmission condition 6.
+  const engine = new TransactionEngine("demo-epoch");
+  const redemption = redemptionStatusFor(engine);
   const decisionChannel = await createDecisionChannel(decisionPoint, {
     mode, pepId: "mcp-payments-pep", audience: CANONICAL_RESOURCE,
+    pepEpoch: redemption.epoch,
+    consumptionStatus: redemption.status,
+    redeemingExecution: redemption.redeemer,
     getOptions: (request) => {
       const ref = request.context.mission;
       const loaded = ref ? loadView(ref) : undefined;
@@ -651,6 +716,7 @@ export async function composeStack(opts: {
     payments,
     evidence,
     decide: decisionChannel.decide,
+    claims: decisionChannel.claims,
     fga,
     modelId,
     loadView,
@@ -684,7 +750,6 @@ export async function composeStack(opts: {
     ...(challengeSigner ? { challengeSigner } : {}),
   });
 
-  const { TransactionEngine } = await import("@mission/mcp-payments");
   const server = new McpPaymentsServer({
     enforcementScopeStatement,
     pep,
@@ -692,7 +757,8 @@ export async function composeStack(opts: {
     loadView,
     jwks: serverJwks,
     issuer,
-    transaction: { engine: new TransactionEngine("demo-epoch"), connectors, evidence },
+    transaction: { engine, connectors, evidence },
+    writeReservations,
     // AROP (RS side): validate a presented txn-token against the AS txn public
     // JWKS (published on /jwks under the as-txn kid) and issuer.
     ...(txnTokenJwks ? { txnTokenJwks } : {}),
@@ -750,6 +816,8 @@ export async function composeStack(opts: {
   return {
     kernel,
     decisionChannel,
+    pdpClaims,
+    writeReservations,
     fga,
     modelId,
     payments,

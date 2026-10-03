@@ -51,5 +51,9 @@
   "openfga": {
     "url": "https://localhost:8080",
     "presharedKey": "dev-preshared-key-change-me"
+  },
+  "stores": {
+    "pdpIdempotencyClaims": { "file": "var/pdp-idempotency-claims.sqlite" },
+    "pepWriteReservations": { "file": "var/pep-write-reservations.sqlite" }
   }
 }

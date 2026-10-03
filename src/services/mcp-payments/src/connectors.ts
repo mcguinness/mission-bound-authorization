@@ -82,6 +82,18 @@ export class Connectors {
     return { committed: true, deduped: false };
   }
 
+  /**
+   * The operation key a permit's effect committed under, on either connector,
+   * or `undefined` when no effect committed for it. The reconciliation
+   * oracle: a committed entry is an effect, whatever evidence went missing.
+   */
+  committedFor(permitId: string): string | undefined {
+    const row = this.db
+      .prepare("SELECT op_key FROM ledger WHERE permit_id = ? UNION ALL SELECT op_key FROM outbox WHERE permit_id = ? LIMIT 1")
+      .get(permitId, permitId) as { op_key: string } | undefined;
+    return row?.op_key;
+  }
+
   ledgerEntries(missionId?: string): Array<Record<string, unknown>> {
     return (
       missionId

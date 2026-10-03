@@ -22,6 +22,7 @@ document. Version: `payments-runtime-profile-v1`; changes bump the suffix.
 | `get_invoice` | `payments:invoice.read` | `invoice` | `consequential_read` | core |
 | `lookup_vendor` | `payments:vendor.read` | `vendor` | `consequential_read` | core |
 | `schedule_payment` | `payments:payment.schedule` | `invoice` | `consequential_write` (reversible) | core |
+| `cancel_scheduled_payment` | `payments:payment.schedule.cancel` | `invoice` | `consequential_write` (reversible) | core |
 | `check_transfer` | `payments:payment.execute`, phase `preflight` | `invoice` | `consequential_read` (no state, no effect) | core |
 | `hold_transfer` | `payments:payment.execute`, phase `prepare` | `invoice` | `consequential_write` (a reversible hold) | core |
 | `execute_wire_transfer` | `payments:payment.execute`, phase `commit` | `invoice` | `irreversible_action` | transaction-assurance |
@@ -74,7 +75,8 @@ below before any authorization work; strings are NFC-normalized at intake;
 unknown members are rejected (`invalid_request` at the tool boundary).
 
 - `get_invoice`: `{ invoice_id: string }`
-- `schedule_payment`: `{ invoice_id: string, execute_after?: RFC3339 }`
+- `schedule_payment`: `{ invoice_id: string, idempotency_key: string, execute_after?: RFC3339 }`
+- `cancel_scheduled_payment`: `{ invoice_id: string, idempotency_key: string }`
 - `execute_wire_transfer`: `{ invoice_id: string }`
 - `send_remittance_email`: `{ invoice_id: string, note?: string (<= 500 chars) }`
 - `list_invoices`: `{ vendor_id?: string, status?: enum }`
@@ -121,6 +123,52 @@ a refusal with reason `parameter_mismatch`.
 and outbox connectors, which reject duplicates. Retries of the same
 effective operation are therefore safe at the connector even if upstream
 state machines fail mid-flight.
+
+`execute_wire_transfer` and `send_remittance_email`, the two
+high-consequence operations, also require a caller-supplied
+`idempotency_key`: 16 to 128 characters of `ALPHA / DIGIT / "-" / "_"`,
+one key per intended execution. The PEP forwards it as
+`action.properties.idempotency_key`; it never enters `parameter_digest`.
+The PDP claims (idempotency scope, key) with the operation identity before
+it issues a permit, and refuses a missing or malformed key with
+`parameter_violation` (#917).
+
+`schedule_payment` and `cancel_scheduled_payment`, the two reversible
+writes, take the "short validity window combined with an idempotency key"
+permit-lifetime control (runtime permit binding; #918). They require the
+same `idempotency_key`, forwarded the same way; the PDP refuses a missing
+or malformed one with `parameter_violation` and makes no claim for it. Its
+permit expires no later than the operation's published
+`permit_validity_max_seconds` (300 s as shipped), which the statement holds
+shorter than the retention, so no permit outlives its reservation. The
+PEP reserves (idempotency scope, key) instead, in its own durable
+single-writer store (`topology.json` `stores.pepWriteReservations.file`),
+and commits the effect with its completed reservation and result in one
+local transaction. A retry under the same key returns the original result
+(`deduped`) for the published P7D horizon, authorized by the retry's own
+fresh Decision; a different operation under the same key is refused
+`operation_identity_conflict`.
+
+- `schedule_payment` records one active schedule for the Mission and
+  invoice and returns `{scheduled, schedule_id, invoice_id, amount}`. A new
+  key on an invoice the Mission already scheduled is refused
+  `schedule_exists`. A schedule moves no money and calls no connector;
+  nothing reads it to pay, and `execute_wire_transfer` keeps its own
+  Decision, single-use permit and redemption.
+- `cancel_scheduled_payment` moves the calling Mission's active schedule
+  for the invoice to `cancelled`, which stays for audit, and returns
+  `{cancelled, schedule_id, invoice_id}`. No active schedule, or one
+  another Mission holds, is refused `schedule_not_found`. Cancelling an
+  uncommitted schedule is cleanup, not compensation.
+- The two refusals change nothing and record no reservation. Their
+  Execution Evidence `error` values are this deployment's
+  collision-resistant names
+  `https://payments.demo/execution-errors/schedule_exists` and
+  `https://payments.demo/execution-errors/schedule_not_found`.
+- A caller whose actor has no stable identity to scope the key on (an
+  instance-profiled leaf with no client) is refused `actor_unkeyable`
+  before any effect, recorded as
+  `https://payments.demo/execution-errors/actor_unkeyable`.
 
 ## Permits, leases, commit point (D28/D36/D29/D39)
 

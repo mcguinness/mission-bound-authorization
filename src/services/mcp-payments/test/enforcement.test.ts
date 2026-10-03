@@ -5,6 +5,7 @@
  * Auto-skips when OpenFGA is unreachable.
  */
 
+import { randomUUID } from "node:crypto";
 import { beforeAll, describe, expect, it } from "vitest";
 import { AUTHORITY_ENTRY_TYP, computeAnchor } from "@mission/core";
 import { Fga, type MissionView } from "@mission/pdp";
@@ -13,12 +14,16 @@ import {
   createEphemeralEvidenceKeys,
   EvidenceStore,
   McpPaymentsServer,
+  openEphemeralWriteReservationStore,
   PaymentsStore,
   Pep,
   type DecisionEvidence,
   type ExecutionEvidence,
   type TokenFacts,
 } from "../src/index.js";
+
+/** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
+const idem = (): string => `idem_${randomUUID()}`;
 
 // @spec runtime-evidence#decision-evidence-object (#741): one bundle per
 // test module. `signing`/`resolver` wire the PEP's store; `decide` is the
@@ -122,6 +127,8 @@ d("M4 core enforcement tier", () => {
       loadView: loadViewFor(VIEW),
       jwks: { keys: [] },
       issuer: ISSUER,
+      // @spec runtime#idempotency (#918): the keyed schedule writes reserve here.
+      writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
     });
   };
 
@@ -162,7 +169,7 @@ d("M4 core enforcement tier", () => {
   // not only the happy path above.
   it("a denied decision also produces attributable, mission-correlated Decision Evidence, not only a permit", async () => {
     build();
-    const res = await server.callWriteTool("schedule_payment", { invoice_id: "inv-3" }, TOKEN);
+    const res = await server.callWriteTool("schedule_payment", { invoice_id: "inv-3", idempotency_key: idem() }, TOKEN);
     expect(res.ok, JSON.stringify(res)).toBe(false);
     // inv-3 is vendor "globex", excluded by the entry's vendors: ["acme"]
     // constraint (@spec authzen#runtime-denial-classification, #801): a
@@ -179,7 +186,7 @@ d("M4 core enforcement tier", () => {
 
   it("scenario 2: schedule under the cap permitted and reconciles digest at execute", async () => {
     build();
-    const res = await server.callWriteTool("schedule_payment", { invoice_id: "inv-1" }, TOKEN);
+    const res = await server.callWriteTool("schedule_payment", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
     expect(res.ok, JSON.stringify(res)).toBe(true);
     expect((res.result as { scheduled: boolean }).scheduled).toBe(true);
   });
@@ -188,7 +195,7 @@ d("M4 core enforcement tier", () => {
     build();
     const res = await server.callWriteTool(
       "schedule_payment",
-      { invoice_id: "inv-1" },
+      { invoice_id: "inv-1", idempotency_key: idem() },
       TOKEN,
       () => payments.bumpInvoiceAmount("inv-1", "480.00"), // mutate in the window
     );
@@ -218,14 +225,14 @@ d("M4 core enforcement tier", () => {
 
   it("over-cap invoice denied parameter_violation", async () => {
     build();
-    const res = await server.callWriteTool("schedule_payment", { invoice_id: "inv-2" }, TOKEN);
+    const res = await server.callWriteTool("schedule_payment", { invoice_id: "inv-2", idempotency_key: idem() }, TOKEN);
     expect(res.ok).toBe(false);
     expect(res.denial_reason).toBe("parameter_violation");
   });
 
   it("vendor outside constraint denied parameter_violation", async () => {
     build();
-    const res = await server.callWriteTool("schedule_payment", { invoice_id: "inv-3" }, TOKEN);
+    const res = await server.callWriteTool("schedule_payment", { invoice_id: "inv-3", idempotency_key: idem() }, TOKEN);
     expect(res.ok).toBe(false);
     // @spec authzen#runtime-denial-classification (#801): payments:payment.schedule
     // IS in the Authority Set; only this vendor is excluded by the entry's own
@@ -244,7 +251,7 @@ d("M4 core enforcement tier", () => {
   // actionable authorization_details the client could propose next.
   it("action absent from the Authority Set entirely denied out_of_authority WITH the insufficient_authorization grain", async () => {
     build();
-    const res = await server.callWriteTool("execute_wire_transfer", { invoice_id: "inv-1" }, TOKEN);
+    const res = await server.callWriteTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
     expect(res.ok).toBe(false);
     expect(res.denial_reason).toBe("out_of_authority");
     expect(res.insufficient_authorization).toBeDefined();

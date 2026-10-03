@@ -13,7 +13,9 @@
 
 import { randomUUID } from "node:crypto";
 import { macEqualHex, macHex, REQUEST_MAC_DOMAIN, RESPONSE_MAC_DOMAIN, sha256Hex } from "./channel-mac.js";
+import type { ClaimChannel } from "./decision-point.js";
 import type { Decision, EvaluationRequest } from "./evaluate.js";
+import type { ClaimResolution, SettlementResult, UnresolvedClaim } from "./idempotency-claims.js";
 
 export interface RemotePdpClientConfig {
   /** The PDP's /evaluate endpoint URL. */
@@ -22,12 +24,28 @@ export interface RemotePdpClientConfig {
   pepId: string;
   /** The shared secret registered with the PDP for this identity. */
   secret: string;
+  /**
+   * @spec runtime#idempotency, retransmission condition 5 (#917): the epoch
+   * of this PEP's redemption store, sent in `X-Pdp-Pep-Epoch` and covered by
+   * the request MAC. Absent, the PDP binds a fresh epoch to the request, so
+   * no prior decision can be returned to it as a retransmission.
+   */
+  pepEpoch?: string;
   /** Injectable transport for tests (a tampering wrapper, a dead endpoint). Defaults to the global fetch. */
   fetchImpl?: typeof fetch;
   /** Abort the request if the PDP has not responded within this many milliseconds. Default 5000. */
   timeoutMs?: number;
   /** Maximum response bytes, including a signed denial. Default 1 MiB. */
   maxResponseBytes?: number;
+}
+
+/**
+ * The request MAC's parts. The epoch, when sent, is a further part, so a
+ * request signed with one cannot be presented without it and a request
+ * signed without one cannot gain it.
+ */
+export function requestMacParts(pepId: string, nonce: string, issuedAt: string, body: string, pepEpoch?: string): string[] {
+  return pepEpoch === undefined ? [pepId, nonce, issuedAt, body] : [pepId, nonce, issuedAt, body, "pep-epoch", pepEpoch];
 }
 
 // Local failures retain the legacy false/context shape for existing callers,
@@ -44,19 +62,22 @@ function channelDeny(denial_reason: string, extra: Record<string, unknown> = {})
   return result;
 }
 
+type SignedExchange =
+  | { ok: true; raw: string; deadline: number }
+  | { ok: false; reason: string; extra?: Record<string, unknown> };
+
 /**
- * Submit a decision request over the remote channel. Any channel-boundary
- * failure (an unreachable PDP, a refused channel, an unsigned or
- * mis-signed response) returns a synthetic deny; it never surfaces a
- * transport error as though it were a PDP decision, and it never returns a
- * decision this client could not authenticate.
+ * One signed request and its authenticated response: the request MAC over
+ * this PEP's identity, nonce, issuance time, body and (when configured)
+ * epoch; a bounded, size-limited read; and the response MAC recomputed from
+ * THIS call's own outstanding request. Every failure is a named refusal,
+ * never a response.
  */
-export async function evaluateRemote(req: EvaluationRequest, cfg: RemotePdpClientConfig): Promise<Decision> {
+async function signedExchange(url: string, body: string, cfg: RemotePdpClientConfig): Promise<SignedExchange> {
   const doFetch = cfg.fetchImpl ?? fetch;
   const nonce = randomUUID();
   const issuedAt = String(Date.now());
-  const body = JSON.stringify({ request: req });
-  const signature = macHex(cfg.secret, REQUEST_MAC_DOMAIN, [cfg.pepId, nonce, issuedAt, body]);
+  const signature = macHex(cfg.secret, REQUEST_MAC_DOMAIN, requestMacParts(cfg.pepId, nonce, issuedAt, body, cfg.pepEpoch));
 
   const timeoutMs = cfg.timeoutMs ?? 5000;
   const maxBytes = cfg.maxResponseBytes ?? 1024 * 1024;
@@ -66,18 +87,18 @@ export async function evaluateRemote(req: EvaluationRequest, cfg: RemotePdpClien
   const controller = new AbortController();
   const deadline = Date.now() + timeoutMs;
   let timer: ReturnType<typeof setTimeout>;
-  const expired = new Promise<Decision>((resolve) => {
+  const expired = new Promise<SignedExchange>((resolve) => {
     timer = setTimeout(() => {
       controller.abort();
-      resolve(channelDeny("decision_channel_timeout"));
+      resolve({ ok: false, reason: "decision_channel_timeout" });
     }, timeoutMs);
   });
 
-  const exchange = async (): Promise<Decision> => {
+  const exchange = async (): Promise<SignedExchange> => {
     let res: Response;
     let raw: string;
     try {
-      res = await doFetch(cfg.url, {
+      res = await doFetch(url, {
         method: "POST",
         headers: {
           "content-type": "application/json",
@@ -85,6 +106,7 @@ export async function evaluateRemote(req: EvaluationRequest, cfg: RemotePdpClien
           "x-pdp-signature": signature,
           "x-pdp-nonce": nonce,
           "x-pdp-issued-at": issuedAt,
+          ...(cfg.pepEpoch !== undefined ? { "x-pdp-pep-epoch": cfg.pepEpoch } : {}),
         },
         body,
         signal: controller.signal,
@@ -101,7 +123,7 @@ export async function evaluateRemote(req: EvaluationRequest, cfg: RemotePdpClien
             if (bytes > maxBytes) {
               void reader.cancel().catch(() => {});
               controller.abort();
-              return channelDeny("decision_channel_response_too_large");
+              return { ok: false, reason: "decision_channel_response_too_large" };
             }
             chunks.push(chunk.value);
           }
@@ -109,14 +131,17 @@ export async function evaluateRemote(req: EvaluationRequest, cfg: RemotePdpClien
         } finally { reader.releaseLock(); }
       } else {
         raw = await res.text();
-        if (Buffer.byteLength(raw) > maxBytes) return channelDeny("decision_channel_response_too_large");
+        if (Buffer.byteLength(raw) > maxBytes) return { ok: false, reason: "decision_channel_response_too_large" };
       }
     } catch (err) {
-      return channelDeny(controller.signal.aborted || (err instanceof Error && err.name === "AbortError")
-        ? "decision_channel_timeout" : "decision_channel_unreachable");
+      return {
+        ok: false,
+        reason: controller.signal.aborted || (err instanceof Error && err.name === "AbortError")
+          ? "decision_channel_timeout" : "decision_channel_unreachable",
+      };
     }
     if (!res.ok) {
-      return channelDeny("decision_channel_refused", { channel_status: res.status });
+      return { ok: false, reason: "decision_channel_refused", extra: { channel_status: res.status } };
     }
 
     // @spec runtime#decision-channel: "the parties MUST authenticate each
@@ -137,28 +162,75 @@ export async function evaluateRemote(req: EvaluationRequest, cfg: RemotePdpClien
       raw,
     ]);
     if (responseSignature === null || !macEqualHex(responseSignature, expected)) {
-      return channelDeny("decision_channel_unauthenticated_response");
+      return { ok: false, reason: "decision_channel_unauthenticated_response" };
     }
-
-    try {
-      const parsed: unknown = JSON.parse(raw);
-      if (
-        !object(parsed) ||
-        typeof parsed.decision !== "boolean" ||
-        !object(parsed.context) ||
-        (parsed.decision && !object(parsed.context.conditions)) ||
-        (!parsed.decision &&
-          typeof parsed.context.reason !== "string" &&
-          typeof parsed.context.denial_reason !== "string")
-      ) {
-        return channelDeny("decision_channel_malformed_response");
-      }
-      if (Date.now() >= deadline) return channelDeny("decision_channel_timeout");
-      return parsed as unknown as Decision;
-    } catch {
-      return channelDeny("decision_channel_malformed_response");
-    }
+    return { ok: true, raw, deadline };
   };
   try { return await Promise.race([exchange(), expired]); }
   finally { clearTimeout(timer!); }
+}
+
+/**
+ * Submit a decision request over the remote channel. Any channel-boundary
+ * failure (an unreachable PDP, a refused channel, an unsigned or
+ * mis-signed response) returns a synthetic deny; it never surfaces a
+ * transport error as though it were a PDP decision, and it never returns a
+ * decision this client could not authenticate.
+ */
+export async function evaluateRemote(req: EvaluationRequest, cfg: RemotePdpClientConfig): Promise<Decision> {
+  const exchanged = await signedExchange(cfg.url, JSON.stringify({ request: req }), cfg);
+  if (!exchanged.ok) return channelDeny(exchanged.reason, exchanged.extra);
+  try {
+    const parsed: unknown = JSON.parse(exchanged.raw);
+    if (
+      !object(parsed) ||
+      typeof parsed.decision !== "boolean" ||
+      !object(parsed.context) ||
+      (parsed.decision && !object(parsed.context.conditions)) ||
+      (!parsed.decision &&
+        typeof parsed.context.reason !== "string" &&
+        typeof parsed.context.denial_reason !== "string")
+    ) {
+      return channelDeny("decision_channel_malformed_response");
+    }
+    if (Date.now() >= exchanged.deadline) return channelDeny("decision_channel_timeout");
+    return parsed as unknown as Decision;
+  } catch {
+    return channelDeny("decision_channel_malformed_response");
+  }
+}
+
+/** The claim route next to the `/evaluate` endpoint `cfg.url` names. */
+function claimRoute(cfg: RemotePdpClientConfig, path: string): string {
+  return new URL(path, cfg.url).toString();
+}
+
+/**
+ * @spec runtime#idempotency (#917, owner ruling 2026-10-02): the claim
+ * channel over the same authenticated decision channel: settlement and
+ * reconciliation travel behind the same per-PEP MAC, replay window and
+ * scope check as a decision request. A channel failure is a refusal the
+ * caller sees as `accepted: false`, never an accepted settlement.
+ */
+export function remoteClaimChannel(cfg: RemotePdpClientConfig & { audience: string }): ClaimChannel {
+  const post = async (path: string, payload: Record<string, unknown>): Promise<unknown> => {
+    const exchanged = await signedExchange(claimRoute(cfg, path), JSON.stringify({ audience: cfg.audience, ...payload }), cfg);
+    if (!exchanged.ok) return { accepted: false, reason: exchanged.reason };
+    try {
+      return JSON.parse(exchanged.raw) as unknown;
+    } catch {
+      return { accepted: false, reason: "decision_channel_malformed_response" };
+    }
+  };
+  const settlement = (value: unknown): SettlementResult =>
+    object(value) && typeof value.accepted === "boolean" ? (value as unknown as SettlementResult) : { accepted: false, reason: "decision_channel_malformed_response" };
+  return {
+    settle: async (record) => settlement(await post("/claims/settle", { record })),
+    listUnresolved: async () => {
+      const value = await post("/claims/unresolved", {});
+      return object(value) && Array.isArray(value.unresolved) ? (value.unresolved as UnresolvedClaim[]) : [];
+    },
+    reconcile: async (evaluationId: string, resolution: ClaimResolution) =>
+      settlement(await post("/claims/reconcile", { evaluation_id: evaluationId, resolution })),
+  };
 }

@@ -21,7 +21,7 @@
     {
       "type": "mission_resource_access",
       "resource": "http://localhost:4403/mcp",
-      "actions": ["payments:payment.schedule", "payments:payment.execute", "payments:remittance.send"],
+      "actions": ["payments:payment.schedule", "payments:payment.schedule.cancel", "payments:payment.execute", "payments:remittance.send"],
       "constraints": {
         "max_amount": { "amount": "500.00", "currency": "USD" },
         "vendors": ["acme"]
@@ -52,6 +52,7 @@
   ],
   "write_actions": [
     "payments:payment.schedule",
+    "payments:payment.schedule.cancel",
     "payments:payment.execute",
     "payments:remittance.send"
   ],

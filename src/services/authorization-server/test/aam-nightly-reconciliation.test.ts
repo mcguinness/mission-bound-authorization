@@ -31,6 +31,7 @@
  * gate up this file runs all eight steps (0 skipped).
  */
 
+import { randomUUID } from "node:crypto";
 import { type Server } from "node:http";
 import {
   AAM_RECONCILIATION_LIFETIME_S,
@@ -70,6 +71,9 @@ import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapt
 import { MISSION_DISPATCH_GRANT_TYPE } from "../src/adapters/provider.js";
 import { type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
 import { capabilityPresentationFor } from "./capability-presentation.helper.js";
+
+/** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
+const idem = (): string => `idem_${randomUUID()}`;
 
 // @spec runtime-evidence#decision-evidence-object (#741): one bundle per
 // test module. `signing`/`resolver` wire the PEP's store; `decide` is the
@@ -574,7 +578,7 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
     // independent line of defense behind the Dispatch-time refusal.
     const remittanceDecision = await evalAction(dispatchedMissionId, "payments:remittance.send");
     expect(remittanceDecision.decision).toBe(false);
-    const remittanceAttempt = await pep.enforce("send_remittance_email", { invoice_id: "inv-1" }, token);
+    const remittanceAttempt = await pep.enforce("send_remittance_email", { invoice_id: "inv-1", idempotency_key: idem() }, token);
     expect(remittanceAttempt.permitted).toBe(false);
     expect(remittanceAttempt.denial_reason ?? remittanceAttempt.refusal_reason).toBe("out_of_authority");
 
@@ -622,7 +626,7 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
     // ...and the actual remittance now runs, mediated by the same PEP, under
     // THIS Mission, not under any Template-dispatched instance.
     const token = tokenFactsFor(humanMissionId);
-    const send = await pep.enforce("send_remittance_email", { invoice_id: "inv-1" }, token);
+    const send = await pep.enforce("send_remittance_email", { invoice_id: "inv-1", idempotency_key: idem() }, token);
     expect(send.permitted, JSON.stringify(send)).toBe(true);
   });
 
@@ -665,7 +669,7 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
     // Mediated through the real PEP, the contained action denies authority_contained
     // (this Decision Evidence is what threads into the Activity Log in step 8)...
     const humanToken = tokenFactsFor(humanMissionId);
-    const send = await pep.enforce("send_remittance_email", { invoice_id: "inv-1" }, humanToken);
+    const send = await pep.enforce("send_remittance_email", { invoice_id: "inv-1", idempotency_key: idem() }, humanToken);
     expect(send.permitted).toBe(false);
     expect(send.denial_reason).toBe("authority_contained");
 

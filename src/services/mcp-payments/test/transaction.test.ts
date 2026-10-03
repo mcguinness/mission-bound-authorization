@@ -5,7 +5,7 @@
  * live OpenFGA, auto-skip when down.
  */
 
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { calculateJwkThumbprint, decodeJwt, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import { executionLeaseMaxSeconds, Fga, type Decision, type MissionView, RUNTIME_POSTURE } from "@mission/pdp";
@@ -26,6 +26,9 @@ import {
   TransactionEngine,
   type TxnConsumptionStore,
 } from "../src/index.js";
+
+/** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
+const idem = (): string => `idem_${randomUUID()}`;
 
 // @spec runtime-evidence#decision-evidence-object (#741): one bundle per
 // test module. `signing`/`resolver` wire the PEP's store; `decide` is the
@@ -277,7 +280,7 @@ d("M5 transaction-assurance tier", () => {
 
   it("scenario 4: wire transfer executes once with permit, evidence, and reconciliation", async () => {
     const { server, evidence, connectors, engine } = build();
-    const res = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1" }, TOKEN);
+    const res = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
     expect(res.ok, JSON.stringify(res)).toBe(true);
     expect((res.result as { executed: boolean }).executed).toBe(true);
 
@@ -312,7 +315,7 @@ d("M5 transaction-assurance tier", () => {
     const continued: TokenFacts = { ...TOKEN, jti: JTI, identityContinuationHandle: HANDLE };
     const { server, evidence } = build();
 
-    const res = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1" }, continued);
+    const res = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, continued);
     expect(res.ok, JSON.stringify(res)).toBe(true);
 
     const exec = evidence.forMission("msn_m5").find((e): e is ExecutionEvidence => e.kind === "execution");
@@ -324,7 +327,7 @@ d("M5 transaction-assurance tier", () => {
     const continued: TokenFacts = { ...TOKEN, jti: JTI };
     const { server, evidence } = build();
 
-    const res = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1" }, continued);
+    const res = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, continued);
     expect(res.ok, JSON.stringify(res)).toBe(true);
 
     const exec = evidence.forMission("msn_m5").find((e): e is ExecutionEvidence => e.kind === "execution");
@@ -335,7 +338,7 @@ d("M5 transaction-assurance tier", () => {
     // The existing TOKEN carries no jti: the field is guarded, so unaffected.
     const { server, evidence } = build();
 
-    const res = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1" }, TOKEN);
+    const res = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
     expect(res.ok, JSON.stringify(res)).toBe(true);
 
     const exec = evidence.forMission("msn_m5").find((e): e is ExecutionEvidence => e.kind === "execution");
@@ -344,7 +347,7 @@ d("M5 transaction-assurance tier", () => {
 
   it("a FRESH permit for an already-claimed operation is refused as operation_already_claimed and does not double-execute", async () => {
     const { server, connectors, evidence } = build();
-    const first = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1" }, TOKEN);
+    const first = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
     expect(first.ok).toBe(true);
     // Each call is its own evaluation, so the second carries a FRESH
     // decision_id. Same effective params -> same op key -> the single use for
@@ -353,7 +356,7 @@ d("M5 transaction-assurance tier", () => {
     // `operation_already_claimed`, never `permit_consumed`, which the draft
     // scopes to re-presenting one evaluation identifier. The caller-visible
     // diagnostic stays `permit_consumed`.
-    const replay = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1" }, TOKEN);
+    const replay = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
     expect(replay.ok).toBe(false);
     expect(replay.refusal_reason).toBe("permit_consumed");
     // Exactly one ledger entry: no double spend.
@@ -382,9 +385,9 @@ d("M5 transaction-assurance tier", () => {
         return decision;
       },
     });
-    const first = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1" }, TOKEN);
+    const first = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
     expect(first.ok, JSON.stringify(first)).toBe(true);
-    const replay = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1" }, TOKEN);
+    const replay = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
     expect(replay.ok).toBe(false);
     expect(replay.refusal_reason).toBe("permit_consumed");
     expect(connectors.ledgerEntries("msn_m5")).toHaveLength(1);
@@ -410,7 +413,7 @@ d("M5 transaction-assurance tier", () => {
     const { server, connectors, evidence } = build({ now: () => clock });
     const res = await server.callTransactionTool(
       "execute_wire_transfer",
-      { invoice_id: "inv-1" },
+      { invoice_id: "inv-1", idempotency_key: idem() },
       TOKEN,
       () => {
         clock = new Date(clock.getTime() + 31_000);
@@ -432,7 +435,7 @@ d("M5 transaction-assurance tier", () => {
     const { server, payments, connectors } = build();
     const res = await server.callTransactionTool(
       "execute_wire_transfer",
-      { invoice_id: "inv-1" },
+      { invoice_id: "inv-1", idempotency_key: idem() },
       TOKEN,
       () => payments.bumpInvoiceAmount("inv-1", "480.00"),
     );
@@ -444,7 +447,7 @@ d("M5 transaction-assurance tier", () => {
 
   it("send_remittance_email executes and reconciles (external commitment)", async () => {
     const { server, evidence } = build();
-    const res = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN);
+    const res = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
     expect(res.ok, JSON.stringify(res)).toBe(true);
     expect(evidence.forMission("msn_m5").some((e) => e.kind === "execution")).toBe(true);
   });
@@ -458,14 +461,14 @@ d("M5 transaction-assurance tier", () => {
     });
 
     // Without the signal the client just sees the denial.
-    const unsignalled = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, TOKEN);
+    const unsignalled = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
     expect(unsignalled.ok).toBe(false);
     expect(unsignalled.denial_reason).toBe("action_approval_required");
     expect(unsignalled.transaction_challenge).toBeUndefined();
 
     const res = await server.callTransactionTool(
       "send_remittance_email",
-      { invoice_id: "inv-1" },
+      { invoice_id: "inv-1", idempotency_key: idem() },
       TOKEN,
       undefined,
       ACCEPT_CHALLENGE,
@@ -545,7 +548,7 @@ d("M5 transaction-assurance tier", () => {
 
     const challengeRes = await server.callTransactionTool(
       "send_remittance_email",
-      { invoice_id: "inv-1" },
+      { invoice_id: "inv-1", idempotency_key: idem() },
       TOKEN,
       undefined,
       ACCEPT_CHALLENGE,
@@ -564,7 +567,7 @@ d("M5 transaction-assurance tier", () => {
     const credential = await credentialFor(server, txnToken);
     expect(credential.txn?.txn).toBe(txn);
     expect(credential.mission.id).toBe("msn_m5");
-    const res = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, credential);
+    const res = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1", idempotency_key: idem() }, credential);
     expect(res.ok, JSON.stringify(res)).toBe(true);
     expect(evidence.forMission("msn_m5").filter((e) => e.kind === "execution")).toHaveLength(1);
   });
@@ -581,7 +584,7 @@ d("M5 transaction-assurance tier", () => {
     });
     const challengeRes = await server.callTransactionTool(
       "send_remittance_email",
-      { invoice_id: "inv-1" },
+      { invoice_id: "inv-1", idempotency_key: idem() },
       TOKEN,
       undefined,
       ACCEPT_CHALLENGE,
@@ -600,7 +603,7 @@ d("M5 transaction-assurance tier", () => {
     // simplification; a transaction credential is refused outright rather than
     // admitted unproven, and the challenged effect never runs.
     const { client } = await createMediatedClient(server);
-    const verdict = await client.callTool("send_remittance_email", { invoice_id: "inv-1" }, txnToken);
+    const verdict = await client.callTool("send_remittance_email", { invoice_id: "inv-1", idempotency_key: idem() }, txnToken);
     expect(verdict.ok).toBe(false);
     expect(verdict.refusal_reason).toBe("txn_pop_required");
     expect(connectors.ledgerEntries("msn_m5")).toHaveLength(0);
@@ -618,7 +621,7 @@ d("M5 transaction-assurance tier", () => {
     });
     const challengeRes = await server.callTransactionTool(
       "send_remittance_email",
-      { invoice_id: "inv-1" },
+      { invoice_id: "inv-1", idempotency_key: idem() },
       TOKEN,
       undefined,
       ACCEPT_CHALLENGE,
@@ -707,7 +710,7 @@ d("M5 transaction-assurance tier", () => {
     });
     const challengeRes = await server.callTransactionTool(
       "send_remittance_email",
-      { invoice_id: "inv-1" },
+      { invoice_id: "inv-1", idempotency_key: idem() },
       TOKEN,
       undefined,
       ACCEPT_CHALLENGE,
@@ -731,14 +734,14 @@ d("M5 transaction-assurance tier", () => {
     expect((await server.callWriteTool("schedule_payment", { invoice_id: "inv-1" }, credential)).refusal_reason).toBe(
       "txn_action_mismatch",
     );
-    const otherAction = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1" }, credential);
+    const otherAction = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, credential);
     expect(otherAction.ok).toBe(false);
     expect(otherAction.refusal_reason).toBe("txn_action_mismatch");
     expect(connectors.ledgerEntries("msn_m5")).toHaveLength(0);
     expect(evidence.forMission("msn_m5").filter((e) => e.kind === "execution")).toHaveLength(0);
 
     // The challenged operation itself still runs under it.
-    const executed = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, credential);
+    const executed = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1", idempotency_key: idem() }, credential);
     expect(executed.ok, JSON.stringify(executed)).toBe(true);
   });
 
@@ -769,7 +772,7 @@ d("M5 transaction-assurance tier", () => {
     const origin: TokenFacts = { ...TOKEN, missionClaim: originClaim as unknown as TokenFacts["missionClaim"] };
     const challengeRes = await server.callTransactionTool(
       "send_remittance_email",
-      { invoice_id: "inv-1" },
+      { invoice_id: "inv-1", idempotency_key: idem() },
       origin,
       undefined,
       ACCEPT_CHALLENGE,
@@ -838,7 +841,7 @@ d("M5 transaction-assurance tier", () => {
     });
     const challengeRes = await server.callTransactionTool(
       "send_remittance_email",
-      { invoice_id: "inv-1" },
+      { invoice_id: "inv-1", idempotency_key: idem() },
       TOKEN,
       undefined,
       ACCEPT_CHALLENGE,
@@ -870,7 +873,7 @@ d("M5 transaction-assurance tier", () => {
     });
     const challengeRes = await server.callTransactionTool(
       "send_remittance_email",
-      { invoice_id: "inv-1" },
+      { invoice_id: "inv-1", idempotency_key: idem() },
       TOKEN,
       undefined,
       ACCEPT_CHALLENGE,
@@ -921,7 +924,7 @@ d("M5 transaction-assurance tier", () => {
     // refuses, so a record that moved under the operation never executes.
     const moved = await credentialFor(server, matching);
     payments.bumpInvoiceAmount("inv-1", "480.00");
-    const refused = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, moved);
+    const refused = await server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1", idempotency_key: idem() }, moved);
     expect(refused.refusal_reason).toBe("txn_parameter_mismatch");
     expect(evidence.forMission("msn_m5").filter((e) => e.kind === "execution")).toHaveLength(0);
   });
@@ -1032,7 +1035,7 @@ d("M5 transaction-assurance tier", () => {
 
     const challengeRes = await a.server.callTransactionTool(
       "send_remittance_email",
-      { invoice_id: "inv-1" },
+      { invoice_id: "inv-1", idempotency_key: idem() },
       TOKEN,
       undefined,
       ACCEPT_CHALLENGE,
@@ -1050,7 +1053,7 @@ d("M5 transaction-assurance tier", () => {
 
     const first = await a.server.callTransactionTool(
       "send_remittance_email",
-      { invoice_id: "inv-1" },
+      { invoice_id: "inv-1", idempotency_key: idem() },
       await credentialFor(a.server, await mint("mtt_one")),
     );
     expect(first.ok, JSON.stringify(first)).toBe(true);
@@ -1059,7 +1062,7 @@ d("M5 transaction-assurance tier", () => {
     // the same replay: refused, never executed as a new attempt.
     const second = await b.server.callTransactionTool(
       "send_remittance_email",
-      { invoice_id: "inv-1" },
+      { invoice_id: "inv-1", idempotency_key: idem() },
       await credentialFor(b.server, await mint("mtt_two")),
     );
     expect(second.ok).toBe(false);
@@ -1094,7 +1097,7 @@ d("M5 transaction-assurance tier", () => {
 
     const challengeRes = await a.server.callTransactionTool(
       "send_remittance_email",
-      { invoice_id: "inv-1" },
+      { invoice_id: "inv-1", idempotency_key: idem() },
       TOKEN,
       undefined,
       ACCEPT_CHALLENGE,
@@ -1113,8 +1116,8 @@ d("M5 transaction-assurance tier", () => {
     const credentialA = await credentialFor(a.server, await mint("mtt_race_a"));
     const credentialB = await credentialFor(b.server, await mint("mtt_race_b"));
     const [first, second] = await Promise.all([
-      a.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, credentialA),
-      b.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1" }, credentialB),
+      a.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1", idempotency_key: idem() }, credentialA),
+      b.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1", idempotency_key: idem() }, credentialB),
     ]);
 
     // Exactly one execution, whichever replica won; the loser is the same
@@ -1164,7 +1167,7 @@ d("M5 transaction-assurance tier", () => {
     });
     const challengeRes = await server.callTransactionTool(
       "send_remittance_email",
-      { invoice_id: "inv-1" },
+      { invoice_id: "inv-1", idempotency_key: idem() },
       TOKEN,
       undefined,
       ACCEPT_CHALLENGE,
@@ -1179,7 +1182,7 @@ d("M5 transaction-assurance tier", () => {
     });
     const res = await server.callTransactionTool(
       "send_remittance_email",
-      { invoice_id: "inv-1" },
+      { invoice_id: "inv-1", idempotency_key: idem() },
       await credentialFor(server, txnToken),
     );
     expect(res.ok).toBe(false);
@@ -1220,7 +1223,7 @@ d("M5 transaction-assurance tier", () => {
       },
     });
     const started = Date.now();
-    const res = await bounded.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1" }, TOKEN);
+    const res = await bounded.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
     expect(res.ok, JSON.stringify(res)).toBe(true);
     const leaseEnd = leaseEndFor(bounded, (res.result as { op_key: string }).op_key);
     const validUntil = Date.parse((permit?.context.conditions as { valid_until: string }).valid_until);
@@ -1251,7 +1254,7 @@ d("M5 transaction-assurance tier", () => {
     const shortStart = Date.now();
     const short = await shortLived.server.callTransactionTool(
       "execute_wire_transfer",
-      { invoice_id: "inv-1" },
+      { invoice_id: "inv-1", idempotency_key: idem() },
       TOKEN,
     );
     expect(short.ok, JSON.stringify(short)).toBe(true);
@@ -1287,7 +1290,7 @@ d("the crash window between consumption and the effect (@spec txn-authorization#
     });
     const challengeRes = await server.callTransactionTool(
       "send_remittance_email",
-      { invoice_id: "inv-1" },
+      { invoice_id: "inv-1", idempotency_key: idem() },
       TOKEN,
       undefined,
       ACCEPT_CHALLENGE,
@@ -1332,7 +1335,7 @@ d("the crash window between consumption and the effect (@spec txn-authorization#
     // re-running it would be a second effect.
     const resumed = await server.callTransactionTool(
       "send_remittance_email",
-      { invoice_id: "inv-1" },
+      { invoice_id: "inv-1", idempotency_key: idem() },
       await credentialFor(server, txnToken),
     );
     expect(resumed.ok, JSON.stringify(resumed)).toBe(true);
@@ -1343,7 +1346,7 @@ d("the crash window between consumption and the effect (@spec txn-authorization#
     expect(stores.consumption.get(CANONICAL_RESOURCE, txn)?.state).toBe("effect_committed");
     const again = await server.callTransactionTool(
       "send_remittance_email",
-      { invoice_id: "inv-1" },
+      { invoice_id: "inv-1", idempotency_key: idem() },
       await credentialFor(server, txnToken),
     );
     expect(again.ok).toBe(false);
@@ -1367,7 +1370,7 @@ d("the crash window between consumption and the effect (@spec txn-authorization#
 
     const res = await server.callTransactionTool(
       "send_remittance_email",
-      { invoice_id: "inv-1" },
+      { invoice_id: "inv-1", idempotency_key: idem() },
       await credentialFor(server, txnToken),
     );
     expect(res.ok).toBe(false);

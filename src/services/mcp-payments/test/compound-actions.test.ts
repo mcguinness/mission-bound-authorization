@@ -18,6 +18,7 @@
  * Unconditional: the FGA check is a stub, so this file never skips.
  */
 
+import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { CATALOG_TOOL_BINDINGS } from "@mission/demo-data";
 import type { Decision, Fga, MissionView } from "@mission/pdp";
@@ -31,6 +32,7 @@ import {
   EvidenceStore,
   type ExecutionEvidence,
   McpPaymentsServer,
+  openEphemeralWriteReservationStore,
   operationKey,
   parameterDigest,
   PaymentsStore,
@@ -195,6 +197,7 @@ function harness(
     jwks: { keys: [] },
     issuer: "https://as.test",
     transaction: { engine, connectors, evidence },
+    writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
   });
 
   self = {
@@ -259,7 +262,9 @@ async function cross(
   hook?: () => void,
   invoiceId = "inv-1",
 ): Promise<{ ok: boolean; refusal_reason?: string; denial_reason?: string; result?: unknown }> {
-  const args = { invoice_id: invoiceId };
+  // @spec runtime#idempotency (#917): every crossing is a new intended
+  // execution; only the keyed commit crossing forwards the key.
+  const args = { invoice_id: invoiceId, idempotency_key: `idem_${randomUUID()}` };
   if (crossing.call === "read") return h.server.callReadTool(crossing.tool, args, TOKEN, hook);
   if (crossing.call === "write") return h.server.callWriteTool(crossing.tool, args, TOKEN, hook);
   return h.server.callTransactionTool(crossing.tool, args, TOKEN, hook);
@@ -297,7 +302,8 @@ describe("compound-action phases (@spec runtime#compound-actions)", () => {
     }
     // An operation the Operation Profile places at no phase carries no
     // condition at all, so the member is not merely defaulted everywhere.
-    await h.server.callWriteTool("schedule_payment", { invoice_id: "inv-1" }, TOKEN);
+    await h.server.callWriteTool("schedule_payment", { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` }, TOKEN);
+    expect(h.lastDecision()?.decision).toBe(true);
     expect(conditionsOf(h.lastDecision())?.action_phase).toBeUndefined();
   });
 
@@ -384,7 +390,11 @@ describe("compound-action phases (@spec runtime#compound-actions)", () => {
     h.replay(h.lastDecision());
     // schedule_payment is no phase of a compound action, so a phase condition
     // is unrecognized there and the permit is invalid at that crossing.
-    const refused = await h.server.callWriteTool("schedule_payment", { invoice_id: "inv-1" }, TOKEN);
+    const refused = await h.server.callWriteTool(
+      "schedule_payment",
+      { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` },
+      TOKEN,
+    );
     expect(refused.ok).toBe(false);
     expect(refused.refusal_reason).toBe("phase_mismatch");
   });
@@ -463,7 +473,7 @@ describe("compound-action phases (@spec runtime#compound-actions)", () => {
     h.replay(h.lastDecision());
     const refused = await h.server.callTransactionTool(
       "execute_wire_transfer",
-      { invoice_id: "inv-1", action_phase: "prepare" },
+      { invoice_id: "inv-1", action_phase: "prepare", idempotency_key: `idem_${randomUUID()}` },
       TOKEN,
     );
     expect(refused.refusal_reason).toBe("phase_mismatch");

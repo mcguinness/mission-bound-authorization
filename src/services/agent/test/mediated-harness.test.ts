@@ -10,10 +10,14 @@
  * checkOnResume, which mcp-payments cannot import without a dependency cycle.
  */
 
+import { randomUUID } from "node:crypto";
 import type { MissionStatusLease } from "@mission/core";
 import { describe, expect, it } from "vitest";
 import type { MissionState } from "../src/harness.js";
 import { MediatedHarness, type MediatedToolChannel, resumeGuard } from "../src/mediated-harness.js";
+
+/** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
+const idem = (): string => `idem_${randomUUID()}`;
 
 function spyChannel(): { channel: MediatedToolChannel; calls: string[] } {
   const calls: string[] = [];
@@ -44,7 +48,7 @@ describe("harness duty 1: fail-closed resume guard", () => {
   it("callTool refuses BEFORE issuing any tool call when the mission is not active", async () => {
     const { channel, calls } = spyChannel();
     const harness = new MediatedHarness(channel, "msn", revoked);
-    const res = await harness.callTool("execute_wire_transfer", { invoice_id: "inv-1" }, "jwt");
+    const res = await harness.callTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, "jwt");
     expect(res.ok).toBe(false);
     expect(res.refusal_reason).toBe("mission_not_active:revoked");
     expect(res.resume?.proceed).toBe(false);
@@ -62,7 +66,7 @@ describe("harness duty 1: fail-closed resume guard", () => {
   it("when active, the harness proceeds to the mediated channel", async () => {
     const { channel, calls } = spyChannel();
     const harness = new MediatedHarness(channel, "msn", active);
-    const res = await harness.callTool("execute_wire_transfer", { invoice_id: "inv-1" }, "jwt");
+    const res = await harness.callTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, "jwt");
     expect(res.ok).toBe(true);
     expect(calls).toEqual(["callTool:execute_wire_transfer"]);
   });
@@ -93,7 +97,7 @@ describe("harness status-continuity: fresh-at-submission fail-closed", () => {
       readStatus: readStatus(activeLease("2026-01-01T22:05:00Z")),
       now: at("2026-01-02T02:00:00Z"),
     });
-    const res = await harness.callTool("execute_wire_transfer", { invoice_id: "inv-1" }, "jwt");
+    const res = await harness.callTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, "jwt");
     expect(res.ok).toBe(false);
     expect(res.refusal_reason).toBe("mission_status_stale:active");
     expect(res.resume?.stale).toBe(true);
@@ -108,7 +112,7 @@ describe("harness status-continuity: fresh-at-submission fail-closed", () => {
       readStatus: readStatus(activeLease("2026-01-02T03:00:00Z")),
       now: at("2026-01-02T02:00:00Z"), // before expiry
     });
-    const res = await harness.callTool("execute_wire_transfer", { invoice_id: "inv-1" }, "jwt");
+    const res = await harness.callTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, "jwt");
     expect(res.ok).toBe(true);
     expect(calls).toEqual(["callTool:execute_wire_transfer"]);
   });

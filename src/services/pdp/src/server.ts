@@ -27,10 +27,21 @@
  * demonstrates is not obscured by an unbounded read.
  */
 
+import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type Server as HttpServer, type ServerResponse } from "node:http";
 import { macEqualHex, macHex, REQUEST_MAC_DOMAIN, RESPONSE_MAC_DOMAIN, sha256Hex } from "./channel-mac.js";
+import { requestMacParts } from "./client.js";
 import type { DecisionEvidenceEmitter } from "./decision-evidence.js";
+import { type ClaimChannel, claimChannelFor } from "./decision-point.js";
 import { evaluate, type Decision, type DecisionOptions, type EvaluateOptions, type EvaluationRequest } from "./evaluate.js";
+import {
+  type ClaimRequester,
+  type ClaimResolution,
+  ClaimDomainUnavailableError,
+  type ConsumptionStatusFn,
+  type RedeemingExecutionFn,
+  type IdempotencyClaimDomain,
+} from "./idempotency-claims.js";
 
 /**
  * One PEP the PDP recognizes: its shared authentication secret and the
@@ -74,12 +85,46 @@ export interface PdpRemoteServerConfig {
    * channel-boundary refusal). Defaults to the real `evaluate`.
    */
   evaluateFn?: typeof evaluate;
+  /**
+   * @spec runtime#idempotency (#917): this PDP's claim domain, bound on this
+   * side of the network hop exactly as `evidence` is: a request option naming
+   * another is stripped.
+   */
+  claims?: IdempotencyClaimDomain;
+  /**
+   * The settlement and reconciliation channel for one authenticated
+   * requester. Defaults to one over {@link PdpRemoteServerConfig.claims}.
+   */
+  claimsFor?: (requester: ClaimRequester, redeemingExecution?: RedeemingExecutionFn) => ClaimChannel;
+  /**
+   * @spec runtime#idempotency, retransmission condition 6 (#917): a
+   * registered PEP's read-only consumption-status capability, injected by
+   * trusted assembly beside the PEP's registration. Absent for a PEP, its
+   * answer is `unknown`, which suppresses every retransmission to it.
+   */
+  consumptionStatus?: (pepId: string) => ConsumptionStatusFn | undefined;
+  /**
+   * #1016 review round 2: a registered PEP's read-only answer naming the
+   * attempt that redeemed a permit, injected beside its registration. Absent,
+   * no failed or suppressed outcome from that PEP settles.
+   */
+  redeemingExecution?: (pepId: string) => RedeemingExecutionFn | undefined;
 }
 
 export interface PdpHttpServerHandle {
   url: string;
   port: number;
   close: () => Promise<void>;
+}
+
+/** One request that passed every channel gate: authenticated, fresh, unreplayed, parsed and in scope. */
+interface AuthenticatedRequest {
+  pepId: string;
+  nonce: string;
+  issuedAt: string;
+  rawBody: string;
+  body: Record<string, unknown>;
+  requester: ClaimRequester;
 }
 
 type ChannelRefusalReason =
@@ -129,7 +174,18 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
     }
   }
 
-  async function handleEvaluate(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  /**
+   * The channel gates every route runs, in order: a bounded body read,
+   * authentication and integrity (the request MAC, covering the epoch header
+   * when one is sent), freshness and replay, a parsed body, and the scope
+   * check on the audience `audienceOf` names. A failure at any gate is
+   * answered here and returns `undefined`: the route does no work at all.
+   */
+  async function authenticate(
+    req: IncomingMessage,
+    res: ServerResponse,
+    audienceOf: (body: Record<string, unknown>) => unknown,
+  ): Promise<AuthenticatedRequest | undefined> {
     const chunks: Buffer[] = [];
     let receivedBytes = 0;
     for await (const chunk of req as AsyncIterable<Buffer>) {
@@ -140,7 +196,7 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
         // explicitly rather than left for the client to discover.
         sendRefusal(res, 413, "request_body_too_large", { connection: "close" });
         req.destroy();
-        return;
+        return undefined;
       }
       chunks.push(chunk);
     }
@@ -150,52 +206,55 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
     const signature = headerString(req.headers["x-pdp-signature"]);
     const nonce = headerString(req.headers["x-pdp-nonce"]);
     const issuedAt = headerString(req.headers["x-pdp-issued-at"]);
+    const pepEpoch = headerString(req.headers["x-pdp-pep-epoch"]);
 
     if (pepId === undefined || signature === undefined || nonce === undefined || issuedAt === undefined) {
       sendRefusal(res, 401, "missing_channel_authentication");
-      return;
+      return undefined;
     }
     const pep = config.peps.get(pepId);
     if (!pep) {
       sendRefusal(res, 401, "unknown_pep");
-      return;
+      return undefined;
     }
 
     // Integrity + mutual authentication: the request's exact bytes, bound to
-    // this PEP identity, nonce, and issuance time, must match a MAC only a
-    // holder of this PEP's registered secret could have produced.
-    const expectedSignature = macHex(pep.secret, REQUEST_MAC_DOMAIN, [pepId, nonce, issuedAt, rawBody]);
+    // this PEP identity, nonce, issuance time and (when sent) its redemption
+    // store's epoch, must match a MAC only a holder of this PEP's registered
+    // secret could have produced.
+    const expectedSignature = macHex(pep.secret, REQUEST_MAC_DOMAIN, requestMacParts(pepId, nonce, issuedAt, rawBody, pepEpoch));
     if (!macEqualHex(signature, expectedSignature)) {
       sendRefusal(res, 401, "invalid_request_signature");
-      return;
+      return undefined;
     }
 
     const now = Date.now();
     const issuedAtMs = Number(issuedAt);
     if (!Number.isFinite(issuedAtMs) || Math.abs(now - issuedAtMs) > replayWindowMs) {
       sendRefusal(res, 401, "stale_or_future_request");
-      return;
+      return undefined;
     }
     pruneExpired(now);
     const nonceKey = `${pepId}:${nonce}`;
     if (seenNonces.has(nonceKey)) {
       sendRefusal(res, 401, "replayed_request");
-      return;
+      return undefined;
     }
     seenNonces.set(nonceKey, now + replayWindowMs);
 
-    let parsedBody: { request?: EvaluationRequest };
+    let body: unknown;
     try {
-      parsedBody = JSON.parse(rawBody) as { request?: EvaluationRequest };
+      body = JSON.parse(rawBody);
     } catch {
       sendRefusal(res, 400, "malformed_body");
-      return;
+      return undefined;
     }
-    const evalRequest = parsedBody.request;
-    const audience = evalRequest?.context?.audience;
-    if (evalRequest === undefined || typeof audience !== "string") {
+    const audience = body !== null && typeof body === "object" && !Array.isArray(body)
+      ? audienceOf(body as Record<string, unknown>)
+      : undefined;
+    if (typeof audience !== "string") {
       sendRefusal(res, 400, "malformed_body");
-      return;
+      return undefined;
     }
     // @spec runtime#decision-channel: "The PDP MUST accept credential-derived
     // inputs only from a PEP authorized for the declared enforcement scope."
@@ -204,23 +263,35 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
     // decision made and then discarded.
     if (!pep.scopes.includes(audience)) {
       sendRefusal(res, 403, "pep_not_authorized_for_scope");
-      return;
+      return undefined;
     }
+    return {
+      pepId,
+      nonce,
+      issuedAt,
+      rawBody,
+      body: body as Record<string, unknown>,
+      // @spec runtime#idempotency, retransmission condition 5 (#917): the
+      // requester is the authenticated PEP and its MAC-covered epoch. A
+      // request without one gets an epoch nothing else can present, so no
+      // stored decision is ever returned to it.
+      requester: { pep_id: pepId, pep_epoch: pepEpoch ?? `unbound:${randomUUID()}` },
+    };
+  }
 
-    const opts = { ...(await config.getOptions(evalRequest)) } as EvaluateOptions;
-    delete opts.evidence;
-    if (config.evidence) opts.evidence = config.evidence;
-    const decision: Decision = await evaluateImpl(evalRequest, opts);
-    const body = JSON.stringify(decision);
+  /** A 200 bound to the request that produced it, not just to its own bytes. */
+  function sendSigned(res: ServerResponse, authed: AuthenticatedRequest, payload: unknown): void {
+    const pep = config.peps.get(authed.pepId) as AuthorizedPep;
+    const body = JSON.stringify(payload);
     const status = 200;
     // Bound to the request that produced it, not just its own bytes: a
     // response MAC over the body alone lets an intermediary replay an
     // old, validly signed permit as the answer to a different request.
     const responseSignature = macHex(pep.secret, RESPONSE_MAC_DOMAIN, [
-      pepId,
-      nonce,
-      issuedAt,
-      sha256Hex(rawBody),
+      authed.pepId,
+      authed.nonce,
+      authed.issuedAt,
+      sha256Hex(authed.rawBody),
       String(status),
       body,
     ]);
@@ -228,13 +299,85 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
     res.end(body);
   }
 
+  async function handleEvaluate(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    const authed = await authenticate(req, res, (body) => {
+      const request = body.request as EvaluationRequest | undefined;
+      return request?.context?.audience;
+    });
+    if (!authed) return;
+    const evalRequest = authed.body.request as EvaluationRequest;
+    const opts = { ...(await config.getOptions(evalRequest)) } as EvaluateOptions;
+    delete opts.evidence;
+    delete opts.claims;
+    delete opts.requester;
+    delete opts.consumptionStatus;
+    if (config.evidence) opts.evidence = config.evidence;
+    if (config.claims) opts.claims = config.claims;
+    opts.requester = authed.requester;
+    const status = config.consumptionStatus?.(authed.pepId);
+    if (status) opts.consumptionStatus = status;
+    let decision: Decision;
+    try {
+      decision = await evaluateImpl(evalRequest, opts);
+    } catch (e) {
+      // @spec runtime#idempotency (#917): an unreachable claim domain is no
+      // decision at all, never a permit without the claim. 503 is what the
+      // PEP's client turns into `pdp_unreachable`.
+      if (e instanceof ClaimDomainUnavailableError) {
+        res.writeHead(503, { "content-type": "application/json" });
+        res.end(JSON.stringify({ error: "claim_domain_unavailable" }));
+        return;
+      }
+      throw e;
+    }
+    sendSigned(res, authed, decision);
+  }
+
+  /**
+   * @spec runtime#idempotency (#917, owner ruling 2026-10-02): settlement
+   * and reconciliation behind the same gates as a decision request. The
+   * requester they act for is the authenticated PEP and epoch, never a body
+   * member.
+   */
+  async function handleClaims(route: string, req: IncomingMessage, res: ServerResponse): Promise<void> {
+    const authed = await authenticate(req, res, (body) => body.audience);
+    if (!authed) return;
+    const redeemer = config.redeemingExecution?.(authed.pepId);
+    const channel =
+      config.claimsFor?.(authed.requester, redeemer) ?? claimChannelFor(config.claims, authed.requester, redeemer);
+    try {
+      if (route === "/claims/settle") {
+        sendSigned(res, authed, await channel.settle(authed.body.record));
+      } else if (route === "/claims/unresolved") {
+        sendSigned(res, authed, { unresolved: await channel.listUnresolved() });
+      } else {
+        const evaluationId = authed.body.evaluation_id;
+        const resolution = authed.body.resolution as ClaimResolution | undefined;
+        if (typeof evaluationId !== "string" || (resolution?.kind !== "unredeemed" && resolution?.kind !== "execution_evidence")) {
+          sendSigned(res, authed, { accepted: false, reason: "malformed_resolution" });
+          return;
+        }
+        sendSigned(res, authed, await channel.reconcile(evaluationId, resolution));
+      }
+    } catch (e) {
+      if (e instanceof ClaimDomainUnavailableError) {
+        res.writeHead(503, { "content-type": "application/json" });
+        res.end(JSON.stringify({ error: "claim_domain_unavailable" }));
+        return;
+      }
+      throw e;
+    }
+  }
+
+  const CLAIM_ROUTES = new Set(["/claims/settle", "/claims/unresolved", "/claims/reconcile"]);
   const httpServer: HttpServer = createServer((req, res) => {
-    if (req.method !== "POST" || req.url !== "/evaluate") {
+    const route = req.url ?? "";
+    if (req.method !== "POST" || (route !== "/evaluate" && !CLAIM_ROUTES.has(route))) {
       res.writeHead(404, { "content-type": "application/json" });
       res.end(JSON.stringify({ error: "not_found" }));
       return;
     }
-    handleEvaluate(req, res).catch(() => {
+    (route === "/evaluate" ? handleEvaluate(req, res) : handleClaims(route, req, res)).catch(() => {
       if (!res.headersSent) {
         res.writeHead(500, { "content-type": "application/json" });
         res.end(JSON.stringify({ error: "server_error" }));

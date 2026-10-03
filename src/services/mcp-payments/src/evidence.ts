@@ -23,7 +23,7 @@
 
 import { createHash } from "node:crypto";
 import type { ContextActor } from "@mission/actor-chain";
-import { computeAnchor, type JsonValue } from "@mission/core";
+import { canonicalize, computeAnchor, type JsonValue } from "@mission/core";
 import { currentTraceId } from "@mission/telemetry";
 import { createLocalJWKSet, type JWK, type JWTPayload, jwtVerify, SignJWT } from "jose";
 import {
@@ -245,7 +245,7 @@ export interface DecisionEvidence {
  */
 export type DecisionEvidenceRetention =
   | { retained: true; record: DecisionEvidence }
-  | { retained: false; reason: EvidenceVerifyFailure | "no_verification_keys" | "malformed_record" };
+  | { retained: false; reason: EvidenceVerifyFailure | "no_verification_keys" | "malformed_record" | "conflicting_record" };
 
 /** The retained Refusal Record row: `content` is the exact signed spec object. */
 export interface RefusalRecord {
@@ -960,6 +960,18 @@ export class EvidenceStore {
     );
     if (!result.valid) {
       return { retained: false, reason: result.reason };
+    }
+    // @spec runtime#idempotency (#917): a retransmitted permit re-presents
+    // the record already retained for its evaluation, byte for byte. That is
+    // accepted idempotently (the held row, never a second copy); a different
+    // record under the same identifier is not.
+    const held = this.records.find(
+      (e): e is DecisionEvidence => e.kind === "decision" && e.content.evidence_id === record.evidence_id,
+    );
+    if (held) {
+      return canonicalize(held.content as unknown as JsonValue) === canonicalize(record as unknown as JsonValue)
+        ? { retained: true, record: held }
+        : { retained: false, reason: "conflicting_record" };
     }
     const traceId = currentTraceId();
     const row: DecisionEvidence = deepFreeze({

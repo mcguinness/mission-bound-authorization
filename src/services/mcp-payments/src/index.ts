@@ -46,6 +46,7 @@ export {
   type TxnCredential,
   type EnforceResult,
   type ExecutionAttempt,
+  type WriteReservationScope,
   type ReverifyOutcome,
   type SuppressOutcome,
   PRE_DECISION_DENIAL_REASON,
@@ -60,12 +61,17 @@ export {
 } from "./pep.js";
 export {
   CONNECTOR_TOOLS,
+  dispatchPathFor,
   McpPaymentsServer,
+  REVERSIBLE_WRITE_REFUSAL_ERRORS,
+  REVERSIBLE_WRITE_TOOLS,
+  type ReversibleWriteFailpoints,
   TOOLS,
   type ToolDef,
   type McpServerDeps,
   type TransactionToolResult,
   type VerifiedTxnCredential,
+  type WriteToolResult,
 } from "./server.js";
 export {
   createMcpChannel,
@@ -87,6 +93,20 @@ export {
 export { Connectors, type WireCommit, type EmailCommit, type CommitResult } from "./connectors.js";
 export { TransactionEngine, operationKey, type OpState } from "./transaction.js";
 export { reconcile, type ReconciliationReport } from "./reconcile.js";
+export { type ClaimReconciliationReport, reconcileClaims } from "./claim-reconciliation.js";
+export {
+  openEphemeralWriteReservationStore,
+  openWriteReservationStore,
+  type PaymentSchedule,
+  type ReserveOutcome,
+  type WriteEffectOutcome,
+  type WriteReservation,
+  type WriteReservationRequest,
+  type WriteReservationState,
+  WriteReservationStore,
+  type WriteReservationStoreOptions,
+} from "./write-reservations.js";
+export { type RedemptionStatus, recordRedeemingAttempt, redemptionStatusFor } from "./redemption-status.js";
 export type { ExecutionEvidence } from "./evidence.js";
 export { createEphemeralEvidenceKeys, type EphemeralEvidenceKeys } from "./ephemeral-signer.js";
 export {

@@ -11,18 +11,20 @@
  * and over-blocking on the legitimate suite.
  */
 
+import { randomUUID } from "node:crypto";
 import {
   Connectors,
   createEphemeralEvidenceKeys,
   EvidenceStore,
   McpPaymentsServer,
   type MissionReference,
+  openEphemeralWriteReservationStore,
   PaymentsStore,
   Pep,
   type TokenFacts,
   TransactionEngine,
 } from "@mission/mcp-payments";
-import type { Fga, MissionView } from "@mission/pdp";
+import { type Fga, type MissionView, RUNTIME_POSTURE } from "@mission/pdp";
 
 export type Expectation = "permit" | "deny";
 
@@ -111,6 +113,11 @@ export async function runCase(c: EvalCase, deps: HarnessDeps): Promise<CaseResul
     allowedFreshnessSources: new Set([EVAL_FRESHNESS_SOURCE]),
     ...(deps.revokedInstances ? { revokedInstances: deps.revokedInstances } : {}),
   });
+  // @spec runtime#idempotency (#918): the PEP's write-reservation store, on
+  // a fresh temporary file per case, as the claim domain is.
+  const writeReservations = openEphemeralWriteReservationStore({
+    owner: RUNTIME_POSTURE.mediated_scope.pep_locations[0] as string,
+  });
   const server = new McpPaymentsServer({
     pep,
     payments,
@@ -118,21 +125,27 @@ export async function runCase(c: EvalCase, deps: HarnessDeps): Promise<CaseResul
     jwks: { keys: [] },
     issuer: "https://as.test",
     transaction: { engine, connectors, evidence },
+    writeReservations,
   });
 
   const before = connectors.ledgerEntries().length;
   const token = c.token();
   const isTxn = c.tool === "execute_wire_transfer" || c.tool === "send_remittance_email";
-  const isWrite = c.tool === "schedule_payment";
+  const isWrite = c.tool === "schedule_payment" || c.tool === "cancel_scheduled_payment";
 
   let outcome: "permit" | "deny" = "deny";
   let reason: string | undefined;
   try {
     let res: { ok: boolean; denial_reason?: string; refusal_reason?: string };
     if (isTxn) {
-      res = await server.callTransactionTool(c.tool, c.args, token, () => c.beforeCommit?.(payments));
+      // @spec runtime#idempotency (#917): the harness acts as the agent, and
+      // each case is one intended execution under its own key.
+      const args = typeof c.args.idempotency_key === "string" ? c.args : { ...c.args, idempotency_key: `idem_${randomUUID()}` };
+      res = await server.callTransactionTool(c.tool, args, token, () => c.beforeCommit?.(payments));
     } else if (isWrite) {
-      res = await server.callWriteTool(c.tool, c.args, token, () => c.beforeCommit?.(payments));
+      // @spec runtime#idempotency (#918): a keyed reversible write, minted the same way.
+      const args = typeof c.args.idempotency_key === "string" ? c.args : { ...c.args, idempotency_key: `idem_${randomUUID()}` };
+      res = await server.callWriteTool(c.tool, args, token, () => c.beforeCommit?.(payments));
     } else {
       res = await server.callReadTool(c.tool, c.args, token);
     }
@@ -148,6 +161,7 @@ export async function runCase(c: EvalCase, deps: HarnessDeps): Promise<CaseResul
   // or Refusal Record), regardless of which mission id it filed under -- a
   // door-slam refusal on a forged mission still records a refusal.
   const evidenceRecorded = evidence.all().length > 0;
+  writeReservations.close();
 
   return {
     id: c.id,

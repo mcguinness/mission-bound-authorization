@@ -9,6 +9,7 @@
  * In-process, live OpenFGA, auto-skip when down.
  */
 
+import { randomUUID } from "node:crypto";
 import { createLocalJWKSet, exportJWK, generateKeyPair, jwtVerify } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import { Fga, type MissionView } from "@mission/pdp";
@@ -21,6 +22,9 @@ import {
   type TokenFacts,
 } from "@mission/mcp-payments";
 import { AccessRequestService } from "../src/index.js";
+
+/** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
+const idem = (): string => `idem_${randomUUID()}`;
 
 // @spec runtime-evidence#decision-evidence-object (#741): one bundle per
 // test module. `signing`/`resolver` wire the PEP's store; `decide` is the
@@ -126,7 +130,7 @@ d("M6 ARAP reevaluate (scenario 5)", () => {
 
   it("denies requestable, resolves via ARS approval, re-evaluates to a permit -- no token issued", async () => {
     // 1. First attempt: no approval -> action_approval_required, requestable.
-    const denied = await pep.enforce("execute_wire_transfer", { invoice_id: "inv-1" }, TOKEN);
+    const denied = await pep.enforce("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
     expect(denied.permitted).toBe(false);
     expect(denied.denial_reason).toBe("action_approval_required");
     expect(denied.access_request?.binding_token).toBeDefined();
@@ -156,7 +160,7 @@ d("M6 ARAP reevaluate (scenario 5)", () => {
     expect(stateClaims.aud).toBe(APPROVAL_AUD);
 
     // 4. PEP re-evaluates with context.action_approval (approved_until carried) -> permit.
-    const permitted = await pep.enforce("execute_wire_transfer", { invoice_id: "inv-1" }, TOKEN, {
+    const permitted = await pep.enforce("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN, {
       id: approval?.id as string,
       approved_at: approval?.approved_at as string,
       approved_until: approval?.approved_until as string,
@@ -169,8 +173,8 @@ d("M6 ARAP reevaluate (scenario 5)", () => {
   });
 
   it("rejects an approval bound to a different parameter_digest", async () => {
-    const denied = await pep.enforce("execute_wire_transfer", { invoice_id: "inv-1" }, TOKEN);
-    const badApproval = await pep.enforce("execute_wire_transfer", { invoice_id: "inv-1" }, TOKEN, {
+    const denied = await pep.enforce("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
+    const badApproval = await pep.enforce("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN, {
       id: "apr_forged",
       approved_at: new Date().toISOString(),
       parameter_digest: "sha-256:WRONG",
@@ -181,7 +185,7 @@ d("M6 ARAP reevaluate (scenario 5)", () => {
   });
 
   it("ARS rejects a submission that does not match its signed binding", async () => {
-    const denied = await pep.enforce("execute_wire_transfer", { invoice_id: "inv-1" }, TOKEN);
+    const denied = await pep.enforce("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
     await expect(
       ars.submit({
         binding_token: denied.access_request?.binding_token as string,

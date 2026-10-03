@@ -7,7 +7,7 @@
  */
 
 import { existsSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve as resolvePath } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   ACTION_PHASES,
@@ -234,6 +234,16 @@ export interface Topology {
     asContinuation: TopologyKey;
   };
   openfga: { url: string; presharedKey: string };
+  /**
+   * @spec runtime#idempotency (#917): the deployment's durable stores.
+   * `pdpIdempotencyClaims.file` is the PDP's Exact claim domain: one SQLite
+   * file one PDP process opens single-writer. A relative path resolves against
+   * the directory holding `config/`, so the loaded value is always absolute.
+   * `pepWriteReservations.file` (#918) is the enforcing PEP's reservation and
+   * retention store for keyed reversible writes: a separate file, opened
+   * single-writer by that PEP alone, never shared with the PDP's.
+   */
+  stores: { pdpIdempotencyClaims: { file: string }; pepWriteReservations: { file: string } };
 }
 
 function reqTxnChallenge(
@@ -276,6 +286,29 @@ function loadTopology(): Topology {
   const ttls = asObject(file, root.ttls, "ttls");
   const keys = asObject(file, root.keys, "keys");
   const openfga = asObject(file, root.openfga, "openfga");
+  const stores = asObject(file, root.stores, "stores");
+  const claimStore = asObject(file, stores.pdpIdempotencyClaims, "stores.pdpIdempotencyClaims");
+  const reservationStore = asObject(
+    file,
+    stores.pepWriteReservations,
+    "stores.pepWriteReservations",
+  );
+  const claimFile = resolvePath(
+    dirname(CONFIG_DIR),
+    reqString(file, claimStore, "file", "stores.pdpIdempotencyClaims"),
+  );
+  const reservationFile = resolvePath(
+    dirname(CONFIG_DIR),
+    reqString(file, reservationStore, "file", "stores.pepWriteReservations"),
+  );
+  // @spec runtime#idempotency (#918, D223): the PEP's reservations are
+  // separate from the PDP's claims; one file for both is refused here.
+  if (claimFile === reservationFile) {
+    throw new ConfigError(
+      file,
+      "stores.pepWriteReservations.file must differ from stores.pdpIdempotencyClaims.file",
+    );
+  }
   return {
     resources: {
       payments: reqString(file, resources, "payments", "resources"),
@@ -323,6 +356,10 @@ function loadTopology(): Topology {
     openfga: {
       url: reqString(file, openfga, "url", "openfga"),
       presharedKey: reqString(file, openfga, "presharedKey", "openfga"),
+    },
+    stores: {
+      pdpIdempotencyClaims: { file: claimFile },
+      pepWriteReservations: { file: reservationFile },
     },
   };
 }
@@ -1528,6 +1565,8 @@ export interface AuthoritySourceSeed {
   id: string;
   type: "user_delegated" | "service_owned" | "organizational";
   clients: string[];
+  /** OPTIONAL Subject selector (#827); absent selects every Subject of `clients`. */
+  subjects?: string[];
   /** REQUIRED and non-empty: gate 2 has no vacuous form (@see loadAuthoritySources). */
   activators: string[];
   ceiling: CeilingEntry[];
@@ -1550,7 +1589,9 @@ const AUTHORITY_SOURCE_TYPES = ["user_delegated", "service_owned", "organization
  * literal string "deployment" to mean the deployment's own derivation ceiling
  * (the user-delegated case, where the source's authority is the deployment's);
  * an `organizational` source takes its ceiling from the governed policy it
- * references, never from a second copy here.
+ * references, never from a second copy here. `subjects` (OPTIONAL, #827)
+ * selects which Subjects of `clients` the source applies to; whether two
+ * sources overlap is the kernel's catalog validation, run at construction.
  */
 function loadAuthoritySources(): AuthoritySourceCatalogSeed {
   const file = "authority-sources.json";
@@ -1565,6 +1606,11 @@ function loadAuthoritySources(): AuthoritySourceCatalogSeed {
       throw new ConfigError(file, `${ctx}.type '${type}' is not a recognized authority source`);
     }
     const clients = reqStringArray(file, e, "clients", ctx);
+    const subjects =
+      e.subjects === undefined ? undefined : reqStringArray(file, e, "subjects", ctx);
+    if (subjects && subjects.length === 0) {
+      throw new ConfigError(file, `${ctx}.subjects, when present, must be non-empty`);
+    }
     const activators = reqStringArray(file, e, "activators", ctx);
     if (activators.length === 0) {
       throw new ConfigError(
@@ -1600,6 +1646,7 @@ function loadAuthoritySources(): AuthoritySourceCatalogSeed {
         id,
         type,
         clients,
+        ...(subjects ? { subjects } : {}),
         activators,
         ceiling: governed.ceiling,
         principals: principals as string[],
@@ -1618,6 +1665,7 @@ function loadAuthoritySources(): AuthoritySourceCatalogSeed {
       id,
       type,
       clients,
+      ...(subjects ? { subjects } : {}),
       activators,
       ceiling,
       ...(principals ? { principals } : {}),
