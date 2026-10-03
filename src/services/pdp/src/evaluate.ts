@@ -31,7 +31,7 @@ import {
 } from "@mission/core";
 import { randomUUID } from "node:crypto";
 import { getTracer } from "@mission/telemetry";
-import { SignJWT, type CryptoKey } from "jose";
+import { SignJWT, type CryptoKey, type JWTVerifyGetKey } from "jose";
 import type {
   DecisionEvidenceEmitter,
   DecisionEvidenceObject,
@@ -69,7 +69,7 @@ import {
   type StalenessBound,
   type StateSourcePlacement,
 } from "./runtime-posture.js";
-import { type MissionStateObservation, parseStateObservation, rfc3339Ms } from "./state-observation.js";
+import { type MissionStateObservation, parseStateObservation, rfc3339Ms, verifyStateAssertion } from "./state-observation.js";
 
 export type { EntitlementObservation, EntitlementResolver, OriginPrincipal, PrincipalMappingObservation, PrincipalMappingResolver } from "@mission/core";
 
@@ -361,6 +361,15 @@ export interface EvaluateOptions {
    * under `pep` placement.
    */
   stateObservedAt?: string;
+  /**
+   * @spec authzen#context-audience-freshness `assertion`: the declared state
+   * source's published Mission Status Response keys (the Mission issuer's
+   * status-response JWKS). A presented `assertion` is verified against these
+   * and must agree with the observation it rides in; absent, no assertion
+   * can be verified, and a request carrying one is denied rather than
+   * relied on unverified.
+   */
+  stateAssertionKeys?: JWTVerifyGetKey;
   /**
    * @spec runtime#state-freshness: allowed future clock skew for
    * `freshness_at`, seconds (default `DEFAULT_FRESHNESS_SKEW_TOLERANCE_SECONDS`).
@@ -760,6 +769,23 @@ async function evaluateInner(
     // `version`), never against `policy_view_id`, and a mismatch is
     // staleness: one side has missed a committed change.
     if (observation.version !== undefined && observation.version !== view.version) return deny("stale_state");
+    // @spec authzen#context-audience-freshness `assertion`: where the PEP
+    // carries the signed Mission Status Response, the PDP verifies it against
+    // the declared source's keys rather than trusting the unsigned snapshot.
+    // One it cannot verify, or one that disagrees with the observation,
+    // establishes nothing.
+    if (
+      observation.assertion !== undefined &&
+      !(await verifyStateAssertion(
+        { ...observation, assertion: observation.assertion },
+        { missionId: req.context.mission.id, issuer: req.context.mission.issuer, audience },
+        opts.stateAssertionKeys,
+        now(),
+        skewToleranceMs / 1000,
+      ))
+    ) {
+      return deny("stale_state");
+    }
   }
 
   // 3. Freshness against the staleness bound (@spec: stale_state).

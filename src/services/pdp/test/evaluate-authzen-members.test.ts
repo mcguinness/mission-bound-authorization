@@ -8,6 +8,7 @@
  * steps decide, and this file never skips.
  */
 
+import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { describe, expect, it } from "vitest";
 import { evaluate, type EvaluateOptions, type EvaluationRequest } from "../src/evaluate.js";
 import type { Fga } from "../src/fga.js";
@@ -154,6 +155,84 @@ describe("AuthZEN profile members (@spec authzen#pdp-request, authzen#context-au
       for (const observation of [observed(), cached("cached"), cached("event_driven")]) {
         const dec = await evaluate(observedRequest({ actionClass: "irreversible_action", observation }), options({ stateSourcePlacement: "pep" }));
         expect(dec.decision, `${observation.mode}: ${JSON.stringify(dec.context)}`).toBe(true);
+      }
+    });
+  });
+
+  // @spec authzen#context-audience-freshness `assertion`: "The signed Mission
+  // Status Response ... the PEP obtained `state` and `version` from, ... so
+  // the PDP can verify the snapshot instead of trusting an unsigned PEP
+  // assertion." The trusted source is the declared one, so the key is that
+  // source's: here, the Mission issuer's status-response key.
+  describe("a present assertion is verified against the declared state source's key", () => {
+    const issued = Math.floor(NOW.getTime() / 1000);
+    const freshUntil = new Date(NOW.getTime() + 60_000).toISOString();
+
+    async function statusKeys() {
+      const { publicKey, privateKey } = await generateKeyPair("ES256");
+      const jwk = { ...(await exportJWK(publicKey)), kid: "status-1004", alg: "ES256" };
+      return { privateKey, keys: createLocalJWKSet({ keys: [jwk] }) };
+    }
+
+    type Signing = { privateKey: CryptoKey; kid?: string; typ?: string; iss?: string; aud?: string; exp?: number; mission?: Record<string, unknown> };
+    const signStatus = (s: Signing) =>
+      new SignJWT({
+        sub: "ap-agent",
+        mission: { id: "msn_1004", issuer: "https://as.test", state: "active", version: 3, fresh_until: freshUntil, ...s.mission },
+      })
+        .setProtectedHeader({ alg: "ES256", kid: s.kid ?? "status-1004", typ: s.typ ?? "mission-status-response+jwt" })
+        .setIssuer(s.iss ?? "https://as.test")
+        .setAudience(s.aud ?? RESOURCE)
+        .setIssuedAt(issued)
+        .setExpirationTime(s.exp ?? issued + 60)
+        .sign(s.privateKey);
+
+    const withAssertion = (assertion: string, over: Record<string, unknown> = {}) =>
+      observed({
+        version: 3,
+        mode: "cached",
+        mission_status_issued_at: new Date(issued * 1000).toISOString(),
+        mission_status_expires_at: freshUntil,
+        assertion,
+        ...over,
+      });
+
+    it("a status response signed by the declared source's key and matching the observation is verified and establishes state", async () => {
+      const { privateKey, keys } = await statusKeys();
+      const dec = await evaluate(
+        observedRequest({ actionClass: "irreversible_action", observation: withAssertion(await signStatus({ privateKey })) }),
+        options({ stateSourcePlacement: "pep", stateAssertionKeys: keys }),
+      );
+      expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
+    });
+
+    it("an assertion the PDP cannot verify, or one that does not match the observation, denies stale_state", async () => {
+      const { privateKey, keys } = await statusKeys();
+      const stranger = await statusKeys();
+      const good = await signStatus({ privateKey });
+      const cases: Array<[string, Record<string, unknown>, boolean]> = [
+        ["no key declared for the source", withAssertion(good), false],
+        ["not a JWS", withAssertion("not-a-jws"), true],
+        ["signed by a key the source does not publish", withAssertion(await signStatus({ privateKey: stranger.privateKey })), true],
+        ["another media type", withAssertion(await signStatus({ privateKey, typ: "JWT" })), true],
+        ["another issuer", withAssertion(await signStatus({ privateKey, iss: "https://other-as.test" })), true],
+        ["another audience", withAssertion(await signStatus({ privateKey, aud: OTHER_RESOURCE })), true],
+        ["already expired", withAssertion(await signStatus({ privateKey, exp: issued - 60 })), true],
+        ["another Mission", withAssertion(await signStatus({ privateKey, mission: { id: "msn_other" } })), true],
+        ["a state other than the observation's", withAssertion(await signStatus({ privateKey, mission: { state: "revoked" } })), true],
+        ["a version other than the observation's", withAssertion(await signStatus({ privateKey, mission: { version: 2 } })), true],
+        ["an issuance other than mission_status_issued_at", withAssertion(good, { mission_status_issued_at: new Date((issued - 1) * 1000).toISOString() }), true],
+        ["an expiry later than its fresh_until", withAssertion(good, { mission_status_expires_at: new Date(NOW.getTime() + 61_000).toISOString() }), true],
+      ];
+      for (const [label, observation, keyed] of cases) {
+        for (const actionClass of ["consequential_write", "irreversible_action"]) {
+          const dec = await evaluate(
+            observedRequest({ actionClass, observation }),
+            options({ stateSourcePlacement: "pep", ...(keyed ? { stateAssertionKeys: keys } : {}) }),
+          );
+          expect(dec.decision, `${label} (${actionClass})`).toBe(false);
+          expect(dec.context.denial_reason, `${label} (${actionClass})`).toBe("stale_state");
+        }
       }
     });
   });

@@ -7,6 +7,8 @@
  * member.
  */
 
+import { type JWTVerifyGetKey, jwtVerify } from "jose";
+
 /**
  * The observation's members. Typed `string` where the profile names a closed
  * set or a timestamp: a value outside the set, or one that does not parse, is
@@ -87,4 +89,59 @@ export function parseStateObservation(value: unknown): ParsedStateObservation | 
     ...(expiresAtMs !== undefined ? { expiresAtMs } : {}),
     ...(typeof o.assertion === "string" ? { assertion: o.assertion } : {}),
   };
+}
+
+/** @spec status#mission-status-response: the signed Status envelope's `typ`. */
+const MISSION_STATUS_RESPONSE_TYP = "mission-status-response+jwt";
+
+/**
+ * @spec authzen#context-audience-freshness `assertion`: verify the signed
+ * Mission Status Response "the PEP obtained `state` and `version` from", so
+ * the PDP relies on the snapshot rather than on an unsigned PEP assertion.
+ * `keys` are the declared state source's published status-response keys;
+ * absent, nothing can be verified and the assertion is refused.
+ *
+ * Verified means: a JWS of the Status media type, signed by one of `keys`,
+ * issued by the Mission's issuer, audienced to this enforcement scope, not
+ * expired, naming this Mission, and agreeing with the observation it rides
+ * in: the same `state`, the same `version` where the observation names one,
+ * an `iat` equal to `mission_status_issued_at`, and a `fresh_until` no
+ * earlier than `mission_status_expires_at` ("its `mission.fresh_until`,
+ * never its `exp`, or an earlier end deployment policy sets").
+ */
+export async function verifyStateAssertion(
+  observation: ParsedStateObservation & { assertion: string },
+  expected: { missionId: string; issuer: string; audience: string },
+  keys: JWTVerifyGetKey | undefined,
+  now: Date,
+  clockToleranceSeconds: number,
+): Promise<boolean> {
+  if (keys === undefined) return false;
+  try {
+    const { payload } = await jwtVerify(observation.assertion, keys, {
+      typ: MISSION_STATUS_RESPONSE_TYP,
+      issuer: expected.issuer,
+      audience: expected.audience,
+      currentDate: now,
+      clockTolerance: clockToleranceSeconds,
+    });
+    const mission = payload.mission;
+    if (mission === null || typeof mission !== "object" || Array.isArray(mission)) return false;
+    const m = mission as Record<string, unknown>;
+    if (m.id !== expected.missionId || m.issuer !== expected.issuer || m.state !== observation.state) return false;
+    if (observation.version !== undefined && m.version !== observation.version) return false;
+    if (
+      observation.issuedAtMs !== undefined &&
+      (typeof payload.iat !== "number" || payload.iat * 1000 !== observation.issuedAtMs)
+    ) {
+      return false;
+    }
+    const freshUntilMs = rfc3339Ms(m.fresh_until);
+    if (observation.expiresAtMs !== undefined && (freshUntilMs === undefined || observation.expiresAtMs > freshUntilMs)) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
 }
