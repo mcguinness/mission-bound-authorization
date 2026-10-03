@@ -3743,6 +3743,10 @@ worked example shows the concrete record
 
 \[\[ To be removed from the final specification ]]
 
+- Out of Scope lists cross-PDP history composition other than through
+  the deployment's evidence store or registered transparency records,
+  matching History. No requirement changed.
+
 - Authority input: for every issuer-held narrowing mechanism the
   deployment runs, the PDP establishes current effective authority from
   a source reporting it and refuses when it cannot; the PDP refuses an
