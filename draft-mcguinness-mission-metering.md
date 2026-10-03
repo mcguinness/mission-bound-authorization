@@ -1047,9 +1047,12 @@ failure signal:
 
 - **Affirmative non-execution** (`outcome` `suppressed`): the action
   was permitted but affirmatively not attempted. The PDP releases
-  the reservation and returns the quantity to the counter. Within
-  the strongly consistent latch domain this same state releases an
-  exclusivity latch ({{exclusivity}}).
+  the reservation and returns the quantity to the counter. It
+  releases an exclusivity latch only when, within the strongly
+  consistent latch domain, every permitted action that matched the
+  latched selector under any Mission bound to the group is
+  affirmatively not executed ({{exclusivity}}); one suppressed action
+  never releases a latch another action exercised or still holds.
 - **Completed execution** (`outcome` `completed`): the PDP commits
   the conveyed actual quantity, or the reserved quantity where the
   class defines no actual measure, and releases any reserved excess.
