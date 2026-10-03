@@ -4,7 +4,9 @@
  * two sources: alice's and bob's delegated authority, and the organizational
  * policy, selected by Subject. The real AS assembly boots over a copy of the
  * shipped `config/` whose `authority-sources.json` shares `ap-agent` between
- * them, so the rendering under test is the one the provider serves.
+ * them, so the rendering under test is the one the provider serves. The
+ * Subject is the one the trusted approval session selected (#826); a
+ * `login_hint` concerns the Approver and selects nothing.
  */
 
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -21,6 +23,7 @@ let dir: string;
 let server: { close: () => void } | undefined;
 let agentKey: CryptoKey;
 let resource: string;
+let sessions: { establish: (uid: string, p: Record<string, unknown>) => { cookie: string } };
 const original = process.env.MISSION_CONFIG_DIR;
 
 beforeAll(async () => {
@@ -38,10 +41,12 @@ beforeAll(async () => {
   writeFileSync(file, JSON.stringify(doc, null, 2));
   process.env.MISSION_CONFIG_DIR = dir;
   vi.resetModules();
-  const { buildAuthorizationServer } = await import("../src/index.js");
+  const { ApprovalSessionStore, buildAuthorizationServer } = await import("../src/index.js");
   const { DERIVATION_POLICY } = await import("@mission/demo-data");
   resource = DERIVATION_POLICY.ceiling[0].resource as string;
-  const as = await buildAuthorizationServer({ issuer: ISSUER, allowHeadlessAdjudication: true });
+  const store = new ApprovalSessionStore();
+  sessions = store as never;
+  const as = await buildAuthorizationServer({ issuer: ISSUER, allowHeadlessAdjudication: true, approvalSessions: store });
   server = as.provider.listen(PORT);
   agentKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
 });
@@ -53,7 +58,9 @@ afterAll(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-async function render(loginHint?: string): Promise<Response> {
+/** Render the approval for `selected`, the Subject a trusted approval session
+ *  for bob selected; `loginHint` rides the PAR as the Approver hint it is. */
+async function render(selected?: string, loginHint?: string): Promise<Response> {
   const assertion = await new SignJWT({})
     .setProtectedHeader({ alg: "ES256", kid: "ap-agent-auth" })
     .setIssuer("ap-agent")
@@ -98,11 +105,16 @@ async function render(loginHint?: string): Promise<Response> {
     .map((line) => line.split(";")[0])
     .join("; ");
   const uid = (auth.headers.get("location") as string).split("/interaction/")[1] as string;
-  return fetch(`${ISSUER}/interaction/${uid}`, { headers: { cookie } });
+  const session = selected
+    ? sessions.establish(uid, { sub: "bob", acr: "password", auth_time: Math.floor(Date.now() / 1000), subject: selected })
+    : undefined;
+  return fetch(`${ISSUER}/interaction/${uid}`, {
+    headers: { cookie: session ? `${cookie}; ${session.cookie}` : cookie },
+  });
 }
 
 describe("authority source rendering for a shared agent registration (@spec mission#approval-event, mission#authority-sources, #827)", () => {
-  it("renders the source of the Subject login_hint names, and refuses to render one that depends on an unnamed Subject", async () => {
+  it("renders the source of the Subject the approval session selected, never one login_hint names, and refuses to render one that depends on an unnamed Subject", async () => {
     const delegated = await render("alice");
     expect(delegated.status).toBe(200);
     const delegatedHtml = await delegated.text();
@@ -122,5 +134,9 @@ describe("authority source rendering for a shared agent registration (@spec miss
     expect(((await unnamed.json()) as { error_description: string }).error_description).toMatch(
       /depends on the Subject/,
     );
+    // A `login_hint` names the Approver, not the Subject: with no session it
+    // selects nothing, and the rendering still refuses.
+    const hinted = await render(undefined, "acme-accounts-payable");
+    expect(hinted.status).toBe(400);
   });
 });

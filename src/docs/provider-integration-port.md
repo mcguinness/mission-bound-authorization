@@ -102,7 +102,7 @@ the store.
 | Obligation | Required for this path | Provider hook | Transaction or acceptance boundary | Permitted asynchronous work | Crash and recovery | Public-surface test | Unsupported or residual |
 |---|---|---|---|---|---|---|---|
 | Trusted approval input and achieved authentication context | Yes, both configurations | `/interaction/{uid}/decide` route, then `decide()` (§3.1) | In request, before any write; no commit of its own | None | Approval sessions and pending interactions are in memory and are lost; nothing to recover | Yes, HTTP (§3.1) | Achieved context checked, not retained; no render-to-decision binding (§3.1) |
-| Canonical Subject resolution and approve-for authorization | Yes | `decide()`: `login_hint`, `knownSubjects`, `approverApprovesFor`, `approverRoleSubs` (§3.2) | In request, before `kernel.approve` | None | Configuration only; nothing to recover | Yes, HTTP (§3.2) | External Subject unsupported and refused (§3.2) |
+| Canonical Subject resolution and approve-for authorization | Yes | `decide()`: the approval surface's Subject selection, `knownSubjects`, `approverApprovesFor`, `approverRoleSubs`; the Approver as provider account (§3.2) | In request, before `kernel.approve` | None | Configuration only; nothing to recover | Yes, HTTP (§3.2) | External Subject unsupported and refused (§3.2) |
 | Source and authority derivation | Yes | `kernel.derive`; the source gates in `kernel.approve` (§3.3) | Computed before the record transaction | None | Nothing written before §4.1 | Yes, HTTP; gate detail is kernel-level (§3.3) | Decision-time `scope` check ignores `capability_sources` (§3.3) |
 | Record and grant binding | Yes | `kernel.approve` and `insertRecord`; `grant.save()`; `kernel.bindGrant`; the code on the resume request (§3.4) | Only the record commit is transactional (§4.1); grant, binding and code are separate writes | Publication of the activating event | A crash before binding leaves an orphan `active` Mission; provider state is lost at restart (§4.5) | Partial (§3.4) | `{#approval-event}` step 7 atomicity not met; a repeated decision binds a second grant (§3.4) |
 | Issuance | Yes | `at.save()`: `extraTokenClaims`, `formats.customizers.jwt`, `access_token.issued` (§3.5) | The counter `UPDATE` autocommits before signing; no acceptance callback (§4.2) | None before delivery | The count stays consumed; nothing reconciles it (§4.3) | Yes, HTTP (§3.5) | Uncoupled counter: a failure after the count stays counted (§4.3); revoke-versus-issue window (§3.5) |
@@ -139,7 +139,7 @@ the store.
   - `approval resolution establishes identity from the surface (#759, #761) > requested authentication strength is checked against the surface context, including stale authentication`
 - **Tests (HTTP, `rar-carriage.test.ts`):**
   - `Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > same-principal: a self-approved Mission satisfies a requested acr_values`
-  - `Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > split-principal: the Approver's own achieved acr satisfies the request, the Subject's identity is irrelevant, and the token carries neither`
+  - `Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > split-principal: the Approver's authentication never becomes the Subject's: openid refuses, and the token carries the Subject and none of the Approver's authentication`
   - `Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > max_age=0 refuses a stale Approver authentication`
   - `Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > an unsupported acr is refused`
 - **Residual.**
@@ -159,9 +159,12 @@ the store.
 
 ### 3.2 Canonical Subject resolution and approve-for authorization
 
-- **Hook.** In `decide()`, the Subject is the pushed `login_hint`, else the
-  Approver. It must be in `knownSubjects`, and an Approver other than the
-  Subject must hold it in `approverApprovesFor`; otherwise 403
+- **Hook.** In `decide()`, the Subject is the selection the authenticated
+  approval surface made (`ApprovalPrincipal.subject`: recorded by the trusted
+  browser login, or named by a headless approval service on
+  `x-approval-subject`), else the Approver. `login_hint` concerns the Approver
+  and selects nothing. The Subject must be in `knownSubjects`, and an Approver
+  other than the Subject must hold it in `approverApprovesFor`; otherwise 403
   `approval_forbidden`. `buildAuthorizationServer` builds `knownSubjects` from
   the configured users and the authority-source principals, and
   `approverApprovesFor` from each user's `approves_for`. A write-bearing
@@ -173,7 +176,7 @@ the store.
 - **Asynchronous work.** None.
 - **Crash and recovery.** Configuration only; nothing to recover.
 - **Tests (HTTP):**
-  - `approval resolution establishes identity from the surface (#759, #761) > the pushed login_hint is resolved and authorized, never accepted as an arbitrary Subject` (`demo/test/approval-resolution-identity.test.ts`)
+  - `approval resolution establishes identity from the surface (#759, #761) > the Subject is the approval surface's selection, authorized for the Approver, never the client's login_hint` (`demo/test/approval-resolution-identity.test.ts`)
   - `approval resolution establishes identity from the surface (#759, #761) > write-bearing distinctness and role checks run over the resolved identities` (same file)
   - `authority source on the approval surface (@spec mission#authority-sources) > refuses access_denied at the decision when the subject discipline fails` (`rar-carriage.test.ts`)
 - **Kernel principal namespace (#829).** The kernel accepts only canonical
@@ -188,9 +191,24 @@ the store.
   reuse an event ID with a different namespace's principal. This holds for a
   direct kernel caller as well as this adapter, which always builds
   principals in the kernel's namespace.
+- **Approver and Subject identities (#826).** The provider account, Grant
+  and session are the Approver's: `interactionFinished` logs the Approver in
+  with the achieved `acr` and authentication time (transiently for a headless
+  approval, whose user agent is the client's), never the Subject. Every
+  Mission-bound access token carries the Subject: `formats.customizers.jwt`
+  sets `sub` from the Mission its grant resolves to, failing closed when it
+  no longer resolves, and refresh-token introspection reports the Subject,
+  not the token's account. `findAccount` (`accountFinder`) knows no account
+  for an id outside the deployment. `openid` asks for an ID Token about the
+  End-User this interaction authenticated: it is refused `invalid_scope`
+  before `kernel.approve` when the Approver is not the Subject, and on a
+  headless approval, where no End-User authenticated in this user agent.
+  Tests (HTTP, `approver-subject-separation.test.ts`):
+  `Approver and Subject stay separate identities (@spec mission#approval-authentication, #826)`,
+  every case.
 - **Unsupported.** External Subjects. `decide()` always records `subject.iss`
   as this AS's issuer, and there is no injective external-to-local mapping. An
-  unknown `login_hint` is refused 403 `approval_forbidden`, so nothing is
+  unknown Subject selection is refused 403 `approval_forbidden`, so nothing is
   approved under an unrecognized identity. Matching is exact string equality
   on the configured `sub` values. A deployment that admits identities from
   another namespace maps each to a canonical local principal first, through
@@ -220,9 +238,10 @@ the store.
   resolver runs, and refuses `access_denied` when the resolver is unavailable
   or answers for a different Subject, client, deployment or source.
   `kernel.approve`, Expansion and template consent each resolve once per
-  completion. The render consults the same resolver: for the `login_hint`
-  Subject, or with none through `resolveForRendering`, which answers only a
-  provenance every Subject of the client shares and otherwise refuses.
+  completion. The render consults the same resolver: for the Subject the
+  approval session selected, or with none through `resolveForRendering`,
+  which answers only a provenance every Subject of the client shares and
+  otherwise refuses.
   Gate 4's human-principal list stays kernel configuration; it can only
   refuse.
 - **Committed roots (#827).** Every Mission records the root it committed
@@ -254,7 +273,7 @@ the store.
   - `authority source on the approval surface (@spec mission#authority-sources) > refuses access_denied when the Approver may not activate the source`
   - `derivation refusal at the authorization decision (@spec mission#error-mapping) > configured-mapping mode (no proposal) that derives nothing is access_denied`
   - `derivation refusal at the authorization decision (@spec mission#error-mapping) > a submitted proposal that derives nothing is invalid_authorization_details`
-  - `authority source rendering for a shared agent registration (@spec mission#approval-event, mission#authority-sources, #827) > renders the source of the Subject login_hint names, and refuses to render one that depends on an unnamed Subject` (`authority-source-render.test.ts`)
+  - `authority source rendering for a shared agent registration (@spec mission#approval-event, mission#authority-sources, #827) > renders the source of the Subject the approval session selected, never one login_hint names, and refuses to render one that depends on an unnamed Subject` (`authority-source-render.test.ts`)
 - **Tests (kernel-level, not the public surface):**
   - `authority source establishment (@spec mission#authority-sources, mission#approval-event) > refuses access_denied when the derived Authority Set exceeds the source ceiling` (`authority-source.test.ts`)
   - `authority source establishment (@spec mission#authority-sources, mission#approval-event) > establishes the source from configuration alone: ApproveInput carries no source member` (same file)
