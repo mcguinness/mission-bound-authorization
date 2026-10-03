@@ -1,5 +1,6 @@
 /** Shared strict lineage comparisons and binding-neutral wire/config boundaries. */
 
+import { isActivationPolicyRef } from "./anchors.js";
 import type { AuthorityEntry, DelegateMatcher, TerminalWhenCondition } from "./authority-entry.js";
 import { canonicalize, type JsonValue } from "./canonicalize.js";
 import { type CapabilitySourceBinding, capabilitySourceIdentity } from "./capability-binding.js";
@@ -145,14 +146,11 @@ export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
       for (const k of ["max_children", "max_child_depth"])
         if (c[k] !== undefined && (!Number.isInteger(c[k]) || (c[k] as number) < 0)) return false;
       if (c.allowed_child_actors !== undefined && !matchers(c.allowed_child_actors)) return false;
-      // @spec child-delegation#fanout — an opaque recorded reference,
-      // compared for equal presence and byte identity ({@link
-      // childrenNoBroader}), never intersected, substituted, or dropped to
-      // manufacture a fit.
-      if (
-        c.child_creation_policy !== undefined &&
-        (typeof c.child_creation_policy !== "string" || !c.child_creation_policy.length)
-      )
+      // @spec child-delegation#fanout, mission#standing-consent-bases — an
+      // activation policy reference, compared for equal presence and identity
+      // of `id`, `version`, and `digest` ({@link childrenNoBroader}), never
+      // intersected, substituted, or dropped to manufacture a fit.
+      if (c.child_creation_policy !== undefined && !isActivationPolicyRef(c.child_creation_policy))
         return false;
     }
   }
@@ -417,8 +415,12 @@ function childPolicyIdentical(
   granted: JsonValue | undefined,
 ): boolean {
   if (candidate === undefined && granted === undefined) return true;
-  if (typeof candidate !== "string" || typeof granted !== "string") return false;
-  return candidate === granted;
+  if (!isActivationPolicyRef(candidate) || !isActivationPolicyRef(granted)) return false;
+  return (
+    candidate.id === granted.id &&
+    candidate.version === granted.version &&
+    candidate.digest === granted.digest
+  );
 }
 
 /** `children` is a GRANT: candidate introducing it where the grantor has none

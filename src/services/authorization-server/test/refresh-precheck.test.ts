@@ -21,6 +21,7 @@ import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN } from "@mission/demo-data";
 import { exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
+import { gateErrorToMissionError } from "../src/adapters/provider.js";
 import { buildAuthorizationServer, type BuiltAs } from "../src/index.js";
 
 const PORT = 14783;
@@ -241,7 +242,7 @@ describe("refresh pre-check: a refused refresh consumes nothing (@spec mission#i
     const refused = await countingRefreshSaves(() => refresh(m.refreshToken, m.keys));
     expect(refused.result.status, JSON.stringify(refused.result.body)).toBe(400);
     expect(refused.result.body.error).toBe("invalid_grant");
-    expect(refused.result.body.mission_error).toBeUndefined(); // suspended has no core value
+    expect(refused.result.body.mission_error).toBe("mission_suspended");
     expect(refused.saved).toBe(0);
     expect(derivations(m.missionId)).toBe(before);
 
@@ -267,6 +268,7 @@ describe("refresh pre-check: a refused refresh consumes nothing (@spec mission#i
     const refused = await countingRefreshSaves(() => refresh(f.refreshToken, f.keys));
     expect(refused.result.status, JSON.stringify(refused.result.body)).toBe(400);
     expect(refused.result.body.error).toBe("invalid_grant");
+    expect(refused.result.body.mission_error).toBe("mission_suspended");
     expect(refused.saved).toBe(0);
 
     await lifecycle(m.missionId, "resume");
@@ -335,5 +337,27 @@ describe("refresh pre-check: a refused refresh consumes nothing (@spec mission#i
     const after = await refresh(m.refreshToken, m.keys);
     expect(after.status).toBe(400);
     expect(after.body.error).toBe("invalid_grant");
+  });
+});
+
+describe("mission_error for Mission Status states (@spec status#mission-lifecycle-endpoint)", () => {
+  it("approval grant on a completed Mission: the refresh is refused invalid_grant with mission_completed", async () => {
+    const m = await issue();
+    // The demo's /lifecycle route also destroys the OAuth grant on a terminal
+    // transition, so a refresh would fail at the grant lookup before the
+    // Mission gate. The raw kernel transition leaves the grant for the gate.
+    expect(as.kernel.transition(m.missionId, "complete").state).toBe("completed");
+    const refused = await refresh(m.refreshToken, m.keys);
+    expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+    expect(refused.body.error).toBe("invalid_grant");
+    expect(refused.body.mission_error).toBe("mission_completed");
+  });
+
+  it("the value names the Mission's own state: a lineage refusal while its own state is active carries none", () => {
+    expect(gateErrorToMissionError("mission_not_active", "suspended")).toBe("mission_suspended");
+    expect(gateErrorToMissionError("mission_not_active", "completed")).toBe("mission_completed");
+    expect(gateErrorToMissionError("mission_not_active", "revoked")).toBe("mission_revoked");
+    expect(gateErrorToMissionError("mission_not_active", "active")).toBeUndefined();
+    expect(gateErrorToMissionError("mission_not_active", undefined)).toBeUndefined();
   });
 });

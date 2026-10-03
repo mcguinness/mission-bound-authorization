@@ -119,10 +119,9 @@ describe("shipped config/policy.json authorizes its own demo (#743)", () => {
     const decision = await evaluate(
       {
         subject: { id: "alice" },
-        resource: { type: "vendor", id: "acme", properties: { vendor_id: "acme", vendor_ids: ["acme"] } },
+        resource: { type: "vendor", id: "acme", properties: { audience: CANONICAL_RESOURCE, vendor_id: "acme", vendor_ids: ["acme"] } },
         action: { name: "payments:invoice.list" },
         context: {
-          audience: CANONICAL_RESOURCE,
           mission: { id: MISSION_ID, issuer: ISS, authority_hash: "sha-256:testhash" },
           // No context.amount: list_invoices supplies none (needsInvoice:
           // false, mcp-payments/src/pep.ts).
@@ -145,10 +144,9 @@ describe("shipped config/policy.json authorizes its own demo (#743)", () => {
     const decision = await evaluate(
       {
         subject: { id: "alice" },
-        resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
+        resource: { type: "invoice", id: "inv-1", properties: { audience: CANONICAL_RESOURCE, vendor_id: "acme" } },
         action: { name: "payments:payment.execute" },
         context: {
-          audience: CANONICAL_RESOURCE,
           mission: { id: MISSION_ID, issuer: ISS, authority_hash: "sha-256:testhash" },
           // No context.amount: a bound max_amount the PDP cannot evaluate
           // MUST refuse (#733), never fall through as unenforced. This

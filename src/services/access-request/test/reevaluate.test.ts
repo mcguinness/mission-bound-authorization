@@ -103,15 +103,14 @@ d("M6 ARAP reevaluate (scenario 5)", () => {
       fga,
       modelId,
       // @spec runtime#state-freshness: a synchronous live read, freshness-
-      // stamped at this read (Finding 1); "load_view" declared trusted below.
+      // stamped at this read (Finding 1), under the published `pep` placement.
       // Implements the canonical (issuer, id) tuple contract (@spec
       // authority-server#reference-tuple, #685 review).
       loadView: (ref) =>
         ref.id === VIEW.id && ref.issuer === VIEW.issuer
-          ? { view: VIEW, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+          ? { view: VIEW, observation: { state: VIEW.state, version: VIEW.version, mode: "fresh", freshness_at: new Date().toISOString() } }
           : undefined,
       instanceEpoch: "epoch-1",
-      allowedFreshnessSources: new Set(["load_view"]),
       // Deployment policy: irreversible execute requires an action-bound approval.
       requiresActionApproval: (_action, cls) => cls === "irreversible_action",
       maxApprovalAgeSeconds: 300,

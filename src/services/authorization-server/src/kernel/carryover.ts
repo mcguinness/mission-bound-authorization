@@ -1437,8 +1437,14 @@ export function applyCarryoverInCallerTx(
       );
     }
     // Source ACTIVATION and source CEILING, both re-run: a `direct`-basis
-    // replacement is an activation, not a bare drawdown.
+    // replacement is an activation, not a bare drawdown. The root is the
+    // committed root of the rendered origin (#827): the old child's, or the
+    // successor's when that change was explicitly rendered and committed.
+    const originRoot = kernel.committedSourceBinding(
+      proposal.authority_source_origin === "old_child" ? oldChild.id : newParent.id,
+    );
     kernel.assertRenderedAuthoritySource({
+      binding: originRoot,
       source: proposal.authority_source,
       subject: successor.subject,
       approver: input.approver,
@@ -1566,7 +1572,10 @@ export function applyCarryoverInCallerTx(
     // @spec discharge#discharge-authority — a carried condition does not first
     // enter the replacement: its discharge-authority pin is the old child's,
     // inherited through the pairing, never resolved again.
-    kernel.insertRecord(record, undefined, { inheritPinsFrom: { missionId: oldChild.id, pairs } });
+    kernel.insertRecord(record, undefined, {
+      inheritPinsFrom: { missionId: oldChild.id, pairs },
+      source: { inherited: originRoot },
+    });
     entryPairsOf.set(entry.child_id, pairs);
     // @spec child-delegation#carryover-no-reset — the transaction-participating
     // external transfer. A throw here rolls the whole batch back, records

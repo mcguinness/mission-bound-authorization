@@ -54,6 +54,8 @@ Rules every agent follows:
 - Never propose merging drafts (see Consolidation Policy). Prefer an
   existing OAuth or JOSE surface over a new endpoint or metadata
   member.
+- Before opening a sketch PR for a new draft, apply CONTRIBUTING.md's
+  New Draft Admission test and put its answers in the PR body.
 
 ## Pull requests and merging
 

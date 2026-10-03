@@ -31,7 +31,8 @@ informative:
     author:
       - org: A2A Project
     date: 2026
-  I-D.draft-zehavi-oauth-rar-metadata:
+  I-D.draft-ietf-oauth-rar-metadata-remediation:
+  RFC9728:
   I-D.draft-mcguinness-mission-metering:
     title: "Mission Consumption Metering"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html
@@ -698,6 +699,50 @@ treats every state other than the exact value `active`, including one it
 does not recognize, as non-active, so an unrecognized state fails safe
 (the OAuth binding's Mission Lifecycle and Gating section).
 
+In OAuth's names, authority then moves along one path from the approval
+event to an action, and no stage holds more than the stage before it:
+
+~~~
+ approval basis
+       |
+       | adjudication
+       v
+ approval event
+       |
+       v
+ Approved Authority Set (anchored, immutable)
+       |
+       | containment, discharge: subtract only
+       v
+ Effective Authority Set --child creation--> new approval event
+       |               |                     for a Child Mission
+       | derivation:   |
+       | subset rule   | current set
+       v               |
+ derived credential    |
+       |               |
+       v               v
+ runtime decision, where deployed
+ (with action parameters and lifecycle state)
+       |
+       v
+ action
+~~~
+{: #authority-path title="The authority path, in OAuth's names"}
+
+The lifecycle gate sits beside the path, not on it: only `active`
+permits issuance, refresh, and a new positive governance decision, and
+`resume` reopens a suspended Mission's gate without changing either set
+({{I-D.draft-mcguinness-oauth-mission-status}}). Widening and
+restoration never happen in place; a new approval event creates a
+successor ({{I-D.draft-mcguinness-oauth-mission-expansion}}). The
+runtime decision takes the current Effective Authority Set as its own
+input, so narrowing applied after issuance binds there
+({{I-D.draft-mcguinness-mission-runtime}}). Where no runtime decision is
+deployed, a resource relies on the credential alone, and the
+materialized-credential residual remains ({{validity-model}}).
+{{authority-transitions}} places each mechanism on this path.
+
 AAuth realizes the separation differently. Its exact-byte `s256`
 commits the private approved mission blob. The approving PS and `s256`
 are the Mission Reference, AAuth's mission identity (Section 8.2.1 of
@@ -1252,6 +1297,30 @@ document can serve more than one package, and the document map
 | analyze | `mission-security-model`, `mission-aam`, this document | all five |
 {: #packages title="The verb spine: owning documents and packages"}
 
+The same mechanisms, placed on the authority path
+({{authority-path}}) by the transition each acts on:
+
+| Mechanism | What it changes | Home |
+| --- | --- | --- |
+| Direct approval | a proposal to an approval event (`direct` basis) | `oauth-mission` |
+| Template dispatch | a template ceiling to an approval event (`template` basis) | `oauth-mission-template` |
+| Expansion | a freshly adjudicated successor Authority Set, for widening or restoration | `oauth-mission-expansion` |
+| Progressive authorization | an Expansion successor adjudicated by policy within a pre-consented ceiling (`ceiling_drawdown` basis) | `oauth-mission-progressive` |
+| Containment | narrows the Effective Authority Set; restored only through an Expansion successor | `oauth-mission-containment` |
+| Discharge | narrows the Effective Authority Set; the entry is spent | `oauth-mission-discharge` |
+| Suspend and resume | closes and reopens the lifecycle gate; neither set changes | `oauth-mission-status` |
+| Revoke, complete, expire | closes the lifecycle gate terminally | `oauth-mission`, `oauth-mission-status` |
+| Issuance and refresh | the Effective Authority Set to a derived credential | `oauth-mission` |
+| Issuance grant | an Effective subset handed to a consuming AS | `oauth-mission-issuance-grant` |
+| Derivation limits | bounds how many derivations the Effective Authority Set yields | `oauth-mission-derivation-limits` |
+| Attenuation | a derived credential to a narrower one, offline | `oauth-mission-attenuation` |
+| Child delegation | a new Child Mission approval event bounded by the parent's Effective Authority Set (`direct` or `policy_drawdown` basis) | `oauth-mission-child-delegation` |
+| Cross-domain projection | a derived subset honored as a destination-local credential | `oauth-mission-cross-domain` |
+| Runtime decision | credential authority, the current Effective Authority Set, and state to a per-action decision | `mission-runtime`, `mission-authzen` |
+| Deferred approval, approval revision, approval governance | how an approval event is reached; no transition of their own | `oauth-mission-approval`, `oauth-mission-approval-revision`, `mission-approval-governance` |
+| Evidence, continuation, work products | record or carry a transition; move no authority | `oauth-mission-consent-evidence`, `mission-runtime-evidence`, `mission-audit`, `oauth-mission-continuation`, `oauth-mission-work-products` |
+{: #authority-transitions title="The transition each mechanism acts on"}
+
 ## Propose
 
 The question: how does a user's request become a candidate approved
@@ -1548,7 +1617,8 @@ capability, so they are not baseline AAuth Mission Context properties.
 
 **Authority only narrows**:
 : Derived tokens, delegated child Missions, attenuated tokens, and
-  cross-domain projections carry subsets; widening exists only as an
+  cross-domain projections carry subsets ({{authority-path}}); widening
+  exists only as an
   approved successor: a fresh approval
   ({{I-D.draft-mcguinness-oauth-mission-expansion}}), or policy drawdown
   within a ceiling a human pre-consented
@@ -1736,10 +1806,12 @@ derivation consumes the declared operations as candidate vocabulary
 resource-authored material, and the declaration's digest rides the
 derived authority (the progressive companion's
 `resource_declaration_digest`,
-{{I-D.draft-mcguinness-oauth-mission-progressive}}). Proposed RAR-type
-metadata ({{I-D.draft-zehavi-oauth-rar-metadata}}), a resource
-publishing the `authorization_details` types and fields it understands,
-is the OAuth-native descriptive surface the direction builds on.
+{{I-D.draft-mcguinness-oauth-mission-progressive}}). The OAuth-native
+descriptive surfaces the direction builds on are an authorization
+server's RAR type metadata, the schema and documentation of each type
+it supports ({{I-D.draft-ietf-oauth-rar-metadata-remediation}}), and a
+protected resource's `authorization_details_types_supported`
+({{RFC9728}}).
 
 In AAuth, R3 can describe deterministic resource authorization
 independently of mission approval; the PS considers the resource request
@@ -2146,6 +2218,20 @@ The differences that decide a design:
 A MAS deployment does not provide AS-native semantics just because both
 hold the same Mission, so a comparison of deployments compares their
 architectures first.
+
+One Mission can govern authority issued by several authorization
+servers. Its Controller need not issue each credential, and each server
+may know the same participant by its own client identifier. The owning
+Mission Issuer records how those identifiers relate: the MAS in its
+mapping contract, and each issuance grant's `client_id` as the
+consuming AS knows it
+({{I-D.draft-mcguinness-mission-authority-server}},
+{{I-D.draft-mcguinness-oauth-mission-issuance-grant}}). Identifier
+equality is therefore neither required nor sufficient for participant
+continuity: the kernel requires no `client_id` and no subset relation
+across administrative or protocol boundaries
+({{I-D.draft-mcguinness-mission-substrate}}), and a `client_id` shared
+by several workloads is a join residual the MAS states.
 
 The OAuth binding stacks two independent chokepoints. Issuance gating
 acts at the token layer: a revoked or expired Mission stops all further
@@ -3731,6 +3817,21 @@ bound profiled by `aauth-mission-expiry`.
   output in derivation is a recorded input that can refuse or narrow,
   never supply or widen, with no change to any profile's
   requirements.
+
+- The authority path, with no change to any profile's requirements.
+  The Mission adds a figure from approval basis to action, with the
+  lifecycle gate beside the path, child creation as a new approval
+  event, and the current Effective Authority Set as a separate runtime
+  input; the Mission Verbs adds a table placing each mechanism on the
+  transition it acts on; and Binding Security Architectures states
+  that one Mission can span authorization servers whose client
+  identifiers differ, related through the owning Mission Issuer's
+  recorded mappings.
+
+- The RAR metadata citation names the working-group successor
+  draft-ietf-oauth-rar-metadata-remediation and separates an
+  authorization server's type metadata from a protected resource's
+  RFC 9728 `authorization_details_types_supported`.
 
 - Approve and Record names the three approval roles (derivation,
   adjudication, accountability) and summarizes the OAuth binding's

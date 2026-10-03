@@ -263,7 +263,7 @@ declaration or an exercised path, with its gated rows.
 | `runtime.agent-isolated-evidence-emission` | Exercised in part: the PEP holds no Decision Evidence emitter (§4) | partial: `runtime.evidence-emission.no-caller-supplied-record-or-relabeling`, `runtime.negative-conformance.evidence-emission-should-demonstrate`; todo: `runtime.evidence-emission.isolated-construction-condition`, `runtime.evidence-emission.should-cover-every-high-consequence-emitter`, `runtime.evidence-emission.no-fallback-on-signer-unavailability`, `runtime.evidence-emission.no-misrepresenting-continuous-satisfaction` |
 | `authzen.runtime-evidence` | Exercised in part: one Execution Evidence record per permit | tested: `authzen.execution-evidence.exactly-one-per-permit`; todo: `authzen.execution-evidence.failure-durably-recorded`, `authzen.execution-evidence.reserve-capacity-and-fail-closed`, `authzen.conformance.pep-checklist-runtime-evidence`, `authzen.conformance.pdp-checklist-runtime-evidence` |
 | `containment.narrowing` (Runtime rows) | Exercised: contained authority denies `authority_contained` | tested: `runtime.decision-inputs.containment-excludes-authority`; todo: `runtime.decision-inputs.containment-narrowing-source`, `runtime.state-freshness.containment-tightening-requires-containment-aware-source` |
-| `mas.baseline-join` | Exercised on the MAS-governed route (§3 finding B). Every gated row is tested, but the statement does not declare the route, so it is recorded as exercised, outside the declared scope | tested: `mas.baseline-join.reference-required`, `mas.baseline-join.subject-join`, `mas.baseline-join.client-join`, `mas.baseline-join.delegate-narrowing`, `mas.baseline-join.no-fallback-denial`, `mas.baseline-join.authority-from-mission`, `mas.baseline-join.three-bound-intersection`, `mas.baseline-join.join-view-commitment` |
+| `mas.baseline-join` | Exercised on the MAS-governed route (§3 finding B). Every PEP and PDP row is tested; the two MAS join-disclosure rows are todo because the composition has no MAS Mission Status surface (#972). The statement does not declare the route, so it is recorded as exercised, outside the declared scope | tested: `mas.baseline-join.reference-required`, `mas.baseline-join.subject-join`, `mas.baseline-join.client-join`, `mas.baseline-join.delegate-narrowing`, `mas.baseline-join.no-fallback-denial`, `mas.baseline-join.authority-from-mission`, `mas.baseline-join.three-bound-intersection`, `mas.baseline-join.join-view-commitment`, `mas.join-inputs.pep-carries-member`, `mas.join-inputs.mission-bound-never-carries`, `mas.join-inputs.presence-marks-join`; todo: `mas.join-disclosure.members`, `mas.join-disclosure.not-to-others` |
 
 Not exercised by this composition:
 
@@ -272,6 +272,8 @@ Not exercised by this composition:
   `runtime.instance-context` (2), `runtime.semantic-evaluator`,
   `runtime.taint-enforcement` and `runtime.break-glass` (1 each). The loader
   refuses any break-glass value other than `absent` (`loadRuntimePosture`).
+- `mas.join-assertion` (13 rows, all `todo`): the composition has no Join
+  Assertion endpoint or consumer, so the capability is unclaimed (#972).
 - `runtime.compromise-resistant` (1 tested, 3 partial, 7 todo) and
   `runtime.trifecta-containment` (1 tested, 2 todo): their tested rows cite
   the agent harness (`src/services/agent/test/`), not this composition.

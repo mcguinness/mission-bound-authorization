@@ -20,8 +20,9 @@
  * dispatcher supplies (from `kernel.get`); see {@link activeInstanceCount}.
  */
 
+import type { ActivationPolicyRef } from "@mission/core";
 import { openStore, UniqueViolationError, withTransaction, type Database } from "@mission/store";
-import { parseAuthoritySource } from "./authority-source.js";
+import { type AuthoritySourceBinding, parseAuthoritySource } from "./authority-source.js";
 import type { AuthorityEntry, AuthoritySource } from "./types.js";
 
 /**
@@ -46,7 +47,7 @@ CREATE TABLE templates (
   approver_sub TEXT NOT NULL,
   authority_source_json TEXT NOT NULL,
   ceiling_json TEXT NOT NULL,
-  dispatch_policy TEXT NOT NULL,
+  dispatch_policy_json TEXT NOT NULL,
   dispatchers_json TEXT NOT NULL,
   recipients_json TEXT NOT NULL,
   per_instance_lifetime_s INTEGER NOT NULL,
@@ -58,6 +59,14 @@ CREATE TABLE templates (
   expires_at TEXT NOT NULL,
   state TEXT NOT NULL,
   created_at TEXT NOT NULL
+) STRICT;
+CREATE TABLE template_source_bindings (
+  template_id TEXT NOT NULL,
+  subject_iss TEXT NOT NULL,
+  subject_sub TEXT NOT NULL,
+  agent TEXT NOT NULL,
+  binding_json TEXT NOT NULL,
+  PRIMARY KEY (template_id, subject_iss, subject_sub, agent)
 ) STRICT;
 CREATE TABLE dispatch_events (
   dispatch_event_id TEXT PRIMARY KEY,
@@ -92,8 +101,12 @@ export interface MissionTemplate {
   authority_source: AuthoritySource;
   /** The template ceiling: one side of the double intersection at dispatch. */
   ceiling: AuthorityEntry[];
-  /** Opaque dispatch policy identifier (audit / lineage only). */
-  dispatch_policy: string;
+  /**
+   * @spec mission-template#the-mission-template, mission#standing-consent-bases
+   * — the Dispatch Policy as an activation policy reference (`id`, `version`,
+   * `digest`), inside `template_hash`; Dispatch verifies `digest` first.
+   */
+  dispatch_policy: ActivationPolicyRef;
   /** Actors permitted to dispatch instances from this template. */
   dispatchers: string[];
   /** `allowed_recipients`: Subjects and Agents (an Agent becomes the instance `client_id`). */
@@ -113,6 +126,19 @@ export interface MissionTemplate {
   created_at: string;
 }
 
+/**
+ * @spec mission#authority-sources (#827): the root one recipient pair (a
+ * listed Subject through a listed Agent) resolved at template consent. A
+ * dispatch for that Subject through that Agent inherits exactly this root,
+ * never another recipient's through a shared registration. Provenance, like
+ * `authority_source`, so it is outside `template_hash`.
+ */
+export interface TemplateSourceBinding {
+  subject: { iss: string; sub: string };
+  agent: string;
+  binding: AuthoritySourceBinding;
+}
+
 /** The fields {@link createTemplate} computes and persists; the store stamps
  *  `state` (`active`) and `created_at`. */
 export interface TemplateCreate {
@@ -121,8 +147,10 @@ export interface TemplateCreate {
   issuer: string;
   approver: { iss: string; sub: string };
   authority_source: AuthoritySource;
+  /** One committed root per recipient pair (#827). */
+  source_bindings: TemplateSourceBinding[];
   ceiling: AuthorityEntry[];
-  dispatch_policy: string;
+  dispatch_policy: ActivationPolicyRef;
   dispatchers: string[];
   recipients: TemplateRecipients;
   per_instance_lifetime_s: number;
@@ -142,7 +170,7 @@ interface TemplateRow {
   approver_sub: string;
   authority_source_json: string;
   ceiling_json: string;
-  dispatch_policy: string;
+  dispatch_policy_json: string;
   dispatchers_json: string;
   recipients_json: string;
   per_instance_lifetime_s: number;
@@ -169,7 +197,7 @@ function rowToTemplate(row: TemplateRow): MissionTemplate {
       `template ${row.id}`,
     ),
     ceiling: JSON.parse(row.ceiling_json) as AuthorityEntry[],
-    dispatch_policy: row.dispatch_policy,
+    dispatch_policy: JSON.parse(row.dispatch_policy_json) as ActivationPolicyRef,
     dispatchers: JSON.parse(row.dispatchers_json) as string[],
     recipients: JSON.parse(row.recipients_json) as TemplateRecipients,
     per_instance_lifetime_s: row.per_instance_lifetime_s,
@@ -209,7 +237,7 @@ export class TemplateStore {
         this.db
           .prepare(
             `INSERT INTO templates (id, template_version, issuer, approver_iss, approver_sub,
-             authority_source_json, ceiling_json, dispatch_policy, dispatchers_json,
+             authority_source_json, ceiling_json, dispatch_policy_json, dispatchers_json,
              recipients_json, per_instance_lifetime_s, max_active, rate_per_min, review_cadence_s,
              template_hash, approval_event_id, expires_at, state, created_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)`,
@@ -222,7 +250,7 @@ export class TemplateStore {
             input.approver.sub,
             JSON.stringify(input.authority_source),
             JSON.stringify(input.ceiling),
-            input.dispatch_policy,
+            JSON.stringify(input.dispatch_policy),
             JSON.stringify(input.dispatchers),
             JSON.stringify(input.recipients),
             input.per_instance_lifetime_s,
@@ -234,6 +262,18 @@ export class TemplateStore {
             input.expires_at,
             this.now().toISOString(),
           );
+        // @spec mission#authority-sources (#827): every recipient pair's
+        // root, in the same transaction as the template it was consented for.
+        // A recipient listed twice is one pair, resolved to one root, so a
+        // repeat is the same row (ON CONFLICT DO NOTHING keeps the first).
+        const bind = this.db.prepare(
+          `INSERT INTO template_source_bindings (template_id, subject_iss, subject_sub, agent, binding_json)
+           VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT DO NOTHING`,
+        );
+        for (const pair of input.source_bindings) {
+          bind.run(input.id, pair.subject.iss, pair.subject.sub, pair.agent, JSON.stringify(pair.binding));
+        }
       });
     } catch (e) {
       if (e instanceof UniqueViolationError) {
@@ -260,6 +300,29 @@ export class TemplateStore {
       .prepare("SELECT * FROM templates WHERE approval_event_id = ?")
       .get(approvalEventId) as TemplateRow | undefined;
     return row ? rowToTemplate(row) : undefined;
+  }
+
+  /**
+   * @spec mission#authority-sources (#827): the root a recipient pair
+   * committed at consent, or undefined for a pair the template never listed.
+   */
+  sourceBinding(
+    templateId: string,
+    subject: { iss: string; sub: string },
+    agent: string,
+  ): AuthoritySourceBinding | undefined {
+    const row = this.db
+      .prepare(
+        `SELECT binding_json FROM template_source_bindings
+         WHERE template_id = ? AND subject_iss = ? AND subject_sub = ? AND agent = ?`,
+      )
+      .get(templateId, subject.iss, subject.sub, agent) as { binding_json: string } | undefined;
+    if (!row) return undefined;
+    const raw = JSON.parse(row.binding_json) as AuthoritySourceBinding;
+    return Object.freeze({
+      ...raw,
+      provenance: parseAuthoritySource(raw.provenance, `template ${templateId} recipient binding`),
+    });
   }
 
   /** Withdraw consent: a revoked template refuses every subsequent dispatch. */

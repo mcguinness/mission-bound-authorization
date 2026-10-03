@@ -15,7 +15,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import type { AuthorityEntry, Fga, MissionView } from "@mission/pdp";
+import type { AuthorityEntry, DecisionFn, EvaluationRequest, Fga, MissionView } from "@mission/pdp";
 import {
   ActorRecords,
   CANONICAL_RESOURCE,
@@ -64,7 +64,7 @@ const view: MissionView = {
 
 const loadViewFor = (v: MissionView) => (ref: { id: string; issuer: string }) =>
   ref.id === v.id && ref.issuer === v.issuer
-    ? { view: v, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+    ? { view: v, observation: { state: v.state, version: v.version, mode: "fresh", freshness_at: new Date().toISOString() } }
     : undefined;
 
 const FULL_AUTHORITY: () => AuthorityEntry[] | undefined = () => [
@@ -83,7 +83,6 @@ function build(overrides: Partial<PepDeps> = {}, viewOverride: MissionView = vie
     modelId: "unit-test-model",
     loadView: loadViewFor(viewOverride),
     instanceEpoch: "epoch-1",
-    allowedFreshnessSources: new Set(["load_view"]),
     ...overrides,
   });
 }
@@ -442,5 +441,67 @@ describe("baseline MAS Join: the Mission-bound path is unaffected (@spec authori
     const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, missionBoundToken);
     expect(res.permitted, JSON.stringify(res)).toBe(true);
     expect(res.resolvedMission).toEqual({ id: missionId, issuer: ISSUER, authority_hash: "sha-256:hash557" });
+  });
+});
+
+// @spec authority-server#join-authzen (#972 item 2): the PEP's decision
+// request is captured here, not inferred from the PDP's verdict, so the
+// assertions below are about the member itself.
+function capturingDecide(): { decide: DecisionFn; requests: EvaluationRequest[] } {
+  const requests: EvaluationRequest[] = [];
+  return {
+    requests,
+    decide: async (req, opts) => {
+      requests.push(req);
+      return EVIDENCE_KEYS.decide(req, opts);
+    },
+  };
+}
+
+describe("baseline MAS Join: context.mission_join carriage (@spec authority-server#join-authzen)", () => {
+  it("carries context.mission_join on a joined delegate decision, with the actor-record depth as delegate_depth", async () => {
+    const SHALLOW_DELEGABLE_ENTRY: AuthorityEntry = {
+      type: "mission_resource_access",
+      resource: CANONICAL_RESOURCE,
+      actions: [READ],
+      join_delegation: { max_depth: 0, allowed_delegates: ["delegate-client"] },
+    };
+    const capture = capturingDecide();
+    const pep = build(
+      {
+        decide: capture.decide,
+        masJoin: {
+          delegatePolicy: { delegates: { "delegate-client": {} } },
+          resolveOrdinaryAuthority: FULL_AUTHORITY,
+          resolveDelegateDepth: () => 0,
+        },
+      },
+      { ...view, authority_set: [DIRECT_ENTRY, SHALLOW_DELEGABLE_ENTRY] },
+    );
+    const delegateToken: TokenFacts = { ...ORDINARY_TOKEN, clientId: "delegate-client" };
+    await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, delegateToken, undefined, {
+      missionReference: REFERENCE,
+    });
+    expect(capture.requests.length).toBeGreaterThan(0);
+    for (const req of capture.requests) {
+      expect(req.context.mission_join).toEqual({ delegate_depth: 0 });
+    }
+  });
+
+  it("carries no context.mission_join on a Mission-bound decision", async () => {
+    const capture = capturingDecide();
+    const pep = build({ decide: capture.decide, masJoin: { resolveOrdinaryAuthority: FULL_AUTHORITY } });
+    const missionBoundToken: TokenFacts = {
+      sub: "alice",
+      clientId: "ap-agent",
+      iss: ISSUER,
+      mission: { id: missionId, issuer: ISSUER, authority_hash: "sha-256:hash557" },
+      cnfJkt: "jkt-1",
+    };
+    await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, missionBoundToken);
+    expect(capture.requests.length).toBeGreaterThan(0);
+    for (const req of capture.requests) {
+      expect(req.context.mission_join).toBeUndefined();
+    }
   });
 });
