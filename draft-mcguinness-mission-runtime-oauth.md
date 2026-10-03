@@ -260,16 +260,18 @@ validated credential context ({{claims-mapping}}).
 For an action in a high-consequence class, the runtime core requires a
 sender-constrained acting credential
 ({{I-D.draft-mcguinness-mission-runtime}}, Section "Credential Custody
-and Mediated Execution"). In OAuth that is an access token whose `cnf`
-member binds either a DPoP key (`cnf.jkt`), presented with a DPoP proof
+and Mediated Execution"). The `cnf` claim of a validated JWT, or the
+`cnf` member of the introspection response for an opaque token
+({{Section 6.2 of RFC9449}}, {{Section 3.2 of RFC8705}}), supplies the
+sender-constraint binding: a DPoP key (`jkt`), proved with a DPoP proof
 checked per {{Section 7.1 of RFC9449}}, or a client certificate
-(`cnf.x5t#S256`), presented over mutual TLS per
-{{Section 3 of RFC8705}}. An access token without a `cnf` member is a
-bearer token and does not meet that requirement, and a `cnf` member
-whose proof the PEP has not verified for the request supplies no
-confirmation key to the decision. The requirement attaches to the
-action's class, not to issuance: the issuance profile's level for the
-primary access token is unchanged
+thumbprint (`x5t#S256`), proved over mutual TLS per
+{{Section 3 of RFC8705}}. An access token whose validated credential
+context carries no such binding is a bearer token and does not meet that
+requirement, and a binding whose proof the PEP has not verified for the
+request supplies no confirmation key to the decision. The requirement
+attaches to the action's class, not to issuance: the issuance profile's
+level for the primary access token is unchanged
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission-Bound Access
 Tokens").
 
@@ -647,9 +649,10 @@ The Mission-bound token claims this document maps are registered by
 
 - Establishing Validated Credential Context: the OAuth realization of
   the runtime core's sender-constraint requirement for high-consequence
-  actions (a DPoP-bound or certificate-bound access token whose proof
-  the PEP verified; no `cnf` member is a bearer token). Adds RFC 8705
-  and RFC 9449 as normative references.
+  actions: the `cnf` binding of the validated credential context (a
+  JWT's claim, or an opaque token's introspection response), with a
+  proof the PEP verified; a context with no binding is a bearer token.
+  Adds RFC 8705 and RFC 9449 as normative references.
 
 # Acknowledgments
 {:numbered="false"}

@@ -11822,7 +11822,7 @@
    "id": "runtime.token-validation.no-cnf-is-bearer-for-high-consequence",
    "spec": "draft-mcguinness-mission-runtime-oauth.md",
    "anchor": "token-validation",
-   "text": "An access token without a `cnf` member is a bearer token and does not meet that requirement",
+   "text": "An access token whose validated credential context carries no such binding is a bearer token and does not meet that requirement",
    "role": "PEP",
    "strength": "stated",
    "applicability": {
@@ -11834,7 +11834,7 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "a high-consequence action presented with an access token that has no cnf member, or whose DPoP or mTLS proof the PEP did not verify for the request, is refused"
+    "normative": "a high-consequence action is refused when the validated credential context (the cnf claim of a validated JWT, or the cnf member of an opaque token's introspection response) carries no sender-constraint binding, or carries one whose DPoP or mTLS proof the PEP did not verify for the request"
    },
    "level": "endpoint",
    "coverage": "todo",
