@@ -2499,9 +2499,9 @@ Failure behavior is uniformly fail-closed. An unresolvable Mission, a
 stale or failed Status response, a join failure (`mission_mismatch`,
 never a fallback), an unknown or malformed authority-detail type, and
 an incomparable or invalid constraint each refuse the evaluation
-rather than comparing best-effort. A Join Assertion that fails
-validation is an absent assertion, never a downgrade to an unverified
-join.
+rather than comparing best-effort. A PDP that consumes a Join
+Assertion and finds it invalid denies with `mission_mismatch`
+({{join-assertion-pdp}}), never falling back to the mapping join.
 
 The following qualifications apply to individual rows:
 
