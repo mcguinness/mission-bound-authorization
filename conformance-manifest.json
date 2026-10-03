@@ -75,8 +75,8 @@
     "content_sha256": "055d460354f9c98d981f74ce661daa606685695bedd42d04a31981158f8389d7"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "22cd16a360c79d98439b2dce02dfa3c02dc22f1f",
-    "content_sha256": "c31083a7b057d7086cecae0ed7820085140b2e03e0d5744995424557801060c1"
+    "revision": "7bb182b0caae732be5813431f4c5ad6406eafaf7",
+    "content_sha256": "b58add3277fa19af45e37df3b380e66fd833392ca7efda1170f656132cb48fb6"
    },
    "draft-mcguinness-mission-orchestration.md": {
     "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
@@ -95,12 +95,12 @@
     "content_sha256": "7747cec83e69020dce2611fd99172fbe14034d776ba68c9b64cdca9fd410d94f"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "22cd16a360c79d98439b2dce02dfa3c02dc22f1f",
-    "content_sha256": "08e29eee9728517c02ca3aa1e78ae6aadf19d059ebb701ea99645f40a1a15c9f"
+    "revision": "7bb182b0caae732be5813431f4c5ad6406eafaf7",
+    "content_sha256": "3d99176b70a7d440c8588863dc35d0f33defd7a5e3807947003767b93166168e"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "e94523acb87b0d9b5e06be19a9b0c17f86949639",
-    "content_sha256": "b2076277d13fdc3e02b1a2678ea1b5cc2b437b0220d96fc2eef4de51dd780e1f"
+    "revision": "7bb182b0caae732be5813431f4c5ad6406eafaf7",
+    "content_sha256": "ca64142309f66877d2142dd8e049e53d31688dc4bad707e726a07090694088db"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "02c1fcf62e9f4fd3aad0df84d6ccabd6ebd7ce0d",
@@ -24701,6 +24701,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Owner ruling on #1026 and #1000 (2026-10-02). No implementation yet."
+  },
+  {
+   "id": "progressive.in-ceiling.synchronous-completion-commits-before-response",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "in-ceiling-expansion",
+   "text": "The Mission Issuer MUST commit the successor's activation, the predecessor's supersession, and the creation reservation, applying the expansion profile's activation checks in that same atomic step, before it delivers the response",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A drawdown that passes every policy-adjudication guard is answered in the token-exchange response with the successor's access token; by the time the response is delivered the successor is active, the predecessor is superseded, and the creation reservation is committed, and a retry with the same creation_request_id recovers that successor rather than creating another. A drawdown that falls back to a fresh human approval completes deferred or interactively instead."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#998 option (a), endorsed by owner review 2026-10-02. No Progressive implementation yet."
   },
   {
    "id": "cross-domain.delegation-depth.composed-bound-disclosure",
