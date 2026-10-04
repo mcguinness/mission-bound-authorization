@@ -592,7 +592,9 @@ Under the OAuth binding, an operator gives an agent the task
    ({{I-D.draft-mcguinness-mission-harness}},
    {{I-D.draft-mcguinness-mission-orchestration}}); a token no
    state-aware gate reaches runs to its own expiry
-   ({{validity-model}}).
+   ({{validity-model}}). Mediated actions under a permit already issued
+   stop within the staleness bound plus the permit window and the
+   class's execution bound ({{I-D.draft-mcguinness-mission-runtime}}).
 8. **Prove.** The record, anchors, evidence, and receipts let an
    auditor reconstruct what was approved, shown, decided, and done,
    and a Mandate carries the committed facts to parties outside the
@@ -725,10 +727,10 @@ except for its state (the Mission Record section).
 
 In the OAuth binding the lifecycle states are `active`, `revoked`,
 and `expired`, and only `active` permits issuance or a new positive
-governance decision. A non-active state stops new derivation at once;
-authority already issued ends at the earliest of delivered
-revocation, a runtime or state-aware re-check, or the credential's
-own expiry ({{validity-model}}).
+governance decision. A non-active state stops further derivation and
+refresh at once. A credential already issued ends at the earliest of an
+applicable revocation, a state-aware or runtime check that reaches it,
+or its own expiry ({{validity-model}}).
 
 Companions add states (`suspended`, `completed`, `superseded`,
 `cascaded`). One rule keeps these additions safe without a registry: a
@@ -1788,9 +1790,10 @@ not baseline AAuth Mission Context properties.
 
 **Revocation is possession-independent**:
 : A Mission ends by a state change at its issuer, not by finding and
-  destroying credentials; outstanding credentials meet the issuance
-  gate, the runtime re-check, or their own expiry, whichever comes
-  first ({{validity-model}};
+  destroying credentials. Where the binding gates issuance, further
+  derivation and refresh stop at once; an outstanding credential ends
+  at the earliest of an applicable revocation, a state-aware or runtime
+  check that reaches it, or its own expiry ({{validity-model}};
   {{I-D.draft-mcguinness-oauth-mission-status}}).
 
 **Attribution is carried, never inferred**:
@@ -2944,7 +2947,7 @@ needs the whole matrix:
 | Control | Stops | Home |
 |---|---|---|
 | Capability kill | one capability within one Mission and the Child Missions it justifies: new derivation at once at commit; credentials already materialized under it run to their own bound unless a containment-aware action-time gate reaches them first ({{kill-switch-composition}}); the body of work still runs | the issuer-held containment overlay |
-| Mission kill | one body of work: new derivation at once, and residual credentials at the earliest of revocation, re-check, or their own expiry ({{validity-model}}) | the OAuth binding's revocation; cascades to Child Missions |
+| Mission kill | one body of work: further derivation and refresh at once, and residual credentials at the earliest of an applicable revocation, a state-aware or runtime check that reaches them, or their own expiry ({{validity-model}}) | the OAuth binding's revocation; cascades to Child Missions |
 | Agent kill | all work by one agent, across its Missions | the deployment's agent IAM ({{three-objects}}) |
 | Agent Deployment kill | every instance running a compromised version | the deployment's change governance ({{three-objects}}) |
 | Credential kill | credentials already issued | the binding's substrate, where it supports revocation; otherwise expiry ({{validity-model}}) |
@@ -4070,6 +4073,15 @@ bound profiled by `aauth-mission-expiry`.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- What ends an already-issued credential is worded the same way in
+  Approval and Lifecycle, the possession-independent revocation
+  invariant, and the containment matrix: an applicable revocation, a
+  state-aware or runtime check that reaches it, or its own expiry.
+  Issuance gating stops only further derivation and refresh; it does
+  not end an existing credential. Step 7 of A Mission's Life keeps its
+  PDP clause and adds when mediated actions under an earlier permit
+  stop. No change to any profile's requirements.
 
 - The Mission Substrate no longer claims that every companion named
   without "oauth" has a Mission Substrate section of its own.
