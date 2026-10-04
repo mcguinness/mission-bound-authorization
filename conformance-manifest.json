@@ -63,8 +63,8 @@
     "content_sha256": "76ae8710dc0faf41220e947e05a4dc4a79440c0039746089a4b24e486c1d06de"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "91d63587ee517c333a14ad19241844bd05deb32d",
-    "content_sha256": "f1fbdd18be8a94ee432a34810920f76dbbaf0f1d5b5772d6dfbaae40e9a743ce"
+    "revision": "f175eba2a7c978611db6ea8ba9413fa82655eb3b",
+    "content_sha256": "2b486543f5bf301ee29c6c8bc12493448324dbdd8f92ac23d3c665d6da11e0e9"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
@@ -95,8 +95,8 @@
     "content_sha256": "7747cec83e69020dce2611fd99172fbe14034d776ba68c9b64cdca9fd410d94f"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "7bb182b0caae732be5813431f4c5ad6406eafaf7",
-    "content_sha256": "3d99176b70a7d440c8588863dc35d0f33defd7a5e3807947003767b93166168e"
+    "revision": "aec5ef67087d7cebce0787dd3ea83b6dcbba193e",
+    "content_sha256": "41d16c43d4e29769a790ea33393bfc300f8b96875a99c614d6039c689cc3fadb"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
     "revision": "4b1ac7e9be5fb4097bcc8b50ddb173ea34aeb85e",
@@ -237,7 +237,8 @@
    "mas.instance-bound-join",
    "derivation-limits.limit",
    "continuation.ica-transport",
-   "submission-evidence.verification"
+   "submission-evidence.verification",
+   "expansion.interactive-completion"
   ]
  },
  "profiles": [
@@ -4767,6 +4768,30 @@
    "coverage": "todo",
    "tests": [],
    "notes": "The AS-side rule only: a human Approver reading the rendered prose and declining is the intended consent check, not issuance gating by the AS."
+  },
+  {
+   "id": "core.derivation.model-input-narrows-only",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "authorization-derivation",
+   "text": "The AS MUST NOT let it supply or widen authority",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for a fixed Intent, proposal or configured mapping, and policy version, the Authority Set derived with a recorded model output is no wider than the set derived without it: the model's output adds no entry and widens none, every resulting entry satisfies its type's subset rule against a candidate the selected mode produced, an Intent that matches no configured mapping is refused whatever the model output, and re-deriving over the retained inputs, model output included, reproduces the set without invoking the model"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "A prohibition every AS meets; one that uses no model in derivation meets it trivially, so the row is unconditional rather than gated on a capability. Candidate authority keeps a proposal or configured-mapping origin; model-generated proposals stay permitted through Shaping and ordinary admission (#1010)."
   },
   {
    "id": "core.approval-authentication.floor-and-requested-carriage-both-satisfied",
@@ -28405,6 +28430,204 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Review finding on #1031 (owner ruling D241): narrowing between adjudication and activation. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.response-shape",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "The Mission Issuer MUST answer the token exchange with an OAuth error response",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "An expansion that completes interactively is answered with HTTP 400, error mission_interaction_required, a mission_continuation handle and expires_in, never with an RFC 8693 success or authorization_pending."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), opened for owner review. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.continuation-refusal",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "MUST refuse a pushed request whose `mission_continuation` is unknown, expired, or bound to another client, with `invalid_request`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A pushed authorization request carrying an unknown or expired mission_continuation, or one issued to another client, is refused with invalid_request and yields no request_uri."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), opened for owner review. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.recorded-inputs-only",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "MUST take the predecessor, Intent, proposal, submission evidence, presenter confirmation, and actor context only from the recorded operation",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A pushed request that supplies a predecessor, Intent, proposal, submission evidence, presenter confirmation or actor context differing from the recorded operation is refused; the approval ceremony renders and binds only the recorded operation's inputs."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), opened for owner review. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.re-push-continues-operation",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "the client pushes again with the same `mission_continuation`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "After a request_uri expires, is consumed, or its authorization response is lost, a new pushed request with the same mission_continuation continues the same operation: before an outcome it starts no second adjudication, and after approval it receives a fresh code for the recorded approval without a second prompt."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), opened for owner review. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.one-recorded-outcome",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "The Mission Issuer MUST serialize adjudication per operation and record at most one approval outcome for it",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "concurrency",
+   "observation": {
+    "normative": "Concurrent pushed requests and ceremonies for one mission_continuation produce exactly one recorded approval outcome; every other ceremony or push resumes from it rather than adjudicating again."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), #1060 review fixes. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.denial-terminal",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "the Mission Issuer MUST refuse the push with `access_denied`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "After a recorded denial, a further pushed request for the continuation is refused with access_denied, a creation_request_id retry receives access_denied, and no later approval or redemption completes the operation."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), #1060 review fixes. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.redemption-deadline",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "the Mission Issuer MUST refuse redemption at or after it with `invalid_grant`, and nothing activates",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "An authorization code still within its own lifetime but redeemed at or after the continuation's expiry is refused with invalid_grant and no successor activates; the deadline is checked atomically with activation."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), #1060 review fixes. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.no-second-code-after-activation",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "After activation the Mission Issuer MUST refuse a further pushed request for the continuation and MUST refuse redemption of any other code issued for the operation with `invalid_grant`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "Once the successor has activated, a further pushed request for the continuation is refused and redemption of any other authorization code issued for the operation fails with invalid_grant; at most one successor exists."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), opened for owner review. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.expired-continuation-retry",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "an operation whose continuation expired before activation answers that retry with `expired_token`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A creation_request_id retry for an operation whose mission_continuation expired before activation is answered with expired_token and creates nothing."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), opened for owner review. No implementation yet."
   },
   {
    "id": "aauth-management.person-path.authorize-as-person",

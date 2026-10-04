@@ -146,6 +146,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-cross-org-delegation:
+    title: "Mission Cross-Organizational Delegation for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-org-delegation.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-derivation-limits:
     title: "Mission Derivation Limits for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-derivation-limits.html
@@ -1161,10 +1169,14 @@ The Mission records the policy version in force as `policy_version`
 ({{mission-record}}), an opaque audit correlator; the policy itself
 is not conveyed.
 
-Generative derivation, with model assistance over the structured
-inputs above, is not one of this document's modes; a deployment that
-uses it as a local-policy extension stays bound by the Intent
-bounds, the prose boundary below, and the recording rule above.
+Generative derivation is not one of this document's modes. As a
+local-policy extension, a model's output can be a recorded input to
+the AS's deterministic derivation policy, together with the model's
+identifier and version. That input can cause refusal or further
+narrow the candidate authority the selected mode and policy otherwise
+permit. The AS MUST NOT let it supply or widen authority. Each type's
+subset rule ({{subset}}), the Intent bounds, and the prose boundary
+below still apply.
 
 A `target_resources` entry the deployment does not recognize is, by
 deployment policy, either omitted from the Authority Set or refused
@@ -5305,11 +5317,14 @@ The following are out of scope for this document:
   by Mission Status ({{I-D.draft-mcguinness-oauth-mission-status}});
   a pending-human-approval state and a holding-token pause-and-resume
   protocol are future lifecycle work.
-- **Multi-hop cross-domain provenance.** A single cross-domain hop is
-  specified by the companion
-  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}); chaining a
-  Mission across more than one trust-domain boundary, and the
-  verifiable provenance that would require, are future work.
+- **Multi-hop cross-domain projection.** A single projection hop is
+  specified by Cross-Domain Projection
+  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}); recursive
+  delegation across organizations is profiled by Mission
+  Cross-Organizational Delegation
+  ({{I-D.draft-mcguinness-oauth-mission-cross-org-delegation}}), whose
+  chain a destination verifies before projecting. Re-projecting a
+  Mission from one Resource AS into a further domain is future work.
 - **Decentralized agent identity.** Agent identity and credentialing
   are out of scope ({{I-D.draft-ietf-wimse-aims}} and the WIMSE
   architecture, {{I-D.draft-ietf-wimse-arch}}); this document governs
@@ -5385,16 +5400,19 @@ A deployment retains a versioned derivation policy with its ceiling,
 configured mappings, and issuance limits. Its inputs include a
 validated Mission Intent, the client's authority proposal in
 narrowing mode (or configured candidates when there is no proposal),
-the applicable authority source ceiling, and the capability catalog's
-per-action properties. The output is the Authority Set committed by
-`authority_hash`; `policy_version` identifies the policy used. The
-policy is not transmitted; its identifier and published
-Intent-to-Authority-Set fixtures let a partner review outcomes.
+the applicable authority source ceiling, the capability catalog's
+per-action properties, and any recorded model output. The output is
+the Authority Set committed by `authority_hash`; `policy_version`
+identifies the policy used. The policy is not transmitted; its
+identifier and published Intent-to-Authority-Set fixtures let a
+partner review outcomes.
 
 Reproducing a derivation requires the same inputs and the retained
 policy and catalog versions, not just the identifier of a mutable
-configuration. Derivation is mechanical: a model may suggest an Intent
-or a proposal, and does not make the approval-time narrowing decision.
+configuration. Replay uses a model's retained output and never reruns
+the model. Derivation is mechanical: a model may suggest an Intent or
+a proposal, or contribute a recorded input that refuses or narrows, and
+does not make the approval-time narrowing decision.
 
 ## Properties a Derivation Policy Holds
 
@@ -5402,9 +5420,10 @@ The five properties below restate, for a policy author, what
 {{authorization-derivation}} and the rules it cites require of a
 derivation.
 
-- **Deterministic.** The same Intent, proposal, ceiling, and catalog
-  derive the same Authority Set, so `policy_version` can serve as an
-  audit correlator ({{authorization-derivation}}).
+- **Deterministic.** The same Intent, proposal, ceiling, catalog, and
+  recorded model output derive the same Authority Set, so
+  `policy_version` can serve as an audit correlator
+  ({{authorization-derivation}}).
 - **Narrowing only.** Every derived entry is a subset of some proposed
   entry of the same type, under that type's own relation
   ({{authority-proposal}}, {{subset}}); in configured-mapping mode the
@@ -5865,6 +5884,19 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Non-Goals: the multi-hop entry names what is specified (one
+  projection hop; recursive cross-organizational delegation, profiled
+  by Mission Cross-Organizational Delegation, added as an informative
+  reference) and what is not (re-projecting a Mission into a further
+  domain) (#1018). No requirement changed.
+
+- Stated that a model's output in derivation is a recorded input to
+  the AS's deterministic derivation policy that can refuse or narrow
+  and never supplies or widens authority: candidate authority keeps a
+  proposal or configured-mapping origin, deterministic policy
+  validates every resulting entry, and replay uses the retained
+  output. This adds a requirement.
 
 - Stated why the primary access token's confirmation member stays
   optional rather than mandatory: compatibility with bearer-only
