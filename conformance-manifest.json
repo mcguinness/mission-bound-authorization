@@ -235,6 +235,7 @@
    "approval-context.manifest",
    "child-delegation.carryover",
    "child-delegation.subtree-rendering",
+   "child-delegation.policy-drawdown",
    "core.instance-context",
    "core.delegation",
    "runtime.instance-context",
@@ -27731,7 +27732,8 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "child-delegation.policy-drawdown"
    },
    "profiles": [],
    "surface": "token-endpoint",
@@ -27755,7 +27757,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "Both forms: without and with a child_creation_policy, the record's approval_event_id equals activation.activation_event_id and differs from the Parent Mission's approval_event_id. Proved by recording the parent's approval_event_id on the child (both tests fail)."
+   "notes": "Both forms: without and with a child_creation_policy, the record's approval_event_id equals activation.activation_event_id and differs from the Parent Mission's approval_event_id. Proved by recording the parent's approval_event_id on the child (both tests fail). Scoped to child-delegation.policy-drawdown: a direct human-approved child records activation.approval_event_id, not an activation_event_id, so this requirement never applies to it."
   },
   {
    "id": "child-delegation.carryover.expansion-disclosure",
