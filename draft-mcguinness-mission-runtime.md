@@ -2416,8 +2416,8 @@ Profile, whose values the decision depended on.
 
 Evaluation-Context Binding is an OPTIONAL Named Assurance Extension,
 claimed per mediated action class in the Enforcement Scope Statement.
-It does not add a requirement to Runtime-Enforced conformance for a
-deployment that does not claim it. The Operation Profile owns its
+It adds no requirement for a Runtime-Enforced deployment that does
+not claim it. The Operation Profile owns its
 declaration; an approval-time resource contract can reference that
 declaration but supplies no dispatch-time observation.
 
@@ -3771,6 +3771,10 @@ worked example shows the concrete record
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Evaluation-Context Binding no longer speaks of "Runtime-Enforced
+  conformance": a level is guidance, never a conformance class. No
+  requirement changed.
 
 - Idempotency defines the Exact and Bounded-consistency enforcement
   profiles for its own claim, so the idempotency requirements no longer

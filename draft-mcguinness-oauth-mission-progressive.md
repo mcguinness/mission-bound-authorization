@@ -466,7 +466,7 @@ per-Mission bound would reset at every step. A deployment:
 - MUST publish the concrete rate bound in the Mission Deployment
   Profile; and
 - MUST record each policy-adjudicated expansion as an approval event
-  whose approver context is the drawdown policy that authorized it
+  whose decision mechanism is the drawdown policy that authorized it
   ({{audit-linkage}}).
 
 Some authority classes always require a fresh human approval even
@@ -659,9 +659,11 @@ expansion stays denied.
 # Audit Linkage {#audit-linkage}
 
 Each policy-adjudicated in-ceiling expansion is an approval event and
-MUST be recorded as one: the approver context is the drawdown policy
-(its identifier and version) rather than a human principal, and the
-successor's `predecessor` member links the drawdown chain for an
+MUST be recorded as one: the decision mechanism is the drawdown policy
+(its identifier and version) rather than a human, the Approver who
+consented the ceiling remains the accountable `consent_principal`
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Role Mapping"), and
+the successor's `predecessor` member links the drawdown chain for an
 authorized auditor exactly as for human-approved expansions
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 
@@ -742,8 +744,8 @@ document adds the drawdown surface:
   ({{I-D.draft-mcguinness-mission-runtime}}).
 - The drawdown policy is authority-bearing governance. A misconfigured
   policy over-grants within the ceiling; it MUST be reviewed and
-  versioned like approval policy, and its identity and version are part
-  of the recorded approver context ({{audit-linkage}}).
+  versioned like approval policy, and its identity and version are
+  recorded as the decision mechanism ({{audit-linkage}}).
 - The ceiling is a consent artifact. It MUST be rendered to the
   Approver at the initial approval with the fact that in-ceiling
   expansion is policy-adjudicated ({{progressive-authorization}}); a
@@ -788,6 +790,10 @@ convention, none of which require registration.
 
 -01
 
+- Audit Linkage and In-Ceiling Expansion name the drawdown policy as
+  the approval event's decision mechanism, not its approver; the
+  Approver who consented the ceiling stays the `consent_principal`,
+  matching the issuance profile's Role Mapping.
 - In-ceiling expansion: a `ceiling_drawdown` successor's
   `approval_event_id` identifies the drawdown: a unique value allocated
   with the exchange's `(client, creation_request_id)` reservation and

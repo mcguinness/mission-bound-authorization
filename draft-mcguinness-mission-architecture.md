@@ -2701,8 +2701,13 @@ named **assurance claims**, each with a proof obligation an existing
 profile fixes, listed in the Deployment Profile
 ({{deployment-profile}}) rather than implied by a level:
 
-- **Approved-record integrity**: the anchors reproduce from the
-  record alone (the OAuth binding's integrity anchors).
+- **Approved-record integrity**: the committed Intent, authority
+  proposal, and Authority Set reproduce from the retained record alone
+  (the OAuth binding's integrity anchors). The claim covers neither the
+  record's provenance members nor an issuer that substitutes a record
+  and its anchors together; defending against post-approval
+  substitution takes an independently pinned anchor
+  ({{I-D.draft-mcguinness-oauth-mission-approved-set-verification}}).
 - **Bounded revocation latency**, per path and mechanism, naming the
   paths it covers: for a runtime-gated class, the published staleness
   bound plus the permit window plus the class's execution bound
@@ -4073,6 +4078,11 @@ bound profiled by `aauth-mission-expiry`.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The Approved-record integrity claim names what the anchors cover
+  (the committed Intent, authority proposal, and Authority Set) and
+  states that provenance members and an issuer substituting a record
+  with its anchors are outside it.
 
 - What ends an already-issued credential is worded the same way in
   Approval and Lifecycle, the possession-independent revocation
