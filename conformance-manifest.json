@@ -235,6 +235,7 @@
    "approval-context.manifest",
    "child-delegation.carryover",
    "child-delegation.subtree-rendering",
+   "child-delegation.policy-drawdown",
    "core.instance-context",
    "core.delegation",
    "runtime.instance-context",
@@ -27673,7 +27674,8 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "child-delegation.policy-drawdown"
    },
    "profiles": [],
    "surface": "token-endpoint",
@@ -27684,7 +27686,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Reference AS sets the record's approval_event_id equal to the minted activation_event_id (kernel/child-delegation.ts); no test asserts the equality yet."
+   "notes": "Reference AS sets the record's approval_event_id equal to the minted activation_event_id (kernel/child-delegation.ts); no test asserts the equality yet. Scoped to child-delegation.policy-drawdown: a direct human-approved child records activation.approval_event_id, not an activation_event_id, so this requirement never applies to it."
   },
   {
    "id": "child-delegation.carryover.expansion-disclosure",
