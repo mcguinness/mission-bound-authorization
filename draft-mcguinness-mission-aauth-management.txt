@@ -116,16 +116,18 @@ Table of Contents
      13.2.  Request Replay
      13.3.  Compromised Agents
      13.4.  Administrative Blast Radius
-     13.5.  Races and Failures
-     13.6.  Log Integrity
-     13.7.  Delegation-Tree Limits
-     13.8.  Transport
+     13.5.  Person Interfaces
+     13.6.  Races and Failures
+     13.7.  Log Integrity
+     13.8.  Delegation-Tree Limits
+     13.9.  Transport
    14. IANA Considerations
    15. Conformance
    16. References
      16.1.  Normative References
      16.2.  Informative References
    Appendix A.  Acknowledgments
+   Appendix B.  Document History
    Author's Address
 
 1.  Introduction
@@ -436,6 +438,38 @@ Table of Contents
    replacement_s256 is REQUIRED, and the PS SHOULD verify that the same
    Person authorized both missions before recording the relationship.
 
+   A Person reaches these operations through the PS's own interface,
+   which either invokes the operation inside the PS or has its backend
+   call the control plane as a management service (Section 5.3).  Either
+   way the PS MUST authorize the action as the authenticated Person
+   under the rules above, MUST record that Person as the principal, and
+   MUST NOT apply a management service's administrative privilege to it.
+   An internal invocation is not a control-plane request, but the same
+   authorization, atomic transition (Section 7), and logging
+   (Section 10) duties apply to it.  How the Person signs in to the
+   interface remains the PS's own; this document defines no user login.
+
+   For example, a Person ends a mission from the PS's account page:
+
+   1.  The Person signs in to the PS's interface and selects the
+       mission.
+
+   2.  The interface submits termination as an explicit action,
+       protected against cross-site submission by the interface itself
+       (Section 13.5).
+
+   3.  The interface invokes termination inside the PS, or its backend
+       signs a control-plane terminate request as a registered
+       management service and conveys the Person's identity over its
+       trusted channel.
+
+   4.  The PS binds the Person to the person the mission represents,
+       authorizes reason revoked for that Person and mission, and runs
+       the atomic transition.
+
+   5.  The mission log records the Person as principal and the interface
+       as the channel.
+
 5.2.  Administrator
 
    The PS MAY authorize a human administrator, authenticated through the
@@ -479,6 +513,15 @@ Table of Contents
    administrative limited to the administrator role, and the recorded
    principal, role, decision, and purpose on every successful request.
 
+   A management service can act for a human, as the PS's own interface
+   backend does for the Person (Section 5.1).  For such a call the PS
+   MUST authorize the action as that human under the human's own caller
+   rules, MUST record the human as the principal and the service as the
+   channel, and MUST NOT apply the service's administrative privilege.
+   How the service conveys the human's identity is a deployment trust
+   relationship this document does not define, and the PS relies on it
+   only for a service it registers for that purpose.
+
 5.4.  Owning Agent
 
    Whether the control plane admits the Owning Agent is a PS decision.
@@ -509,10 +552,12 @@ Table of Contents
 5.5.  Ambient Credentials
 
    Every action defined here is a JSON POST authenticated as this
-   section requires.  A PS that serves a human-facing interface at the
-   same origin MUST NOT let an ambient credential, such as a cookie or
-   session a browser attaches automatically, satisfy that
-   authentication.
+   section requires, and a browser session never authenticates a
+   control-plane request directly.  A PS that serves a human-facing
+   interface at the same origin MUST NOT let an ambient credential, such
+   as a cookie or session a browser attaches automatically, satisfy that
+   authentication.  The interface reaches the operations through the PS
+   (Section 5.1).
 
 6.  Status Operation
 
@@ -1112,7 +1157,25 @@ Table of Contents
    blast radius.  The endpoint MUST NOT infer administrative authority
    from an Agent's domain or parent_agent relationship.
 
-13.5.  Races and Failures
+13.5.  Person Interfaces
+
+   A PS interface that reaches these operations carries web-session
+   risks the signed control plane does not.  What makes a Person's
+   action explicit is the interface's own protection against cross-site
+   submission, which the PS that serves the interface validates; the
+   control plane's refusal of ambient credentials does not protect the
+   interface itself.  The PS binds each action to the Person
+   authenticated when the action is taken and to the person the mission
+   represents, never to an account or tenant selected in the request, so
+   switching accounts or tenants mid-session cannot redirect it.  A
+   session established before the Person's authorization changed carries
+   no earlier authorization forward: the PS evaluates authorization at
+   the action.  A backend that calls as a management service for the
+   Person could otherwise apply its own administrative privilege, a
+   confused deputy; the PS authorizes such a call as the Person and
+   never under the service's privilege (Section 5.3).
+
+13.6.  Races and Failures
 
    The local terminal commit precedes external revocation.
    Transactional state evaluation prevents a token request racing with
@@ -1127,7 +1190,7 @@ Table of Contents
    stronger cutoff cannot rely only on cached status or token expiry; it
    needs an action-time decision or effective revocation mechanism.
 
-13.6.  Log Integrity
+13.7.  Log Integrity
 
    The mission log influences future governance and is security-
    critical.  The PS MUST prevent Agents and ordinary operators from
@@ -1137,7 +1200,7 @@ Table of Contents
    mechanism, but a PS MAY add tamper-evident storage or signed
    checkpoints.
 
-13.7.  Delegation-Tree Limits
+13.8.  Delegation-Tree Limits
 
    The returned tree is based on PS observations, not global execution.
    Treating it as complete evidence can hide agent identity, opaque-
@@ -1147,7 +1210,7 @@ Table of Contents
    accepted only after their normal AAuth verification; unverified
    caller assertions never create edges.
 
-13.8.  Transport
+13.9.  Transport
 
    All operations use HTTPS and the TLS requirements of
    [I-D.draft-hardt-oauth-aauth-protocol] and [RFC9325].  Responses
@@ -1315,6 +1378,22 @@ Appendix A.  Acknowledgments
    The AAuth mission-management seam and two-state lifecycle were
    defined by Dick Hardt in the AAuth Protocol.  This companion
    preserves those native choices.
+
+Appendix B.  Document History
+
+   [[ To be removed from the final specification ]]
+
+   *  A Person reaches status and termination through the PS's own
+      interface, by internal invocation or by a backend calling the
+      control plane as a management service; the PS authorizes and
+      records the action as the authenticated Person and never applies a
+      management service's administrative privilege.  A management
+      service acting for a human is authorized and recorded as that
+      human, with the service as the channel.  A browser session never
+      authenticates a control-plane request, and Person Interfaces
+      security considerations cover cross-site submission, account or
+      tenant switching, stale sessions, and the service-principal
+      confused deputy (#839).
 
 Author's Address
 

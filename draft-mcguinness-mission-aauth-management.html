@@ -1294,16 +1294,19 @@ to report and bound the residual window honestly.<a href="#section-abstract-3" c
                 <p id="section-toc.1-1.13.2.4.1"><a href="#section-13.4" class="auto internal xref">13.4</a>.  <a href="#name-administrative-blast-radius" class="internal xref">Administrative Blast Radius</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.5">
-                <p id="section-toc.1-1.13.2.5.1"><a href="#section-13.5" class="auto internal xref">13.5</a>.  <a href="#name-races-and-failures" class="internal xref">Races and Failures</a></p>
+                <p id="section-toc.1-1.13.2.5.1"><a href="#section-13.5" class="auto internal xref">13.5</a>.  <a href="#name-person-interfaces" class="internal xref">Person Interfaces</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.6">
-                <p id="section-toc.1-1.13.2.6.1"><a href="#section-13.6" class="auto internal xref">13.6</a>.  <a href="#name-log-integrity" class="internal xref">Log Integrity</a></p>
+                <p id="section-toc.1-1.13.2.6.1"><a href="#section-13.6" class="auto internal xref">13.6</a>.  <a href="#name-races-and-failures" class="internal xref">Races and Failures</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.7">
-                <p id="section-toc.1-1.13.2.7.1"><a href="#section-13.7" class="auto internal xref">13.7</a>.  <a href="#name-delegation-tree-limits" class="internal xref">Delegation-Tree Limits</a></p>
+                <p id="section-toc.1-1.13.2.7.1"><a href="#section-13.7" class="auto internal xref">13.7</a>.  <a href="#name-log-integrity" class="internal xref">Log Integrity</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.8">
-                <p id="section-toc.1-1.13.2.8.1"><a href="#section-13.8" class="auto internal xref">13.8</a>.  <a href="#name-transport" class="internal xref">Transport</a></p>
+                <p id="section-toc.1-1.13.2.8.1"><a href="#section-13.8" class="auto internal xref">13.8</a>.  <a href="#name-delegation-tree-limits" class="internal xref">Delegation-Tree Limits</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13.2.9">
+                <p id="section-toc.1-1.13.2.9.1"><a href="#section-13.9" class="auto internal xref">13.9</a>.  <a href="#name-transport" class="internal xref">Transport</a></p>
 </li>
             </ul>
 </li>
@@ -1328,7 +1331,10 @@ to report and bound the residual window honestly.<a href="#section-abstract-3" c
             <p id="section-toc.1-1.17.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18">
-            <p id="section-toc.1-1.18.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+            <p id="section-toc.1-1.18.1"><a href="#appendix-B" class="auto internal xref">Appendix B</a>.  <a href="#name-document-history" class="internal xref">Document History</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.19">
+            <p id="section-toc.1-1.19.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -1692,7 +1698,7 @@ target mission after authentication and before existence is disclosed.<a href="#
 <p id="section-5-2">This document defines no new token type and no new credential.  Each
 caller class authenticates with a mechanism the base protocol or the
 PS already has.<a href="#section-5-2" class="pilcrow">¶</a></p>
-<div id="person">
+<div id="person-caller">
 <section id="section-5.1">
         <h3 id="name-person">
 <a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-person" class="section-name selfRef">Person</a>
@@ -1706,6 +1712,41 @@ selection from being supplied solely by the request body.<a href="#section-5.1-1
 reason <code>completed</code>, <code>revoked</code>, or <code>superseded</code>.  For <code>superseded</code>,
 <code>replacement_s256</code> is <span class="bcp14">REQUIRED</span>, and the PS <span class="bcp14">SHOULD</span> verify that the
 same Person authorized both missions before recording the relationship.<a href="#section-5.1-2" class="pilcrow">¶</a></p>
+<p id="section-5.1-3">A Person reaches these operations through the PS's own interface, which
+either invokes the operation inside the PS or has its backend call the
+control plane as a management service (<a href="#management-service" class="auto internal xref">Section 5.3</a>).  Either
+way the PS <span class="bcp14">MUST</span> authorize the action as the authenticated Person under
+the rules above, <span class="bcp14">MUST</span> record that Person as the principal, and <span class="bcp14">MUST NOT</span>
+apply a management service's administrative privilege to it.  An
+internal invocation is not a control-plane request, but the same
+authorization, atomic transition (<a href="#terminate" class="auto internal xref">Section 7</a>), and logging
+(<a href="#logging" class="auto internal xref">Section 10</a>) duties apply to it.  How the Person signs in to the
+interface remains the PS's own; this document defines no user login.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
+<p id="section-5.1-4">For example, a Person ends a mission from the PS's account page:<a href="#section-5.1-4" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-5.1-5">
+<li id="section-5.1-5.1">
+            <p id="section-5.1-5.1.1">The Person signs in to the PS's interface and selects the mission.<a href="#section-5.1-5.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-5.1-5.2">
+            <p id="section-5.1-5.2.1">The interface submits termination as an explicit action, protected
+against cross-site submission by the interface itself
+(<a href="#person-interfaces" class="auto internal xref">Section 13.5</a>).<a href="#section-5.1-5.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-5.1-5.3">
+            <p id="section-5.1-5.3.1">The interface invokes termination inside the PS, or its backend
+signs a control-plane <code>terminate</code> request as a registered management
+service and conveys the Person's identity over its trusted channel.<a href="#section-5.1-5.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-5.1-5.4">
+            <p id="section-5.1-5.4.1">The PS binds the Person to the person the mission represents,
+authorizes reason <code>revoked</code> for that Person and mission, and runs
+the atomic transition.<a href="#section-5.1-5.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-5.1-5.5">
+            <p id="section-5.1-5.5.1">The mission log records the Person as principal and the interface as
+the channel.<a href="#section-5.1-5.5.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
 </section>
 </div>
 <div id="administrator">
@@ -1754,6 +1795,14 @@ protocol already forbids it to agents (Section 11.3.2 of
 least-privilege scoping, a separate privilege for delegation data,
 <code>administrative</code> limited to the administrator role, and the recorded
 principal, role, decision, and purpose on every successful request.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
+<p id="section-5.3-3">A management service can act for a human, as the PS's own interface
+backend does for the Person (<a href="#person-caller" class="auto internal xref">Section 5.1</a>).  For such a call the PS
+<span class="bcp14">MUST</span> authorize the action as that human under the human's own caller
+rules, <span class="bcp14">MUST</span> record the human as the principal and the service as the
+channel, and <span class="bcp14">MUST NOT</span> apply the service's administrative privilege.
+How the service conveys the human's identity is a deployment trust
+relationship this document does not define, and the PS relies on it
+only for a service it registers for that purpose.<a href="#section-5.3-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="owning-agent">
@@ -1790,10 +1839,12 @@ this endpoint: AAuth requires its parent to mediate PS operations.<a href="#sect
 <a href="#section-5.5" class="section-number selfRef">5.5. </a><a href="#name-ambient-credentials" class="section-name selfRef">Ambient Credentials</a>
         </h3>
 <p id="section-5.5-1">Every action defined here is a JSON <code>POST</code> authenticated as this
-section requires.  A PS that serves a human-facing interface at the
-same origin <span class="bcp14">MUST NOT</span> let an ambient credential, such as a cookie or
-session a browser attaches automatically, satisfy that
-authentication.<a href="#section-5.5-1" class="pilcrow">¶</a></p>
+section requires, and a browser session never authenticates a
+control-plane request directly.  A PS that serves a human-facing
+interface at the same origin <span class="bcp14">MUST NOT</span> let an ambient credential, such
+as a cookie or session a browser attaches automatically, satisfy that
+authentication.  The interface reaches the operations through the PS
+(<a href="#person-caller" class="auto internal xref">Section 5.1</a>).<a href="#section-5.5-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2505,60 +2556,82 @@ radius.  The endpoint <span class="bcp14">MUST NOT</span> infer administrative a
 Agent's domain or <code>parent_agent</code> relationship.<a href="#section-13.4-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="races-and-failures">
+<div id="person-interfaces">
 <section id="section-13.5">
-        <h3 id="name-races-and-failures">
-<a href="#section-13.5" class="section-number selfRef">13.5. </a><a href="#name-races-and-failures" class="section-name selfRef">Races and Failures</a>
+        <h3 id="name-person-interfaces">
+<a href="#section-13.5" class="section-number selfRef">13.5. </a><a href="#name-person-interfaces" class="section-name selfRef">Person Interfaces</a>
         </h3>
-<p id="section-13.5-1">The local terminal commit precedes external revocation.  Transactional
+<p id="section-13.5-1">A PS interface that reaches these operations carries web-session risks
+the signed control plane does not.  What makes a Person's action
+explicit is the interface's own protection against cross-site
+submission, which the PS that serves the interface validates; the
+control plane's refusal of ambient credentials does not protect the
+interface itself.  The PS binds each action to the Person
+authenticated when the action is taken and to the person the mission
+represents, never to an account or tenant selected in the request, so
+switching accounts or tenants mid-session cannot redirect it.  A
+session established before the Person's authorization changed carries
+no earlier authorization forward: the PS evaluates authorization at
+the action.  A backend that calls as a management service for the
+Person could otherwise apply its own administrative privilege, a
+confused deputy; the PS authorizes such a call as the Person and never
+under the service's privilege (<a href="#management-service" class="auto internal xref">Section 5.3</a>).<a href="#section-13.5-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="races-and-failures">
+<section id="section-13.6">
+        <h3 id="name-races-and-failures">
+<a href="#section-13.6" class="section-number selfRef">13.6. </a><a href="#name-races-and-failures" class="section-name selfRef">Races and Failures</a>
+        </h3>
+<p id="section-13.6-1">The local terminal commit precedes external revocation.  Transactional
 state evaluation prevents a token request racing with termination from
 being issued after the commit.  Implementations <span class="bcp14">MUST</span> ensure every local
 decision path consults the same authoritative state or a cache whose
 failure behavior is fail closed.  Expiry is checked synchronously so a
-failed scheduler cannot keep a mission active.<a href="#section-13.5-1" class="pilcrow">¶</a></p>
-<p id="section-13.5-2">External failures do not restore the mission.  Revocation retries are
+failed scheduler cannot keep a mission active.<a href="#section-13.6-1" class="pilcrow">¶</a></p>
+<p id="section-13.6-2">External failures do not restore the mission.  Revocation retries are
 durable work and survive PS restarts.  A Resource that needs a stronger
 cutoff cannot rely only on cached status or token expiry; it needs an
-action-time decision or effective revocation mechanism.<a href="#section-13.5-2" class="pilcrow">¶</a></p>
+action-time decision or effective revocation mechanism.<a href="#section-13.6-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="log-integrity">
-<section id="section-13.6">
+<section id="section-13.7">
         <h3 id="name-log-integrity">
-<a href="#section-13.6" class="section-number selfRef">13.6. </a><a href="#name-log-integrity" class="section-name selfRef">Log Integrity</a>
+<a href="#section-13.7" class="section-number selfRef">13.7. </a><a href="#name-log-integrity" class="section-name selfRef">Log Integrity</a>
         </h3>
-<p id="section-13.6-1">The mission log influences future governance and is security-critical.
+<p id="section-13.7-1">The mission log influences future governance and is security-critical.
 The PS <span class="bcp14">MUST</span> prevent Agents and ordinary operators from rewriting or
 reordering it.  Sequence allocation, durable storage, authenticated
 actor attribution, backup, and restricted access are required.  This
 document does not require a public transparency mechanism, but a PS <span class="bcp14">MAY</span>
-add tamper-evident storage or signed checkpoints.<a href="#section-13.6-1" class="pilcrow">¶</a></p>
+add tamper-evident storage or signed checkpoints.<a href="#section-13.7-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="delegation-tree-limits">
-<section id="section-13.7">
+<section id="section-13.8">
         <h3 id="name-delegation-tree-limits">
-<a href="#section-13.7" class="section-number selfRef">13.7. </a><a href="#name-delegation-tree-limits" class="section-name selfRef">Delegation-Tree Limits</a>
+<a href="#section-13.8" class="section-number selfRef">13.8. </a><a href="#name-delegation-tree-limits" class="section-name selfRef">Delegation-Tree Limits</a>
         </h3>
-<p id="section-13.7-1">The returned tree is based on PS observations, not global execution.
+<p id="section-13.8-1">The returned tree is based on PS observations, not global execution.
 Treating it as complete evidence can hide agent identity, opaque-token,
 or off-path activity.  Consumers <span class="bcp14">MUST</span> preserve the distinction between
 page completeness and observational completeness.  <code>parent_agent</code>
 values and the PS's own issuance-linked chain state are accepted only
 after their normal AAuth verification; unverified caller assertions
-never create edges.<a href="#section-13.7-1" class="pilcrow">¶</a></p>
+never create edges.<a href="#section-13.8-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="transport">
-<section id="section-13.8">
+<section id="section-13.9">
         <h3 id="name-transport">
-<a href="#section-13.8" class="section-number selfRef">13.8. </a><a href="#name-transport" class="section-name selfRef">Transport</a>
+<a href="#section-13.9" class="section-number selfRef">13.9. </a><a href="#name-transport" class="section-name selfRef">Transport</a>
         </h3>
-<p id="section-13.8-1">All operations use HTTPS and the TLS requirements of
+<p id="section-13.9-1">All operations use HTTPS and the TLS requirements of
 <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span> and <span>[<a href="#RFC9325" class="cite xref">RFC9325</a>]</span>.  Responses
 <span class="bcp14">SHOULD</span> carry cache controls preventing shared caching.  Management
 clients <span class="bcp14">MUST</span> validate the PS metadata issuer and endpoint origin before
-sending references or credentials.<a href="#section-13.8-1" class="pilcrow">¶</a></p>
+sending references or credentials.<a href="#section-13.9-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2750,8 +2823,30 @@ by Dick Hardt in the AAuth Protocol.  This companion preserves those
 native choices.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="authors-addresses">
+<div id="document-history">
 <section id="appendix-B">
+      <h2 id="name-document-history">
+<a href="#appendix-B" class="section-number selfRef">Appendix B. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
+      </h2>
+<p id="appendix-B-1">[[ To be removed from the final specification ]]<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="appendix-B-2.1">
+          <p id="appendix-B-2.1.1">A Person reaches status and termination through the PS's own
+interface, by internal invocation or by a backend calling the control
+plane as a management service; the PS authorizes and records the
+action as the authenticated Person and never applies a management
+service's administrative privilege. A management service acting for
+a human is authorized and recorded as that human, with the service as
+the channel. A browser session never authenticates a control-plane
+request, and Person Interfaces security considerations cover
+cross-site submission, account or tenant switching, stale sessions,
+and the service-principal confused deputy (#839).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-C">
       <h2 id="name-authors-address">
 <a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
       </h2>
