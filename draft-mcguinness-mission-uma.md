@@ -608,7 +608,7 @@ substrate's ratified machinery, and that companion does not apply.
 
 **Pre-registered policy.** Where the resource owner's standing
 policy at the authorization server covers the proposal, that policy
-is the deciding mechanism, not the Approver: the approval event
+is the decision mechanism, not the Approver: the approval event
 records the policy identity and version as that mechanism, the
 resource owner who registered it stays the accountable person
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Role Mapping"), and
