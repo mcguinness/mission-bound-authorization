@@ -24483,9 +24483,15 @@
      "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > happy path: dispatch mints a DPoP-bound mission token, and a repeated dispatch_event_id is idempotent",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "Dispatch idempotency at /token (@spec mission-template#dispatch, mission#intent-submission-evidence) > a completed Dispatch recovers before evidence re-verification; a new Dispatch still verifies",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Tested at the endpoint for the same-fingerprint retry. Dispatch now runs the expansion profile's creation idempotency apparatus under op dispatch (#1017): fingerprint mismatch and tombstone retention have kernel-level tests (template.dispatch.fingerprint-mismatch-refusal, template.dispatch.approval-event-id-per-dispatch); concurrent-duplicate recovery (the reservation's primary-key race) is not exercised, so the row stays partial."
+   "notes": "Tested at the endpoint for the same-fingerprint retry, including a retry whose Intent Submission Evidence lapsed after completion (recovered before re-verification; proved by skipping the early lookup). Fingerprint mismatch and tombstone retention have their own rows (template.dispatch.fingerprint-mismatch-refusal, template.dispatch.approval-event-id-per-dispatch). Concurrent-duplicate recovery (the reservation's primary-key race) is not exercised, so the row stays partial."
   },
   {
    "id": "template.dispatch.fingerprint-mismatch-refusal",
@@ -24504,9 +24510,15 @@
    "observation": {
     "normative": "a dispatch_event_id reused with a different operation fingerprint (a changed template_id, intent, evidence, proposal, or cnf) is refused with invalid_request rather than recovered"
    },
-   "level": "unit",
-   "coverage": "partial",
+   "level": "endpoint",
+   "coverage": "tested",
    "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "Dispatch idempotency at /token (@spec mission-template#dispatch, mission#intent-submission-evidence) > a reused dispatch_event_id with a different intent or evidence is invalid_request, with no mission_denial_reason",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
     {
      "file": "src/services/authorization-server/test/template.test.ts",
      "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases) > the same Dispatcher's dispatch_event_id with a different fingerprint is refused, never recovered",
@@ -24514,7 +24526,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "Kernel level: a reused dispatch_event_id with a changed template_id, proposal or presenter key (cnf) is refused dispatch_event_mismatch, nothing is committed, and the unchanged retry still recovers; proved by skipping the fingerprint comparison (the test fails). Not yet asserted: a changed intent or evidence, and the token endpoint's invalid_request mapping (dispatchErrorCode's default branch)."
+   "notes": "Every named fingerprint member is asserted: intent and evidence changes at the token endpoint (invalid_request with an error_description and no mission_denial_reason, and the unchanged retry still recovers); template_id, proposal and cnf changes at kernel level (refused, nothing committed). Proved by skipping the fingerprint comparison (both tests fail) and by restoring a mission_denial_reason on the mismatch response (the endpoint test fails)."
   },
   {
    "id": "template.dispatch.completed-recovery-survives-retirement",
