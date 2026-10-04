@@ -9247,7 +9247,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "for a credential carrying no mission claim, the baseline-Join gateway path (RequestSignals.missionReference) is the ONLY source of the Mission reference, and the two unusable-carriage cases are reported apart: an ABSENT reference names no Mission at all and the credential carries none either, so the request refuses unknown_mission; a MALFORMED reference where governance requires one is carriage that cannot be used and refuses mission_reference_conflict. Neither is a silent no-op and neither falls back to some other guess. The configured route (src/demo/src/stack.ts, config/mas-join.json's governed_resources) supplies the reference over the wire as the Mission-Reference field"
+    "normative": "for a credential carrying no mission claim, the baseline-Join gateway path (RequestSignals.missionReference) is the ONLY source of the Mission reference, and the two unusable-carriage cases are reported apart: an ABSENT reference names no Mission at all and the credential carries none either, so the request is refused (the reference PEP emits unknown_mission, where reference-verification specifies mission_reference_conflict: row mas.reference.missing-required-refusal); a MALFORMED reference where governance requires one is carriage that cannot be used and refuses mission_reference_conflict. Neither is a silent no-op and neither falls back to some other guess. The configured route (src/demo/src/stack.ts, config/mas-join.json's governed_resources) supplies the reference over the wire as the Mission-Reference field"
    },
    "level": "unit",
    "coverage": "tested",
@@ -28650,6 +28650,40 @@
    "coverage": "todo",
    "tests": [],
    "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#972 item 13)."
+  },
+  {
+   "id": "mas.reference.missing-required-refusal",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "reference-verification",
+   "text": "An attribution conflict, or a malformed or missing reference where governance requires one, is denied with the `mission_reference_conflict` denial reason",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "on a route whose governance requires a reference, a malformed reference and a missing one are both refused with mission_reference_conflict"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: configuration gate (@spec authority-server#mission-join) > refuses mission_reference_conflict for a malformed propagated reference, not unknown_mission",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
+     "name": "MAS-governed HTTP MCP channel (baseline Join) > refuses mission_reference_conflict with a MALFORMED Mission-Reference field, a different failure from an absent one",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Partial: the malformed case is tested. The reference PEP refuses a missing reference on the MAS-governed route with the undocumented unknown_mission (src/services/mcp-payments/src/pep.ts), not mission_reference_conflict; the PEP migration is not part of this slice (#972 item 13). Attribution conflicts are mas.reference.conflict-deny."
   },
   {
    "id": "authzen.instance-context.no-upstream-actor",

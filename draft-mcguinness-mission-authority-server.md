@@ -1331,14 +1331,15 @@ those of {{reference-tuple}}.
   deployment configuration) names a different Mission than the
   propagated reference, the conflict is a deny, never a silent
   pick-one.
-- An attribution conflict, or a malformed reference where governance
-  requires one, is denied with the `mission_reference_conflict`
-  denial reason. This document adds that reason to the AuthZEN
-  denial-reason set under its extensibility rule, beside
-  `mission_mismatch` ({{mission-join}}). The `mission_mismatch` reason
-  remains the subject-or-client join failure, and
-  `mission_reference_conflict` covers reference sources naming
-  different Missions or an unusable reference.
+- An attribution conflict, or a malformed or missing reference where
+  governance requires one, is denied with the
+  `mission_reference_conflict` denial reason. This document adds that
+  reason to the AuthZEN denial-reason set under its extensibility
+  rule, beside `mission_mismatch` ({{mission-join}}). The
+  `mission_mismatch` reason remains the subject-or-client join
+  failure, and `mission_reference_conflict` covers reference sources
+  naming different Missions or a reference that is unusable or
+  missing.
 - If a PEP establishes the conflict before any evaluation, it surfaces
   the same reason as a coordinated pre-decision refusal, recorded as
   a Refusal Record with this `denial_reason`
