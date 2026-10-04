@@ -2081,12 +2081,12 @@ MAS or an OAuth AS is deployment configuration.
 This section states what MAS-only deployment does not provide. These
 are structural properties of the mode, not implementation quality
 issues, and a deployment claiming this profile MUST NOT overstate
-them. The mode provides the contextual-governance kernel,
-State-Observable, and Structured Authority capabilities. It does not
+them. The mode supplies the capabilities its Mission Substrate
+Statement lists ({{mission-substrate}}). It does not
 claim that an unchanged Authorization Server's credential was issued
 under the Mission or that its issuance was lifecycle-gated.
 
-Credential-Bound correlation and action-time lifecycle gating compose
+Credential correlation and action-time lifecycle gating compose
 through the runtime join and PEP coverage, within the conditional
 scope declared by {{mission-substrate}}. Among the Mission Assurance
 Levels, this is the Runtime-Enforced level reached through the MAS
@@ -2561,7 +2561,11 @@ The contextual-governance kernel maps as follows:
    verifies the reference against the acting credential before using
    Mission authority. That join establishes correlation, not that the
    unchanged Authorization Server issued the credential under the
-   Mission ({{mission-reference}}, {{mission-join}}).
+   Mission ({{mission-reference}}, {{mission-join}}). The
+   `Mission-Reference` HTTP field and the MCP `_meta` key carry the
+   reference to a PEP that does not hold the Mission binding
+   ({{reference-propagation}}); that propagation selects a Mission and
+   never conveys authority.
 9. **Governance record**: the MAS audit log is the ordered governance
    record. The MAS MUST append approval, positive and negative
    Mission-dependent decisions, join decisions it makes, and lifecycle
