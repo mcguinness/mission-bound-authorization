@@ -28477,6 +28477,116 @@
    "notes": "No Enterprise high-consequence path with Instance Context in the reference composition (#972 item 8)."
   },
   {
+   "id": "mas.join-assertion.audience-enrolled",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-request",
+   "text": "The MAS MUST NOT mint for an `audience` that names no PDP enrolled for the Mission's enforcement scope",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a request whose audience names no PDP enrolled for the Mission is refused join_failed, and no assertion is minted"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972 item 11)."
+  },
+  {
+   "id": "mas.join-assertion.aud-claim",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-artifact",
+   "text": "REQUIRED. A string. The request's `audience`: the consuming PDP",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every minted assertion carries aud equal to the request's audience"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972 item 11)."
+  },
+  {
+   "id": "mas.join-assertion.pdp-checks-aud",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-pdp",
+   "text": "that `exp` has not passed and `aud` names this PDP; an assertion with no `aud`, or one naming another PDP, fails this check",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an assertion with no aud, or one naming another PDP, is denied"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972 item 11)."
+  },
+  {
+   "id": "mas.join-assertion.cache-key",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-request",
+   "text": "The cache key is the qualified Mission reference (`issuer`, `mission_id`), the token digest, and the `audience`",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a cached assertion is served only for a request matching its Mission, token digest and audience"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972 item 11)."
+  },
+  {
+   "id": "mas.join-assertion.cache-rechecks",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-request",
+   "text": "Before serving a cached assertion, the MAS MUST recheck the caller against the endpoint's visibility set and apply the minting checks above",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a caller outside the visibility set, or a request failing a minting check, is refused even when a cached assertion matches"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972 item 11)."
+  },
+  {
    "id": "authzen.instance-context.no-upstream-actor",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-actor",

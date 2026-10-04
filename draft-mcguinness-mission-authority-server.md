@@ -714,8 +714,8 @@ A consumer MUST ignore members it does not recognize.
 | `invalid_authority` | 400 | submission | Well-formed Intent, but no valid Authority Set is derivable under policy. |
 | `invalid_mission_intent_evidence` | 400 | submission | An evidence entry of unsupported type or failing its type's verification, or a policy-required evidence type absent from the submission. |
 | `unauthorized` | 401 | submission, join assertion | Request not authenticated. |
-| `invalid_join_request` | 400 | join assertion | The request body is not a JSON object carrying `mission_id` and exactly one token form ({{join-assertion-request}}). |
-| `join_failed` | 403 | join assertion | The referenced Mission is not `active`, or the acting token is inactive, carries no `cnf` confirmation, or does not join the referenced Mission ({{join-assertion-request}}). |
+| `invalid_join_request` | 400 | join assertion | The request body is not a JSON object carrying `mission_id`, a string `audience`, and exactly one token form ({{join-assertion-request}}). |
+| `join_failed` | 403 | join assertion | The referenced Mission is not `active`, the `audience` names no enrolled PDP, or the acting token is inactive, carries no `cnf` confirmation, or does not join the referenced Mission ({{join-assertion-request}}). |
 | `not_found` | 404 | submission, join assertion | A referenced submission or Mission does not exist or is not visible to the caller. |
 | `conflict` | 409 | submission (expansion, child creation) | A resolved predecessor or parent whose state or serialization refuses the operation ({{native-carriage}}). |
 | `rate_limited` | 429 | submission, join assertion | Caller is rate-limited. |
@@ -847,7 +847,8 @@ The PEPs and PDPs enrolled for a Mission's enforcement scope are
 deployment configuration that the MAS holds. This document defines no
 enrollment protocol: the MAS authenticates the caller and checks it
 against that configuration. The same set bounds visibility at the
-join-assertion endpoint ({{join-assertion-request}}).
+join-assertion endpoint and the `audience` it accepts
+({{join-assertion-request}}).
 
 # Mission Join {#mission-join}
 
@@ -1404,6 +1405,12 @@ is a JSON object with the following members:
 : REQUIRED. A string. The Mission the join is asserted against; its
   `issuer` is the MAS.
 
+`audience`:
+: REQUIRED. A string. The consuming PDP the assertion is minted for,
+  as the enrollment configuration of {{join-disclosure}} identifies
+  it. The MAS MUST NOT mint for an `audience` that names no PDP
+  enrolled for the Mission's enforcement scope.
+
 `access_token`:
 : A string. The acting access token. REQUIRED unless the digest pair
   is present.
@@ -1466,15 +1473,16 @@ The MAS verifies the join centrally, as follows:
 The MAS mints an assertion only for a Mission in the `active` state.
 It responds in the error format of {{submission-errors}}, as follows:
 
-- If the request body is not a JSON object carrying `mission_id` and
-  exactly one of the two token forms, the MAS rejects it with HTTP 400
-  and the `invalid_join_request` error code.
+- If the request body is not a JSON object carrying `mission_id`, a
+  string `audience`, and exactly one of the two token forms, the MAS
+  rejects it with HTTP 400 and the `invalid_join_request` error code.
 - If the `mission_id` is unknown or not visible to the caller, the MAS
   returns the `not_found` error code, preserving the anti-oracle
   property.
-- If the Mission is visible but not `active`, the acting token is
-  inactive or carries no `cnf` confirmation, or the acting token does
-  not join, the MAS rejects the request with HTTP 403 and the
+- If the Mission is visible but not `active`, the `audience` names no
+  PDP enrolled for the Mission's enforcement scope, the acting token
+  is inactive or carries no `cnf` confirmation, or the acting token
+  does not join, the MAS rejects the request with HTTP 403 and the
   `join_failed` error code.
 
 Visibility on this endpoint is bounded: a Mission is visible to its
@@ -1497,10 +1505,16 @@ does not repeat the AS round trip.
 Minting is a high-frequency path, invoked on every rotation for every
 Mission and workload the MAS serves, and is therefore a
 denial-of-service surface. The MAS MUST rate-limit assertion requests
-per caller. The MAS SHOULD serve repeated requests for the same
-(token digest, audience) pair from cache within the assertion's
-lifetime, so a burst of re-mints for an unchanged token costs one
-evaluation rather than many.
+per caller. The MAS SHOULD serve a repeated request from cache within
+the assertion's lifetime, so a burst of re-mints for an unchanged
+token costs one signing rather than many. The cache key is the
+qualified Mission reference (`issuer`, `mission_id`), the token
+digest, and the `audience`. Before serving a cached assertion, the MAS
+MUST recheck the caller against the endpoint's visibility set and
+apply the minting checks above, reusing an introspection result only
+as the preceding paragraph allows. A cache hit changes nothing in the
+consuming PDP's own state and freshness checks (rule 2 of
+{{join-rules}}).
 
 ## The Assertion {#join-assertion-artifact}
 
@@ -1555,7 +1569,7 @@ implements the substitution defense of Sections 3.11 and 3.12 of
   lifetime.
 
 `aud`:
-: RECOMMENDED. The PDP or PDPs for which the assertion is minted.
+: REQUIRED. A string. The request's `audience`: the consuming PDP.
   Audience scoping prevents replay of an assertion to a consumer it
   was not minted for.
 
@@ -1617,6 +1631,7 @@ Assertion:
     "client_id": "client_erp-recon-agent",
     "disposition": "client"
   },
+  "aud": "https://pdp.example.com",
   "iat": 1793606400,
   "exp": 1793608200
 }
@@ -1638,7 +1653,8 @@ mapping checks of rules 3 and 4 of {{join-rules}}:
   `issuer` and `id`; when the assertion's `mission` also carries
   `authority_hash`, that it matches the referenced Mission's
   `authority_hash` too;
-- that `exp` has not passed and any `aud` names this PDP; and
+- that `exp` has not passed and `aud` names this PDP; an assertion
+  with no `aud`, or one naming another PDP, fails this check; and
 - the token binding: `context.mission_join.token_sha256` equals
   `token.sha256`, and the reported thumbprint equals the assertion's
   confirmation member of the same method (`token_jkt` to `token.jkt`,
