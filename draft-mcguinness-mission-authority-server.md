@@ -3150,6 +3150,17 @@ shows the denial:
 
 \[\[ To be removed from the final specification ]]
 
+- Reference and claim consistency (#972, D289). The reference tuple
+  and both carriages share one extension rule. Every deployment
+  documents its mapping contract and an Enterprise MAS publishes it.
+  High-Consequence Binding defines the Mission-bound credential
+  composition inline and keeps the floor and Enterprise requirements
+  distinct; Acting Credentials points at the runtime profile's Custody
+  rule. Join rule 1 names a trusted propagated reference, step 4
+  compares identity only, Limitations points at the Statement, the
+  credential-holding component validates Instance Context, and
+  approval-surface authentication uses the published floor.
+
 - Submission polling and Join Assertion outcomes (#972). The 202 and
   `pending` status responses carry an `interval`; the client waits at
   least the interval in force (5 seconds by default) between status
