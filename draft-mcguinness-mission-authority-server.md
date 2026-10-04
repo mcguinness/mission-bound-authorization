@@ -723,13 +723,22 @@ JSON object body:
 
 A consumer MUST ignore members it does not recognize.
 
+A 401 `unauthorized` response carries the `WWW-Authenticate`
+challenges that Mission Status defines for its endpoints
+({{I-D.draft-mcguinness-oauth-mission-status}}, Section
+"Authentication Challenges"), naming the Protected Resource Metadata
+of the endpoint called. A failed mTLS or private-key-JWT client
+authentication is not reported as an access-token failure, and an
+authenticated caller to whom a submission or Mission is not visible
+still receives `not_found`.
+
 | `error` | HTTP | Returned by | Description |
 |---|---|---|---|
 | `invalid_mission_intent` | 400 | submission | Unparseable, structurally invalid, oversized, or containing an undefined top-level member. |
 | `invalid_authority` | 400 | submission | Well-formed Intent, but no valid Authority Set is derivable under policy. |
 | `invalid_mission_intent_evidence` | 400 | submission | An evidence entry of unsupported type or failing its type's verification, or a policy-required evidence type absent from the submission. |
 | `unsupported_media_type` | 415 | submission | The request media type is neither of the two the endpoint dispatches on ({{mission-submission}}). |
-| `unauthorized` | 401 | submission, join assertion | Request not authenticated. |
+| `unauthorized` | 401 | submission, join assertion | Request not authenticated; the response carries the challenges Mission Status defines. |
 | `invalid_join_request` | 400 | join assertion | The request body is not a JSON object carrying `mission_id`, a string `audience`, and exactly one token form ({{join-assertion-request}}). |
 | `join_failed` | 403 | join assertion | The referenced Mission is not `active`, the `audience` names no enrolled PDP, or the acting token is inactive, carries no `cnf` confirmation, or does not join the referenced Mission ({{join-assertion-request}}). |
 | `not_found` | 404 | submission, join assertion | A referenced submission or Mission does not exist or is not visible to the caller. |
@@ -3196,6 +3205,10 @@ shows the denial:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Authentication challenges (#972 item 18, D289). A 401 from the
+  submission or join-assertion endpoint carries the challenges Mission
+  Status defines.
 
 - Assertion audience and submission outcomes (#972, D289). A Join
   Assertion request names its consuming PDP in a required `audience`,

@@ -28792,6 +28792,27 @@
    "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#972 item 13)."
   },
   {
+   "id": "mas.errors.unauthorized-challenges",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "submission-errors",
+   "text": "A 401 `unauthorized` response carries the `WWW-Authenticate` challenges that Mission Status defines for its endpoints",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a 401 from the submission or join-assertion endpoint carries the Mission Status challenges"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack has no MAS submission or join-assertion endpoint. Todo until a MAS service exists (#972 item 18)."
+  },
+  {
    "id": "authzen.instance-context.no-upstream-actor",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-actor",
