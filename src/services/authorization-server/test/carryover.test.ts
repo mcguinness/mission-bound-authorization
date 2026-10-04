@@ -91,7 +91,13 @@ let seq = 0;
 let clock = new Date("2026-07-01T00:00:00Z");
 let tmp: string | undefined;
 
-const mkKernel = (over: { file?: string; onCommit?: (c: LifecycleCommit) => void } = {}): MissionKernel =>
+const mkKernel = (
+  over: {
+    file?: string;
+    onCommit?: (c: LifecycleCommit) => void;
+    reconciliation?: { mappings?: Record<string, string> };
+  } = {},
+): MissionKernel =>
   new MissionKernel({
     issuer: ISS,
     policy: DERIVATION_POLICY as never,
@@ -105,6 +111,7 @@ const mkKernel = (over: { file?: string; onCommit?: (c: LifecycleCommit) => void
     now: () => clock,
     actorProfiles: ACTORS,
     ...(over.file ? { store: { file: over.file } } : {}),
+    ...(over.reconciliation ? { authoritySourceReconciliation: over.reconciliation } : {}),
     onLifecycleCommit: over.onCommit ?? ((c) => commits.push(c)),
   });
 
@@ -262,6 +269,42 @@ describe("Child Mission Carryover (@spec child-delegation#carryover)", () => {
     // The derivation budget continues; it is not reset to a fresh counter.
     expect(replacement.derivation_limit).toBe(child.derivation_limit);
     expect(replacement.derivation_count).toBe(child.derivation_count);
+  });
+
+  it("gives a replacement the committed root of its rendered origin, and reconciles it from the committed manifest after a restart (@spec mission#authority-sources, #827)", () => {
+    tmp = mkdtempSync(join(tmpdir(), "carryover-"));
+    const file = join(tmp, "kernel.sqlite");
+    const k1 = mkKernel({ file });
+    const pred = approvePredecessor(k1);
+    const child = addChild(pred.id, "child-a", ["payments:invoice.read"], k1);
+    const run = openApproved(pred.id, { store: new ExpansionDeferralStore(k1, () => clock, config()) });
+    const entry = manifestOf(run).entries.find((e) => e.child_id === child.id);
+    expect(entry?.replacement?.authority_source_origin).toBe("old_child");
+    const out = redeem(run);
+    if ("error" in out) throw new Error(`carryover failed: ${JSON.stringify(out)}`);
+    const replacementId = entry?.replacement?.replacement_id as string;
+    const childRoot = k1.committedSourceBinding(child.id);
+    expect(k1.committedSourceBinding(replacementId)).toEqual(childRoot);
+    expect(k1.sourceBindings.basisOf(replacementId)).toBe("inherited");
+    // An upgraded store whose rows predate bindings. The root rows are
+    // mapped, the successor to a distinct root so the origin is observable;
+    // the old child follows its parent, and the replacement its rendered
+    // origin (the old child) as the committed manifest records it, not its
+    // parent. The fixed clock gives every row one creation instant, so order
+    // alone cannot sequence them.
+    k1.db.prepare("DELETE FROM authority_source_bindings").run();
+    k1.db.close();
+    const k2 = mkKernel({
+      file,
+      reconciliation: { mappings: { [pred.id]: childRoot.rootId, [out.successor.id]: "successor-root" } },
+    });
+    try {
+      expect(k2.committedSourceBinding(out.successor.id).rootId).toBe("successor-root");
+      expect(k2.committedSourceBinding(replacementId)).toEqual(childRoot);
+      expect(k2.sourceBindings.basisOf(replacementId)).toBe("reconciled");
+    } finally {
+      k2.db.close();
+    }
   });
 
   it("cascades an uncovered child with a rendered reason and authenticates the complete map under the issuer's signing key", async () => {

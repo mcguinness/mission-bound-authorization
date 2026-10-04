@@ -11,24 +11,29 @@
  * under that type's documented runtime semantics and MUST refuse if it
  * does not understand or cannot enforce those semantics").
  *
- * GAP 2: freshness (step 3) fails closed when context.freshness is absent
- * for a high-consequence action class (irreversible_action,
+ * GAP 2: freshness (step 3) fails closed when the Mission state
+ * observation (`context.mission_state_observation`) is absent for a
+ * high-consequence action class (irreversible_action,
  * external_commitment, privileged_administration), which @spec
  * runtime#state-freshness requires an active freshness mechanism for: "The
  * PDP MUST refuse a consequential action when it cannot establish, within
  * the deployment's published staleness bound, that the Mission is
  * `active`." Below that floor, token-lifetime expiry is itself a
  * conforming state source (@spec runtime#state-freshness, "Token-lifetime
- * freshness"), so an absent member there stays a permit.
+ * freshness"), but under a declared placement the state input is still
+ * REQUIRED (#1049 owner ruling), so an absent member denies at every class.
  *
- * GAP 3 (finding 2 of the follow-on author review): a PRESENT
- * context.freshness was accepted on shape alone. `ageMs > bound` is the
- * only check step 3 ran: a malformed `observed_at` parses to NaN, and
- * `NaN > bound` is false, so it passed; a future-dated `observed_at` yields
- * a negative age, also never greater than the bound, so it passed too;
- * `source` was never checked against anything. Each of these means the PDP
- * cannot actually establish Mission state from the observation, so each now
- * denies the same way as present-but-stale (@spec runtime#state-freshness).
+ * GAP 3 (finding 2 of the follow-on author review): a PRESENT observation
+ * was accepted on shape alone. `ageMs > bound` is the only check step 3 ran:
+ * a malformed timestamp parses to NaN, and `NaN > bound` is false, so it
+ * passed; a future-dated one yields a negative age, also never greater than
+ * the bound, so it passed too; and nothing tied the observation to the
+ * deployment's declared state source. Each of these means the PDP cannot
+ * actually establish Mission state from the observation, so each now denies
+ * the same way as present-but-stale (@spec runtime#state-freshness). The
+ * trusted source is the enforcement scope's declared one (#1004): the PDP
+ * relies on a PEP-supplied observation only where the declared state-source
+ * placement is `pep` (@spec authzen#context-audience-freshness).
  *
  * GAP 4 (finding 3 of the follow-on author review): step 5's "no entry
  * matched" arm collapsed two different failure kinds into one
@@ -64,7 +69,7 @@ const opts = (v: MissionView) => ({
   now: () => NOW,
   stalenessBound,
   relationForAction,
-  allowedFreshnessSources: new Set(["status"]),
+  stateSourcePlacement: "pep" as const,
   // @spec runtime#idempotency (#917): every high-consequence permit is claimed;
   // a fixture domain that also mediates privileged administration.
   claims: CLAIMS,
@@ -83,11 +88,12 @@ const view = (entry: AuthorityEntry): MissionView => ({
 
 const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => ({
   subject: { id: "alice" },
-  resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
+  resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
   action: { name: "payments:invoice.read", properties: { idempotency_key: freshKey() } },
   context: {
-    audience: RESOURCE,
     mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
+    // REQUIRED under the declared pep placement (#1049 owner ruling).
+    mission_state_observation: { state: "active", mode: "fresh", freshness_at: NOW.toISOString() },
   },
   ...over,
 });
@@ -148,12 +154,11 @@ describe("evaluateInner fail-closed gaps (#608)", () => {
 
     const HIGH_CONSEQUENCE_CLASSES = ["irreversible_action", "external_commitment", "privileged_administration"];
 
-    it("every high-consequence action_class with context.freshness absent -> deny stale_state, Mission state cannot be established, never a bypass", async () => {
+    it("every high-consequence action_class with context.mission_state_observation absent -> deny stale_state, Mission state cannot be established, never a bypass", async () => {
       for (const actionClass of HIGH_CONSEQUENCE_CLASSES) {
         const dec = await evaluate(
           req({
             context: {
-              audience: RESOURCE,
               mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
               action_class: actionClass,
             },
@@ -165,15 +170,14 @@ describe("evaluateInner fail-closed gaps (#608)", () => {
       }
     });
 
-    it("every high-consequence action_class with context.freshness present and fresh -> permit (the fix denies absence, not presence)", async () => {
+    it("every high-consequence action_class with context.mission_state_observation present and fresh -> permit (the fix denies absence, not presence)", async () => {
       for (const actionClass of HIGH_CONSEQUENCE_CLASSES) {
         const dec = await evaluate(
           req({
             context: {
-              audience: RESOURCE,
               mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
               action_class: actionClass,
-              freshness: { observed_at: NOW.toISOString(), source: "status" },
+              mission_state_observation: { state: "active", mode: "fresh", freshness_at: NOW.toISOString() },
             },
           }),
           opts(view(entry)),
@@ -182,16 +186,15 @@ describe("evaluateInner fail-closed gaps (#608)", () => {
       }
     });
 
-    it("every high-consequence action_class with context.freshness present but stale -> deny stale_state (the pre-existing arm, unchanged)", async () => {
+    it("every high-consequence action_class with context.mission_state_observation present but stale -> deny stale_state (the pre-existing arm, unchanged)", async () => {
       for (const actionClass of HIGH_CONSEQUENCE_CLASSES) {
         const dec = await evaluate(
           req({
             context: {
-              audience: RESOURCE,
               mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
               action_class: actionClass,
               // an hour old: beyond every class's staleness bound (30s/60s/300s default)
-              freshness: { observed_at: "2026-07-22T11:00:00Z", source: "status" },
+              mission_state_observation: { state: "active", mode: "fresh", freshness_at: "2026-07-22T11:00:00Z" },
             },
           }),
           opts(view(entry)),
@@ -201,23 +204,31 @@ describe("evaluateInner fail-closed gaps (#608)", () => {
       }
     });
 
-    it("a non-high-consequence action_class with context.freshness absent -> permit (token-lifetime freshness suffices below the floor)", async () => {
+    // #1049 owner ruling: under pep placement the observation is REQUIRED at
+    // every class. Token-lifetime freshness may be a lower class's state
+    // source, but it never excuses omitting the state input, so these two
+    // cases, which asserted the old floor's permit, now deny.
+    it("a non-high-consequence action_class with context.mission_state_observation absent under pep placement -> deny stale_state (the observation is REQUIRED; token-lifetime freshness does not excuse omitting it)", async () => {
       const dec = await evaluate(
         req({
           context: {
-            audience: RESOURCE,
             mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
             action_class: "consequential_write",
           },
         }),
         opts(view(entry)),
       );
-      expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
+      expect(dec.decision, JSON.stringify(dec.context)).toBe(false);
+      expect(dec.context.denial_reason).toBe("stale_state");
     });
 
-    it("no action_class at all, context.freshness absent -> permit (unclassified requests are unaffected)", async () => {
-      const dec = await evaluate(req(), opts(view(entry)));
-      expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
+    it("no action_class at all, context.mission_state_observation absent under pep placement -> deny stale_state (unclassified requests are not exempt)", async () => {
+      const dec = await evaluate(
+        req({ context: { mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" } } }),
+        opts(view(entry)),
+      );
+      expect(dec.decision, JSON.stringify(dec.context)).toBe(false);
+      expect(dec.context.denial_reason).toBe("stale_state");
     });
   });
 
@@ -230,56 +241,57 @@ describe("evaluateInner fail-closed gaps (#608)", () => {
 
     const HIGH_CONSEQUENCE_CLASSES = ["irreversible_action", "external_commitment", "privileged_administration"];
 
-    const reqWith = (actionClass: string, freshness: { observed_at: string; source: string }) =>
+    const reqWith = (actionClass: string, freshnessAt: string) =>
       req({
         context: {
-          audience: RESOURCE,
           mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           action_class: actionClass,
-          freshness,
+          mission_state_observation: { state: "active", mode: "fresh", freshness_at: freshnessAt },
         },
       });
 
-    it("the reported repro -- a non-parseable observed_at with an unrecognized source -- denies stale_state, never permits, for every high-consequence class", async () => {
+    it("the reported repro -- a non-parseable freshness_at -- denies stale_state, never permits, for every high-consequence class", async () => {
       for (const actionClass of HIGH_CONSEQUENCE_CLASSES) {
-        const dec = await evaluate(
-          reqWith(actionClass, { observed_at: "not-a-date", source: "bogus" }),
-          opts(view(entry)),
-        );
+        const dec = await evaluate(reqWith(actionClass, "not-a-date"), opts(view(entry)));
         expect(dec.decision, actionClass).toBe(false);
         expect(dec.context.denial_reason, actionClass).toBe("stale_state");
       }
     });
 
-    it("a future observed_at beyond the skew tolerance denies stale_state, for every high-consequence class", async () => {
+    it("a future freshness_at beyond the skew tolerance denies stale_state, for every high-consequence class", async () => {
       // Bound-independent: even irreversible_action's tight 30s staleness
       // bound would forgive a small negative age; this is minutes ahead, far
       // past the default 5s skew tolerance, so only the new skew check
       // catches it.
       const future = new Date(NOW.getTime() + 5 * 60_000).toISOString();
       for (const actionClass of HIGH_CONSEQUENCE_CLASSES) {
-        const dec = await evaluate(reqWith(actionClass, { observed_at: future, source: "status" }), opts(view(entry)));
+        const dec = await evaluate(reqWith(actionClass, future), opts(view(entry)));
         expect(dec.decision, actionClass).toBe(false);
         expect(dec.context.denial_reason, actionClass).toBe("stale_state");
       }
     });
 
-    it("a well-formed, fresh observation from a source outside the deployment's allowed set denies stale_state, for every high-consequence class", async () => {
-      for (const actionClass of HIGH_CONSEQUENCE_CLASSES) {
-        const dec = await evaluate(
-          reqWith(actionClass, { observed_at: NOW.toISOString(), source: "unrecognized_source" }),
-          opts(view(entry)),
-        );
-        expect(dec.decision, actionClass).toBe(false);
-        expect(dec.context.denial_reason, actionClass).toBe("stale_state");
+    it("a well-formed, fresh observation the deployment's declared state source does not place with the PEP denies stale_state, for every high-consequence class", async () => {
+      // No declared placement, and a declared `pdp` placement with no read of
+      // the PDP's own: either way the PEP-supplied observation is not the
+      // trusted source, so it establishes nothing.
+      for (const placement of [undefined, "pdp" as const]) {
+        for (const actionClass of HIGH_CONSEQUENCE_CLASSES) {
+          const dec = await evaluate(reqWith(actionClass, NOW.toISOString()), {
+            ...opts(view(entry)),
+            stateSourcePlacement: placement,
+          });
+          expect(dec.decision, `${placement} ${actionClass}`).toBe(false);
+          expect(dec.context.denial_reason, `${placement} ${actionClass}`).toBe("stale_state");
+        }
       }
     });
 
-    it("a future observed_at within the skew tolerance still permits (boundary control: the tolerance itself is not itself a denial)", async () => {
+    it("a future freshness_at within the skew tolerance still permits (boundary control: the tolerance itself is not itself a denial)", async () => {
       // Exactly at the 5s default tolerance boundary, inclusive.
       const withinSkew = new Date(NOW.getTime() + 5_000).toISOString();
       const dec = await evaluate(
-        reqWith("irreversible_action", { observed_at: withinSkew, source: "status" }),
+        reqWith("irreversible_action", withinSkew),
         opts(view(entry)),
       );
       expect(dec.decision, JSON.stringify(dec.context)).toBe(true);

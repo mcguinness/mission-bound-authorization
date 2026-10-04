@@ -1,7 +1,10 @@
 import { approvalContextManifest } from "@mission/core";
 import { DERIVATION_POLICY } from "@mission/demo-data";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { generateKeyPair } from "jose";
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   assertLocalPrincipal,
   type AuthorityEntry,
@@ -37,6 +40,18 @@ let key: CryptoKey;
 beforeAll(async () => {
   key = (await generateKeyPair("ES256")).privateKey;
 });
+
+// File-backed kernel stores, so a kernel can be reopened over the same rows
+// (a restart) with a changed catalog.
+const storeDirs: string[] = [];
+afterAll(() => {
+  for (const dir of storeDirs) rmSync(dir, { recursive: true, force: true });
+});
+const storeFile = (): string => {
+  const dir = mkdtempSync(join(tmpdir(), "mission-827-"));
+  storeDirs.push(dir);
+  return join(dir, "kernel.db");
+};
 
 const entry = (actions: string[], over: Record<string, unknown> = {}): AuthorityEntry =>
   ({
@@ -203,23 +218,30 @@ describe("authority source establishment (@spec mission#authority-sources, missi
   });
 
   it("refuses access_denied when the governed policy digest has drifted", () => {
-    const kernel = makeKernel();
+    const file = storeFile();
+    const kernel = makeKernel({ store: { file } });
     const record = approve(kernel, {
       clientId: "governed-agent",
       subject: "acme-accounts-payable",
     });
-    // The governed policy is edited after approval: the record's committed
-    // digest no longer matches what the catalog now resolves.
+    kernel.db.close();
+    // The governed policy is edited after approval, and the deployment
+    // restarts with it: the root the record committed now resolves a digest
+    // that no longer matches the one the Mission committed.
     const drifted = catalog();
     (drifted.entries as { policy?: { digest: string } }[])[2].policy = {
       id: "ap-controls",
       version: "1",
       digest: "sha-256:edited-policy",
     } as never;
-    const after = makeKernel({ authoritySourceCatalog: drifted as never });
-    expect(() => after.assertInheritedAuthoritySource(record.authority_source, [])).toThrow(
-      /has drifted from the reference the Mission committed/,
-    );
+    const after = makeKernel({ authoritySourceCatalog: drifted as never, store: { file } });
+    try {
+      expect(() => after.assertInheritedAuthoritySource(after.committedSourceBinding(record.id), [])).toThrow(
+        /has drifted from the reference the Mission committed/,
+      );
+    } finally {
+      after.db.close();
+    }
   });
 
   it("establishes the source from configuration alone: ApproveInput carries no source member", () => {
@@ -447,8 +469,10 @@ describe("authority source drawdown (@spec mission#authority-sources, child-dele
   });
 
   it("a drawdown refuses access_denied when the source narrowed since approval", () => {
-    const kernel = makeKernel({ actorProfiles: { "child-agent": "ai_agent" } });
+    const file = storeFile();
+    const kernel = makeKernel({ actorProfiles: { "child-agent": "ai_agent" }, store: { file } });
     const parent = approve(kernel);
+    kernel.db.close();
     const narrowed = catalog();
     (narrowed.entries as { ceiling: AuthorityEntry[] }[])[0].ceiling = [
       entry(["payments:vendor.read"]),
@@ -456,13 +480,26 @@ describe("authority source drawdown (@spec mission#authority-sources, child-dele
     const after = makeKernel({
       authoritySourceCatalog: narrowed as never,
       actorProfiles: { "child-agent": "ai_agent" },
+      store: { file },
     });
-    // The parent record is re-presented to a kernel whose catalog narrowed; the
-    // inherited source identity still resolves, so provenance is untouched, but
-    // the ceiling assertion refuses.
-    expect(() =>
-      after.assertInheritedAuthoritySource(parent.authority_source, parent.authority_set),
-    ).toThrow(/exceeds the authority of the user_delegated source/);
+    // The deployment restarts with a narrowed catalog. The parent's committed
+    // root survives and still resolves, so provenance is untouched, but the
+    // ceiling assertion refuses, at the kernel gate and at a real child drawdown.
+    try {
+      expect(() =>
+        after.assertInheritedAuthoritySource(after.committedSourceBinding(parent.id), parent.authority_set),
+      ).toThrow(/exceeds the authority of the user_delegated source/);
+      expect(() =>
+        createChildMission(after, {
+          parentId: parent.id,
+          intent: childIntent(),
+          proposedAuthority: [entry(["payments:invoice.read"])],
+          childActor: { sub: "child-agent", sub_profile: "ai_agent" },
+        } as never),
+      ).toThrow(/exceeds the authority of the user_delegated source/);
+    } finally {
+      after.db.close();
+    }
   });
 
   it("a template instance carries the template's source verbatim", () => {
@@ -677,14 +714,16 @@ describe("issuer-qualified principals at the source gates (@spec mission#authori
       () => kernel.establishAuthoritySource({ clientId: "ap-agent", subject: { iss: FOREIGN, sub: "alice" }, approver: { iss: ISS, sub: "bob" } }),
       /subject is not a principal/,
     );
+    const record = approve(kernel);
+    const root = kernel.committedSourceBinding(record.id);
     refused(
-      () => kernel.assertSubjectDisciplineForSource({ type: "user_delegated" }, { iss: FOREIGN, sub: "alice" }),
+      () => kernel.assertInheritedSubjectDiscipline(kernel.resolveCommittedSource(root), { iss: FOREIGN, sub: "alice" }),
       /subject is not a principal/,
     );
-    const record = approve(kernel);
     refused(
       () =>
         kernel.assertRenderedAuthoritySource({
+          binding: root,
           source: record.authority_source,
           subject: { iss: ISS, sub: "alice" },
           approver: { iss: FOREIGN, sub: "bob" },
@@ -1098,6 +1137,7 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
       /exceeds the authority of the user_delegated source 'alice-delegated'/,
     );
     expect(kernel.allMissions()).toHaveLength(1);
+    expect(() => kernel.insertRecord(forged as never, undefined, {} as never)).toThrow(/requires the source the record was established from/);
   });
 
   it("resolves once per approval completion, so gate 3 asserts the resolution gates 1, 2, 4 and 5 ran on", () => {
@@ -1137,52 +1177,69 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
     ).toThrow(/source 'alice-delegated'/);
   });
 
-  it("refuses an inherited source whose provenance denotes more than one root, rather than drawing on the first", () => {
+  it("recovers the parent's committed root for a child, never the first root of that provenance, with the root's own context", () => {
     const kernel = k({ actorProfiles: { "child-agent": "ai_agent" } });
     const parent = approveFor(kernel, "alice", "ap-agent", [grant(READS, "acme")]);
+    // bob-delegated is the first user_delegated root in the catalog, and
+    // alice's acme read lies outside it: the child succeeds only on alice's.
+    const { child } = createChildMission(kernel, {
+      parentId: parent.id,
+      intent: intent({ goal: "Read one invoice", expires_at: "2026-11-01T00:00:00Z" }),
+      proposedAuthority: [grant(["payments:invoice.read"], "acme")],
+      childActor: { sub: "child-agent", sub_profile: "ai_agent" },
+    } as never);
+    const root = kernel.committedSourceBinding(child.id);
+    expect(root).toEqual(kernel.committedSourceBinding(parent.id));
+    expect(root.rootId).toBe("alice-delegated");
+    // The root's own context, not the child's: the root still selects it.
+    expect(root.clientId).toBe("ap-agent");
+    expect(kernel.sourceBindings.basisOf(child.id)).toBe("inherited");
+    expect(kernel.sourceBindings.basisOf(parent.id)).toBe("resolved");
+    // A grandchild beyond alice's root refuses against that same root.
+    refusedWith(
+      () => kernel.assertInheritedAuthoritySource(root, [grant(READS, "globex")]),
+      /source 'alice-delegated'/,
+    );
+    // Provenance compares member by member: a policy id and version whose
+    // delimiter-joined forms collide are a changed provenance, not the same root.
+    const colliding = shared();
+    (colliding.entries as unknown[]).push({
+      ...(colliding.entries[4] as object),
+      id: "split",
+      clients: ["split-agent"],
+      subjects: ["acme-accounts-payable"],
+      policy: { id: "p", version: "q:r", digest: "sha-256:two" },
+    });
+    const resolver = catalogAuthoritySourceResolver(bindAuthoritySourceCatalog(colliding, ISS, ISS));
     refusedWith(
       () =>
-        createChildMission(kernel, {
-          parentId: parent.id,
-          intent: intent({ goal: "Read one invoice", expires_at: "2026-11-01T00:00:00Z" }),
-          proposedAuthority: [grant(["payments:invoice.read"], "acme")],
-          childActor: { sub: "child-agent", sub_profile: "ai_agent" },
-        } as never),
-      /denotes more than one root/,
+        resolver.resolveCommittedRoot({
+          deployment: ISS,
+          binding: {
+            rootId: "split",
+            deployment: ISS,
+            principal: { iss: ISS, sub: "acme-accounts-payable" },
+            clientId: "split-agent",
+            provenance: { type: "organizational", policy: { id: "p:q", version: "r", digest: "sha-256:two" } },
+          },
+        }),
+      /has changed provenance/,
     );
-    refusedWith(
-      () => kernel.assertInheritedAuthoritySource(parent.authority_source, parent.authority_set),
-      /denotes more than one root/,
-    );
-    // Policy identity compares member by member: ids and versions whose
-    // delimiter-joined forms collide still denote two distinct roots.
-    const colliding = shared();
-    (colliding.entries as unknown[]).push(
-      { ...(colliding.entries[4] as object), id: "split-1", clients: ["split-agent-1"], policy: { id: "p:q", version: "r", digest: "sha-256:one" } },
-      { ...(colliding.entries[4] as object), id: "split-2", clients: ["split-agent-2"], policy: { id: "p", version: "q:r", digest: "sha-256:two" } },
-    );
-    const split = k({ authoritySourceCatalog: colliding as never });
-    expect(() =>
-      split.assertInheritedAuthoritySource(
-        { type: "organizational", policy: { id: "p:q", version: "r", digest: "sha-256:one" } },
-        [],
-      ),
-    ).not.toThrow();
   });
-
-  it("establishes a template's source for every recipient Subject through every recipient Agent, refusing recipients whose roots differ", () => {
+  it("records each recipient's own root at template consent, and dispatch draws on the dispatching Subject's root, never another recipient's", () => {
     const kernel = k();
-    const consent = (subjects: string[]) =>
+    const store = new TemplateStore();
+    const consent = (subjects: string[], agents = ["ap-agent"]) =>
       createTemplate(
-        new TemplateStore(),
+        store,
         {
           template_version: "t827",
           issuer: ISS,
           approver: { iss: ISS, sub: "rita" },
           ceiling: [grant(READS, "acme")],
           dispatch_policy: { id: "read-only", version: "1" },
-          dispatchers: ["ap-agent"],
-          recipients: { subjects: subjects.map((sub) => ({ iss: ISS, sub })), agents: ["ap-agent"] },
+          dispatchers: agents,
+          recipients: { subjects: subjects.map((sub) => ({ iss: ISS, sub })), agents },
           per_instance_lifetime_s: 900,
           max_active: 5,
           rate_per_min: 30,
@@ -1192,11 +1249,60 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
         } as never,
         { ...kernel.authoritySourceOptions(), dispatchPolicies: READ_ONLY_POLICIES },
       );
-    expect(consent(["alice"]).authority_source).toEqual({ type: "user_delegated" });
-    expect(() => consent(["alice", "bob"])).toThrow(/draw on more than one authority source/);
+    // Two people sharing one agent registration: one provenance, two roots.
+    const template = consent(["alice", "bob"]);
+    expect(template.authority_source).toEqual({ type: "user_delegated" });
+    expect(store.sourceBinding(template.id, { iss: ISS, sub: "alice" }, "ap-agent")?.rootId).toBe("alice-delegated");
+    expect(store.sourceBinding(template.id, { iss: ISS, sub: "bob" }, "ap-agent")?.rootId).toBe("bob-delegated");
+    // A recipient listed twice is one pair with one root, not a refusal.
+    const twice = consent(["alice", "alice"]);
+    expect(store.sourceBinding(twice.id, { iss: ISS, sub: "alice" }, "ap-agent")?.rootId).toBe("alice-delegated");
+    const dispatch = (sub: string) =>
+      dispatchFromTemplate(kernel, store, {
+        dispatchPolicies: READ_ONLY_POLICIES,
+        templateId: template.id,
+        dispatchEventId: `dsp-827-${seq++}`,
+        dispatcher: "ap-agent",
+        intent: intent({ expires_at: "2026-11-01T00:00:00Z" }),
+        subject: { iss: ISS, sub },
+        policyVersion: DERIVATION_POLICY.policy_version,
+      } as never);
+    const { mission } = dispatch("alice");
+    expect(kernel.committedSourceBinding(mission.id).rootId).toBe("alice-delegated");
+    // bob's instance draws on bob's root, whose ceiling holds no acme read.
+    refusedWith(() => dispatch("bob"), /source 'bob-delegated'/);
+    // Recipients whose roots differ in provenance still refuse: a template has one.
+    expect(() => consent(["bob", "acme-accounts-payable"], ["mixed-agent"])).toThrow(
+      /draw on more than one authority source/,
+    );
     expect(() => consent(["alice", "carol"])).toThrow(/no trusted authority source is declared for 'carol'/);
+    // Gate 2 runs for every distinct root: an approver who may activate
+    // alice's root but not bob's cannot consent for both.
+    const split = shared();
+    (split.entries as { activators: string[] }[])[0].activators = ["ops-reviewer"];
+    const splitKernel = k({ authoritySourceCatalog: split as never });
+    expect(() =>
+      createTemplate(
+        new TemplateStore(),
+        {
+          template_version: "t827-split",
+          issuer: ISS,
+          approver: { iss: ISS, sub: "rita" },
+          ceiling: [grant(READS, "acme")],
+          dispatch_policy: { id: "read-only", version: "1" },
+          dispatchers: ["ap-agent"],
+          recipients: { subjects: [{ iss: ISS, sub: "alice" }, { iss: ISS, sub: "bob" }], agents: ["ap-agent"] },
+          per_instance_lifetime_s: 900,
+          max_active: 5,
+          rate_per_min: 30,
+          review_cadence_s: 86400,
+          approval_event_id: `tmpl-827-${seq++}`,
+          expires_at: "2099-01-01T00:00:00Z",
+        } as never,
+        { ...splitKernel.authoritySourceOptions(), dispatchPolicies: READ_ONLY_POLICIES },
+      ),
+    ).toThrow(/approver 'rita' is not authorized to activate the user_delegated authority source 'bob-delegated'/);
   });
-
   it("renders the source of the Subject it names, and refuses a client whose sources differ in provenance when it names none", () => {
     const kernel = k();
     expect(kernel.renderAuthoritySource({ clientId: "ap-agent" })).toEqual({ type: "user_delegated" });
@@ -1247,11 +1353,50 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
     );
   });
 
-  it("refuses a drawdown under a configured resolver rather than checking a catalog the approval never consulted", () => {
+  it("runs gate 4 at dispatch on the recipient's own root, refusing a human Subject of a workload source", () => {
+    // Consent establishes each pair's root and runs gate 2; the Subject an
+    // instance acts for is held to the root's subject discipline at dispatch.
+    const kernel = makeKernel();
+    const store = new TemplateStore();
+    const template = createTemplate(
+      store,
+      {
+        template_version: "t827-gate4",
+        issuer: ISS,
+        approver: { iss: ISS, sub: "bob" },
+        ceiling: [entry(READ_ACTIONS)],
+        dispatch_policy: { id: "read-only", version: "1" },
+        dispatchers: ["svc-agent"],
+        recipients: { subjects: [{ iss: ISS, sub: "alice" }, { iss: ISS, sub: "svc-reconciler" }], agents: ["svc-agent"] },
+        per_instance_lifetime_s: 900,
+        max_active: 5,
+        rate_per_min: 30,
+        review_cadence_s: 86400,
+        approval_event_id: `tmpl-827-${seq++}`,
+        expires_at: "2099-01-01T00:00:00Z",
+      } as never,
+      { ...kernel.authoritySourceOptions(), dispatchPolicies: READ_ONLY_POLICIES },
+    );
+    expect(template.authority_source).toEqual({ type: "service_owned" });
+    const dispatch = (sub: string) =>
+      dispatchFromTemplate(kernel, store, {
+        dispatchPolicies: READ_ONLY_POLICIES,
+        templateId: template.id,
+        dispatchEventId: `dsp-827-${seq++}`,
+        dispatcher: "svc-agent",
+        intent: intent({ expires_at: "2026-11-01T00:00:00Z" }),
+        subject: { iss: ISS, sub },
+        policyVersion: DERIVATION_POLICY.policy_version,
+      } as never);
+    expect(dispatch("svc-reconciler").mission.subject).toEqual({ iss: ISS, sub: "svc-reconciler" });
+    refusedWith(() => dispatch("alice"), /MUST NOT record the human principal 'alice'/);
+  });
+
+  it("draws down under a configured resolver from that resolver's committed root, never the catalog behind the kernel", () => {
     // The configured resolver serves ap-agent a narrow delegated root; the
     // kernel's own catalog carries a wider entry with the same provenance. A
-    // drawdown resolved from provenance against that catalog would admit
-    // authority the approved root never held.
+    // drawdown checked against that catalog would admit authority the
+    // approved root never held.
     const narrow: AuthoritySourceCatalog = {
       humanPrincipals: ["alice", "bob", "rita"],
       entries: [
@@ -1264,17 +1409,15 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
       actorProfiles: { "child-agent": "ai_agent" },
     });
     const parent = approveFor(kernel, "alice", "ap-agent", [grant(READS, "acme")]);
-    refusedWith(
-      () =>
-        createChildMission(kernel, {
-          parentId: parent.id,
-          intent: intent({ goal: "Read one invoice", expires_at: "2026-11-01T00:00:00Z" }),
-          proposedAuthority: [grant(["payments:invoice.read"], "acme")],
-          childActor: { sub: "child-agent", sub_profile: "ai_agent" },
-        } as never),
-      /needs the Mission's committed root/,
-    );
-    // Template consent resolves through the resolver; dispatch is a drawdown.
+    const { child } = createChildMission(kernel, {
+      parentId: parent.id,
+      intent: intent({ goal: "Read one invoice", expires_at: "2026-11-01T00:00:00Z" }),
+      proposedAuthority: [grant(["payments:invoice.read"], "acme")],
+      childActor: { sub: "child-agent", sub_profile: "ai_agent" },
+    } as never);
+    expect(kernel.committedSourceBinding(child.id).rootId).toBe("narrow-people");
+    // Template consent resolves through the resolver; dispatch is a drawdown
+    // whose instance set (vendor.read included) exceeds the resolver's root.
     const store = new TemplateStore();
     const template = createTemplate(
       store,
@@ -1306,11 +1449,36 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
           subject: { iss: ISS, sub: "alice" },
           policyVersion: DERIVATION_POLICY.policy_version,
         } as never),
-      /needs the Mission's committed root/,
+      /source 'narrow-people'/,
     );
-    expect(kernel.allMissions()).toHaveLength(1);
+    expect(kernel.allMissions()).toHaveLength(2);
+    // The committed-root answer is verified like an approval answer: one for
+    // another root, an unavailable resolver, or another deployment refuses.
+    const base = catalogAuthoritySourceResolver(bindAuthoritySourceCatalog(narrow, ISS, ISS));
+    const root = kernel.committedSourceBinding(parent.id);
+    const other = { ...base.resolveCommittedRoot({ deployment: ISS, binding: root }), rootId: "elsewhere" };
+    const crossed = k({
+      authoritySourceCatalog: catalog() as never,
+      authoritySourceResolver: { ...base, resolveCommittedRoot: () => other },
+    });
+    refusedWith(() => crossed.resolveCommittedSource(root), /answered for a different root, deployment, root context or source/);
+    const down = (): never => {
+      throw new Error("connect ECONNREFUSED");
+    };
+    const unavailable = k({
+      authoritySourceCatalog: catalog() as never,
+      authoritySourceResolver: { ...base, resolveCommittedRoot: down },
+    });
+    refusedWith(() => unavailable.resolveCommittedSource(root), /resolver is unavailable/);
+    const permissive = k({
+      authoritySourceCatalog: catalog() as never,
+      authoritySourceResolver: { ...base, resolveCommittedRoot: (input) => ({ ...base.resolveCommittedRoot({ ...input, deployment: ISS, binding: root }) }) },
+    });
+    refusedWith(
+      () => permissive.resolveCommittedSource({ ...root, deployment: "https://as-other.test" }),
+      /belongs to another deployment/,
+    );
   });
-
   it("accepts a source request only as confirmation of the root that resolves, never as a choice of root", () => {
     const resolver = catalogAuthoritySourceResolver(bindAuthoritySourceCatalog(shared(), ISS, ISS));
     const ask = { deployment: ISS, subject: { iss: ISS, sub: "bob" }, clientId: "mixed-agent" };
@@ -1372,5 +1540,312 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
         }).resolveCommittedRoot({ deployment: ISS, binding: orgBinding }),
       /has drifted from the reference the Mission committed/,
     );
+  });
+  const CHILD_ACTORS = { "child-agent": "ai_agent" };
+  const childOf = (kernel: MissionKernel, parentId: string) =>
+    createChildMission(kernel, {
+      parentId,
+      intent: intent({ goal: "Read one invoice", expires_at: "2026-11-01T00:00:00Z" }),
+      proposedAuthority: [grant(["payments:invoice.read"], "acme")],
+      childActor: { sub: "child-agent", sub_profile: "ai_agent" },
+    } as never);
+
+  it("preserves every committed root across a restart, and a child drawn after it recovers its parent's", () => {
+    const file = storeFile();
+    const before = k({ actorProfiles: CHILD_ACTORS, store: { file } });
+    const parent = approveFor(before, "alice", "ap-agent", [grant(READS, "acme")]);
+    const root = before.committedSourceBinding(parent.id);
+    before.db.close();
+    const after = k({ actorProfiles: CHILD_ACTORS, store: { file } });
+    try {
+      expect(after.committedSourceBinding(parent.id)).toEqual(root);
+      const { child } = childOf(after, parent.id);
+      expect(after.committedSourceBinding(child.id)).toEqual(root);
+    } finally {
+      after.db.close();
+    }
+  });
+
+  it("records a fresh root for an Expansion successor, never the predecessor's", () => {
+    const file = storeFile();
+    const before = k({ store: { file } });
+    const predecessor = approveFor(before, "alice", "ap-agent", [grant(READS, "acme")]);
+    before.db.close();
+    // The deployment restarts with alice's delegated authority declared under a
+    // new root. Expansion is a fresh approval, so the successor resolves that
+    // root rather than copying the predecessor's binding.
+    const renamed = shared();
+    (renamed.entries as { id: string }[])[1].id = "alice-delegated-v2";
+    const after = k({ authoritySourceCatalog: renamed as never, store: { file } });
+    try {
+      const { successor } = createExpansion(after, {
+        predecessorId: predecessor.id,
+        intent: intent(),
+        proposedAuthority: [grant(READS, "acme"), grant(SCHEDULE, "acme", "100.00")],
+        approver: { iss: ISS, sub: "rita" },
+        approvalEventId: `apev-827-exp-${seq++}`,
+        approvedUntil: "2027-01-01T00:00:00Z",
+      });
+      expect(after.committedSourceBinding(successor.id).rootId).toBe("alice-delegated-v2");
+      expect(after.sourceBindings.basisOf(successor.id)).toBe("resolved");
+      expect(after.committedSourceBinding(predecessor.id).rootId).toBe("alice-delegated");
+    } finally {
+      after.db.close();
+    }
+  });
+
+  // A store whose rows predate committed-root bindings: approved and drawn
+  // down as usual, then the bindings table emptied, as an upgraded store has it.
+  const preBindingStore = () => {
+    const file = storeFile();
+    const kernel = k({ actorProfiles: CHILD_ACTORS, store: { file } });
+    const parent = approveFor(kernel, "alice", "ap-agent", [grant(READS, "acme")]);
+    const { child } = childOf(kernel, parent.id);
+    kernel.db.prepare("DELETE FROM authority_source_bindings").run();
+    kernel.db.close();
+    return { file, parent, child };
+  };
+  const reopen = (file: string, over: Record<string, unknown> = {}) =>
+    k({ actorProfiles: CHILD_ACTORS, store: { file }, ...over });
+
+  it("binds a pre-binding row only from a reconciliation mapping or a declared historical catalog, and a derived row from its origin", () => {
+    // No evidence: nothing binds, and a drawdown refuses.
+    {
+      const { file, parent, child } = preBindingStore();
+      const kernel = reopen(file);
+      try {
+        expect(kernel.sourceBindings.get(parent.id)).toBeUndefined();
+        expect(kernel.sourceBindings.get(child.id)).toBeUndefined();
+        refusedWith(() => childOf(kernel, parent.id), /has no committed authority-source root/);
+      } finally {
+        kernel.db.close();
+      }
+    }
+    // An explicit mapping binds the root row; its child takes the parent's
+    // root, even listed before it (a skewed clock), since passes repeat.
+    {
+      const { file, parent, child } = preBindingStore();
+      const skew = k({ store: { file } });
+      skew.db.prepare("UPDATE missions SET created_at = ? WHERE id = ?").run("2000-01-01T00:00:00.000Z", child.id);
+      skew.db.close();
+      const kernel = reopen(file, { authoritySourceReconciliation: { mappings: { [parent.id]: "alice-delegated" } } });
+      try {
+        expect(kernel.committedSourceBinding(parent.id).rootId).toBe("alice-delegated");
+        expect(kernel.sourceBindings.basisOf(parent.id)).toBe("reconciled");
+        expect(kernel.committedSourceBinding(child.id)).toEqual(kernel.committedSourceBinding(parent.id));
+        expect(kernel.sourceBindings.basisOf(child.id)).toBe("reconciled");
+        expect(childOf(kernel, parent.id).child.authority_source).toEqual({ type: "user_delegated" });
+      } finally {
+        kernel.db.close();
+      }
+    }
+    // A declared historical catalog in force at the approval binds it too.
+    {
+      const { file, parent } = preBindingStore();
+      const kernel = reopen(file, {
+        authoritySourceReconciliation: { history: [{ catalog: shared(), from: "2000-01-01T00:00:00Z" }] },
+      });
+      try {
+        expect(kernel.committedSourceBinding(parent.id).rootId).toBe("alice-delegated");
+      } finally {
+        kernel.db.close();
+      }
+    }
+    // A historical root with another provenance is no evidence for this row.
+    {
+      const { file, parent } = preBindingStore();
+      const otherMode = shared();
+      Object.assign((otherMode.entries as object[])[1] as object, { type: "service_owned", principals: ["alice"] });
+      const kernel = reopen(file, {
+        authoritySourceReconciliation: { history: [{ catalog: otherMode, from: "2000-01-01T00:00:00Z" }] },
+      });
+      try {
+        expect(kernel.sourceBindings.get(parent.id)).toBeUndefined();
+      } finally {
+        kernel.db.close();
+      }
+    }
+    // A historical catalog whose interval does not contain the approval is no evidence.
+    {
+      const { file, parent } = preBindingStore();
+      const kernel = reopen(file, {
+        authoritySourceReconciliation: {
+          history: [{ catalog: shared(), from: "2000-01-01T00:00:00Z", until: "2001-01-01T00:00:00Z" }],
+        },
+      });
+      try {
+        expect(kernel.sourceBindings.get(parent.id)).toBeUndefined();
+      } finally {
+        kernel.db.close();
+      }
+    }
+  });
+
+  it("never binds a pre-binding row to a replacement root that merely matches it in the current catalog", () => {
+    // Root A (alice-delegated) approved the row; the deployment then removed A
+    // and declared B for the same Subject, client and provenance.
+    const replaced = () => {
+      const c = shared();
+      (c.entries as { id: string }[])[1].id = "alice-delegated-b";
+      return c;
+    };
+    // No evidence: B is the unique current match, and the row still does not bind to it.
+    {
+      const { file, parent } = preBindingStore();
+      const kernel = reopen(file, { authoritySourceCatalog: replaced() as never });
+      try {
+        expect(kernel.sourceBindings.get(parent.id)).toBeUndefined();
+        refusedWith(() => childOf(kernel, parent.id), /has no committed authority-source root/);
+      } finally {
+        kernel.db.close();
+      }
+    }
+    // A mapping naming A binds A, which is no longer declared: the drawdown refuses.
+    {
+      const { file, parent } = preBindingStore();
+      const kernel = reopen(file, {
+        authoritySourceCatalog: replaced() as never,
+        authoritySourceReconciliation: { mappings: { [parent.id]: "alice-delegated" } },
+      });
+      try {
+        expect(kernel.committedSourceBinding(parent.id).rootId).toBe("alice-delegated");
+        refusedWith(() => childOf(kernel, parent.id), /committed is no longer declared/);
+      } finally {
+        kernel.db.close();
+      }
+    }
+    // The catalog in force at the approval names A as well; never B.
+    {
+      const { file, parent } = preBindingStore();
+      const kernel = reopen(file, {
+        authoritySourceCatalog: replaced() as never,
+        authoritySourceReconciliation: { history: [{ catalog: shared(), from: "2000-01-01T00:00:00Z" }] },
+      });
+      try {
+        expect(kernel.committedSourceBinding(parent.id).rootId).toBe("alice-delegated");
+        refusedWith(() => childOf(kernel, parent.id), /committed is no longer declared/);
+      } finally {
+        kernel.db.close();
+      }
+    }
+  });
+
+  it("refuses construction on reconciliation evidence it cannot trust", () => {
+    expect(() =>
+      k({
+        authoritySourceReconciliation: {
+          history: [
+            { catalog: shared(), from: "2000-01-01T00:00:00Z" },
+            { catalog: shared(), from: "2010-01-01T00:00:00Z" },
+          ],
+        },
+      }),
+    ).toThrow(/intervals overlap/);
+    expect(() =>
+      k({ authoritySourceReconciliation: { history: [{ catalog: shared(), from: "2010-01-01T00:00:00Z", until: "2000-01-01T00:00:00Z" }] } }),
+    ).toThrow(/from must precede until/);
+    const overlapping = shared();
+    (overlapping.entries as { subjects?: string[] }[])[1].subjects = ["alice", "bob"];
+    expect(() =>
+      k({ authoritySourceReconciliation: { history: [{ catalog: overlapping, from: "2000-01-01T00:00:00Z" }] } }),
+    ).toThrow(/both select subject 'bob'/);
+    expect(() => k({ authoritySourceReconciliation: { mappings: { "msn-x": "" } } })).toThrow(/must name a root/);
+  });
+  it("refuses a committed-root answer whose client or Subject selector no longer selects the binding's context", () => {
+    const narrow: AuthoritySourceCatalog = {
+      humanPrincipals: ["alice", "bob", "rita"],
+      entries: [
+        { id: "narrow-people", type: "user_delegated", clients: ["ap-agent"], activators: ["rita"], ceiling: [cap(READS, "acme")] },
+      ],
+    };
+    const base = catalogAuthoritySourceResolver(bindAuthoritySourceCatalog(narrow, ISS, ISS));
+    // The same root id, with the binding's client, then its Subject, excluded.
+    for (const patch of [{ clients: ["other-agent"] }, { subjects: ["bob"] }]) {
+      const kernel = k({
+        authoritySourceCatalog: catalog() as never,
+        authoritySourceResolver: {
+          ...base,
+          resolveCommittedRoot: (input) => {
+            const r = base.resolveCommittedRoot(input);
+            return { ...r, entry: { ...r.entry, ...patch } };
+          },
+        },
+        actorProfiles: CHILD_ACTORS,
+      });
+      const parent = approveFor(kernel, "alice", "ap-agent", [grant(READS, "acme")]);
+      refusedWith(() => childOf(kernel, parent.id), /answered for a different root, deployment, root context or source/);
+    }
+  });
+
+  it("reconciles a template instance by its template's consent instant, never its dispatch instant", () => {
+    const file = storeFile();
+    const kernel = k({ store: { file } });
+    const store = new TemplateStore();
+    const template = createTemplate(
+      store,
+      {
+        template_version: "t827-legacy",
+        issuer: ISS,
+        approver: { iss: ISS, sub: "rita" },
+        ceiling: [grant(READS, "acme")],
+        dispatch_policy: { id: "read-only", version: "1" },
+        dispatchers: ["ap-agent"],
+        recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents: ["ap-agent"] },
+        per_instance_lifetime_s: 900,
+        max_active: 5,
+        rate_per_min: 30,
+        review_cadence_s: 86400,
+        approval_event_id: `tmpl-827-${seq++}`,
+        expires_at: "2099-01-01T00:00:00Z",
+      } as never,
+      { ...kernel.authoritySourceOptions(), dispatchPolicies: READ_ONLY_POLICIES },
+    );
+    const dispatchOne = () =>
+      dispatchFromTemplate(kernel, store, {
+        templateId: template.id,
+        dispatchEventId: `dsp-827-${seq++}`,
+        dispatcher: "ap-agent",
+        dispatchPolicies: READ_ONLY_POLICIES,
+        intent: intent({ expires_at: "2026-11-01T00:00:00Z" }),
+        subject: { iss: ISS, sub: "alice" },
+        policyVersion: DERIVATION_POLICY.policy_version,
+      } as never).mission;
+    const consented = dispatchOne();
+    const unusable = dispatchOne();
+    // Legacy rows with no bindings, from a template consented in 2020, long
+    // before these dispatches; one row's consent instant is lost.
+    kernel.db.prepare("DELETE FROM authority_source_bindings").run();
+    const setApprovedAt = (id: string, at: string | undefined): void => {
+      const row = kernel.db.prepare("SELECT approval_basis_json FROM missions WHERE id = ?").get(id) as {
+        approval_basis_json: string;
+      };
+      const basis = JSON.parse(row.approval_basis_json) as Record<string, unknown>;
+      if (at === undefined) delete basis.approved_at;
+      else basis.approved_at = at;
+      kernel.db.prepare("UPDATE missions SET approval_basis_json = ? WHERE id = ?").run(JSON.stringify(basis), id);
+    };
+    setApprovedAt(consented.id, "2020-01-01T00:00:00.000Z");
+    setApprovedAt(unusable.id, undefined);
+    kernel.db.close();
+    // Root A was in force at the consent; replacement root B, for the same
+    // recipient pair and provenance, was in force by the dispatches.
+    const replaced = shared();
+    (replaced.entries as { id: string }[])[1].id = "alice-delegated-b";
+    const after = k({
+      store: { file },
+      authoritySourceReconciliation: {
+        history: [
+          { catalog: shared(), from: "2000-01-01T00:00:00Z", until: "2025-01-01T00:00:00Z" },
+          { catalog: replaced, from: "2025-01-01T00:00:00Z" },
+        ],
+      },
+    });
+    try {
+      expect(after.committedSourceBinding(consented.id).rootId).toBe("alice-delegated");
+      expect(after.sourceBindings.basisOf(consented.id)).toBe("reconciled");
+      expect(after.sourceBindings.get(unusable.id)).toBeUndefined();
+    } finally {
+      after.db.close();
+    }
   });
 });

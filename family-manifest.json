@@ -211,7 +211,7 @@
    "role": "companion",
    "spec_maturity": "experimental",
    "maintenance": "frozen-until-upstream-release",
-   "maintenance_exception": "2026-10-02 (#838): the terminate response is the full status representation; status carries token_residual once terminated, with its members defined; idempotency equivalence covers caller, PS, mission path target and the parsed body, and a replay repeats the committed receipt with a fresh observation; examples are validated by scripts/check-aauth-management-examples.mjs. No AAuth wire member changed. The frozen-until-upstream-release text-fix policy is otherwise unchanged.",
+   "maintenance_exception": "2026-10-02 (#838): the terminate response is the full status representation; status carries token_residual once terminated, with its members defined; idempotency equivalence covers caller, PS, mission path target and the parsed body, and a replay repeats the committed receipt with a fresh observation; examples are validated by scripts/check-aauth-management-examples.mjs. No AAuth wire member changed. 2026-10-03 (#839): a Person reaches the operations through the PS's own interface, by internal invocation or a backend calling as a management service; the PS authorizes and records the action as the human, never under the service's administrative privilege; a browser session never authenticates a control-plane request; Person Interfaces security considerations added. No AAuth wire member changed. The frozen-until-upstream-release text-fix policy is otherwise unchanged.",
    "group": "lifecycle",
    "verbs": [
     "govern"
@@ -1270,7 +1270,6 @@
     "draft-mcguinness-mission-approval-governance",
     "draft-mcguinness-mission-audit",
     "draft-mcguinness-mission-authzen",
-    "draft-mcguinness-mission-metering",
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-mission-runtime-evidence",
     "draft-mcguinness-mission-substrate",
@@ -2417,6 +2416,7 @@
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-continuation",
     "draft-mcguinness-oauth-mission-cross-domain",
+    "draft-mcguinness-oauth-mission-cross-org-delegation",
     "draft-mcguinness-oauth-mission-derivation-limits",
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-management",

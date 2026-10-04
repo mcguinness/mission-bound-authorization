@@ -11,8 +11,8 @@ const { action: _recordedAction, ...presented } = binding;
 const makeView = (): MissionView => ({ id: "msn_cap", issuer: "https://as.test", authority_hash: "sha-256:test", state: "active", version: 1,
   subject: { iss: "https://as.test", sub: "alice" }, client_id: "ap-agent",
   authority_set: [{ type: "mission_resource_access", resource, actions: [action, "payments:vendor.read"], capability_sources: [binding] }] });
-const makeRequest = (): EvaluationRequest => ({ subject: { id: "alice" }, resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } }, action: { name: action }, context: {
-  audience: resource, mission: { id: "msn_cap", issuer: "https://as.test", authority_hash: "sha-256:test" }, capability_source: { ...presented },
+const makeRequest = (): EvaluationRequest => ({ subject: { id: "alice" }, resource: { type: "invoice", id: "inv-1", properties: { audience: resource, vendor_id: "acme" } }, action: { name: action }, context: {
+  mission: { id: "msn_cap", issuer: "https://as.test", authority_hash: "sha-256:test" }, capability_source: { ...presented },
 } });
 function options(view = makeView()): EvaluateOptions {
   return { view, fga: { checkWithContext: async () => true } as unknown as Fga, modelId: "test", now: () => new Date("2026-09-04T12:00:00Z"), relationForAction, stalenessBound };

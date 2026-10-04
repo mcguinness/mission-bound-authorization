@@ -7,8 +7,8 @@
     "content_sha256": "ec57264fec92ea2dd3c42ba1067c70d72195f251bc5c416ccad856cb1beac3a1"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "2dbc4808363ba25f739a1f293418f6e34faaa551",
-    "content_sha256": "977d0dbe5dc5aeeacc01a9d960246cd2837854687e628afb178563961d3aff3f"
+    "revision": "68b6713ad9cf5556704e40d0386c8e3716582be8",
+    "content_sha256": "dfffde4a2feed909aa58ab9d787aa77f801f5603d270809450cbfcfd445ae001"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "6f10361ef7fae0c457e78b003860587fb773ac4f",
@@ -19,8 +19,8 @@
     "content_sha256": "a2a1f271328ddd5634a826cbf588eadcc514418fad0f4679fe1f31c647056ec0"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "ca5651271c9ffcd9ddfc7d5e30f8f9c66b1bb7ad",
-    "content_sha256": "9c8386a66e90b87bed75b4d34f8a295401777b9bd61a358ee60de3757174354b"
+    "revision": "091f1ffd5e6b77d47f8f189797bfdb0cf64ea328",
+    "content_sha256": "2dec6151c2f5be97d04850b1d0253608ade2b9d406227f7a3149814c781af1f7"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "2b422bf1c54a64ae5cdf4440f041a0d27f2a0e05",
@@ -59,12 +59,12 @@
     "content_sha256": "55a783cb8e35204a9799f0c69552a46cc8ed2bc5d9604349bb809851220e7bd8"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
-    "revision": "1ea788e00f84b3804c447cb8bbb143c7b803901d",
-    "content_sha256": "873b64d56c1813874239d7c4e07d5e1cbc777809c05d725efbf79439038750f9"
+    "revision": "091f1ffd5e6b77d47f8f189797bfdb0cf64ea328",
+    "content_sha256": "76ae8710dc0faf41220e947e05a4dc4a79440c0039746089a4b24e486c1d06de"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "c974571e77358f75177fa9abdf74c88253e9bf4c",
-    "content_sha256": "3ef35f23b31fab1f0f363b1fb715c1a1fb4394589188b2e1885da46ed769f8b9"
+    "revision": "f175eba2a7c978611db6ea8ba9413fa82655eb3b",
+    "content_sha256": "2b486543f5bf301ee29c6c8bc12493448324dbdd8f92ac23d3c665d6da11e0e9"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
@@ -95,8 +95,8 @@
     "content_sha256": "7747cec83e69020dce2611fd99172fbe14034d776ba68c9b64cdca9fd410d94f"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "7bb182b0caae732be5813431f4c5ad6406eafaf7",
-    "content_sha256": "3d99176b70a7d440c8588863dc35d0f33defd7a5e3807947003767b93166168e"
+    "revision": "aec5ef67087d7cebce0787dd3ea83b6dcbba193e",
+    "content_sha256": "41d16c43d4e29769a790ea33393bfc300f8b96875a99c614d6039c689cc3fadb"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
     "revision": "c974571e77358f75177fa9abdf74c88253e9bf4c",
@@ -113,6 +113,10 @@
    "draft-mcguinness-oauth-mission-submission-evidence.md": {
     "revision": "dd16dd544da103729cc5380bb11e860796a95643",
     "content_sha256": "78fa453b80921a5898aa47c2453be8c86cf81d74a5a5a87e95ed0c2a4a06637e"
+   },
+   "draft-mcguinness-mission-aauth-management.md": {
+    "revision": "622d072fd453603bd406bd39ea0f11b43c6384e4",
+    "content_sha256": "be36c6e41489638f056832d274a9daadb25837ede6b13b5963fa76c5fc14c33c"
    }
   }
  },
@@ -233,7 +237,8 @@
    "mas.instance-bound-join",
    "derivation-limits.limit",
    "continuation.ica-transport",
-   "submission-evidence.verification"
+   "submission-evidence.verification",
+   "expansion.interactive-completion"
   ]
  },
  "profiles": [
@@ -3442,6 +3447,12 @@
      "name": "issuer-qualified principals at the source gates (@spec mission#authority-sources, mission#approval-event, #829) > refuses a dispatch retry whose Subject is foreign or malformed before returning the instance its dispatch id created, and still returns it for a legitimate retry after revocation",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > runs gate 4 at dispatch on the recipient's own root, refusing a human Subject of a workload source",
+     "level": "unit",
+     "surface": "derivation"
     }
    ]
   },
@@ -3602,6 +3613,18 @@
      "name": "shipped authority-source catalog (@spec mission#authority-sources) > the real AS assembly runs with the shipped catalog and refuses an undeclared client",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > records a fresh root for an Expansion successor, never the predecessor's",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > refuses construction on reconciliation evidence it cannot trust",
+     "level": "unit",
+     "surface": "derivation"
     }
    ]
   },
@@ -3727,6 +3750,12 @@
      "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > lets an authorized reviewer activate workload authority it does not hold, and refuses one who may not",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > records each recipient's own root at template consent, and dispatch draws on the dispatching Subject's root, never another recipient's",
+     "level": "unit",
+     "surface": "derivation"
     }
    ]
   },
@@ -3784,6 +3813,18 @@
     {
      "file": "src/services/authorization-server/test/authority-source.test.ts",
      "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > refuses at the creation funnel a record whose source is not the one its approval resolved",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > draws down under a configured resolver from that resolver's committed root, never the catalog behind the kernel",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > recovers the parent's committed root for a child, never the first root of that provenance, with the root's own context",
      "level": "unit",
      "surface": "derivation"
     }
@@ -3877,19 +3918,43 @@
     },
     {
      "file": "src/services/authorization-server/test/authority-source.test.ts",
-     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > refuses an inherited source whose provenance denotes more than one root, rather than drawing on the first",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > draws down under a configured resolver from that resolver's committed root, never the catalog behind the kernel",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/authority-source.test.ts",
-     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > establishes a template's source for every recipient Subject through every recipient Agent, refusing recipients whose roots differ",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > recovers the parent's committed root for a child, never the first root of that provenance, with the root's own context",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/authority-source.test.ts",
-     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > refuses a drawdown under a configured resolver rather than checking a catalog the approval never consulted",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > records each recipient's own root at template consent, and dispatch draws on the dispatching Subject's root, never another recipient's",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > binds a pre-binding row only from a reconciliation mapping or a declared historical catalog, and a derived row from its origin",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > never binds a pre-binding row to a replacement root that merely matches it in the current catalog",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > refuses a committed-root answer whose client or Subject selector no longer selects the binding's context",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > reconciles a template instance by its template's consent instant, never its dispatch instant",
      "level": "unit",
      "surface": "derivation"
     }
@@ -4728,6 +4793,30 @@
    "coverage": "todo",
    "tests": [],
    "notes": "The AS-side rule only: a human Approver reading the rendered prose and declining is the intended consent check, not issuance gating by the AS."
+  },
+  {
+   "id": "core.derivation.model-input-narrows-only",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "authorization-derivation",
+   "text": "The AS MUST NOT let it supply or widen authority",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for a fixed Intent, proposal or configured mapping, and policy version, the Authority Set derived with a recorded model output is no wider than the set derived without it: the model's output adds no entry and widens none, every resulting entry satisfies its type's subset rule against a candidate the selected mode produced, an Intent that matches no configured mapping is refused whatever the model output, and re-deriving over the retained inputs, model output included, reproduces the set without invoking the model"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "A prohibition every AS meets; one that uses no model in derivation meets it trivially, so the row is unconditional rather than gated on a capability. Candidate authority keeps a proposal or configured-mapping origin; model-generated proposals stay permitted through Shaping and ordinary admission (#1010)."
   },
   {
    "id": "core.approval-authentication.floor-and-requested-carriage-both-satisfied",
@@ -12915,31 +13004,31 @@
     },
     {
      "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
-     "name": "evaluateInner fail-closed gaps (#608) > GAP 2: freshness absence fails closed for high-consequence classes (@spec runtime#state-freshness) > every high-consequence action_class with context.freshness absent -> deny stale_state, Mission state cannot be established, never a bypass",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 2: freshness absence fails closed for high-consequence classes (@spec runtime#state-freshness) > every high-consequence action_class with context.mission_state_observation absent -> deny stale_state, Mission state cannot be established, never a bypass",
      "level": "endpoint",
      "surface": "decision-request"
     },
     {
      "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
-     "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > the reported repro -- a non-parseable observed_at with an unrecognized source -- denies stale_state, never permits, for every high-consequence class",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > the reported repro -- a non-parseable freshness_at -- denies stale_state, never permits, for every high-consequence class",
      "level": "endpoint",
      "surface": "decision-request"
     },
     {
      "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
-     "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > a future observed_at beyond the skew tolerance denies stale_state, for every high-consequence class",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > a future freshness_at beyond the skew tolerance denies stale_state, for every high-consequence class",
      "level": "endpoint",
      "surface": "decision-request"
     },
     {
      "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
-     "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > a well-formed, fresh observation from a source outside the deployment's allowed set denies stale_state, for every high-consequence class",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > a well-formed, fresh observation the deployment's declared state source does not place with the PEP denies stale_state, for every high-consequence class",
      "level": "endpoint",
      "surface": "decision-request"
     },
     {
      "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
-     "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > a future observed_at within the skew tolerance still permits (boundary control: the tolerance itself is not itself a denial)",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 3: malformed/future/untrusted freshness fails closed, never merely shape-checked (@spec runtime#state-freshness) > a future freshness_at within the skew tolerance still permits (boundary control: the tolerance itself is not itself a denial)",
      "level": "endpoint",
      "surface": "decision-request"
     },
@@ -12954,9 +13043,27 @@
      "name": "consequential freshness floor (@spec runtime#state-freshness) > refuses an injected no-freshness posture for consequential, undeclared and default classes",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > under PDP placement the observation is absent and the PDP establishes state from its own read > with no read of its own, denies stale_state below the high-consequence floor too: a consequential write and a read",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > a present assertion is verified against the declared state source's key > a verified assertion whose signed fresh_until has already passed denies stale_state, in fresh mode too",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > under PEP placement the PDP reads context.mission_state_observation > a missing observation denies stale_state at every class below the high-consequence floor too, audit_only included",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "Three arms of \"cannot establish ... within the bound\": state present but beyond the bound (the pre-existing, OpenFGA-gated mapping above), state absent entirely for a class that requires an active source (#608 GAP 2, unconditional), and state PRESENT but not actually establishable from it (author-review finding 2, GAP 3, unconditional): a non-finite observed_at, an observed_at dated beyond the deployment's configured future-skew tolerance, or a source outside the deployment's configured allowed set. Each of the three GAP 3 mappings is asserted for all three high-consequence classes in one case; a fourth case is the boundary control proving the skew tolerance itself (default 5s, configurable via EvaluateOptions.freshnessSkewToleranceSeconds) is not itself a denial. GAP 2's sibling unconditional cases (same file) cover the fresh-present and stale-present arms, plus a boundary control that a non-high-consequence class stays a permit when freshness is absent, since token-lifetime expiry conforms below that floor per @spec runtime#state-freshness. #793: a no-freshness declaration cannot disable consequential-class checks: configuration load refuses it, and the PDP separately refuses an injected none posture as out_of_authority before consulting freshness."
+   "notes": "Three arms of \"cannot establish ... within the bound\": state present but beyond the bound (the pre-existing, OpenFGA-gated mapping above), state absent entirely for a class that requires an active source (#608 GAP 2, unconditional), and state PRESENT but not actually establishable from it (author-review finding 2, GAP 3, unconditional): a non-finite freshness_at, a freshness_at dated beyond the deployment's configured future-skew tolerance, or an observation the enforcement scope's declared state-source placement does not rely on (no declared placement, or pdp placement with no read of the PDP's own; #1004 retired the request-named source). Each of the three GAP 3 mappings is asserted for all three high-consequence classes in one case; a fourth case is the boundary control proving the skew tolerance itself (default 5s, configurable via EvaluateOptions.freshnessSkewToleranceSeconds) is not itself a denial. GAP 2's sibling unconditional cases (same file) cover the fresh-present and stale-present arms, plus a boundary control that a non-high-consequence class stays a permit when freshness is absent, since token-lifetime expiry conforms below that floor per @spec runtime#state-freshness. #793: a no-freshness declaration cannot disable consequential-class checks: configuration load refuses it, and the PDP separately refuses an injected none posture as out_of_authority before consulting freshness."
   },
   {
    "id": "runtime.state-freshness.state-source-expiry-or-observation-rule",
@@ -13011,6 +13118,24 @@
     {
      "file": "src/services/pdp/test/evaluate-decision.test.ts",
      "name": "a permit expires no later than the state view it was decided against (@spec runtime#state-freshness) > denies stale_state rather than issuing a permit whose window has already closed",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > under PEP placement the permit is capped at the accepted observation's state valid-through > caps valid_until at mission_status_expires_at when the observation reports one, earlier or later than the observation plus the class bound",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > under PEP placement the permit is capped at the accepted observation's state valid-through > a reported expiry already reached yields no permit: stale_state",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > a present assertion is verified against the declared state source's key > a verified assertion's signed fresh_until caps the permit in fresh mode, though the observation does not repeat it",
      "level": "unit",
      "surface": "decision-request"
     }
@@ -15437,8 +15562,21 @@
     "normative": "the PDP matches the approved Authority Set entry's resource against resource.properties.audience, never against the AuthZEN resource object's type/id identity"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > the entry match reads resource.properties.audience > matches the approved entry's resource against resource.properties.audience, with no context.audience and a resource id that names an object",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > the entry match reads resource.properties.audience > never matches on the resource object's id or type: an id naming the entry's resource under another audience is out_of_authority",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ]
   },
   {
    "id": "authzen.pdp-request.no-downgrade-to-non-mission-policy",
@@ -15488,8 +15626,27 @@
      "name": "PDP decisions against OpenFGA (@spec authzen) > revoked mission -> deny mission_inactive within the bound",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > the PEP-supplied state is exactly active, and the PDP's own view wins on disagreement (@spec authzen#pdp-request rule 1) > the PDP's own active view against a PEP-supplied revoked state denies mission_inactive",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > the PEP-supplied state is exactly active, and the PDP's own view wins on disagreement (@spec authzen#pdp-request rule 1) > an unknown PEP-supplied state, against the PDP's own active view, denies mission_inactive",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > the PEP-supplied state is exactly active, and the PDP's own view wins on disagreement (@spec authzen#pdp-request rule 1) > the PDP's own revoked view against a PEP-supplied active state denies mission_inactive: the PDP's view wins",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
-   ]
+   ],
+   "notes": "Both disagreement directions under the PDP role (#1004): the PDP's active view against a PEP-supplied revoked state, and the PDP's revoked view against a PEP-supplied active state, each deny mission_inactive; an unrecognized PEP-supplied value (case, whitespace, an unknown state) is non-active. This PDP always holds its own view (the loaded view's state)."
   },
   {
    "id": "authzen.pdp-request.consistency-id-and-issuer-equal",
@@ -15606,9 +15763,22 @@
     "normative": "a supplied context.mission_state_observation.version that disagrees with the PDP's own tracked state version is treated as staleness (stale_state), and version is never compared against policy_view_id"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#594 wave 3: not unlocked by the 2026-09-04 Decision Evidence batch. state_version appears nowhere under services/pdp/src: the PDP tracks no Mission state version to compare a presented one against, and its DecisionEvidenceObject (services/pdp/src/decision-evidence.ts) has no member to record the comparison in. The row needs PDP code, not a test."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > an observation version the PDP does not track is staleness (@spec authzen#pdp-request rule 4) > an observation version other than the PDP's tracked Mission state version denies stale_state",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > an observation version the PDP does not track is staleness (@spec authzen#pdp-request rule 4) > the version is compared against the tracked version, never against policy_view_id: a matching version permits beside the view's policy_view_id",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "The PDP's tracked version is the loaded view's version (#1004); a mismatching observation version denies stale_state. The never-against-policy_view_id clause is witnessed only by a positive control (a matching version permits beside the view's policy_view_id) that is unproven (no fail-before evidence). Recording the comparison in Decision Evidence (the row's text) is not implemented: DecisionEvidenceObject has no member for it."
   },
   {
    "id": "authzen.pdp-request.consistency-no-fail-on-optional-omission",
@@ -16252,8 +16422,28 @@
     "normative": "context.mission_state_observation is REQUIRED when the deployment's declared state-source placement has the PEP supply state, and absent when state establishment is placed with the PDP instead"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/authzen-members.test.ts",
+     "name": "the PEP sends the AuthZEN profile's members (@spec authzen#context-audience-freshness, #1004) > under PEP placement, carries the loader's observation at context.mission_state_observation, with state, mode and freshness_at, and no context.freshness",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authzen-members.test.ts",
+     "name": "the PEP sends the AuthZEN profile's members (@spec authzen#context-audience-freshness, #1004) > under PDP placement, omits context.mission_state_observation, and the co-resident PDP establishes state from its own read",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authzen-members.test.ts",
+     "name": "the PEP sends the AuthZEN profile's members (@spec authzen#context-audience-freshness, #1004) > under PEP placement, refuses state_unavailable without asking the PDP when the loader's observation lacks a member its mode requires or carries a malformed one",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "The placement is the Enforcement Scope Statement's state_source.placement (pep in the shipped statement). Under pep the PEP sends the observation, and refuses state_unavailable rather than send a request without a well-formed one; under pdp it omits the member."
   },
   {
    "id": "authzen.context-audience-freshness.state-observation-members-required",
@@ -16274,8 +16464,22 @@
     "normative": "when present, mission_state_observation carries state (string, REQUIRED) and mode (string, REQUIRED, one of fresh/cached/event_driven) and freshness_at (timestamp, REQUIRED in every mode); it also carries mission_status_issued_at and mission_status_expires_at (timestamps, REQUIRED for cached and event_driven modes, OPTIONAL for fresh), version (integer, OPTIONAL), and assertion (string, OPTIONAL)"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/authzen-members.test.ts",
+     "name": "the PEP sends the AuthZEN profile's members (@spec authzen#context-audience-freshness, #1004) > under PEP placement, carries the loader's observation at context.mission_state_observation, with state, mode and freshness_at, and no context.freshness",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authzen-members.test.ts",
+     "name": "the PEP sends the AuthZEN profile's members (@spec authzen#context-audience-freshness, #1004) > under PEP placement, refuses state_unavailable without asking the PDP when the loader's observation lacks a member its mode requires or carries a malformed one",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "E2 shows a sent observation carries state, mode and freshness_at; E4 shows the PEP never sends one missing a member its mode requires (state, mode, freshness_at; mission_status_issued_at and mission_status_expires_at for cached and event_driven) or carrying a mode outside the three, a non-integer version or a non-string assertion. The shipped loader is a live read, so it emits fresh observations only."
   },
   {
    "id": "authzen.context-external-communication.required-for-pdp-enforced-taint-classes",
@@ -28035,6 +28239,179 @@
    "notes": "The reference composition publishes no MAS metadata document. Todo (#972)."
   },
   {
+   "id": "mas.join-assertion.mint-requires-active",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-request",
+   "text": "The MAS mints an assertion only for a Mission in the `active` state",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "no assertion is minted for a Mission that is not active"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+  },
+  {
+   "id": "mas.join-assertion.malformed-request",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-request",
+   "text": "the MAS rejects it with HTTP 400 and the `invalid_join_request` error code",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a body without mission_id and exactly one token form gets 400 invalid_join_request"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+  },
+  {
+   "id": "mas.join-assertion.join-failed-outcomes",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-request",
+   "text": "the MAS rejects the request with HTTP 403 and the `join_failed` error code",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a visible non-active Mission, an inactive or unbound token, or a failed join gets 403 join_failed, while an unknown or invisible Mission keeps 404 not_found"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+  },
+  {
+   "id": "mas.submission.interval-in-force",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "submission-status",
+   "text": "The interval in force for a submission is the most recent `interval` the client received for it, or 5 seconds if it has received none",
+   "role": "client",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the interval in force starts at 5 seconds, a pending response carrying a positive-integer interval replaces it, and one omitting interval (or carrying a non-positive-integer value) leaves it unchanged"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#972)."
+  },
+  {
+   "id": "mas.submission.interval-wait",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "submission-status",
+   "text": "The client MUST wait at least the interval in force between submission-status requests for a submission, measured from its receipt of the preceding response for that submission",
+   "role": "client",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a client never sends a status request for a submission sooner than the interval in force after receiving the preceding response for it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#972)."
+  },
+  {
+   "id": "mas.submission.status-parameter",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "submission-status",
+   "text": "REQUIRED. A string. The `submission_id` the MAS returned on acceptance",
+   "role": "client",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the status request carries the submission_id parameter"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#972)."
+  },
+  {
+   "id": "mas.join-assertion.signs-with-listed-alg",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-artifact",
+   "text": "The MAS MUST sign the assertion with an algorithm listed in its `mission_status_signing_alg_values_supported` metadata member",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every assertion's alg is listed in the MAS's mission_status_signing_alg_values_supported"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+  },
+  {
+   "id": "mas.join-assertion.pdp-rejects-unlisted-alg",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "discovery",
+   "text": "a PDP MUST reject an assertion whose `alg` is `none` or is not listed",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an assertion signed with none or an unlisted alg is rejected"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+  },
+  {
    "id": "authzen.instance-context.no-upstream-actor",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-actor",
@@ -28143,6 +28520,330 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Review finding on #1031 (owner ruling D241): narrowing between adjudication and activation. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.response-shape",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "The Mission Issuer MUST answer the token exchange with an OAuth error response",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "An expansion that completes interactively is answered with HTTP 400, error mission_interaction_required, a mission_continuation handle and expires_in, never with an RFC 8693 success or authorization_pending."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), opened for owner review. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.continuation-refusal",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "MUST refuse a pushed request whose `mission_continuation` is unknown, expired, or bound to another client, with `invalid_request`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A pushed authorization request carrying an unknown or expired mission_continuation, or one issued to another client, is refused with invalid_request and yields no request_uri."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), opened for owner review. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.recorded-inputs-only",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "MUST take the predecessor, Intent, proposal, submission evidence, presenter confirmation, and actor context only from the recorded operation",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A pushed request that supplies a predecessor, Intent, proposal, submission evidence, presenter confirmation or actor context differing from the recorded operation is refused; the approval ceremony renders and binds only the recorded operation's inputs."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), opened for owner review. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.re-push-continues-operation",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "the client pushes again with the same `mission_continuation`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "After a request_uri expires, is consumed, or its authorization response is lost, a new pushed request with the same mission_continuation continues the same operation: before an outcome it starts no second adjudication, and after approval it receives a fresh code for the recorded approval without a second prompt."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), opened for owner review. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.one-recorded-outcome",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "The Mission Issuer MUST serialize adjudication per operation and record at most one approval outcome for it",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "concurrency",
+   "observation": {
+    "normative": "Concurrent pushed requests and ceremonies for one mission_continuation produce exactly one recorded approval outcome; every other ceremony or push resumes from it rather than adjudicating again."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), #1060 review fixes. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.denial-terminal",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "the Mission Issuer MUST refuse the push with `access_denied`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "After a recorded denial, a further pushed request for the continuation is refused with access_denied, a creation_request_id retry receives access_denied, and no later approval or redemption completes the operation."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), #1060 review fixes. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.redemption-deadline",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "the Mission Issuer MUST refuse redemption at or after it with `invalid_grant`, and nothing activates",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "An authorization code still within its own lifetime but redeemed at or after the continuation's expiry is refused with invalid_grant and no successor activates; the deadline is checked atomically with activation."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), #1060 review fixes. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.no-second-code-after-activation",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "After activation the Mission Issuer MUST refuse a further pushed request for the continuation and MUST refuse redemption of any other code issued for the operation with `invalid_grant`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "Once the successor has activated, a further pushed request for the continuation is refused and redemption of any other authorization code issued for the operation fails with invalid_grant; at most one successor exists."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), opened for owner review. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.expired-continuation-retry",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "an operation whose continuation expired before activation answers that retry with `expired_token`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A creation_request_id retry for an operation whose mission_continuation expired before activation is answered with expired_token and creates nothing."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), opened for owner review. No implementation yet."
+  },
+  {
+   "id": "aauth-management.person-path.authorize-as-person",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "person-caller",
+   "text": "Either way the PS MUST authorize the action as the authenticated Person under the rules above, MUST record that Person as the principal, and MUST NOT apply a management service's administrative privilege to it.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an action the PS's interface submits for a Person, by internal invocation or through a management-service backend, is refused when it exceeds that Person's own caller authorization for the target mission, even though the interface or service could otherwise perform it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#839 specification slice (PR #1063). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.person-path.record-person",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "person-caller",
+   "text": "Either way the PS MUST authorize the action as the authenticated Person under the rules above, MUST record that Person as the principal, and MUST NOT apply a management service's administrative privilege to it.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the mission log entry for an action submitted through the PS's interface names the authenticated Person as the principal"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#839 specification slice (PR #1063). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.person-path.no-service-privilege",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "person-caller",
+   "text": "Either way the PS MUST authorize the action as the authenticated Person under the rules above, MUST record that Person as the principal, and MUST NOT apply a management service's administrative privilege to it.",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an action submitted for a Person through a management-service backend never succeeds on the service's administrative privilege; a reason or scope only an administrator holds, such as administrative, is refused"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#839 specification slice (PR #1063). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.service-for-human.authorize-as-human",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "management-service",
+   "text": "For such a call the PS MUST authorize the action as that human under the human's own caller rules, MUST record the human as the principal and the service as the channel, and MUST NOT apply the service's administrative privilege.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a management-service call made for a human is refused when it exceeds that human's own caller authorization for the target mission, even when the service's own registration would permit it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#839 specification slice (PR #1063). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.service-for-human.record-human-and-channel",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "management-service",
+   "text": "For such a call the PS MUST authorize the action as that human under the human's own caller rules, MUST record the human as the principal and the service as the channel, and MUST NOT apply the service's administrative privilege.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the mission log entry for a management-service call made for a human names that human as the principal and the service as the channel"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#839 specification slice (PR #1063). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.service-for-human.no-service-privilege",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "management-service",
+   "text": "For such a call the PS MUST authorize the action as that human under the human's own caller rules, MUST record the human as the principal and the service as the channel, and MUST NOT apply the service's administrative privilege.",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a management-service call made for a human never succeeds on the service's administrative privilege; a reason or scope only an administrator holds is refused"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#839 specification slice (PR #1063). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
   }
  ]
 }

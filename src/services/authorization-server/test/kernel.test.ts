@@ -474,12 +474,16 @@ describe("mission record expiry ceiling (@spec mission#mission-record)", () => {
     });
     // The funnel is checked against the record's OWN intent, whatever built it.
     expect(() =>
-      k.insertRecord({
-        ...record,
-        id: newMissionId(),
-        approval_event_id: "apev-funnel-2",
-        expires_at: "2026-07-01T02:00:00Z",
-      }),
+      k.insertRecord(
+        {
+          ...record,
+          id: newMissionId(),
+          approval_event_id: "apev-funnel-2",
+          expires_at: "2026-07-01T02:00:00Z",
+        },
+        undefined,
+        { source: { inherited: k.committedSourceBinding(record.id) } },
+      ),
     ).toThrow(/later than the requested ceiling/);
   });
 
@@ -495,12 +499,16 @@ describe("mission record expiry ceiling (@spec mission#mission-record)", () => {
     // @spec mission#approval-event — the atomic creation-time check: a ceiling
     // that passes while the approval pends creates no Mission.
     const e = refuse(() =>
-      k.insertRecord({
+      k.insertRecord(
+        {
         ...record,
         id: newMissionId(),
         approval_event_id: "apev-atomic-2",
         created_at: "2026-07-01T01:00:00Z",
-      }),
+        },
+        undefined,
+        { source: { inherited: k.committedSourceBinding(record.id) } },
+      ),
     );
     expect(e).toBeInstanceOf(IntentError);
     expect((e as IntentError).code).toBe("invalid_request");

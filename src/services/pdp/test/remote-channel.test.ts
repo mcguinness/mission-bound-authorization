@@ -57,9 +57,13 @@ const view = (): MissionView => ({
 
 const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => ({
   subject: { id: "alice" },
-  resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
+  resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
   action: { name: "payments:invoice.read" },
-  context: { audience: RESOURCE, mission: { id: "msn_test_1", issuer: "https://as.test" } },
+  // The observation is REQUIRED under the declared pep placement (#1049 owner ruling).
+  context: {
+    mission: { id: "msn_test_1", issuer: "https://as.test" },
+    mission_state_observation: { state: "active", mode: "fresh", freshness_at: NOW.toISOString() },
+  },
   ...over,
 });
 
@@ -89,7 +93,7 @@ async function startServer(
       now: () => NOW,
       stalenessBound,
       relationForAction,
-      allowedFreshnessSources: new Set(["status"]),
+      stateSourcePlacement: "pep" as const,
     }),
     evaluateFn: countingEvaluate,
     replayWindowSeconds: 30,
@@ -176,7 +180,7 @@ describe("Remote Decision Channel (@spec runtime#decision-channel)", () => {
     const evaluations = { n: 0 };
     const server = await startServer(evaluations);
     const decision = await evaluateRemote(
-      req({ context: { audience: OTHER_RESOURCE, mission: { id: "msn_test_1", issuer: "https://as.test" } } }),
+      req({ resource: { type: "invoice", id: "inv-1", properties: { audience: OTHER_RESOURCE, vendor_id: "acme" } } }),
       { url: server.url, pepId: PEP_ID, secret: SECRET },
     );
     expect(decision.decision).toBe(false);
@@ -398,7 +402,7 @@ describe("Remote Decision Channel (@spec runtime#decision-channel)", () => {
       now: () => NOW,
       stalenessBound,
       relationForAction,
-      allowedFreshnessSources: new Set(["status"]),
+      stateSourcePlacement: "pep" as const,
     });
     expect(dec.decision).toBe(true);
   });
@@ -413,14 +417,13 @@ describe("Remote Decision Channel (@spec runtime#decision-channel)", () => {
 describe("the remote channel binds the claim requester (@spec runtime#idempotency, #917)", () => {
   const keyed = (key: string): EvaluationRequest => ({
     subject: { id: "alice" },
-    resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
+    resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
     action: { name: "payments:invoice.read", properties: { idempotency_key: key } },
     context: {
-      audience: RESOURCE,
       mission: { id: "msn_test_1", issuer: "https://as.test" },
       action_class: "irreversible_action",
       parameter_digest: "sha-256:pd-917",
-      freshness: { observed_at: NOW.toISOString(), source: "status" },
+      mission_state_observation: { state: "active", mode: "fresh", freshness_at: NOW.toISOString() },
     },
   });
   async function startClaimServer(claims = openTestClaims({ now: () => NOW })): Promise<PdpHttpServerHandle> {
@@ -433,7 +436,7 @@ describe("the remote channel binds the claim requester (@spec runtime#idempotenc
         now: () => NOW,
         stalenessBound,
         relationForAction,
-        allowedFreshnessSources: new Set(["status"]),
+        stateSourcePlacement: "pep" as const,
       }),
       claims,
       consumptionStatus: (pepId) => (pepId === PEP_ID ? () => "unconsumed" : undefined),

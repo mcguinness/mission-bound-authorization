@@ -120,17 +120,16 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
       modelId: conn.modelId,
       loadView: (ref) =>
         ref.id === view.id && ref.issuer === view.issuer
-          ? { view: view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+          ? { view: view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } }
           : undefined,
       instanceEpoch: "epoch-1",
-      allowedFreshnessSources: new Set(["load_view"]),
     });
     const server = new McpPaymentsServer({
       pep,
       payments,
       loadView: (ref) =>
         ref.id === view.id && ref.issuer === view.issuer
-          ? { view: view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+          ? { view: view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } }
           : undefined,
       jwks: { keys: [] },
       issuer: ISSUER,
@@ -293,7 +292,7 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
     const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
     const loadView = (ref: { id: string; issuer: string }) =>
       ref.id === missionId && ref.issuer === current.issuer
-        ? { view: current, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+        ? { view: current, observation: { state: current.state, version: current.version, mode: "fresh", freshness_at: new Date().toISOString() } }
         : undefined;
     const pep = new Pep({
       decide,
@@ -303,7 +302,6 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
       modelId: conn.modelId,
       loadView,
       instanceEpoch: "epoch-1",
-      allowedFreshnessSources: new Set(["load_view"]),
     });
     const server = new McpPaymentsServer({ pep, payments, loadView, jwks: { keys: [] }, issuer: ISSUER });
 
@@ -367,7 +365,7 @@ describe("finding 3: a multi-vendor list_invoices names every returned vendor to
     const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
     const loadView = (ref: { id: string; issuer: string }) =>
       ref.id === missionId && ref.issuer === view.issuer
-        ? { view: view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+        ? { view: view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } }
         : undefined;
     const pep = new Pep({
       decide,
@@ -377,7 +375,6 @@ describe("finding 3: a multi-vendor list_invoices names every returned vendor to
       modelId: "unit-test-model",
       loadView,
       instanceEpoch: "epoch-1",
-      allowedFreshnessSources: new Set(["load_view"]),
     });
     const server = new McpPaymentsServer({ pep, payments, loadView, jwks: { keys: [] }, issuer: ISSUER });
     return { server };
@@ -440,7 +437,7 @@ describe("GAP 2: an unrecognized decision-context member makes a permit unusable
       modelId: "unused",
       loadView: (ref) =>
         ref.id === view.id && ref.issuer === view.issuer
-          ? { view: view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+          ? { view: view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } }
           : undefined,
       instanceEpoch: "epoch-1",
     });

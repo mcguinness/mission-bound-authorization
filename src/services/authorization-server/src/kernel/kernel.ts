@@ -40,9 +40,10 @@ import {
   assertSubjectDiscipline,
   assertWithinSourceCeiling,
   bindAuthoritySourceCatalog,
+  bindingOf,
   catalogAuthoritySourceResolver,
+  type AuthoritySourceBinding,
   type AuthoritySourceCatalog,
-  type AuthoritySourceCatalogEntry,
   type AuthoritySourceResolution,
   type AuthoritySourceResolver,
   type BoundAuthoritySourceCatalog,
@@ -50,7 +51,7 @@ import {
   authoritySourceOf,
   parseAuthoritySource,
   resolveApprovalSource,
-  resolveDeclaredSource,
+  resolveCommittedSource,
   resolveRenderingSource,
   validateAuthoritySourceCatalog,
 } from "./authority-source.js";
@@ -84,6 +85,11 @@ import {
   terminalWhenOf,
 } from "./discharge.js";
 import { DischargeMappingPinStore } from "./discharge-pin-store.js";
+import {
+  type AuthoritySourceReconciliation,
+  reconcileSourceBindings,
+} from "./source-binding-reconciliation.js";
+import { SourceBindingStore } from "./source-binding-store.js";
 import { DischargeSelectorStore } from "./discharge-selector-store.js";
 import { justifyingIndex } from "./child-delegation.js";
 import type { CarryoverEntryPair, CarryoverMap } from "./carryover.js";
@@ -464,6 +470,15 @@ export interface KernelOptions {
    */
   authoritySourceResolver?: AuthoritySourceResolver;
   /**
+   * @spec mission#authority-sources (#827): trusted evidence for Mission rows
+   * that predate committed-root bindings (a durable store opened again after
+   * the upgrade). Each such row is bound at construction only from an
+   * explicit mapping or a declared historical catalog, never from a match in
+   * the current catalog; a row with neither stays unbound and its drawdowns
+   * refuse. Absent, no row is reconciled.
+   */
+  authoritySourceReconciliation?: AuthoritySourceReconciliation;
+  /**
    * @spec control-plane#deployment-declaration (D27) — the kernel store. The
    * default stays in-memory and single-process; a `file` names the OPT-IN
    * file-backed SINGLE-WRITER store that makes restart recovery of the durable
@@ -538,6 +553,12 @@ export class MissionKernel {
    */
   readonly dischargePins: DischargeMappingPinStore;
   /**
+   * @spec mission#authority-sources (#827): the committed authority-source
+   * root of every Mission, written in the record transaction and read by
+   * every drawdown.
+   */
+  readonly sourceBindings: SourceBindingStore;
+  /**
    * @spec discharge#condition-selectors — the issuer-held selector table: one
    * opaque selector per (mission_id, entry_digest, condition_digest) target,
    * never committed and never deleted while the record lives.
@@ -609,6 +630,13 @@ export class MissionKernel {
     this.sourceResolver = opts.authoritySourceResolver ?? catalogAuthoritySourceResolver(this.sourceCatalog);
     this.db = openStore(SCHEMA, opts.store ?? {});
     migrateMissions(this.db);
+    this.sourceBindings = new SourceBindingStore(this.db);
+    reconcileSourceBindings(
+      this.db,
+      this.sourceBindings,
+      { deployment: opts.issuer, principalIssuer: this.sourceCatalog.principalIssuer },
+      opts.authoritySourceReconciliation,
+    );
     this.missionBoundGrants = new MissionBoundGrantStore(opts.now ?? (() => new Date()));
     this.now = opts.now ?? (() => new Date());
     this.allocateStatusIndex = opts.allocateStatusIndex ?? (() => randomInt(STATUS_LIST_SIZE));
@@ -893,50 +921,57 @@ export class MissionKernel {
   }
 
   /**
-   * @spec mission#authority-sources, mission#mission-record — the DRAWDOWN
-   * path (template dispatch, child creation): the successor INHERITS the
-   * source identity verbatim, and only the ceiling assertion re-runs against
-   * catalog state current at the moment authority is drawn. A source narrowed
-   * since the predecessor was approved therefore refuses `access_denied`
-   * without ever rewriting provenance.
+   * @spec mission#authority-sources (#827): the root a Mission committed. A
+   * Mission with none (a row that predates bindings and found no trusted
+   * reconciliation evidence at startup) refuses: provenance alone never
+   * stands in for the root.
    */
-  /**
-   * @spec mission#authority-sources — GATE 4 against an ALREADY-ESTABLISHED
-   * source. A drawdown inherits the source but binds a fresh Subject (a
-   * template instance acts for its own Subject), so the subject discipline is
-   * re-run at that surface while the source identity is not.
-   */
-  assertSubjectDisciplineForSource(
-    source: AuthoritySource,
-    subject: { iss: string; sub: string },
-  ): void {
-    assertSubjectDiscipline(this.sourceCatalog, this.declaredSourceEntry(source), subject);
-  }
-
-  assertInheritedAuthoritySource(
-    inherited: AuthoritySource,
-    authoritySet: readonly AuthorityEntry[],
-  ): void {
-    const entry = this.declaredSourceEntry(inherited);
-    assertWithinSourceCeiling(entry, authoritySet);
-  }
-
-  /**
-   * @spec mission#authority-sources (#827): the declaration a DRAWDOWN
-   * re-resolves from the record's provenance. Under the default catalog
-   * resolver that is the same catalog the approval resolved against. Under a
-   * configured replacement resolver it would not be, so a drawdown there
-   * refuses rather than checking a catalog the approval never consulted;
-   * the committed-root binding (#827 part 2) replaces this lookup.
-   */
-  private declaredSourceEntry(source: AuthoritySource): AuthoritySourceCatalogEntry {
-    if (this.opts.authoritySourceResolver) {
+  committedSourceBinding(missionId: string): AuthoritySourceBinding {
+    const binding = this.sourceBindings.get(missionId);
+    if (!binding) {
       throw new IntentError(
         "access_denied",
-        "a drawdown under a configured authority-source resolver needs the Mission's committed root, which this deployment does not record",
+        `Mission ${missionId} has no committed authority-source root; it needs reconciliation before authority is drawn from it`,
       );
     }
-    return resolveDeclaredSource(this.sourceCatalog, source);
+    return binding;
+  }
+
+  /** @spec mission#authority-sources (#827): the CURRENT declaration of a
+   *  committed root, through the configured resolver. */
+  resolveCommittedSource(binding: AuthoritySourceBinding): AuthoritySourceResolution {
+    return resolveCommittedSource(this.sourceResolver, { deployment: this.opts.issuer, binding });
+  }
+
+  /**
+   * @spec mission#authority-sources, mission#mission-record: the DRAWDOWN
+   * path (child creation, template dispatch): the Mission inherits its
+   * origin's committed root verbatim, and only the ceiling assertion re-runs,
+   * against that root's declaration current at the moment authority is drawn.
+   * A root narrowed since the origin was approved refuses `access_denied`
+   * without ever rewriting provenance. Returns the resolution, so the caller
+   * runs gate 4 on the same answer.
+   */
+  assertInheritedAuthoritySource(
+    binding: AuthoritySourceBinding,
+    authoritySet: readonly AuthorityEntry[],
+  ): AuthoritySourceResolution {
+    const resolved = this.resolveCommittedSource(binding);
+    assertWithinSourceCeiling(resolved.entry, authoritySet);
+    return resolved;
+  }
+
+  /**
+   * @spec mission#authority-sources: GATE 4 against an inherited root. A
+   * drawdown inherits the root but may bind a fresh Subject (a template
+   * instance acts for its own Subject), so the subject discipline re-runs at
+   * that surface while the root does not.
+   */
+  assertInheritedSubjectDiscipline(
+    resolved: AuthoritySourceResolution,
+    subject: { iss: string; sub: string },
+  ): void {
+    assertSubjectDiscipline(this.sourceCatalog, resolved.entry, subject);
   }
 
   /**
@@ -1074,7 +1109,7 @@ export class MissionKernel {
    *  child creation): the single Mission-record creation funnel. */
   insertRecord(
     record: MissionRecord,
-    precondition?: () => void,
+    precondition: (() => void) | undefined,
     options: {
       /**
        * @spec discharge#discharge-authority, discharge#discharge-carryover — a
@@ -1086,13 +1121,14 @@ export class MissionKernel {
        */
       inheritPinsFrom?: { missionId: string; pairs: readonly CarryoverEntryPair[] };
       /**
-       * @spec mission#authority-sources (#827): the one resolution a FRESH
-       * approval (direct, Expansion) established its source from. Present,
-       * the funnel re-asserts against it rather than resolving again from
-       * provenance; absent (a drawdown), it re-resolves from provenance.
+       * @spec mission#authority-sources (#827), REQUIRED: the one resolution a
+       * FRESH approval (direct, Expansion) established its source from, or
+       * the committed root a DRAWDOWN inherits (child, template dispatch,
+       * carryover). The funnel re-asserts against it and records the binding
+       * in the record transaction; nothing resolves a source from provenance.
        */
-      source?: AuthoritySourceResolution;
-    } = {},
+      source: AuthoritySourceResolution | { inherited: AuthoritySourceBinding };
+    },
   ): void {
     // @spec control-plane#isolation — one issuer owns a kernel store.
     if (record.issuer !== this.opts.issuer) throw new Error("record issuer does not own this kernel");
@@ -1115,14 +1151,18 @@ export class MissionKernel {
     // member the record carries, and the set being committed still lies within
     // that source's authority. A drawdown against a source narrowed since its
     // predecessor was approved refuses here. A fresh approval hands over the
-    // one resolution its gates ran on (#827), so the funnel never resolves
-    // again by different inputs.
-    if (options.source) {
-      assertRecordedSourceResolved(record.authority_source, options.source);
-      this.assertAuthorityWithinSource(options.source, record.authority_set);
-    } else {
-      this.assertInheritedAuthoritySource(record.authority_source, record.authority_set);
+    // one resolution its gates ran on, and a drawdown its origin's committed
+    // root (#827), so the funnel never resolves again by different inputs.
+    if (!options?.source) {
+      throw new Error("insertRecord requires the source the record was established from (#827)");
     }
+    const inherited = "inherited" in options.source ? options.source.inherited : undefined;
+    const resolvedSource = inherited
+      ? this.resolveCommittedSource(inherited)
+      : (options.source as AuthoritySourceResolution);
+    assertRecordedSourceResolved(record.authority_source, resolvedSource);
+    this.assertAuthorityWithinSource(resolvedSource, record.authority_set);
+    const binding = inherited ?? bindingOf(resolvedSource);
     withTransaction(this.db, () => {
       // @spec mission#mission-record, mission#approval-event (step 4) — the
       // creation-transaction expiry invariant, checked INDEPENDENTLY of whatever
@@ -1222,6 +1262,10 @@ export class MissionKernel {
           // after creation (like approval_basis), written only here.
           record.submission_evidence ? JSON.stringify(record.submission_evidence) : null,
         );
+      // @spec mission#authority-sources (#827): the committed root, in the
+      // SAME transaction as the record: a Mission never exists without the
+      // root a later drawdown recovers.
+      this.sourceBindings.bindInCallerTx(record.id, binding, inherited ? "inherited" : "resolved");
       // @spec discharge#discharge-authority — bind the RESOLVED mapping
       // (identifier, version, and content) to this exact entry_digest +
       // condition_digest, in the SAME transaction as the record: discharge
@@ -1541,16 +1585,20 @@ export class MissionKernel {
    * digest must still agree.
    */
   assertRenderedAuthoritySource(input: {
+    /** The committed root of the rendered origin (#827). */
+    binding: AuthoritySourceBinding;
     source: AuthoritySource;
     subject: { iss: string; sub: string };
     approver: { iss: string; sub: string };
     authoritySet: readonly AuthorityEntry[];
-  }): void {
-    const entry = this.declaredSourceEntry(input.source);
-    assertApproverMayActivate(this.sourceCatalog, entry, input.approver);
-    assertSubjectDiscipline(this.sourceCatalog, entry, input.subject);
-    assertPolicyDigestMatches(entry, authoritySourceOf(entry));
-    assertWithinSourceCeiling(entry, input.authoritySet);
+  }): AuthoritySourceResolution {
+    // Gate 5 (the policy digest) runs inside the committed-root resolution.
+    const resolved = this.resolveCommittedSource(input.binding);
+    assertRecordedSourceResolved(input.source, resolved);
+    assertApproverMayActivate(this.sourceCatalog, resolved.entry, input.approver);
+    assertSubjectDiscipline(this.sourceCatalog, resolved.entry, input.subject);
+    assertWithinSourceCeiling(resolved.entry, input.authoritySet);
+    return resolved;
   }
 
   /**
