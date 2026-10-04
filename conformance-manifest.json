@@ -235,6 +235,7 @@
    "core.delegation",
    "runtime.instance-context",
    "mas.instance-bound-join",
+   "mas.expansion-child-creation",
    "derivation-limits.limit",
    "continuation.ica-transport",
    "submission-evidence.verification",
@@ -28622,6 +28623,28 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a refused requested_derivation_limit gets 400 invalid_mission_intent with error_reason requested_derivation_limit"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#972 item 13)."
+  },
+  {
+   "id": "mas.native.subject-mismatch-denied",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "native-binding",
+   "text": "On a mismatch, the MAS MUST resolve the submission to `denied` with the `mission_denial_reason` value `subject_mismatch`",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.expansion-child-creation"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an expansion whose established Subject differs from the predecessor's subject creates no successor and resolves denied with subject_mismatch"
    },
    "level": "endpoint",
    "coverage": "todo",

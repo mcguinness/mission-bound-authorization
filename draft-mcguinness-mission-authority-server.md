@@ -1814,7 +1814,9 @@ follows:
 - For an expansion, the MAS MUST verify at the approval event that the
   Subject it establishes ({{mission-approval}}) equals the predecessor
   Mission's `subject`; a successor MUST NOT be created for a different
-  Subject.
+  Subject. On a mismatch, the MAS MUST resolve the submission to
+  `denied` with the `mission_denial_reason` value `subject_mismatch`
+  ({{iana-denial-reason}}).
 
 This binding is authentication-based, not possession-based. It proves
 that the requester is the same registered client for which the
@@ -1851,8 +1853,9 @@ reference:
   profile's semantics and surface through the MAS's Mission Status
   responses. The `superseded` state enters the state space the MAS
   reports ({{lifecycle-and-state}}).
-- **Denial reasons.** That profile's closed denial-reason set applies;
-  the code rides in `mission_denial_reason` per
+- **Denial reasons.** That profile's Mission Denial Reasons registry
+  applies, including this document's `subject_mismatch`
+  ({{native-binding}}); the code rides in `mission_denial_reason` per
   {{native-carriage}}.
 
 Approval of the successor is this document's native asynchronous
@@ -2475,7 +2478,8 @@ claiming it additionally:
 - verifies the binding of {{native-binding}} before adjudicating: the
   authenticated submitting client equals the predecessor's or parent's
   recorded `client_id`, and, for expansion, the established Subject
-  equals the predecessor's `subject`;
+  equals the predecessor's `subject`, a mismatch resolving to `denied`
+  with `subject_mismatch`;
 - applies the expansion profile's rules by reference: predecessor
   active, reconciliation serialization, supersession atomicity, and
   the lineage members ({{native-expansion}});
@@ -2972,6 +2976,16 @@ IANA is requested to register one media type per {{RFC6838}}.
 - Restrictions on usage: none
 - Author: IETF
 - Change controller: IETF
+
+## Mission Denial Reason Registration {#iana-denial-reason}
+
+IANA is requested to register the following value in the "Mission
+Denial Reasons" registry
+({{I-D.draft-mcguinness-oauth-mission-expansion}}):
+
+| Value | Semantics | Change Controller | Reference |
+|---|---|---|---|
+| `subject_mismatch` | The Subject established at an expansion's approval event differs from the predecessor Mission's `subject`, so no successor is created. | IETF | this document, {{native-binding}} |
 
 ## Runtime Denial Reasons
 
