@@ -63,8 +63,8 @@
     "content_sha256": "76ae8710dc0faf41220e947e05a4dc4a79440c0039746089a4b24e486c1d06de"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "fa0b716347bbc04a21bb20080198cc217e1f2aca",
-    "content_sha256": "78a41f2661886614e1fa442a6e52bbacfd05309eedc04a4d7716c6ac7d39b55d"
+    "revision": "f175eba2a7c978611db6ea8ba9413fa82655eb3b",
+    "content_sha256": "2b486543f5bf301ee29c6c8bc12493448324dbdd8f92ac23d3c665d6da11e0e9"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
@@ -95,8 +95,8 @@
     "content_sha256": "7747cec83e69020dce2611fd99172fbe14034d776ba68c9b64cdca9fd410d94f"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "7bb182b0caae732be5813431f4c5ad6406eafaf7",
-    "content_sha256": "3d99176b70a7d440c8588863dc35d0f33defd7a5e3807947003767b93166168e"
+    "revision": "aec5ef67087d7cebce0787dd3ea83b6dcbba193e",
+    "content_sha256": "41d16c43d4e29769a790ea33393bfc300f8b96875a99c614d6039c689cc3fadb"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
     "revision": "4b1ac7e9be5fb4097bcc8b50ddb173ea34aeb85e",
@@ -113,6 +113,10 @@
    "draft-mcguinness-oauth-mission-submission-evidence.md": {
     "revision": "dd16dd544da103729cc5380bb11e860796a95643",
     "content_sha256": "78fa453b80921a5898aa47c2453be8c86cf81d74a5a5a87e95ed0c2a4a06637e"
+   },
+   "draft-mcguinness-mission-aauth-management.md": {
+    "revision": "622d072fd453603bd406bd39ea0f11b43c6384e4",
+    "content_sha256": "be36c6e41489638f056832d274a9daadb25837ede6b13b5963fa76c5fc14c33c"
    }
   }
  },
@@ -233,7 +237,8 @@
    "mas.instance-bound-join",
    "derivation-limits.limit",
    "continuation.ica-transport",
-   "submission-evidence.verification"
+   "submission-evidence.verification",
+   "expansion.interactive-completion"
   ]
  },
  "profiles": [
@@ -28493,6 +28498,330 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Review finding on #1031 (owner ruling D241): narrowing between adjudication and activation. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.response-shape",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "The Mission Issuer MUST answer the token exchange with an OAuth error response",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "An expansion that completes interactively is answered with HTTP 400, error mission_interaction_required, a mission_continuation handle and expires_in, never with an RFC 8693 success or authorization_pending."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), opened for owner review. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.continuation-refusal",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "MUST refuse a pushed request whose `mission_continuation` is unknown, expired, or bound to another client, with `invalid_request`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A pushed authorization request carrying an unknown or expired mission_continuation, or one issued to another client, is refused with invalid_request and yields no request_uri."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), opened for owner review. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.recorded-inputs-only",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "MUST take the predecessor, Intent, proposal, submission evidence, presenter confirmation, and actor context only from the recorded operation",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A pushed request that supplies a predecessor, Intent, proposal, submission evidence, presenter confirmation or actor context differing from the recorded operation is refused; the approval ceremony renders and binds only the recorded operation's inputs."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), opened for owner review. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.re-push-continues-operation",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "the client pushes again with the same `mission_continuation`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "After a request_uri expires, is consumed, or its authorization response is lost, a new pushed request with the same mission_continuation continues the same operation: before an outcome it starts no second adjudication, and after approval it receives a fresh code for the recorded approval without a second prompt."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), opened for owner review. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.one-recorded-outcome",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "The Mission Issuer MUST serialize adjudication per operation and record at most one approval outcome for it",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "concurrency",
+   "observation": {
+    "normative": "Concurrent pushed requests and ceremonies for one mission_continuation produce exactly one recorded approval outcome; every other ceremony or push resumes from it rather than adjudicating again."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), #1060 review fixes. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.denial-terminal",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "the Mission Issuer MUST refuse the push with `access_denied`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "After a recorded denial, a further pushed request for the continuation is refused with access_denied, a creation_request_id retry receives access_denied, and no later approval or redemption completes the operation."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), #1060 review fixes. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.redemption-deadline",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "the Mission Issuer MUST refuse redemption at or after it with `invalid_grant`, and nothing activates",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "An authorization code still within its own lifetime but redeemed at or after the continuation's expiry is refused with invalid_grant and no successor activates; the deadline is checked atomically with activation."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), #1060 review fixes. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.no-second-code-after-activation",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "After activation the Mission Issuer MUST refuse a further pushed request for the continuation and MUST refuse redemption of any other code issued for the operation with `invalid_grant`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "Once the successor has activated, a further pushed request for the continuation is refused and redemption of any other authorization code issued for the operation fails with invalid_grant; at most one successor exists."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), opened for owner review. No implementation yet."
+  },
+  {
+   "id": "expansion.interactive.expired-continuation-retry",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "interactive-handoff",
+   "text": "an operation whose continuation expired before activation answers that retry with `expired_token`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A creation_request_id retry for an operation whose mission_continuation expired before activation is answered with expired_token and creates nothing."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1045 option (a2), opened for owner review. No implementation yet."
+  },
+  {
+   "id": "aauth-management.person-path.authorize-as-person",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "person-caller",
+   "text": "Either way the PS MUST authorize the action as the authenticated Person under the rules above, MUST record that Person as the principal, and MUST NOT apply a management service's administrative privilege to it.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an action the PS's interface submits for a Person, by internal invocation or through a management-service backend, is refused when it exceeds that Person's own caller authorization for the target mission, even though the interface or service could otherwise perform it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#839 specification slice (PR #1063). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.person-path.record-person",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "person-caller",
+   "text": "Either way the PS MUST authorize the action as the authenticated Person under the rules above, MUST record that Person as the principal, and MUST NOT apply a management service's administrative privilege to it.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the mission log entry for an action submitted through the PS's interface names the authenticated Person as the principal"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#839 specification slice (PR #1063). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.person-path.no-service-privilege",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "person-caller",
+   "text": "Either way the PS MUST authorize the action as the authenticated Person under the rules above, MUST record that Person as the principal, and MUST NOT apply a management service's administrative privilege to it.",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an action submitted for a Person through a management-service backend never succeeds on the service's administrative privilege; a reason or scope only an administrator holds, such as administrative, is refused"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#839 specification slice (PR #1063). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.service-for-human.authorize-as-human",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "management-service",
+   "text": "For such a call the PS MUST authorize the action as that human under the human's own caller rules, MUST record the human as the principal and the service as the channel, and MUST NOT apply the service's administrative privilege.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a management-service call made for a human is refused when it exceeds that human's own caller authorization for the target mission, even when the service's own registration would permit it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#839 specification slice (PR #1063). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.service-for-human.record-human-and-channel",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "management-service",
+   "text": "For such a call the PS MUST authorize the action as that human under the human's own caller rules, MUST record the human as the principal and the service as the channel, and MUST NOT apply the service's administrative privilege.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the mission log entry for a management-service call made for a human names that human as the principal and the service as the channel"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#839 specification slice (PR #1063). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.service-for-human.no-service-privilege",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "management-service",
+   "text": "For such a call the PS MUST authorize the action as that human under the human's own caller rules, MUST record the human as the principal and the service as the channel, and MUST NOT apply the service's administrative privilege.",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a management-service call made for a human never succeeds on the service's administrative privilege; a reason or scope only an administrator holds is refused"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#839 specification slice (PR #1063). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
   }
  ]
 }
