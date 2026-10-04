@@ -9191,7 +9191,7 @@
    "id": "mas.join.credential-mission-equality",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "high-consequence-binding",
-   "text": "requires exact equality of its issuer and Mission identifier with the credential's `mission` claim, and, where both convey `authority_hash`, a consistent value too, denying on any mismatch",
+   "text": "requires exact equality of its issuer and Mission identifier with the credential's `mission` claim, denying on any mismatch",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
@@ -9235,7 +9235,7 @@
    "id": "mas.baseline-join.reference-required",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "mission-join",
-   "text": "For governed work the PEP MUST supply the `mission_id` and `issuer` of the Mission the work is bound to, taken from its Mission binding (a Mission-aware harness records exactly this, {{I-D.draft-mcguinness-mission-harness}}) or from deployment configuration.",
+   "text": "For governed work the PEP MUST supply the `mission_id` and `issuer` of the Mission the work is bound to, taken from its Mission binding (a Mission-aware harness records exactly this, {{I-D.draft-mcguinness-mission-harness}}), from deployment configuration, or from a trusted propagated reference ({{reference-propagation}}).",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {

@@ -872,8 +872,9 @@ A Mission-joining PDP and its PEPs MUST observe the following:
    PEP MUST supply the `mission_id` and `issuer` of the Mission the
    work is bound to, taken from its Mission binding (a Mission-aware
    harness records exactly this,
-   {{I-D.draft-mcguinness-mission-harness}}) or from deployment
-   configuration. In the AuthZEN profile
+   {{I-D.draft-mcguinness-mission-harness}}), from deployment
+   configuration, or from a trusted propagated reference
+   ({{reference-propagation}}). In the AuthZEN profile
    ({{I-D.draft-mcguinness-mission-authzen}}) this reference is
    `context.mission`; the PEP additionally populates `state`, and
    `authority_hash` where the MAS's signed Mission Status response
@@ -2333,8 +2334,7 @@ For each action, the PDP:
    `mission` claim, never from an external selection;
 4. where a propagated Mission-Reference is also present, requires
    exact equality of its issuer and Mission identifier with the
-   credential's `mission` claim, and, where both convey
-   `authority_hash`, a consistent value too, denying on any mismatch;
+   credential's `mission` claim, denying on any mismatch;
 5. applies current Mission state, current authority, the subject,
    client, and actor checks, the sender proof, and, where the
    credential carries Instance Context whose association with the
