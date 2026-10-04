@@ -626,6 +626,12 @@ Only `approved` delivers a Mission. A consumer MUST treat every other
 `status` value, recognized or not, as not approved, mirroring the
 OAuth binding's only-`active` rule.
 
+Every submission-status response carries `submission_id` and
+`status`. A `denied` response carries `mission_denial_reason` where
+adjudication of an expansion or child creation denied the submission
+({{native-carriage}}); like every status response, it goes only to the
+submitting client.
+
 The interval in force for a submission is the most recent `interval`
 the client received for it, or 5 seconds if it has received none. A
 `pending` status response that carries `interval` replaces the

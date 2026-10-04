@@ -28686,6 +28686,49 @@
    "notes": "Partial: the malformed case is tested. The reference PEP refuses a missing reference on the MAS-governed route with the undocumented unknown_mission (src/services/mcp-payments/src/pep.ts), not mission_reference_conflict; the PEP migration is not part of this slice (#972 item 13). Attribution conflicts are mas.reference.conflict-deny."
   },
   {
+   "id": "mas.submission.status-body-members",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "submission-status",
+   "text": "Every submission-status response carries `submission_id` and `status`",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every submission-status response, approved or not, carries submission_id and status"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#972 item 13)."
+  },
+  {
+   "id": "mas.submission.denied-carries-reason",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "submission-status",
+   "text": "A `denied` response carries `mission_denial_reason` where adjudication of an expansion or child creation denied the submission",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.expansion-child-creation"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a denied expansion or child-creation status response carries the adjudication's mission_denial_reason, to the submitting client only"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#972 item 13)."
+  },
+  {
    "id": "authzen.instance-context.no-upstream-actor",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-actor",
