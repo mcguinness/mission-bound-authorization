@@ -8223,6 +8223,69 @@
    "notes": "The reference Status endpoint has no consuming-Authorization-Server caller class or per-audience caller configuration, and no issuance-grant redemption path exists in src. Added with #963 decision D1; todo until a consuming-AS caller exists."
   },
   {
+   "id": "status.auth.challenge-token-scheme",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-challenges",
+   "text": "A request whose presented access token fails authentication receives a challenge in the scheme it used: `Bearer` with the error attributes of {{Section 3 of RFC6750}}, or `DPoP` under {{Section 7.1 of RFC9449}}, including its `algs` parameter and error codes",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a 401 for a failed Bearer token carries a Bearer challenge with RFC 6750 error attributes, and one for a failed DPoP token carries a DPoP challenge with algs"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference AS emits no WWW-Authenticate on the Status or Lifecycle endpoint and publishes no Protected Resource Metadata for them, so resource_metadata has no target. Todo until the AS publishes that metadata (#972 item 18)."
+  },
+  {
+   "id": "status.auth.challenge-no-token",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-challenges",
+   "text": "A request that presented no access token, including one that failed mTLS or private-key-JWT client authentication, receives one challenge for each access-token scheme the endpoint accepts, with no `error` attribute",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a 401 for a request with no access token carries one challenge per accepted access-token scheme and no error attribute"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference AS emits no WWW-Authenticate on the Status or Lifecycle endpoint and publishes no Protected Resource Metadata for them, so resource_metadata has no target. Todo until the AS publishes that metadata (#972 item 18)."
+  },
+  {
+   "id": "status.auth.challenge-resource-metadata",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-challenges",
+   "text": "Every challenge carries the `resource_metadata` parameter naming the endpoint's Protected Resource Metadata",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "every 401 challenge names the endpoint's Protected Resource Metadata URL"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference AS emits no WWW-Authenticate on the Status or Lifecycle endpoint and publishes no Protected Resource Metadata for them, so resource_metadata has no target. Todo until the AS publishes that metadata (#972 item 18)."
+  },
+  {
    "id": "signals.discharge.authority-changed-rematerialize",
    "spec": "draft-mcguinness-oauth-mission-signals.md",
    "anchor": "consumer-behavior",

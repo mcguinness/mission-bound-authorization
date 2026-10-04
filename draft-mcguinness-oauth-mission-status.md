@@ -30,6 +30,7 @@ author:
 
 normative:
   RFC3339:
+  RFC6750:
   RFC6838:
   RFC7009:
   RFC7515:
@@ -466,6 +467,28 @@ endpoint ({{as-metadata}}), not read from the token endpoint's
 `token_endpoint_auth_methods_supported` {{RFC8414}}. Both paths are
 therefore discoverable.
 
+### Authentication Challenges {#mission-status-challenges}
+
+Where the endpoint accepts an access-token scheme, a 401
+`unauthorized` response carries a `WWW-Authenticate` challenge:
+
+- A request whose presented access token fails authentication receives
+  a challenge in the scheme it used: `Bearer` with the error attributes
+  of {{Section 3 of RFC6750}}, or `DPoP` under
+  {{Section 7.1 of RFC9449}}, including its `algs` parameter and error
+  codes.
+- A request that presented no access token, including one that failed
+  mTLS or private-key-JWT client authentication, receives one challenge
+  for each access-token scheme the endpoint accepts, with no `error`
+  attribute ({{Section 3.1 of RFC6750}}). Such a failure is not
+  reported as an access-token failure.
+- Every challenge carries the `resource_metadata` parameter naming the
+  endpoint's Protected Resource Metadata ({{Section 5.1 of RFC9728}}).
+
+An authenticated caller not authorized for the referenced Mission
+receives `not_found` (404) with no challenge
+({{mission-status-anti-oracle}}).
+
 ## Worked Request Example
 
 ~~~ http-message
@@ -751,7 +774,7 @@ Wire error codes (carried in the `error` member of a JSON body):
 | `error` | HTTP | Description |
 |---|---|---|
 | `invalid_request` | 400 | Malformed request: an unparseable body, a required member missing or malformed, an invalid member combination, or a retransmitted `nonce` paired with a request that is not byte-identical to the original ({{idempotency}}). |
-| `unauthorized` | 401 | Request not authenticated. |
+| `unauthorized` | 401 | Request not authenticated; the response carries the challenges of {{mission-status-challenges}}. |
 | `not_found` | 404 | Reference does not exist OR is not visible. |
 | `conflict` | 409 | Lifecycle operation not legal from the current state ({{idempotency}}). |
 | `stale_version` | 409 | `expected_version` differs from the current state version ({{idempotency}}). |
@@ -1112,7 +1135,8 @@ or private-key JWT. Its discovery mirrors that endpoint: the accepted
 methods in `mission_lifecycle_endpoint_auth_methods_supported` and, for
 `private_key_jwt`, the accepted client-assertion algorithms in
 `mission_lifecycle_endpoint_auth_signing_alg_values_supported`
-({{as-metadata}}).
+({{as-metadata}}). Its 401 responses carry the challenges of
+{{mission-status-challenges}}.
 
 For the sender-constrained access-token path, this
 endpoint is an OAuth protected resource exactly as the Mission Status
@@ -1853,6 +1877,12 @@ Authorization work for feedback that shaped these extensions.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- A 401 from the Status or Lifecycle endpoint carries a
+  `WWW-Authenticate` challenge: the scheme of a failed access token
+  (`Bearer` or `DPoP`), or each accepted access-token scheme when the
+  request presented no access token, always with `resource_metadata`
+  (#972 item 18).
 
 - A derivation refused because the Mission is `suspended` or
   `completed` carries the `mission_error` value `mission_suspended` or
