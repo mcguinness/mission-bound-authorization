@@ -2142,8 +2142,8 @@ Statement; its Mapping Assessment maps it to the same capabilities
 ({{I-D.draft-mcguinness-oauth-mission}}).
 
 The companion profiles named without "oauth" are defined against the
-binding-neutral contract and declare what they consume, each in a
-Mission Substrate section of its own. The runtime profile's
+binding-neutral contract, and most declare what they consume in a
+Mission Substrate section of their own. The runtime profile's
 declaration is the exemplar ({{I-D.draft-mcguinness-mission-runtime}}),
 and the other consumers align with it to varying degrees. Where a
 companion consumes a concrete representation, it is the OAuth
@@ -4070,6 +4070,9 @@ bound profiled by `aauth-mission-expiry`.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The Mission Substrate no longer claims that every companion named
+  without "oauth" has a Mission Substrate section of its own.
 
 - A readability pass, with no change to any profile's requirements.
   The Mission and Mission Assurance Levels gain subsections (Approval
