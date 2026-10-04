@@ -189,9 +189,10 @@ Termination Reason:
 : An audit fact explaining why an `active` mission became `terminated`.
   It does not add a state or permit reactivation.
 
-Tracked Auth Token:
-: An Auth Token that the PS issued or provided under a Mission Reference
-  and for which it retained at least `iss`, `jti`, `aud`, and `exp`.
+Tracked Credential:
+: A Person Token the PS issued under a Mission Reference, or an Auth
+  Token it issued or provided under one, for which it retained at least
+  `iss`, `jti`, `aud`, and `exp`.
 
 Residual Window:
 : The interval after termination during which already-issued authority
@@ -676,11 +677,17 @@ The PS returns `200 OK` with the full status representation
 `complete`, all REQUIRED, and `residual_until`, an RFC 3339
 `date-time` {{RFC3339}}, when a residual is known.  The counters
 disclose only tokens the caller is authorized to know about.
-`complete` is true only when every Tracked Auth Token is either
-confirmed revoked or expired and the PS knows of no untracked access
-mode for the mission.  `residual_until` is the latest `exp` among
-unconfirmed Tracked Auth Tokens.  It MUST be omitted when no residual is
-known and MUST NOT be presented as a complete bound if untracked or
+The counters count Tracked Credentials, so a Person Token counts like
+an Auth Token.  `complete` is true only when every Tracked Credential
+is either confirmed revoked or expired and the PS knows of no untracked
+access mode for the mission; it is false while any Person Token is live
+and unconfirmed, and never follows from Auth Tokens alone.  `complete`
+covers every Tracked Credential, including any the counters withhold
+from the caller.  A credential whose recipient advertises no revocation
+endpoint, or whose revocation outcome is unknown, stays unconfirmed
+until its `exp`.  `residual_until` is the latest `exp` among
+unconfirmed Tracked Credentials.  It MUST be omitted when no residual
+is known and MUST NOT be presented as a complete bound if untracked or
 opaque credentials may exist.
 
 ## Idempotency and Concurrency {#idempotency}
@@ -863,7 +870,7 @@ administrative requests and oracle probes without associating an
 unverified reference with a real mission.
 
 The PS MUST retain the terminal state and its reason for at least as
-long as any Tracked Auth Token could remain valid, plus the deployment's
+long as any Tracked Credential could remain valid, plus the deployment's
 audit and dispute period.  It SHOULD retain the immutable mission blob
 and log for the same period when lawful.  Retention limits, deletion,
 legal holds, and access controls MUST be documented.  Deletion of the
@@ -894,26 +901,31 @@ the PS.  Terminating a mission does not revoke the Agent Token, because
 the Agent identity can legitimately be used for another mission or for
 missionless AAuth interactions.
 
-## Tracking Auth Tokens
+## Tracking Credentials {#tracking}
 
-For each Auth Token it issues or provides under a mission, a conforming
-PS MUST retain:
+For each Person Token it issues under a mission, and each Auth Token it
+issues or provides under one, a conforming PS MUST retain:
 
 * the Mission Reference;
 * the token's `iss` and `jti` as a compound identity;
 * `aud` and `exp`;
-* the Resource revocation endpoint, when advertised; and
-* whether the PS issued the token or obtained it through federation.
+* the revocation endpoint of the Resource in `aud`, when advertised;
+* whether the PS issued the token or obtained it through federation;
+* for a Person Token, each AS the PS presented it to, as Section 7.1 of
+  {{I-D.draft-hardt-oauth-aauth-protocol}} requires; and
+* for a federated or chained credential, the presented or upstream
+  token it derives from.
 
 The PS MUST NOT key revocation by `jti` alone.  It SHOULD also retain the
 AS and Resource endpoints required to retry revocation.  These records
 are sensitive and follow {{logging}}.
 
-## Revocation Attempts
+## Revocation Attempts {#revocation-attempts}
 
-After termination, the PS SHOULD revoke every unexpired Tracked Auth
-Token, as Section 11.12.4 of {{I-D.draft-hardt-oauth-aauth-protocol}}
-recommends when a PS revokes a mission.  Each revocation is a signed
+After termination, the PS SHOULD revoke every unexpired Tracked
+Credential, as Section 11.12.4 of
+{{I-D.draft-hardt-oauth-aauth-protocol}} recommends when a PS revokes a
+mission.  Each revocation is a signed
 `POST` of `{jti, exp}` to the recipient's `revocation_endpoint`, with
 `exp` taken from the PS's record of that token.  The PS signs as a
 server under the `jwks_uri` scheme, with its issuer as `id` and
@@ -922,8 +934,11 @@ server under the `jwks_uri` scheme, with its issuer as `id` and
 {{I-D.draft-hardt-oauth-aauth-protocol}}).  The recipient takes the
 issuer from the signature, so the PS revokes only tokens it issued.
 
-In PS authorization (three-party), the PS revokes an Auth Token it
-issued at the Resource it was issued for.  In federated authorization
+The PS revokes a Person Token at the Resource named in its `aud` and at
+each AS it presented the token to (Section 11.12.2 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  In PS authorization
+(three-party), the PS revokes an Auth Token it issued at the Resource
+it was issued for.  In federated authorization
 (four-party), the AS issued the Auth Token, so the PS instead revokes
 the Person Token it presented to that AS, known from the issuance
 record that Section 7.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}
@@ -936,9 +951,11 @@ downstream revocation that did not succeed, and reports the current
 outcome (Section 11.12.3 of {{I-D.draft-hardt-oauth-aauth-protocol}}).
 
 A revocation is confirmed, for `revocation_confirmed` and `complete`
-({{terminate}}), only by an outcome that names the Tracked Auth Token's
-own Resource:
+({{terminate}}), only by an outcome that names the Tracked Credential's
+own recipients:
 
+* a Person Token is confirmed when the Resource in its `aud` and each AS
+  it was presented to have each answered `200`;
 * an Auth Token the PS revoked at the Resource it was issued for is
   confirmed by that Resource's `200`, which has nothing downstream and
   carries an empty body; and
@@ -978,13 +995,18 @@ because it marked its local state or contacted an AS.
 
 Termination is not retroactive.  It cannot undo an action already
 performed or necessarily stop an action already accepted.  A
-self-contained Auth Token can remain acceptable until its `exp` unless
-the Resource receives and enforces revocation.  Network partitions and
+self-contained Person Token or Auth Token can remain acceptable until
+its `exp` unless the Resource receives and enforces revocation.  At a
+Resource that serves person identity access, holding a Person Token is
+effectively access (Section 7.1.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}), so a live Person Token is
+part of the residual.  Network partitions and
 Resource policy therefore create an unavoidable residual window.
 
-The PS can provide a time bound only for the Tracked Auth Tokens whose
+The PS can provide a time bound only for the Tracked Credentials whose
 expiry it knows.  The conservative tracked bound is the latest `exp`
-among tokens not confirmed revoked.  If the PS cannot determine an
+among Tracked Credentials not confirmed revoked, Person Tokens
+included.  If the PS cannot determine an
 expiry, it MUST report the tracked residual as unbounded rather than
 inventing a deadline.
 
@@ -999,7 +1021,8 @@ The PS has no general visibility or control over:
 Where any such path was possible, the PS MUST mark mission-wide
 revocation completeness as false or unknown.  Deployment documentation
 MUST state which AAuth access modes are covered, the maximum configured
-Auth Token lifetime, whether Resources implement revocation, retry
+Person Token and Auth Token lifetimes, whether Resources implement
+revocation, retry
 policy, and the worst-case residual expected under partition.  Risky
 deployments SHOULD use short Auth Token lifetimes and action-time
 Resource checks in addition to PS gating.
@@ -1190,9 +1213,9 @@ it:
    decision path at the terminal commit, and enforces idempotency;
 6. records the management and revocation events required by
    {{logging}};
-7. tracks Auth Tokens by `(iss, jti)`, attempts applicable revocation,
-   and reports residual limits without claiming control over unseen or
-   independently managed access; and
+7. tracks Person Tokens and Auth Tokens by `(iss, jti)`, attempts
+   applicable revocation, and reports residual limits without claiming
+   control over unseen or independently managed access; and
 8. meets the security, privacy, retention, and TLS requirements of this
    document and the base AAuth Protocol.
 
@@ -1220,6 +1243,12 @@ native choices.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Person Tokens are Tracked Credentials: the PS retains them, counts
+  them in `token_residual`, revokes them at the Resource in `aud` and at
+  each AS it presented them to, and reports `complete` false while any
+  is live and unconfirmed. The residual bounds name a live Person Token
+  at a Resource serving person identity access (#834).
 
 - A Person reaches status and termination through the PS's own
   interface, by internal invocation or by a backend calling the control
