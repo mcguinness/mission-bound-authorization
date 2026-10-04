@@ -1028,8 +1028,10 @@ Table of Contents
    drawdown is against the parent's approved delegation entry itself,
    not a separate policy artifact: activation omits policy_id and
    carries only the delegation event identifier as activation_event_id.
-   The record's approver is consent_principal: the Parent Mission's
-   human Approver, never the policy and never the requesting agent.
+   In both forms the record's approval_event_id is that
+   activation_event_id, never the Parent Mission's approval event.  The
+   record's approver is consent_principal: the Parent Mission's human
+   Approver, never the policy and never the requesting agent.
 
    approved_at (the issuance profile's standing-consent requirement) is
    the human approval instant of the consented root that root_commitment
@@ -2375,6 +2377,10 @@ Appendix A.  Experimental Consumer-Verified Cascade Modes
 Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Mission Record Requirements: under policy_drawdown the record's
+      approval_event_id is the creation's activation_event_id, never the
+      Parent Mission's approval event (#1017).
 
    *  The completion comparison names the progressive authorization
       companion's synchronous drawdown as the one synchronous expansion.

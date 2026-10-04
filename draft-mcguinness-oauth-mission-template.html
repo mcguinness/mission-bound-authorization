@@ -1771,26 +1771,34 @@ instance; <code>approval_basis</code> is the structured authorization-basis
 record, and the two are consistent by construction;<a href="#section-6-4.8.2.1.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-6-4.8.2.2">
-              <p id="section-6-4.8.2.2.1"><code>subject</code> is established as the issuance profile requires, never
-taken from Dispatcher input, and is an entry of
-<code>allowed_recipients</code> <code>subjects</code>
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>);<a href="#section-6-4.8.2.2.1" class="pilcrow">¶</a></p>
+              <p id="section-6-4.8.2.2.1"><code>approval_event_id</code> identifies this Dispatch, never the template's
+approval: a unique value the Mission Issuer allocates when it
+creates the Dispatch's <code>(authenticated client, dispatch_event_id)</code>
+reservation (below) and retains with the committed instance. A
+retry recovers it; a reservation created after that key's
+tombstone expires receives a new one;<a href="#section-6-4.8.2.2.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-6-4.8.2.3">
-              <p id="section-6-4.8.2.3.1"><code>client_id</code> is the Agent selected from <code>allowed_recipients</code>
+              <p id="section-6-4.8.2.3.1"><code>subject</code> is established as the issuance profile requires, never
+taken from Dispatcher input, and is an entry of
+<code>allowed_recipients</code> <code>subjects</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>);<a href="#section-6-4.8.2.3.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-6-4.8.2.4">
+              <p id="section-6-4.8.2.4.1"><code>client_id</code> is the Agent selected from <code>allowed_recipients</code>
                 <code>agents</code> (<a href="#the-mission-template" class="auto internal xref">Section 4</a>), never taken from Dispatcher
 input. The selection is part of the committed instance: a retried
 or recovered Dispatch returns the committed Agent and does not
-select again;<a href="#section-6-4.8.2.3.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-6-4.8.2.4">
-              <p id="section-6-4.8.2.4.1"><code>intent_hash</code> and <code>authority_hash</code> are computed over the instance's
-own Intent and final Authority Set, never over the template; the
-template commits the ceiling under <code>template_hash</code>
-(<a href="#template-hash" class="auto internal xref">Section 4.1</a>);<a href="#section-6-4.8.2.4.1" class="pilcrow">¶</a></p>
+select again;<a href="#section-6-4.8.2.4.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-6-4.8.2.5">
-              <p id="section-6-4.8.2.5.1"><code>expires_at</code> is the effective Mission expiry of the issuance
+              <p id="section-6-4.8.2.5.1"><code>intent_hash</code> and <code>authority_hash</code> are computed over the instance's
+own Intent and final Authority Set, never over the template; the
+template commits the ceiling under <code>template_hash</code>
+(<a href="#template-hash" class="auto internal xref">Section 4.1</a>);<a href="#section-6-4.8.2.5.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-6-4.8.2.6">
+              <p id="section-6-4.8.2.6.1"><code>expires_at</code> is the effective Mission expiry of the issuance
 profile's requested-versus-effective rule
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): the minimum of the
 dispatch intent's requested <code>expires_at</code>, the committed Mission
@@ -1801,10 +1809,10 @@ recomputation is exact. These are the complete expiry inputs for
 Dispatch: a deployment that needs a tighter standing-consent
 lifetime records it in <code>instance_lifetime</code> or the template's
 <code>expires_at</code> under a newly consented <code>template_version</code>, rather
-than applying an undisclosed fourth clamp; and<a href="#section-6-4.8.2.5.1" class="pilcrow">¶</a></p>
+than applying an undisclosed fourth clamp; and<a href="#section-6-4.8.2.6.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-6-4.8.2.6">
-              <p id="section-6-4.8.2.6.1"><code>template</code> lineage member is set (<a href="#template-member" class="auto internal xref">Section 6.1</a>).<a href="#section-6-4.8.2.6.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-6-4.8.2.7">
+              <p id="section-6-4.8.2.7.1"><code>template</code> lineage member is set (<a href="#template-member" class="auto internal xref">Section 6.1</a>).<a href="#section-6-4.8.2.7.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
 </li>
@@ -2573,40 +2581,47 @@ object by that value.<a href="#section-14-8.4.1" class="pilcrow">¶</a></p>
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">The Mission Issuer selects a dispatched instance's Agent from
+          <p id="appendix-A-2.1.1">Dispatch: a dispatched instance's <code>approval_event_id</code> identifies the
+Dispatch, never the template's approval: a unique value allocated
+with the Dispatch's reservation and retained with the instance, so a
+retry recovers it and reuse of the key after its tombstone expires
+receives a new one (#1017).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">The Mission Issuer selects a dispatched instance's Agent from
 <code>allowed_recipients</code> <code>agents</code> under the Dispatch Policy, never from
 Dispatcher input: one listed Agent is selected directly, and several
 need the Dispatch Policy's selection rule. The selection is recorded
 at commit, kept on retries, and separate from Dispatcher
-authentication and the token's presenter binding (#970).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+authentication and the token's presenter binding (#970).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1"><code>dispatch_policy</code> is an activation policy reference (<code>id</code>,
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1"><code>dispatch_policy</code> is an activation policy reference (<code>id</code>,
 <code>version</code>, <code>digest</code>) under the issuance profile's Standing-Consent
 Bases, replacing the <span class="bcp14">SHOULD</span> to commit the policy body. Dispatch
 verifies it as a new step 3 and refuses a mismatch with the new
 <code>dispatch_policy_changed</code> reason; the <code>template</code> lineage member and
-each Dispatch record carry the digest.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">The consumption-bound rationale under Prohibited Classes states
-that dispatch multiplies an instance's bound by <code>max_active</code> and
-<code>dispatch_rate</code>, and that the template consent renders that product
-under the metering profile.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+each Dispatch record carry the digest.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1"><code>allowed_dispatchers</code> lists <code>client_id</code> strings, and
-<code>allowed_recipients</code> is an object of <code>subjects</code> (<code>iss</code> and <code>sub</code>)
-and <code>agents</code> (<code>client_id</code>), each checked separately at Dispatch, so
-any listed Agent may serve any listed Subject.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.4.1">The consumption-bound rationale under Prohibited Classes states
+that dispatch multiplies an instance's bound by <code>max_active</code> and
+<code>dispatch_rate</code>, and that the template consent renders that product
+under the metering profile.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.5">
-          <p id="appendix-A-2.5.1">The dispatch bounds have stated encodings. <code>instance_lifetime</code> and
+          <p id="appendix-A-2.5.1"><code>allowed_dispatchers</code> lists <code>client_id</code> strings, and
+<code>allowed_recipients</code> is an object of <code>subjects</code> (<code>iss</code> and <code>sub</code>)
+and <code>agents</code> (<code>client_id</code>), each checked separately at Dispatch, so
+any listed Agent may serve any listed Subject.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.6">
+          <p id="appendix-A-2.6.1">The dispatch bounds have stated encodings. <code>instance_lifetime</code> and
 <code>review_cadence</code> are positive integer seconds, the latter measured
 from the approval's <code>approved_at</code>; <code>max_active</code> is a positive
 integer; <code>dispatch_rate</code> is a <code>limit</code> of committed instantiations per
 trailing <code>window</code> of seconds, counting neither refused Dispatches nor
-recovered retries; and <code>expires_at</code> is an RFC 3339 date-time.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+recovered retries; and <code>expires_at</code> is an RFC 3339 date-time.<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

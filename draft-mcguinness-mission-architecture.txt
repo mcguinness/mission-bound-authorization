@@ -1120,8 +1120,8 @@ Table of Contents
    |Verb    | Owning documents                          |Packages      |
    +========+===========================================+==============+
    |propose | mission-shaping, oauth-mission-           |Agent         |
-   |        | submission-evidence                       |Execution     |
-   |        |                                           |Governance    |
+   |        | submission-evidence, oauth-mission-       |Execution     |
+   |        | request-provenance                        |Governance    |
    +--------+-------------------------------------------+--------------+
    |approve | oauth-mission, mission-authority-server,  |Mission       |
    |and     | mission-aauth, mission-uma, mission-      |Control;      |
@@ -4950,44 +4950,54 @@ Appendix G.  Mission Document Map
 
    *Approval time:*
 
-    +===================================+=============================+
-    | Document                          | Role                        |
-    +===================================+=============================+
-    | mission-shaping                   | Client-side shaping of a    |
-    |                                   | user's request into a       |
-    |                                   | candidate Mission Intent,   |
-    |                                   | as untrusted proposal.      |
-    +-----------------------------------+-----------------------------+
-    | oauth-mission-submission-evidence | The Intent Submission       |
-    |                                   | Evidence framework: entry   |
-    |                                   | convention, binding, and    |
-    |                                   | verification bounds;        |
-    |                                   | defines no types.           |
-    +-----------------------------------+-----------------------------+
-    | oauth-mission-consent-evidence    | The consent_rendering_hash  |
-    |                                   | anchor and signed evidence  |
-    |                                   | of what the Approver was    |
-    |                                   | shown.                      |
-    +-----------------------------------+-----------------------------+
-    | oauth-mission-approval            | Asynchronous approval over  |
-    |                                   | the deferred substrate.     |
-    +-----------------------------------+-----------------------------+
-    | mission-approval-governance       | The Approval Governance     |
-    |                                   | Record: authenticated       |
-    |                                   | assertions behind an        |
-    |                                   | approval, committed         |
-    |                                   | atomically with activation. |
-    +-----------------------------------+-----------------------------+
-    | oauth-mission-approval-revision   | Experimental: in-review     |
-    |                                   | narrowing revision of a     |
-    |                                   | deferred proposal.          |
-    +-----------------------------------+-----------------------------+
-    | oauth-mission-template            | Experimental: one consent   |
-    |                                   | to a template's ceiling;    |
-    |                                   | each dispatch is an         |
-    |                                   | ordinary, policy-           |
-    |                                   | instantiated Mission.       |
-    +-----------------------------------+-----------------------------+
+     +===================================+===========================+
+     | Document                          | Role                      |
+     +===================================+===========================+
+     | mission-shaping                   | Client-side shaping of a  |
+     |                                   | user's request into a     |
+     |                                   | candidate Mission Intent, |
+     |                                   | as untrusted proposal.    |
+     +-----------------------------------+---------------------------+
+     | oauth-mission-submission-evidence | The Intent Submission     |
+     |                                   | Evidence framework: entry |
+     |                                   | convention, binding, and  |
+     |                                   | verification bounds;      |
+     |                                   | defines no types.         |
+     +-----------------------------------+---------------------------+
+     | oauth-mission-request-provenance  | Optional evidence type: a |
+     |                                   | trusted intake's signed   |
+     |                                   | record of who originated  |
+     |                                   | the request behind an     |
+     |                                   | Intent, with a secret-    |
+     |                                   | keyed request digest.     |
+     +-----------------------------------+---------------------------+
+     | oauth-mission-consent-evidence    | The                       |
+     |                                   | consent_rendering_hash    |
+     |                                   | anchor and signed         |
+     |                                   | evidence of what the      |
+     |                                   | Approver was shown.       |
+     +-----------------------------------+---------------------------+
+     | oauth-mission-approval            | Asynchronous approval     |
+     |                                   | over the deferred         |
+     |                                   | substrate.                |
+     +-----------------------------------+---------------------------+
+     | mission-approval-governance       | The Approval Governance   |
+     |                                   | Record: authenticated     |
+     |                                   | assertions behind an      |
+     |                                   | approval, committed       |
+     |                                   | atomically with           |
+     |                                   | activation.               |
+     +-----------------------------------+---------------------------+
+     | oauth-mission-approval-revision   | Experimental: in-review   |
+     |                                   | narrowing revision of a   |
+     |                                   | deferred proposal.        |
+     +-----------------------------------+---------------------------+
+     | oauth-mission-template            | Experimental: one consent |
+     |                                   | to a template's ceiling;  |
+     |                                   | each dispatch is an       |
+     |                                   | ordinary, policy-         |
+     |                                   | instantiated Mission.     |
+     +-----------------------------------+---------------------------+
 
                                   Table 19
 
