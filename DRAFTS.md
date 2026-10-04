@@ -49,9 +49,9 @@ own Introduction and carry no Status section.
 
 <!-- generated:family-counts:start -->
 
-50 documents: 1 core, 5 adapter-binding, 41 companion, 3 guide.
-Spec maturity: 1 candidate, 42 experimental, 4 sketch, 3 not applicable (guide documents; protocol maturity does not apply).
-Conformance ledger (`conformance-manifest.json`): 908 requirement rows across 29 audited specs (353 tested, 97 partial, 458 todo); 21 documents carry no rows in the audited set yet.
+51 documents: 1 core, 5 adapter-binding, 42 companion, 3 guide.
+Spec maturity: 1 candidate, 43 experimental, 4 sketch, 3 not applicable (guide documents; protocol maturity does not apply).
+Conformance ledger (`conformance-manifest.json`): 932 requirement rows across 30 audited specs (353 tested, 97 partial, 482 todo); 21 documents carry no rows in the audited set yet.
 
 <!-- generated:family-counts:end -->
 
@@ -108,6 +108,7 @@ Conformance ledger (`conformance-manifest.json`): 908 requirement rows across 29
 | [Mission-Bound Authorization for OAuth 2.0](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission.html) | adapter-binding | experimental | 88 rows: 43 tested, 8 partial, 37 todo | active | approve | The substrate and the bindings | The OAuth 2.0 binding of the Mission model, the issuance profile to its OAuth companions: defines the OAuth realization of the Mission, the Mission Intent and Authority Set, the approval event and its `intent_hash` / `authority_hash` anchors, the `mission` token claim, the subset rule, and state-gated issuance. | Start here for OAuth issuance: any agent's approval must bind durably to the tokens it later uses. | nothing beyond its listed references |
 | [Mission Derivation Limits for OAuth 2.0](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-derivation-limits.html) | companion | experimental | 7 rows: 2 tested, 3 partial, 2 todo | active | govern | Lifecycle | Bounds how many derivations the issuer performs under a Mission: an optional requested ceiling, an AS-established effective limit, atomic counting across code exchange, refresh, and Token Exchange (the refreshes of an async delegation family are not counted), refusal at the cap, and remaining-count disclosure through introspection. | A deployment wants a cap on counted derivations under one Mission, independent of authority and lifetime; the refreshes of an async delegation family are not counted. | Mission-Bound Authorization for OAuth 2.0 |
 | [Mission Intent Submission Evidence for OAuth 2.0](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-submission-evidence.html) | companion | experimental | 1 row: 1 todo | active | propose | Approval time | Defines how typed evidence presented with a Mission Intent is processed: the entry convention, required evidence resolved before derivation, binding to one exact Intent, agreement with the authenticated presenter, bounded verification cost, and where refusals are returned. | A deployment supports any Intent Submission Evidence type, or an applicable profile or policy requires submission evidence. | Mission-Bound Authorization for OAuth 2.0 |
+| [Mission Request Provenance for OAuth 2.0](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-request-provenance.html) | companion | experimental | 24 rows: 24 todo | active | propose | Approval time | Defines an optional Intent Submission Evidence type: a trusted request intake's signed assertion of who originated the instruction behind a Mission Intent, through which authenticated channel, and when, bound to one AS, one exact Intent, and one presenter, carrying only a secret-keyed digest of the instruction. | A deployment's admission policy needs authenticated evidence of where the request behind a Mission Intent came from, from an intake isolated from the shaper. | Mission-Bound Authorization for OAuth 2.0; Mission Intent Submission Evidence for OAuth 2.0 |
 | [Mission Approved-Set Verification for OAuth 2.0](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-approved-set-verification.html) | companion | experimental | 4 rows: 3 tested, 1 todo | active | prove | Proof and portability | Lets a verifying Resource Server or policy decision point check a token's carried authority against the complete committed Authority Set: authenticated complete-set retrieval, recomputation of authority_hash, a subset check, optional independent pinning, and fail-closed handling. | A Resource Server must not rely on the issuer's subset assertion alone for high-consequence authority. | Mission-Bound Authorization for OAuth 2.0 |
 
 <!-- generated:drafts-index:end -->
@@ -226,6 +227,20 @@ refuses any entry it cannot verify, and treats a verified entry as
 policy input, never authority. It defines no evidence types.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-submission-evidence.html)
+
+#### Mission Request Provenance for OAuth 2.0
+
+An optional Intent Submission Evidence type. A trusted request intake,
+isolated from the shaper, captures a person's instruction before
+shaping and later signs an assertion binding who originated it,
+through which authenticated channel, and when, to one AS, one exact
+Mission Intent, and one presenter. The assertion carries only an HMAC
+digest of the instruction under a per-request secret the intake
+keeps, so a holder cannot test guessed wordings. It authenticates the
+request's origin; it does not prove the Intent interprets the request
+faithfully, and it is never approval or authority.
+
+[Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-request-provenance.html)
 
 #### Mission Consent Evidence for OAuth 2.0
 

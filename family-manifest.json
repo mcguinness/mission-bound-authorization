@@ -84,7 +84,7 @@
    "architecture_name": "High-assurance architecture"
   }
  },
- "count": 50,
+ "count": 51,
  "drafts": [
   {
    "file": "draft-mcguinness-mission-control-plane.md",
@@ -2488,6 +2488,36 @@
     "draft-mcguinness-oauth-mission-approval-revision",
     "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-expansion"
+   ]
+  },
+  {
+   "file": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "slug": "draft-mcguinness-oauth-mission-request-provenance",
+   "title": "Mission Request Provenance for OAuth 2.0",
+   "category": "std",
+   "role": "companion",
+   "spec_maturity": "experimental",
+   "maintenance": "active",
+   "group": "approval-time",
+   "verbs": [
+    "propose"
+   ],
+   "summary": "Defines an optional Intent Submission Evidence type: a trusted request intake's signed assertion of who originated the instruction behind a Mission Intent, through which authenticated channel, and when, bound to one AS, one exact Intent, and one presenter, carrying only a secret-keyed digest of the instruction.",
+   "pull_when": "A deployment's admission policy needs authenticated evidence of where the request behind a Mission Intent came from, from an intake isolated from the shaper.",
+   "normative_references": [
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-submission-evidence"
+   ],
+   "adoption_requires": [
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-submission-evidence"
+   ],
+   "requires_when": [],
+   "references": [
+    "draft-mcguinness-mission-evidence-envelope",
+    "draft-mcguinness-mission-shaping",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-submission-evidence"
    ]
   },
   {
