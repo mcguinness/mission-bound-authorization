@@ -566,11 +566,14 @@ What this composition does not cover:
 
 ## 9. Status
 
-This is a commit-bound evidence record, not a deployment contract. It is the
-evidence base that #253's eventual deployment contract
-(`src/docs/initial-runtime-deployment.md`, not yet written) is to link. #253
-has not selected a first deployment target; its recommendation of the
-AS-native payments composition awaits the owner.
+This is a commit-bound evidence record, not a deployment contract. #253
+adopted the AS-native payments composition (D284), and its deployment
+contract is [initial-runtime-deployment.md](initial-runtime-deployment.md),
+which is current where the two differ. Superseded here since `a90a25c8`:
+§3 finding A (every tool now carries a class); the statements in §3 and §5
+that there is no PDP idempotency domain and no `outcome_reconciliation` (both
+are now declared, #917); and the test names that read `context.freshness`
+(now `context.mission_state_observation`, #1004).
 
 Out of scope: document maturity (published only in `DRAFTS.md`), any
 assurance level or conformance class, production readiness, the
