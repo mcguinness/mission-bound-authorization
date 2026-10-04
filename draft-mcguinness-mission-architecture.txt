@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                            3 October 2026
-Expires: 6 April 2027
+Intended status: Informational                            4 October 2026
+Expires: 7 April 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 6 April 2027.
+   This Internet-Draft will expire on 7 April 2027.
 
 Copyright Notice
 
@@ -2076,8 +2076,8 @@ Table of Contents
    same capabilities ([I-D.draft-mcguinness-oauth-mission]).
 
    The companion profiles named without "oauth" are defined against the
-   binding-neutral contract and declare what they consume, each in a
-   Mission Substrate section of its own.  The runtime profile's
+   binding-neutral contract, and most declare what they consume in a
+   Mission Substrate section of their own.  The runtime profile's
    declaration is the exemplar ([I-D.draft-mcguinness-mission-runtime]),
    and the other consumers align with it to varying degrees.  Where a
    companion consumes a concrete representation, it is the OAuth
@@ -5230,6 +5230,9 @@ Appendix G.  Mission Document Map
 Appendix H.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The Mission Substrate no longer claims that every companion named
+      without "oauth" has a Mission Substrate section of its own.
 
    *  A readability pass, with no change to any profile's requirements.
       The Mission and Mission Assurance Levels gain subsections
