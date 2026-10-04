@@ -180,7 +180,7 @@ export interface MissionBoundTokenFacts extends CommonTokenFacts {
  * credential-carried claim governs exactly as before; absent (this type),
  * `enforceInner` resolves the baseline mapping Join against a PEP-supplied
  * propagated reference (`RequestSignals.missionReference`) before anything
- * else runs, and the PDP itself denies `mission_mismatch` on a failed
+ * else runs, and the PDP itself denies `mission_binding_failed` on a failed
  * subject/client join, never falling back to an unjoined decision (#557
  * review point 1).
  */
@@ -616,7 +616,7 @@ export interface PepDeps {
      * exists to keep.
      *
      * Absent (including an absent hook): the delegate has no actor record
-     * under the Mission, so the PDP denies `mission_mismatch` whether or
+     * under the Mission, so the PDP denies `mission_binding_failed` whether or
      * not any `max_depth` is declared. An unconfigured deployment therefore
      * fails closed on the delegate disposition; the direct-client
      * disposition consults no depth at all.
@@ -1171,7 +1171,7 @@ export class Pep {
       if (boundAuthority.length === 0) return await this.refuse(token, "out_of_authority", mapping.action, loaded.view);
 
       // Rules 3, 4, 5, 6 (subject/client join, delegate narrowing, uniform
-      // mission_mismatch with no fallback) are NOT resolved here anymore:
+      // mission_binding_failed with no fallback) are NOT resolved here anymore:
       // `context.mission_join` below tells the PDP to resolve them itself,
       // against this (rule-8-narrowed) view -- the PDP is the party that
       // can verify the credential inputs and tell whether the join actually

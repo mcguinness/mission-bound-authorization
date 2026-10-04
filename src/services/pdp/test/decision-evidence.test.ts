@@ -107,7 +107,7 @@ describe("Decision Evidence records the entries a decision turned on (@spec runt
     const r = req(); r.subject.properties = { iss: v.subject.iss };
     r.context.actor = { client_id: "delegate" }; r.context.mission_join = { delegate_depth: 1 };
     const { record } = await recorded(r, v, { delegatePolicy: { delegates: { delegate: {} } } });
-    expect(record.denial_reason).toBe("mission_mismatch");
+    expect(record.denial_reason).toBe("mission_binding_failed");
     expect(record.contributing_constraints).toEqual(["mission_resource_access"]);
   });
 });

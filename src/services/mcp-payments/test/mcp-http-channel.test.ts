@@ -633,7 +633,7 @@ d("MAS-governed HTTP MCP channel (baseline Join)", () => {
     expect(res.ok, JSON.stringify(res)).toBe(true);
   });
 
-  it("denies mission_mismatch for the SAME delegate when nothing recorded the edge: no actor record, no join", async () => {
+  it("denies mission_binding_failed for the SAME delegate when nothing recorded the edge: no actor record, no join", async () => {
     const { url } = await buildGoverned({ delegate: true });
     const { client, close } = await createHttpMediatedClient(
       url,
@@ -644,7 +644,7 @@ d("MAS-governed HTTP MCP channel (baseline Join)", () => {
     cleanups.push(close);
     const res = await client.callTool("get_invoice", { invoice_id: "inv-1" });
     expect(res.ok).toBe(false);
-    expect(res.denial_reason).toBe("mission_mismatch");
+    expect(res.denial_reason).toBe("mission_binding_failed");
   });
 
   it("the MISSION-BOUND channel rejects the same ordinary credential at the gate, before the PEP", async () => {

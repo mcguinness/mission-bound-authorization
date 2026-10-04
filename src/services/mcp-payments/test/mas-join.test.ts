@@ -5,7 +5,7 @@
  * credential (TokenFacts.mission absent) joined against a PEP-supplied
  * propagated Mission reference. Rules 3-6 (the join proper) are resolved by
  * the PDP itself (#557 review point 1; see `services/pdp/test/mas-join.test.ts`
- * for standalone `resolveBaselineJoin` coverage) -- a mission_mismatch here
+ * for standalone `resolveBaselineJoin` coverage) -- a mission_binding_failed here
  * is a genuine Decision, `res.decision` defined, `res.denial_reason` set,
  * never a pre-evaluate() PEP refusal. This file covers the PEP's OWN gateway
  * duties: the configured/unconfigured gate, propagated-reference selection
@@ -192,7 +192,7 @@ describe("baseline MAS Join: PepDeps.masJoin.resolveDelegateDepth (@spec authori
     expect(res.permitted, JSON.stringify(res)).toBe(true);
   });
 
-  it("denies mission_mismatch when the resolved depth exceeds the entry's own join_delegation.max_depth", async () => {
+  it("denies mission_binding_failed when the resolved depth exceeds the entry's own join_delegation.max_depth", async () => {
     const pep = build(
       {
         masJoin: {
@@ -207,10 +207,10 @@ describe("baseline MAS Join: PepDeps.masJoin.resolveDelegateDepth (@spec authori
       missionReference: REFERENCE,
     });
     expect(res.permitted).toBe(false);
-    expect(res.denial_reason).toBe("mission_mismatch");
+    expect(res.denial_reason).toBe("mission_binding_failed");
   });
 
-  it("denies mission_mismatch with an unconfigured resolveDelegateDepth: a delegate with no actor record is not recorded as acting under the Mission", async () => {
+  it("denies mission_binding_failed with an unconfigured resolveDelegateDepth: a delegate with no actor record is not recorded as acting under the Mission", async () => {
     const pep = build(
       {
         masJoin: {
@@ -225,12 +225,12 @@ describe("baseline MAS Join: PepDeps.masJoin.resolveDelegateDepth (@spec authori
       missionReference: REFERENCE,
     });
     expect(res.permitted).toBe(false);
-    expect(res.denial_reason).toBe("mission_mismatch");
+    expect(res.denial_reason).toBe("mission_binding_failed");
   });
 });
 
-describe("baseline MAS Join: mission_mismatch (@spec authority-server#mission-join rule 6)", () => {
-  it("denies mission_mismatch when the authenticated subject does not match the Mission's subject", async () => {
+describe("baseline MAS Join: mission_binding_failed (@spec authority-server#mission-join rule 6)", () => {
+  it("denies mission_binding_failed when the authenticated subject does not match the Mission's subject", async () => {
     const pep = build({ masJoin: { resolveOrdinaryAuthority: FULL_AUTHORITY } });
     const mismatchedToken: TokenFacts = { ...ORDINARY_TOKEN, sub: "mallory" };
     const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, mismatchedToken, undefined, {
@@ -240,12 +240,12 @@ describe("baseline MAS Join: mission_mismatch (@spec authority-server#mission-jo
     // @spec authority-server#mission-join (#557 review point 1) — this is
     // now a genuine PDP decision (denial_reason on a Decision Evidence
     // record), not a PEP-only refusal: the PDP resolves rules 3-6 itself.
-    expect(res.denial_reason).toBe("mission_mismatch");
+    expect(res.denial_reason).toBe("mission_binding_failed");
     expect(res.decision).toBeDefined();
     expect(res.decision?.decision).toBe(false);
   });
 
-  it("denies mission_mismatch for a client that is neither the Mission's own client_id nor an authorized delegate, and never falls back to the unjoined authority", async () => {
+  it("denies mission_binding_failed for a client that is neither the Mission's own client_id nor an authorized delegate, and never falls back to the unjoined authority", async () => {
     const pep = build({ masJoin: { resolveOrdinaryAuthority: FULL_AUTHORITY } });
     const unknownClientToken: TokenFacts = { ...ORDINARY_TOKEN, clientId: "unrecognized-client" };
     const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, unknownClientToken, undefined, {
@@ -256,12 +256,12 @@ describe("baseline MAS Join: mission_mismatch (@spec authority-server#mission-jo
     // itself denies this now (a real Decision, not a pre-evaluate() PEP
     // refusal): res.decision is DEFINED and carries no authoritySet the
     // caller could accidentally evaluate against (rule 6, no fallback).
-    expect(res.denial_reason).toBe("mission_mismatch");
+    expect(res.denial_reason).toBe("mission_binding_failed");
     expect(res.decision).toBeDefined();
     expect(res.decision?.decision).toBe(false);
   });
 
-  it("denies mission_mismatch for a referenced Mission that does not resolve at all", async () => {
+  it("refuses unknown_mission, before any decision, for a referenced Mission that does not resolve at all", async () => {
     const pep = build({ masJoin: { resolveOrdinaryAuthority: FULL_AUTHORITY } });
     const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, ORDINARY_TOKEN, undefined, {
       missionReference: { id: "no-such-mission", issuer: ISSUER },
@@ -335,7 +335,7 @@ describe("baseline MAS Join: depth from the deployment's actor records (@spec au
     expect(res.permitted, JSON.stringify(res)).toBe(true);
   });
 
-  it("denies mission_mismatch for the SAME delegate once the recorded chain is one hop too long for the ceiling", async () => {
+  it("denies mission_binding_failed for the SAME delegate once the recorded chain is one hop too long for the ceiling", async () => {
     // The only difference from the permit above is the ceiling: the depth is
     // the ledger's, walked over the recorded edges, not a token act chain.
     const res = await pepFor(twoHopLedger(), 1).enforce(
@@ -346,11 +346,11 @@ describe("baseline MAS Join: depth from the deployment's actor records (@spec au
       { missionReference: REFERENCE },
     );
     expect(res.permitted).toBe(false);
-    expect(res.denial_reason).toBe("mission_mismatch");
+    expect(res.denial_reason).toBe("mission_binding_failed");
     expect(res.decision).toBeDefined();
   });
 
-  it("denies mission_mismatch when the ledger records the delegation under a DIFFERENT issuer's same-id Mission", async () => {
+  it("denies mission_binding_failed when the ledger records the delegation under a DIFFERENT issuer's same-id Mission", async () => {
     const records = new ActorRecords();
     records.record({
       mission: { id: missionId, issuer: "https://other.example" },
@@ -365,7 +365,7 @@ describe("baseline MAS Join: depth from the deployment's actor records (@spec au
       { missionReference: REFERENCE },
     );
     expect(res.permitted).toBe(false);
-    expect(res.denial_reason).toBe("mission_mismatch");
+    expect(res.denial_reason).toBe("mission_binding_failed");
   });
 });
 
