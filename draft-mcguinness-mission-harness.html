@@ -2045,14 +2045,14 @@ it on its own: an <code>active</code> check is a lifecycle-state check, and a
 contain transition changes no lifecycle state. This document adds no
 general resume duty for a contain transition; which residual applies
 follows from the containment property the deployment's other
-profiles already establish:<a href="#section-7.3-1" class="pilcrow">¶</a></p>
+profiles already establish for the action class:<a href="#section-7.3-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-7.3-2.1">
-            <p id="section-7.3-2.1.1">A Runtime-Enforced deployment closes the path at the PDP: the
-cached-access rule already requires a fresh runtime decision for a
-consequential action (<a href="#cached-access" class="auto internal xref">Section 10</a>), and that decision denies
-contained capability whether or not the harness itself checked for
-containment.<a href="#section-7.3-2.1.1" class="pilcrow">¶</a></p>
+            <p id="section-7.3-2.1.1">Where the action class carries the Runtime-Enforced containment
+property, the PDP closes the path: the cached-access rule already
+requires a fresh runtime decision for a consequential action
+(<a href="#cached-access" class="auto internal xref">Section 10</a>), and that decision denies contained capability
+whether or not the harness itself checked for containment.<a href="#section-7.3-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-7.3-2.2">
             <p id="section-7.3-2.2.1">A harness that is also a Signals consumer materializing effective
@@ -2065,10 +2065,11 @@ document adding a duty of its own
 Behavior on Receipt").<a href="#section-7.3-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-7.3-2.3">
-            <p id="section-7.3-2.3.1">A Baseline-only deployment retains the documented pre-transition
-residual: a credential derived before the contain transition
-remains usable to its own bound, because Containment defines
-Baseline as a new-derivation kill, not a revocation
+            <p id="section-7.3-2.3.1">Where the action class carries only the Baseline containment
+property, the documented pre-transition residual remains: a
+credential derived before the contain transition remains usable to
+its own bound, because Containment defines Baseline as a
+new-derivation kill, not a revocation
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>).<a href="#section-7.3-2.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
@@ -3665,14 +3666,19 @@ exists.<a href="#appendix-A-5" class="pilcrow">¶</a></p>
 <p id="appendix-B-1">[[ To be removed from the final specification ]]<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-2.1">
-          <p id="appendix-B-2.1.1"><code>status_checked_at</code> is the harness's observation as its own clock
+          <p id="appendix-B-2.1.1">Interaction with Mission Containment keys the residual on the
+action class's containment property, not on a deployment's level.
+No requirement changed.<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.2">
+          <p id="appendix-B-2.2.1"><code>status_checked_at</code> is the harness's observation as its own clock
 read it, preceding the relied-on status's <code>iat</code> by no more than the
 published maximum clock skew; <code>status_expires_at</code> is its reliance
 end, never later than a Mission Status Response's
-<code>mission.fresh_until</code>.<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+<code>mission.fresh_until</code>.<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.2">
-          <p id="appendix-B-2.2.1">Client-instance references follow their successors:
+        <li class="normal" id="appendix-B-2.3">
+          <p id="appendix-B-2.3.1">Client-instance references follow their successors:
 draft-mcguinness-oauth-client-instance-assertion is replaced by
 {I-D.draft-mcguinness-oauth-client-instance-id}, and the
 deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
@@ -3682,13 +3688,13 @@ Context's <code>iss</code> and <code>id</code>, instead of <code>agent_instance_
 instance <code>sub</code>. The retired profile's
 guarantee that sub-agent chains cannot shed identity now depends on
 the harness's own durable association between each sub-agent handle
-and its instance.<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
+and its instance.<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.3">
-          <p id="appendix-B-2.3.1">Linked the limits of provenance-backed taint control to the Security
+        <li class="normal" id="appendix-B-2.4">
+          <p id="appendix-B-2.4.1">Linked the limits of provenance-backed taint control to the Security
 Model's Enforcement Perimeter and distinguished the per-channel
 egress disposition from the runtime profile's per-entry perimeter
-disposition; no taint requirement changed (#758).<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
+disposition; no taint requirement changed (#758).<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

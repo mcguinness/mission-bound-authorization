@@ -1562,7 +1562,7 @@ Profile; and<a href="#section-4.1-18.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-4.1-18.3">
             <p id="section-4.1-18.3.1"><span class="bcp14">MUST</span> record each policy-adjudicated expansion as an approval event
-whose approver context is the drawdown policy that authorized it
+whose decision mechanism is the drawdown policy that authorized it
 (<a href="#audit-linkage" class="auto internal xref">Section 6</a>).<a href="#section-4.1-18.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
@@ -1795,9 +1795,11 @@ expansion stays denied.<a href="#section-5-3" class="pilcrow">¶</a></p>
 <a href="#section-6" class="section-number selfRef">6. </a><a href="#name-audit-linkage" class="section-name selfRef">Audit Linkage</a>
       </h2>
 <p id="section-6-1">Each policy-adjudicated in-ceiling expansion is an approval event and
-<span class="bcp14">MUST</span> be recorded as one: the approver context is the drawdown policy
-(its identifier and version) rather than a human principal, and the
-successor's <code>predecessor</code> member links the drawdown chain for an
+<span class="bcp14">MUST</span> be recorded as one: the decision mechanism is the drawdown policy
+(its identifier and version) rather than a human, the Approver who
+consented the ceiling remains the accountable <code>consent_principal</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Role Mapping"), and
+the successor's <code>predecessor</code> member links the drawdown chain for an
 authorized auditor exactly as for human-approved expansions
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>).<a href="#section-6-1" class="pilcrow">¶</a></p>
 <p id="section-6-2">The record <span class="bcp14">MUST</span> carry the chain's cumulative drawdown count, so the
@@ -1903,8 +1905,8 @@ per-action runtime enforcement
         <li class="normal" id="section-8-2.2">
           <p id="section-8-2.2.1">The drawdown policy is authority-bearing governance. A misconfigured
 policy over-grants within the ceiling; it <span class="bcp14">MUST</span> be reviewed and
-versioned like approval policy, and its identity and version are part
-of the recorded approver context (<a href="#audit-linkage" class="auto internal xref">Section 6</a>).<a href="#section-8-2.2.1" class="pilcrow">¶</a></p>
+versioned like approval policy, and its identity and version are
+recorded as the decision mechanism (<a href="#audit-linkage" class="auto internal xref">Section 6</a>).<a href="#section-8-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-2.3">
           <p id="section-8-2.3.1">The ceiling is a consent artifact. It <span class="bcp14">MUST</span> be rendered to the
@@ -2058,57 +2060,63 @@ convention, none of which require registration.<a href="#section-10-1" class="pi
 <p id="appendix-A-2">-01<a href="#appendix-A-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-3.1">
-          <p id="appendix-A-3.1.1">In-ceiling expansion: a <code>ceiling_drawdown</code> successor's
+          <p id="appendix-A-3.1.1">Audit Linkage and In-Ceiling Expansion name the drawdown policy as
+the approval event's decision mechanism, not its approver; the
+Approver who consented the ceiling stays the <code>consent_principal</code>,
+matching the issuance profile's Role Mapping.<a href="#appendix-A-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-3.2">
+          <p id="appendix-A-3.2.1">In-ceiling expansion: a <code>ceiling_drawdown</code> successor's
 <code>approval_event_id</code> identifies the drawdown: a unique value allocated
 with the exchange's <code>(client, creation_request_id)</code> reservation and
 retained with the successor, so a retry recovers it and reuse of the
 key after its tombstone expires receives a new one; no new member
-(#1017).<a href="#appendix-A-3.1.1" class="pilcrow">¶</a></p>
+(#1017).<a href="#appendix-A-3.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-3.2">
-          <p id="appendix-A-3.2.1">In-ceiling expansion: a drawdown that passes every policy-adjudication
+        <li class="normal" id="appendix-A-3.3">
+          <p id="appendix-A-3.3.1">In-ceiling expansion: a drawdown that passes every policy-adjudication
 guard completes synchronously in the token-exchange response,
 committing activation, supersession and the creation reservation
 before the response; the undefined <code>request_uri</code> redemption is
-removed.<a href="#appendix-A-3.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-3.3">
-          <p id="appendix-A-3.3.1">In-ceiling expansion: the discharge guard tests the complete successor
-Authority Set against the chain's discharge restrictions, from any
-later Mission, and the ceiling review discloses outstanding discharge
-restrictions.<a href="#appendix-A-3.3.1" class="pilcrow">¶</a></p>
+removed.<a href="#appendix-A-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-3.4">
-          <p id="appendix-A-3.4.1">In-ceiling expansion: a policy-adjudicated drawdown whose complete
+          <p id="appendix-A-3.4.1">In-ceiling expansion: the discharge guard tests the complete successor
+Authority Set against the chain's discharge restrictions, from any
+later Mission, and the ceiling review discloses outstanding discharge
+restrictions.<a href="#appendix-A-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-3.5">
+          <p id="appendix-A-3.5.1">In-ceiling expansion: a policy-adjudicated drawdown whose complete
 Authority Set overlaps capability under a containment restriction of
 its chain falls back to a fresh human approval naming the contained
 capability and its cause, from any later Mission in the chain; the
 ceiling review discloses outstanding restrictions and does not clear
-them.<a href="#appendix-A-3.4.1" class="pilcrow">¶</a></p>
+them.<a href="#appendix-A-3.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-3.5">
-          <p id="appendix-A-3.5.1"><code>drawdown_policy</code> is an activation policy reference (<code>id</code>,
+        <li class="normal" id="appendix-A-3.6">
+          <p id="appendix-A-3.6.1"><code>drawdown_policy</code> is an activation policy reference (<code>id</code>,
 <code>version</code>, <code>digest</code>) under the issuance profile's Standing-Consent
 Bases, replacing the string or URI and the <span class="bcp14">SHOULD</span> to commit the
 policy body; <code>ceiling_hash</code> covers the object, and a snapshot that
 does not match falls back to a fresh human approval. The
 <code>ceiling_drawdown</code> activation maps to <code>drawdown_policy.id</code> and
 <code>.version</code>, and the review cadence, part of the policy content, is
-anchored with it.<a href="#appendix-A-3.5.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-3.6">
-          <p id="appendix-A-3.6.1">The consumption-bound rationale rests on the metering profile's
-successor rule: a successor continues its predecessor's counters, and
-a policy-adjudicated successor cannot raise a bound.<a href="#appendix-A-3.6.1" class="pilcrow">¶</a></p>
+anchored with it.<a href="#appendix-A-3.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-3.7">
-          <p id="appendix-A-3.7.1">Editorial: disambiguated <code>authority_ceiling</code> from the template
-profile's Template Ceiling and the shaping companion's shaping
-ceiling at its first definition (<a href="#conventions-and-terminology" class="auto internal xref">Section 3</a>), no
-normative change.<a href="#appendix-A-3.7.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-3.7.1">The consumption-bound rationale rests on the metering profile's
+successor rule: a successor continues its predecessor's counters, and
+a policy-adjudicated successor cannot raise a bound.<a href="#appendix-A-3.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-3.8">
-          <p id="appendix-A-3.8.1">Mirrored the OAuth binding's Mission Template uncommitted-policy-body
+          <p id="appendix-A-3.8.1">Editorial: disambiguated <code>authority_ceiling</code> from the template
+profile's Template Ceiling and the shaping companion's shaping
+ceiling at its first definition (<a href="#conventions-and-terminology" class="auto internal xref">Section 3</a>), no
+normative change.<a href="#appendix-A-3.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-3.9">
+          <p id="appendix-A-3.9.1">Mirrored the OAuth binding's Mission Template uncommitted-policy-body
 pattern onto <code>drawdown_policy</code>: a <span class="bcp14">SHOULD</span> to additionally commit the
 policy body under an integrity anchor or disclose it under Consent
 Evidence (<a href="#progressive-authorization" class="auto internal xref">Section 4</a>). Reframed the ceiling
@@ -2116,7 +2124,7 @@ review cadence as a recency ceiling on the <code>ceiling_drawdown</code>
 approval basis's <code>approved_at</code>, reproducible from the drawdown
 policy's own versioned content identified by the existing
 <code>policy_id</code>/<code>policy_version</code> rather than a new commitment or a new,
-separately versioned member (<a href="#ceiling-review" class="auto internal xref">Section 4.3</a>, <a href="#audit-linkage" class="auto internal xref">Section 6</a>).<a href="#appendix-A-3.8.1" class="pilcrow">¶</a></p>
+separately versioned member (<a href="#ceiling-review" class="auto internal xref">Section 4.3</a>, <a href="#audit-linkage" class="auto internal xref">Section 6</a>).<a href="#appendix-A-3.9.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

@@ -4673,8 +4673,13 @@ profile fixes, listed in the Deployment Profile
 (<a href="#deployment-profile" class="auto internal xref">Section 12.6</a>) rather than implied by a level:<a href="#section-11.3-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-11.3-2.1">
-            <p id="section-11.3-2.1.1"><strong>Approved-record integrity</strong>: the anchors reproduce from the
-record alone (the OAuth binding's integrity anchors).<a href="#section-11.3-2.1.1" class="pilcrow">¶</a></p>
+            <p id="section-11.3-2.1.1"><strong>Approved-record integrity</strong>: the committed Intent, authority
+proposal, and Authority Set reproduce from the retained record alone
+(the OAuth binding's integrity anchors). The claim covers neither the
+record's provenance members nor an issuer that substitutes a record
+and its anchors together; defending against post-approval
+substitution takes an independently pinned anchor
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approved-set-verification" class="cite xref">I-D.draft-mcguinness-oauth-mission-approved-set-verification</a>]</span>).<a href="#section-11.3-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.3-2.2">
             <p id="section-11.3-2.2.1"><strong>Bounded revocation latency</strong>, per path and mechanism, naming the
@@ -7274,21 +7279,27 @@ bound profiled by <code>aauth-mission-expiry</code>.<a href="#appendix-G-3" clas
 <p id="appendix-H-1">[[ To be removed from the final specification ]]<a href="#appendix-H-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-H-2.1">
-          <p id="appendix-H-2.1.1">What ends an already-issued credential is worded the same way in
+          <p id="appendix-H-2.1.1">The Approved-record integrity claim names what the anchors cover
+(the committed Intent, authority proposal, and Authority Set) and
+states that provenance members and an issuer substituting a record
+with its anchors are outside it.<a href="#appendix-H-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-H-2.2">
+          <p id="appendix-H-2.2.1">What ends an already-issued credential is worded the same way in
 Approval and Lifecycle, the possession-independent revocation
 invariant, and the containment matrix: an applicable revocation, a
 state-aware or runtime check that reaches it, or its own expiry.
 Issuance gating stops only further derivation and refresh; it does
 not end an existing credential. Step 7 of A Mission's Life keeps its
 PDP clause and adds when mediated actions under an earlier permit
-stop. No change to any profile's requirements.<a href="#appendix-H-2.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-H-2.2">
-          <p id="appendix-H-2.2.1">The Mission Substrate no longer claims that every companion named
-without "oauth" has a Mission Substrate section of its own.<a href="#appendix-H-2.2.1" class="pilcrow">¶</a></p>
+stop. No change to any profile's requirements.<a href="#appendix-H-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-H-2.3">
-          <p id="appendix-H-2.3.1">A readability pass, with no change to any profile's requirements.
+          <p id="appendix-H-2.3.1">The Mission Substrate no longer claims that every companion named
+without "oauth" has a Mission Substrate section of its own.<a href="#appendix-H-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-H-2.4">
+          <p id="appendix-H-2.4.1">A readability pass, with no change to any profile's requirements.
 The Mission and Mission Assurance Levels gain subsections (Approval
 and Lifecycle, The Authority Path, The Delegated-Authority Layer, The
 Four Levels); each verb section leads with its question, boundary,
@@ -7299,16 +7310,16 @@ leave table cells so the tables fit the text format; and inline
 enumerations across the document become lists. RFC 8693 is cited
 where the delegation chooser names token exchange, two stale uses of
 "Completion" name the Entry Discharge companion, and the assurance
-levels are called levels throughout, never rungs.<a href="#appendix-H-2.3.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-H-2.4">
-          <p id="appendix-H-2.4.1">The derivation-modes table follows the OAuth binding: a model's
-output in derivation is a recorded input that can refuse or narrow,
-never supply or widen, with no change to any profile's
-requirements.<a href="#appendix-H-2.4.1" class="pilcrow">¶</a></p>
+levels are called levels throughout, never rungs.<a href="#appendix-H-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-H-2.5">
-          <p id="appendix-H-2.5.1">The authority path, with no change to any profile's requirements.
+          <p id="appendix-H-2.5.1">The derivation-modes table follows the OAuth binding: a model's
+output in derivation is a recorded input that can refuse or narrow,
+never supply or widen, with no change to any profile's
+requirements.<a href="#appendix-H-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-H-2.6">
+          <p id="appendix-H-2.6.1">The authority path, with no change to any profile's requirements.
 The Mission adds a figure from approval basis to action, with the
 lifecycle gate beside the path, child creation as a new approval
 event, and the current Effective Authority Set as a separate runtime
@@ -7316,65 +7327,65 @@ input; the Mission Verbs adds a table placing each mechanism on the
 transition it acts on; and Binding Security Architectures states
 that one Mission can span authorization servers whose client
 identifiers differ, related through the owning Mission Issuer's
-recorded mappings.<a href="#appendix-H-2.5.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-H-2.6">
-          <p id="appendix-H-2.6.1">The RAR metadata citation names the working-group successor
-draft-ietf-oauth-rar-metadata-remediation and separates an
-authorization server's type metadata from a protected resource's
-RFC 9728 <code>authorization_details_types_supported</code>.<a href="#appendix-H-2.6.1" class="pilcrow">¶</a></p>
+recorded mappings.<a href="#appendix-H-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-H-2.7">
-          <p id="appendix-H-2.7.1">Approve and Record names the three approval roles (derivation,
+          <p id="appendix-H-2.7.1">The RAR metadata citation names the working-group successor
+draft-ietf-oauth-rar-metadata-remediation and separates an
+authorization server's type metadata from a protected resource's
+RFC 9728 <code>authorization_details_types_supported</code>.<a href="#appendix-H-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-H-2.8">
+          <p id="appendix-H-2.8.1">Approve and Record names the three approval roles (derivation,
 adjudication, accountability) and summarizes the OAuth binding's
 rule that a model's judgment enters adjudication only as a recorded
 input to a deterministic policy, an input that can refuse or narrow
 and never grant or widen; the prose members stay the human
-Approver's check.<a href="#appendix-H-2.7.1" class="pilcrow">¶</a></p>
+Approver's check.<a href="#appendix-H-2.8.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-H-2.8">
-          <p id="appendix-H-2.8.1">Composition states the per-Mission bound model once, with no change
+        <li class="normal" id="appendix-H-2.9">
+          <p id="appendix-H-2.9.1">Composition states the per-Mission bound model once, with no change
 to any profile's requirements: an approval bounds the authority each
 derivation carries; concurrent children, generations, and
 per-Mission derivations do not multiply into a lifetime total; and
-an aggregate bound holds only where a deployment enforces one.<a href="#appendix-H-2.8.1" class="pilcrow">¶</a></p>
+an aggregate bound holds only where a deployment enforces one.<a href="#appendix-H-2.9.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-H-2.9">
-          <p id="appendix-H-2.9.1">Derivation and narrowing, with no change to any profile's
+        <li class="normal" id="appendix-H-2.10">
+          <p id="appendix-H-2.10.1">Derivation and narrowing, with no change to any profile's
 requirements. The derivation boundary states the derivation
 procedure the authority-bearing bindings share (narrowing or a
 configured mapping, with prose members as disclosure) and that only
 derivation policy stays local; Authority only narrows covers the
 Effective Authority Set and the per-type transformation
-capabilities.<a href="#appendix-H-2.9.1" class="pilcrow">¶</a></p>
+capabilities.<a href="#appendix-H-2.10.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-H-2.10">
-          <p id="appendix-H-2.10.1">The issuance-join row of the composed kill-switch table and its note
+        <li class="normal" id="appendix-H-2.11">
+          <p id="appendix-H-2.11.1">The issuance-join row of the composed kill-switch table and its note
 follow the Mission Issuance Grant's two consuming-AS modes: with a
 Mission-state integration, redemption and refresh are projected
 through the Effective Authority Set; without one, nothing is checked
 at redemption and no refresh tokens are issued. The earlier
-"active-only" redemption check no longer exists there.<a href="#appendix-H-2.10.1" class="pilcrow">¶</a></p>
+"active-only" redemption check no longer exists there.<a href="#appendix-H-2.11.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-H-2.11">
-          <p id="appendix-H-2.11.1">AAuth alignment, with no change to any profile's requirements. The
+        <li class="normal" id="appendix-H-2.12">
+          <p id="appendix-H-2.12.1">AAuth alignment, with no change to any profile's requirements. The
 AAuth and R3 references cite the published revisions -11 and -00;
 the Mission Reference is the approving PS and <code>s256</code>; the access
 modes carry AAuth's names; and the gateway walkthrough names the
-issuers of the auth tokens it accepts.<a href="#appendix-H-2.11.1" class="pilcrow">¶</a></p>
+issuers of the auth tokens it accepts.<a href="#appendix-H-2.12.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-H-2.12">
-          <p id="appendix-H-2.12.1">Density, with no change to any profile's requirements. Long
+        <li class="normal" id="appendix-H-2.13">
+          <p id="appendix-H-2.13.1">Density, with no change to any profile's requirements. Long
 paragraphs are split to one idea each and long sentences shortened;
 Continue lists the three continuities and keeps the residual for
 authority already issued under a continued grant; the binding
 properties' mechanism mapping is a table; the kill-switch
 composition table has short cells with numbered notes; and
 meta-commentary about the document is removed. OAuth-specific
-statements the pass found unlabeled now say so.<a href="#appendix-H-2.12.1" class="pilcrow">¶</a></p>
+statements the pass found unlabeled now say so.<a href="#appendix-H-2.13.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-H-2.13">
-          <p id="appendix-H-2.13.1">Reading order and section ownership, with no change to any
+        <li class="normal" id="appendix-H-2.14">
+          <p id="appendix-H-2.14.1">Reading order and section ownership, with no change to any
 profile's requirements. A Mission's Life leads the model; Meaning
 and Derivation gathers the ontology contract, the derivation
 boundary, and approval fidelity; the binding comparison, now with
@@ -7389,10 +7400,10 @@ Repeated explanations have one home, and a repetition that
 qualifies a guarantee keeps a short local summary. The model is
 stated binding-neutrally, with each realization labeled, and the
 Runtime-Enforced bundle's dependencies are described by intended
-category, not maturity.<a href="#appendix-H-2.13.1" class="pilcrow">¶</a></p>
+category, not maturity.<a href="#appendix-H-2.14.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-H-2.14">
-          <p id="appendix-H-2.14.1">Editorial corrections, with no change to any profile's
+        <li class="normal" id="appendix-H-2.15">
+          <p id="appendix-H-2.15.1">Editorial corrections, with no change to any profile's
 requirements. The capability-kill property is stated per action
 class and consumer rather than per assurance level, matching the
 composition section and the containment profile. The four Mission
@@ -7406,18 +7417,18 @@ lowercased, and temporal phrasing is removed. The agent-identity
 section is retitled, the binding-property summary covers the whole
 vector, and the AuthZEN companion is called the AuthZEN profile.
 The Stop step of A Mission's Life separates what ends at once from
-what ends within a staleness bound or at a token's own expiry.<a href="#appendix-H-2.14.1" class="pilcrow">¶</a></p>
+what ends within a staleness bound or at a token's own expiry.<a href="#appendix-H-2.15.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-H-2.15">
-          <p id="appendix-H-2.15.1">The issuance-only deployment is named under Entry Ramps by Estate
+        <li class="normal" id="appendix-H-2.16">
+          <p id="appendix-H-2.16.1">The issuance-only deployment is named under Entry Ramps by Estate
 with its invariants, introspection cutoff, claims, and runtime
 triggers; the adoption-ladder table grants Baseline Issuance the
 reads and writes whose bounds the receiving Resource Server
 enforces; and the Deployment Profile gains an issuance-only example
-shape.<a href="#appendix-H-2.15.1" class="pilcrow">¶</a></p>
+shape.<a href="#appendix-H-2.16.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-H-2.16">
-          <p id="appendix-H-2.16.1">Client-instance references follow their successors:
+        <li class="normal" id="appendix-H-2.17">
+          <p id="appendix-H-2.17.1">Client-instance references follow their successors:
 draft-mcguinness-oauth-client-instance-assertion is replaced by
 {I-D.draft-mcguinness-oauth-client-instance-id} and
 <span>[<a href="#I-D.draft-mcguinness-oauth-client-attesters" class="cite xref">I-D.draft-mcguinness-oauth-client-attesters</a>]</span>, and the
@@ -7425,18 +7436,18 @@ deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
 cited. Instance identity is
 a client-instance attestation and validated Instance Context,
 attribution needs an instance-unique key, and instance evidence
-identifies no actor. No requirement changed.<a href="#appendix-H-2.16.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-H-2.17">
-          <p id="appendix-H-2.17.1">Linked the OAuth binding's informative derivation-policy appendix
-from the authority derivation boundary (#309).<a href="#appendix-H-2.17.1" class="pilcrow">¶</a></p>
+identifies no actor. No requirement changed.<a href="#appendix-H-2.17.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-H-2.18">
-          <p id="appendix-H-2.18.1">Added the optional Control-Plane Consistency companion to the document
-map (#250).<a href="#appendix-H-2.18.1" class="pilcrow">¶</a></p>
+          <p id="appendix-H-2.18.1">Linked the OAuth binding's informative derivation-policy appendix
+from the authority derivation boundary (#309).<a href="#appendix-H-2.18.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-H-2.19">
-          <p id="appendix-H-2.19.1">Controls taxonomy retirement (#636): the swarm-execution discussion
+          <p id="appendix-H-2.19.1">Added the optional Control-Plane Consistency companion to the document
+map (#250).<a href="#appendix-H-2.19.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-H-2.20">
+          <p id="appendix-H-2.20.1">Controls taxonomy retirement (#636): the swarm-execution discussion
 no longer claims <code>derivation_limit</code> (renamed from <code>max_derivations</code>)
 is a fan-out or concurrency ceiling; it counts issuance events, not
 instances, and one instance refreshing repeatedly exhausts it exactly
@@ -7446,10 +7457,10 @@ the OAuth binding currently defines, pointing to a forward-referenced
 Agent Deployment Binding profile instead of the retired
 <code>controls.agent_deployment</code>. References to the OAuth binding's
 retired <code>controls</code> extension seam updated to the Mission Intent's
-own (open, named-member) extension seam.<a href="#appendix-H-2.19.1" class="pilcrow">¶</a></p>
+own (open, named-member) extension seam.<a href="#appendix-H-2.20.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-H-2.20">
-          <p id="appendix-H-2.20.1">PR #717 review fix: precised the "Mission-bound" definition text
+        <li class="normal" id="appendix-H-2.21">
+          <p id="appendix-H-2.21.1">PR #717 review fix: precised the "Mission-bound" definition text
 (<a href="#token-classes" class="auto internal xref">Section 10.2</a> and <a href="#binding-properties" class="auto internal xref">Section 11.4</a>) so it no longer
 requires a Mission Substrate Statement of a binding that
 deliberately publishes none. A binding that claims substrate
@@ -7458,10 +7469,10 @@ Statement; the OAuth binding, which claims no substrate conformance
 and publishes no Statement, is instead assessed through its own
 informative Mapping Assessment and discharges the definition
 directly through its own Conformance gates. No normative content
-changed.<a href="#appendix-H-2.20.1" class="pilcrow">¶</a></p>
+changed.<a href="#appendix-H-2.21.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-H-2.21">
-          <p id="appendix-H-2.21.1">Reworded the blanket "the bindings are peers of one another"
+        <li class="normal" id="appendix-H-2.22">
+          <p id="appendix-H-2.22.1">Reworded the blanket "the bindings are peers of one another"
 sentence in the Introduction to name two independent axes, deployment
 topology and data-model independence, and to classify the Mission
 Authority Server as a normative standalone-controller protocol
@@ -7475,10 +7486,10 @@ binding's Conformance gates): <a href="#binding-properties" class="auto internal
 a binding's Mission Substrate Statement is how it evidences the
 properties, and the OAuth binding's gates are its discharge of the
 definition (#663). No normative content, anchor, or table row
-changed.<a href="#appendix-H-2.21.1" class="pilcrow">¶</a></p>
+changed.<a href="#appendix-H-2.22.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-H-2.22">
-          <p id="appendix-H-2.22.1">Cross-referenced the three previously separate accounts of what
+        <li class="normal" id="appendix-H-2.23">
+          <p id="appendix-H-2.23.1">Cross-referenced the three previously separate accounts of what
 earns the "Mission-bound" term: <a href="#token-classes" class="auto internal xref">Section 10.2</a> now names the
 Mission Binding Properties vector's <code>credential-mission-bound</code>
 property (<a href="#binding-properties" class="auto internal xref">Section 11.4</a>) as the definition. Its six
@@ -7488,18 +7499,18 @@ no longer names a token-carried <code>authority_hash</code>, aligning with
 the ruled minimal-claim direction of #702, and condition 6
 (the auditable derivation link) names the OAuth binding's retained
 Mission Record explicitly rather than asserting an unspecified
-discharge (#663).<a href="#appendix-H-2.22.1" class="pilcrow">¶</a></p>
+discharge (#663).<a href="#appendix-H-2.23.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-H-2.23">
-          <p id="appendix-H-2.23.1">Non-goal reworded (#637): "a new authority format, or a new grant
+        <li class="normal" id="appendix-H-2.24">
+          <p id="appendix-H-2.24.1">Non-goal reworded (#637): "a new authority format, or a new grant
 protocol" narrowed to "a new grant protocol," naming the OAuth
 binding's Mission Resource Access Profile as the family's one
 cross-resource <code>authorization_details</code> type, since RFC 9396 leaves
 type semantics to the type and the family now defines one. Document
-Map gains the profile's row under "The substrate and the bindings."<a href="#appendix-H-2.23.1" class="pilcrow">¶</a></p>
+Map gains the profile's row under "The substrate and the bindings."<a href="#appendix-H-2.24.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-H-2.24">
-          <p id="appendix-H-2.24.1">Editorial density pass on this Informational document: the
+        <li class="normal" id="appendix-H-2.25">
+          <p id="appendix-H-2.25.1">Editorial density pass on this Informational document: the
 aggregate-ceiling and artifact-plane (non-transitive work-product)
 composition readings under <a href="#invariants" class="auto internal xref">Section 8</a> tightened to a summary
 sentence plus citation each, with their "not this summary, is the
@@ -7507,7 +7518,7 @@ normative text this passage tracks" deferral kept; several
 over-long paragraphs in <a href="#capability-envelope" class="auto internal xref">Section 4.4</a>, <a href="#validity-model" class="auto internal xref">Section 10.4</a>,
 <a href="#assurance-levels" class="auto internal xref">Section 11</a>, and <a href="#containment" class="auto internal xref">Section 11.5</a> split for one idea per
 paragraph and front-loaded openers. No normative content, anchor,
-or table row changed.<a href="#appendix-H-2.24.1" class="pilcrow">¶</a></p>
+or table row changed.<a href="#appendix-H-2.25.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

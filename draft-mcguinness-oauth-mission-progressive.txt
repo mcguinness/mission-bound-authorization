@@ -396,7 +396,7 @@ Table of Contents
       Profile; and
 
    *  MUST record each policy-adjudicated expansion as an approval event
-      whose approver context is the drawdown policy that authorized it
+      whose decision mechanism is the drawdown policy that authorized it
       (Section 6).
 
    Some authority classes always require a fresh human approval even
@@ -594,9 +594,11 @@ Table of Contents
 6.  Audit Linkage
 
    Each policy-adjudicated in-ceiling expansion is an approval event and
-   MUST be recorded as one: the approver context is the drawdown policy
-   (its identifier and version) rather than a human principal, and the
-   successor's predecessor member links the drawdown chain for an
+   MUST be recorded as one: the decision mechanism is the drawdown
+   policy (its identifier and version) rather than a human, the Approver
+   who consented the ceiling remains the accountable consent_principal
+   ([I-D.draft-mcguinness-oauth-mission], Section "Role Mapping"), and
+   the successor's predecessor member links the drawdown chain for an
    authorized auditor exactly as for human-approved expansions
    ([I-D.draft-mcguinness-oauth-mission-expansion]).
 
@@ -686,7 +688,7 @@ Table of Contents
    *  The drawdown policy is authority-bearing governance.  A
       misconfigured policy over-grants within the ceiling; it MUST be
       reviewed and versioned like approval policy, and its identity and
-      version are part of the recorded approver context (Section 6).
+      version are recorded as the decision mechanism (Section 6).
 
    *  The ceiling is a consent artifact.  It MUST be rendered to the
       Approver at the initial approval with the fact that in-ceiling
@@ -823,6 +825,11 @@ Appendix A.  Document History
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  Audit Linkage and In-Ceiling Expansion name the drawdown policy as
+      the approval event's decision mechanism, not its approver; the
+      Approver who consented the ceiling stays the consent_principal,
+      matching the issuance profile's Role Mapping.
 
    *  In-ceiling expansion: a ceiling_drawdown successor's
       approval_event_id identifies the drawdown: a unique value

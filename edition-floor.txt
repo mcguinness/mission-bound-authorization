@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-04T05:35:46Z
-Source repository commit: 20bbfd281563e6bd4d458b384351685b6de1b748
+Generated: 2026-10-04T14:02:10Z
+Source repository commit: a633f0ce9e56bf335c6aad628e24819fd5cd782b
 Member count: 7
 
 Reading order:
@@ -2844,8 +2844,13 @@ Table of Contents
    profile fixes, listed in the Deployment Profile (Section 12.6) rather
    than implied by a level:
 
-   *  *Approved-record integrity*: the anchors reproduce from the record
-      alone (the OAuth binding's integrity anchors).
+   *  *Approved-record integrity*: the committed Intent, authority
+      proposal, and Authority Set reproduce from the retained record
+      alone (the OAuth binding's integrity anchors).  The claim covers
+      neither the record's provenance members nor an issuer that
+      substitutes a record and its anchors together; defending against
+      post-approval substitution takes an independently pinned anchor
+      ([I-D.draft-mcguinness-oauth-mission-approved-set-verification]).
 
    *  *Bounded revocation latency*, per path and mechanism, naming the
       paths it covers: for a runtime-gated class, the published
@@ -5270,6 +5275,11 @@ Appendix G.  Mission Document Map
 Appendix H.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The Approved-record integrity claim names what the anchors cover
+      (the committed Intent, authority proposal, and Authority Set) and
+      states that provenance members and an issuer substituting a record
+      with its anchors are outside it.
 
    *  What ends an already-issued credential is worded the same way in
       Approval and Lifecycle, the possession-independent revocation
@@ -18754,10 +18764,10 @@ Table of Contents
 
    Evaluation-Context Binding is an OPTIONAL Named Assurance Extension,
    claimed per mediated action class in the Enforcement Scope Statement.
-   It does not add a requirement to Runtime-Enforced conformance for a
-   deployment that does not claim it.  The Operation Profile owns its
-   declaration; an approval-time resource contract can reference that
-   declaration but supplies no dispatch-time observation.
+   It adds no requirement for a Runtime-Enforced deployment that does
+   not claim it.  The Operation Profile owns its declaration; an
+   approval-time resource contract can reference that declaration but
+   supplies no dispatch-time observation.
 
    A claiming deployment MUST publish the covered classes and
    operations, each operation's versioned binding descriptor, and
@@ -20630,6 +20640,10 @@ Appendix C.  Runtime Evidence Worked Examples
 Appendix D.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Evaluation-Context Binding no longer speaks of "Runtime-Enforced
+      conformance": a level is guidance, never a conformance class.  No
+      requirement changed.
 
    *  Idempotency defines the Exact and Bounded-consistency enforcement
       profiles for its own claim, so the idempotency requirements no

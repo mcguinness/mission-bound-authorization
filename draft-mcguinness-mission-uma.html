@@ -1492,9 +1492,9 @@ resource owner or the owner's pre-registered policy. The issuance
 profile's rule that the proposing party never approves is the
 substrate's own geometry here. Second, both of the issuance
 profile's approval modes are native UMA modes: pre-registered owner
-policy at the authorization server is the authorized-policy approver
-deciding at machine speed, and <code>request_submitted</code> is the human
-Approver deciding asynchronously (<a href="#approval" class="auto internal xref">Section 6</a>).<a href="#section-3-2" class="pilcrow">¶</a></p>
+policy at the authorization server is a policy adjudication deciding
+at machine speed, and <code>request_submitted</code> is the human Approver
+deciding asynchronously (<a href="#approval" class="auto internal xref">Section 6</a>).<a href="#section-3-2" class="pilcrow">¶</a></p>
 <p id="section-3-3">UMA permits the requesting party and the resource owner to be the
 same natural person, and in the agent deployments this profile
 targets they usually are: the person's agent is the client, and the
@@ -1677,9 +1677,11 @@ OAuth binding needs the Mission Deferred Approval companion for
 substrate's ratified machinery, and that companion does not apply.<a href="#section-6-4" class="pilcrow">¶</a></p>
 <p id="section-6-5"><strong>Pre-registered policy.</strong> Where the resource owner's standing
 policy at the authorization server covers the proposal, that policy
-is the issuance profile's authorized-policy approver: the approval
-event records the policy identity and version as the Approver
-context, and the anchors commit as in the interactive case. A
+is the decision mechanism, not the Approver: the approval event
+records the policy identity and version as that mechanism, the
+resource owner who registered it stays the accountable person
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Role Mapping"), and
+the anchors commit as in the interactive case. A
 deployment <span class="bcp14">SHOULD</span> reserve policy approval for Missions within bounds
 the owner has expressly pre-consented and route everything else to
 <code>request_submitted</code>.<a href="#section-6-5" class="pilcrow">¶</a></p>
