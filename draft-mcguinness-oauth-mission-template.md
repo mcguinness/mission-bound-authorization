@@ -569,6 +569,12 @@ The Mission Issuer adjudicates a Dispatch in this order:
      record of which template and Dispatch Policy adjudicated the
      instance; `approval_basis` is the structured authorization-basis
      record, and the two are consistent by construction;
+   - `approval_event_id` identifies this Dispatch, never the template's
+     approval: a unique value the Mission Issuer allocates when it
+     creates the Dispatch's `(authenticated client, dispatch_event_id)`
+     reservation (below) and retains with the committed instance. A
+     retry recovers it; a reservation created after that key's
+     tombstone expires receives a new one;
    - `subject` is established as the issuance profile requires, never
      taken from Dispatcher input, and is an entry of
      `allowed_recipients` `subjects`
@@ -1108,6 +1114,12 @@ IANA action. Following the restraint of the sibling profiles:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Dispatch: a dispatched instance's `approval_event_id` identifies the
+  Dispatch, never the template's approval: a unique value allocated
+  with the Dispatch's reservation and retained with the instance, so a
+  retry recovers it and reuse of the key after its tombstone expires
+  receives a new one (#1017).
 
 - The Mission Issuer selects a dispatched instance's Agent from
   `allowed_recipients` `agents` under the Dispatch Policy, never from
