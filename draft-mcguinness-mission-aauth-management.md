@@ -1024,8 +1024,8 @@ MUST state which AAuth access modes are covered, the maximum configured
 Person Token and Auth Token lifetimes, whether Resources implement
 revocation, retry
 policy, and the worst-case residual expected under partition.  Risky
-deployments SHOULD use short Auth Token lifetimes and action-time
-Resource checks in addition to PS gating.
+deployments SHOULD use short Person Token and Auth Token lifetimes and
+action-time Resource checks in addition to PS gating.
 
 The base AAuth text sometimes describes this action as revoking a
 mission.  In this profile, "revoke the mission" means the single,
@@ -1226,11 +1226,12 @@ to {{expiry}} in full.  Delegation-tree support is OPTIONAL.  If
 advertised, the PS conforms to {{delegation-tree}} in full.
 
 A deployment claiming conformance MUST publish or otherwise make
-available its caller-role authorization policy, Auth Token retention
-period, supported access-mode coverage, maximum token lifetime,
-revocation retry policy, expiry clock policy if used, and worst-case
-residual behavior.  It MUST NOT claim that Mission termination revokes
-agent identity, opaque resource-managed, or otherwise untracked access.
+available its caller-role authorization policy, Tracked Credential
+retention period, supported access-mode coverage, maximum token
+lifetime, revocation retry policy, expiry clock policy if used, and
+worst-case residual behavior.  It MUST NOT claim that Mission
+termination revokes agent identity, opaque resource-managed, or
+otherwise untracked access.
 
 --- back
 
