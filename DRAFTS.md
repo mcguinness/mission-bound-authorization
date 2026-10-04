@@ -236,9 +236,12 @@ shaping and later signs an assertion binding who originated it,
 through which authenticated channel, and when, to one AS, one exact
 Mission Intent, and one presenter. The assertion carries only an HMAC
 digest of the instruction under a per-request secret the intake
-keeps, so a holder cannot test guessed wordings. It authenticates the
-request's origin; it does not prove the Intent interprets the request
-faithfully, and it is never approval or authority.
+keeps, so a holder cannot test guessed wordings against that digest;
+its `intent_hash` stays the OAuth binding's unsalted commitment, which
+a holder can test where the Intent copies the wording. It
+authenticates the request's origin; it does not prove the Intent
+interprets the request faithfully, and it is never approval or
+authority.
 
 [Editor's Copy](https://mcguinness.github.io/mission-bound-authorization/#go.draft-mcguinness-oauth-mission-request-provenance.html)
 

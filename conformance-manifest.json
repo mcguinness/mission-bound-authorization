@@ -28835,7 +28835,7 @@
    "surface": "par",
    "assertion": "privacy",
    "observation": {
-    "normative": "The recorded facts and the Mission Record carry neither the instruction nor the capture secret."
+    "normative": "This evidence type's recorded facts carry neither the instruction nor the capture secret."
    },
    "level": "endpoint",
    "coverage": "todo",
