@@ -94,10 +94,7 @@ export type DispatchReason =
   | "out_of_template_ceiling"
   | "dispatch_prohibited_class"
   | "max_active_exceeded"
-  | "rate_exceeded"
-  // @spec mission-template#dispatch — the same (Dispatcher, dispatch_event_id)
-  // presented with a different operation fingerprint (invalid_request).
-  | "dispatch_event_mismatch";
+  | "rate_exceeded";
 
 export class DispatchError extends Error {
   constructor(
@@ -105,6 +102,20 @@ export class DispatchError extends Error {
     message: string,
   ) {
     super(message);
+  }
+}
+
+/**
+ * @spec mission-template#dispatch — the same (Dispatcher, dispatch_event_id)
+ * presented with a different operation fingerprint. Not a Dispatch refusal
+ * reason: the adapter answers `invalid_request` with an `error_description`
+ * and no `mission_denial_reason`, as the expansion profile's durable
+ * reservation does.
+ */
+export class DispatchMismatchError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DispatchMismatchError";
   }
 }
 
@@ -479,11 +490,18 @@ function selectionRuleOf(policy: DispatchPolicy): string | undefined {
  * expired, review not overdue, dispatcher allowed, Agent selected, recipient
  * allowed, max-active, rate, double intersection, prohibited-class.
  */
-export function dispatchFromTemplate(
-  kernel: MissionKernel,
-  store: TemplateStore,
-  input: DispatchInput,
-): DispatchResult {
+/** The Dispatch's idempotency context: its template, store, fingerprint, and recovery. */
+interface DispatchIdempotency {
+  template: MissionTemplate;
+  idem: CreationIdempotencyStore;
+  presenterJkt: string;
+  fingerprint: string;
+  recover(op: NonNullable<ReturnType<CreationIdempotencyStore["find"]>>): DispatchResult;
+  /** The recorded Dispatch for this key, recovered; undefined when the key is free. */
+  lookup(): DispatchResult | undefined;
+}
+
+function dispatchIdempotency(kernel: MissionKernel, store: TemplateStore, input: DispatchInput): DispatchIdempotency {
   const template = store.get(input.templateId);
   // Unknown template: a plain Error (mirrors createChildMission's unknown
   // parent), NOT a DispatchError — the reason union has no "unknown" member.
@@ -508,8 +526,7 @@ export function dispatchFromTemplate(
   /** Recover a recorded Dispatch, or refuse a reused key with a different fingerprint. */
   const recover = (op: NonNullable<ReturnType<CreationIdempotencyStore["find"]>>): DispatchResult => {
     if (op.op !== "dispatch" || op.fingerprint !== fingerprint) {
-      throw new DispatchError(
-        "dispatch_event_mismatch",
+      throw new DispatchMismatchError(
         `dispatch_event_id ${input.dispatchEventId} was already used for a different dispatch request`,
       );
     }
@@ -517,23 +534,48 @@ export function dispatchFromTemplate(
     if (!recorded) throw new Error(`recorded dispatch instance ${op.missionId ?? "(none)"} not found`);
     return { mission: recorded, template };
   };
+  const lookup = (): DispatchResult | undefined => {
+    // @spec mission#authority-sources (#829): the instance's Subject is a
+    // principal of this deployment's issuer namespace, checked BEFORE the
+    // idempotency return: a retry carrying a foreign or malformed Subject under
+    // a known dispatch id is refused, never handed the instance that id
+    // created. Only the namespace is checked here; gate 4 (subject discipline)
+    // still runs only for a new instance.
+    kernel.assertDeploymentPrincipal(input.subject, "subject");
+    // Look up (Dispatcher, dispatch_event_id): another Dispatcher's identical
+    // dispatch_event_id is a different key. A reused key with a different
+    // fingerprint (another template, intent, proposal, evidence or presenter
+    // key) is refused, never handed the recorded instance.
+    const existing = idem.find(input.dispatcher, input.dispatchEventId);
+    return existing ? recover(existing) : undefined;
+  };
+  return { template, idem, presenterJkt, fingerprint, recover, lookup };
+}
 
-  // @spec mission#authority-sources (#829): the instance's Subject is a
-  // principal of this deployment's issuer namespace, checked BEFORE the
-  // idempotency return: a retry carrying a foreign or malformed Subject under a
-  // known dispatch id is refused, never handed the instance that id created.
-  // Only the namespace is checked here; gate 4 (subject discipline) still runs
-  // only for a new instance, below.
-  kernel.assertDeploymentPrincipal(input.subject, "subject");
+/**
+ * @spec mission-template#dispatch, mission#intent-submission-evidence — the
+ * completed-operation recovery lookup alone, for an adapter that must recover
+ * a completed Dispatch BEFORE re-verifying its Intent Submission Evidence (an
+ * artifact that expired after completion MUST NOT break recovery). Returns the
+ * recorded instance, undefined when the key admits a new Dispatch, or throws
+ * {@link DispatchMismatchError}.
+ */
+export function findDispatch(kernel: MissionKernel, store: TemplateStore, input: DispatchInput): DispatchResult | undefined {
+  return dispatchIdempotency(kernel, store, input).lookup();
+}
 
-  // a. Idempotency: look up (Dispatcher, dispatch_event_id) BEFORE the gates,
-  // so a retry after the template was revoked/expired, or its review fell
-  // overdue, still returns the instance the first Dispatch created. Another
-  // Dispatcher's identical dispatch_event_id is a different key. A reused key
-  // with a different fingerprint (another template, intent, proposal,
-  // evidence or presenter key) is refused, never handed the recorded instance.
-  const existing = idem.find(input.dispatcher, input.dispatchEventId);
-  if (existing) return recover(existing);
+export function dispatchFromTemplate(
+  kernel: MissionKernel,
+  store: TemplateStore,
+  input: DispatchInput,
+): DispatchResult {
+  const { template, idem, presenterJkt, fingerprint, recover, lookup } = dispatchIdempotency(kernel, store, input);
+
+  // a. Idempotency BEFORE the gates, so a retry after the template was
+  // revoked/expired, or its review fell overdue, still returns the instance
+  // the first Dispatch created.
+  const recovered = lookup();
+  if (recovered) return recovered;
 
   // @spec mission#standing-consent-bases, mission-template#dispatch — the
   // instance's approval_event_id identifies THIS Dispatch: allocated with the

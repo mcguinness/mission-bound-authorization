@@ -8,6 +8,7 @@ import {
   createTemplate,
   type CreateTemplateInput,
   DispatchError,
+  DispatchMismatchError,
   type DispatchInput,
   type DispatchPolicies,
   dispatchFromTemplate,
@@ -707,16 +708,8 @@ describe("seeded demo reconciliation template (@spec mission-template)", () => {
   });
 });
 
-/** Expect `fn` to throw a DispatchError with `reason`. */
-const expectDispatchRefusal = (fn: () => unknown, reason: string) => {
-  try {
-    fn();
-    expect.unreachable();
-  } catch (e) {
-    expect(e).toBeInstanceOf(DispatchError);
-    expect((e as DispatchError).reason).toBe(reason);
-  }
-};
+/** Expect `fn` to be refused as a fingerprint mismatch (invalid_request, not a Dispatch refusal reason). */
+const expectMismatch = (fn: () => unknown) => expect(fn).toThrow(DispatchMismatchError);
 
 describe("approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases)", () => {
   it("two Dispatches under one template consent create two Missions, each with its own approval_event_id, never the template's", () => {
@@ -770,18 +763,16 @@ describe("approval_event_id per Dispatch reservation (@spec mission-template#dis
     const first = dispatch(t.id, { dispatchEventId: "evt-fp", presenterJkt: "jkt-1" }).mission;
     const committed = kernel.allMissions().length;
     // A different template (the fingerprint's source).
-    expectDispatchRefusal(() => dispatch(other.id, { dispatchEventId: "evt-fp", presenterJkt: "jkt-1" }), "dispatch_event_mismatch");
+    expectMismatch(() => dispatch(other.id, { dispatchEventId: "evt-fp", presenterJkt: "jkt-1" }));
     // A different presenter key (the fingerprint's cnf).
-    expectDispatchRefusal(() => dispatch(t.id, { dispatchEventId: "evt-fp", presenterJkt: "jkt-2" }), "dispatch_event_mismatch");
+    expectMismatch(() => dispatch(t.id, { dispatchEventId: "evt-fp", presenterJkt: "jkt-2" }));
     // A different proposal (the fingerprint's proposal).
-    expectDispatchRefusal(
-      () =>
-        dispatch(t.id, {
-          dispatchEventId: "evt-fp",
-          presenterJkt: "jkt-1",
-          proposedAuthority: proposalOf(["payments:invoice.read"], "100.00"),
-        }),
-      "dispatch_event_mismatch",
+    expectMismatch(() =>
+      dispatch(t.id, {
+        dispatchEventId: "evt-fp",
+        presenterJkt: "jkt-1",
+        proposedAuthority: proposalOf(["payments:invoice.read"], "100.00"),
+      }),
     );
     // Nothing new committed, and the unchanged retry still recovers.
     expect(kernel.allMissions().length).toBe(committed);
