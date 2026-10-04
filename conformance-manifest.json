@@ -7,16 +7,16 @@
     "content_sha256": "ec57264fec92ea2dd3c42ba1067c70d72195f251bc5c416ccad856cb1beac3a1"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "7386a2fcc8dd9b37b429c6a3e1c26bf35e1430da",
-    "content_sha256": "8c88bb3ba50abb16bff48ad20f03ff3cf14b9a6f5c001cde661baba41a9d538d"
+    "revision": "40705c1d1bab1ee18d0a5345f3071aaaa30d2031",
+    "content_sha256": "12a596b9456318d0a07d08775312af6f0750f4900c119fe4da154511b77b8a1e"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "6f10361ef7fae0c457e78b003860587fb773ac4f",
     "content_sha256": "37d43c72d0ca7ebba7e3e2495460b125128ed61d60317542b473904ddab13cf0"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "f06f5e6a330dfe1274b231501edebcfd231955f3",
-    "content_sha256": "a2a1f271328ddd5634a826cbf588eadcc514418fad0f4679fe1f31c647056ec0"
+    "revision": "40705c1d1bab1ee18d0a5345f3071aaaa30d2031",
+    "content_sha256": "ea9be2ae2bb1b15bd13e30d8a9bdf328bfcbb89f15621f6cf31bf75eb400fca3"
    },
    "draft-mcguinness-mission-runtime.md": {
     "revision": "091f1ffd5e6b77d47f8f189797bfdb0cf64ea328",
@@ -9627,7 +9627,7 @@
    "id": "mas.baseline-join.no-fallback-denial",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "mission-join",
-   "text": "A failure of the subject or client join MUST be denied with the `mission_mismatch` denial reason: the presented credential does not join to the referenced Mission because its authenticated subject or client identifier does not match the Mission's `subject.sub` or `client_id` under the deployment's documented mapping and delegate policy. The PDP MUST NOT fall back to evaluating the action against the referenced Mission's authority when the join fails.",
+   "text": "A failure of the subject or client join MUST be denied with the `mission_binding_failed` denial reason, the AuthZEN profile's classification of a failed externally-established binding join ({{I-D.draft-mcguinness-mission-authzen}}): the presented credential does not join to the referenced Mission because its authenticated subject or client identifier does not match the Mission's `subject.sub` or `client_id` under the deployment's documented mapping and delegate policy. The PDP MUST NOT fall back to evaluating the action against the referenced Mission's authority when the join fails.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -9787,7 +9787,7 @@
    "id": "mas.baseline-join.join-view-commitment",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "mission-join",
-   "text": "A decision reached over a successful join MUST carry a joined-view commitment (`join_view_id`) separate from `policy_view_id`, which alone does not distinguish a joined decision from a direct one. `join_view_id` MUST change whenever the joining client identifier, the join disposition (the Mission's own `client_id` or an authorized delegate), or the resulting effective Authority Set differs, so a verifier can tell a joined decision's evidence from a direct Mission-bound decision's, and one joined view from a differently-joined one.",
+   "text": "The PDP MUST record a joined-view commitment, `join_view_id`, as a top-level member of the Decision Evidence ({{I-D.draft-mcguinness-mission-runtime-evidence}}) of every decision reached over a successful join, including one that policy then denies. It is separate from `policy_view_id`, which alone does not distinguish a joined decision from a direct one, and it is absent for a failed join and for a direct Mission-bound decision; the AuthZEN response carries no view identifier. `join_view_id` MUST change whenever the joining client identifier, the join disposition (the Mission's own `client_id` or an authorized delegate), or the resulting effective Authority Set differs, so a verifier can tell a joined decision's evidence from a direct Mission-bound decision's, and one joined view from a differently-joined one.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -27977,7 +27977,7 @@
    "id": "mas.instance-join.no-coarse-fallback",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "mission-join",
-   "text": "Where the mapping contract requires an instance-bound join, the PDP MUST deny with `mission_mismatch` if the established instance is absent or does not match that contract, without falling back to a subject-and-client-only join.",
+   "text": "Where the mapping contract requires an instance-bound join, the PDP MUST deny with `mission_binding_failed` if the established instance is absent or does not match that contract, without falling back to a subject-and-client-only join.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -28243,7 +28243,7 @@
    "id": "mas.join-assertion.depth-disagreement-denies",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "join-assertion-pdp",
-   "text": "When `context.mission_join` also carries `delegate_depth` and it differs from `join.depth`, the PDP MUST deny with `mission_mismatch`",
+   "text": "When `context.mission_join` also carries `delegate_depth` and it differs from `join.depth`, the PDP MUST deny with `mission_binding_failed`",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -28287,7 +28287,7 @@
    "id": "mas.join-assertion.failed-validation-denies",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "join-assertion-pdp",
-   "text": "denies with `mission_mismatch` when any check above fails",
+   "text": "denies with `mission_binding_failed` when any check above fails",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
