@@ -3620,10 +3620,10 @@ async function handleMissionDispatchGrant(
   const intent = submission.intent;
   // @spec mission#intent-submission-evidence — STAGE-2 verification (required
   // types resolved BEFORE derivation; the presenter is the AUTHENTICATED
-  // dispatcher). Dispatch has its own idempotency (dispatch_event_id inside
-  // dispatchFromTemplate) but no D69 creation fingerprint; verification runs
-  // here on every dispatch request, and a retried dispatch of a completed
-  // event recovers below regardless of these facts (same instance returned).
+  // dispatcher). Verification runs on every dispatch request; the Dispatch's
+  // creation idempotency (op: dispatch, keyed by the Dispatcher and
+  // dispatch_event_id, inside dispatchFromTemplate) then recovers a completed
+  // Dispatch whose fingerprint matches, or refuses a reused key that differs.
   let submissionEvidence: Awaited<ReturnType<typeof kernel.verifySubmissionEvidence>>;
   try {
     submissionEvidence = await kernel.verifySubmissionEvidence({
@@ -3667,6 +3667,32 @@ async function handleMissionDispatchGrant(
     }
   }
 
+  // @spec expansion#creation-lookup-order, mission-template#dispatch —
+  // possession verification precedes the Dispatch idempotency lookup, and the
+  // verified DPoP key is the fingerprint's `cnf` and the issued token's binding.
+  const proofJws = ctx.get("DPoP");
+  if (!proofJws) throw new errors.InvalidRequest("DPoP proof JWT required");
+  let jkt: string;
+  let proofJti: unknown;
+  try {
+    const header = decodeProtectedHeader(proofJws);
+    jkt = await calculateJwkThumbprint(header.jwk as JWK);
+    const { payload: proof } = await jwtVerify(proofJws, header.jwk as JWK, { typ: "dpop+jwt" });
+    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
+      throw new Error("DPoP htu/htm mismatch");
+    }
+    proofJti = proof.jti;
+  } catch {
+    throw new errors.InvalidRequest("invalid DPoP proof");
+  }
+  // @spec RFC 9449 — proof-jti single-use within the bounded replay window.
+  if (!freshProofJti(opts, proofJti)) {
+    ctx.status = 400;
+    ctx.body = { error: "invalid_dpop_proof", error_description: "DPoP proof jti missing or replayed" };
+    ctx.set("cache-control", "no-store");
+    return;
+  }
+
   // Core-consistency: the Dispatcher does NOT name the Subject; the Issuer
   // establishes it. The template carries the consenting human (approver); the
   // subject is established from it (decide() defaults subject to approver, and
@@ -3677,6 +3703,9 @@ async function handleMissionDispatchGrant(
       templateId,
       dispatchEventId,
       dispatcher: client.clientId,
+      ...(opts.creationIdempotency ? { idempotency: opts.creationIdempotency } : {}),
+      presenterJkt: jkt,
+      ...(submission.evidence ? { presentedEvidence: submission.evidence } : {}),
       ...(opts.dispatchPolicies ? { dispatchPolicies: opts.dispatchPolicies } : {}),
       intent,
       ...(proposedAuthority ? { proposedAuthority } : {}),
@@ -3702,34 +3731,11 @@ async function handleMissionDispatchGrant(
   }
 
   // ---- mint mission-bound access token: INLINE COPY of handleChildJwtBearerGrant
-  // (~806-879). DPoP-bind from the request proof (unchanged). The Grant and the
+  // (~806-879). DPoP-bind to the proof verified above. The Grant and the
   // AccessToken are owned by `client` (the DISPATCHER, the authenticated entity
   // here) rather than by `record.client_id` (the recipient, who is not present
   // in this exchange) — the one substitution the child-bearer code does not need,
   // because there record.client_id IS the authenticated client.
-  const proofJws = ctx.get("DPoP");
-  if (!proofJws) throw new errors.InvalidRequest("DPoP proof JWT required");
-  let jkt: string;
-  let proofJti: unknown;
-  try {
-    const header = decodeProtectedHeader(proofJws);
-    jkt = await calculateJwkThumbprint(header.jwk as JWK);
-    const { payload: proof } = await jwtVerify(proofJws, header.jwk as JWK, { typ: "dpop+jwt" });
-    if (proof.htu !== `${opts.issuer}/token` || proof.htm !== "POST") {
-      throw new Error("DPoP htu/htm mismatch");
-    }
-    proofJti = proof.jti;
-  } catch {
-    throw new errors.InvalidRequest("invalid DPoP proof");
-  }
-  // @spec RFC 9449 — proof-jti single-use within the bounded replay window.
-  if (!freshProofJti(opts, proofJti)) {
-    ctx.status = 400;
-    ctx.body = { error: "invalid_dpop_proof", error_description: "DPoP proof jti missing or replayed" };
-    ctx.set("cache-control", "no-store");
-    return;
-  }
-
   // Containment: every copy of the instance's authority into rar/authorization_
   // details projects the EFFECTIVE set (approved minus containment overlay).
   const effective = kernel.effectiveAuthoritySet(record);

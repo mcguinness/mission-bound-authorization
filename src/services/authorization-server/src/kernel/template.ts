@@ -36,6 +36,8 @@ import {
 } from "./authority-source.js";
 import { activationPolicyMatches, mintActivationPolicyRef, type RegisteredActivationPolicy } from "./activation-policy.js";
 import { inheritCapabilitySources, resolveFreshCapabilitySources, type CapabilitySourceResolver } from "./capability-binding.js";
+import { UniqueViolationError } from "@mission/store";
+import { CreationIdempotencyStore, type CreationReservation, creationFingerprint } from "./creation-idempotency.js";
 import { deriveAuthoritySet, isSubsetSet } from "./derive.js";
 import { IntentError } from "./intent.js";
 import type { MissionKernel } from "./kernel.js";
@@ -53,6 +55,7 @@ import {
   type AuthorityEntry,
   type AuthoritySource,
   type MissionIntent,
+  type IntentSubmissionEvidenceEntry,
   type IntentSubmissionEvidenceFact,
   type MissionRecord,
   type TemplateRef,
@@ -91,7 +94,10 @@ export type DispatchReason =
   | "out_of_template_ceiling"
   | "dispatch_prohibited_class"
   | "max_active_exceeded"
-  | "rate_exceeded";
+  | "rate_exceeded"
+  // @spec mission-template#dispatch — the same (Dispatcher, dispatch_event_id)
+  // presented with a different operation fingerprint (invalid_request).
+  | "dispatch_event_mismatch";
 
 export class DispatchError extends Error {
   constructor(
@@ -350,11 +356,25 @@ export interface DispatchInput {
   /** The Mission Template to instantiate from. */
   templateId: string;
   /**
-   * Caller-supplied dispatch event identifier. The instance's
-   * `approval_event_id` is `"dsp_" + dispatchEventId`, so a retried dispatch
-   * (same id) is idempotent and returns the same instance.
+   * @spec mission-template#dispatch — the caller-supplied dispatch event
+   * identifier: with the Dispatcher, the reservation key of the creation
+   * idempotency apparatus (`op: dispatch`). A retried Dispatch (same key, same
+   * fingerprint) returns the same instance; the same key with a different
+   * fingerprint is refused. The instance's `approval_event_id` is allocated
+   * per reservation, never derived from this identifier.
    */
   dispatchEventId: string;
+  /**
+   * The creation idempotency store the reservation lives in (the adapter's
+   * shared store; a fresh store over `kernel` when absent). Its retention is
+   * the published retry horizon: once a key's tombstone expires, the key
+   * admits a new reservation and a new instance.
+   */
+  idempotency?: CreationIdempotencyStore;
+  /** The Dispatcher's verified presenter confirmation (DPoP `jkt`), the fingerprint's `cnf`. */
+  presenterJkt?: string;
+  /** The presented Intent Submission Evidence entries, for the fingerprint's `evidence`. */
+  presentedEvidence?: IntentSubmissionEvidenceEntry[];
   /** The dispatching actor; MUST be in the template's `dispatchers`. */
   dispatcher: string;
   /**
@@ -469,7 +489,34 @@ export function dispatchFromTemplate(
   // parent), NOT a DispatchError — the reason union has no "unknown" member.
   if (!template) throw new Error(`unknown template ${input.templateId}`);
 
-  const approvalEventId = `dsp_${input.dispatchEventId}`;
+  // @spec mission-template#dispatch — the creation idempotency apparatus under
+  // `op: dispatch`: reservation key (authenticated Dispatcher,
+  // dispatch_event_id), fingerprint over the parsed inputs with `source` the
+  // template_id. The reservation, not the identifier, carries idempotency.
+  const idem = input.idempotency ?? new CreationIdempotencyStore(kernel);
+  const presenterJkt = input.presenterJkt ?? "";
+  const fingerprint = creationFingerprint({
+    op: "dispatch",
+    iss: template.issuer,
+    client: input.dispatcher,
+    source: template.id,
+    cnf: { jkt: presenterJkt },
+    intent: input.intent,
+    ...(input.proposedAuthority?.length ? { proposal: input.proposedAuthority } : {}),
+    ...(input.presentedEvidence?.length ? { evidence: input.presentedEvidence } : {}),
+  });
+  /** Recover a recorded Dispatch, or refuse a reused key with a different fingerprint. */
+  const recover = (op: NonNullable<ReturnType<CreationIdempotencyStore["find"]>>): DispatchResult => {
+    if (op.op !== "dispatch" || op.fingerprint !== fingerprint) {
+      throw new DispatchError(
+        "dispatch_event_mismatch",
+        `dispatch_event_id ${input.dispatchEventId} was already used for a different dispatch request`,
+      );
+    }
+    const recorded = op.missionId ? kernel.get(op.missionId) : undefined;
+    if (!recorded) throw new Error(`recorded dispatch instance ${op.missionId ?? "(none)"} not found`);
+    return { mission: recorded, template };
+  };
 
   // @spec mission#authority-sources (#829): the instance's Subject is a
   // principal of this deployment's issuer namespace, checked BEFORE the
@@ -479,22 +526,21 @@ export function dispatchFromTemplate(
   // only for a new instance, below.
   kernel.assertDeploymentPrincipal(input.subject, "subject");
 
-  // a. Idempotency: a caller-supplied dispatch id makes retries idempotent.
-  // Checked BEFORE the gates so a retry after the template was revoked/expired,
-  // or its review fell overdue, still returns the instance the first dispatch
-  // created. `approval_event_id`
-  // is globally unique, so guard the pathological case of the SAME dispatch id
-  // reused against a DIFFERENT template (which would otherwise silently return a
-  // mismatched {mission, template} pair).
-  const existing = kernel.findByApprovalEvent(approvalEventId);
-  if (existing) {
-    if (existing.template?.id !== template.id) {
-      throw new Error(
-        `dispatch event ${input.dispatchEventId} is already bound to template ${existing.template?.id}`,
-      );
-    }
-    return { mission: existing, template };
-  }
+  // a. Idempotency: look up (Dispatcher, dispatch_event_id) BEFORE the gates,
+  // so a retry after the template was revoked/expired, or its review fell
+  // overdue, still returns the instance the first Dispatch created. Another
+  // Dispatcher's identical dispatch_event_id is a different key. A reused key
+  // with a different fingerprint (another template, intent, proposal,
+  // evidence or presenter key) is refused, never handed the recorded instance.
+  const existing = idem.find(input.dispatcher, input.dispatchEventId);
+  if (existing) return recover(existing);
+
+  // @spec mission#standing-consent-bases, mission-template#dispatch — the
+  // instance's approval_event_id identifies THIS Dispatch: allocated with the
+  // reservation and retained with the instance, never derived from the
+  // reusable dispatch_event_id, so a key reused after its tombstone expires
+  // creates a new instance under a new value.
+  const approvalEventId = `dsp_${randomBytes(16).toString("base64url")}`;
 
   // @spec mission#approval-event (step 4) — ONE clock read for the whole
   // dispatch: the gates below, the instance's `created_at`, and the
@@ -748,8 +794,32 @@ export function dispatchFromTemplate(
     template: templateRef,
   };
 
-  // f. Insert the instance and record the dispatch (audit + rate/max-active).
-  kernel.insertRecord(record, undefined, { source: { inherited: recipientRoot } });
+  // f. Reserve, insert the instance, and complete the reservation in ONE
+  // kernel-db transaction (@spec mission-template#dispatch: the reservation and
+  // the dispatched Mission's identifier commit atomically with the instance).
+  // A concurrent duplicate loses on the reservation's primary key and recovers
+  // the winner's outcome.
+  const reservation: CreationReservation = {
+    clientId: input.dispatcher,
+    creationRequestId: input.dispatchEventId,
+    op: "dispatch",
+    fingerprint,
+    cnfJkt: presenterJkt,
+    sourceMissionId: template.id,
+  };
+  try {
+    idem.createCompleted(reservation, () => {
+      kernel.insertRecord(record, undefined, { source: { inherited: recipientRoot } });
+      return { missionId: id, value: undefined };
+    });
+  } catch (e) {
+    if (e instanceof UniqueViolationError) {
+      const winner = idem.find(input.dispatcher, input.dispatchEventId);
+      if (winner) return recover(winner);
+    }
+    throw e;
+  }
+  // Audit + rate/max-active trail (the template store's own database).
   store.recordDispatch({
     dispatchEventId: input.dispatchEventId,
     templateId: template.id,
