@@ -962,8 +962,7 @@ end state. The issuance join
 Mission-bound issuance restores cryptographic derivation. A path
 claiming the Enterprise profile's high-consequence credential property
 MUST use Mission-bound issuance: an acting credential satisfying the
-mission-credential-bound composition of the Mission Binding Properties
-({{I-D.draft-mcguinness-mission-architecture}}).
+composition defined in {{high-consequence-binding}}.
 
 A deployment without Mission-bound issuance still claims the runtime
 and join capabilities its paths actually have, and states the
@@ -2206,11 +2205,9 @@ following obligations:
 - **Mission-bound issuance for the high-consequence classes.** For
   the high-consequence action classes
   ({{I-D.draft-mcguinness-mission-runtime}}), the PDP MUST require an
-  acting credential satisfying the mission-credential-bound
-  composition of the Mission Binding Properties
-  ({{I-D.draft-mcguinness-mission-architecture}}): the
-  credential-mission-bound equivalence plus presenter-key-bound
-  possession, end to end; a Join Assertion does not satisfy it, and
+  acting credential satisfying the composition defined in
+  {{high-consequence-binding}}, with presenter proof of possession end
+  to end; a Join Assertion does not satisfy it, and
   absence denies rather than falling back to a mapping or asserted
   join.
   - Where the Mission Issuance Grant
@@ -2285,8 +2282,39 @@ action, as the runtime profile specifies
 ({{I-D.draft-mcguinness-mission-runtime}}). A high-consequence path
 switches modes rather than layering them. The join algorithm of
 {{mission-join}} assumes a credential that cannot identify its
-Mission, and it never runs against one that can. For each action, the
-PDP:
+Mission, and it never runs against one that can.
+
+A Mission-bound acting credential, in this document, establishes all
+of the following for the covered path, each as the OAuth binding
+defines it ({{I-D.draft-mcguinness-oauth-mission}}):
+
+1. a trusted issuer authorized to issue for the Mission (the Mission
+   Issuer role);
+2. the canonical (`mission.issuer`, `mission.id`) pair identifying the
+   Mission, as an identity condition only;
+3. an issued authority projection no broader than the Mission's
+   Authority Set for the target audience (the subset rule);
+4. the mapped subject, the requesting `client_id`, and actor or
+   delegation context where applicable (the approval event);
+5. a bounded lifetime plus active-state issuance and refresh gates (the
+   lifecycle gate); and
+6. an auditable derivation link to the Mission's recorded Authority
+   Set: the Mission Record, an Issuance Grant `jti`
+   ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}), or an
+   equivalently specified artifact.
+
+The presenter also proves possession of the key the credential is
+constrained to, end to end, with DPoP {{RFC9449}} or mutual TLS
+{{RFC8705}}. An instance association, where a path requires one, is a
+separate check ({{join-instance}}). The Substrate's Credential-Bound
+capability with correlation-only semantics
+({{I-D.draft-mcguinness-mission-substrate}}) does not establish this
+composition, and a Join Assertion fails conditions 3, 5, and 6. No
+condition requires a token-carried `authority_hash`. The architecture
+explains these properties as the Mission Binding Properties
+({{I-D.draft-mcguinness-mission-architecture}}).
+
+For each action, the PDP:
 
 1. classifies the action under the runtime profile's classes;
 2. for a high-consequence path in the declared coverage set, requires
@@ -2437,7 +2465,8 @@ A **Mission-joining PDP**:
 - verifies the subject join and the client join before evaluating
   authority, and denies with `mission_mismatch` on any join failure;
 - for a high-consequence path under the Enterprise profile, requires
-  the mission-credential-bound acting credential and denies on its
+  the Mission-bound acting credential of {{high-consequence-binding}}
+  and denies on its
   absence, never falling back to a mapping or asserted join
   ({{enterprise-profile}});
 - evaluates joined actions under the runtime profile's decision

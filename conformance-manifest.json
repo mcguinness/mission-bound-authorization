@@ -9015,7 +9015,7 @@
    "id": "mas.join.stronger-claim-requires-issuance",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "mission-join",
-   "text": "A path claiming the Enterprise profile's high-consequence credential property MUST use Mission-bound issuance: an acting credential satisfying the mission-credential-bound composition of the Mission Binding Properties ({{I-D.draft-mcguinness-mission-architecture}}).",
+   "text": "A path claiming the Enterprise profile's high-consequence credential property MUST use Mission-bound issuance: an acting credential satisfying the composition defined in {{high-consequence-binding}}.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -9037,7 +9037,7 @@
    "id": "mas.join.issuance-required-high-consequence",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "enterprise-profile",
-   "text": "the PDP MUST require an acting credential satisfying the mission-credential-bound composition of the Mission Binding Properties ({{I-D.draft-mcguinness-mission-architecture}}): the credential-mission-bound equivalence plus presenter-key-bound possession, end to end",
+   "text": "the PDP MUST require an acting credential satisfying the composition defined in {{high-consequence-binding}}, with presenter proof of possession end to end",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
