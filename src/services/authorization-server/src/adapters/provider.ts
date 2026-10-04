@@ -1822,9 +1822,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
   // @spec mission#approval-authentication (#826): a headless approval
   // leaves the client's user agent no End-User session. Its resume (GET on
   // the authorization route's `/:uid`) runs without the session cookie this
-  // user agent holds, so that session is neither read nor modified; after the
-  // response, the session the resume's login created is destroyed and its
-  // cookie never reaches the user agent. The code it issued is not
+  // user agent holds, so that session is neither read nor modified. Once the
+  // route returns, before the response is flushed, the session the resume's
+  // login created is destroyed and its cookie removed, on success or error,
+  // so the user agent never holds it. The code it issued is not
   // session-bound (expiresWithSession). The headless marker is read from the
   // stored interaction, written only by `decide()`.
   provider.use(async (ctx, next) => {

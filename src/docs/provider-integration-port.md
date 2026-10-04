@@ -196,8 +196,8 @@ the store.
   achieved `acr` and authentication time, never the Subject. A browser
   approval keeps that session. A headless approval leaves none: its user
   agent is the client's, so the resume runs without the session cookie that
-  user agent holds, the session the login created is destroyed after the
-  response and its cookie never delivered, and the code is not
+  user agent holds, the session the login created is destroyed before the
+  response is flushed and its cookie removed, and the code is not
   session-bound (`expiresWithSession`). Every
   Mission-bound access token carries the Subject: `formats.customizers.jwt`
   sets `sub` from the Mission its grant resolves to, failing closed when it
