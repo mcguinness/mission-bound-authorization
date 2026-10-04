@@ -325,6 +325,12 @@ transaction surfaces tracked row-by-row in
 [`src/docs/issuance-only-deployment.md`](src/docs/issuance-only-deployment.md)
 describes the proposed issuance-only reference deployment: a Mission-aware
 AS and Resource Servers that need not be Mission-aware.
+[`src/docs/initial-runtime-deployment.md`](src/docs/initial-runtime-deployment.md)
+is the contract for the adopted first runtime target (#253, D284): that floor
+plus a runtime PEP and PDP on the payments resource. The abstract Mission
+substrate supplies no common token format or authority vocabulary; both
+deployments use the OAuth binding's Mission-bound tokens and
+`mission_resource_access` entries.
 [`conformance-manifest.json`](conformance-manifest.json) maps each
 inventoried requirement in its audited specification set to tested,
 partial, or todo coverage.
