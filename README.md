@@ -11,10 +11,10 @@ across many resources, and the moment it bites is always the same
 one: something looks wrong, and there is no object to ask what this
 task is still allowed to do, or how to wind it down.
 
-A **Mission** is that object: a durable, integrity-bound record of
-the approved task (the intent, the derived Authority Set, the
-Approver, and a lifecycle), recorded and retained by the Mission
-control point. Identity answers who is acting. Entitlements answer
+A **Mission** is that object: a durable record of the approved task
+(the intent and the derived Authority Set, both integrity-anchored,
+plus the Approver and a lifecycle), recorded and retained by the
+Mission control point. Identity answers who is acting. Entitlements answer
 what a principal may hold. A Mission answers the remaining question:
 what work was approved, and is it still in force. It replaces
 neither of the first two, and it sits above grants and tokens rather
