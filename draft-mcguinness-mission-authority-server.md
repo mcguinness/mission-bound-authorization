@@ -471,6 +471,11 @@ The endpoint serves two operations, dispatched by request media type:
   `application/x-www-form-urlencoded` body containing a
   `submission_id` parameter ({{submission-status}}).
 
+The MAS MUST reject a request of any other media type with HTTP 415
+({{Section 15.5.16 of RFC9110}}) and the `unsupported_media_type`
+error code, so a client can tell a media-type error from an invalid
+Intent.
+
 ## Intent Submission {#intent-submission}
 
 The request body is a Mission Intent Submission envelope as the
@@ -538,11 +543,13 @@ derivation event per grant minted and applies that companion's
 counting rule.
 
 Where a MAS has no derivation event, it SHOULD refuse an Intent that
-carries a `requested_derivation_limit` member, or record the member
-and ensure the approval rendering marks it non-binding, per the OAuth
-binding's rule that consent is not given to a limit that binds
-nowhere. The same treatment applies to any future Mission Intent
-member scoped to an issuance event.
+carries a `requested_derivation_limit` member, with the
+`invalid_mission_intent` error code and `requested_derivation_limit`
+as the `error_reason`, or record the member and ensure the approval
+rendering marks it non-binding, per the OAuth binding's rule that
+consent is not given to a limit that binds nowhere. The same
+treatment applies to any future Mission Intent member scoped to an
+issuance event.
 
 On acceptance, the MAS derives the Authority Set from the Intent, and
 from the authority proposal where one was submitted, under the OAuth
@@ -702,7 +709,9 @@ JSON object body:
 `error_reason`:
 : OPTIONAL. A string. A machine-readable refinement of `error`: for
   `invalid_mission_intent`, the name of the offending top-level
-  member; for `invalid_authority`, the `target_resources` entry no
+  member, including a refused `requested_derivation_limit`
+  ({{intent-submission}}); for `invalid_authority`, the
+  `target_resources` entry no
   authority could be derived for. It reflects the client's own input
   and MUST NOT disclose policy internals.
 
@@ -713,6 +722,7 @@ A consumer MUST ignore members it does not recognize.
 | `invalid_mission_intent` | 400 | submission | Unparseable, structurally invalid, oversized, or containing an undefined top-level member. |
 | `invalid_authority` | 400 | submission | Well-formed Intent, but no valid Authority Set is derivable under policy. |
 | `invalid_mission_intent_evidence` | 400 | submission | An evidence entry of unsupported type or failing its type's verification, or a policy-required evidence type absent from the submission. |
+| `unsupported_media_type` | 415 | submission | The request media type is neither of the two the endpoint dispatches on ({{mission-submission}}). |
 | `unauthorized` | 401 | submission, join assertion | Request not authenticated. |
 | `invalid_join_request` | 400 | join assertion | The request body is not a JSON object carrying `mission_id`, a string `audience`, and exactly one token form ({{join-assertion-request}}). |
 | `join_failed` | 403 | join assertion | The referenced Mission is not `active`, the `audience` names no enrolled PDP, or the acting token is inactive, carries no `cnf` confirmation, or does not join the referenced Mission ({{join-assertion-request}}). |

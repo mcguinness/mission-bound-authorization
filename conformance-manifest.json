@@ -28587,6 +28587,48 @@
    "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972 item 11)."
   },
   {
+   "id": "mas.submission.unsupported-media-type",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-submission",
+   "text": "The MAS MUST reject a request of any other media type with HTTP 415 ({{Section 15.5.16 of RFC9110}}) and the `unsupported_media_type` error code",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a submission-endpoint request that is neither application/json nor form-urlencoded gets 415 unsupported_media_type"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#972 item 13)."
+  },
+  {
+   "id": "mas.submission.derivation-limit-refusal-code",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "intent-submission",
+   "text": "it SHOULD refuse an Intent that carries a `requested_derivation_limit` member, with the `invalid_mission_intent` error code and `requested_derivation_limit` as the `error_reason`",
+   "role": "Controller",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a refused requested_derivation_limit gets 400 invalid_mission_intent with error_reason requested_derivation_limit"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#972 item 13)."
+  },
+  {
    "id": "authzen.instance-context.no-upstream-actor",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-actor",
