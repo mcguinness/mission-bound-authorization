@@ -3197,6 +3197,19 @@ shows the denial:
 
 \[\[ To be removed from the final specification ]]
 
+- Assertion audience and submission outcomes (#972, D289). A Join
+  Assertion request names its consuming PDP in a required `audience`,
+  limited to enrolled PDPs, and the assertion's `aud` is required and
+  checked by that PDP. The assertion cache is keyed by Mission, token
+  digest, and audience, and a cache hit rechecks visibility and the
+  minting checks. The submission endpoint answers an unsupported media
+  type with 415 `unsupported_media_type` and a refused
+  `requested_derivation_limit` with `invalid_mission_intent`. An
+  expansion Subject mismatch denies with `subject_mismatch`, registered
+  in the Mission Denial Reasons registry. A missing required reference
+  is refused with `mission_reference_conflict`, and every
+  submission-status body carries `submission_id` and `status`.
+
 - Reference and claim consistency (#972, D289). The reference tuple
   and both carriages share one extension rule. Every deployment
   documents its mapping contract and an Enterprise MAS publishes it.
