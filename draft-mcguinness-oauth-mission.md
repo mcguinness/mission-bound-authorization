@@ -2161,8 +2161,11 @@ deactivate the Mission.
 A companion profile defining a standing-consent `type` MUST make its
 `consent_principal` and `root_commitment` trace to an accountable
 human's approval of the named standing consent, with no fresh approval
-event per instance, and MUST carry that approval's instant as
-`approved_at`.
+event per instance, MUST carry that approval's instant as
+`approved_at`, and MUST state what the record's `approval_event_id`
+carries for an instance it activates. That value identifies the
+activation event, never the standing approval, so a retried activation
+deduplicates and each distinct activation creates its own Mission.
 
 `approved_at`:
 : REQUIRED for every standing-consent `type`. An RFC 3339 date-time: the
@@ -5884,6 +5887,12 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Standing-Consent Bases: a companion profile defining a
+  standing-consent type states what the record's `approval_event_id`
+  carries for an instance it activates; the value identifies the
+  activation event, never the standing approval (#1017). This adds a
+  requirement.
 
 - Non-Goals: the multi-hop entry names what is specified (one
   projection hop; recursive cross-organizational delegation, profiled
