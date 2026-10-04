@@ -2344,8 +2344,9 @@ plans for the `access_token` form.
 
 A join can be coarse or can drift: shared `client_id` values,
 many-to-one directory mappings, and workload identity that the join
-collapses ({{join-spoofing}}). An enterprise MAS MUST publish a
-mapping contract stating, for the joins it performs:
+collapses ({{join-spoofing}}). Every deployment documents the mapping
+contract its joins apply, and an enterprise MAS MUST publish it. The
+contract states, for the joins performed:
 
 - the subject namespace mapping (how a credential's authenticated
   subject maps to the Mission's `subject`);
@@ -2571,9 +2572,10 @@ The following qualifications apply to individual rows:
   expansion is a fresh approval ({{native-expansion}}); and tokens of
   the unchanged AS are outside the claim.
 - For Authorized Context Correlation, the MAS and its joining PDPs
-  are the joining authority under the enterprise mapping contract
-  ({{mapping-contract}}), joining the introspected credential, the
-  subject and client mappings, and the Mission. The bare mapping join
+  are the joining authority under the deployment's documented mapping
+  contract ({{mapping-contract}}), which an enterprise MAS publishes,
+  joining the presented credential, the subject and client mappings,
+  and the Mission. The bare mapping join
   carries the (`subject`, `client`) equivalence-class ambiguity, and
   substitution protection requires the `cnf`-bound Join Assertion
   ({{join-spoofing}}).

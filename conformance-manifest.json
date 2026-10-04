@@ -28412,6 +28412,49 @@
    "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
   },
   {
+   "id": "mas.mapping-contract.floor-documented",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mapping-contract",
+   "text": "Every deployment documents the mapping contract its joins apply",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every deployment that joins documents its subject, client, delegate and instance mappings"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Deployment documentation; no runtime surface to test (#972 item 7)."
+  },
+  {
+   "id": "mas.mapping-contract.enterprise-publishes",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mapping-contract",
+   "text": "an enterprise MAS MUST publish it",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.enterprise"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an Enterprise MAS publishes its mapping contract"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Deployment documentation; no runtime surface to test (#972 item 7)."
+  },
+  {
    "id": "authzen.instance-context.no-upstream-actor",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-actor",
