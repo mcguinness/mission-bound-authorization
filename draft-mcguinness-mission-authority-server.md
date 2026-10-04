@@ -2825,8 +2825,9 @@ verifiable.
 
 The MAS's review surface is the approval event surface, and the
 OAuth binding's approval rules apply to it unchanged
-({{mission-approval}}). The Approver is authenticated to the `acr`
-mapping, the Subject is never taken from client input, client text is
+({{mission-approval}}). The Approver is authenticated to the
+deployment's published approval-authentication floor, the Subject is
+never taken from client input, client text is
 rendered inert, and derived authority is visually distinguished from
 client text. The submission, status, and lifecycle endpoints reject
 unauthenticated callers and preserve the anti-oracle property
