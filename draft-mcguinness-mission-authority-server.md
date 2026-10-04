@@ -3237,6 +3237,16 @@ shows the denial:
 
 \[\[ To be removed from the final specification ]]
 
+- Join evidence and the join-failure value (#972 items 27a, 27b,
+  D289). The PDP records `join_view_id` as a top-level member of the
+  signed Decision Evidence of every decision reached over a successful
+  join, a later policy denial included, and the AuthZEN response
+  carries no view identifier. A failed join denies with the AuthZEN
+  profile's `mission_binding_failed` in place of `mission_mismatch`,
+  which this document no longer adds to that profile's denial-reason
+  set; signed records made before the change are left as they are.
+  The AuthZEN examples use the profile's request and response shapes.
+
 - Authentication challenges (#972 item 18, D289). A 401 from the
   submission or join-assertion endpoint carries the challenges Mission
   Status defines.
