@@ -3,9 +3,11 @@
  * mission#mission-bound-tokens (#826): the Approver who authenticates and the
  * Mission's Subject are separate identities over the real AS assembly. The
  * Subject is the one the trusted approval surface selected; the provider
- * account and session are the Approver's; every Mission-bound token carries
- * the Subject; and `openid` is available only when one End-User both
- * authenticated in this user agent and is the Subject.
+ * account is the Approver's, and so is the session of a browser approval,
+ * while a headless approval leaves the client's user agent no session at
+ * all; every Mission-bound token carries the Subject; and `openid` is
+ * available only when one End-User both authenticated in this user agent and
+ * is the Subject.
  */
 
 import { type Server } from "node:http";
@@ -74,6 +76,30 @@ type Approval =
   | { browser: { sub: string; acr?: string; auth_time?: number; subject?: string } }
   | { headless: { sub: string; subject: string | null } };
 
+/** A pushed authorization request for the Read Acme invoices Mission. */
+async function push(client: "ap-agent" | "governed-agent", extra: Record<string, string>): Promise<Response> {
+  const challenge = Buffer.from(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(VERIFIER))).toString("base64url");
+  return fetch(`${ISSUER}/request`, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: client,
+      response_type: "code",
+      redirect_uri: REDIRECT_URI,
+      resource: RESOURCE,
+      code_challenge: challenge,
+      code_challenge_method: "S256",
+      ...extra,
+      mission_intent: JSON.stringify({
+        intent: { goal: "Read Acme invoices", target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" },
+      }),
+      authorization_details: JSON.stringify(READ),
+      client_assertion: await clientAssertion(client),
+      client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+    }).toString(),
+  });
+}
+
 /**
  * One authorization in its own user agent (`jar`, fresh unless given): PAR,
  * the trusted approval, and the redirect's code or error.
@@ -88,30 +114,13 @@ async function authorize(args: {
 }): Promise<{ code?: string; error?: string; jar: Jar; decideStatus: number }> {
   const client = args.client ?? "ap-agent";
   const jar = args.jar ?? new Map<string, string>();
-  const challenge = Buffer.from(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(VERIFIER))).toString("base64url");
-  const par = await fetch(`${ISSUER}/request`, {
-    method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: client,
-      response_type: "code",
-      redirect_uri: REDIRECT_URI,
-      resource: RESOURCE,
-      code_challenge: challenge,
-      code_challenge_method: "S256",
-      ...(args.scope ? { scope: args.scope } : {}),
-      ...(args.extra ?? {}),
-      mission_intent: JSON.stringify({
-        intent: { goal: "Read Acme invoices", target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" },
-      }),
-      authorization_details: JSON.stringify(READ),
-      client_assertion: await clientAssertion(client),
-      client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-    }).toString(),
-  });
+  const par = await push(client, { ...(args.scope ? { scope: args.scope } : {}), ...(args.extra ?? {}) });
   expect(par.status, await par.clone().text()).toBe(201);
   const { request_uri } = (await par.json()) as { request_uri: string };
-  let res = await fetch(`${ISSUER}/auth?${new URLSearchParams({ client_id: client, request_uri })}`, { redirect: "manual" });
+  let res = await fetch(`${ISSUER}/auth?${new URLSearchParams({ client_id: client, request_uri })}`, {
+    redirect: "manual",
+    headers: { cookie: cookieOf(jar) },
+  });
   keep(jar, res);
   let location = res.headers.get("location") ?? "";
   const uid = location.split("/interaction/")[1] as string;
@@ -289,14 +298,10 @@ describe("Approver and Subject stay separate identities (@spec mission#approval-
     expect(as.kernel.allMissions()).toHaveLength(before);
   });
 
-  it("approves an organizational workload Subject: the token carries the workload, and the only authentication is the Approver's", async () => {
+  it("approves an organizational workload Subject: the token carries the workload, and the approval leaves no authentication session", async () => {
     const r = await authorize({ client: "governed-agent", approval: { headless: { sub: "bob", subject: "acme-accounts-payable" } } });
     expect(r.code, r.error).toBeTruthy();
-    const session = await sessionOf(r.jar);
-    expect(session?.accountId).toBe("bob");
-    // A headless approval logs the Approver in only transiently: this user
-    // agent is the client's, not Bob's.
-    expect(sessionLines.get(r.jar)?.toLowerCase()).not.toContain("expires=");
+    expect(r.jar.has("_session")).toBe(false);
     const issued = await redeem("governed-agent", r.code as string, await newKeys());
     const at = decodeJwt(issued.access_token as string);
     expect(at.sub).toBe("acme-accounts-payable");
@@ -306,16 +311,48 @@ describe("Approver and Subject stay separate identities (@spec mission#approval-
     expect(refused.error).toBe("invalid_scope");
   });
 
-  it("an Alice session established before Bob approves for her is never refreshed by Bob's act", async () => {
+  it("a headless approval leaves the client's user agent no End-User session: the resume's login is destroyed and never delivered, and the code still redeems and refreshes", async () => {
+    // oidc-provider finishes the interaction through a login; capture the
+    // session that login wrote, to show it does not outlive the response.
+    const resumed: string[] = [];
+    const onSuccess = (ctx: { oidc: { session?: { id?: string; accountId?: string } } }) => {
+      if (ctx.oidc.session?.accountId === "bob" && ctx.oidc.session.id) resumed.push(ctx.oidc.session.id);
+    };
+    as.provider.on("authorization.success", onSuccess);
+    let r: Awaited<ReturnType<typeof authorize>>;
+    try {
+      r = await authorize({ approval: { headless: { sub: "bob", subject: "alice" } } });
+    } finally {
+      as.provider.off("authorization.success", onSuccess);
+    }
+    expect(r.code, r.error).toBeTruthy();
+    expect(resumed).toHaveLength(1);
+    expect(await as.provider.Session.find(resumed[0] as string)).toBeUndefined();
+    expect(r.jar.has("_session")).toBe(false);
+    expect(sessionLines.get(r.jar)).toBeUndefined();
+    // The code is not bound to the session that no longer exists.
+    const k = await newKeys();
+    const issued = await redeem("ap-agent", r.code as string, k);
+    expect(decodeJwt(issued.access_token as string).sub).toBe("alice");
+    const refreshed = await token("ap-agent", { grant_type: "refresh_token", refresh_token: issued.refresh_token as string }, k);
+    expect(decodeJwt(refreshed.access_token as string).sub).toBe("alice");
+  });
+
+  it("an Alice session established before Bob approves for her is neither read nor refreshed by Bob's headless act, which still completes", async () => {
     const aliceTime = Math.floor(Date.now() / 1000) - 600;
     const first = await authorize({ scope: "openid", approval: { browser: { sub: "alice", acr: "mfa", auth_time: aliceTime } } });
     expect(first.code, first.error).toBeTruthy();
+    const aliceSession = first.jar.get("_session");
     expect((await sessionOf(first.jar))?.loginTs).toBe(aliceTime);
-    // Bob approves for Alice in the same user agent. Whatever the provider
-    // does with the existing session, Alice's authentication is not renewed.
-    await authorize({ approval: { headless: { sub: "bob", subject: "alice" } }, jar: first.jar });
+    // Bob approves for Alice in the same user agent: the resume never sees
+    // Alice's session, so it neither asks to end it nor renews it.
+    const second = await authorize({ approval: { headless: { sub: "bob", subject: "alice" } }, jar: first.jar });
+    expect(second.code, second.error).toBeTruthy();
+    expect(first.jar.get("_session")).toBe(aliceSession);
     const after = await sessionOf(first.jar);
-    expect(after?.accountId === "alice" ? after.loginTs : aliceTime).toBe(aliceTime);
+    expect(after?.accountId).toBe("alice");
+    expect(after?.loginTs).toBe(aliceTime);
+    expect(after?.acr).toBe("mfa");
   });
 
   it("a later prompt=none request naming the Subject is not satisfied by another principal's approval", async () => {
@@ -379,6 +416,14 @@ describe("Approver and Subject stay separate identities (@spec mission#approval-
     const issued = await redeem("ap-agent", browser.code as string, await newKeys());
     const missionId = (decodeJwt(issued.access_token as string).mission as { id: string }).id;
     expect(as.kernel.get(missionId)?.subject.sub).toBe("bob");
+  });
+
+  it("a delegated request cannot ask for the Approver's acr_values or max_age: without openid, PAR refuses them invalid_request before any interaction", async () => {
+    for (const extra of [{ acr_values: "mfa" }, { max_age: "300" }]) {
+      const par = await push("ap-agent", extra);
+      expect(par.status).toBe(400);
+      expect(((await par.json()) as { error?: string }).error).toBe("invalid_request");
+    }
   });
 
   it("knows no account for an id outside the deployment, and no profile for a workload principal", async () => {

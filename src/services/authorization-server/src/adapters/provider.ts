@@ -46,6 +46,9 @@ import {
  * parameter allow-list drops it from every PAR and authorization request.
  */
 export const DERIVED_AUTHORIZATION_DETAILS_MARKER = "__mission_derived_authorization_details";
+/** Interaction-result member marking an approval no End-User authenticated
+ *  in the user agent (a headless approval service's, #826). */
+const HEADLESS_APPROVAL_RESULT = "mission_headless_approval";
 
 /**
  * @spec mission#authority-proposal — the client's authority proposal as the
@@ -1169,6 +1172,14 @@ export function buildProvider(opts: AdapterOptions): Provider {
       }
       return true;
     },
+    // @spec mission#approval-authentication (#826): a headless approval's
+    // code has no End-User session to bind to (its resume session is torn
+    // down, see the headless-resume middleware), so it and the tokens it
+    // yields are not session-bound. Otherwise oidc-provider's default.
+    expiresWithSession: async (ctx, code) =>
+      (ctx.oidc.result as Record<string, unknown> | undefined)?.[HEADLESS_APPROVAL_RESULT] === true
+        ? false
+        : !code.scopes.has("offline_access"),
     pkce: { required: () => true },
     interactions: { url: (_ctx, interaction) => `/interaction/${interaction.uid}` },
     // @spec mission#downgrade-by-omission — the per-client Mission-governance
@@ -1806,6 +1817,42 @@ export function buildProvider(opts: AdapterOptions): Provider {
   provider.use(async (ctx, next) => {
     await next();
     await opts.kernel.drainLifecycleOutbox();
+  });
+
+  // @spec mission#approval-authentication (#826): a headless approval
+  // leaves the client's user agent no End-User session. Its resume (GET on
+  // the authorization route's `/:uid`) runs without the session cookie this
+  // user agent holds, so that session is neither read nor modified; after the
+  // response, the session the resume's login created is destroyed and its
+  // cookie never reaches the user agent. The code it issued is not
+  // session-bound (expiresWithSession). The headless marker is read from the
+  // stored interaction, written only by `decide()`.
+  provider.use(async (ctx, next) => {
+    const uid = ctx.method === "GET" ? /^\/auth\/([^/]+)$/.exec(ctx.path)?.[1] : undefined;
+    const interaction = uid ? await provider.Interaction.find(uid) : undefined;
+    const result = interaction?.result as Record<string, unknown> | undefined;
+    if (result?.[HEADLESS_APPROVAL_RESULT] !== true) return next();
+    const sessionCookie = /^_session(?:\.sig)?$/;
+    const kept = (ctx.req.headers.cookie ?? "")
+      .split(";")
+      .filter((c) => c.trim() && !sessionCookie.test(c.trim().split("=")[0] ?? ""));
+    if (kept.length) ctx.req.headers.cookie = kept.join(";");
+    else delete ctx.req.headers.cookie;
+    try {
+      await next();
+    } finally {
+      const set = ctx.response.get("set-cookie") as unknown as string[] | string | undefined;
+      const lines = typeof set === "string" ? [set] : set ?? [];
+      for (const line of lines) {
+        const [name, value] = (line.split(";")[0] ?? "").split("=");
+        if (name?.trim() === "_session" && value) await (await provider.Session.find(value.trim()))?.destroy();
+      }
+      const rest = lines.filter((l) => !sessionCookie.test((l.split("=")[0] ?? "").trim()));
+      if (rest.length !== lines.length) {
+        if (rest.length) ctx.set("set-cookie", rest);
+        else ctx.remove("set-cookie");
+      }
+    }
   });
 
   provider.use(makeRoutes(provider, opts));
@@ -4122,11 +4169,20 @@ async function decide(
   // @spec mission#approval-authentication (#826): the login is the
   // Approver's own, with its achieved `acr` and authentication time, never a
   // time manufactured from the approval click and never an authentication of
-  // a different Subject. A headless approval logs in only transiently: this
-  // user agent belongs to the client, not to the Approver.
+  // a different Subject. oidc-provider finishes an interaction only through
+  // a login, which on a headless approval is the code's account and nothing
+  // more: this user agent is the client's, no End-User authenticated in it,
+  // and the resume leaves it no session (the headless-resume middleware).
+  // The resume runs on a fresh session, so the interaction no longer names
+  // the one this user agent held when it began.
+  if (!interactive && details.session?.uid) {
+    delete (details.session as { uid?: string }).uid;
+    await details.save(Math.max(1, (details.exp ?? 0) - Math.floor(Date.now() / 1000)));
+  }
   await provider.interactionFinished(ctx.req, ctx.res, {
     login: { accountId: approver, acr: principal.acr, ts: principal.auth_time, remember: interactive },
     consent: { grantId },
+    ...(interactive ? {} : { [HEADLESS_APPROVAL_RESULT]: true }),
   });
 }
 

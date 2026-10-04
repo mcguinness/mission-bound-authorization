@@ -4805,7 +4805,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "acr_values/max_age describe the requested authentication of the Approver, never the token's Subject; the Approver's achieved authentication must satisfy both the deployment's own floor and a client-requested acr_values/max_age, and the AS refuses the approval decision (access_denied, per {{error-mapping}}) when either is unmet",
-    "local": "the achieved context (acr, auth_time) comes from the authenticated approval surface: a trusted browser login's recorded context or a headless approval service's registration, never decide()'s body, which refuses identity members. oidc-provider accepts acr_values and max_age only with openid (lib/actions/authorization/check_openid_scope.js, 9.10.0), and openid is available only to a self-approval in this user agent (#826), so a client-requested strength is exercised on self-approvals; an approval for another principal cannot request one here. oidc-provider's own check_max_age middleware translates a literal max_age=0 to prompt=login and clears params.max_age before this handler runs, so the implementation recovers that signal from prompt=login (forceFreshLogin) rather than reading a cleared max_age."
+    "local": "the achieved context (acr, auth_time) comes from the authenticated approval surface: a trusted browser login's recorded context or a headless approval service's registration, never decide()'s body, which refuses identity members. oidc-provider accepts acr_values and max_age only with openid (lib/actions/authorization/check_openid_scope.js, 9.10.0), and openid is available only to a self-approval in this user agent (#826), so a client-requested strength is exercised on self-approvals; an approval for another principal cannot request one here: PAR refuses acr_values or max_age without openid invalid_request, before any interaction (open on #826). oidc-provider's own check_max_age middleware translates a literal max_age=0 to prompt=login and clears params.max_age before this handler runs, so the implementation recovers that signal from prompt=login (forceFreshLogin) rather than reading a cleared max_age."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -4827,6 +4827,12 @@
      "name": "Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > an unsupported acr is refused",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > a delegated request cannot ask for the Approver's acr_values or max_age: without openid, PAR refuses them invalid_request before any interaction",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
     }
    ],
    "notes": "Adopted #636 acceptance criterion (approver-vs-subject tests). The requested-strength cases run on self-approvals in a trusted browser session (#826: a delegated request cannot carry acr_values without openid here); the split-principal case moved to no-token-claim-carriage and openid-refused-when-approver-not-subject. The Deferred Mission Approval companion ({{I-D.draft-mcguinness-oauth-mission-approval}} {{deferred-approval}}) that would relocate this same check to an asynchronous reviewer has no reference implementation in src/ (only the unrelated AROP post-Mission-widening deferral is implemented, a different mechanism, {{I-D.gerber-oauth-deferred-token-response}}); a deferred-review wire test is not implementable in this stack and is disclosed here rather than fabricated."
@@ -4890,7 +4896,7 @@
     },
     {
      "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
-     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > approves an organizational workload Subject: the token carries the workload, and the only authentication is the Approver's",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > approves an organizational workload Subject: the token carries the workload, and the approval leaves no authentication session",
      "level": "endpoint",
      "surface": "authorization-endpoint"
     },
@@ -4938,7 +4944,13 @@
     },
     {
      "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
-     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > an Alice session established before Bob approves for her is never refreshed by Bob's act",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > an Alice session established before Bob approves for her is neither read nor refreshed by Bob's headless act, which still completes",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > a headless approval leaves the client's user agent no End-User session: the resume's login is destroyed and never delivered, and the code still redeems and refreshes",
      "level": "endpoint",
      "surface": "authorization-endpoint"
     },
@@ -4950,7 +4962,7 @@
     },
     {
      "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
-     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > approves an organizational workload Subject: the token carries the workload, and the only authentication is the Approver's",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > approves an organizational workload Subject: the token carries the workload, and the approval leaves no authentication session",
      "level": "endpoint",
      "surface": "authorization-endpoint"
     },
@@ -4967,7 +4979,7 @@
      "surface": "authorization-endpoint"
     }
    ],
-   "notes": "#826. The provider account, grant and session are the Approver's, logged in with the achieved acr and authentication time (a headless approval only transiently); Mission-bound tokens carry the Subject through the JWT customizer, refresh introspection reports the Subject. Discriminating witnesses: the session and grant belong to Bob and the token sub is Alice (delegated), and an earlier Alice session keeps its authentication time. Two clauses hold in this assembly by construction as well: Mission access tokens are resource-audienced, so UserInfo refuses them, and every Mission authorization request needs its own approval interaction, so a prompt=none request is never satisfied silently; their tests assert the outcome, not that the defect alone would have changed it."
+   "notes": "#826. The provider account and grant are the Approver's, logged in with the achieved acr and authentication time; a browser approval keeps that session, and a headless approval leaves the client's user agent none (the resume runs without the user agent's session cookie, the session its login created is destroyed after the response and its cookie never delivered, and the code is not session-bound). Mission-bound tokens carry the Subject through the JWT customizer, refresh introspection reports the Subject. Discriminating witnesses: the session and grant belong to Bob and the token sub is Alice (delegated browser approval); a headless approval's resume session no longer exists and no session cookie reaches the user agent; and an earlier Alice session in the same user agent is neither replaced nor renewed. Two clauses hold in this assembly by construction as well: Mission access tokens are resource-audienced, so UserInfo refuses them, and every Mission authorization request needs its own approval interaction, so a prompt=none request is never satisfied silently; their tests assert the outcome, not that the defect alone would have changed it."
   },
   {
    "id": "core.grant-binding.mission-id-inert",

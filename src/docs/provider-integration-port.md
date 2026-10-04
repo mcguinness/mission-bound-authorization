@@ -191,10 +191,14 @@ the store.
   reuse an event ID with a different namespace's principal. This holds for a
   direct kernel caller as well as this adapter, which always builds
   principals in the kernel's namespace.
-- **Approver and Subject identities (#826).** The provider account, Grant
-  and session are the Approver's: `interactionFinished` logs the Approver in
-  with the achieved `acr` and authentication time (transiently for a headless
-  approval, whose user agent is the client's), never the Subject. Every
+- **Approver and Subject identities (#826).** The provider account and Grant
+  are the Approver's: `interactionFinished` logs the Approver in with the
+  achieved `acr` and authentication time, never the Subject. A browser
+  approval keeps that session. A headless approval leaves none: its user
+  agent is the client's, so the resume runs without the session cookie that
+  user agent holds, the session the login created is destroyed after the
+  response and its cookie never delivered, and the code is not
+  session-bound (`expiresWithSession`). Every
   Mission-bound access token carries the Subject: `formats.customizers.jwt`
   sets `sub` from the Mission its grant resolves to, failing closed when it
   no longer resolves, and refresh-token introspection reports the Subject,
@@ -203,6 +207,10 @@ the store.
   End-User this interaction authenticated: it is refused `invalid_scope`
   before `kernel.approve` when the Approver is not the Subject, and on a
   headless approval, where no End-User authenticated in this user agent.
+  oidc-provider accepts `acr_values` and `max_age` only with `openid`, so a
+  delegated request cannot name an Approver strength: PAR refuses it
+  `invalid_request` before any interaction. The issuer's approval floor
+  still applies; requested strength on a delegated approval is open on #826.
   Tests (HTTP, `approver-subject-separation.test.ts`):
   `Approver and Subject stay separate identities (@spec mission#approval-authentication, #826)`,
   every case.
