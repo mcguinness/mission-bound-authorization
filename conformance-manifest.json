@@ -115,8 +115,8 @@
     "content_sha256": "78fa453b80921a5898aa47c2453be8c86cf81d74a5a5a87e95ed0c2a4a06637e"
    },
    "draft-mcguinness-mission-aauth-management.md": {
-    "revision": "622d072fd453603bd406bd39ea0f11b43c6384e4",
-    "content_sha256": "be36c6e41489638f056832d274a9daadb25837ede6b13b5963fa76c5fc14c33c"
+    "revision": "87a20d1a36476bf802b67e5de63d8a2b47f3f647",
+    "content_sha256": "97bee1a45e1e489de11bef53e3ca8d2756165bdb55374b16f7144f3c5e27b2bc"
    }
   }
  },
@@ -28754,6 +28754,111 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#839 specification slice (PR #1063). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.residual.person-token-keeps-incomplete",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "terminate",
+   "text": "`complete` is true only when every Tracked Credential is either confirmed revoked or expired and the PS knows of no untracked access mode for the mission; it is false while any Person Token is live and unconfirmed, and never follows from Auth Tokens alone.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after termination, a mission with a live, unconfirmed Person Token reports complete false in token_residual, even when every Auth Token is confirmed revoked or expired"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice. Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.residual.complete-covers-withheld",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "terminate",
+   "text": "`complete` covers every Tracked Credential, including any the counters withhold from the caller.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "complete is false for a caller whose counters omit a credential it may not see, while that credential is live and unconfirmed"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice. Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.residual.unconfirmed-until-exp",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "terminate",
+   "text": "A credential whose recipient advertises no revocation endpoint, or whose revocation outcome is unknown, stays unconfirmed until its `exp`.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Tracked Credential whose recipient advertises no revocation endpoint, or whose outcome is unknown, is counted unconfirmed and keeps complete false until its exp passes"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice. Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.revocation.person-token-recipients",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "revocation-attempts",
+   "text": "The PS revokes a Person Token at the Resource named in its `aud` and at each AS it presented the token to (Section 11.12.2 of {{I-D.draft-hardt-oauth-aauth-protocol}}).",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after termination, the PS sends a signed revocation for each live Person Token to the Resource in its aud and to each AS it presented the token to"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice. Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.revocation.person-token-confirmation",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "revocation-attempts",
+   "text": "a Person Token is confirmed when the Resource in its `aud` and each AS it was presented to have each answered `200`;",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Person Token counts as confirmed revoked only after the Resource in its aud and every AS it was presented to answered 200; any missing answer leaves it unconfirmed"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice. Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
   }
  ]
 }
