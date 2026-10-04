@@ -1008,10 +1008,12 @@ any holder inside the (subject, client) equivalence class joins
 Where the deployment's Authorization Server conveys Instance Context in
 its tokens ({{I-D.draft-mcguinness-oauth-client-instance-id}}: the
 `client_instance` claim or introspection member), the acting credential
-identifies a concrete runtime instance once the PDP has validated that
-context and established its association with the presenter as a Context
-Consumer ({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section
-7.5).
+identifies a concrete runtime instance once the component holding the
+credential has validated that context and established its association
+with the presenter as a Context Consumer
+({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 7.5). In
+the PEP/PDP split, that component is the PEP. A token digest or key
+thumbprint alone supplies no instance association.
 
 A sender-constraint key unique to the instance
 ({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 7.3)
@@ -1021,9 +1023,8 @@ issuer may have preserved from an input token also needs a profile
 that authenticates its provenance, since such a token can carry one
 instance's context while bound to another's key.
 
-Where the PDP has validated that Instance Context and established its
-association with the presenter, the PDP SHOULD include that instance
-in the join, so the client join binds (subject, client, instance)
+Where that association is established, the PDP SHOULD include that
+instance in the join, so the client join binds (subject, client, instance)
 rather than (subject, client). This restores
 per-instance granularity behind a shared gateway `client_id`: the
 validated instance joins, not every workload in the `client_id`
@@ -1032,7 +1033,8 @@ equivalence class.
 In the PEP/PDP split, the PEP performs the credential, context, and
 presenter-proof validation and supplies the established instance
 through the authenticated decision context. The PDP relies on that
-PEP under the decision API's trust boundary.
+authenticated attestation under the decision API's trust boundary and
+applies the instance mapping.
 
 The mapping contract states which paths require an instance-bound join
 and how the established instance maps to the Mission's permitted
