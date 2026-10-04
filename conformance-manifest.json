@@ -3261,10 +3261,23 @@
    "observation": {
     "normative": "for an instance activated under a standing-consent basis, the record's approval_event_id identifies that activation: a retried activation returns the committed Mission, and two distinct activations under one standing consent create two Missions"
    },
-   "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: Template sets approval_event_id to 'dsp_' + dispatch_event_id (kernel/template.ts) and Child Delegation sets it to the minted activation_event_id (kernel/child-delegation.ts); Progressive ceiling_drawdown is not implemented. No test yet asserts that two distinct activations under one standing consent create two Missions."
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases) > two Dispatches under one template consent create two Missions, each with its own approval_event_id, never the template's",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases) > a retry by the same Dispatcher recovers the committed instance and its approval_event_id",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Witnessed on the Template Dispatch basis: two Dispatches under one template consent create two Missions with distinct approval_event_ids, and a retry returns the committed Mission and its value. Proved by deriving approval_event_id from dispatch_event_id again (the distinct-activations test fails) and by disabling recovery (the retry test fails). Child Delegation's policy_drawdown is witnessed by its own row; Progressive ceiling_drawdown is not implemented."
   },
   {
    "id": "core.approval-basis.adjudication-governance-record-override",
@@ -24477,9 +24490,15 @@
      "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > happy path: dispatch mints a DPoP-bound mission token, and a repeated dispatch_event_id is idempotent",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "Dispatch idempotency at /token (@spec mission-template#dispatch, mission#intent-submission-evidence) > a completed Dispatch recovers before evidence re-verification; a new Dispatch still verifies",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Tested for the same-fingerprint retry path only (an unchanged repeated dispatch_event_id). Fingerprint-mismatch refusal, atomic-reservation concurrency, and tombstone retention are not exercised by the current suite; the current implementation dedupes on dispatch_event_id via the issuance profile's approval_event_id mechanism and does not yet implement the fingerprint object this profile's adoption of the expansion apparatus specifies."
+   "notes": "Tested at the endpoint for the same-fingerprint retry, including a retry whose Intent Submission Evidence lapsed after completion (recovered before re-verification; proved by skipping the early lookup). Fingerprint mismatch and tombstone retention have their own rows (template.dispatch.fingerprint-mismatch-refusal, template.dispatch.approval-event-id-per-dispatch). Concurrent-duplicate recovery (the reservation's primary-key race) is not exercised, so the row stays partial."
   },
   {
    "id": "template.dispatch.fingerprint-mismatch-refusal",
@@ -24499,8 +24518,22 @@
     "normative": "a dispatch_event_id reused with a different operation fingerprint (a changed template_id, intent, evidence, proposal, or cnf) is refused with invalid_request rather than recovered"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "Dispatch idempotency at /token (@spec mission-template#dispatch, mission#intent-submission-evidence) > a reused dispatch_event_id with a different intent or evidence is invalid_request, with no mission_denial_reason",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases) > the same Dispatcher's dispatch_event_id with a different fingerprint is refused, never recovered",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Every named fingerprint member is asserted: intent and evidence changes at the token endpoint (invalid_request with an error_description and no mission_denial_reason, and the unchanged retry still recovers); template_id, proposal and cnf changes at kernel level (refused, nothing committed). Proved by skipping the fingerprint comparison (both tests fail) and by restoring a mission_denial_reason on the mismatch response (the endpoint test fails)."
   },
   {
    "id": "template.dispatch.completed-recovery-survives-retirement",
@@ -24815,10 +24848,35 @@
    "observation": {
     "normative": "each new Dispatch reservation receives a unique approval_event_id, retained with the committed instance: a retry by the same Dispatcher recovers it, a different Dispatcher or dispatch_event_id never resolves to it, and a reservation created after the key's tombstone expires receives a new one"
    },
-   "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS gaps: approval_event_id is 'dsp_' + dispatch_event_id (kernel/template.ts), a deterministic derivation that is neither keyed by the authenticated Dispatcher (a second permitted Dispatcher reusing another's dispatch_event_id on the same template receives the first Dispatcher's instance) nor fresh for a reservation created after the key's tombstone expires. Not cited until both are fixed and tests prove distinct Dispatches create distinct Missions."
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases) > a retry by the same Dispatcher recovers the committed instance and its approval_event_id",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases) > two Dispatches under one template consent create two Missions, each with its own approval_event_id, never the template's",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases) > another permitted Dispatcher reusing the same dispatch_event_id gets its own instance, never the first Dispatcher's",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases) > a dispatch_event_id reused after its tombstone expires creates a new instance with a new approval_event_id",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Each observation clause has its own test: same-Dispatcher retry recovers (RETRY), a different dispatch_event_id never resolves to it (TWO), a different Dispatcher never resolves to it (OTHER), and a reservation after the tombstone expires receives a new value (EXPIRY, a 60 s retention and the injected clock). Mutation-proved: deriving the value from dispatch_event_id fails TWO, OTHER and EXPIRY; keying the reservation without the Dispatcher fails OTHER; disabling recovery fails RETRY; ignoring the store's retention fails EXPIRY."
   },
   {
    "id": "template.grant-type.agent-separate-from-presenter",
@@ -27683,10 +27741,23 @@
    "observation": {
     "normative": "a child created under policy_drawdown records approval_event_id equal to its activation_event_id, never the Parent Mission's approval_event_id"
    },
-   "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS sets the record's approval_event_id equal to the minted activation_event_id (kernel/child-delegation.ts); no test asserts the equality yet. Scoped to child-delegation.policy-drawdown: a direct human-approved child records activation.approval_event_id, not an activation_event_id, so this requirement never applies to it."
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "approval basis (@spec mission#approval-basis, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "approval basis (@spec mission#approval-basis, child-delegation#child-creation) > uses the justifying entry's child_creation_policy digest as root_commitment when the entry carries one",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Both forms: without and with a child_creation_policy, the record's approval_event_id equals activation.activation_event_id and differs from the Parent Mission's approval_event_id. Proved by recording the parent's approval_event_id on the child (both tests fail). Scoped to child-delegation.policy-drawdown: a direct human-approved child records activation.approval_event_id, not an activation_event_id, so this requirement never applies to it."
   },
   {
    "id": "child-delegation.carryover.expansion-disclosure",
