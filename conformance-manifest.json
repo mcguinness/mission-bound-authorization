@@ -28455,6 +28455,28 @@
    "notes": "Deployment documentation; no runtime surface to test (#972 item 7)."
   },
   {
+   "id": "mas.hc.mission-bound-instance-check",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "high-consequence-binding",
+   "text": "where the credential carries Instance Context whose association with the presenter is established, the instance check of {{join-instance}}",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.enterprise"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "on a Mission-bound high-consequence path, an established instance association is checked"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No Enterprise high-consequence path with Instance Context in the reference composition (#972 item 8)."
+  },
+  {
    "id": "authzen.instance-context.no-upstream-actor",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-actor",

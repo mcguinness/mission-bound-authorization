@@ -996,9 +996,11 @@ The join binds identity, not possession. The acting credential's own
 sender binding keeps a joined permit from being a bearer property.
 Acting credentials for governed work SHOULD be sender-constrained,
 with DPoP or mutual TLS at the unchanged AS. For the high-consequence
-action classes, acting credentials for governed work MUST be
-sender-constrained. With a pure bearer token, any holder inside the
-(subject, client) equivalence class joins ({{join-spoofing}}).
+action classes, the runtime profile's Custody rules require a verified
+sender-constrained acting credential in either establishment mode
+({{I-D.draft-mcguinness-mission-runtime}}). With a pure bearer token,
+any holder inside the (subject, client) equivalence class joins
+({{join-spoofing}}).
 
 ## Instance-Bound Joins {#join-instance}
 
@@ -2231,13 +2233,13 @@ following obligations:
 - **Instance-bound joins.** Where the acting credential carries
   Instance Context ({{I-D.draft-mcguinness-oauth-client-instance-id}})
   whose association with the presenter is established as
-  {{join-instance}} describes, a high-consequence join MUST bind
+  {{join-instance}} describes, a join on a covered path MUST bind
   (`subject`, `client`, `instance`), not (`subject`, `client`), so a
   single workload joins rather than every workload sharing a gateway
   `client_id`. Client-instance identity is defined by an individual
   draft ({{I-D.draft-mcguinness-oauth-client-instance-id}}).
-  Where a deployment has no instance-identity substrate, the
-  high-consequence join binds only (`subject`, `client`), and the
+  Where a deployment has no instance-identity substrate, such a join
+  binds only (`subject`, `client`), and the
   shared-`client_id` residual of {{join-spoofing}} remains, stated in
   the Mission Deployment Profile's `residual_risks`.
 - **Runtime enforcement.** Consequential actions MUST be enforced
@@ -2284,6 +2286,13 @@ switches modes rather than layering them. The join algorithm of
 {{mission-join}} assumes a credential that cannot identify its
 Mission, and it never runs against one that can.
 
+The floor and the Enterprise profile differ on these paths. At the
+floor, a joined high-consequence path needs, each as a necessary part,
+a sender-constrained acting credential, the join, active freshness,
+and runtime enforcement. The Enterprise profile additionally requires
+Mission-bound issuance for the high-consequence classes, so on its
+covered paths the join does not run for those classes.
+
 A Mission-bound acting credential, in this document, establishes all
 of the following for the covered path, each as the OAuth binding
 defines it ({{I-D.draft-mcguinness-oauth-mission}}):
@@ -2327,8 +2336,10 @@ For each action, the PDP:
    credential's `mission` claim, and, where both convey
    `authority_hash`, a consistent value too, denying on any mismatch;
 5. applies current Mission state, current authority, the subject,
-   client, and actor checks, and the sender proof, as elsewhere in
-   this profile; and
+   client, and actor checks, the sender proof, and, where the
+   credential carries Instance Context whose association with the
+   presenter is established, the instance check of {{join-instance}},
+   as elsewhere in this profile; and
 6. never uses a Join Assertion or a mapping join to select a
    different Mission than the credential's own: with concurrent
    Missions for one subject and client, the credential's `mission`
@@ -2349,9 +2360,8 @@ provides:
   a Join Assertion for a token it can neither introspect nor validate
   ({{join-assertion-request}}).
 - **Sender-constrained issuance.** DPoP-bound or mutual-TLS-bound
-  access tokens for the agent clients acting in the high-consequence
-  classes. The join requires sender-constraint for those classes
-  ({{mission-join}}), and the MAS MUST NOT mint an assertion for a
+  access tokens for the agent clients on the joined paths that require
+  a Join Assertion, since the MAS MUST NOT mint an assertion for a
   token without a `cnf` key ({{join-assertion-request}}).
 - **`cnf` in introspection or token claims.** Introspection responses,
   or validated JWT claims, that report the token's `cnf` confirmation,
@@ -3013,10 +3023,13 @@ token-layer gate.
 "No AS code change" holds in records and enforced-paths modes (phases
 1 through 4); what changes is the claim. Issuance mode needs each
 consuming AS to redeem Issuance Grants (phase 5) or to become
-Mission-aware (phase 6). A high-consequence enforcement claim requires
-issuance mode's
-machinery or the Estate Prerequisites' AS features
-({{enterprise-prerequisites}}), never records alone. The phases are:
+Mission-aware (phase 6). Under the Enterprise profile, a
+high-consequence enforcement claim requires Mission-bound issuance,
+which is issuance mode. At the floor, a joined high-consequence path
+requires a sender-constrained acting credential, the join, active
+freshness, and runtime enforcement, and claims only what the join
+proves ({{high-consequence-binding}}). Records alone support no
+enforcement claim. The phases are:
 
 1. The MAS records Missions and approvals: governance and audit of
    what tasks were approved, with no enforcement change yet
