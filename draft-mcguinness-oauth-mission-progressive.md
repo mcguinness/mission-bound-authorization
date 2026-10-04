@@ -354,10 +354,13 @@ issuance profile's standing-consent requirement) is the instant the
 Approver consented the ceiling that `ceiling_hash` commits, read
 from the Mission Issuer's retained record of that consent, never
 from the drawdown request. Its record's `approval_event_id` identifies
-this drawdown, never the ceiling consent: a value derived one-to-one
-from the requesting client and the exchange's `creation_request_id`
-({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "Creation
-Idempotency"). The child delegation
+this drawdown, never the ceiling consent: a unique value the Mission
+Issuer allocates when it creates the exchange's
+`(client, creation_request_id)` reservation and retains with the
+committed successor ({{I-D.draft-mcguinness-oauth-mission-expansion}},
+Section "Creation Idempotency"). A retry recovers it; a reservation
+created after that key's tombstone expires receives a new one. The
+child delegation
 profile's `policy_drawdown` basis
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) is not
 reused: that value names policy-approved child creation, not a
@@ -786,9 +789,11 @@ convention, none of which require registration.
 -01
 
 - In-ceiling expansion: a `ceiling_drawdown` successor's
-  `approval_event_id` identifies the drawdown, derived one-to-one from
-  the requesting client and the exchange's `creation_request_id`; no
-  new member (#1017).
+  `approval_event_id` identifies the drawdown: a unique value allocated
+  with the exchange's `(client, creation_request_id)` reservation and
+  retained with the successor, so a retry recovers it and reuse of the
+  key after its tombstone expires receives a new one; no new member
+  (#1017).
 
 - In-ceiling expansion: a drawdown that passes every policy-adjudication
   guard completes synchronously in the token-exchange response,

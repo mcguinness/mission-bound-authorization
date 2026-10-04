@@ -24602,12 +24602,12 @@
    "surface": "token-endpoint",
    "assertion": "replay",
    "observation": {
-    "normative": "each Dispatch's instance carries an approval_event_id derived one-to-one from its (authenticated client, dispatch_event_id) key: a retry by the same Dispatcher returns the committed instance, and a different Dispatcher or dispatch_event_id never resolves to it"
+    "normative": "each new Dispatch reservation receives a unique approval_event_id, retained with the committed instance: a retry by the same Dispatcher recovers it, a different Dispatcher or dispatch_event_id never resolves to it, and a reservation created after the key's tombstone expires receives a new one"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Reference AS gap: approval_event_id is 'dsp_' + dispatch_event_id (kernel/template.ts), unique per dispatch_event_id but not keyed by the authenticated Dispatcher as the Dispatch reservation key requires; a second permitted Dispatcher reusing another's dispatch_event_id on the same template receives the first Dispatcher's instance. Not cited until that is fixed and a test proves distinct Dispatches create distinct Missions."
+   "notes": "Reference AS gaps: approval_event_id is 'dsp_' + dispatch_event_id (kernel/template.ts), a deterministic derivation that is neither keyed by the authenticated Dispatcher (a second permitted Dispatcher reusing another's dispatch_event_id on the same template receives the first Dispatcher's instance) nor fresh for a reservation created after the key's tombstone expires. Not cited until both are fixed and tests prove distinct Dispatches create distinct Missions."
   },
   {
    "id": "template.grant-type.agent-separate-from-presenter",
@@ -24874,7 +24874,7 @@
    "surface": "token-endpoint",
    "assertion": "replay",
    "observation": {
-    "normative": "a ceiling_drawdown successor's approval_event_id is derived one-to-one from the requesting client and the exchange's creation_request_id: a lost-response retry recovers the committed successor, and a distinct drawdown under the same ceiling consent creates its own successor"
+    "normative": "each new (client, creation_request_id) reservation for a ceiling_drawdown receives a unique approval_event_id, retained with the committed successor: a lost-response retry recovers it, and a distinct drawdown, or a reservation created after the key's tombstone expires, receives a new one"
    },
    "level": "endpoint",
    "coverage": "todo",
