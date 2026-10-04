@@ -455,9 +455,9 @@ resource owner or the owner's pre-registered policy. The issuance
 profile's rule that the proposing party never approves is the
 substrate's own geometry here. Second, both of the issuance
 profile's approval modes are native UMA modes: pre-registered owner
-policy at the authorization server is the authorized-policy approver
-deciding at machine speed, and `request_submitted` is the human
-Approver deciding asynchronously ({{approval}}).
+policy at the authorization server is a policy adjudication deciding
+at machine speed, and `request_submitted` is the human Approver
+deciding asynchronously ({{approval}}).
 
 UMA permits the requesting party and the resource owner to be the
 same natural person, and in the agent deployments this profile
@@ -608,9 +608,11 @@ substrate's ratified machinery, and that companion does not apply.
 
 **Pre-registered policy.** Where the resource owner's standing
 policy at the authorization server covers the proposal, that policy
-is the issuance profile's authorized-policy approver: the approval
-event records the policy identity and version as the Approver
-context, and the anchors commit as in the interactive case. A
+is the deciding mechanism, not the Approver: the approval event
+records the policy identity and version as that mechanism, the
+resource owner who registered it stays the accountable person
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Role Mapping"), and
+the anchors commit as in the interactive case. A
 deployment SHOULD reserve policy approval for Missions within bounds
 the owner has expressly pre-consented and route everything else to
 `request_submitted`.
