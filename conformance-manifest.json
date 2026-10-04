@@ -8734,7 +8734,7 @@
    "id": "mas.reference.strict-dictionary",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "mission-reference-field",
-   "text": "A receiver MUST reject as malformed, before map collapse: a duplicate `id` or `issuer` occurrence, a parameter on either member, an Inner List or any non-String value, and any member other than the two defined here",
+   "text": "A receiver MUST reject as malformed, before map collapse: a duplicate `id` or `issuer` occurrence, a parameter on either member, an Inner List or any non-String value, and any member outside the extension rule of {{reference-tuple}}",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -8952,7 +8952,7 @@
    "id": "mas.reference.mcp-duplicate-keys",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "mcp-reference",
-   "text": "The value object is closed the same way as the HTTP field: a receiver MUST reject duplicate JSON member names at parse time, a member other than `mission_id` and `issuer`, a non-string member value, and the propagation key appearing more than once in `_meta`",
+   "text": "The value object is closed the same way as the HTTP field: a receiver MUST reject duplicate JSON member names at parse time, a member outside the extension rule of {{reference-tuple}}, a non-string member value, and the propagation key appearing more than once in `_meta`",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {

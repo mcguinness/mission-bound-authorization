@@ -1206,6 +1206,14 @@ detectable rather than absorbed. Each carriage below maps this one
 tuple, and an additional carrier profiles it rather than defining a
 second.
 
+A profile MAY define an additional member by specification. Both
+carriages apply one extension rule: a receiver rejects any member that
+neither this document nor a profile the receiver implements defines.
+An extension member never carries state, integrity anchors, authority,
+or policy data; the reference remains a selection channel. The HTTP
+field names the identifier `id` and the MCP key names it `mission_id`;
+both map the same tuple.
+
 ## HTTP Carriage: Mission-Reference {#mission-reference-field}
 
 `Mission-Reference` is an HTTP request field {{RFC9110}} whose value
@@ -1239,10 +1247,8 @@ Mission-Reference: id="msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
   parse success alone is not sufficient. A receiver MUST reject as
   malformed, before map collapse: a duplicate `id` or `issuer`
   occurrence, a parameter on either member, an Inner List or any
-  non-String value, and any member other than the two defined here.
-  A profile the deployment adopts MAY define an additional member by
-  specification. A receiver MUST NOT act on a member it does not
-  implement.
+  non-String value, and any member outside the extension rule of
+  {{reference-tuple}}.
 - A sender MUST send exactly one field line. If the field lines do not
   combine into exactly one Dictionary satisfying every rule above, or
   if parsing fails, the reference is malformed.
@@ -1282,9 +1288,9 @@ the reference:
 The value carries exactly `mission_id` and `issuer`, with the tuple
 semantics of {{reference-tuple}} unchanged. The value object is
 closed the same way as the HTTP field: a receiver MUST reject
-duplicate JSON member names at parse time, a member other than
-`mission_id` and `issuer`, a non-string member value, and the
-propagation key appearing more than once in `_meta`. Unknown `_meta`
+duplicate JSON member names at parse time, a member outside the
+extension rule of {{reference-tuple}}, a non-string member value, and
+the propagation key appearing more than once in `_meta`. Unknown `_meta`
 keys are extensible metadata that an ordinary MCP server may ignore.
 A server that silently ignores this key is not a conforming Mission
 PEP.
