@@ -131,12 +131,12 @@ async function build(): Promise<{ server: McpPaymentsServer; connectors: Connect
   const connectors = new Connectors();
   const engine = new TransactionEngine("epoch-1");
   // @spec runtime#state-freshness: a synchronous live read, freshness-
-  // stamped at this read (Finding 1); "load_view" declared trusted below.
+  // stamped at this read (Finding 1), under the published `pep` placement.
   // Implements the canonical (issuer, id) tuple contract (@spec
   // authority-server#reference-tuple, #685 review).
   const loadView = (ref: { id: string; issuer: string }) =>
     ref.id === VIEW.id && ref.issuer === VIEW.issuer
-      ? { view: VIEW, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+      ? { view: VIEW, observation: { state: VIEW.state, version: VIEW.version, mode: "fresh", freshness_at: new Date().toISOString() } }
       : undefined;
   const pep = new Pep({
     decide: EVIDENCE_KEYS.decide,
@@ -146,7 +146,6 @@ async function build(): Promise<{ server: McpPaymentsServer; connectors: Connect
     modelId,
     loadView,
     instanceEpoch: "epoch-1",
-    allowedFreshnessSources: new Set(["load_view"]),
   });
   const server = new McpPaymentsServer({
     pep,

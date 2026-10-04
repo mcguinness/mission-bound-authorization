@@ -38,6 +38,7 @@ import {
   type TokenFacts,
 } from "../src/index.js";
 import { testAttempt } from "./execution-attempt.js";
+import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 
 // @spec runtime-evidence#decision-evidence-object (#741): one bundle per
 // test module. `signing`/`resolver` wire the PEP's store; `decide` is the
@@ -49,6 +50,7 @@ const TOKEN: TokenFacts = {
   clientId: "ap-agent",
   mission: { id: "msn_refusal", issuer: "https://as.test", authority_hash: "sha-256:refusalhash" },
   cnfJkt: "jkt-1",
+  credentialAuthority: ALL_ACTIONS_CREDENTIAL,
 };
 
 describe("Refusal Records are per-attempt, immutable, and append-only", () => {
@@ -84,10 +86,9 @@ describe("Refusal Records are per-attempt, immutable, and append-only", () => {
       modelId: "unused",
       loadView: (ref) =>
         ref.id === view.id && ref.issuer === view.issuer
-          ? { view: view as never, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+          ? ({ view, observation: { state: view.state, mode: "fresh", freshness_at: new Date().toISOString() } } as never)
           : undefined,
       instanceEpoch: "epoch-1",
-      allowedFreshnessSources: new Set(["load_view"]),
     });
 
     const first = await pep.enforce("schedule_payment", { invoice_id: "inv-missing" }, TOKEN);

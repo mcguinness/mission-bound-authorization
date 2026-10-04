@@ -19,11 +19,11 @@ async function build(mode: "co-resident" | "remote", override?: DecisionFn) {
     authority_set: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"], constraints: { vendors: ["acme"] }, capability_sources: [{ action: "payments:invoice.read", ...source.binding }] }],
   };
   const fga = { checkWithContext: async () => true } as unknown as Fga;
-  const loadView = () => ({ view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } });
-  const getOptions = vi.fn(() => ({ view, fga, modelId: "test", now: () => new Date(), stalenessBound, relationForAction, allowedFreshnessSources: new Set(["load_view"]) }));
+  const loadView = () => ({ view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } });
+  const getOptions = vi.fn(() => ({ view, fga, modelId: "test", now: () => new Date(), stalenessBound, relationForAction, stateSourcePlacement: "pep" as const }));
   const channel = await createDecisionChannel(point, { mode, pepId: "payments-pep", audience: CANONICAL_RESOURCE, getOptions });
   const observe = vi.fn();
-  const pep = new Pep({ payments, evidence, fga, modelId: "test", loadView, instanceEpoch: "epoch", decide: override ?? channel.decide, observe, allowedFreshnessSources: new Set(["load_view"]) });
+  const pep = new Pep({ payments, evidence, fga, modelId: "test", loadView, instanceEpoch: "epoch", decide: override ?? channel.decide, observe });
   const statement = loadRuntimePosture({ ...RUNTIME_POSTURE, remote_decision_channels: channel.remoteDecisionChannels });
   const server = new McpPaymentsServer({ pep, payments, loadView, issuer: view.issuer, jwks: { keys: [] }, enforcementScopeStatement: statement });
   const token: TokenFacts = { sub: "alice", clientId: "agent", cnfJkt: "jkt", mission: { id: view.id, issuer: view.issuer, authority_hash: view.authority_hash }, credentialAuthority: ALL_ACTIONS_CREDENTIAL };
@@ -63,9 +63,9 @@ describe("configured PDP unavailability (@spec runtime#ride-through, authzen#fai
     try {
       const request = {
         subject: { id: "alice" },
-        resource: { type: "invoice", id: "one", properties: { vendor_id: "acme" } },
+        resource: { type: "invoice", id: "one", properties: { audience: CANONICAL_RESOURCE, vendor_id: "acme" } },
         action: { name: "payments:invoice.read" },
-        context: { audience: CANONICAL_RESOURCE, mission: { id: x.view.id, issuer: x.view.issuer, authority_hash: x.view.authority_hash } },
+        context: { mission: { id: x.view.id, issuer: x.view.issuer, authority_hash: x.view.authority_hash } },
       } as EvaluationRequest;
       const submitted = canonicalDigest(JSON.parse(JSON.stringify(request)));
       const decision = await x.channel.decide(request, x.getOptions() as DecisionOptions);
@@ -198,8 +198,8 @@ describe("configured PDP unavailability (@spec runtime#ride-through, authzen#fai
       expect(stalenessBound("irreversible_action")).toEqual({ kind: "bounded", seconds: 30 });
       const started = Date.now();
       const decision = await channel.decide({
-        subject: { id: "alice" }, resource: { type: "invoice", id: "one" }, action: { name: "payments:payment.execute" },
-        context: { audience: CANONICAL_RESOURCE, mission: { id: "msn_remote", issuer: "https://as.test" }, action_class: "irreversible_action" },
+        subject: { id: "alice" }, resource: { type: "invoice", id: "one", properties: { audience: CANONICAL_RESOURCE } }, action: { name: "payments:payment.execute" },
+        context: { mission: { id: "msn_remote", issuer: "https://as.test" }, action_class: "irreversible_action" },
       });
       expect(Date.now() - started).toBeLessThan(5_000);
       expect(decision.decision).toBe(false);

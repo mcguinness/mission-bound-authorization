@@ -439,6 +439,10 @@ export {
   parseAuthoritySource,
   validateAuthoritySourceCatalog,
 } from "./kernel/authority-source.js";
+export type {
+  AuthoritySourceReconciliation,
+  HistoricalAuthoritySourceCatalog,
+} from "./kernel/source-binding-reconciliation.js";
 export type { AuthoritySource, AuthoritySourceType } from "./kernel/types.js";
 export {
   DeferralStore,

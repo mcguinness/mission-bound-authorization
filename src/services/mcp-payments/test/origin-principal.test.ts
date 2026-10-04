@@ -6,7 +6,7 @@
  * are populated ONLY from verified `TokenFacts` -- never from `args`, the
  * per-request tool arguments a client controls -- and the resolved dual-axis
  * result reaches the PDP through `PepDeps.principalMapping`/`.entitlement`,
- * the same forwarding idiom `allowedFreshnessSources` already uses. A stub
+ * the same forwarding idiom `stateSourcePlacement` already uses. A stub
  * `Fga` that always permits is used throughout: OpenFGA is not required for
  * any test in this file.
  */
@@ -57,7 +57,7 @@ const view: MissionView = {
  */
 const loadViewFor = (v: MissionView) => (ref: { id: string; issuer: string }) =>
   ref.id === v.id && ref.issuer === v.issuer
-    ? { view: v, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+    ? { view: v, observation: { state: v.state, version: v.version, mode: "fresh", freshness_at: new Date().toISOString() } }
     : undefined;
 
 function build(): { pep: Pep; envelopes: EvaluationRequest[] } {
@@ -70,7 +70,6 @@ function build(): { pep: Pep; envelopes: EvaluationRequest[] } {
     modelId: "unit-test-model",
     loadView: loadViewFor(view),
     instanceEpoch: "epoch-1",
-    allowedFreshnessSources: new Set(["load_view"]),
     observe: (e) => envelopes.push(e.envelope),
   });
   return { pep, envelopes };
@@ -151,7 +150,6 @@ describe("PEP AuthZEN envelope: origin principal and local-subject issuer (#539 
       modelId: "unit-test-model",
       loadView: loadViewFor(view),
       instanceEpoch: "epoch-1",
-      allowedFreshnessSources: new Set(["load_view"]),
       observe: (e) => envelopes.push(e.envelope),
       principalMapping: {
         resolve: async () => ({

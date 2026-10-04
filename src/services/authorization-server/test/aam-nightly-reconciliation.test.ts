@@ -357,14 +357,15 @@ function viewFor(missionId: string): MissionView {
 }
 
 // @spec runtime#state-freshness: a synchronous live read, freshness-stamped
-// at this read (Finding 1); "load_view" declared trusted at the Pep below.
+// at this read (Finding 1), supplied under the published `pep` placement.
 // Implements the canonical (issuer, id) tuple contract (@spec
 // authority-server#reference-tuple, #685 review): a same-id record under a
 // different issuer is a miss, not a match.
 const loadView = (ref: { id: string; issuer: string }) => {
   const r = as.kernel.get(ref.id);
   if (!r || r.issuer !== ref.issuer) return undefined;
-  return { view: viewFor(ref.id), freshness: { observed_at: new Date().toISOString(), source: "load_view" } };
+  const view = viewFor(ref.id);
+  return { view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } };
 };
 
 /** A raw PDP decision for one Mission action (the Task-Scoped Access Engine). */
@@ -374,11 +375,10 @@ const evalAction = async (missionId: string, action: string) => {
   return evaluate(
     {
       subject: { id: as.kernel.get(missionId)?.subject.sub ?? "unknown" },
-      resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
+      resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
       action: { name: action },
       context: {
         ...capabilityPresentationFor(action),
-        audience: RESOURCE,
         mission: { id: view.id, issuer: view.issuer, authority_hash: view.authority_hash },
         // The reconciliation ceiling/proposal entries bind a max_amount across
         // invoice.read and remittance.send alike (@spec runtime#input-parameters:
@@ -434,7 +434,6 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
       modelId,
       loadView,
       instanceEpoch: "aam-epoch",
-      allowedFreshnessSources: new Set(["load_view"]),
     });
 
     // The gate's own evidence store; the gate is built in step 4 (needs the mission id).

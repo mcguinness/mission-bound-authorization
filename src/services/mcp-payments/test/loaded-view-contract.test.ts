@@ -25,6 +25,7 @@ import {
   type TokenFacts,
 } from "../src/index.js";
 import { testAttempt } from "./execution-attempt.js";
+import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 
 // @spec runtime-evidence#decision-evidence-object (#741): one bundle per
 // test module. `signing`/`resolver` wire the PEP's store; `decide` is the
@@ -60,6 +61,7 @@ const WRONG_ISSUER_TOKEN: TokenFacts = {
   clientId: "some-other-client",
   mission: { id: SHARED_ID, issuer: WRONG_ISSUER, authority_hash: "sha-256:realhash" },
   cnfJkt: "jkt-mallory",
+  credentialAuthority: ALL_ACTIONS_CREDENTIAL,
 };
 
 /**
@@ -70,7 +72,7 @@ const WRONG_ISSUER_TOKEN: TokenFacts = {
  */
 const nonconformingLoadView = (ref: { id: string }) =>
   ref.id === REAL_VIEW.id
-    ? { view: REAL_VIEW, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+    ? { view: REAL_VIEW, observation: { state: REAL_VIEW.state, version: REAL_VIEW.version, mode: "fresh", freshness_at: new Date().toISOString() } }
     : undefined;
 
 function build(): { pep: Pep; server: McpPaymentsServer } {

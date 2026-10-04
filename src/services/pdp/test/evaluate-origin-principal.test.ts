@@ -58,17 +58,21 @@ const baseOpts = (extra: Partial<EvaluateOptions> = {}): EvaluateOptions => ({
   now: () => NOW,
   stalenessBound,
   relationForAction,
-  allowedFreshnessSources: new Set(["status"]),
+  stateSourcePlacement: "pep" as const,
   ...extra,
 });
 
+/** A `fresh` Mission state observation read at the decision instant. */
+const OBSERVED = { state: "active", mode: "fresh", freshness_at: NOW.toISOString() };
+
 const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => ({
   subject: { id: LOCAL.sub, properties: { iss: LOCAL.iss } },
-  resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } },
+  resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
   action: { name: "payments:invoice.read" },
   context: {
-    audience: RESOURCE,
     mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash", subject: ORIGIN },
+    // REQUIRED under the declared pep placement (#1049 owner ruling).
+    mission_state_observation: OBSERVED,
   },
   ...over,
 });
@@ -99,7 +103,7 @@ describe("evaluateInner cross-domain Origin Principal dual-axis (#539 stage A)",
     expect(deny.context.principal_mapping).toEqual(allow.context.principal_mapping);
   });
   it("a request NOT claiming the profile (no context.mission.subject) is completely unaffected: no resolvers configured, still permits", async () => {
-    const dec = await evaluate(req({ context: { audience: RESOURCE, mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" } } }), baseOpts());
+    const dec = await evaluate(req({ context: { mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" }, mission_state_observation: OBSERVED } }), baseOpts());
     expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
     expect(dec.context.principal_mapping).toBeUndefined();
   });
@@ -116,7 +120,7 @@ describe("evaluateInner cross-domain Origin Principal dual-axis (#539 stage A)",
     });
   });
 
-  it("profile claimed, no principalMapping/entitlement resolver configured at all: denies principal_mapping_failed (fail-closed-on-unconfigured, same idiom as allowedFreshnessSources)", async () => {
+  it("profile claimed, no principalMapping/entitlement resolver configured at all: denies principal_mapping_failed (fail-closed-on-unconfigured, same idiom as stateSourcePlacement)", async () => {
     const dec = await evaluate(req(), baseOpts());
     expect(dec.decision).toBe(false);
     expect(dec.context.denial_reason).toBe("principal_mapping_failed");

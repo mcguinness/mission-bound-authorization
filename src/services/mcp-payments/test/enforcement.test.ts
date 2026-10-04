@@ -83,13 +83,13 @@ let server: McpPaymentsServer;
 
 /**
  * @spec runtime#state-freshness: a synchronous live read, freshness-stamped
- * at this read (Finding 1); "load_view" declared trusted below. Implements
+ * at this read (Finding 1), under the published `pep` placement. Implements
  * the canonical (issuer, id) tuple contract (@spec
  * authority-server#reference-tuple, #685 review).
  */
 const loadViewFor = (v: MissionView) => (ref: { id: string; issuer: string }) =>
   ref.id === v.id && ref.issuer === v.issuer
-    ? { view: v, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+    ? { view: v, observation: { state: v.state, version: v.version, mode: "fresh", freshness_at: new Date().toISOString() } }
     : undefined;
 
 d("M4 core enforcement tier", () => {
@@ -121,7 +121,6 @@ d("M4 core enforcement tier", () => {
       modelId,
       loadView: loadViewFor(VIEW),
       instanceEpoch: "epoch-1",
-      allowedFreshnessSources: new Set(["load_view"]),
     });
     server = new McpPaymentsServer({
       pep,
@@ -301,7 +300,6 @@ d("M4 core enforcement tier", () => {
       modelId,
       loadView: loadViewFor(containedView),
       instanceEpoch: "epoch-1",
-      allowedFreshnessSources: new Set(["load_view"]),
     });
     const containedServer = new McpPaymentsServer({
       pep,

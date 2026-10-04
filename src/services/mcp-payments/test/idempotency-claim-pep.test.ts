@@ -103,7 +103,7 @@ async function harness(o: HarnessOptions = {}) {
   );
   const loadView = (ref: { id: string; issuer: string }) =>
     ref.id === "msn_917" && ref.issuer === "https://as.test"
-      ? { view: view(), freshness: { observed_at: now().toISOString(), source: "load_view" } }
+      ? { view: view(), observation: { state: view().state, version: view().version, mode: "fresh", freshness_at: now().toISOString() } }
       : undefined;
 
   // The PDP side: its own claim domain on its own file, verifying settlement
@@ -137,7 +137,7 @@ async function harness(o: HarnessOptions = {}) {
       now,
       stalenessBound,
       relationForAction,
-      allowedFreshnessSources: new Set(["load_view"]),
+      stateSourcePlacement: "pep" as const,
     }),
   });
   const settlements: unknown[] = [];
@@ -168,7 +168,6 @@ async function harness(o: HarnessOptions = {}) {
     modelId: "model-917",
     loadView,
     instanceEpoch: "epoch-917",
-    allowedFreshnessSources: new Set(["load_view"]),
     now,
   });
   const server = new McpPaymentsServer({

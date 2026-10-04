@@ -139,7 +139,7 @@ function harness(o: { file?: string; statement?: RuntimePosture } = {}) {
   const views: Record<string, MissionView> = { msn_918a: viewFor("msn_918a"), msn_918b: viewFor("msn_918b") };
   const loadView = (ref: { id: string; issuer: string }) => {
     const view = ref.issuer === ISSUER ? views[ref.id] : undefined;
-    return view ? { view, freshness: { observed_at: now().toISOString(), source: "load_view" } } : undefined;
+    return view ? { view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: now().toISOString() } } : undefined;
   };
   const evidence = new HeldEvidenceStore(KEYS.signing, KEYS.resolver);
   const connectors = new Connectors(now);
@@ -163,7 +163,6 @@ function harness(o: { file?: string; statement?: RuntimePosture } = {}) {
     modelId: "model-918",
     loadView,
     instanceEpoch: "epoch-918",
-    allowedFreshnessSources: new Set(["load_view"]),
     now,
   });
   const server = new McpPaymentsServer({

@@ -87,7 +87,7 @@ function buildServer(missionView: MissionView, fga: Fga) {
   const evidence = new EvidenceStore(keys.signing, keys.resolver);
   const loadView = (ref: { id: string; issuer: string }) =>
     ref.id === missionView.id && ref.issuer === missionView.issuer
-      ? { view: missionView, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+      ? { view: missionView, observation: { state: missionView.state, version: missionView.version, mode: "fresh", freshness_at: new Date().toISOString() } }
       : undefined;
   const pep = new Pep({
     payments,
@@ -97,7 +97,6 @@ function buildServer(missionView: MissionView, fga: Fga) {
     modelId: "unit-test-model",
     loadView,
     instanceEpoch: "epoch-1",
-    allowedFreshnessSources: new Set(["load_view"]),
   });
   const server = new McpPaymentsServer({
     pep,
@@ -123,7 +122,7 @@ describe("a permit and a denial through the real PEP/PDP call sites produce a ge
     const missionView = view(["payments:invoice.read"]);
     const loadView = (ref: { id: string; issuer: string }) =>
       ref.id === missionView.id && ref.issuer === missionView.issuer
-        ? { view: missionView, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+        ? { view: missionView, observation: { state: missionView.state, version: missionView.version, mode: "fresh", freshness_at: new Date().toISOString() } }
         : undefined;
     const pep = new Pep({
       payments,
@@ -133,7 +132,6 @@ describe("a permit and a denial through the real PEP/PDP call sites produce a ge
       modelId: "unit-test-model",
       loadView,
       instanceEpoch: "epoch-1",
-      allowedFreshnessSources: new Set(["load_view"]),
     });
     const server = new McpPaymentsServer({
       pep,
@@ -176,7 +174,7 @@ describe("a permit and a denial through the real PEP/PDP call sites produce a ge
     const missionView = view([]); // no authority entries at all
     const loadView = (ref: { id: string; issuer: string }) =>
       ref.id === missionView.id && ref.issuer === missionView.issuer
-        ? { view: missionView, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+        ? { view: missionView, observation: { state: missionView.state, version: missionView.version, mode: "fresh", freshness_at: new Date().toISOString() } }
         : undefined;
     const pep = new Pep({
       payments,
@@ -186,7 +184,6 @@ describe("a permit and a denial through the real PEP/PDP call sites produce a ge
       modelId: "unit-test-model",
       loadView,
       instanceEpoch: "epoch-1",
-      allowedFreshnessSources: new Set(["load_view"]),
     });
     const server = new McpPaymentsServer({
       pep,
@@ -246,7 +243,7 @@ describe("buildEvidenceKeyResolver: emitter + audience binding (#739 review poin
     const missionView = view(["payments:invoice.read"]);
     const loadView = (ref: { id: string; issuer: string }) =>
       ref.id === missionView.id && ref.issuer === missionView.issuer
-        ? { view: missionView, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+        ? { view: missionView, observation: { state: missionView.state, version: missionView.version, mode: "fresh", freshness_at: new Date().toISOString() } }
         : undefined;
     const pep = new Pep({
       payments,
@@ -256,7 +253,6 @@ describe("buildEvidenceKeyResolver: emitter + audience binding (#739 review poin
       modelId: "unit-test-model",
       loadView,
       instanceEpoch: "epoch-1",
-      allowedFreshnessSources: new Set(["load_view"]),
     });
     const server = new McpPaymentsServer({
       pep,

@@ -93,13 +93,13 @@ let leafTools: AATTools;
 
 /**
  * @spec runtime#state-freshness: a synchronous live read, freshness-stamped
- * at this read (Finding 1); `allowedFreshnessSources` below declares
- * "load_view" as trusted. Implements the canonical (issuer, id) tuple
+ * at this read (Finding 1), supplied as `context.mission_state_observation`
+ * under the published `pep` placement. Implements the canonical (issuer, id) tuple
  * contract (@spec authority-server#reference-tuple, #685 review).
  */
 const loadView = (ref: { id: string; issuer: string }) =>
   ref.id === view.id && ref.issuer === view.issuer
-    ? { view, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+    ? { view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } }
     : undefined;
 
 /** RFC 9449 Section 4.2: `ath` is the base64url SHA-256 of the access token presented. */
@@ -199,7 +199,6 @@ beforeAll(async () => {
       modelId: "m",
       loadView,
       instanceEpoch: "epoch-1",
-      allowedFreshnessSources: new Set(["load_view"]),
     }),
     payments: new PaymentsStore(),
     loadView,
@@ -255,7 +254,6 @@ describe("attenuation chain: verify + leaf enforcement", () => {
       modelId: "m",
       loadView,
       instanceEpoch: "epoch-1",
-      allowedFreshnessSources: new Set(["load_view"]),
     });
     const res = await pep.enforce("schedule_payment", { invoice_id: "inv-1" }, facts);
     expect(res.permitted).toBe(false);
@@ -385,7 +383,6 @@ d("attenuation chain: PEP permits an in-leaf action (OpenFGA)", () => {
       modelId,
       loadView,
       instanceEpoch: "epoch-1",
-      allowedFreshnessSources: new Set(["load_view"]),
     });
     const res = await pep.enforce("get_invoice", { invoice_id: "inv-1" }, facts);
     expect(res.permitted, JSON.stringify(res)).toBe(true);

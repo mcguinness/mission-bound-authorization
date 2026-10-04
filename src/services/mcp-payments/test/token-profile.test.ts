@@ -118,7 +118,7 @@ function pepRecording(extra: { requiresActionApproval?: (action: string, actionC
     modelId: "m",
     loadView: (ref) =>
       ref.id === VIEW.id && ref.issuer === VIEW.issuer
-        ? { view: VIEW, freshness: { observed_at: new Date().toISOString(), source: "load_view" } }
+        ? { view: VIEW, observation: { state: VIEW.state, version: VIEW.version, mode: "fresh", freshness_at: new Date().toISOString() } }
         : undefined,
     instanceEpoch: "epoch-825",
     allowedFreshnessSources: new Set(["load_view"]),

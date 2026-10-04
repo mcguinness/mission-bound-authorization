@@ -3,6 +3,7 @@ import { canonicalDigest } from "@mission/core";
 import type { Fga } from "@mission/pdp";
 import { CANONICAL_RESOURCE, createEphemeralEvidenceKeys, EvidenceStore, PaymentsStore, Pep, type PepDeps, type TokenFacts } from "../src/index.js";
 import { TOOLS } from "../src/server.js";
+import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 
 function build() {
   const keys = createEphemeralEvidenceKeys();
@@ -11,11 +12,11 @@ function build() {
     evidence, payments: new PaymentsStore(), decide: keys.decide,
     fga: { checkWithContext: async () => true } as unknown as Fga,
     modelId: "test", loadView: () => undefined, instanceEpoch: "test-759",
-    allowedFreshnessSources: new Set(["load_view"]), requiresActionApproval: () => false, observe: () => {},
+    requiresActionApproval: () => false, observe: () => {},
   };
   return { pep: new Pep(deps), evidence };
 }
-const token: TokenFacts = { sub: "alice", clientId: "ap-agent", cnfJkt: "agent-jkt", mission: { id: "claimed-mission", issuer: "https://issuer.test" } };
+const token: TokenFacts = { sub: "alice", clientId: "ap-agent", cnfJkt: "agent-jkt", mission: { id: "claimed-mission", issuer: "https://issuer.test" }, credentialAuthority: ALL_ACTIONS_CREDENTIAL };
 
 describe("approval resolution is outside the mediated tool boundary (#759)", () => {
   it("approval-resolution tool names refuse unknown_tool and retain one PEP Refusal Record", async () => {
