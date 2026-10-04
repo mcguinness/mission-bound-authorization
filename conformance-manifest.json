@@ -115,8 +115,8 @@
     "content_sha256": "78fa453b80921a5898aa47c2453be8c86cf81d74a5a5a87e95ed0c2a4a06637e"
    },
    "draft-mcguinness-mission-aauth-management.md": {
-    "revision": "87a20d1a36476bf802b67e5de63d8a2b47f3f647",
-    "content_sha256": "97bee1a45e1e489de11bef53e3ca8d2756165bdb55374b16f7144f3c5e27b2bc"
+    "revision": "0d59405c4b5a2c3fbd1b021b2f914b0701c8e8a7",
+    "content_sha256": "2a7df9ec7e7679bd56ec77e7d1bcbe457ae738fef4bbc1501b3195ab86a93386"
    }
   }
  },
@@ -28832,7 +28832,7 @@
    "surface": "lifecycle-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "after termination, the PS sends a signed revocation for each live Person Token to the Resource in its aud and to each AS it presented the token to"
+    "normative": "when the PS attempts to revoke a Person Token, its requests go to the Resource in the token's aud and to each AS it presented the token to, and to no other party; whether the PS attempts revocation at all is the SHOULD of aauth-management.revocation.attempt-after-termination"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -28859,6 +28859,132 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#834 half 1 specification slice. Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.tracking.retain-credentials",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "tracking",
+   "text": "For each Person Token it issues under a mission, and each Auth Token it issues or provides under one, a conforming PS MUST retain:",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the PS's revocation and residual accounting for a terminated mission covers every Person Token and Auth Token issued under it, each keyed by (iss, jti) with its aud and exp, and reaches each AS a Person Token was presented to and the presented or upstream token a federated or chained credential derives from"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice (#1077 review). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.retention.terminal-state-through-credential-validity",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "logging",
+   "text": "The PS MUST retain the terminal state and its reason for at least as long as any Tracked Credential could remain valid, plus the deployment's audit and dispute period.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "status for a terminated mission keeps reporting terminated with its original reason for as long as any of its Person Tokens or Auth Tokens could remain valid"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice (#1077 review). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.residuals.document-lifetimes",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "residuals",
+   "text": "Deployment documentation MUST state which AAuth access modes are covered, the maximum configured Person Token and Auth Token lifetimes, whether Resources implement revocation, retry policy, and the worst-case residual expected under partition.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the deployment documentation states the covered access modes, the maximum Person Token and Auth Token lifetimes, whether Resources implement revocation, the retry policy, and the worst-case residual under partition"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice (#1077 review). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.revocation.attempt-after-termination",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "revocation-attempts",
+   "text": "After termination, the PS SHOULD revoke every unexpired Tracked Credential, as Section 11.12.4 of {{I-D.draft-hardt-oauth-aauth-protocol}} recommends when a PS revokes a mission.",
+   "role": "Controller",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after termination, the PS attempts revocation of each unexpired Person Token and Auth Token it tracks for the mission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice (#1077 review). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.conformance.publish-retention-and-lifetimes",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "conformance",
+   "text": "A deployment claiming conformance MUST publish or otherwise make available its caller-role authorization policy, Tracked Credential retention period, supported access-mode coverage, maximum token lifetime, revocation retry policy, expiry clock policy if used, and worst-case residual behavior.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a deployment claiming conformance makes available its caller-role authorization policy, Tracked Credential retention period, access-mode coverage, maximum token lifetime, revocation retry policy, expiry clock policy if used, and worst-case residual behavior"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice (#1077 review). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.residuals.short-lifetimes",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "residuals",
+   "text": "Risky deployments SHOULD use short Person Token and Auth Token lifetimes and action-time Resource checks in addition to PS gating.",
+   "role": "Controller",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a risky deployment configures short Person Token and Auth Token lifetimes and action-time Resource checks in addition to PS gating"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice (#1077 review). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
   }
  ]
 }
