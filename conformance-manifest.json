@@ -55,16 +55,16 @@
     "content_sha256": "14a4a413a5b087f8ca471accdf042bbe87e929abe6908d4986a75accfad46cb8"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "30113da8793707597d5d5ced96eb838d881a29e6",
-    "content_sha256": "e7f66a5cb2708e6f6192888c4a98afd24baab76b1b77f8171f12ac2620858b55"
+    "revision": "94f778aa73a09dba70239f5d1a9b51a45e63d8b3",
+    "content_sha256": "8458bf88e169f9ac3376235372abb2b83822c4dca6930229d365659a244d68bc"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "091f1ffd5e6b77d47f8f189797bfdb0cf64ea328",
     "content_sha256": "76ae8710dc0faf41220e947e05a4dc4a79440c0039746089a4b24e486c1d06de"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "f175eba2a7c978611db6ea8ba9413fa82655eb3b",
-    "content_sha256": "2b486543f5bf301ee29c6c8bc12493448324dbdd8f92ac23d3c665d6da11e0e9"
+    "revision": "73859449fc9ff36044486ade4d96ddb2e7e791a1",
+    "content_sha256": "190d771a34f77a914917df260768ec4f3328ed2724b84237167ff8598b8e2997"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
@@ -75,8 +75,8 @@
     "content_sha256": "055d460354f9c98d981f74ce661daa606685695bedd42d04a31981158f8389d7"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "7bb182b0caae732be5813431f4c5ad6406eafaf7",
-    "content_sha256": "b58add3277fa19af45e37df3b380e66fd833392ca7efda1170f656132cb48fb6"
+    "revision": "94f778aa73a09dba70239f5d1a9b51a45e63d8b3",
+    "content_sha256": "1a7f39800c9d34cd05efdd4bbdf8775dd2be4726b37d38bc85db06d61e30bca7"
    },
    "draft-mcguinness-mission-orchestration.md": {
     "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
@@ -99,8 +99,8 @@
     "content_sha256": "41d16c43d4e29769a790ea33393bfc300f8b96875a99c614d6039c689cc3fadb"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "4b1ac7e9be5fb4097bcc8b50ddb173ea34aeb85e",
-    "content_sha256": "77a833399499f8151e64e14656ceb6ddc13e573af4f7d9499a489492d4f68b04"
+    "revision": "c974571e77358f75177fa9abdf74c88253e9bf4c",
+    "content_sha256": "19db44056201dce495dbcc984f4d661af641a1f625f0e0dc074d2c22916dda3b"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "02c1fcf62e9f4fd3aad0df84d6ccabd6ebd7ce0d",
@@ -3233,6 +3233,31 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#985 (D219). No implementation witness: the reference registry holds the current snapshot per policy id, not the history an audit horizon needs once a policy is edited."
+  },
+  {
+   "id": "core.standing-consent.activation-event-id",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "standing-consent-bases",
+   "text": "That value identifies the activation event, never the standing approval",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "for an instance activated under a standing-consent basis, the record's approval_event_id identifies that activation: a retried activation returns the committed Mission, and two distinct activations under one standing consent create two Missions"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Reference AS: Template sets approval_event_id to 'dsp_' + dispatch_event_id (kernel/template.ts) and Child Delegation sets it to the minted activation_event_id (kernel/child-delegation.ts); Progressive ceiling_drawdown is not implemented. No test yet asserts that two distinct activations under one standing consent create two Missions."
   },
   {
    "id": "core.approval-basis.adjudication-governance-record-override",
@@ -24835,6 +24860,28 @@
    "notes": "A selection that changes between attempts needs a reconfigured Dispatch Policy, which only the unit test can stage; the endpoint test shows the retry returning the committed Agent under a fixed policy."
   },
   {
+   "id": "template.dispatch.approval-event-id-per-dispatch",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch",
+   "text": "`approval_event_id` identifies this Dispatch, never the template's approval",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "each new Dispatch reservation receives a unique approval_event_id, retained with the committed instance: a retry by the same Dispatcher recovers it, a different Dispatcher or dispatch_event_id never resolves to it, and a reservation created after the key's tombstone expires receives a new one"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Reference AS gaps: approval_event_id is 'dsp_' + dispatch_event_id (kernel/template.ts), a deterministic derivation that is neither keyed by the authenticated Dispatcher (a second permitted Dispatcher reusing another's dispatch_event_id on the same template receives the first Dispatcher's instance) nor fresh for a reservation created after the key's tombstone expires. Not cited until both are fixed and tests prove distinct Dispatches create distinct Missions."
+  },
+  {
    "id": "template.grant-type.agent-separate-from-presenter",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "grant-type",
@@ -25083,6 +25130,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#998 option (a), endorsed by owner review 2026-10-02. No Progressive implementation yet."
+  },
+  {
+   "id": "progressive.in-ceiling.approval-event-id-per-drawdown",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "in-ceiling-expansion",
+   "text": "Its record's `approval_event_id` identifies this drawdown, never the ceiling consent",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "each new (client, creation_request_id) reservation for a ceiling_drawdown receives a unique approval_event_id, retained with the committed successor: a lost-response retry recovers it, and a distinct drawdown, or a reservation created after the key's tombstone expires, receives a new one"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Not implemented: the reference AS has no ceiling_drawdown activation."
   },
   {
    "id": "cross-domain.delegation-depth.composed-bound-disclosure",
@@ -27657,6 +27726,27 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#987 (D219 ruling). No implementation witness: the reference consent rendering shows no child-delegation figures yet."
+  },
+  {
+   "id": "child-delegation.record.policy-drawdown-approval-event-id",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "record-requirements",
+   "text": "In both forms the record's `approval_event_id` is that `activation_event_id`, never the Parent Mission's approval event",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a child created under policy_drawdown records approval_event_id equal to its activation_event_id, never the Parent Mission's approval_event_id"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Reference AS sets the record's approval_event_id equal to the minted activation_event_id (kernel/child-delegation.ts); no test asserts the equality yet."
   },
   {
    "id": "child-delegation.carryover.expansion-disclosure",
