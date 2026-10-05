@@ -1977,7 +1977,7 @@ required) and a <code>value</code> (string, required).<a href="#section-4.1-1.56
 <a href="#evidence-extensions" class="auto internal xref">Section 8</a> for the extension rule and the coordinated
 extension members a deployment following the AuthZEN profile
 commonly carries (<code>taint</code>, <code>mission_history</code>, <code>capability_source</code>,
-<code>hop_reference</code>).<a href="#section-4.1-2" class="pilcrow">¶</a></p>
+<code>hop_reference</code>, <code>principal_mapping</code>, <code>join_view_id</code>).<a href="#section-4.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="pre-decision-refusal">
@@ -3623,6 +3623,19 @@ Execution Evidence joins the mapping through <code>evaluation_id</code> rather
 than carrying the object again. Registered and owned by the
 cross-domain profile.<a href="#section-8-3.10.1" class="pilcrow">¶</a></p>
 </dd>
+        <dd class="break"></dd>
+<dt id="section-8-3.11">
+<code>join_view_id</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-8-3.12">
+          <p id="section-8-3.12.1"><span class="bcp14">OPTIONAL</span>. A string, recorded at the top level of Decision Evidence:
+the joined-view commitment of a decision reached over a successful
+Mission Join. <span class="bcp14">REQUIRED</span> on the Decision Evidence of every decision
+reached over a successful join, including one that policy then
+denies, and absent for a failed join and for a direct Mission-bound
+decision. Registered and owned by the Mission Authority Server
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>), which defines
+what the commitment distinguishes.<a href="#section-8-3.12.1" class="pilcrow">¶</a></p>
+</dd>
       <dd class="break"></dd>
 </dl>
 </section>
@@ -4501,20 +4514,27 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Decision Evidence's <code>mission.policy_view_id</code> is <span class="bcp14">REQUIRED</span> where the
+          <p id="appendix-A-2.1.1"><code>join_view_id</code> is a coordinated Decision Evidence extension member,
+registered and owned by the Mission Authority Server: the
+joined-view commitment of a decision reached over a successful
+Mission Join (#972 item 27a). The list of commonly carried
+coordinated members also names <code>principal_mapping</code>.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">Decision Evidence's <code>mission.policy_view_id</code> is <span class="bcp14">REQUIRED</span> where the
 PDP evaluates through a materialized policy view; a PDP that
 evaluates the Mission's recorded authority directly omits it and
 records <code>authority_hash</code> and the new <code>pdp_policy_version</code>, following
 the runtime profile's two evaluation paths; the Mission Receipt's
-<code>policy</code> object projects <code>pdp_policy_version</code> likewise.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+<code>policy</code> object projects <code>pdp_policy_version</code> likewise.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1"><code>evaluation_request_digest</code> covers the evaluation request as the
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1"><code>evaluation_request_digest</code> covers the evaluation request as the
 decision-API profile defines it or, for a Refusal Record emitted
 before any request, a defined pre-request input; the Refusal Record
 member <code>request_digest_input</code> names which. The digest is no longer
 described as privacy-preserving: it commits to its input and does
-not hide an input a party can guess (#971).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+not hide an input a party can guess (#971).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

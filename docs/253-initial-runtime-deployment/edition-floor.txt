@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-05T17:10:27Z
-Source repository commit: c9113951b5523c5711170dabc47e0cbca1d2fb8a
+Generated: 2026-10-05T21:20:02Z
+Source repository commit: d2b8009e693db06f9f87572f4dee24f5a3f54d44
 Member count: 7
 
 Reading order:
@@ -14260,6 +14260,7 @@ Table of Contents
    3.  Mission Status Operation
      3.1.  Request
      3.2.  Authentication
+       3.2.1.  Authentication Failures
      3.3.  Worked Request Example
      3.4.  Response
      3.5.  Caching
@@ -14507,15 +14508,16 @@ Table of Contents
 
    Plain Basic or POST client authentication MUST NOT be used for this
    endpoint.  The AS MUST refuse a request not authenticated by one of
-   the three mechanisms with unauthorized (HTTP 401).  The mechanism is
-   determined by wire evidence in order: a request presenting an access
-   token in Authorization is mechanism 2, and any client certificate is
-   then evaluated only as that token's mTLS sender constraint; otherwise
-   a request presenting client_assertion is mechanism 3, and any client
-   certificate is not treated as client authentication; otherwise a
-   request presenting only a client certificate is mechanism 1.  This
-   order keeps "exactly one mechanism" satisfiable when mTLS terminates
-   at the edge.
+   the three mechanisms, with the outcome Section 3.2.1 assigns:
+   unauthorized (HTTP 401) or invalid_client (HTTP 400).  The mechanism
+   is determined by wire evidence in order: a request presenting an
+   access token in Authorization is mechanism 2, and any client
+   certificate is then evaluated only as that token's mTLS sender
+   constraint; otherwise a request presenting client_assertion is
+   mechanism 3, and any client certificate is not treated as client
+   authentication; otherwise a request presenting only a client
+   certificate is mechanism 1.  This order keeps "exactly one mechanism"
+   satisfiable when mTLS terminates at the edge.
 
    An authenticated caller MUST additionally carry an explicit read
    authorization: a mission_status scope on the presented access token,
@@ -14561,6 +14563,36 @@ Table of Contents
    endpoint (Section 8), not read from the token endpoint's
    token_endpoint_auth_methods_supported [RFC8414].  Both paths are
    therefore discoverable.
+
+3.2.1.  Authentication Failures
+
+   A request that fails authentication receives the outcome for the
+   credential it presented:
+
+   *  A request whose presented access token fails authentication
+      receives HTTP 401 unauthorized with a WWW-Authenticate challenge
+      in the scheme it used: Bearer with the error attributes of
+      Section 3 of [RFC6750], or DPoP under Section 7.1 of [RFC9449],
+      including its algs parameter and error codes.
+
+   *  A request whose mTLS or private-key-JWT client authentication
+      fails at the HTTP layer receives HTTP 400 with the invalid_client
+      error code, as Section 5.2 of [RFC6749] answers a failed client
+      authentication carried outside the Authorization header.  It
+      carries no WWW-Authenticate challenge and is not reported as an
+      access-token failure.  A client certificate rejected during the
+      TLS handshake fails at the TLS layer, before any HTTP response.
+
+   *  A request that presented no credential receives, where the
+      endpoint accepts an access-token scheme, HTTP 401 unauthorized
+      with one challenge for each access-token scheme the endpoint
+      accepts and no error attribute (Section 3.1 of [RFC6750]); where
+      it accepts none, it receives HTTP 400 invalid_client.
+
+   Every challenge carries the resource_metadata parameter naming the
+   endpoint's Protected Resource Metadata (Section 5.1 of [RFC9728]).
+   An authenticated caller not authorized for the referenced Mission
+   receives not_found (404) with no challenge (Section 3.6).
 
 3.3.  Worked Request Example
 
@@ -14879,7 +14911,17 @@ Table of Contents
    |                 |      | request that is not byte-identical to   |
    |                 |      | the original (Section 5.7).             |
    +-----------------+------+-----------------------------------------+
-   | unauthorized    | 401  | Request not authenticated.              |
+   | invalid_client  | 400  | Direct client authentication (mTLS or   |
+   |                 |      | private-key JWT) failed, or no          |
+   |                 |      | credential was presented where no       |
+   |                 |      | access-token scheme is accepted         |
+   |                 |      | (Section 3.2.1).                        |
+   +-----------------+------+-----------------------------------------+
+   | unauthorized    | 401  | Access-token authentication failed, or  |
+   |                 |      | no credential was presented where an    |
+   |                 |      | access-token scheme is accepted; the    |
+   |                 |      | response carries the challenges of      |
+   |                 |      | Section 3.2.1.                          |
    +-----------------+------+-----------------------------------------+
    | not_found       | 404  | Reference does not exist OR is not      |
    |                 |      | visible.                                |
@@ -14897,12 +14939,13 @@ Table of Contents
 
                                  Table 2
 
-   Note the distinction between the two access failures: unauthorized
-   (401) means the request carried no valid authentication, whereas a
-   request that is authenticated but not authorized for the referenced
-   Mission returns not_found (404), never 401, so that an unauthorized
-   reference is indistinguishable from an unknown one (Section 3.6).
-   The error body is:
+   Note the distinction between the access failures: unauthorized (401)
+   and invalid_client (400) mean the request carried no valid
+   authentication, whereas a request that is authenticated but not
+   authorized for the referenced Mission returns not_found (404), never
+   an authentication failure, so that an unauthorized reference is
+   indistinguishable from an unknown one (Section 3.6).  The error body
+   is:
 
    HTTP/1.1 404 Not Found
    Content-Type: application/json
@@ -15281,7 +15324,7 @@ Table of Contents
    mission_lifecycle_endpoint_auth_methods_supported and, for
    private_key_jwt, the accepted client-assertion algorithms in
    mission_lifecycle_endpoint_auth_signing_alg_values_supported
-   (Section 8).
+   (Section 8).  Its authentication failures follow Section 3.2.1.
 
    For the sender-constrained access-token path, this endpoint is an
    OAuth protected resource exactly as the Mission Status endpoint is:
@@ -16044,6 +16087,15 @@ Normative References
               Timestamps", RFC 3339, DOI 10.17487/RFC3339, July 2002,
               <https://www.rfc-editor.org/rfc/rfc3339>.
 
+   [RFC6749]  Hardt, D., Ed., "The OAuth 2.0 Authorization Framework",
+              RFC 6749, DOI 10.17487/RFC6749, October 2012,
+              <https://www.rfc-editor.org/rfc/rfc6749>.
+
+   [RFC6750]  Jones, M. and D. Hardt, "The OAuth 2.0 Authorization
+              Framework: Bearer Token Usage", RFC 6750,
+              DOI 10.17487/RFC6750, October 2012,
+              <https://www.rfc-editor.org/rfc/rfc6750>.
+
    [RFC6838]  Freed, N., Klensin, J., and T. Hansen, "Media Type
               Specifications and Registration Procedures", BCP 13,
               RFC 6838, DOI 10.17487/RFC6838, January 2013,
@@ -16227,6 +16279,14 @@ Informative References
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Authentication failures at the Status and Lifecycle endpoints: a
+      failed access token gets a 401 WWW-Authenticate challenge in its
+      scheme (Bearer or DPoP); a request with no credential gets a
+      challenge for each accepted access-token scheme, always with
+      resource_metadata; failed mTLS or private-key-JWT client
+      authentication, or no credential where no access-token scheme is
+      accepted, gets 400 invalid_client (#972 item 18).
 
    *  A derivation refused because the Mission is suspended or completed
       carries the mission_error value mission_suspended or
@@ -21411,7 +21471,8 @@ Table of Contents
    A Decision Evidence Object is closed to uncoordinated extension; see
    Section 8 for the extension rule and the coordinated extension
    members a deployment following the AuthZEN profile commonly carries
-   (taint, mission_history, capability_source, hop_reference).
+   (taint, mission_history, capability_source, hop_reference,
+   principal_mapping, join_view_id).
 
 4.2.  Refusal Record
 
@@ -22760,6 +22821,16 @@ Table of Contents
       joins the mapping through evaluation_id rather than carrying the
       object again.  Registered and owned by the cross-domain profile.
 
+   join_view_id:  OPTIONAL.  A string, recorded at the top level of
+      Decision Evidence: the joined-view commitment of a decision
+      reached over a successful Mission Join.  REQUIRED on the Decision
+      Evidence of every decision reached over a successful join,
+      including one that policy then denies, and absent for a failed
+      join and for a direct Mission-bound decision.  Registered and
+      owned by the Mission Authority Server
+      ([I-D.draft-mcguinness-mission-authority-server]), which defines
+      what the commitment distinguishes.
+
 9.  Conformance
 
    This document defines conformance for four roles: a PRODUCER that
@@ -23409,6 +23480,12 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  join_view_id is a coordinated Decision Evidence extension member,
+      registered and owned by the Mission Authority Server: the joined-
+      view commitment of a decision reached over a successful Mission
+      Join (#972 item 27a).  The list of commonly carried coordinated
+      members also names principal_mapping.
 
    *  Decision Evidence's mission.policy_view_id is REQUIRED where the
       PDP evaluates through a materialized policy view; a PDP that
