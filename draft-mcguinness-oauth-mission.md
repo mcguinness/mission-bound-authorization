@@ -1430,10 +1430,20 @@ mapping is specified in
 
 # Mission Approval {#approval-event}
 
-The approval event is the atomic transition at which the Approver
-consents and the AS creates the Mission. It runs as an OAuth 2.0
-{{RFC6749}} authorization-code flow initiated from the PAR-issued
-`request_uri` ({{submission-via-par}}). Because the authorization code
+The approval event is the atomic, adjudicated transition that creates
+a Mission under its approval basis (`approval_basis`,
+{{mission-record}}). Every Mission is created at its own approval
+event, which the record's `approval_event_id` identifies. A `direct`
+approval event includes the Approver's contemporaneous consent: it is
+a human approval event. Under a standing-consent basis
+({{standing-consent-bases}}), the instance is decided under an
+accountable human's earlier approval, with no fresh human approval.
+The approval basis and its adjudication semantics, not the event
+alone, establish whether a human decided at that instant.
+
+The direct realization runs as an OAuth 2.0 {{RFC6749}}
+authorization-code flow initiated from the PAR-issued `request_uri`
+({{submission-via-par}}). Because the authorization code
 is the artifact the Mission grant binds to ({{grant-binding}}) and it
 passes through the front channel, the AS MUST bind the code to the
 requesting client with PKCE ({{RFC7636}}, `S256` challenge method)
@@ -1446,7 +1456,7 @@ The AS SHOULD include the `iss` authorization-response parameter
 ({{RFC9207}}) on the authorization response, so the client can detect
 a mix-up attack on the consent-bearing redirect leg ({{RFC9700}}).
 
-At the approval event the AS MUST, in order:
+At a direct approval event the AS MUST, in order:
 
 1. Authenticate the Approver, subject to the approval-authentication
    floor and any client-requested strength
@@ -1533,9 +1543,19 @@ The `authority_hash` is the **authority commitment**: it commits, by
 cryptographic digest, exactly the authority the Approver approved.
 
 Every Mission is rooted in an approved authorization basis
-(`approval_basis`, {{mission-record}}); the steps above define the
-`direct` basis, and {{mission-record}} states the rules for it and
-for a standing-consent basis a companion profile defines.
+(`approval_basis`, {{mission-record}}). The steps above define the
+`direct` basis; a companion profile that relocates a direct approval
+keeps them unchanged ({{extensibility}}). Under a standing-consent
+basis ({{standing-consent-bases}}), the standing consent and the
+instance's adjudication supply the human decision: the Approver's
+authentication (step 1), the Approver's authorization for the Subject
+and the authority source (steps 2 and 3), and the consent rendering
+(step 5). The other creation rules still bind the instance's approval
+event wherever they apply: Subject establishment and mapping (step 2),
+the authority source and its ceiling ({{authority-sources}}), the
+effective expiry and its creation-commit check (steps 4 and 7), the
+integrity anchors (step 6), and atomic creation deduplicated on
+`approval_event_id` ({{mission-record}}).
 
 Refusals follow {{error-mapping}}. A token-endpoint `resource` value
 outside the Authority Set is an invalid `resource` value in the sense
