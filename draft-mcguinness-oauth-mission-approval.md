@@ -193,8 +193,9 @@ response, `access_denied`, or `expired_token`.
 
 ## Sequencing the Approval Event {#deferred-sequencing}
 
-The issuance profile treats the approval event as immediate: the
-Approver consents and the Mission record is created atomically with
+The issuance profile's direct realization treats the approval event
+as immediate: the Approver consents and the Mission record is created
+atomically with
 issuance of the authorization code
 ({{I-D.draft-mcguinness-oauth-mission}}). For a deferred approval this
 profile relocates that approval event without weakening it, moving it
