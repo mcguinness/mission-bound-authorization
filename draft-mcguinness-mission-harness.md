@@ -650,13 +650,13 @@ it on its own: an `active` check is a lifecycle-state check, and a
 contain transition changes no lifecycle state. This document adds no
 general resume duty for a contain transition; which residual applies
 follows from the containment property the deployment's other
-profiles already establish:
+profiles already establish for the action class:
 
-- A Runtime-Enforced deployment closes the path at the PDP: the
-  cached-access rule already requires a fresh runtime decision for a
-  consequential action ({{cached-access}}), and that decision denies
-  contained capability whether or not the harness itself checked for
-  containment.
+- Where the action class carries the Runtime-Enforced containment
+  property, the PDP closes the path: the cached-access rule already
+  requires a fresh runtime decision for a consequential action
+  ({{cached-access}}), and that decision denies contained capability
+  whether or not the harness itself checked for containment.
 - A harness that is also a Signals consumer materializing effective
   authority already rematerializes on containment through Signals'
   own rule: an in-order `mission.lifecycle-change` event carrying
@@ -665,10 +665,11 @@ profiles already establish:
   document adding a duty of its own
   ({{I-D.draft-mcguinness-oauth-mission-signals}}, Section "Consumer
   Behavior on Receipt").
-- A Baseline-only deployment retains the documented pre-transition
-  residual: a credential derived before the contain transition
-  remains usable to its own bound, because Containment defines
-  Baseline as a new-derivation kill, not a revocation
+- Where the action class carries only the Baseline containment
+  property, the documented pre-transition residual remains: a
+  credential derived before the contain transition remains usable to
+  its own bound, because Containment defines Baseline as a
+  new-derivation kill, not a revocation
   ({{I-D.draft-mcguinness-oauth-mission-containment}}).
 
 `containment_version` can appear on both the Mission Status response
@@ -1732,6 +1733,10 @@ exists.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Interaction with Mission Containment keys the residual on the
+  action class's containment property, not on a deployment's level.
+  No requirement changed.
 
 - `status_checked_at` is the harness's observation as its own clock
   read it, preceding the relied-on status's `iat` by no more than the

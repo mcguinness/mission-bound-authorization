@@ -87,9 +87,10 @@ export function isValidCreationRequestId(v: unknown): v is string {
   return typeof v === "string" && CREATION_REQUEST_ID_RE.test(v);
 }
 
-/** The Mission-creating token exchanges plus the delegation-family-creating
- *  async-delegation exchange (domain separation member `op`). */
-export type CreationOp = "child-creation" | "expansion" | "async-delegation";
+/** The Mission-creating token exchanges, the delegation-family-creating
+ *  async-delegation exchange, and the template Dispatch grant (domain
+ *  separation member `op`). */
+export type CreationOp = "child-creation" | "expansion" | "async-delegation" | "dispatch";
 
 /**
  * @spec expansion#creation-fingerprint — the EXACT typed fingerprint object.
@@ -169,6 +170,30 @@ export interface AsyncDelegationFingerprintInput {
   scope: string;
 }
 
+/**
+ * @spec mission-template#dispatch — the Dispatch grant's fingerprint (same
+ * anchor idiom, same `typ`), adopting the expansion profile's apparatus under
+ * its own `op`. Members:
+ *  - `op`: `dispatch`.
+ *  - `iss` / `client`: as the expansion profile defines them; `client` is the
+ *    authenticated Dispatcher.
+ *  - `source`: the Dispatch's `template_id` (a Dispatch has no source Mission).
+ *  - `cnf`: the Dispatcher's verified presenter confirmation.
+ *  - `intent` / `evidence`: the parsed Submission envelope's members.
+ *  - `proposal`: the parsed `authorization_details` array, when present.
+ * `actor`, `child_actor`, `requested_token_type` and `cross_check` are absent.
+ */
+export interface DispatchFingerprintInput {
+  op: "dispatch";
+  iss: string;
+  client: string;
+  source: string;
+  cnf: { jkt: string };
+  intent: MissionIntent;
+  proposal?: AuthorityEntry[];
+  evidence?: IntentSubmissionEvidenceEntry[];
+}
+
 /** A `scope` parameter as its normalized value set: deduplicated, sorted, space-separated. */
 export function normalizedScope(value: unknown): string {
   if (typeof value !== "string") return "";
@@ -177,9 +202,23 @@ export function normalizedScope(value: unknown): string {
 
 export type CreationFingerprintInput =
   | MissionCreationFingerprintInput
-  | AsyncDelegationFingerprintInput;
+  | AsyncDelegationFingerprintInput
+  | DispatchFingerprintInput;
 
 export function creationFingerprint(input: CreationFingerprintInput): string {
+  if (input.op === "dispatch") {
+    const value = {
+      op: input.op,
+      iss: input.iss,
+      client: input.client,
+      source: input.source,
+      cnf: input.cnf,
+      intent: input.intent,
+      ...(input.proposal ? { proposal: input.proposal } : {}),
+      ...(input.evidence ? { evidence: input.evidence } : {}),
+    };
+    return computeAnchor(MISSION_CREATION_FINGERPRINT_TYP, input.iss, value as unknown as JsonValue);
+  }
   if (input.op === "async-delegation") {
     const value = {
       op: input.op,
@@ -229,7 +268,8 @@ export interface CreationReservation {
   fingerprint: string;
   /** The verified presenter confirmation recorded for recovery revalidation. */
   cnfJkt: string;
-  /** The RESOLVED source (parent/predecessor) Mission identifier. */
+  /** The RESOLVED source: the parent/predecessor Mission identifier, or a
+   *  Dispatch's `template_id`. */
   sourceMissionId: string;
   /** Initial delivery metadata (e.g. the deferral handle), when known at reserve time. */
   delivery?: Record<string, unknown>;
