@@ -1066,7 +1066,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 7 April 2027</td>
+<td class="center">Expires 8 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1082,12 +1082,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-status-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-04" class="published">4 October 2026</time>
+<time datetime="2026-10-05" class="published">5 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-07">7 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-08">8 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1147,7 +1147,7 @@ profile.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 7 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 8 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1190,6 +1190,11 @@ profile.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.2">
                 <p id="section-toc.1-1.3.2.2.1"><a href="#section-3.2" class="auto internal xref">3.2</a>.  <a href="#name-authentication" class="internal xref">Authentication</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.2.2.1">
+                    <p id="section-toc.1-1.3.2.2.2.1.1"><a href="#section-3.2.1" class="auto internal xref">3.2.1</a>.  <a href="#name-authentication-failures" class="internal xref">Authentication Failures</a></p>
+</li>
+                </ul>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.3">
                 <p id="section-toc.1-1.3.2.3.1"><a href="#section-3.3" class="auto internal xref">3.3</a>.  <a href="#name-worked-request-example" class="internal xref">Worked Request Example</a></p>
@@ -1597,7 +1602,9 @@ whose <code>aud</code> names no such endpoint. The AS accepts only the JWS
         </ol>
 <p id="section-3.2-3">Plain Basic or POST client authentication <span class="bcp14">MUST NOT</span> be used for this
 endpoint. The AS <span class="bcp14">MUST</span> refuse a request not authenticated by one of the
-three mechanisms with <code>unauthorized</code> (HTTP 401). The mechanism is
+three mechanisms, with the outcome <a href="#mission-status-auth-failures" class="auto internal xref">Section 3.2.1</a>
+assigns: <code>unauthorized</code> (HTTP 401) or <code>invalid_client</code> (HTTP 400). The
+mechanism is
 determined by wire evidence in order: a request presenting an access
 token in <code>Authorization</code> is mechanism 2, and any client certificate is
 then evaluated only as that token's mTLS sender constraint; otherwise a
@@ -1648,6 +1655,46 @@ accepted client-assertion signing algorithms are advertised for this
 endpoint (<a href="#as-metadata" class="auto internal xref">Section 8</a>), not read from the token endpoint's
 <code>token_endpoint_auth_methods_supported</code> <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>. Both paths are
 therefore discoverable.<a href="#section-3.2-7" class="pilcrow">¶</a></p>
+<div id="mission-status-auth-failures">
+<section id="section-3.2.1">
+          <h4 id="name-authentication-failures">
+<a href="#section-3.2.1" class="section-number selfRef">3.2.1. </a><a href="#name-authentication-failures" class="section-name selfRef">Authentication Failures</a>
+          </h4>
+<p id="section-3.2.1-1">A request that fails authentication receives the outcome for the
+credential it presented:<a href="#section-3.2.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.2.1-2.1">
+              <p id="section-3.2.1-2.1.1">A request whose presented access token fails authentication receives
+HTTP 401 <code>unauthorized</code> with a <code>WWW-Authenticate</code> challenge in the
+scheme it used: <code>Bearer</code> with the error attributes of
+<span><a href="https://rfc-editor.org/rfc/rfc6750#section-3" class="relref">Section 3</a> of [<a href="#RFC6750" class="cite xref">RFC6750</a>]</span>, or <code>DPoP</code> under
+<span><a href="https://rfc-editor.org/rfc/rfc9449#section-7.1" class="relref">Section 7.1</a> of [<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>, including its <code>algs</code> parameter and error
+codes.<a href="#section-3.2.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-3.2.1-2.2">
+              <p id="section-3.2.1-2.2.1">A request whose mTLS or private-key-JWT client authentication fails
+at the HTTP layer receives HTTP 400 with the <code>invalid_client</code> error
+code, as <span><a href="https://rfc-editor.org/rfc/rfc6749#section-5.2" class="relref">Section 5.2</a> of [<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> answers a failed client
+authentication carried outside the <code>Authorization</code> header. It carries
+no <code>WWW-Authenticate</code> challenge and is not reported as an
+access-token failure. A client certificate rejected during the TLS
+handshake fails at the TLS layer, before any HTTP response.<a href="#section-3.2.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-3.2.1-2.3">
+              <p id="section-3.2.1-2.3.1">A request that presented no credential receives, where the endpoint
+accepts an access-token scheme, HTTP 401 <code>unauthorized</code> with one
+challenge for each access-token scheme the endpoint accepts and no
+<code>error</code> attribute (<span><a href="https://rfc-editor.org/rfc/rfc6750#section-3.1" class="relref">Section 3.1</a> of [<a href="#RFC6750" class="cite xref">RFC6750</a>]</span>); where it accepts
+none, it receives HTTP 400 <code>invalid_client</code>.<a href="#section-3.2.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+<p id="section-3.2.1-3">Every challenge carries the <code>resource_metadata</code> parameter naming the
+endpoint's Protected Resource Metadata (<span><a href="https://rfc-editor.org/rfc/rfc9728#section-5.1" class="relref">Section 5.1</a> of [<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>).
+An authenticated caller not authorized for the referenced Mission
+receives <code>not_found</code> (404) with no challenge
+(<a href="#mission-status-anti-oracle" class="auto internal xref">Section 3.6</a>).<a href="#section-3.2.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="worked-request-example">
@@ -2042,10 +2089,17 @@ recognizes it.<a href="#section-3.7-4" class="pilcrow">¶</a></p>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
+                <code>invalid_client</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">400</td>
+              <td class="text-left" rowspan="1" colspan="1">Direct client authentication (mTLS or private-key JWT) failed, or no credential was presented where no access-token scheme is accepted (<a href="#mission-status-auth-failures" class="auto internal xref">Section 3.2.1</a>).</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
                 <code>unauthorized</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">401</td>
-              <td class="text-left" rowspan="1" colspan="1">Request not authenticated.</td>
+              <td class="text-left" rowspan="1" colspan="1">Access-token authentication failed, or no credential was presented where an access-token scheme is accepted; the response carries the challenges of <a href="#mission-status-auth-failures" class="auto internal xref">Section 3.2.1</a>.</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
@@ -2085,11 +2139,12 @@ recognizes it.<a href="#section-3.7-4" class="pilcrow">¶</a></p>
             </tr>
           </tbody>
         </table>
-<p id="section-3.7-7">Note the distinction between the two access failures: <code>unauthorized</code>
-(401) means the request carried no valid authentication, whereas a
-request that is authenticated but not authorized for the referenced
-Mission returns <code>not_found</code> (404), never 401, so that an unauthorized
-reference is indistinguishable from an unknown one
+<p id="section-3.7-7">Note the distinction between the access failures: <code>unauthorized</code>
+(401) and <code>invalid_client</code> (400) mean the request carried no valid
+authentication, whereas a request that is authenticated but not
+authorized for the referenced Mission returns <code>not_found</code> (404), never
+an authentication failure, so that an unauthorized reference is
+indistinguishable from an unknown one
 (<a href="#mission-status-anti-oracle" class="auto internal xref">Section 3.6</a>). The error body is:<a href="#section-3.7-7" class="pilcrow">¶</a></p>
 <div class="lang-http-message sourcecode" id="section-3.7-8">
 <pre>
@@ -2678,7 +2733,8 @@ or private-key JWT. Its discovery mirrors that endpoint: the accepted
 methods in <code>mission_lifecycle_endpoint_auth_methods_supported</code> and, for
 <code>private_key_jwt</code>, the accepted client-assertion algorithms in
 <code>mission_lifecycle_endpoint_auth_signing_alg_values_supported</code>
-(<a href="#as-metadata" class="auto internal xref">Section 8</a>).<a href="#section-5.4-1" class="pilcrow">¶</a></p>
+(<a href="#as-metadata" class="auto internal xref">Section 8</a>). Its authentication failures follow
+<a href="#mission-status-auth-failures" class="auto internal xref">Section 3.2.1</a>.<a href="#section-5.4-1" class="pilcrow">¶</a></p>
 <p id="section-5.4-2">For the sender-constrained access-token path, this
 endpoint is an OAuth protected resource exactly as the Mission Status
 endpoint is: the AS publishes, in its Protected Resource Metadata for
@@ -3662,6 +3718,14 @@ Authorization work for feedback that shaped these extensions.<a href="#section-1
         <dd>
 <span class="refAuthor">Klyne, G.</span> and <span class="refAuthor">C. Newman</span>, <span class="refTitle">"Date and Time on the Internet: Timestamps"</span>, <span class="seriesInfo">RFC 3339</span>, <span class="seriesInfo">DOI 10.17487/RFC3339</span>, <time datetime="2002-07" class="refDate">July 2002</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc3339" class="reader-edition-ext-link" target="_blank" rel="noopener">https://www.rfc-editor.org/rfc/rfc3339</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="RFC6749">[RFC6749]</dt>
+        <dd>
+<span class="refAuthor">Hardt, D., Ed.</span>, <span class="refTitle">"The OAuth 2.0 Authorization Framework"</span>, <span class="seriesInfo">RFC 6749</span>, <span class="seriesInfo">DOI 10.17487/RFC6749</span>, <time datetime="2012-10" class="refDate">October 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6749" class="reader-edition-ext-link" target="_blank" rel="noopener">https://www.rfc-editor.org/rfc/rfc6749</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6750">[RFC6750]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span> and <span class="refAuthor">D. Hardt</span>, <span class="refTitle">"The OAuth 2.0 Authorization Framework: Bearer Token Usage"</span>, <span class="seriesInfo">RFC 6750</span>, <span class="seriesInfo">DOI 10.17487/RFC6750</span>, <time datetime="2012-10" class="refDate">October 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6750" class="reader-edition-ext-link" target="_blank" rel="noopener">https://www.rfc-editor.org/rfc/rfc6750</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="RFC6838">[RFC6838]</dt>
         <dd>
 <span class="refAuthor">Freed, N.</span>, <span class="refAuthor">Klensin, J.</span>, and <span class="refAuthor">T. Hansen</span>, <span class="refTitle">"Media Type Specifications and Registration Procedures"</span>, <span class="seriesInfo">BCP 13</span>, <span class="seriesInfo">RFC 6838</span>, <span class="seriesInfo">DOI 10.17487/RFC6838</span>, <time datetime="2013-01" class="refDate">January 2013</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6838" class="reader-edition-ext-link" target="_blank" rel="noopener">https://www.rfc-editor.org/rfc/rfc6838</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
@@ -3824,39 +3888,48 @@ Authorization work for feedback that shaped these extensions.<a href="#section-1
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">A derivation refused because the Mission is <code>suspended</code> or
-<code>completed</code> carries the <code>mission_error</code> value <code>mission_suspended</code> or
-<code>mission_completed</code>, so a client can tell a refusal that a <code>resume</code>
-lifts from a terminal one.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.1.1">Authentication failures at the Status and Lifecycle endpoints: a
+failed access token gets a 401 <code>WWW-Authenticate</code> challenge in its
+scheme (<code>Bearer</code> or <code>DPoP</code>); a request with no credential gets a
+challenge for each accepted access-token scheme, always with
+<code>resource_metadata</code>; failed mTLS or private-key-JWT client
+authentication, or no credential where no access-token scheme is
+accepted, gets 400 <code>invalid_client</code> (#972 item 18).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">A caller may request the projection for an audience other than its
+          <p id="appendix-A-2.2.1">A derivation refused because the Mission is <code>suspended</code> or
+<code>completed</code> carries the <code>mission_error</code> value <code>mission_suspended</code> or
+<code>mission_completed</code>, so a client can tell a refusal that a <code>resume</code>
+lifts from a terminal one.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">A caller may request the projection for an audience other than its
 own, such as each resource a Mission Issuance Grant consuming
 Authorization Server serves, only where the Mission Issuer's
 configuration authorizes it; the consumer checks <code>aud</code> against the
-<code>audience</code> its request named (#963).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">The mutual-TLS method value is <code>tls_client_auth</code>, the registered
-<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span> spelling, and an absent endpoint auth-methods member is
-never read from token-endpoint metadata. The Mission Authority Server
-publishes the same per-endpoint members.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+<code>audience</code> its request named (#963).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1">A refresh against a suspended Mission is checked, and refused, before
-its refresh token is consumed, so a <code>resume</code> restores refresh with the
-same token; issuance-time validation still governs a concurrent
-suspension (#914).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.4.1">The mutual-TLS method value is <code>tls_client_auth</code>, the registered
+<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span> spelling, and an absent endpoint auth-methods member is
+never read from token-endpoint metadata. The Mission Authority Server
+publishes the same per-endpoint members.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.5">
-          <p id="appendix-A-2.5.1">Added conditional carryover correlation on an old child's cascaded
-observation; no state or authority is inferred from the pointer (#576).<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.5.1">A refresh against a suspended Mission is checked, and refused, before
+its refresh token is consumed, so a <code>resume</code> restores refresh with the
+same token; issuance-time validation still governs a concurrent
+suspension (#914).<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.6">
-          <p id="appendix-A-2.6.1">Operational Considerations added (#310): recovery sizing for the
+          <p id="appendix-A-2.6.1">Added conditional carryover correlation on an old child's cascaded
+observation; no state or authority is inferred from the pointer (#576).<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.7">
+          <p id="appendix-A-2.7.1">Operational Considerations added (#310): recovery sizing for the
 advertised propagation ceiling, the per-surface distribution posture,
 and the operator observations after a degraded surface recovers. No
-freshness window is extended and no member is added.<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
+freshness window is extended and no member is added.<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

@@ -1068,7 +1068,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 7 April 2027</td>
+<td class="center">Expires 8 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1081,12 +1081,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-aauth-management-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-04" class="published">4 October 2026</time>
+<time datetime="2026-10-05" class="published">5 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-07">7 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-08">8 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1149,7 +1149,7 @@ to report and bound the residual window honestly.<a href="#section-abstract-3" c
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 7 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 8 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1265,7 +1265,7 @@ to report and bound the residual window honestly.<a href="#section-abstract-3" c
                 <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref">11.1</a>.  <a href="#name-local-gating" class="internal xref">Local Gating</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.2">
-                <p id="section-toc.1-1.11.2.2.1"><a href="#section-11.2" class="auto internal xref">11.2</a>.  <a href="#name-tracking-auth-tokens" class="internal xref">Tracking Auth Tokens</a></p>
+                <p id="section-toc.1-1.11.2.2.1"><a href="#section-11.2" class="auto internal xref">11.2</a>.  <a href="#name-tracking-credentials" class="internal xref">Tracking Credentials</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.3">
                 <p id="section-toc.1-1.11.2.3.1"><a href="#section-11.3" class="auto internal xref">11.3</a>.  <a href="#name-revocation-attempts" class="internal xref">Revocation Attempts</a></p>
@@ -1432,10 +1432,11 @@ mission blob.<a href="#section-2-4.6.1" class="pilcrow">¶</a></p>
 It does not add a state or permit reactivation.<a href="#section-2-4.8.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-2-4.9">Tracked Auth Token:</dt>
+<dt id="section-2-4.9">Tracked Credential:</dt>
         <dd style="margin-left: 1.5em" id="section-2-4.10">
-          <p id="section-2-4.10.1">An Auth Token that the PS issued or provided under a Mission Reference
-and for which it retained at least <code>iss</code>, <code>jti</code>, <code>aud</code>, and <code>exp</code>.<a href="#section-2-4.10.1" class="pilcrow">¶</a></p>
+          <p id="section-2-4.10.1">A Person Token the PS issued under a Mission Reference, or an Auth
+Token it issued or provided under one, for which it retained at least
+<code>iss</code>, <code>jti</code>, <code>aud</code>, and <code>exp</code>.<a href="#section-2-4.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-2-4.11">Residual Window:</dt>
@@ -2032,11 +2033,17 @@ attempts <span class="bcp14">MAY</span> continue asynchronously.<a href="#sectio
 <code>complete</code>, all <span class="bcp14">REQUIRED</span>, and <code>residual_until</code>, an RFC 3339
 <code>date-time</code> <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span>, when a residual is known.  The counters
 disclose only tokens the caller is authorized to know about.
-<code>complete</code> is true only when every Tracked Auth Token is either
-confirmed revoked or expired and the PS knows of no untracked access
-mode for the mission.  <code>residual_until</code> is the latest <code>exp</code> among
-unconfirmed Tracked Auth Tokens.  It <span class="bcp14">MUST</span> be omitted when no residual is
-known and <span class="bcp14">MUST NOT</span> be presented as a complete bound if untracked or
+The counters count Tracked Credentials, so a Person Token counts like
+an Auth Token.  <code>complete</code> is true only when every Tracked Credential
+is either confirmed revoked or expired and the PS knows of no untracked
+access mode for the mission; it is false while any Person Token is live
+and unconfirmed, and never follows from Auth Tokens alone.  <code>complete</code>
+covers every Tracked Credential, including any the counters withhold
+from the caller.  A credential whose recipient advertises no revocation
+endpoint, or whose revocation outcome is unknown, stays unconfirmed
+until its <code>exp</code>.  <code>residual_until</code> is the latest <code>exp</code> among
+unconfirmed Tracked Credentials.  It <span class="bcp14">MUST</span> be omitted when no residual
+is known and <span class="bcp14">MUST NOT</span> be presented as a complete bound if untracked or
 opaque credentials may exist.<a href="#section-7.2-6" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -2271,7 +2278,7 @@ Agent's completion interaction.  A security log <span class="bcp14">MUST</span> 
 administrative requests and oracle probes without associating an
 unverified reference with a real mission.<a href="#section-10-4" class="pilcrow">¶</a></p>
 <p id="section-10-5">The PS <span class="bcp14">MUST</span> retain the terminal state and its reason for at least as
-long as any Tracked Auth Token could remain valid, plus the deployment's
+long as any Tracked Credential could remain valid, plus the deployment's
 audit and dispute period.  It <span class="bcp14">SHOULD</span> retain the immutable mission blob
 and log for the same period when lawful.  Retention limits, deletion,
 legal holds, and access controls <span class="bcp14">MUST</span> be documented.  Deletion of the
@@ -2309,13 +2316,13 @@ the Agent identity can legitimately be used for another mission or for
 missionless AAuth interactions.<a href="#section-11.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="tracking-auth-tokens">
+<div id="tracking">
 <section id="section-11.2">
-        <h3 id="name-tracking-auth-tokens">
-<a href="#section-11.2" class="section-number selfRef">11.2. </a><a href="#name-tracking-auth-tokens" class="section-name selfRef">Tracking Auth Tokens</a>
+        <h3 id="name-tracking-credentials">
+<a href="#section-11.2" class="section-number selfRef">11.2. </a><a href="#name-tracking-credentials" class="section-name selfRef">Tracking Credentials</a>
         </h3>
-<p id="section-11.2-1">For each Auth Token it issues or provides under a mission, a conforming
-PS <span class="bcp14">MUST</span> retain:<a href="#section-11.2-1" class="pilcrow">¶</a></p>
+<p id="section-11.2-1">For each Person Token it issues under a mission, and each Auth Token it
+issues or provides under one, a conforming PS <span class="bcp14">MUST</span> retain:<a href="#section-11.2-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-11.2-2.1">
             <p id="section-11.2-2.1.1">the Mission Reference;<a href="#section-11.2-2.1.1" class="pilcrow">¶</a></p>
@@ -2327,10 +2334,18 @@ PS <span class="bcp14">MUST</span> retain:<a href="#section-11.2-1" class="pilcr
             <p id="section-11.2-2.3.1"><code>aud</code> and <code>exp</code>;<a href="#section-11.2-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.2-2.4">
-            <p id="section-11.2-2.4.1">the Resource revocation endpoint, when advertised; and<a href="#section-11.2-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-11.2-2.4.1">the revocation endpoint of the Resource in <code>aud</code>, when advertised;<a href="#section-11.2-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.2-2.5">
-            <p id="section-11.2-2.5.1">whether the PS issued the token or obtained it through federation.<a href="#section-11.2-2.5.1" class="pilcrow">¶</a></p>
+            <p id="section-11.2-2.5.1">whether the PS issued the token or obtained it through federation;<a href="#section-11.2-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-11.2-2.6">
+            <p id="section-11.2-2.6.1">for a Person Token, each AS the PS presented it to, as Section 7.1 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span> requires; and<a href="#section-11.2-2.6.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-11.2-2.7">
+            <p id="section-11.2-2.7.1">for a federated or chained credential, the presented or upstream
+token it derives from.<a href="#section-11.2-2.7.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-11.2-3">The PS <span class="bcp14">MUST NOT</span> key revocation by <code>jti</code> alone.  It <span class="bcp14">SHOULD</span> also retain the
@@ -2343,9 +2358,10 @@ are sensitive and follow <a href="#logging" class="auto internal xref">Section 1
         <h3 id="name-revocation-attempts">
 <a href="#section-11.3" class="section-number selfRef">11.3. </a><a href="#name-revocation-attempts" class="section-name selfRef">Revocation Attempts</a>
         </h3>
-<p id="section-11.3-1">After termination, the PS <span class="bcp14">SHOULD</span> revoke every unexpired Tracked Auth
-Token, as Section 11.12.4 of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>
-recommends when a PS revokes a mission.  Each revocation is a signed
+<p id="section-11.3-1">After termination, the PS <span class="bcp14">SHOULD</span> revoke every unexpired Tracked
+Credential, as Section 11.12.4 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span> recommends when a PS revokes a
+mission.  Each revocation is a signed
 <code>POST</code> of <code>{jti, exp}</code> to the recipient's <code>revocation_endpoint</code>, with
 <code>exp</code> taken from the PS's record of that token.  The PS signs as a
 server under the <code>jwks_uri</code> scheme, with its issuer as <code>id</code> and
@@ -2353,8 +2369,11 @@ server under the <code>jwks_uri</code> scheme, with its issuer as <code>id</code
 <code>content-digest</code> and <code>content-type</code> (Sections 11.3.2 and 11.12.1 of
 <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).  The recipient takes the
 issuer from the signature, so the PS revokes only tokens it issued.<a href="#section-11.3-1" class="pilcrow">¶</a></p>
-<p id="section-11.3-2">In PS authorization (three-party), the PS revokes an Auth Token it
-issued at the Resource it was issued for.  In federated authorization
+<p id="section-11.3-2">The PS revokes a Person Token at the Resource named in its <code>aud</code> and at
+each AS it presented the token to (Section 11.12.2 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).  In PS authorization
+(three-party), the PS revokes an Auth Token it issued at the Resource
+it was issued for.  In federated authorization
 (four-party), the AS issued the Auth Token, so the PS instead revokes
 the Person Token it presented to that AS, known from the issuance
 record that Section 7.1 of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>
@@ -2366,18 +2385,22 @@ idempotent: the recipient records nothing new, re-attempts each
 downstream revocation that did not succeed, and reports the current
 outcome (Section 11.12.3 of <span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>).<a href="#section-11.3-2" class="pilcrow">¶</a></p>
 <p id="section-11.3-3">A revocation is confirmed, for <code>revocation_confirmed</code> and <code>complete</code>
-(<a href="#terminate" class="auto internal xref">Section 7</a>), only by an outcome that names the Tracked Auth Token's
-own Resource:<a href="#section-11.3-3" class="pilcrow">¶</a></p>
+(<a href="#terminate" class="auto internal xref">Section 7</a>), only by an outcome that names the Tracked Credential's
+own recipients:<a href="#section-11.3-3" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-11.3-4.1">
-            <p id="section-11.3-4.1.1">an Auth Token the PS revoked at the Resource it was issued for is
-confirmed by that Resource's <code>200</code>, which has nothing downstream and
-carries an empty body; and<a href="#section-11.3-4.1.1" class="pilcrow">¶</a></p>
+            <p id="section-11.3-4.1.1">a Person Token is confirmed when the Resource in its <code>aud</code> and each AS
+it was presented to have each answered <code>200</code>;<a href="#section-11.3-4.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.3-4.2">
-            <p id="section-11.3-4.2.1">an Auth Token an AS issued is confirmed only by a <code>downstream</code> entry,
+            <p id="section-11.3-4.2.1">an Auth Token the PS revoked at the Resource it was issued for is
+confirmed by that Resource's <code>200</code>, which has nothing downstream and
+carries an empty body; and<a href="#section-11.3-4.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-11.3-4.3">
+            <p id="section-11.3-4.3.1">an Auth Token an AS issued is confirmed only by a <code>downstream</code> entry,
 in the AS's <code>200</code> to the Person Token revocation, whose <code>recipient</code>
-is the token's <code>aud</code> and which carries no <code>error</code>.<a href="#section-11.3-4.2.1" class="pilcrow">¶</a></p>
+is the token's <code>aud</code> and which carries no <code>error</code>.<a href="#section-11.3-4.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-11.3-5">An absent body, an absent <code>downstream</code> member, or a <code>downstream</code> array
@@ -2423,12 +2446,17 @@ because it marked its local state or contacted an AS.<a href="#section-11.3-8" c
         </h3>
 <p id="section-11.4-1">Termination is not retroactive.  It cannot undo an action already
 performed or necessarily stop an action already accepted.  A
-self-contained Auth Token can remain acceptable until its <code>exp</code> unless
-the Resource receives and enforces revocation.  Network partitions and
+self-contained Person Token or Auth Token can remain acceptable until
+its <code>exp</code> unless the Resource receives and enforces revocation.  At a
+Resource that serves person identity access, holding a Person Token is
+effectively access (Section 7.1.1 of
+<span>[<a href="#I-D.draft-hardt-oauth-aauth-protocol" class="cite xref">I-D.draft-hardt-oauth-aauth-protocol</a>]</span>), so a live Person Token is
+part of the residual.  Network partitions and
 Resource policy therefore create an unavoidable residual window.<a href="#section-11.4-1" class="pilcrow">¶</a></p>
-<p id="section-11.4-2">The PS can provide a time bound only for the Tracked Auth Tokens whose
+<p id="section-11.4-2">The PS can provide a time bound only for the Tracked Credentials whose
 expiry it knows.  The conservative tracked bound is the latest <code>exp</code>
-among tokens not confirmed revoked.  If the PS cannot determine an
+among Tracked Credentials not confirmed revoked, Person Tokens
+included.  If the PS cannot determine an
 expiry, it <span class="bcp14">MUST</span> report the tracked residual as unbounded rather than
 inventing a deadline.<a href="#section-11.4-2" class="pilcrow">¶</a></p>
 <p id="section-11.4-3">The PS has no general visibility or control over:<a href="#section-11.4-3" class="pilcrow">¶</a></p>
@@ -2452,10 +2480,11 @@ inventing a deadline.<a href="#section-11.4-2" class="pilcrow">¶</a></p>
 <p id="section-11.4-5">Where any such path was possible, the PS <span class="bcp14">MUST</span> mark mission-wide
 revocation completeness as false or unknown.  Deployment documentation
 <span class="bcp14">MUST</span> state which AAuth access modes are covered, the maximum configured
-Auth Token lifetime, whether Resources implement revocation, retry
+Person Token and Auth Token lifetimes, whether Resources implement
+revocation, retry
 policy, and the worst-case residual expected under partition.  Risky
-deployments <span class="bcp14">SHOULD</span> use short Auth Token lifetimes and action-time
-Resource checks in addition to PS gating.<a href="#section-11.4-5" class="pilcrow">¶</a></p>
+deployments <span class="bcp14">SHOULD</span> use short Person Token and Auth Token lifetimes and
+action-time Resource checks in addition to PS gating.<a href="#section-11.4-5" class="pilcrow">¶</a></p>
 <p id="section-11.4-6">The base AAuth text sometimes describes this action as revoking a
 mission.  In this profile, "revoke the mission" means the single,
 permanent transition to <code>terminated</code> with Termination Reason <code>revoked</code>.
@@ -2714,9 +2743,9 @@ decision path at the terminal commit, and enforces idempotency;<a href="#section
 <a href="#logging" class="auto internal xref">Section 10</a>;<a href="#section-15-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-15-2.7">
-          <p id="section-15-2.7.1">tracks Auth Tokens by <code>(iss, jti)</code>, attempts applicable revocation,
-and reports residual limits without claiming control over unseen or
-independently managed access; and<a href="#section-15-2.7.1" class="pilcrow">¶</a></p>
+          <p id="section-15-2.7.1">tracks Person Tokens and Auth Tokens by <code>(iss, jti)</code>, attempts
+applicable revocation, and reports residual limits without claiming
+control over unseen or independently managed access; and<a href="#section-15-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-15-2.8">
           <p id="section-15-2.8.1">meets the security, privacy, retention, and TLS requirements of this
@@ -2729,11 +2758,12 @@ retained deltas of <span>[<a href="#I-D.draft-mcguinness-aauth-mission-expiry" c
 to <a href="#expiry" class="auto internal xref">Section 3.3</a> in full.  Delegation-tree support is <span class="bcp14">OPTIONAL</span>.  If
 advertised, the PS conforms to <a href="#delegation-tree" class="auto internal xref">Section 8</a> in full.<a href="#section-15-3" class="pilcrow">¶</a></p>
 <p id="section-15-4">A deployment claiming conformance <span class="bcp14">MUST</span> publish or otherwise make
-available its caller-role authorization policy, Auth Token retention
-period, supported access-mode coverage, maximum token lifetime,
-revocation retry policy, expiry clock policy if used, and worst-case
-residual behavior.  It <span class="bcp14">MUST NOT</span> claim that Mission termination revokes
-agent identity, opaque resource-managed, or otherwise untracked access.<a href="#section-15-4" class="pilcrow">¶</a></p>
+available its caller-role authorization policy, Tracked Credential
+retention period, supported access-mode coverage, maximum token
+lifetime, revocation retry policy, expiry clock policy if used, and
+worst-case residual behavior.  It <span class="bcp14">MUST NOT</span> claim that Mission
+termination revokes agent identity, opaque resource-managed, or
+otherwise untracked access.<a href="#section-15-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="sec-combined-references">
@@ -2831,7 +2861,14 @@ native choices.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <p id="appendix-B-1">[[ To be removed from the final specification ]]<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-2.1">
-          <p id="appendix-B-2.1.1">A Person reaches status and termination through the PS's own
+          <p id="appendix-B-2.1.1">Person Tokens are Tracked Credentials: the PS retains them, counts
+them in <code>token_residual</code>, revokes them at the Resource in <code>aud</code> and at
+each AS it presented them to, and reports <code>complete</code> false while any
+is live and unconfirmed. The residual bounds name a live Person Token
+at a Resource serving person identity access (#834).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.2">
+          <p id="appendix-B-2.2.1">A Person reaches status and termination through the PS's own
 interface, by internal invocation or by a backend calling the control
 plane as a management service; the PS authorizes and records the
 action as the authenticated Person and never applies a management
@@ -2840,7 +2877,7 @@ a human is authorized and recorded as that human, with the service as
 the channel. A browser session never authenticates a control-plane
 request, and Person Interfaces security considerations cover
 cross-site submission, account or tenant switching, stale sessions,
-and the service-principal confused deputy (#839).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+and the service-principal confused deputy (#839).<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
