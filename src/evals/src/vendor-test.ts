@@ -10,7 +10,7 @@
 
 import { type EvalCase, runCase } from "./index.js";
 import type { HarnessDeps } from "./index.js";
-import type { MissionBoundTokenFacts } from "@mission/mcp-payments";
+import { credentialAuthorityFrom, type MissionBoundTokenFacts, TOOLS } from "@mission/mcp-payments";
 import { CANONICAL_RESOURCE } from "@mission/mcp-payments";
 
 const MISSION = { id: "msn_eval", issuer: "https://as.test", authority_hash: "sha-256:evalhash" };
@@ -24,6 +24,11 @@ const validToken = (over: Partial<MissionBoundTokenFacts> = {}): MissionBoundTok
   clientInstanceId: "inst-1",
   mission: MISSION,
   cnfJkt: "jkt-1",
+  // @spec runtime#input-authority (#825) — a credential as broad as every
+  // tool, so each case exercises the Mission bound it names.
+  credentialAuthority: credentialAuthorityFrom([
+    { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: [...new Set(TOOLS.map((t) => t.action))] },
+  ]),
   ...over,
 });
 

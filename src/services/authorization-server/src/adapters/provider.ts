@@ -302,8 +302,11 @@ import {
   createTemplate,
   dispatchFromTemplate,
   DispatchError,
+  DispatchMismatchError,
+  findDispatch,
   TemplateError,
   type CreateTemplateInput,
+  type DispatchInput,
   type DispatchPolicies,
   type DispatchReason,
 } from "../kernel/template.js";
@@ -3699,30 +3702,6 @@ async function handleMissionDispatchGrant(
     return;
   }
   const intent = submission.intent;
-  // @spec mission#intent-submission-evidence — STAGE-2 verification (required
-  // types resolved BEFORE derivation; the presenter is the AUTHENTICATED
-  // dispatcher). Dispatch has its own idempotency (dispatch_event_id inside
-  // dispatchFromTemplate) but no D69 creation fingerprint; verification runs
-  // here on every dispatch request, and a retried dispatch of a completed
-  // event recovers below regardless of these facts (same instance returned).
-  let submissionEvidence: Awaited<ReturnType<typeof kernel.verifySubmissionEvidence>>;
-  try {
-    submissionEvidence = await kernel.verifySubmissionEvidence({
-      intent,
-      ...(submission.evidence ? { evidence: submission.evidence } : {}),
-      presenter: { clientId: client.clientId },
-      required: requiredEvidenceTypesFor(opts, client),
-      requestContext: { carrier: "mission-dispatch" },
-    });
-  } catch (e) {
-    if (e instanceof IntentError) {
-      ctx.status = 400;
-      ctx.body = { error: e.code, error_description: e.message };
-      return;
-    }
-    throw e;
-  }
-
   // @spec mission#authority-proposal — the dispatcher's authority proposal
   // rides the standard authorization_details parameter of this grant (the
   // instance Intent carries no authority members). Optional: absent means
@@ -3748,46 +3727,9 @@ async function handleMissionDispatchGrant(
     }
   }
 
-  // Core-consistency: the Dispatcher does NOT name the Subject; the Issuer
-  // establishes it. The template carries the consenting human (approver); the
-  // subject is established from it (decide() defaults subject to approver, and
-  // read-only missions may self-approve, D37). Recipient comes from the template.
-  let record: MissionRecord;
-  try {
-    ({ mission: record } = dispatchFromTemplate(kernel, store, {
-      templateId,
-      dispatchEventId,
-      dispatcher: client.clientId,
-      ...(opts.dispatchPolicies ? { dispatchPolicies: opts.dispatchPolicies } : {}),
-      intent,
-      ...(proposedAuthority ? { proposedAuthority } : {}),
-      ...(submissionEvidence?.length ? { submissionEvidence } : {}),
-      subject: { iss: template.issuer, sub: template.approver.sub },
-      policyVersion: DERIVATION_POLICY.policy_version,
-      dispatchProhibitedActions: DISPATCH_PROHIBITED_ACTIONS,
-    }));
-  } catch (e) {
-    if (e instanceof IntentError) throw intentErrorToOidc(e);
-    if (e instanceof DispatchError) {
-      const code = dispatchErrorCode(e.reason);
-      ctx.status = code === "access_denied" ? 403 : 400;
-      // Set status/body DIRECTLY (status before body) so mission_denial_reason
-      // survives oidc-provider's err_out renderer (same pattern as child creation).
-      ctx.body = { error: code, mission_denial_reason: e.reason };
-      ctx.set("cache-control", "no-store");
-      return;
-    }
-    ctx.status = 400;
-    ctx.body = { error: "invalid_request", error_description: e instanceof Error ? e.message : "dispatch failed" };
-    return;
-  }
-
-  // ---- mint mission-bound access token: INLINE COPY of handleChildJwtBearerGrant
-  // (~806-879). DPoP-bind from the request proof (unchanged). The Grant and the
-  // AccessToken are owned by `client` (the DISPATCHER, the authenticated entity
-  // here) rather than by `record.client_id` (the recipient, who is not present
-  // in this exchange) — the one substitution the child-bearer code does not need,
-  // because there record.client_id IS the authenticated client.
+  // @spec expansion#creation-lookup-order, mission-template#dispatch —
+  // possession verification precedes the Dispatch idempotency lookup, and the
+  // verified DPoP key is the fingerprint's `cnf` and the issued token's binding.
   const proofJws = ctx.get("DPoP");
   if (!proofJws) throw new errors.InvalidRequest("DPoP proof JWT required");
   let jkt: string;
@@ -3811,6 +3753,103 @@ async function handleMissionDispatchGrant(
     return;
   }
 
+  // Core-consistency: the Dispatcher does NOT name the Subject; the Issuer
+  // establishes it. The template carries the consenting human (approver); the
+  // subject is established from it (decide() defaults subject to approver, and
+  // read-only missions may self-approve, D37). Recipient comes from the template.
+  const dispatchInput: DispatchInput = {
+    templateId,
+    dispatchEventId,
+    dispatcher: client.clientId,
+    ...(opts.creationIdempotency ? { idempotency: opts.creationIdempotency } : {}),
+    presenterJkt: jkt,
+    ...(submission.evidence ? { presentedEvidence: submission.evidence } : {}),
+    ...(opts.dispatchPolicies ? { dispatchPolicies: opts.dispatchPolicies } : {}),
+    intent,
+    ...(proposedAuthority ? { proposedAuthority } : {}),
+    subject: { iss: template.issuer, sub: template.approver.sub },
+    policyVersion: DERIVATION_POLICY.policy_version,
+    dispatchProhibitedActions: DISPATCH_PROHIBITED_ACTIONS,
+  };
+  /** A refused Dispatch: the response, or false when `e` is not a Dispatch outcome. */
+  const dispatchFailure = (e: unknown): boolean => {
+    if (e instanceof DispatchMismatchError) {
+      // @spec mission-template#dispatch — the expansion profile's durable
+      // reservation: a different fingerprint is invalid_request, with no
+      // mission_denial_reason (the profile's closed set has no member for it).
+      ctx.status = 400;
+      ctx.body = { error: "invalid_request", error_description: e.message };
+      ctx.set("cache-control", "no-store");
+      return true;
+    }
+    if (e instanceof DispatchError) {
+      const code = dispatchErrorCode(e.reason);
+      ctx.status = code === "access_denied" ? 403 : 400;
+      // Set status/body DIRECTLY (status before body) so mission_denial_reason
+      // survives oidc-provider's err_out renderer (same pattern as child creation).
+      ctx.body = { error: code, mission_denial_reason: e.reason };
+      ctx.set("cache-control", "no-store");
+      return true;
+    }
+    return false;
+  };
+
+  // @spec expansion#creation-lookup-order, mission#intent-submission-evidence —
+  // the completed-operation recovery lookup runs after possession verification
+  // and BEFORE evidence re-verification and the gates.
+  let record: MissionRecord | undefined;
+  try {
+    record = findDispatch(kernel, store, dispatchInput)?.mission;
+  } catch (e) {
+    if (dispatchFailure(e)) return;
+    ctx.status = 400;
+    ctx.body = { error: "invalid_request", error_description: e instanceof Error ? e.message : "dispatch failed" };
+    return;
+  }
+  if (!record) {
+    // @spec mission#intent-submission-evidence — STAGE-2 verification (required
+    // types resolved BEFORE derivation; the presenter is the AUTHENTICATED
+    // dispatcher). It runs AFTER the completed-operation recovery lookup above:
+    // an artifact that expired after the first Dispatch completed MUST NOT
+    // break recovery; a new Dispatch still verifies.
+    let submissionEvidence: Awaited<ReturnType<typeof kernel.verifySubmissionEvidence>>;
+    try {
+      submissionEvidence = await kernel.verifySubmissionEvidence({
+        intent,
+        ...(submission.evidence ? { evidence: submission.evidence } : {}),
+        presenter: { clientId: client.clientId },
+        required: requiredEvidenceTypesFor(opts, client),
+        requestContext: { carrier: "mission-dispatch" },
+      });
+    } catch (e) {
+      if (e instanceof IntentError) {
+        ctx.status = 400;
+        ctx.body = { error: e.code, error_description: e.message };
+        return;
+      }
+      throw e;
+    }
+
+    try {
+      ({ mission: record } = dispatchFromTemplate(kernel, store, {
+        ...dispatchInput,
+        ...(submissionEvidence?.length ? { submissionEvidence } : {}),
+      }));
+    } catch (e) {
+      if (e instanceof IntentError) throw intentErrorToOidc(e);
+      if (dispatchFailure(e)) return;
+      ctx.status = 400;
+      ctx.body = { error: "invalid_request", error_description: e instanceof Error ? e.message : "dispatch failed" };
+      return;
+    }
+  }
+
+  // ---- mint mission-bound access token: INLINE COPY of handleChildJwtBearerGrant
+  // (~806-879). DPoP-bind to the proof verified above. The Grant and the
+  // AccessToken are owned by `client` (the DISPATCHER, the authenticated entity
+  // here) rather than by `record.client_id` (the recipient, who is not present
+  // in this exchange) — the one substitution the child-bearer code does not need,
+  // because there record.client_id IS the authenticated client.
   // Containment: every copy of the instance's authority into rar/authorization_
   // details projects the EFFECTIVE set (approved minus containment overlay).
   const effective = kernel.effectiveAuthoritySet(record);

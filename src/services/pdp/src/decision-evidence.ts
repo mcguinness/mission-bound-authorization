@@ -181,6 +181,15 @@ export interface DecisionEvidenceObject {
   evidence_id: string;
   evaluation_id: string;
   mission: RuntimeMissionRef;
+  /**
+   * @spec authority-server#join-rules rule 9, runtime-evidence#evidence-extensions
+   * `join_view_id` — the joined-view commitment, a top-level coordinated
+   * extension member the MAS owns. Present on every decision reached over a
+   * successful baseline Join, a later policy denial included; absent for a
+   * failed join and for a direct Mission-bound decision. Signed with the rest
+   * of the record; never echoed in the AuthZEN response context.
+   */
+  join_view_id?: string;
   subject: RuntimeSubjectRef;
   resource: RuntimeResourceRef;
   action: RuntimeActionRef;
@@ -269,6 +278,8 @@ export function preRequestDigest(input: {
 export interface DecisionEvidenceEmissionInput {
   capability_source?: RuntimeCapabilitySource;
   mission: RuntimeMissionRef;
+  /** The PDP's joined-view commitment, set only when this decision rode a successful join. */
+  join_view_id?: string;
   subject: RuntimeSubjectRef;
   resource: RuntimeResourceRef;
   action: RuntimeActionRef;
@@ -392,6 +403,7 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
         evidence_id: newRecordId("evd"),
         evaluation_id: input.evaluation_id,
         mission,
+        ...(input.join_view_id !== undefined ? { join_view_id: requiredString(input.join_view_id) } : {}),
         subject: { id: requiredString(input.subject.id),
           ...(typeof input.subject.type === "string" ? { type: input.subject.type } : {}),
           ...(typeof input.subject.properties?.iss === "string" ? { properties: { iss: input.subject.properties.iss } } : {}),

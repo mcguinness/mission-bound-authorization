@@ -8,13 +8,21 @@
  * facts, propagated Mission reference, mapping result, and delegation depth
  * into the PDP request and resolve there"). `mas-join.test.ts` covers
  * `resolveBaselineJoin` standalone; this file proves the PDP actually calls
- * it, denies before ever exposing a fallback authoritySet, and stamps
- * `join_view_id` on a decision that rode the joined path.
+ * it, denies before ever exposing a fallback authoritySet, and records
+ * `join_view_id` in the signed Decision Evidence of a decision that rode the
+ * joined path (rule 9, #972 item 27a), never on the response context.
  */
 
+import { generateKeyPairSync } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import type { Fga } from "../src/fga.js";
 import { evaluate, type EvaluationRequest, type EvaluateOptions } from "../src/evaluate.js";
+import {
+  createDecisionEvidenceEmitter,
+  DECISION_EVIDENCE_MEDIA_TYPE,
+  type DecisionEvidenceObject,
+  verifyEvidenceEnvelope,
+} from "../src/index.js";
 import { MISSION_RESOURCE_ACCESS_TYPE, type AuthorityEntry, type MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
 
@@ -55,6 +63,25 @@ const baseOpts = (extra: Partial<EvaluateOptions> = {}): EvaluateOptions => ({
   ...extra,
 });
 
+/**
+ * Evaluate with a real Decision Evidence emitter and return the signed record
+ * an independent verifier accepted, so every `join_view_id` assertion below
+ * reads the SIGNED record, not an unsigned copy.
+ */
+async function evaluated(request: EvaluationRequest, opts: EvaluateOptions) {
+  const { privateKey, publicKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
+  const kid = "pdp-join-evidence-test";
+  const emitter = createDecisionEvidenceEmitter({ signer: { kid, key: privateKey }, emitterId: RESOURCE, audience: RESOURCE });
+  const resolve = (params: { kid: string; emitter: { id: string; role: string }; audience?: string }) =>
+    params.kid === kid && params.emitter.role === "pdp" && params.emitter.id === RESOURCE && params.audience === RESOURCE
+      ? { key: publicKey }
+      : undefined;
+  const decision = await evaluate(request, { ...opts, evidence: emitter });
+  const record = decision.context.decision_evidence as DecisionEvidenceObject;
+  expect(await verifyEvidenceEnvelope(record, DECISION_EVIDENCE_MEDIA_TYPE, resolve)).toEqual({ valid: true });
+  return { decision, record, resolve };
+}
+
 /** A `fresh` Mission state observation read at the decision instant. */
 const OBSERVED = { state: "active", mode: "fresh", freshness_at: NOW.toISOString() };
 
@@ -73,14 +100,14 @@ const joinReq = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => ({
 });
 
 describe("evaluate(): baseline MAS Join, direct client (@spec authority-server#mission-join rules 1-4, 7, #557 review point 1)", () => {
-  it("permits and stamps join_view_id when context.mission_join is present and the subject/client match directly", async () => {
-    const decision = await evaluate(joinReq(), baseOpts());
+  it("permits when context.mission_join is present and the subject/client match directly, recording join_view_id in its signed Decision Evidence", async () => {
+    const { decision, record } = await evaluated(joinReq(), baseOpts());
     expect(decision.decision, JSON.stringify(decision)).toBe(true);
-    expect(decision.context.join_view_id).toBeTruthy();
+    expect(record.join_view_id).toMatch(/^sha-256:/);
   });
 
-  it("never carries join_view_id for an ORDINARY Mission-bound request (context.mission_join absent): the existing path is untouched", async () => {
-    const decision = await evaluate(
+  it("never records join_view_id for an ORDINARY Mission-bound request (context.mission_join absent): the existing path is untouched", async () => {
+    const { decision, record } = await evaluated(
       joinReq({
         context: {
           mission: { id: view.id, issuer: view.issuer },
@@ -91,38 +118,69 @@ describe("evaluate(): baseline MAS Join, direct client (@spec authority-server#m
       baseOpts(),
     );
     expect(decision.decision, JSON.stringify(decision)).toBe(true);
-    expect(decision.context.join_view_id).toBeUndefined();
+    expect(record).not.toHaveProperty("join_view_id");
   });
 });
 
-describe("evaluate(): baseline MAS Join, mission_mismatch (@spec authority-server#mission-join rule 6, #557 review point 1)", () => {
-  it("denies mission_mismatch when the authenticated subject does not match the Mission's subject, resolved BY THE PDP", async () => {
+describe("evaluate(): the joined-view commitment rides signed Decision Evidence only (@spec authority-server#join-rules rule 9, #972 item 27a)", () => {
+  it("signs join_view_id into the record: altering it fails verification", async () => {
+    const { record, resolve } = await evaluated(joinReq(), baseOpts());
+    expect(record.join_view_id).toMatch(/^sha-256:/);
+    const altered = { ...record, join_view_id: "sha-256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" };
+    expect((await verifyEvidenceEnvelope(altered, DECISION_EVIDENCE_MEDIA_TYPE, resolve)).valid).toBe(false);
+  });
+
+  it("carries no view identifier on the AuthZEN response context of a joined decision", async () => {
+    const { decision } = await evaluated(joinReq(), baseOpts());
+    expect(decision.context).not.toHaveProperty("join_view_id");
+  });
+
+  it("records the same join_view_id on a policy denial reached after a successful join", async () => {
+    const permit = await evaluated(joinReq(), baseOpts());
+    const denial = await evaluated(joinReq({ action: { name: "payments:invoice.approve" } }), baseOpts());
+    expect(denial.decision.decision).toBe(false);
+    expect(denial.record.denial_reason).not.toBe("mission_binding_failed");
+    expect(denial.record.join_view_id).toMatch(/^sha-256:/);
+    expect(denial.record.join_view_id).toBe(permit.record.join_view_id);
+  });
+
+  it("omits join_view_id from the Decision Evidence of a failed join", async () => {
+    const { decision, record } = await evaluated(
+      joinReq({ subject: { id: "mallory", properties: { iss: SUBJECT.iss } } }),
+      baseOpts(),
+    );
+    expect(decision.decision).toBe(false);
+    expect(record.denial_reason).toBe("mission_binding_failed");
+    expect(record).not.toHaveProperty("join_view_id");
+  });
+});
+
+describe("evaluate(): baseline MAS Join, mission_binding_failed (@spec authority-server#mission-join rule 6, #557 review point 1)", () => {
+  it("denies mission_binding_failed when the authenticated subject does not match the Mission's subject, resolved BY THE PDP", async () => {
     const decision = await evaluate(
       joinReq({ subject: { id: "mallory", properties: { iss: SUBJECT.iss } } }),
       baseOpts(),
     );
     expect(decision.decision).toBe(false);
-    expect(decision.context.denial_reason).toBe("mission_mismatch");
+    expect(decision.context.denial_reason).toBe("mission_binding_failed");
     // No fallback: a failed join never exposes any authoritySet-derived
-    // evidence (rule 6). This decision never reached step 4b's success
-    // assignment, so join_view_id is absent too.
+    // evidence (rule 6).
     expect(decision.context.entry_digest).toBeUndefined();
-    expect(decision.context.join_view_id).toBeUndefined();
   });
 
-  it("denies mission_mismatch when context.actor.client_id is missing entirely on the Join path", async () => {
+  it("denies mission_binding_failed when context.actor.client_id is missing entirely on the Join path", async () => {
     const decision = await evaluate(joinReq({ context: { ...joinReq().context, actor: undefined } }), baseOpts());
     expect(decision.decision).toBe(false);
-    expect(decision.context.denial_reason).toBe("mission_mismatch");
+    expect(decision.context.denial_reason).toBe("mission_binding_failed");
   });
 
-  it("denies mission_mismatch for an unrecognized client with no delegate policy configured, never falling back to the Mission's full authority", async () => {
+  it("denies mission_binding_failed for an unrecognized client with no delegate policy configured, never falling back to the Mission's full authority", async () => {
     const decision = await evaluate(
       joinReq({ context: { ...joinReq().context, actor: { client_id: "unrecognized-client" } } }),
       baseOpts(),
     );
     expect(decision.decision).toBe(false);
-    expect(decision.context.denial_reason).toBe("mission_mismatch");
+    expect(decision.context.denial_reason).toBe("mission_binding_failed");
   });
 });
 
@@ -143,7 +201,7 @@ describe("evaluate(): baseline MAS Join, delegate narrowing (@spec authority-ser
     expect(decision.decision, JSON.stringify(decision)).toBe(true);
   });
 
-  it("denies mission_mismatch for a delegate whose recorded depth exceeds the entry's own join_delegation.max_depth, even though the deployment's DelegatePolicy permits deeper delegation (#557 review point 3)", async () => {
+  it("denies mission_binding_failed for a delegate whose recorded depth exceeds the entry's own join_delegation.max_depth, even though the deployment's DelegatePolicy permits deeper delegation (#557 review point 3)", async () => {
     const decision = await evaluate(
       joinReq({
         context: {
@@ -155,12 +213,12 @@ describe("evaluate(): baseline MAS Join, delegate narrowing (@spec authority-ser
       baseOpts({ view: delegateView, delegatePolicy: { delegates: { "delegate-a": { maxDepth: 3 } } } }),
     );
     expect(decision.decision).toBe(false);
-    expect(decision.context.denial_reason).toBe("mission_mismatch");
+    expect(decision.context.denial_reason).toBe("mission_binding_failed");
   });
 
-  it("stamps a DIFFERENT join_view_id for the delegate's narrowed view than the direct client's full view", async () => {
-    const direct = await evaluate(joinReq(), baseOpts());
-    const delegate = await evaluate(
+  it("records a DIFFERENT join_view_id for the delegate's narrowed view than the direct client's full view", async () => {
+    const direct = await evaluated(joinReq(), baseOpts());
+    const delegate = await evaluated(
       joinReq({
         context: {
           ...joinReq().context,
@@ -170,8 +228,9 @@ describe("evaluate(): baseline MAS Join, delegate narrowing (@spec authority-ser
       }),
       baseOpts({ view: delegateView, delegatePolicy: { delegates: { "delegate-a": { maxDepth: 3 } } } }),
     );
-    expect(direct.decision).toBe(true);
-    expect(delegate.decision).toBe(true);
-    expect(delegate.context.join_view_id).not.toBe(direct.context.join_view_id);
+    expect(direct.decision.decision).toBe(true);
+    expect(delegate.decision.decision).toBe(true);
+    expect(delegate.record.join_view_id).toMatch(/^sha-256:/);
+    expect(delegate.record.join_view_id).not.toBe(direct.record.join_view_id);
   });
 });

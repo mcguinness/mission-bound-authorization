@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { Fga, type RuntimePosture } from "@mission/pdp";
-import type { TokenFacts } from "@mission/mcp-payments";
+import { credentialAuthorityFrom, type TokenFacts } from "@mission/mcp-payments";
 import { approveDemoMission, composeStack } from "../src/stack.js";
 /** @spec runtime#idempotency (#917): each stack gets its own single-writer claim file. */
 const tempClaimsFile = (): string => join(mkdtempSync(join(tmpdir(), "demo-claims-")), "claims.sqlite");
@@ -19,7 +19,7 @@ describe("demo configured remote PDP route", () => {
     try {
       const mission = approveDemoMission(stack);
       const view = stack.viewFor(mission.id)!;
-      const token: TokenFacts = { sub: "alice", clientId: "ap-agent", cnfJkt: "jkt", mission: { id: view.id, issuer: view.issuer, authority_hash: view.authority_hash } };
+      const token: TokenFacts = { sub: "alice", clientId: "ap-agent", cnfJkt: "jkt", mission: { id: view.id, issuer: view.issuer, authority_hash: view.authority_hash }, credentialAuthority: credentialAuthorityFrom(view.authority_set) };
       const statement = stack.server.protectedResourceMetadata().enforcement_scope_statement as RuntimePosture;
       expect(statement.state_source.pdp_unavailability_posture).toBe("deny");
       expect(statement.remote_decision_channels).toHaveLength(1);

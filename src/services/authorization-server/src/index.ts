@@ -407,10 +407,12 @@ export {
 export {
   createTemplate,
   dispatchFromTemplate,
+  findDispatch,
   selectDispatchAgent,
   TemplateStore,
   TemplateError,
   DispatchError,
+  DispatchMismatchError,
   type DispatchPolicies,
   type DispatchPolicy,
   type MissionTemplate,
