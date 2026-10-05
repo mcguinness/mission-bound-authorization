@@ -23,6 +23,7 @@ export {
   type EgressAdmission,
   type EgressAdmissionOptions,
   type EgressRequest,
+  type FetchJsonOptions,
   type FetchLimits,
   type HostLookup,
   isNonPublicAddress,

@@ -116,33 +116,105 @@ describe("egress admission (@spec aauth#section-11.4, signature-key#section-7.3)
   });
 });
 
+/** These fetches reach a local test server, so they admit loopback. */
+const LOCAL = { admitPrivateDestination: () => true };
+
 describe("bounded fetch (@spec signature-key#section-7.3)", () => {
   let server: Server | undefined;
+  let hits = 0;
   afterEach(() => {
     server?.close();
     server = undefined;
+    hits = 0;
   });
 
   async function serve(handler: Parameters<typeof createServer>[1]): Promise<string> {
-    server = createServer(handler);
+    server = createServer((req, res) => {
+      hits += 1;
+      handler?.(req, res);
+    });
     await new Promise<void>((resolve) => server?.listen(0, "127.0.0.1", resolve));
     return `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   }
+
+  const jwksServer = () =>
+    serve((_req, res) => {
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ keys: [] }));
+    });
+
+  it("connects to the addresses its own lookup checked, not a second resolution", async () => {
+    const { port } = new URL(await jwksServer());
+    // .invalid never resolves (RFC 6761), so success means the pinned answer was used.
+    const fetchJson = createFetchJson({
+      ...LOCAL,
+      lookup: async () => [{ address: "127.0.0.1", family: 4 }],
+    });
+    expect((await fetchJson(`http://pinned.invalid:${port}/jwks`)).status).toBe(200);
+    expect(hits).toBe(1);
+  });
+
+  it("refuses a host name whose answer is non-public, before connecting", async () => {
+    const { port } = new URL(await jwksServer());
+    const rebound = createFetchJson({
+      timeoutMs: 500,
+      lookup: async () => [{ address: "127.0.0.1", family: 4 }],
+    });
+    await expect(rebound(`http://rebound.invalid:${port}/jwks`)).rejects.toThrow(/non-public/);
+    expect(hits).toBe(0);
+  });
+
+  it("refuses any non-public address in the answer, even beside a public one", async () => {
+    const mixed = createFetchJson({
+      timeoutMs: 500,
+      lookup: async () => [
+        { address: "93.184.215.14", family: 4 },
+        { address: "10.0.0.7", family: 4 },
+      ],
+    });
+    await expect(mixed("https://mixed.invalid/jwks")).rejects.toThrow(/non-public/);
+  });
+
+  it("refuses a non-public IP literal without connecting, unless admitted", async () => {
+    const base = await jwksServer();
+    await expect(createFetchJson({ timeoutMs: 500 })(`${base}/jwks`)).rejects.toThrow(/public/);
+    expect(hits).toBe(0);
+    expect((await createFetchJson(LOCAL)(`${base}/jwks`)).status).toBe(200);
+  });
+
+  it("refuses a rebound answer that admission saw as public (@spec aauth#section-11.4)", async () => {
+    const lookups: string[] = [];
+    const resolver = new JwksResolver({
+      admitEgress: createEgressAdmission({ lookup: PUBLIC_DNS }),
+      fetchJson: createFetchJson({
+        timeoutMs: 500,
+        lookup: async (host) => {
+          lookups.push(host);
+          return [{ address: "169.254.169.254", family: 4 }];
+        },
+      }),
+    });
+    const err = await resolver.resolveKey(AP, "aauth-agent.json", "key-1").catch((e: unknown) => e);
+    expect((err as SignatureError).code).toBe("unknown_key");
+    expect(lookups).toEqual(["ap.example"]);
+  });
 
   it("refuses a response over the size limit", async () => {
     const base = await serve((_req, res) => {
       res.writeHead(200, { "content-type": "application/json" });
       res.end(JSON.stringify({ keys: [], pad: "x".repeat(4096) }));
     });
-    await expect(createFetchJson({ maxBytes: 1024 })(`${base}/jwks`)).rejects.toThrow(/exceeds/);
-    expect((await createFetchJson()(`${base}/jwks`)).status).toBe(200);
+    await expect(createFetchJson({ ...LOCAL, maxBytes: 1024 })(`${base}/jwks`)).rejects.toThrow(
+      /exceeds/,
+    );
+    expect((await createFetchJson(LOCAL)(`${base}/jwks`)).status).toBe(200);
   });
 
   it("gives up after the timeout", async () => {
     const base = await serve(() => {
       // Never answers.
     });
-    await expect(createFetchJson({ timeoutMs: 50 })(`${base}/slow`)).rejects.toThrow();
+    await expect(createFetchJson({ ...LOCAL, timeoutMs: 50 })(`${base}/slow`)).rejects.toThrow();
   });
 
   it("does not follow redirects", async () => {
@@ -155,7 +227,7 @@ describe("bounded fetch (@spec signature-key#section-7.3)", () => {
       res.writeHead(302, { location: "/ok" });
       res.end();
     });
-    await expect(createFetchJson()(`${base}/moved`)).rejects.toThrow();
+    await expect(createFetchJson(LOCAL)(`${base}/moved`)).rejects.toThrow(/redirect/);
   });
 
   it("is what a resolver uses by default, behind the default admission", async () => {

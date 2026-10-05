@@ -6,7 +6,16 @@ import { isServerIdentifier, isWellKnownName } from "./identifiers.js";
 export type FetchJson = (url: string) => Promise<{ status: number; body: unknown }>;
 
 export interface JwksResolverOptions {
-  /** Default: a fetch with a timeout, a size limit and no redirects. */
+  /**
+   * Default: {@link createFetchJson}, a fetch with a timeout, a size limit
+   * and no redirects that connects only to the public addresses it
+   * resolved. A replacement must pin its connection to addresses it has
+   * checked in the same way (DNS-rebinding defense), and a deployment that
+   * admits private destinations admits them here as well as in
+   * `admitEgress`.
+   *
+   * @spec signature-key#section-7.3
+   */
   fetchJson?: FetchJson;
   /** Milliseconds since the epoch. */
   now?: () => number;
@@ -63,7 +72,10 @@ export class JwksResolver {
   /** Per issuer: the last JWKS fetch, its floor and any fetch in flight. */
   private readonly issuerJwks = new Map<string, { url: string; keys: unknown[] }>();
   private readonly issuerJwksAttempt = new Map<string, number>();
-  private readonly issuerJwksInflight = new Map<string, { url: string; keys: Promise<unknown[]> }>();
+  private readonly issuerJwksInflight = new Map<
+    string,
+    { url: string; keys: Promise<unknown[]> }
+  >();
 
   constructor(options: JwksResolverOptions = {}) {
     this.fetchJson = options.fetchJson ?? createFetchJson();

@@ -1,5 +1,7 @@
 import { lookup as dnsLookup } from "node:dns/promises";
-import { BlockList, isIP } from "node:net";
+import { request as httpRequest } from "node:http";
+import { request as httpsRequest } from "node:https";
+import { BlockList, isIP, type LookupFunction } from "node:net";
 
 /** What a verifier is about to fetch, and on whose behalf. */
 export interface EgressRequest {
@@ -68,9 +70,10 @@ const systemLookup: HostLookup = (hostname) => dnsLookup(hostname, { all: true, 
  * a JWKS on another origin than its issuer only with explicit admission;
  * no private, loopback or link-local destination, whether named by an IP
  * literal or resolved from a host name. Admission is checked before the
- * fetch; pinning the resolved address for the connection is the fetch
- * function's job, so a deployment that needs DNS-rebinding defense
- * supplies a `fetchJson` that pins.
+ * fetch. Its DNS answer is not the one a connection uses, so the
+ * DNS-rebinding defense is the fetch's: {@link createFetchJson} checks the
+ * addresses it resolves and connects only to them, and a replacement
+ * `fetchJson` must do the same.
  *
  * @spec aauth#section-11.4
  * @spec signature-key#section-7.3
@@ -104,37 +107,118 @@ export interface FetchLimits {
   maxBytes?: number;
 }
 
+export interface FetchJsonOptions extends FetchLimits {
+  /** Default: the system resolver, all addresses. */
+  lookup?: HostLookup;
+  /** Admit a private, loopback or link-local destination (deployment admission). */
+  admitPrivateDestination?: (url: URL) => boolean;
+}
+
 /**
- * A JSON fetch with a timeout, a response-size limit and no redirects.
+ * The connection's own lookup: resolve once, refuse unless every address is
+ * public or the destination is admitted, and hand the socket exactly the
+ * addresses checked, so a changed DNS answer cannot redirect the connection.
+ */
+function pinnedLookup(url: URL, options: FetchJsonOptions): LookupFunction {
+  const lookup = options.lookup ?? systemLookup;
+  return (hostname, lookupOptions, callback) => {
+    const family =
+      lookupOptions.family === "IPv4"
+        ? 4
+        : lookupOptions.family === "IPv6"
+          ? 6
+          : lookupOptions.family;
+    lookup(hostname)
+      .then((resolved) => {
+        if (
+          !options.admitPrivateDestination?.(url) &&
+          resolved.some((a) => isNonPublicAddress(a.address))
+        ) {
+          throw new Error(`${hostname} resolves to a non-public address`);
+        }
+        const addresses = family ? resolved.filter((a) => a.family === family) : resolved;
+        const [first] = addresses;
+        if (!first) throw new Error(`${hostname} has no usable address`);
+        if (lookupOptions.all) callback(null, addresses);
+        else callback(null, first.address, first.family);
+      })
+      .catch((err: Error) => callback(err, "", 0));
+  };
+}
+
+/**
+ * A JSON fetch with a timeout, a response-size limit and no redirects that
+ * pins the connection to the addresses it checked: a host name is resolved
+ * once, by the connection itself, and refused unless every address is
+ * public; an IP literal is checked directly. Protocol and origin rules stay
+ * with egress admission.
  *
  * @spec signature-key#section-7.3
  */
-export function createFetchJson(limits: FetchLimits = {}) {
-  const timeoutMs = limits.timeoutMs ?? 5000;
-  const maxBytes = limits.maxBytes ?? 256 * 1024;
-  return async (url: string): Promise<{ status: number; body: unknown }> => {
-    const response = await fetch(url, {
-      redirect: "error",
-      headers: { accept: "application/json" },
-      signal: AbortSignal.timeout(timeoutMs),
+export function createFetchJson(options: FetchJsonOptions = {}) {
+  const timeoutMs = options.timeoutMs ?? 5000;
+  const maxBytes = options.maxBytes ?? 256 * 1024;
+  return (url: string): Promise<{ status: number; body: unknown }> => {
+    const target = new URL(url);
+    const host = target.hostname.replace(/^\[|\]$/g, "");
+    // A connection to an IP literal makes no lookup, so check it here.
+    if (isIP(host) && isNonPublicAddress(host) && !options.admitPrivateDestination?.(target)) {
+      return Promise.reject(new Error(`${host} is not a public address`));
+    }
+    const send =
+      target.protocol === "https:"
+        ? httpsRequest
+        : target.protocol === "http:"
+          ? httpRequest
+          : null;
+    if (!send) return Promise.reject(new Error(`${target.protocol} is not fetched`));
+    return new Promise((resolve, reject) => {
+      const request = send(
+        target,
+        {
+          headers: { accept: "application/json" },
+          agent: false,
+          lookup: pinnedLookup(target, options),
+          signal: AbortSignal.timeout(timeoutMs),
+        },
+        (response) => {
+          const status = response.statusCode ?? 0;
+          if (status >= 300 && status < 400) {
+            response.destroy();
+            reject(new Error(`${url} redirects, and redirects are not followed`));
+            return;
+          }
+          if (status !== 200) {
+            response.resume();
+            resolve({ status, body: null });
+            return;
+          }
+          const chunks: Buffer[] = [];
+          let size = 0;
+          response.on("data", (chunk: Buffer) => {
+            size += chunk.length;
+            if (size > maxBytes) {
+              response.destroy();
+              reject(new Error(`response from ${url} exceeds ${maxBytes} bytes`));
+              return;
+            }
+            chunks.push(chunk);
+          });
+          response.on("end", () => {
+            try {
+              resolve({ status: 200, body: JSON.parse(Buffer.concat(chunks).toString("utf8")) });
+            } catch (err) {
+              reject(err);
+            }
+          });
+          response.on("error", reject);
+          response.on("close", () => {
+            if (!response.complete) reject(new Error(`response from ${url} ended early`));
+          });
+        },
+      );
+      request.on("error", reject);
+      request.end();
     });
-    if (response.status !== 200 || !response.body) {
-      await response.body?.cancel();
-      return { status: response.status, body: null };
-    }
-    const reader = response.body.getReader();
-    const chunks: Uint8Array[] = [];
-    let size = 0;
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      size += value.length;
-      if (size > maxBytes) {
-        await reader.cancel();
-        throw new Error(`response from ${url} exceeds ${maxBytes} bytes`);
-      }
-      chunks.push(value);
-    }
-    return { status: 200, body: JSON.parse(Buffer.concat(chunks).toString("utf8")) };
   };
 }
