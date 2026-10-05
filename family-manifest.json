@@ -84,7 +84,7 @@
    "architecture_name": "High-assurance architecture"
   }
  },
- "count": 50,
+ "count": 51,
  "drafts": [
   {
    "file": "draft-mcguinness-mission-control-plane.md",
@@ -211,7 +211,7 @@
    "role": "companion",
    "spec_maturity": "experimental",
    "maintenance": "frozen-until-upstream-release",
-   "maintenance_exception": "2026-10-02 (#838): the terminate response is the full status representation; status carries token_residual once terminated, with its members defined; idempotency equivalence covers caller, PS, mission path target and the parsed body, and a replay repeats the committed receipt with a fresh observation; examples are validated by scripts/check-aauth-management-examples.mjs. No AAuth wire member changed. The frozen-until-upstream-release text-fix policy is otherwise unchanged.",
+   "maintenance_exception": "2026-10-02 (#838): the terminate response is the full status representation; status carries token_residual once terminated, with its members defined; idempotency equivalence covers caller, PS, mission path target and the parsed body, and a replay repeats the committed receipt with a fresh observation; examples are validated by scripts/check-aauth-management-examples.mjs. No AAuth wire member changed. 2026-10-03 (#839): a Person reaches the operations through the PS's own interface, by internal invocation or a backend calling as a management service; the PS authorizes and records the action as the human, never under the service's administrative privilege; a browser session never authenticates a control-plane request; Person Interfaces security considerations added. No AAuth wire member changed. 2026-10-04 (#834): Person Tokens are Tracked Credentials, retained, counted in token_residual, revoked at the aud Resource and each presented-to AS, and keep complete false while live and unconfirmed; residual bounds name them. No AAuth wire member changed. The frozen-until-upstream-release text-fix policy is otherwise unchanged.",
    "group": "lifecycle",
    "verbs": [
     "govern"
@@ -2488,6 +2488,36 @@
     "draft-mcguinness-oauth-mission-approval-revision",
     "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-expansion"
+   ]
+  },
+  {
+   "file": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "slug": "draft-mcguinness-oauth-mission-request-provenance",
+   "title": "Mission Request Provenance for OAuth 2.0",
+   "category": "std",
+   "role": "companion",
+   "spec_maturity": "experimental",
+   "maintenance": "active",
+   "group": "approval-time",
+   "verbs": [
+    "propose"
+   ],
+   "summary": "Defines an optional Intent Submission Evidence type: a trusted request intake's signed assertion of who originated the instruction behind a Mission Intent, through which authenticated channel, and when, bound to one AS, one exact Intent, and one presenter, carrying only a secret-keyed digest of the instruction.",
+   "pull_when": "A deployment's admission policy needs authenticated evidence of where the request behind a Mission Intent came from, from an intake isolated from the shaper.",
+   "normative_references": [
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-submission-evidence"
+   ],
+   "adoption_requires": [
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-submission-evidence"
+   ],
+   "requires_when": [],
+   "references": [
+    "draft-mcguinness-mission-evidence-envelope",
+    "draft-mcguinness-mission-shaping",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-submission-evidence"
    ]
   },
   {

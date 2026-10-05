@@ -19,8 +19,8 @@
     "content_sha256": "a2a1f271328ddd5634a826cbf588eadcc514418fad0f4679fe1f31c647056ec0"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "091f1ffd5e6b77d47f8f189797bfdb0cf64ea328",
-    "content_sha256": "2dec6151c2f5be97d04850b1d0253608ade2b9d406227f7a3149814c781af1f7"
+    "revision": "84822ae9e2d0d2d05b29fd1b14286ca6fef1ca74",
+    "content_sha256": "417dd729db9e3a999d209c40df9f3f3912afd77def975c7ff66f55cd1142c277"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "2b422bf1c54a64ae5cdf4440f041a0d27f2a0e05",
@@ -55,16 +55,16 @@
     "content_sha256": "14a4a413a5b087f8ca471accdf042bbe87e929abe6908d4986a75accfad46cb8"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "30113da8793707597d5d5ced96eb838d881a29e6",
-    "content_sha256": "e7f66a5cb2708e6f6192888c4a98afd24baab76b1b77f8171f12ac2620858b55"
+    "revision": "94f778aa73a09dba70239f5d1a9b51a45e63d8b3",
+    "content_sha256": "8458bf88e169f9ac3376235372abb2b83822c4dca6930229d365659a244d68bc"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "091f1ffd5e6b77d47f8f189797bfdb0cf64ea328",
     "content_sha256": "76ae8710dc0faf41220e947e05a4dc4a79440c0039746089a4b24e486c1d06de"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "f175eba2a7c978611db6ea8ba9413fa82655eb3b",
-    "content_sha256": "2b486543f5bf301ee29c6c8bc12493448324dbdd8f92ac23d3c665d6da11e0e9"
+    "revision": "73859449fc9ff36044486ade4d96ddb2e7e791a1",
+    "content_sha256": "190d771a34f77a914917df260768ec4f3328ed2724b84237167ff8598b8e2997"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "19fa5a0efe2af365e706b34d45ca1d1f384f6dec",
@@ -75,8 +75,8 @@
     "content_sha256": "055d460354f9c98d981f74ce661daa606685695bedd42d04a31981158f8389d7"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "7bb182b0caae732be5813431f4c5ad6406eafaf7",
-    "content_sha256": "b58add3277fa19af45e37df3b380e66fd833392ca7efda1170f656132cb48fb6"
+    "revision": "4481fc1f4d24f824e79fedd8208568556a2e1c11",
+    "content_sha256": "61fcaab3847fbfa855aa816916384f8032e7438326c4952ad53cb1ae65d3a48b"
    },
    "draft-mcguinness-mission-orchestration.md": {
     "revision": "4fe0d0b07fad335e74bf3d9ed85e99a08965e8b2",
@@ -99,8 +99,8 @@
     "content_sha256": "41d16c43d4e29769a790ea33393bfc300f8b96875a99c614d6039c689cc3fadb"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "4b1ac7e9be5fb4097bcc8b50ddb173ea34aeb85e",
-    "content_sha256": "77a833399499f8151e64e14656ceb6ddc13e573af4f7d9499a489492d4f68b04"
+    "revision": "c974571e77358f75177fa9abdf74c88253e9bf4c",
+    "content_sha256": "19db44056201dce495dbcc984f4d661af641a1f625f0e0dc074d2c22916dda3b"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "02c1fcf62e9f4fd3aad0df84d6ccabd6ebd7ce0d",
@@ -113,6 +113,14 @@
    "draft-mcguinness-oauth-mission-submission-evidence.md": {
     "revision": "dd16dd544da103729cc5380bb11e860796a95643",
     "content_sha256": "78fa453b80921a5898aa47c2453be8c86cf81d74a5a5a87e95ed0c2a4a06637e"
+   },
+   "draft-mcguinness-oauth-mission-request-provenance.md": {
+    "revision": "77aa582c9ac6588eaa2bcf0ab6f1d298308f3f3b",
+    "content_sha256": "b0fcb6a467d70b0348ba62d7ec2a567cf49101c94e5e39ad4f5c8490258f521e"
+   },
+   "draft-mcguinness-mission-aauth-management.md": {
+    "revision": "0d59405c4b5a2c3fbd1b021b2f914b0701c8e8a7",
+    "content_sha256": "2a7df9ec7e7679bd56ec77e7d1bcbe457ae738fef4bbc1501b3195ab86a93386"
    }
   }
  },
@@ -227,6 +235,7 @@
    "approval-context.manifest",
    "child-delegation.carryover",
    "child-delegation.subtree-rendering",
+   "child-delegation.policy-drawdown",
    "core.instance-context",
    "core.delegation",
    "runtime.instance-context",
@@ -234,6 +243,8 @@
    "derivation-limits.limit",
    "continuation.ica-transport",
    "submission-evidence.verification",
+   "request-provenance.verification",
+   "request-provenance.intake",
    "expansion.interactive-completion"
   ]
  },
@@ -3229,6 +3240,44 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#985 (D219). No implementation witness: the reference registry holds the current snapshot per policy id, not the history an audit horizon needs once a policy is edited."
+  },
+  {
+   "id": "core.standing-consent.activation-event-id",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "standing-consent-bases",
+   "text": "That value identifies the activation event, never the standing approval",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "for an instance activated under a standing-consent basis, the record's approval_event_id identifies that activation: a retried activation returns the committed Mission, and two distinct activations under one standing consent create two Missions"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases) > two Dispatches under one template consent create two Missions, each with its own approval_event_id, never the template's",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases) > a retry by the same Dispatcher recovers the committed instance and its approval_event_id",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Witnessed on the Template Dispatch basis: two Dispatches under one template consent create two Missions with distinct approval_event_ids, and a retry returns the committed Mission and its value. Proved by deriving approval_event_id from dispatch_event_id again (the distinct-activations test fails) and by disabling recovery (the retry test fails). Child Delegation's policy_drawdown is witnessed by its own row; Progressive ceiling_drawdown is not implemented."
   },
   {
    "id": "core.approval-basis.adjudication-governance-record-override",
@@ -24489,9 +24538,15 @@
      "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > happy path: dispatch mints a DPoP-bound mission token, and a repeated dispatch_event_id is idempotent",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "Dispatch idempotency at /token (@spec mission-template#dispatch, mission#intent-submission-evidence) > a completed Dispatch recovers before evidence re-verification; a new Dispatch still verifies",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Tested for the same-fingerprint retry path only (an unchanged repeated dispatch_event_id). Fingerprint-mismatch refusal, atomic-reservation concurrency, and tombstone retention are not exercised by the current suite; the current implementation dedupes on dispatch_event_id via the issuance profile's approval_event_id mechanism and does not yet implement the fingerprint object this profile's adoption of the expansion apparatus specifies."
+   "notes": "Tested at the endpoint for the same-fingerprint retry, including a retry whose Intent Submission Evidence lapsed after completion (recovered before re-verification; proved by skipping the early lookup). Fingerprint mismatch and tombstone retention have their own rows (template.dispatch.fingerprint-mismatch-refusal, template.dispatch.approval-event-id-per-dispatch). Concurrent-duplicate recovery (the reservation's primary-key race) is not exercised, so the row stays partial."
   },
   {
    "id": "template.dispatch.fingerprint-mismatch-refusal",
@@ -24511,8 +24566,22 @@
     "normative": "a dispatch_event_id reused with a different operation fingerprint (a changed template_id, intent, evidence, proposal, or cnf) is refused with invalid_request rather than recovered"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "Dispatch idempotency at /token (@spec mission-template#dispatch, mission#intent-submission-evidence) > a reused dispatch_event_id with a different intent or evidence is invalid_request, with no mission_denial_reason",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases) > the same Dispatcher's dispatch_event_id with a different fingerprint is refused, never recovered",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Every named fingerprint member is asserted: intent and evidence changes at the token endpoint (invalid_request with an error_description and no mission_denial_reason, and the unchanged retry still recovers); template_id, proposal and cnf changes at kernel level (refused, nothing committed). Proved by skipping the fingerprint comparison (both tests fail) and by restoring a mission_denial_reason on the mismatch response (the endpoint test fails)."
   },
   {
    "id": "template.dispatch.completed-recovery-survives-retirement",
@@ -24811,6 +24880,53 @@
    "notes": "A selection that changes between attempts needs a reconfigured Dispatch Policy, which only the unit test can stage; the endpoint test shows the retry returning the committed Agent under a fixed policy."
   },
   {
+   "id": "template.dispatch.approval-event-id-per-dispatch",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch",
+   "text": "`approval_event_id` identifies this Dispatch, never the template's approval",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "each new Dispatch reservation receives a unique approval_event_id, retained with the committed instance: a retry by the same Dispatcher recovers it, a different Dispatcher or dispatch_event_id never resolves to it, and a reservation created after the key's tombstone expires receives a new one"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases) > a retry by the same Dispatcher recovers the committed instance and its approval_event_id",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases) > two Dispatches under one template consent create two Missions, each with its own approval_event_id, never the template's",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases) > another permitted Dispatcher reusing the same dispatch_event_id gets its own instance, never the first Dispatcher's",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases) > a dispatch_event_id reused after its tombstone expires creates a new instance with a new approval_event_id",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Each observation clause has its own test: same-Dispatcher retry recovers (RETRY), a different dispatch_event_id never resolves to it (TWO), a different Dispatcher never resolves to it (OTHER), and a reservation after the tombstone expires receives a new value (EXPIRY, a 60 s retention and the injected clock). Mutation-proved: deriving the value from dispatch_event_id fails TWO, OTHER and EXPIRY; keying the reservation without the Dispatcher fails OTHER; disabling recovery fails RETRY; ignoring the store's retention fails EXPIRY."
+  },
+  {
    "id": "template.grant-type.agent-separate-from-presenter",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "grant-type",
@@ -25059,6 +25175,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#998 option (a), endorsed by owner review 2026-10-02. No Progressive implementation yet."
+  },
+  {
+   "id": "progressive.in-ceiling.approval-event-id-per-drawdown",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "in-ceiling-expansion",
+   "text": "Its record's `approval_event_id` identifies this drawdown, never the ceiling consent",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "each new (client, creation_request_id) reservation for a ceiling_drawdown receives a unique approval_event_id, retained with the committed successor: a lost-response retry recovers it, and a distinct drawdown, or a reservation created after the key's tombstone expires, receives a new one"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Not implemented: the reference AS has no ceiling_drawdown activation."
   },
   {
    "id": "cross-domain.delegation-depth.composed-bound-disclosure",
@@ -27635,6 +27773,41 @@
    "notes": "#987 (D219 ruling). No implementation witness: the reference consent rendering shows no child-delegation figures yet."
   },
   {
+   "id": "child-delegation.record.policy-drawdown-approval-event-id",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "record-requirements",
+   "text": "In both forms the record's `approval_event_id` is that `activation_event_id`, never the Parent Mission's approval event",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.policy-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a child created under policy_drawdown records approval_event_id equal to its activation_event_id, never the Parent Mission's approval_event_id"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "approval basis (@spec mission#approval-basis, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "approval basis (@spec mission#approval-basis, child-delegation#child-creation) > uses the justifying entry's child_creation_policy digest as root_commitment when the entry carries one",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Both forms: without and with a child_creation_policy, the record's approval_event_id equals activation.activation_event_id and differs from the Parent Mission's approval_event_id. Proved by recording the parent's approval_event_id on the child (both tests fail). Scoped to child-delegation.policy-drawdown: a direct human-approved child records activation.approval_event_id, not an activation_event_id, so this requirement never applies to it."
+  },
+  {
    "id": "child-delegation.carryover.expansion-disclosure",
    "spec": "draft-mcguinness-oauth-mission-expansion.md",
    "anchor": "deferred-window",
@@ -28410,6 +28583,541 @@
    "notes": "#901 review: make the AS-binding check explicit in the optional Submission Evidence companion. No supported evidence type currently exercises this check; verification must include absent, wrong-AS, invalid, and valid bindings when a concrete type is implemented."
   },
   {
+   "id": "request-provenance.trust.no-header-key",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "trust-configuration",
+   "text": "The AS MUST NOT resolve or accept a key from the assertion's `jku`, `x5u`, `jwk`, or `x5c` header parameters",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "An assertion carrying jku, x5u, jwk, or x5c is refused with invalid_mission_intent_evidence, and no key is fetched from or taken from those parameters."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+  },
+  {
+   "id": "request-provenance.trust.key-purpose-mapping",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "trust-configuration",
+   "text": "name cryptographic operations, not authority to sign provenance, and never establish that mapping alone",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "An assertion verified under a configured signer's key that the AS configuration does not map to this evidence type is refused with invalid_mission_intent_evidence, even when the key's use is sig and its key_ops include verify."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+  },
+  {
+   "id": "request-provenance.verification.entry-shape",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "verification",
+   "text": "It refuses the submission with `invalid_mission_intent_evidence` on any failure below",
+   "facet": "entry-shape",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "An entry with any member other than type and assertion, or a non-string assertion, is refused with invalid_mission_intent_evidence."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+  },
+  {
+   "id": "request-provenance.verification.header",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "verification",
+   "text": "It refuses the submission with `invalid_mission_intent_evidence` on any failure below",
+   "facet": "protected-header",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "An assertion whose protected typ is not exactly mission-request-provenance+jwt, whose alg is none, or that lacks kid, is refused with invalid_mission_intent_evidence."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+  },
+  {
+   "id": "request-provenance.verification.signer-and-key-scope",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "verification",
+   "text": "It refuses the submission with `invalid_mission_intent_evidence` on any failure below",
+   "facet": "signer-key-and-signature",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "An assertion from a signer the AS configuration does not authorize, under a kid the configuration does not map to this evidence type, or with an alg the key does not permit, is refused with invalid_mission_intent_evidence; an assertion with an invalid signature is refused likewise."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+  },
+  {
+   "id": "request-provenance.verification.claims-and-audience",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "verification",
+   "text": "It refuses the submission with `invalid_mission_intent_evidence` on any failure below",
+   "facet": "required-claims-and-audience",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "An assertion missing a required claim, carrying a claim of the wrong type, or whose aud is an array or any value other than this AS's issuer identifier, is refused with invalid_mission_intent_evidence."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+  },
+  {
+   "id": "request-provenance.verification.time-window",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "verification",
+   "text": "It refuses the submission with `invalid_mission_intent_evidence` on any failure below",
+   "facet": "time-window",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "Outside the declared clock-skew allowance, an assertion with iat in the future, exp passed, exp minus iat above the declared maximum lifetime, captured_at later than iat, or iat minus captured_at above the declared maximum capture age, is refused with invalid_mission_intent_evidence."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+  },
+  {
+   "id": "request-provenance.verification.signer-scope",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "verification",
+   "text": "It refuses the submission with `invalid_mission_intent_evidence` on any failure below",
+   "facet": "originator-and-channel-scope",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "An assertion whose originator or channel.type lies outside the signer's configured scope, or from a user-device signer whose key the AS has not bound to that originator, is refused with invalid_mission_intent_evidence."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+  },
+  {
+   "id": "request-provenance.verification.intent-and-presenter",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "verification",
+   "text": "It refuses the submission with `invalid_mission_intent_evidence` on any failure below",
+   "facet": "intent-and-presenter-binding",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "An assertion whose intent_hash differs from the submitted Intent's provisional intent_hash, or whose presenter does not match the presenter the containing exchange established, is refused with invalid_mission_intent_evidence."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+  },
+  {
+   "id": "request-provenance.verification.declared-bounds",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "verification",
+   "text": "The deployment declares its maximum assertion lifetime, maximum capture age, and clock-skew allowance, and keeps each bounded.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The deployment's documentation states a finite maximum assertion lifetime, maximum capture age, and clock-skew allowance."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+  },
+  {
+   "id": "request-provenance.replay.reserve",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "replay",
+   "text": "succeeds only if no other submission has reserved or committed it",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "concurrency",
+   "observation": {
+    "normative": "Of concurrent submissions presenting the same (iss, jti), at most one reserves the pair; every other is refused as replay with invalid_mission_intent_evidence."
+   },
+   "level": "concurrency",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+  },
+  {
+   "id": "request-provenance.replay.release-on-refusal",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "replay",
+   "text": "When the AS refuses the containing submission for any reason, including another evidence entry failing, it releases the reservation.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "After a submission carrying a valid assertion is refused for another reason, such as another evidence entry failing, a later submission presenting the same assertion is not refused as replay."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+  },
+  {
+   "id": "request-provenance.replay.committed-refused",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "replay",
+   "text": "a client that retries after losing the response to an accepted submission presents a fresh assertion: the committed `jti` is refused as replay.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "replay",
+   "observation": {
+    "normative": "On a surface without a creation idempotency fingerprint, such as PAR, presenting an assertion whose (iss, jti) an accepted submission committed is refused as replay with invalid_mission_intent_evidence until at least exp plus the clock-skew allowance."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+  },
+  {
+   "id": "request-provenance.replay.creation-recovery-original-evidence",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "replay",
+   "text": "A client retrying an operation on such a surface after a lost response MUST re-present the original evidence entry unchanged, including the original assertion",
+   "role": "client",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A client retrying an expansion or child-creation exchange with the same creation_request_id after a lost response presents the same evidence array, including the original assertion string, as the first attempt."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+  },
+  {
+   "id": "request-provenance.replay.creation-recovery-exact-retry",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "replay",
+   "text": "The AS resolves an exact retry by its fingerprint and returns the recorded outcome or continuation without verifying the assertion again, so the committed `jti` does not refuse it.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "On an expansion or child-creation exchange, a retry with the same creation_request_id that re-presents the original assertion recovers the recorded outcome or continuation and is not refused as replay, even after the assertion's exp; a retry presenting a fresh assertion is refused with invalid_request on the fingerprint mismatch and creates nothing."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+  },
+  {
+   "id": "request-provenance.recorded-facts.exact",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "recorded-facts",
+   "text": "On acceptance, the AS records the entry as a `submission_evidence` element",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The accepted entry's recorded facts are exactly signer {iss, kid}, originator, channel, captured_at as an RFC 3339 timestamp, request_digest, assertion_id (the jti), and capture_id when present; no fact is recorded from an undefined claim."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+  },
+  {
+   "id": "request-provenance.recorded-facts.no-content",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "recorded-facts",
+   "text": "They carry no instruction text and no secret.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "This evidence type's recorded facts carry neither the instruction nor the capture secret."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+  },
+  {
+   "id": "request-provenance.assertion.header-no-key",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "assertion",
+   "text": "The header MUST NOT carry `jku`, `x5u`, `jwk`, or `x5c`.",
+   "role": "PRODUCER",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.intake"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "An assertion the intake emits carries none of jku, x5u, jwk, or x5c in its protected header."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+  },
+  {
+   "id": "request-provenance.assertion.no-content-commitment",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "assertion",
+   "text": "A producer MUST NOT emit any other claim that carries or commits, directly or through a hash, to request content",
+   "role": "PRODUCER",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.intake"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "An assertion the intake emits carries no claim beyond those the document defines that carries or commits to the instruction, its media type, the capture secret, or Shaping Evidence; in particular no shaping hash."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+  },
+  {
+   "id": "request-provenance.assertion.capture-id-random",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "assertion",
+   "text": "MUST NOT be derived from the instruction or any other request content",
+   "role": "PRODUCER",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.intake"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "Two captures of the same instruction and media type yield distinct capture_id values, neither computable from the request content."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+  },
+  {
+   "id": "request-provenance.signing.own-capture-only",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "signing",
+   "text": "It MUST NOT sign for a capture record from another workflow or for a request it did not capture.",
+   "role": "PRODUCER",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.intake"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A signing request naming a capture record from another workflow, or carrying no capture record of the intake's own, yields no assertion."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+  },
+  {
+   "id": "request-provenance.signing.own-intent-hash",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "signing",
+   "text": "The intake computes `intent_hash` itself over the candidate Intent",
+   "role": "PRODUCER",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.intake"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The emitted intent_hash equals the intake's own computation over the candidate Intent for the AS that aud names; an intent_hash, digest, originator, or channel fact supplied by the shaper does not change the emitted claims."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+  },
+  {
+   "id": "request-provenance.signing.fresh-per-intent",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "signing",
+   "text": "When shaping or approval revision changes `intent_hash`, the intake issues a fresh assertion with a fresh `jti`",
+   "role": "PRODUCER",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.intake"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "After the candidate Intent changes, the intake's next assertion carries the new intent_hash and a jti it has not used before."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+  },
+  {
+   "id": "request-provenance.request-digest.construction",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "request-digest",
+   "text": "The request digest is HMAC-SHA-256 ({{RFC2104}}, {{RFC6234}}) under the capture's secret, over this exact input:",
+   "role": "PRODUCER",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.intake"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Over the Appendix test vectors, the intake's request_digest reproduces each published value, and differs when the instruction, the media type, or the secret changes."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+  },
+  {
    "id": "expansion.restoration.discharge-disclosed",
    "spec": "draft-mcguinness-oauth-mission-expansion.md",
    "anchor": "verification-order",
@@ -28672,6 +29380,363 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1045 option (a2), opened for owner review. No implementation yet."
+  },
+  {
+   "id": "aauth-management.person-path.authorize-as-person",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "person-caller",
+   "text": "Either way the PS MUST authorize the action as the authenticated Person under the rules above, MUST record that Person as the principal, and MUST NOT apply a management service's administrative privilege to it.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an action the PS's interface submits for a Person, by internal invocation or through a management-service backend, is refused when it exceeds that Person's own caller authorization for the target mission, even though the interface or service could otherwise perform it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#839 specification slice (PR #1063). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.person-path.record-person",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "person-caller",
+   "text": "Either way the PS MUST authorize the action as the authenticated Person under the rules above, MUST record that Person as the principal, and MUST NOT apply a management service's administrative privilege to it.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the mission log entry for an action submitted through the PS's interface names the authenticated Person as the principal"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#839 specification slice (PR #1063). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.person-path.no-service-privilege",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "person-caller",
+   "text": "Either way the PS MUST authorize the action as the authenticated Person under the rules above, MUST record that Person as the principal, and MUST NOT apply a management service's administrative privilege to it.",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an action submitted for a Person through a management-service backend never succeeds on the service's administrative privilege; a reason or scope only an administrator holds, such as administrative, is refused"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#839 specification slice (PR #1063). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.service-for-human.authorize-as-human",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "management-service",
+   "text": "For such a call the PS MUST authorize the action as that human under the human's own caller rules, MUST record the human as the principal and the service as the channel, and MUST NOT apply the service's administrative privilege.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a management-service call made for a human is refused when it exceeds that human's own caller authorization for the target mission, even when the service's own registration would permit it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#839 specification slice (PR #1063). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.service-for-human.record-human-and-channel",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "management-service",
+   "text": "For such a call the PS MUST authorize the action as that human under the human's own caller rules, MUST record the human as the principal and the service as the channel, and MUST NOT apply the service's administrative privilege.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the mission log entry for a management-service call made for a human names that human as the principal and the service as the channel"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#839 specification slice (PR #1063). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.service-for-human.no-service-privilege",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "management-service",
+   "text": "For such a call the PS MUST authorize the action as that human under the human's own caller rules, MUST record the human as the principal and the service as the channel, and MUST NOT apply the service's administrative privilege.",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a management-service call made for a human never succeeds on the service's administrative privilege; a reason or scope only an administrator holds is refused"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#839 specification slice (PR #1063). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.residual.person-token-keeps-incomplete",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "terminate",
+   "text": "`complete` is true only when every Tracked Credential is either confirmed revoked or expired and the PS knows of no untracked access mode for the mission; it is false while any Person Token is live and unconfirmed, and never follows from Auth Tokens alone.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after termination, a mission with a live, unconfirmed Person Token reports complete false in token_residual, even when every Auth Token is confirmed revoked or expired"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice. Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.residual.complete-covers-withheld",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "terminate",
+   "text": "`complete` covers every Tracked Credential, including any the counters withhold from the caller.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "complete is false for a caller whose counters omit a credential it may not see, while that credential is live and unconfirmed"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice. Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.residual.unconfirmed-until-exp",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "terminate",
+   "text": "A credential whose recipient advertises no revocation endpoint, or whose revocation outcome is unknown, stays unconfirmed until its `exp`.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Tracked Credential whose recipient advertises no revocation endpoint, or whose outcome is unknown, is counted unconfirmed and keeps complete false until its exp passes"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice. Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.revocation.person-token-recipients",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "revocation-attempts",
+   "text": "The PS revokes a Person Token at the Resource named in its `aud` and at each AS it presented the token to (Section 11.12.2 of {{I-D.draft-hardt-oauth-aauth-protocol}}).",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "when the PS attempts to revoke a Person Token, its requests go to the Resource in the token's aud and to each AS it presented the token to, and to no other party; whether the PS attempts revocation at all is the SHOULD of aauth-management.revocation.attempt-after-termination"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice. Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.revocation.person-token-confirmation",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "revocation-attempts",
+   "text": "a Person Token is confirmed when the Resource in its `aud` and each AS it was presented to have each answered `200`;",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Person Token counts as confirmed revoked only after the Resource in its aud and every AS it was presented to answered 200; any missing answer leaves it unconfirmed"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice. Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.tracking.retain-credentials",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "tracking",
+   "text": "For each Person Token it issues under a mission, and each Auth Token it issues or provides under one, a conforming PS MUST retain:",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the PS's revocation and residual accounting for a terminated mission covers every Person Token and Auth Token issued under it, each keyed by (iss, jti) with its aud and exp, and reaches each AS a Person Token was presented to and the presented or upstream token a federated or chained credential derives from"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice (#1077 review). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.retention.terminal-state-through-credential-validity",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "logging",
+   "text": "The PS MUST retain the terminal state and its reason for at least as long as any Tracked Credential could remain valid, plus the deployment's audit and dispute period.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "status for a terminated mission keeps reporting terminated with its original reason for as long as any of its Person Tokens or Auth Tokens could remain valid"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice (#1077 review). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.residuals.document-lifetimes",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "residuals",
+   "text": "Deployment documentation MUST state which AAuth access modes are covered, the maximum configured Person Token and Auth Token lifetimes, whether Resources implement revocation, retry policy, and the worst-case residual expected under partition.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the deployment documentation states the covered access modes, the maximum Person Token and Auth Token lifetimes, whether Resources implement revocation, the retry policy, and the worst-case residual under partition"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice (#1077 review). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.revocation.attempt-after-termination",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "revocation-attempts",
+   "text": "After termination, the PS SHOULD revoke every unexpired Tracked Credential, as Section 11.12.4 of {{I-D.draft-hardt-oauth-aauth-protocol}} recommends when a PS revokes a mission.",
+   "role": "Controller",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after termination, the PS attempts revocation of each unexpired Person Token and Auth Token it tracks for the mission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice (#1077 review). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.conformance.publish-retention-and-lifetimes",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "conformance",
+   "text": "A deployment claiming conformance MUST publish or otherwise make available its caller-role authorization policy, Tracked Credential retention period, supported access-mode coverage, maximum token lifetime, revocation retry policy, expiry clock policy if used, and worst-case residual behavior.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a deployment claiming conformance makes available its caller-role authorization policy, Tracked Credential retention period, access-mode coverage, maximum token lifetime, revocation retry policy, expiry clock policy if used, and worst-case residual behavior"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice (#1077 review). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.residuals.short-lifetimes",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "residuals",
+   "text": "Risky deployments SHOULD use short Person Token and Auth Token lifetimes and action-time Resource checks in addition to PS gating.",
+   "role": "Controller",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a risky deployment configures short Person Token and Auth Token lifetimes and action-time Resource checks in addition to PS gating"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice (#1077 review). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
   }
  ]
 }

@@ -189,9 +189,10 @@ Termination Reason:
 : An audit fact explaining why an `active` mission became `terminated`.
   It does not add a state or permit reactivation.
 
-Tracked Auth Token:
-: An Auth Token that the PS issued or provided under a Mission Reference
-  and for which it retained at least `iss`, `jti`, `aud`, and `exp`.
+Tracked Credential:
+: A Person Token the PS issued under a Mission Reference, or an Auth
+  Token it issued or provided under one, for which it retained at least
+  `iss`, `jti`, `aud`, and `exp`.
 
 Residual Window:
 : The interval after termination during which already-issued authority
@@ -387,7 +388,7 @@ This document defines no new token type and no new credential.  Each
 caller class authenticates with a mechanism the base protocol or the
 PS already has.
 
-## Person
+## Person {#person-caller}
 
 The PS authenticates the Person using its normal person-facing channel.
 This specification does not replace the PS's account authentication or
@@ -399,6 +400,32 @@ The Person MAY read status and delegation data, and MAY terminate with
 reason `completed`, `revoked`, or `superseded`.  For `superseded`,
 `replacement_s256` is REQUIRED, and the PS SHOULD verify that the
 same Person authorized both missions before recording the relationship.
+
+A Person reaches these operations through the PS's own interface, which
+either invokes the operation inside the PS or has its backend call the
+control plane as a management service ({{management-service}}).  Either
+way the PS MUST authorize the action as the authenticated Person under
+the rules above, MUST record that Person as the principal, and MUST NOT
+apply a management service's administrative privilege to it.  An
+internal invocation is not a control-plane request, but the same
+authorization, atomic transition ({{terminate}}), and logging
+({{logging}}) duties apply to it.  How the Person signs in to the
+interface remains the PS's own; this document defines no user login.
+
+For example, a Person ends a mission from the PS's account page:
+
+1. The Person signs in to the PS's interface and selects the mission.
+2. The interface submits termination as an explicit action, protected
+   against cross-site submission by the interface itself
+   ({{person-interfaces}}).
+3. The interface invokes termination inside the PS, or its backend
+   signs a control-plane `terminate` request as a registered management
+   service and conveys the Person's identity over its trusted channel.
+4. The PS binds the Person to the person the mission represents,
+   authorizes reason `revoked` for that Person and mission, and runs
+   the atomic transition.
+5. The mission log records the Person as principal and the interface as
+   the channel.
 
 ## Administrator
 
@@ -419,7 +446,7 @@ administrative request.  It SHOULD require step-up authentication or
 dual control for high-blast-radius automation.  This profile does not
 define fleet enumeration or bulk termination.
 
-## Management Service
+## Management Service {#management-service}
 
 A management service authenticates with the AAuth HTTP Message
 Signatures profile {{RFC9421}}, signing under the `jwks_uri` scheme of
@@ -442,6 +469,15 @@ A management service is subject to the administrative rules above:
 least-privilege scoping, a separate privilege for delegation data,
 `administrative` limited to the administrator role, and the recorded
 principal, role, decision, and purpose on every successful request.
+
+A management service can act for a human, as the PS's own interface
+backend does for the Person ({{person-caller}}).  For such a call the PS
+MUST authorize the action as that human under the human's own caller
+rules, MUST record the human as the principal and the service as the
+channel, and MUST NOT apply the service's administrative privilege.
+How the service conveys the human's identity is a deployment trust
+relationship this document does not define, and the PS relies on it
+only for a service it registers for that purpose.
 
 ## Owning Agent
 
@@ -473,10 +509,12 @@ this endpoint: AAuth requires its parent to mediate PS operations.
 ## Ambient Credentials
 
 Every action defined here is a JSON `POST` authenticated as this
-section requires.  A PS that serves a human-facing interface at the
-same origin MUST NOT let an ambient credential, such as a cookie or
-session a browser attaches automatically, satisfy that
-authentication.
+section requires, and a browser session never authenticates a
+control-plane request directly.  A PS that serves a human-facing
+interface at the same origin MUST NOT let an ambient credential, such
+as a cookie or session a browser attaches automatically, satisfy that
+authentication.  The interface reaches the operations through the PS
+({{person-caller}}).
 
 # Status Operation {#status}
 
@@ -639,11 +677,17 @@ The PS returns `200 OK` with the full status representation
 `complete`, all REQUIRED, and `residual_until`, an RFC 3339
 `date-time` {{RFC3339}}, when a residual is known.  The counters
 disclose only tokens the caller is authorized to know about.
-`complete` is true only when every Tracked Auth Token is either
-confirmed revoked or expired and the PS knows of no untracked access
-mode for the mission.  `residual_until` is the latest `exp` among
-unconfirmed Tracked Auth Tokens.  It MUST be omitted when no residual is
-known and MUST NOT be presented as a complete bound if untracked or
+The counters count Tracked Credentials, so a Person Token counts like
+an Auth Token.  `complete` is true only when every Tracked Credential
+is either confirmed revoked or expired and the PS knows of no untracked
+access mode for the mission; it is false while any Person Token is live
+and unconfirmed, and never follows from Auth Tokens alone.  `complete`
+covers every Tracked Credential, including any the counters withhold
+from the caller.  A credential whose recipient advertises no revocation
+endpoint, or whose revocation outcome is unknown, stays unconfirmed
+until its `exp`.  `residual_until` is the latest `exp` among
+unconfirmed Tracked Credentials.  It MUST be omitted when no residual
+is known and MUST NOT be presented as a complete bound if untracked or
 opaque credentials may exist.
 
 ## Idempotency and Concurrency {#idempotency}
@@ -826,7 +870,7 @@ administrative requests and oracle probes without associating an
 unverified reference with a real mission.
 
 The PS MUST retain the terminal state and its reason for at least as
-long as any Tracked Auth Token could remain valid, plus the deployment's
+long as any Tracked Credential could remain valid, plus the deployment's
 audit and dispute period.  It SHOULD retain the immutable mission blob
 and log for the same period when lawful.  Retention limits, deletion,
 legal holds, and access controls MUST be documented.  Deletion of the
@@ -857,26 +901,31 @@ the PS.  Terminating a mission does not revoke the Agent Token, because
 the Agent identity can legitimately be used for another mission or for
 missionless AAuth interactions.
 
-## Tracking Auth Tokens
+## Tracking Credentials {#tracking}
 
-For each Auth Token it issues or provides under a mission, a conforming
-PS MUST retain:
+For each Person Token it issues under a mission, and each Auth Token it
+issues or provides under one, a conforming PS MUST retain:
 
 * the Mission Reference;
 * the token's `iss` and `jti` as a compound identity;
 * `aud` and `exp`;
-* the Resource revocation endpoint, when advertised; and
-* whether the PS issued the token or obtained it through federation.
+* the revocation endpoint of the Resource in `aud`, when advertised;
+* whether the PS issued the token or obtained it through federation;
+* for a Person Token, each AS the PS presented it to, as Section 7.1 of
+  {{I-D.draft-hardt-oauth-aauth-protocol}} requires; and
+* for a federated or chained credential, the presented or upstream
+  token it derives from.
 
 The PS MUST NOT key revocation by `jti` alone.  It SHOULD also retain the
 AS and Resource endpoints required to retry revocation.  These records
 are sensitive and follow {{logging}}.
 
-## Revocation Attempts
+## Revocation Attempts {#revocation-attempts}
 
-After termination, the PS SHOULD revoke every unexpired Tracked Auth
-Token, as Section 11.12.4 of {{I-D.draft-hardt-oauth-aauth-protocol}}
-recommends when a PS revokes a mission.  Each revocation is a signed
+After termination, the PS SHOULD revoke every unexpired Tracked
+Credential, as Section 11.12.4 of
+{{I-D.draft-hardt-oauth-aauth-protocol}} recommends when a PS revokes a
+mission.  Each revocation is a signed
 `POST` of `{jti, exp}` to the recipient's `revocation_endpoint`, with
 `exp` taken from the PS's record of that token.  The PS signs as a
 server under the `jwks_uri` scheme, with its issuer as `id` and
@@ -885,8 +934,11 @@ server under the `jwks_uri` scheme, with its issuer as `id` and
 {{I-D.draft-hardt-oauth-aauth-protocol}}).  The recipient takes the
 issuer from the signature, so the PS revokes only tokens it issued.
 
-In PS authorization (three-party), the PS revokes an Auth Token it
-issued at the Resource it was issued for.  In federated authorization
+The PS revokes a Person Token at the Resource named in its `aud` and at
+each AS it presented the token to (Section 11.12.2 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}).  In PS authorization
+(three-party), the PS revokes an Auth Token it issued at the Resource
+it was issued for.  In federated authorization
 (four-party), the AS issued the Auth Token, so the PS instead revokes
 the Person Token it presented to that AS, known from the issuance
 record that Section 7.1 of {{I-D.draft-hardt-oauth-aauth-protocol}}
@@ -899,9 +951,11 @@ downstream revocation that did not succeed, and reports the current
 outcome (Section 11.12.3 of {{I-D.draft-hardt-oauth-aauth-protocol}}).
 
 A revocation is confirmed, for `revocation_confirmed` and `complete`
-({{terminate}}), only by an outcome that names the Tracked Auth Token's
-own Resource:
+({{terminate}}), only by an outcome that names the Tracked Credential's
+own recipients:
 
+* a Person Token is confirmed when the Resource in its `aud` and each AS
+  it was presented to have each answered `200`;
 * an Auth Token the PS revoked at the Resource it was issued for is
   confirmed by that Resource's `200`, which has nothing downstream and
   carries an empty body; and
@@ -941,13 +995,18 @@ because it marked its local state or contacted an AS.
 
 Termination is not retroactive.  It cannot undo an action already
 performed or necessarily stop an action already accepted.  A
-self-contained Auth Token can remain acceptable until its `exp` unless
-the Resource receives and enforces revocation.  Network partitions and
+self-contained Person Token or Auth Token can remain acceptable until
+its `exp` unless the Resource receives and enforces revocation.  At a
+Resource that serves person identity access, holding a Person Token is
+effectively access (Section 7.1.1 of
+{{I-D.draft-hardt-oauth-aauth-protocol}}), so a live Person Token is
+part of the residual.  Network partitions and
 Resource policy therefore create an unavoidable residual window.
 
-The PS can provide a time bound only for the Tracked Auth Tokens whose
+The PS can provide a time bound only for the Tracked Credentials whose
 expiry it knows.  The conservative tracked bound is the latest `exp`
-among tokens not confirmed revoked.  If the PS cannot determine an
+among Tracked Credentials not confirmed revoked, Person Tokens
+included.  If the PS cannot determine an
 expiry, it MUST report the tracked residual as unbounded rather than
 inventing a deadline.
 
@@ -962,10 +1021,11 @@ The PS has no general visibility or control over:
 Where any such path was possible, the PS MUST mark mission-wide
 revocation completeness as false or unknown.  Deployment documentation
 MUST state which AAuth access modes are covered, the maximum configured
-Auth Token lifetime, whether Resources implement revocation, retry
+Person Token and Auth Token lifetimes, whether Resources implement
+revocation, retry
 policy, and the worst-case residual expected under partition.  Risky
-deployments SHOULD use short Auth Token lifetimes and action-time
-Resource checks in addition to PS gating.
+deployments SHOULD use short Person Token and Auth Token lifetimes and
+action-time Resource checks in addition to PS gating.
 
 The base AAuth text sometimes describes this action as revoking a
 mission.  In this profile, "revoke the mission" means the single,
@@ -1043,6 +1103,24 @@ their use.  Management automation SHOULD require a declared purpose and
 SHOULD use approval or dual control appropriate to its potential blast
 radius.  The endpoint MUST NOT infer administrative authority from an
 Agent's domain or `parent_agent` relationship.
+
+## Person Interfaces {#person-interfaces}
+
+A PS interface that reaches these operations carries web-session risks
+the signed control plane does not.  What makes a Person's action
+explicit is the interface's own protection against cross-site
+submission, which the PS that serves the interface validates; the
+control plane's refusal of ambient credentials does not protect the
+interface itself.  The PS binds each action to the Person
+authenticated when the action is taken and to the person the mission
+represents, never to an account or tenant selected in the request, so
+switching accounts or tenants mid-session cannot redirect it.  A
+session established before the Person's authorization changed carries
+no earlier authorization forward: the PS evaluates authorization at
+the action.  A backend that calls as a management service for the
+Person could otherwise apply its own administrative privilege, a
+confused deputy; the PS authorizes such a call as the Person and never
+under the service's privilege ({{management-service}}).
 
 ## Races and Failures
 
@@ -1135,9 +1213,9 @@ it:
    decision path at the terminal commit, and enforces idempotency;
 6. records the management and revocation events required by
    {{logging}};
-7. tracks Auth Tokens by `(iss, jti)`, attempts applicable revocation,
-   and reports residual limits without claiming control over unseen or
-   independently managed access; and
+7. tracks Person Tokens and Auth Tokens by `(iss, jti)`, attempts
+   applicable revocation, and reports residual limits without claiming
+   control over unseen or independently managed access; and
 8. meets the security, privacy, retention, and TLS requirements of this
    document and the base AAuth Protocol.
 
@@ -1148,11 +1226,12 @@ to {{expiry}} in full.  Delegation-tree support is OPTIONAL.  If
 advertised, the PS conforms to {{delegation-tree}} in full.
 
 A deployment claiming conformance MUST publish or otherwise make
-available its caller-role authorization policy, Auth Token retention
-period, supported access-mode coverage, maximum token lifetime,
-revocation retry policy, expiry clock policy if used, and worst-case
-residual behavior.  It MUST NOT claim that Mission termination revokes
-agent identity, opaque resource-managed, or otherwise untracked access.
+available its caller-role authorization policy, Tracked Credential
+retention period, supported access-mode coverage, maximum token
+lifetime, revocation retry policy, expiry clock policy if used, and
+worst-case residual behavior.  It MUST NOT claim that Mission
+termination revokes agent identity, opaque resource-managed, or
+otherwise untracked access.
 
 --- back
 
@@ -1161,3 +1240,24 @@ agent identity, opaque resource-managed, or otherwise untracked access.
 The AAuth mission-management seam and two-state lifecycle were defined
 by Dick Hardt in the AAuth Protocol.  This companion preserves those
 native choices.
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Person Tokens are Tracked Credentials: the PS retains them, counts
+  them in `token_residual`, revokes them at the Resource in `aud` and at
+  each AS it presented them to, and reports `complete` false while any
+  is live and unconfirmed. The residual bounds name a live Person Token
+  at a Resource serving person identity access (#834).
+
+- A Person reaches status and termination through the PS's own
+  interface, by internal invocation or by a backend calling the control
+  plane as a management service; the PS authorizes and records the
+  action as the authenticated Person and never applies a management
+  service's administrative privilege. A management service acting for
+  a human is authorized and recorded as that human, with the service as
+  the channel. A browser session never authenticates a control-plane
+  request, and Person Interfaces security considerations cover
+  cross-site submission, account or tenant switching, stale sessions,
+  and the service-principal confused deputy (#839).

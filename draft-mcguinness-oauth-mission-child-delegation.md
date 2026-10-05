@@ -1117,7 +1117,9 @@ Bases"). Where the entry carries no `child_creation_policy`, the
 drawdown is against the parent's approved delegation entry itself,
 not a separate policy
 artifact: `activation` omits `policy_id` and carries only the
-delegation event identifier as `activation_event_id`. The record's
+delegation event identifier as `activation_event_id`. In both forms
+the record's `approval_event_id` is that `activation_event_id`, never
+the Parent Mission's approval event. The record's
 `approver` is `consent_principal`: the Parent Mission's human
 Approver, never the policy and never the requesting agent.
 
@@ -2195,6 +2197,10 @@ apply unchanged.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Mission Record Requirements: under `policy_drawdown` the record's
+  `approval_event_id` is the creation's `activation_event_id`, never
+  the Parent Mission's approval event (#1017).
 
 - The completion comparison names the progressive authorization
   companion's synchronous drawdown as the one synchronous expansion.
