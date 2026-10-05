@@ -60,7 +60,8 @@ keeps its own ruling; #820 and #424 stay parked.
 
 Required, not excluded: token authority (#825) and independently
 administered Resource policy (#828) belong to the adopted policy conjunction.
-Both are unmet (§5). Under D284 ruling 4 they are acceptance prerequisites,
+Neither is met (§5): token authority is enforced at the PEP but not yet at
+the PDP, and Resource policy is not implemented. Under D284 ruling 4 they are acceptance prerequisites,
 so this target cannot pass acceptance while either is missing.
 
 ## 2. Dimension contract
@@ -71,7 +72,7 @@ so this target cannot pass acceptance while either is missing.
 | Binding | OAuth Mission-bound issuance, Runtime OAuth and AuthZEN; MAS join only in its separately declared path | Runtime OAuth credential validation and the AuthZEN request (§4, §5). The PDP is a direct call by default with no PEP authentication (`services/pdp/src/decision-channel.ts:56-61`); `MISSION_PDP_MODE=remote` adds a loopback HTTP hop keyed by a per-boot secret that is never configured, so it cannot cross processes as shipped (`decision-channel.ts:64-66`). `config/mas-join.json` names the payments resource governed, so `composeStack` also starts a MAS join route (`stack.ts:792-794`) the statement does not declare | Partial | Exclude the MAS route on this target: #1105 (#818 owns MAS; #956 Q2 its declaration in the shared demo) |
 | Operations | Enumerated payments operations, authority types, classes, phases and parameter binding; refuse outside the allowlist | Nine tools, all classed (§3). An unknown tool is refused `unknown_tool` before any PDP call (`pep.ts:1095`) | Partial | `hold_transfer` permit control: #1080. Profile drift (§3): #1106 |
 | State | For this co-located target, the declared local committed read (D293 narrows D284's "authoritative Status"); per-class staleness, skew, permit and execution bounds; source ownership and unavailable behavior | The PEP and PDP read the AS kernel's committed record in process (`loadView`, `stack.ts:665-672`; the statement's state source is `kernel-committed load_view`, placement `pep`). That is the authoritative record behind Status, but it is not the Mission Status operation, introspection or Signals. Bounds and fail-closed behavior: §4 | Source accepted (D293); one unavailable-state witness missing (§4) | Separated PEP or PDP: #1101, which gates only a separated-deployment claim |
-| Policy | Conjunction of token authority, current effective Mission authority and independently administered Resource policy | Current effective Mission authority is enforced and tested. Token authority is read only for validity, audience, `cnf` and the `mission` reference. Independent Resource policy is not implemented (§5) | Required, not met: blocks acceptance | Token authority: #825 (PR #1062). Resource policy: #828 |
+| Policy | Conjunction of token authority, current effective Mission authority and independently administered Resource policy | Current effective Mission authority is enforced and tested. Token authority is enforced at the PEP only: an action outside the verified token's own `authorization_details` is refused before the PDP, which does not evaluate it. Independent Resource policy is not implemented (§5) | Required, not met: blocks acceptance | Token authority: #825 (PR 1 merged as #1062; PR 2 remains). Resource policy: #828 |
 | Evidence | Runtime/Decision Base and explicitly enabled evidence capabilities; emitters, verifiers, retention, failure carriers; missing telemetry is `indeterminate` | Decision Evidence, Refusal Records and Execution Evidence (§6). The `evidence` extension is not enabled, so there is no receipt issuer | Partial | Emission failures: #1104 |
 | Persistence | Every store, its transaction or acceptance boundary, and restart and reconciliation behavior | Only the PDP claim domain and the PEP write reservations are durable files; every other store is in memory (§7). The declared reconciler is not run | Partial | Reconciliation never runs: #1103. #250, #831 |
 | Claims | Per-action limits only; execution and transaction handling for applicable operations; no aggregate cap, compromise containment or unattended prohibited-class exception | §8 | Partial | §8 |
@@ -157,15 +158,30 @@ and
 The gates are independently necessary:
 `runtime decision gates are independently necessary (@spec runtime#decision) > a stale freshness failure denies even though authority and the Resource-policy/FGA check both permit`.
 
-**Token authority:** partial. The PEP validates the token's signature,
-issuer, audience, `cnf` and DPoP, and requires the `mission` claim
+**Token authority:** partial; #825 PR 1 merged as #1062 (D302). The PEP
+validates the token's signature, issuer, audience, `cnf` and DPoP
 (`verifyDpopBoundToken`, `server.ts:478-495`):
 `the PEP establishes token validity before using any of its claims as decision inputs (@spec runtime#token-validation) > a token whose audience does not name this resource is refused, before any of its claims reach a decision (@spec runtime#token-validation, audience)`.
-It does not read the Mission-bound token's `authorization_details` or `scope`;
-the PDP matches the kernel's current Authority Set (`evaluate.ts:1070-1077`).
-A narrowed token is therefore not honored as narrower. Credential expiry is
-checked only at validation; the PDP records `context.credential.expires_at`
-in evidence but does not deny on it. Owner: #825 (PR 1 is #1062).
+It then checks the Mission access-token profile: `typ` `at+jwt`, the RFC 9068
+claims with their types, a `mission` claim with `id` and `issuer`, and the
+token's own `authorization_details`, read in full as the credential's
+authority. A token that fails the profile is refused, never demoted to the
+ordinary class (`missionBoundFactsFrom`, `server.ts:506-539`;
+`readMissionAccessClaims`, `services/mcp-payments/src/token-verifier.ts:108-120`):
+`the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > never demotes a Mission-bound token that fails its profile to the ordinary class on a gateway route`.
+Before the PDP is asked, the PEP refuses `out_of_authority` for an action the
+credential's own authority does not cover, one whole entry at a time, on the
+resource, action, vendors and amount it resolved; an approval requirement is
+honored only with a verified transaction credential's approval
+(`pep.ts:1307-1341`):
+`the credential authority bounds the action the PEP resolved (@spec runtime#input-authority, #825) > refuses vendor lookup under an invoice-only token, and lets a broad token reach the PDP, on the same broad Mission`.
+A narrowed token is therefore honored as narrower at the PEP. The Mission-bound
+path does not read `scope`. Credential expiry is checked only at validation;
+the PDP records `context.credential.expires_at` in evidence but does not deny
+on it. Remaining under #825 (PR 2): the PDP neither receives nor evaluates the
+credential authority (no `context.credential.authority` carrier; it matches
+the kernel's current Authority Set, `evaluate.ts:1070-1077`), so there is no
+PDP-side witness; whether the PEP pre-check stays; and key-role separation.
 
 **Independently administered Resource policy:** not implemented. The OpenFGA
 relations admit only `mission` subjects (`services/pdp/src/fga.ts:20-47`) and
@@ -243,7 +259,7 @@ That test uses another member; no test names `max_budget`.
 
 **Unmet obligations by owner:**
 
-- Blocking acceptance: #825 (token authority; PR #1062) and #828 (Resource policy).
+- Blocking acceptance: #825 (token authority; PR 1 merged as #1062, PR 2 remains) and #828 (Resource policy).
 - Acceptance-pack prerequisites: #1105 (launcher, MAS route excluded), #1103 (reconciliation never runs), #1104 (emission failures), #1106 (Operation Profile drift), #1080 (`hold_transfer` permit control).
 - Separated deployment only: #1101 (state source under D293).
 - Also open: #826 (Approver versus Subject; PR #1074), #831 (keys and verifier refresh), #250 (control-plane atomicity; revoke versus issue), #916 (approval commits before grant binding), #830 (identity changes apply at restart), #817 (resource-side execution capabilities), #773 (context-drift vectors, conditional), #873 (inherited floor obligations).
@@ -315,7 +331,7 @@ The pack cannot pass while #825 or #828 is unmet (§1).
 | Vector | Existing witness | Gap |
 |---|---|---|
 | Valid request | [FGA] `M4 core enforcement tier > scenario 2: happy path -- in-authority read permitted, Decision Evidence recorded` | not on the assembled path |
-| Narrowed token | none | #825 (PR #1062); required, blocks acceptance |
+| Narrowed token | at the PEP only: `the credential authority bounds the action the PEP resolved (@spec runtime#input-authority, #825) > narrows by vendor independently of the Mission` | no PDP-side witness and not on the assembled path; #825 PR 2; required, blocks acceptance |
 | Independent policy revocation | a stubbed policy only: `finding 3: a multi-vendor list_invoices names every returned vendor to Resource policy, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy denies one: the whole read refuses out_of_authority, never a narrowed result` | #828; required, blocks acceptance |
 | Stale or non-active Mission at admission and at each fresh commit-phase decision | the §4 refusal table; `compound-action phases (@spec runtime#compound-actions) > denies the fresh commit Decision when the Mission deactivates after prepare` | not on the assembled path |
 | Run to completion after an earlier valid permit | none | no test yet that an admitted action completes only inside its permit and lease bounds and that the next decision refuses; no instantaneous revocation is implied (§4) |
