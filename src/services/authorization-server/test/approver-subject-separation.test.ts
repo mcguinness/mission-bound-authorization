@@ -111,6 +111,8 @@ async function authorize(args: {
   decideHeaders?: Record<string, string>;
   approval: Approval;
   jar?: Jar;
+  /** Rewrites the resume request (the first redirect back into the issuer after the decision). */
+  resume?: { url?: (location: string) => string; method?: string };
 }): Promise<{ code?: string; error?: string; jar: Jar; decideStatus: number }> {
   const client = args.client ?? "ap-agent";
   const jar = args.jar ?? new Map<string, string>();
@@ -137,8 +139,12 @@ async function authorize(args: {
   const decideStatus = res.status;
   keep(jar, res);
   location = res.headers.get("location") ?? "";
+  let first = true;
   while (location.startsWith(ISSUER)) {
-    res = await fetch(location, { redirect: "manual", headers: { cookie: cookieOf(jar) } });
+    const url = first && args.resume?.url ? args.resume.url(location) : location;
+    const method = first && args.resume?.method ? args.resume.method : "GET";
+    first = false;
+    res = await fetch(url, { method, redirect: "manual", headers: { cookie: cookieOf(jar) } });
     keep(jar, res);
     location = res.headers.get("location") ?? "";
   }
@@ -336,6 +342,36 @@ describe("Approver and Subject stay separate identities (@spec mission#approval-
     expect(decodeJwt(issued.access_token as string).sub).toBe("alice");
     const refreshed = await token("ap-agent", { grant_type: "refresh_token", refresh_token: issued.refresh_token as string }, k);
     expect(decodeJwt(refreshed.access_token as string).sub).toBe("alice");
+  });
+
+  // oidc-provider's router accepts more than the canonical `/auth/<uid>`: it
+  // is not strict about a trailing slash, matches case-insensitively, serves
+  // HEAD on the GET route, and resumes the interaction its resume cookie names
+  // whatever uid the path carries. A client that owns the user agent can send
+  // any of these, so the teardown must hold for every resume the provider
+  // accepts, not only the canonical path.
+  it.each([
+    ["a trailing slash", { url: (l: string) => `${l}/` }],
+    ["an uppercase path", { url: (l: string) => l.replace("/auth/", "/AUTH/") }],
+    ["a different path uid", { url: (l: string) => l.replace(/\/auth\/[^/?]+/, "/auth/not-the-interaction") }],
+    ["a HEAD request", { method: "HEAD" }],
+  ] as const)("a headless resume through %s still leaves the client's user agent no End-User session", async (_form, resume) => {
+    const resumed: string[] = [];
+    const onSuccess = (ctx: { oidc: { session?: { id?: string; accountId?: string } } }) => {
+      if (ctx.oidc.session?.accountId === "bob" && ctx.oidc.session.id) resumed.push(ctx.oidc.session.id);
+    };
+    as.provider.on("authorization.success", onSuccess);
+    let r: Awaited<ReturnType<typeof authorize>>;
+    try {
+      r = await authorize({ approval: { headless: { sub: "bob", subject: "alice" } }, resume });
+    } finally {
+      as.provider.off("authorization.success", onSuccess);
+    }
+    // Whether or not this form completes the authorization, no session the
+    // resume's login wrote survives it, and none reaches the user agent.
+    for (const id of resumed) expect(await as.provider.Session.find(id)).toBeUndefined();
+    expect(r.jar.has("_session")).toBe(false);
+    expect(sessionLines.get(r.jar)).toBeUndefined();
   });
 
   it("an Alice session established before Bob approves for her is neither read nor refreshed by Bob's headless act, which still completes", async () => {

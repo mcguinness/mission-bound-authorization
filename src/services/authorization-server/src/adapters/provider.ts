@@ -1823,17 +1823,29 @@ export function buildProvider(opts: AdapterOptions): Provider {
   });
 
   // @spec mission#approval-authentication (#826): a headless approval
-  // leaves the client's user agent no End-User session. Its resume (GET on
-  // the authorization route's `/:uid`) runs without the session cookie this
-  // user agent holds, so that session is neither read nor modified. Once the
-  // route returns, before the response is flushed, the session the resume's
-  // login created is destroyed and its cookie removed, on success or error,
-  // so the user agent never holds it. The code it issued is not
-  // session-bound (expiresWithSession). The headless marker is read from the
-  // stored interaction, written only by `decide()`.
+  // leaves the client's user agent no End-User session. Its resume runs
+  // without the session cookie this user agent holds, so that session is
+  // neither read nor modified. Once the route returns, before the response is
+  // flushed, the session the resume's login created is destroyed and its
+  // cookie removed, on success or error, so the user agent never holds it.
+  // The code it issued is not session-bound (expiresWithSession). The
+  // headless marker is read from the stored interaction, written only by
+  // `decide()`.
+  //
+  // The resume is recognized by the interaction it resumes, not by its path.
+  // oidc-provider's resume action loads the interaction named by the resume
+  // cookie and never by the path's `:uid`, and its router is neither strict
+  // about a trailing slash nor case-sensitive, and serves HEAD on the GET
+  // route. A client that owns the user agent controls all of these, so any
+  // request whose resume cookie names a headless interaction gets this
+  // treatment. The cookie is read exactly as the resume action reads it
+  // (same name, the provider's default signing).
   provider.use(async (ctx, next) => {
-    const uid = ctx.method === "GET" ? /^\/auth\/([^/]+)$/.exec(ctx.path)?.[1] : undefined;
-    const interaction = uid ? await provider.Interaction.find(uid) : undefined;
+    // `cookieName` is the provider's own resolver (configured names
+    // included); oidc-provider's types omit it.
+    const resumeCookie = (provider as unknown as { cookieName(type: "resume"): string }).cookieName("resume");
+    const resumeId = ctx.cookies.get(resumeCookie);
+    const interaction = resumeId ? await provider.Interaction.find(resumeId) : undefined;
     const result = interaction?.result as Record<string, unknown> | undefined;
     if (result?.[HEADLESS_APPROVAL_RESULT] !== true) return next();
     const sessionCookie = /^_session(?:\.sig)?$/;
