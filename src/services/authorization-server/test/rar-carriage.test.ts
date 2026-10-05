@@ -20,7 +20,7 @@
  *    output feeds the standard parameter with no re-wrapping.
  */
 
-import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { browserApprovalHeaders, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 
 import { type Server } from "node:http";
 import { computeAnchor, PROPOSED_AUTHORITY_TYP, proposalHash } from "@mission/core";
@@ -29,6 +29,7 @@ import { buildInsufficientAuthorization } from "@mission/mcp-payments";
 import { exportJWK, generateKeyPair, importJWK, SignJWT, type CryptoKey } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
+  ApprovalSessionStore,
   buildAuthorizationServer,
   IntentError,
   MissionKernel,
@@ -279,8 +280,17 @@ async function pushPar(
   });
 }
 
+// The trusted browser login: an Approver authenticated in the user agent
+// itself, the only approval an ID Token can describe (#826).
+const SESSIONS = new ApprovalSessionStore();
+
 beforeAll(async () => {
-  as = await buildAuthorizationServer({ issuer: ISSUER, allowHeadlessAdjudication: true, serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS });
+  as = await buildAuthorizationServer({
+    issuer: ISSUER,
+    allowHeadlessAdjudication: true,
+    serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
+    approvalSessions: SESSIONS,
+  });
   asServer = as.provider.listen(PORT);
   agentKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
   governedKey = (await importJWK(as.governedClientJwk as never, "ES256")) as CryptoKey;
@@ -632,22 +642,29 @@ describe("Approver Authentication Strength (@spec mission#approval-authenticatio
     { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] },
   ];
 
+  // Every approval here is a trusted BROWSER approval: the Approver
+  // authenticated in this user agent, with the achieved acr and time the
+  // trusted login recorded. `subject` is that login's selection; absent, a
+  // self-approval. oidc-provider accepts `acr_values`/`max_age` only with
+  // `openid` (lib/actions/authorization/check_openid_scope.js, 9.10.0), and
+  // `openid` is available only to a self-approval (#826), so a requested
+  // strength is exercised on self-approvals.
   async function runApproval(args: {
     parExtra?: Record<string, string>;
+    scope?: string | null;
     approver: string;
-    subject: string;
-    decideExtra?: Record<string, unknown>;
+    subject?: string;
+    acr?: string;
+    authTime?: number;
   }): Promise<URL> {
+    // A fresh user agent per approval: an earlier test's provider session for
+    // another account would otherwise meet this login with oidc-provider's
+    // logout confirmation (lib/actions/authorization/resume.js, 9.10.0).
+    cookies.clear();
     const par = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
-      login_hint: "alice",
       mission_intent: JSON.stringify({ intent: TASK_INTENT }),
       authorization_details: JSON.stringify(READ_ONLY_PROPOSAL),
-      // oidc-provider requires the `openid` scope to accept `acr_values`
-      // (an OpenID Connect Core authentication-request parameter): the
-      // ADOPTED profile of it here is Approver-scoped, not Subject/ID-Token
-      // scoped, but the underlying library ties the parameter's acceptance
-      // to that scope regardless of which principal it describes.
-      scope: "openid",
+      ...(args.scope === null ? {} : { scope: args.scope ?? "openid" }),
       ...(args.parExtra ?? {}),
     });
     expect(par.status).toBe(201);
@@ -659,10 +676,21 @@ describe("Approver Authentication Strength (@spec mission#approval-authenticatio
     let location = res.headers.get("location") as string;
     const uid = location.split("/interaction/")[1] as string;
 
+    const approval = browserApprovalHeaders(
+      SESSIONS,
+      uid,
+      {
+        sub: args.approver,
+        ...(args.acr ? { acr: args.acr } : {}),
+        ...(args.authTime !== undefined ? { auth_time: args.authTime } : {}),
+        ...(args.subject ? { subject: args.subject } : {}),
+      },
+      cookieHeader(),
+    );
     res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
       method: "POST",
       redirect: "manual",
-      headers: { ...trustedApprovalHeaders(args.approver, args.decideExtra), "content-type": "application/json", cookie: cookieHeader() },
+      headers: { ...approval, "content-type": "application/json" },
       body: JSON.stringify({ decision: "approve" }),
     });
     storeCookies(res);
@@ -679,20 +707,21 @@ describe("Approver Authentication Strength (@spec mission#approval-authenticatio
     const redirect = await runApproval({
       parExtra: { acr_values: "mfa" },
       approver: "alice",
-      subject: "alice",
-      decideExtra: { approver_acr: "mfa", approver_auth_time: new Date().toISOString() },
+      acr: "mfa",
     });
     expect(redirect.searchParams.get("error")).toBeNull();
     expect(redirect.searchParams.get("code")).toBeTruthy();
   });
 
-  it("split-principal: the Approver's own achieved acr satisfies the request, the Subject's identity is irrelevant, and the token carries neither", async () => {
-    const redirect = await runApproval({
-      parExtra: { acr_values: "mfa" },
-      approver: "bob",
-      subject: "alice",
-      decideExtra: { approver_acr: "mfa", approver_auth_time: new Date().toISOString() },
-    });
+  it("split-principal: the Approver's authentication never becomes the Subject's: openid refuses, and the token carries the Subject and none of the Approver's authentication", async () => {
+    // Asking for an ID Token (and with it an Approver strength) while Bob
+    // approves for Alice refuses `invalid_scope` before any Mission exists.
+    const refused = await runApproval({ parExtra: { acr_values: "mfa" }, approver: "bob", subject: "alice", acr: "mfa" });
+    expect(refused.searchParams.get("error")).toBe("invalid_scope");
+    expect(refused.searchParams.get("code")).toBeNull();
+
+    // Without openid the approval proceeds for Alice under Bob's authentication.
+    const redirect = await runApproval({ scope: null, approver: "bob", subject: "alice", acr: "mfa" });
     expect(redirect.searchParams.get("error")).toBeNull();
     const code = redirect.searchParams.get("code") as string;
     expect(code).toBeTruthy();
@@ -744,12 +773,15 @@ describe("Approver Authentication Strength (@spec mission#approval-authenticatio
       });
     }
     expect(tok.status).toBe(200);
-    const body = (await tok.json()) as { access_token: string };
+    const body = (await tok.json()) as { access_token: string; id_token?: string };
+    expect(body.id_token).toBeUndefined();
     const [, payloadB64] = body.access_token.split(".");
     const claims = JSON.parse(Buffer.from(payloadB64 as string, "base64url").toString()) as Record<
       string,
       unknown
     >;
+    // The token's Subject is Alice, whoever authenticated.
+    expect(claims.sub).toBe("alice");
     // The Approver's achieved acr/auth_time is approval-time provenance,
     // never a token claim ({{approval-authentication}}): neither the
     // top-level RFC 9068 claims nor the mission claim carry it.
@@ -762,9 +794,8 @@ describe("Approver Authentication Strength (@spec mission#approval-authenticatio
   it("max_age=0 refuses a stale Approver authentication", async () => {
     const redirect = await runApproval({
       parExtra: { max_age: "0" },
-      approver: "bob",
-      subject: "alice",
-      decideExtra: { approver_auth_time: new Date(Date.now() - 5000).toISOString() },
+      approver: "alice",
+      authTime: Math.floor((Date.now() - 5000) / 1000),
     });
     expect(redirect.searchParams.get("error")).toBe("access_denied");
   });
@@ -772,9 +803,8 @@ describe("Approver Authentication Strength (@spec mission#approval-authenticatio
   it("an unsupported acr is refused", async () => {
     const redirect = await runApproval({
       parExtra: { acr_values: "passkey" },
-      approver: "bob",
-      subject: "alice",
-      decideExtra: { approver_acr: "password", approver_auth_time: new Date().toISOString() },
+      approver: "alice",
+      acr: "password",
     });
     expect(redirect.searchParams.get("error")).toBe("access_denied");
   });

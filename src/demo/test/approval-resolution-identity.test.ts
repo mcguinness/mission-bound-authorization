@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Hono } from "hono";
 import { SessionStore } from "@mission/console-bff";
 import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN } from "@mission/demo-data";
-import { ApprovalSessionStore, buildAuthorizationServer, MISSION_APPROVAL_SCOPE } from "@mission/authorization-server";
+import { APPROVAL_SUBJECT_HEADER, ApprovalSessionStore, buildAuthorizationServer, MISSION_APPROVAL_SCOPE } from "@mission/authorization-server";
 import { clientAssertionSigner, dpopProofFor, jarClosures, redeemMissionApproval, submitMissionApproval, type IssueOpts, type IssuedMission, type SubmittedApproval } from "../src/oauth-client.js";
 import { resolveMissionApproval } from "../src/approval-console.js";
 import { installConsoleSessionBoundary } from "../src/console-session-boundary.js";
@@ -19,7 +19,6 @@ let agentCredential: IssuedMission;
 const defaults: IssueOpts = {
   missionIntent: JSON.stringify({ intent: { goal: "Read approved invoices", target_resources: [CANONICAL_RESOURCE], expires_at: "2027-01-01T00:00:00Z" } }),
   authorizationDetails: JSON.stringify([{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] }]),
-  scope: "openid",
 };
 beforeAll(async () => {
   const now = Math.floor(Date.now() / 1000);
@@ -39,6 +38,20 @@ const pending = (opts: Partial<IssueOpts> = {}) => submitMissionApproval(ISSUER,
 const decide = (p: SubmittedApproval, body: Record<string, unknown> = { decision: "approve" }, headers: Record<string, string> = {}) => fetch(`${ISSUER}/interaction/${p.uid}/decide`, {
   method: "POST", redirect: "manual", headers: { "content-type": "application/json", cookie: jarClosures(p.jar).cookieHeader(), ...headers }, body: JSON.stringify(body),
 });
+/** Resolve in a trusted browser session (an Approver authenticated in this user agent) and follow to the redirect's error or code. */
+async function resolveInBrowser(p: SubmittedApproval, principal: { sub: string; acr: string; auth_time: number }): Promise<URLSearchParams> {
+  const { cookieHeader, storeCookies } = jarClosures(p.jar);
+  const login = sessions.establish(p.uid, principal);
+  let res = await decide(p, { decision: "approve" }, { cookie: cookieHeader() + "; " + login.cookie, "x-csrf-token": login.csrf, origin: ISSUER });
+  storeCookies(res);
+  let location = res.headers.get("location");
+  while (location && new URL(location, ISSUER).origin === ISSUER) {
+    res = await fetch(location, { redirect: "manual", headers: { cookie: cookieHeader() } });
+    storeCookies(res);
+    location = res.headers.get("location");
+  }
+  return new URL(location!).searchParams;
+}
 
 describe("approval resolution establishes identity from the surface (#759, #761)", () => {
   it("enabled headless mode refuses all agent-held credentials and cookies for both approve and deny, then the independent approver succeeds", async () => {
@@ -73,7 +86,9 @@ describe("approval resolution establishes identity from the surface (#759, #761)
   });
 
   it("independent browser login requires its own session, CSRF, origin, and interaction binding", async () => {
-    const p = await pending({ acrValues: "mfa" });
+    // A self-approval in this user agent, the one approval openid (and with it
+    // a requested strength) is available to (#826).
+    const p = await pending({ acrValues: "mfa", scope: "openid" });
     const other = await pending();
     // Only trusted login integration establishes this record; no HTTP route does so.
     const login = sessions.establish(p.uid, { sub: "bob", acr: "mfa", auth_time: Math.floor(Date.now() / 1000) });
@@ -93,25 +108,36 @@ describe("approval resolution establishes identity from the surface (#759, #761)
   });
 
   it("requested authentication strength is checked against the surface context, including stale authentication", async () => {
+    // oidc-provider accepts acr_values and max_age only with openid, which only
+    // a self-approval in this user agent may request (#826): the trusted
+    // browser login's recorded context is the surface context checked.
+    const now = Math.floor(Date.now() / 1000);
     for (const opts of [{ acrValues: "mfa" }, { maxAge: "0" }]) {
-      const p = await pending(opts);
-      await expect(resolveMissionApproval(ISSUER, WEAK, p, "approve")).rejects.toThrow("access_denied");
+      const p = await pending({ ...opts, scope: "openid" });
+      expect((await resolveInBrowser(p, { sub: "bob", acr: "password", auth_time: now - 3600 })).get("error")).toBe("access_denied");
     }
-    const p = await pending({ acrValues: "mfa" });
-    expect(await resolveMissionApproval(ISSUER, TRUSTED, p, "approve")).toBeTruthy();
+    const p = await pending({ acrValues: "mfa", scope: "openid" });
+    expect((await resolveInBrowser(p, { sub: "bob", acr: "mfa", auth_time: now })).get("code")).toBeTruthy();
   });
 
-  it("the pushed login_hint is resolved and authorized, never accepted as an arbitrary Subject", async () => {
-    for (const [hint, token] of [["unknown-person", TRUSTED], ["bob", ALICE]]) {
-      const p = await pending({ loginHint: hint });
-      expect((await decide(p, { decision: "approve" }, { "x-service-token": token! })).status).toBe(403);
+  it("the Subject is the approval surface's selection, authorized for the Approver, never the client's login_hint", async () => {
+    // The surface's selection is still authorized: an unknown Subject, or one
+    // this Approver may not approve for, refuses.
+    for (const [subject, token] of [["unknown-person", TRUSTED], ["bob", ALICE]]) {
+      const p = await pending();
+      expect((await decide(p, { decision: "approve" }, { "x-service-token": token!, [APPROVAL_SUBJECT_HEADER]: subject! })).status).toBe(403);
     }
+    // A client login_hint concerns the Approver and selects nothing: the
+    // surface's selection stands.
+    const hinted = await pending({ loginHint: "unknown-person" });
+    expect(await resolveMissionApproval(ISSUER, TRUSTED, hinted, "approve")).toBeTruthy();
+    expect(as.kernel.allMissions().at(-1)!.subject.sub).toBe("alice");
   });
 
   it("write-bearing distinctness and role checks run over the resolved identities", async () => {
-    const p = await pending({ loginHint: "bob", authorizationDetails: JSON.stringify([{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:payment.execute"], constraints: { max_amount: { amount: "100.00", currency: "USD" }, vendors: ["acme"] } }]) });
+    const p = await pending({ authorizationDetails: JSON.stringify([{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:payment.execute"], constraints: { max_amount: { amount: "100.00", currency: "USD" }, vendors: ["acme"] } }]) });
     const before = as.kernel.allMissions().length;
-    expect((await decide(p, { decision: "approve" }, { "x-service-token": TRUSTED })).status).toBe(403);
+    expect((await decide(p, { decision: "approve" }, { "x-service-token": TRUSTED, [APPROVAL_SUBJECT_HEADER]: "bob" })).status).toBe(403);
     expect(as.kernel.allMissions()).toHaveLength(before);
   });
 

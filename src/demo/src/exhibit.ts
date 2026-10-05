@@ -1101,9 +1101,12 @@ async function main() {
   step(2, "Real issuance: the live OAuth dance mints a real token pair");
   goal(
     "The agent runs the real OAuth dance (PAR, authorize, Bob approves, token) to mint a mission-bound token pair.",
-    "the issuer narrows the proposal to the policy ceiling: bogus vendor.delete dropped, vendors reduced to acme, cap 999999 to 500; a real access token and id_token are issued.",
+    "the issuer narrows the proposal to the policy ceiling: bogus vendor.delete dropped, vendors reduced to acme, cap 999999 to 500; a real access token is issued, whose sub is Alice.",
   );
-  const issued = await issueMissionToken(asUrl, as.agentClientJwk, { missionIntent, authorizationDetails, scope: "openid profile email" }, as.approverServiceToken);
+  // OAuth only: Bob approves for Alice, and an approval is never Alice's
+  // authentication, so this flow carries no `openid` and yields no ID Token
+  // (#826).
+  const issued = await issueMissionToken(asUrl, as.agentClientJwk, { missionIntent, authorizationDetails }, as.approverServiceToken);
 
   // PAR (Agent → AS, real HTTP): push the request carrying the mission_intent.
   hop("Agent", "AS", "POST /request", "HTTP");
@@ -1123,7 +1126,7 @@ async function main() {
   httpReq("GET", `${asUrl}/auth?client_id=ap-agent&request_uri=${issued.artifacts.par.response.request_uri}`);
   httpRes(302, undefined, { headers: { location: "/interaction/{uid}  (headless consent)" } });
 
-  // Decide (Approver Bob → AS, real HTTP): Bob approves alice; 302 carries the code.
+  // Decide (Approver Bob → AS, real HTTP): Bob approves, the console selecting Alice as the Subject; 302 carries the code.
   hop("Approver (Bob)", "AS", "POST /interaction/{uid}/decide", "HTTP");
   httpReq("POST", `${asUrl}/interaction/{uid}/decide`, {
     headers: { "content-type": "application/json", cookie: "<interaction session>" },
@@ -1148,9 +1151,8 @@ async function main() {
     ...(tokRes.refresh_token ? { refresh_token: `${String(tokRes.refresh_token).slice(0, 12)}...` } : {}),
   });
 
-  if (!issued.idToken) throw new Error("expected an id_token from scope=openid");
+  if (issued.idToken) throw new Error("an approval for another principal must not yield an id_token");
   const at = decodeClaims(issued.accessToken);
-  const idt = decodeClaims(issued.idToken);
   block("REAL access token — decoded claims", {
     iss: at.iss,
     sub: at.sub,
@@ -1160,18 +1162,7 @@ async function main() {
     authorization_details: at.authorization_details,
   });
   note("aud = CANONICAL_RESOURCE (resource-audienced); cnf.jkt DPoP-binds the token; authorization_details spans BOTH estates (payments + SaaS).");
-  block("REAL id_token — decoded claims", {
-    iss: idt.iss,
-    sub: idt.sub,
-    aud: idt.aud,
-    ...(idt.name ? { name: idt.name } : {}),
-    ...(idt.preferred_username ? { preferred_username: idt.preferred_username } : {}),
-    ...(idt.email ? { email: idt.email } : {}),
-    ...(idt.auth_time ? { auth_time: idt.auth_time } : {}),
-    iat: idt.iat,
-    exp: idt.exp,
-  });
-  note("aud = client_id ap-agent: the id_token identifies the USER to the client (name/email from the identity store), distinct from the resource-audienced access token.");
+  note("sub = alice, the Mission's Subject; the provider account is Bob, who authenticated and approved. No id_token: Bob's approval is not Alice's authentication, so an ID Token about her would assert a login that never happened.");
 
   const missionId = (at.mission as { id: string }).id;
   const record = stack.kernel.get(missionId);
@@ -1194,7 +1185,6 @@ async function main() {
   note("subject alice != approver bob (write-bearing missions need a distinct approver).");
 
   block("raw access_token (compact JWS, signature truncated)", truncTok(issued.accessToken));
-  block("raw id_token (compact JWS, signature truncated)", truncTok(issued.idToken));
   focusedMissionId = missionId;
   rail(stack);
 
