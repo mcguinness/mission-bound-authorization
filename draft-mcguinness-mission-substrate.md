@@ -1218,7 +1218,8 @@ contract was generalized from.  The terms correspond as follows:
 | Mission Reference | Mission Identifier |
 | Controller | Mission Issuer, where the binding issues; natively the AS, MAS, UMA authorization server, or AAuth PS |
 | Actor | the authenticated acting client or agent |
-| Approver | Approver |
+| Approver | for a direct approval, the Approver (`consent_principal`); under a standing-consent basis, see below |
+| Approval event | approval event: the atomic, adjudicated creation of a Mission under its `approval_basis`, for every basis |
 | Approved Context | the Mission Intent, the recorded authority proposal where one was submitted, and the derived Authority Set |
 | Ordered governance record | the Mission log, assessment log, or audit record |
 {: title="Family vocabulary mapping"}
@@ -1232,6 +1233,25 @@ sources (user-delegated, service-owned, organizational) are the OAuth
 binding's realization of the authority-source authority role, and its
 source ceiling is that role's assertion staying within the named
 source's authority.
+
+The kernel's Approver is whoever makes the approval decision through
+the binding's native ceremony, which can be a policy authority.  The
+family separates three roles that this one term can combine
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Role Mapping"):
+`consent_principal`, the accountable human recorded as `approver`;
+`activation_actor`, who triggered the instance; and `adjudication`,
+the mechanism that decided it.  For a direct approval, the kernel's
+Approver is `consent_principal`.  Under a standing-consent basis,
+`consent_principal` is the accountable owner whose earlier approval
+of the standing consent roots the instance; the authorized policy
+ceremony supplies the instance's decision, and `adjudication`, where
+present, names that mechanism, whose activation policy commitment
+makes the decision reproducible
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Standing-Consent
+Bases").  A family document never relabels a deciding policy or model
+as the family's human Approver.  This correspondence relaxes no
+requirement of {{approval}} and adds no conformance claim for the
+OAuth binding.
 
 Precedence is scoped, not global.  For the OAuth-native binding, the
 OAuth binding's definitions govern that mapping; this document governs
@@ -1251,6 +1271,12 @@ reference to it; no change is ever made solely to move words.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Family Use maps the kernel's Approver to the family's accountable
+  owner (`consent_principal`) and, under a standing-consent basis, to
+  the policy ceremony that decides an instance (`adjudication`), and
+  maps the approval event to the creation of a Mission under any
+  approval basis (#1078).
 
 - Removed the normative dependency on the OAuth binding (#708): the
   OAuth Binding Mapping Assessment moved to the OAuth binding's own
