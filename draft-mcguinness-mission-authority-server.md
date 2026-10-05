@@ -1198,12 +1198,13 @@ of this channel.
 
 ## The Reference Tuple {#reference-tuple}
 
-The propagated value is exactly the Mission reference tuple:
+The propagated value is the Mission reference tuple:
 `mission_id` and `issuer`, compared as the canonical (`issuer`,
 `mission_id`) pair under the OAuth binding's comparison rules
 ({{I-D.draft-mcguinness-oauth-mission}}). The channel carries nothing
-else. State, integrity anchors, authority, and policy data always
-come from the MAS's signed Mission Status response
+else beyond the extension members admitted below. State, integrity
+anchors, authority, and policy data always come from the MAS's
+signed Mission Status response
 ({{lifecycle-and-state}}), and a request carrying any of them in this
 channel MUST be refused, never silently ignored, so ambiguity is
 detectable rather than absorbed. Each carriage below maps this one
@@ -1236,10 +1237,10 @@ Mission-Reference: id="msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
 
 - The field is a request header field and MUST NOT be sent as a
   trailer field.
-- The value is a Dictionary carrying exactly two members, both
-  REQUIRED: `id`, a String carrying the Mission identifier, and
-  `issuer`, a String carrying the exact issuer identifier the MAS
-  publishes in its metadata ({{discovery}}). A MAS participating in
+- The value is a Dictionary carrying two REQUIRED members: `id`, a
+  String carrying the Mission identifier, and `issuer`, a String
+  carrying the exact issuer identifier the MAS publishes in its
+  metadata ({{discovery}}). A MAS participating in
   this profile MUST publish an ASCII issuer identifier (Structured
   Field Strings are ASCII). The sender copies that published string
   with no URI normalization of any kind, and equality is byte
@@ -1289,7 +1290,7 @@ the reference:
 }
 ~~~
 
-The value carries exactly `mission_id` and `issuer`, with the tuple
+The value carries `mission_id` and `issuer`, with the tuple
 semantics of {{reference-tuple}} unchanged. The value object is
 closed the same way as the HTTP field: a receiver MUST reject
 duplicate JSON member names at parse time, a member outside the
