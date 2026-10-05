@@ -117,6 +117,19 @@ describe("common JWT verification (@spec aauth#section-11.5.2)", () => {
     await rejects(verifyAgentToken(jwt, opts()), "expired_jwt");
   });
 
+  it("rejects a token before its nbf, before any fetch, and accepts one at or after it", async () => {
+    const early = await agentToken(ap, agentKey, { nbf: NOW + 300 });
+    await rejects(verifyAgentToken(early, opts()), "invalid_jwt", /nbf/);
+    expect(net.fetched).toEqual([]);
+    await verifyAgentToken(await agentToken(ap, agentKey, { nbf: NOW }), opts());
+    await verifyAgentToken(await agentToken(ap, agentKey, { nbf: NOW - 60 }), opts());
+  });
+
+  it("rejects an nbf that is not a number", async () => {
+    const jwt = await agentToken(ap, agentKey, { nbf: String(NOW) });
+    await rejects(verifyAgentToken(jwt, opts()), "invalid_jwt", /nbf/);
+  });
+
   it("refuses an iat ahead of the clock only when a bound is applied", async () => {
     const jwt = await agentToken(ap, agentKey, { iat: NOW + 120 });
     await verifyAgentToken(jwt, opts());

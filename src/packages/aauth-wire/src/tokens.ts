@@ -70,7 +70,8 @@ function decode(jwt: string): {
  * Common JWT verification for every AAuth token. Cheap checks come first,
  * so a wrong, expired or malformed token fails before any fetch or
  * signature operation: format, `typ`, header `alg` and `kid`, `exp` (no
- * skew tolerance), `iat` (present; the optional ahead-of-clock bound), the
+ * skew tolerance), `nbf` when present (no tolerance either), `iat`
+ * (present; the optional ahead-of-clock bound), the
  * lifetime ceiling, `dwk`, `iss` and `jti`. Then the issuer's key is
  * discovered through `{iss}/.well-known/{dwk}` and the signature verified;
  * a cached key that fails is refreshed once before `unknown_key` or
@@ -95,6 +96,11 @@ async function verifyCommon(
   if (typeof header.kid !== "string") throw invalid("kid is missing");
   if (typeof payload.exp !== "number") throw invalid("exp is missing");
   if (payload.exp <= nowSeconds) throw new SignatureError("expired_jwt", "token has expired");
+  // @spec aauth#section-11.5.2: verified per RFC 7519, which refuses a token before its nbf.
+  if (payload.nbf !== undefined) {
+    if (typeof payload.nbf !== "number") throw invalid("nbf is not a number");
+    if (payload.nbf > nowSeconds) throw invalid("token is not yet valid (nbf)");
+  }
   if (typeof payload.iat !== "number") throw invalid("iat is missing");
   if (options.iatSkewSeconds !== undefined && payload.iat > nowSeconds + options.iatSkewSeconds) {
     throw new SignatureError("clock_skew", "iat is ahead of this verifier's clock");
