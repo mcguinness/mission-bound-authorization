@@ -518,8 +518,10 @@ Subject:
   (`iss`, `sub`) pair and carried in derived tokens' `sub` claim.
 
 Approver:
-: The single accountable principal who approves the Mission at the
-  approval event. Equal to the Subject for self-approval; different
+: The single accountable principal who approves the Mission: at its
+  direct approval event or, under a standing-consent basis, through
+  the earlier standing consent ({{standing-consent-bases}}). Equal to
+  the Subject for self-approval; different
   for administrator or delegated approval. This document records one
   accountable Approver; multi-party approval and the provenance of
   delegated approval authority are deferred ({{multi-party-approval}}).
@@ -1646,8 +1648,8 @@ organizational policy with a named accountable owner
 draws on, recorded immutably as the Mission's `authority_source`;
 `approval_basis` records how drawing on it was activated
 ({{mission-record}}), and the two compose: any source may activate
-through a `direct` approval event or through a standing-consent basis
-a companion defines. Approval activates authority the source already
+under the `direct` basis or a standing-consent basis a companion
+defines. Approval activates authority the source already
 holds and manufactures none: the AS establishes the source and
 verifies the derived Authority Set against it before approval
 ({{approval-event}}).
@@ -1753,9 +1755,9 @@ Mission ({{I-D.draft-mcguinness-oauth-mission-continuation}}). The
 AS alone establishes and resolves a binding; a client never supplies
 or negotiates one.
 
-At the approval event the AS binds the Mission to the authorization
-code it issues. The binding is server-side and is what "the
-referenced Mission" in {{lifecycle}} refers to. The code itself
+At a direct approval event the AS binds the Mission to the
+authorization code it issues. The binding is server-side and is what
+"the referenced Mission" in {{lifecycle}} refers to. The code itself
 carries no refresh-token family: only a successful redemption
 produces one, and where it does, the resulting refresh-token family
 inherits the code's binding atomically with its issuance, extending
