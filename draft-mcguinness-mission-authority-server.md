@@ -904,10 +904,10 @@ A Mission-joining PDP and its PEPs MUST observe the following:
    configuration, or from a trusted propagated reference
    ({{reference-propagation}}). In the AuthZEN profile
    ({{I-D.draft-mcguinness-mission-authzen}}) this reference is
-   `context.mission`; the PEP additionally populates `state`, and
-   `authority_hash` where the MAS's signed Mission Status response
-   discloses it, as OPTIONAL enrichment beyond the required `id` and
-   `issuer`.
+   `context.mission`, with `authority_hash` where the MAS's signed
+   Mission Status response discloses it as OPTIONAL enrichment beyond
+   the required `id` and `issuer`; the Mission state the PEP observed
+   travels in `context.mission_state_observation`.
 2. **The PDP resolves the Mission at the MAS.** The PDP MUST resolve
    the referenced Mission through the MAS's Mission Status operation.
    The PDP MUST treat the MAS as the Mission state source under the
@@ -941,9 +941,11 @@ A Mission-joining PDP and its PEPs MUST observe the following:
    and `max_depth` is evaluated from the deployment's actor records
    rather than from a Mission-bound token's `act` chain. A delegate
    with no actor record under the Mission is not recorded as acting
-   under it, and the join fails with `mission_mismatch`.
+   under it, and the join fails with `mission_binding_failed`.
 6. **Join failure is a deny.** A failure of the subject or client join
-   MUST be denied with the `mission_mismatch` denial reason: the
+   MUST be denied with the `mission_binding_failed` denial reason, the
+   AuthZEN profile's classification of a failed externally-established
+   binding join ({{I-D.draft-mcguinness-mission-authzen}}): the
    presented credential does not join to the referenced Mission
    because its authenticated subject or client identifier does not
    match the Mission's `subject.sub` or `client_id` under the
@@ -964,10 +966,15 @@ A Mission-joining PDP and its PEPs MUST observe the following:
    bound and MUST NOT widen either of the other two. A PEP MUST
    NOT treat a Mission permit as overriding what the credential or
    the resource would refuse.
-9. **Joined-view evidence commitment.** A decision reached over a
-   successful join MUST carry a joined-view commitment
-   (`join_view_id`) separate from `policy_view_id`, which alone does
-   not distinguish a joined decision from a direct one. `join_view_id`
+9. **Joined-view evidence commitment.** The PDP MUST record a
+   joined-view commitment, `join_view_id`, as a top-level member of
+   the Decision Evidence
+   ({{I-D.draft-mcguinness-mission-runtime-evidence}}) of every
+   decision reached over a successful join, including one that policy
+   then denies. It is separate from `policy_view_id`, which alone does
+   not distinguish a joined decision from a direct one, and it is
+   absent for a failed join and for a direct Mission-bound decision;
+   the AuthZEN response carries no view identifier. `join_view_id`
    MUST change whenever the joining client identifier, the join
    disposition (the Mission's own `client_id` or an authorized
    delegate), or the resulting effective Authority Set differs, so a
@@ -1067,9 +1074,9 @@ applies the instance mapping.
 The mapping contract states which paths require an instance-bound join
 and how the established instance maps to the Mission's permitted
 parties. Where the mapping contract requires an instance-bound join,
-the PDP MUST deny with `mission_mismatch` if the established instance
-is absent or does not match that contract, without falling back to a
-subject-and-client-only join.
+the PDP MUST deny with `mission_binding_failed` if the established
+instance is absent or does not match that contract, without falling
+back to a subject-and-client-only join.
 
 A PEP unable to validate required instance attribution refuses before
 requesting a decision, using the instance specification's Section 7.6
@@ -1118,10 +1125,11 @@ Join Assertions ignores `assertion` and the token members and joins
 under the mapping rules.
 
 The following example shows a decision request for a successful join
-in the AuthZEN profile. The PEP supplies `context.mission` populated
-from its Mission binding, with `state` (and `authority_hash` where
-disclosed) taken from the MAS's signed Mission Status response, and
-the other decision inputs per {{I-D.draft-mcguinness-mission-authzen}}:
+in the AuthZEN profile. The PEP supplies `context.mission` from its
+Mission binding, the Mission state it observed in the MAS's signed
+Mission Status response as `context.mission_state_observation`, the
+authenticated client as `context.actor.client_id`, and the other
+decision inputs per {{I-D.draft-mcguinness-mission-authzen}}:
 
 ~~~ json
 {
@@ -1130,16 +1138,27 @@ the other decision inputs per {{I-D.draft-mcguinness-mission-authzen}}:
     "id": "user_3p2q8mN1a0kV7tR",
     "properties": { "iss": "https://idp.example.com" }
   },
-  "resource": { "type": "invoice", "id": "inv_2026Q3_842" },
+  "resource": {
+    "type": "invoice",
+    "id": "inv_2026Q3_842",
+    "properties": { "audience": "https://erp.example.com" }
+  },
   "action": { "name": "invoices.read" },
   "context": {
     "mission": {
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
       "issuer": "https://mas.example.com",
       "authority_hash":
-        "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
-      "state": "active"
+        "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
     },
+    "mission_state_observation": {
+      "state": "active",
+      "mission_status_issued_at": "2026-11-02T08:14:00Z",
+      "mission_status_expires_at": "2026-11-02T08:15:00Z",
+      "mode": "cached",
+      "freshness_at": "2026-11-02T08:14:00Z"
+    },
+    "actor": { "client_id": "client_erp-recon-agent" },
     "mission_join": {}
   }
 }
@@ -1154,32 +1173,49 @@ shows the resulting permit:
 {
   "decision": true,
   "context": {
-    "decision_id": "dec_7mQ2sV5rL9tY3sB8zN1eF4jB0K",
-    "policy_view_id":
-      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t",
-    "join_view_id":
-      "sha-256:dV7wM3sK9nQ2vL5tR8bY1eG4jF6xH0pC3nT9kV2mZ5t",
-    "action_class": "consequential_read",
-    "class_source": "resource_floor",
-    "permit_expires_at": "2026-11-02T08:15:30Z"
+    "evaluation_id": "dec_7mQ2sV5rL9tY3sB8zN1eF4jB0K",
+    "conditions": {
+      "valid_until": "2026-11-02T08:15:00Z"
+    }
   }
 }
 ~~~
 
-The `join_view_id` member accompanies `policy_view_id` because this
-decision was reached over the join (rule 9 of {{join-rules}}). The
-direct-client disposition and `client_id` it binds distinguish it from
-a differently-joined decision (a narrowed delegate view) and from a
-direct Mission-bound decision, which never carries `join_view_id`.
+The response carries no view identifier. The PDP records the joined
+view in the decision's Decision Evidence (rule 9 of {{join-rules}}),
+beside the record's `mission.policy_view_id`. The following abridged
+example shows those members of that record:
 
-The AuthZEN profile's denial-reason extensibility rule permits a
-companion profile to extend the denial-reason set by specification,
-and requires a consumer to treat an unrecognized reason as a deny
+~~~ json
+{
+  "evaluation_id": "dec_7mQ2sV5rL9tY3sB8zN1eF4jB0K",
+  "mission": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "issuer": "https://mas.example.com",
+    "policy_view_id":
+      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"
+  },
+  "join_view_id":
+    "sha-256:dV7wM3sK9nQ2vL5tR8bY1eG4jF6xH0pC3nT9kV2mZ5t",
+  "decision": "permit"
+}
+~~~
+
+The direct-client disposition and `client_id` the commitment binds
+distinguish this record from a differently-joined decision's (a
+narrowed delegate view) and from a direct Mission-bound decision's,
+which carries no `join_view_id`.
+
+A failed join is denied with the AuthZEN profile's own
+`mission_binding_failed` classification. The profile's denial-reason
+extensibility rule permits a companion profile to extend the
+denial-reason set by specification, and requires a consumer to treat
+an unrecognized reason as a deny
 ({{I-D.draft-mcguinness-mission-authzen}}). Where this document is
-implemented, `mission_mismatch` and `mission_reference_conflict`
-({{reference-verification}}) are members of that set; neither requires
+implemented, `mission_reference_conflict`
+({{reference-verification}}) is a member of that set, requiring no
 IANA action under that extension-by-specification model. A consumer
-that does not implement this document treats them as that rule
+that does not implement this document treats it as that rule
 requires, so the action stays refused.
 
 The following is an example of an AuthZEN denial for a credential
@@ -1189,12 +1225,8 @@ whose `client_id` does not match the referenced Mission:
 {
   "decision": false,
   "context": {
-    "decision_id": "dec_2nP4qV9rL3tY6sB1zN0eF7jB8K",
-    "denial_reason": "mission_mismatch",
-    "action_class": "consequential_read",
-    "class_source": "resource_floor",
-    "policy_view_id":
-      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"
+    "evaluation_id": "dec_2nP4qV9rL3tY6sB1zN0eF7jB8K",
+    "reason": "mission_binding_failed"
   }
 }
 ~~~
@@ -1353,11 +1385,10 @@ those of {{reference-tuple}}.
   governance requires one, is denied with the
   `mission_reference_conflict` denial reason. This document adds that
   reason to the AuthZEN denial-reason set under its extensibility
-  rule, beside `mission_mismatch` ({{mission-join}}). The
-  `mission_mismatch` reason remains the subject-or-client join
-  failure, and `mission_reference_conflict` covers reference sources
-  naming different Missions or a reference that is unusable or
-  missing.
+  rule. A subject-or-client join failure is the AuthZEN profile's
+  `mission_binding_failed` ({{mission-join}}), and
+  `mission_reference_conflict` covers reference sources naming
+  different Missions or a reference that is unusable or missing.
 - If a PEP establishes the conflict before any evaluation, it surfaces
   the same reason as a coordinated pre-decision refusal, recorded as
   a Refusal Record with this `denial_reason`
@@ -1383,8 +1414,8 @@ that conflicts with the PEP's recorded binding:
 {
   "decision": false,
   "context": {
-    "decision_id": "dec_2nP4qV9rL3tY6sB1zN0eF7jB8K",
-    "denial_reason": "mission_reference_conflict"
+    "evaluation_id": "dec_2nP4qV9rL3tY6sB1zN0eF7jB8K",
+    "reason": "mission_reference_conflict"
   }
 }
 ~~~
@@ -1695,12 +1726,12 @@ mappings. It applies rule 5 of {{join-rules}} with them, and they are
 the joining client identifier and disposition that rule 9's
 commitment changes with. When `context.mission_join` also carries
 `delegate_depth` and it differs from `join.depth`, the PDP MUST deny
-with `mission_mismatch`.
+with `mission_binding_failed`.
 
 Every other join rule holds unchanged: the PDP resolves Mission state
 at the MAS under the runtime profile's freshness rules, denies with
-`mission_mismatch` when any check above fails, and draws authority
-from the Mission.
+`mission_binding_failed` when any check above fails, and draws
+authority from the Mission.
 
 For an instance-bound join, the PDP also applies the instance mapping
 of {{join-instance}} to the validated presenter context supplied by the
@@ -2446,8 +2477,8 @@ contract states, for the joins performed:
 - whether client-instance identity is supported and required;
 - a mapping version identifier, so a mapping change is detectable;
 - an audit record for each mapping decision; and
-- the failure semantics, which MUST fail closed with `mission_mismatch`
-  on any unresolved or ambiguous mapping.
+- the failure semantics, which MUST fail closed with
+  `mission_binding_failed` on any unresolved or ambiguous mapping.
 
 A MAS that mints Join Assertions SHOULD carry the version in each
 assertion's `mapping_version` claim ({{join-assertion-artifact}}), so
@@ -2524,7 +2555,8 @@ A **Mission-joining PDP**:
   operation and treats the MAS as its Mission state source under the
   runtime profile's freshness rules ({{mission-join}});
 - verifies the subject join and the client join before evaluating
-  authority, and denies with `mission_mismatch` on any join failure;
+  authority, and denies with `mission_binding_failed` on any join
+  failure;
 - for a high-consequence path under the Enterprise profile, requires
   the Mission-bound acting credential of {{high-consequence-binding}}
   and denies on its
@@ -2649,11 +2681,12 @@ residual after non-active is bounded by the consumer's declared
 staleness bound.
 
 Failure behavior is uniformly fail-closed. An unresolvable Mission, a
-stale or failed Status response, a join failure (`mission_mismatch`,
-never a fallback), an unknown or malformed authority-detail type, and
-an incomparable or invalid constraint each refuse the evaluation
-rather than comparing best-effort. A PDP that consumes a Join
-Assertion and finds it invalid denies with `mission_mismatch`
+stale or failed Status response, a join failure
+(`mission_binding_failed`, never a fallback), an unknown or malformed
+authority-detail type, and an incomparable or invalid constraint each
+refuse the evaluation rather than comparing best-effort. A PDP that
+consumes a Join Assertion and finds it invalid denies with
+`mission_binding_failed`
 ({{join-assertion-pdp}}), never falling back to the mapping join.
 
 The following qualifications apply to individual rows:
@@ -2721,8 +2754,8 @@ A client cannot gain authority by asserting another party's
 `mission_id`. The join requires the subject and client that the PEP
 authenticates from the credential to match the values the MAS
 recorded at approval, which the client cannot alter. A reference to
-someone else's Mission therefore fails with `mission_mismatch`. Four
-residuals remain:
+someone else's Mission therefore fails with `mission_binding_failed`.
+Four residuals remain:
 
 - **Mapping coarseness.** Where the deployment's account mapping is
   many-to-one (several AS accounts map to one directory subject), any
@@ -3008,10 +3041,11 @@ Denial Reasons" registry
 
 ## Runtime Denial Reasons
 
-`mission_mismatch` and `mission_reference_conflict` extend the
-denial-reason set of {{I-D.draft-mcguinness-mission-authzen}} under
-that profile's denial-reason extensibility rule ({{mission-join}},
-{{reference-verification}}). That profile's denial reasons are AuthZEN
+`mission_reference_conflict` extends the denial-reason set of
+{{I-D.draft-mcguinness-mission-authzen}} under that profile's
+denial-reason extensibility rule ({{reference-verification}}). A
+failed join uses that profile's own `mission_binding_failed`
+({{mission-join}}). That profile's denial reasons are AuthZEN
 extension data and are not registered in an IETF registry, so this
 document requests no IANA action for them.
 
@@ -3163,9 +3197,10 @@ reference and its consented authority; the example in
 
 The agent works under an ordinary OAuth token from the unchanged AS,
 which carries no Mission signal. For the first consequential action,
-the PEP supplies the Mission reference, with `state` (and
-`authority_hash` where the response discloses it) from the MAS's
-signed Mission Status response. The PDP verifies the subject and
+the PEP supplies the Mission reference, with `authority_hash` where
+the MAS's signed Mission Status response discloses it, and the
+Mission state it observed in that response. The PDP verifies the
+subject and
 client joins ({{mission-join}}). The first example in
 {{join-authzen}} shows the decision request.
 
@@ -3195,12 +3230,8 @@ shows the denial:
 {
   "decision": false,
   "context": {
-    "decision_id": "dec_9tY3sB8zN1eF4jB0K7mQ2sV5rL",
-    "denial_reason": "mission_inactive",
-    "action_class": "consequential_read",
-    "class_source": "resource_floor",
-    "policy_view_id":
-      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"
+    "evaluation_id": "dec_9tY3sB8zN1eF4jB0K7mQ2sV5rL",
+    "reason": "mission_inactive"
   }
 }
 ~~~
@@ -3208,6 +3239,16 @@ shows the denial:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Join evidence and the join-failure value (#972 items 27a, 27b,
+  D289). The PDP records `join_view_id` as a top-level member of the
+  signed Decision Evidence of every decision reached over a successful
+  join, a later policy denial included, and the AuthZEN response
+  carries no view identifier. A failed join denies with the AuthZEN
+  profile's `mission_binding_failed` in place of `mission_mismatch`,
+  which this document no longer adds to that profile's denial-reason
+  set; signed records made before the change are left as they are.
+  The AuthZEN examples use the profile's request and response shapes.
 
 - Authentication failures (#972 item 18, D289). A 401 from the
   submission or join-assertion endpoint carries the challenges Mission

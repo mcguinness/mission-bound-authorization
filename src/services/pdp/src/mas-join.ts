@@ -17,7 +17,7 @@
  * delegate), 5 (delegate narrowing: an absent actor record denies, and both
  * the deployment's DelegatePolicy ceiling and each entry's own
  * join_delegation.max_depth are enforced), 6 (uniform
- * `mission_mismatch` denial, no fallback), and the Mission-authority half of
+ * `mission_binding_failed` denial, no fallback), and the Mission-authority half of
  * 8 (the acting credential's own authority and current Resource policy are
  * bounds the CALLER independently intersects; this resolver only ever
  * narrows toward the Mission's own authority, never widens past it).
@@ -65,10 +65,10 @@ export interface BaselineJoinInput {
    * "evaluated from the deployment's actor records rather than from a
    * Mission-bound token's `act` chain": the caller resolves it itself and
    * supplies it here; this resolver never reads a token's own `act` chain
-   * for it. ABSENT on the delegate disposition denies `mission_mismatch`
+   * for it. ABSENT on the delegate disposition denies `mission_binding_failed`
    * unconditionally: "a delegate with no actor record under the Mission is
    * not recorded as acting under it, and the join fails
-   * `mission_mismatch`". An absent depth is not a shallow default, and not
+   * `mission_binding_failed`". An absent depth is not a shallow default, and not
    * an unbounded one either; it is the deployment saying it has no record
    * of this client acting under this Mission.
    */
@@ -77,7 +77,7 @@ export interface BaselineJoinInput {
 
 export type BaselineJoinResult =
   | { ok: true; disposition: "direct" | "delegate"; authoritySet: AuthorityEntry[] }
-  | { ok: false; reason: "mission_mismatch" };
+  | { ok: false; reason: "mission_binding_failed" };
 
 /**
  * @spec authority-server#mission-join rules 3, 4, 5, 6. Rule 3 (subject
@@ -85,12 +85,12 @@ export type BaselineJoinResult =
  * and MAS subject namespaces differ supplies an already-mapped `subject`
  * (its own account-mapping contract, {{mapping-contract}}), never a bare
  * `sub` comparison here. Rule 6: a failed subject or client join returns
- * `mission_mismatch` uniformly, and the caller MUST NOT fall back to
+ * `mission_binding_failed` uniformly, and the caller MUST NOT fall back to
  * evaluating the action against the referenced Mission's authority.
  */
 export function resolveBaselineJoin(input: BaselineJoinInput): BaselineJoinResult {
   if (input.view.subject.iss !== input.subject.iss || input.view.subject.sub !== input.subject.sub) {
-    return { ok: false, reason: "mission_mismatch" };
+    return { ok: false, reason: "mission_binding_failed" };
   }
 
   if (input.view.client_id === input.clientId) {
@@ -102,10 +102,10 @@ export function resolveBaselineJoin(input: BaselineJoinInput): BaselineJoinResul
   // the DEPLOYMENT'S static ceiling (DelegatePolicy); `input.delegateDepth`
   // is the caller-supplied, per-decision current depth (see the type doc).
   const delegateRule = input.delegatePolicy?.delegates[input.clientId];
-  if (!delegateRule) return { ok: false, reason: "mission_mismatch" };
+  if (!delegateRule) return { ok: false, reason: "mission_binding_failed" };
 
   // Rule 5: "A delegate with no actor record under the Mission is not
-  // recorded as acting under it, and the join fails `mission_mismatch`."
+  // recorded as acting under it, and the join fails `mission_binding_failed`."
   // Depth is read from the deployment's actor records, so an absent depth
   // means no such record exists, and the delegate disposition denies here
   // whether or not any max_depth is declared. This is the only bound that
@@ -113,10 +113,10 @@ export function resolveBaselineJoin(input: BaselineJoinInput): BaselineJoinResul
   // delegate-policy ceiling applies. Held in a const so the narrowing
   // survives into the filter callback below.
   const depth = input.delegateDepth;
-  if (depth === undefined) return { ok: false, reason: "mission_mismatch" };
+  if (depth === undefined) return { ok: false, reason: "mission_binding_failed" };
 
   if (delegateRule.maxDepth !== undefined && depth > delegateRule.maxDepth) {
-    return { ok: false, reason: "mission_mismatch" };
+    return { ok: false, reason: "mission_binding_failed" };
   }
 
   // Rule 5: narrow to the delegable subset. Entries without a
@@ -136,7 +136,7 @@ export function resolveBaselineJoin(input: BaselineJoinInput): BaselineJoinResul
     }
     return true;
   });
-  if (narrowed.length === 0) return { ok: false, reason: "mission_mismatch" };
+  if (narrowed.length === 0) return { ok: false, reason: "mission_binding_failed" };
   return { ok: true, disposition: "delegate", authoritySet: narrowed };
 }
 
