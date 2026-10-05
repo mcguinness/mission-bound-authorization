@@ -20,6 +20,7 @@ import {
   PaymentsStore,
   Pep,
   type TokenFacts,
+  credentialAuthorityFrom
 } from "@mission/mcp-payments";
 import { AccessRequestService } from "../src/index.js";
 
@@ -69,6 +70,8 @@ const TOKEN: TokenFacts = {
   clientId: "ap-agent",
   mission: { id: "msn_m6", issuer: "https://as.test", authority_hash: "sha-256:m6hash" },
   cnfJkt: "jkt-1",
+  // @spec runtime#input-authority (#825) — as issued for this Mission.
+  credentialAuthority: credentialAuthorityFrom(VIEW.authority_set),
 };
 
 let fga: Fga;

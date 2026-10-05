@@ -6,13 +6,16 @@
  */
 
 import {
+
   authorizationDetailsEqual,
+  type CredentialAuthorityEntry,
+  credentialEntriesFromAatTools,
   type DpopProofReplay,
   isIdempotencyKey,
   MISSION_TXN_TOKEN_TYP,
   missionInvariantsEqual,
   newDpopProofReplay,
-  parseAatToolId,
+  parseCredentialAuthority,
   readTxnMissionClaim,
   toolsOf,
   verifyAttenuationChain,
@@ -59,6 +62,7 @@ import {
   type WriteReservationScope,
 } from "./pep.js";
 import { type DpopPresentation, verifyDpopProof } from "./dpop.js";
+import { readAttenuationRootClaims, readMissionAccessClaims } from "./token-verifier.js";
 import {
   openTxnStores,
   type TxnConsumeOutcome,
@@ -476,9 +480,9 @@ export class McpPaymentsServer {
     dpopProof: string,
     htu: string,
     htm: string,
-  ): Promise<{ payload: JWTPayload; cnfJkt: string }> {
+  ): Promise<{ payload: JWTPayload; typ: unknown; cnfJkt: string }> {
     refuseTransactionToken(accessToken);
-    const { payload } = await jwtVerify(accessToken, this.resolveKey, {
+    const { payload, protectedHeader } = await jwtVerify(accessToken, this.resolveKey, {
       issuer: this.deps.issuer,
       audience: CANONICAL_RESOURCE,
     });
@@ -487,24 +491,28 @@ export class McpPaymentsServer {
     // Verify the DPoP proof and bind it to the token's cnf.jkt AND to the token
     // itself (`ath`), under the same verifier the transaction path uses.
     await this.verifyPresentation(accessToken, cnf.jkt, { proof: dpopProof, htu, htm });
-    return { payload, cnfJkt: cnf.jkt };
+    return { payload, typ: protectedHeader.typ, cnfJkt: cnf.jkt };
   }
 
   /**
-   * The Mission-bound facts of an already-verified payload. A `mission` claim
-   * that is present but not the profiled shape THROWS here: it is a refusal,
-   * never a credential silently demoted to the ordinary class.
+   * The Mission-bound facts of an already signature-verified payload, under
+   * the ordinary Mission access-token profile (@spec runtime-oauth#token-
+   * validation, #825): `typ` `at+jwt`, the RFC 9068 claim set with types, the
+   * `mission` claim and the credential's own `authorization_details`. A claim
+   * that is missing or not the profiled shape THROWS here: it is a refusal,
+   * never a credential silently demoted to the ordinary class. A proof of
+   * possession is not part of this: each transport verifies its own.
    */
-  private missionBoundFactsFrom(payload: JWTPayload, cnfJkt: string): MissionBoundTokenFacts {
-    // @spec cross-domain#mission-subject — readTxnMissionClaim validates the
-    // REQUIRED invariants and, when present, the closed {iss, sub} shape of
-    // the origin principal; a present-but-malformed `subject` is a refusal
-    // here, not a silently dropped member.
-    const mission = readTxnMissionClaim(payload.mission);
-    if (!mission) throw new Error("token missing mission claim");
+  private missionBoundFactsFrom(payload: JWTPayload, typ: unknown): MissionBoundTokenFacts {
+    // @spec cross-domain#mission-subject — readTxnMissionClaim (inside the
+    // profile) validates the REQUIRED invariants and, when present, the
+    // closed {iss, sub} shape of the origin principal; a present-but-malformed
+    // `subject` is a refusal here, not a silently dropped member.
+    const claims = readMissionAccessClaims(typ, payload, Math.floor(Date.now() / 1000));
+    const mission = claims.mission;
     return {
-      sub: payload.sub as string,
-      clientId: payload.client_id as string,
+      sub: claims.sub,
+      clientId: claims.clientId,
       // @spec authzen#pdp-request rule 10 — this resource's own verified
       // issuer, never the mission's origin issuer.
       iss: this.deps.issuer,
@@ -519,8 +527,11 @@ export class McpPaymentsServer {
         ...(mission.subject ? { subject: mission.subject } : {}),
       },
       missionClaim: mission,
-      cnfJkt,
-      ...(payload.jti ? { jti: payload.jti as string } : {}),
+      cnfJkt: claims.cnfJkt,
+      // @spec runtime#input-authority (#825) — the credential's own authority,
+      // evaluated as its own bound and never replaced by the Mission's.
+      credentialAuthority: claims.credentialAuthority,
+      jti: claims.jti,
       ...(payload.identity_continuation_handle
         ? { identityContinuationHandle: payload.identity_continuation_handle as string }
         : {}),
@@ -553,8 +564,8 @@ export class McpPaymentsServer {
    * @spec mission#rs-enforcement: enforce from the token (cnf, mission claim).
    */
   async validateToken(accessToken: string, dpopProof: string, htu: string, htm: string): Promise<MissionBoundTokenFacts> {
-    const { payload, cnfJkt } = await this.verifyDpopBoundToken(accessToken, dpopProof, htu, htm);
-    return this.missionBoundFactsFrom(payload, cnfJkt);
+    const { payload, typ } = await this.verifyDpopBoundToken(accessToken, dpopProof, htu, htm);
+    return this.missionBoundFactsFrom(payload, typ);
   }
 
   /**
@@ -609,8 +620,8 @@ export class McpPaymentsServer {
     pop: DpopPresentation,
     admitsOrdinary: boolean,
   ): Promise<TokenFacts> {
-    const { payload, cnfJkt } = await this.verifyDpopBoundToken(accessToken, pop.proof, pop.htu, pop.htm);
-    if (payload.mission !== undefined) return this.missionBoundFactsFrom(payload, cnfJkt);
+    const { payload, typ, cnfJkt } = await this.verifyDpopBoundToken(accessToken, pop.proof, pop.htu, pop.htm);
+    if (payload.mission !== undefined) return this.missionBoundFactsFrom(payload, typ);
     if (!admitsOrdinary) throw new Error("token missing mission claim");
     return this.ordinaryFactsFrom(payload, cnfJkt);
   }
@@ -628,35 +639,16 @@ export class McpPaymentsServer {
    */
   async validateMissionToken(accessToken: string): Promise<MissionBoundTokenFacts> {
     refuseTransactionToken(accessToken);
-    const { payload } = await jwtVerify(accessToken, this.resolveKey, {
+    const { payload, protectedHeader } = await jwtVerify(accessToken, this.resolveKey, {
       issuer: this.deps.issuer,
       audience: CANONICAL_RESOURCE,
     });
-    const cnf = payload.cnf as { jkt?: string } | undefined;
-    if (!cnf?.jkt) throw new Error("token missing cnf.jkt");
-    const mission = readTxnMissionClaim(payload.mission);
-    if (!mission) throw new Error("token missing mission claim");
+    // The same claim profile as the HTTP path; no proof is claimed, because
+    // this transport delivers none (the documented limitation above).
+    const facts = this.missionBoundFactsFrom(payload, protectedHeader.typ);
     return {
-      sub: payload.sub as string,
-      clientId: payload.client_id as string,
-      iss: this.deps.issuer,
-      credential: verifiedCredentialRef(payload),
+      ...facts,
       ...(payload.client_instance_id ? { clientInstanceId: payload.client_instance_id as string } : {}),
-      ...(payload.act ? { act: payload.act as ActObject } : {}),
-      mission: {
-        id: mission.id,
-        issuer: mission.issuer,
-        // @spec mission#the-mission-claim (#702) — NOT on the baseline claim;
-        // carried only when the source token's own profile added it.
-        ...(mission.authority_hash !== undefined ? { authority_hash: mission.authority_hash } : {}),
-        ...(mission.subject ? { subject: mission.subject } : {}),
-      },
-      missionClaim: mission,
-      cnfJkt: cnf.jkt,
-      ...(payload.jti ? { jti: payload.jti as string } : {}),
-      ...(payload.identity_continuation_handle
-        ? { identityContinuationHandle: payload.identity_continuation_handle as string }
-        : {}),
     };
   }
 
@@ -770,6 +762,14 @@ export class McpPaymentsServer {
     if (!authorizationDetailsEqual(payload.authorization_details, pending.authorizationDetails)) {
       return { ok: false, refusal_reason: "txn_authority_mismatch" };
     }
+    // @spec runtime#input-authority (#825) — the operation entry this
+    // credential carries is its own authority bound.
+    let credentialAuthority: readonly CredentialAuthorityEntry[];
+    try {
+      credentialAuthority = parseCredentialAuthority(payload.authorization_details);
+    } catch {
+      return { ok: false, refusal_reason: "txn_invalid" };
+    }
     if (payload.parameter_digest !== pending.parameterDigest) {
       return { ok: false, refusal_reason: "txn_parameter_mismatch" };
     }
@@ -808,6 +808,7 @@ export class McpPaymentsServer {
         },
         missionClaim: mission,
         cnfJkt: cnf.jkt,
+        credentialAuthority,
         jti: payload.jti,
         txn,
       },
@@ -841,17 +842,18 @@ export class McpPaymentsServer {
   ): Promise<MissionBoundTokenFacts> {
     if (chain.length === 0) throw new Error("empty attenuation chain");
 
-    // Root: under the AS JWKS, audience-scoped, iss == mission.issuer.
-    const { payload: rootPayload } = await jwtVerify(chain[0] as string, this.resolveKey, {
+    // Root: under the AS JWKS, audience-scoped, the `aat+jwt` profile with its
+    // typed claim set (@spec runtime-oauth#token-validation, #825), and
+    // iss == mission.issuer.
+    const { payload: rootPayload, protectedHeader: rootHeader } = await jwtVerify(chain[0] as string, this.resolveKey, {
       issuer: this.deps.issuer,
       audience: CANONICAL_RESOURCE,
       algorithms: ["ES256"],
     });
-    const rootMission = rootPayload.mission as { id: string; issuer: string; authority_hash: string } | undefined;
-    if (!rootMission?.id) throw new Error("attenuation root missing mission claim");
+    const root = readAttenuationRootClaims(rootHeader.typ, rootPayload, Math.floor(Date.now() / 1000));
+    const rootMission = root.mission;
     if (rootPayload.iss !== rootMission.issuer) throw new Error("attenuation root iss != mission.issuer");
-    let parentCnfJkt = (rootPayload.cnf as { jkt?: string } | undefined)?.jkt;
-    if (!parentCnfJkt) throw new Error("attenuation root missing cnf.jkt");
+    let parentCnfJkt: string | undefined = root.cnfJkt;
 
     // Each child: signed by the exact key the parent's cnf commits to.
     let leafPayload = rootPayload;
@@ -874,26 +876,26 @@ export class McpPaymentsServer {
     const verified = verifyAttenuationChain(chain);
     if (!verified.ok) throw new Error(`attenuation chain invalid: ${verified.reason}`);
 
-    // Proof-of-possession under the LEAF's cnf key.
+    // Proof-of-possession under the LEAF's cnf key, through the one proof
+    // check every credential class runs (@spec RFC 9449 Section 4.3, #825):
+    // the request binding, the key, a fresh `iat`, a `jti` this replica has
+    // not seen, and `ath` over the leaf token. The leaf is the credential the
+    // proof's key is bound to, and each child's `par_hash` already commits
+    // to its parent, so binding the proof to the leaf binds the whole chain.
     const leafCnf = (leafPayload.cnf as { jkt?: string } | undefined)?.jkt;
     if (!leafCnf) throw new Error("attenuation leaf missing cnf.jkt");
-    const proofHeader = decodeProtectedHeader(dpopProof);
-    if ((await calculateJwkThumbprint(proofHeader.jwk as never)) !== leafCnf) {
-      throw new Error("DPoP key does not match leaf cnf.jkt");
-    }
-    const { payload: proof } = await jwtVerify(dpopProof, proofHeader.jwk as never, {
-      typ: "dpop+jwt",
-      algorithms: ["ES256"],
-    });
-    if (proof.htu !== htu || proof.htm !== htm) throw new Error("DPoP htu/htm mismatch");
+    await this.verifyPresentation(chain[chain.length - 1] as string, leafCnf, { proof: dpopProof, htu, htm });
 
-    // Effective authority = the leaf's narrowed tools, as {resource, actions}.
-    const byResource = new Map<string, Set<string>>();
-    for (const toolId of Object.keys(toolsOf(verified.leaf))) {
-      const { resource, action } = parseAatToolId(toolId);
-      (byResource.get(resource) ?? byResource.set(resource, new Set()).get(resource))?.add(action);
+    // @spec runtime#input-authority (#825) — the credential bound is the
+    // leaf's tools with every restriction they carry (resource, action, vendor
+    // and amount bounds). The keyless verifier above already holds each child
+    // to a subset of its parent, so the leaf is the narrowest authority.
+    let credentialAuthority: readonly CredentialAuthorityEntry[];
+    try {
+      credentialAuthority = credentialEntriesFromAatTools(toolsOf(verified.leaf));
+    } catch (e) {
+      throw new Error(`attenuation leaf authority: ${(e as Error).message}`);
     }
-    const leafAuthority = [...byResource].map(([resource, actions]) => ({ resource, actions: [...actions] }));
 
     // @spec cross-domain#mission-subject — the root's origin principal,
     // where the profile applies, carried unchanged into TokenFacts the same
@@ -901,7 +903,7 @@ export class McpPaymentsServer {
     const missionClaim = readTxnMissionClaim(rootPayload.mission);
     return {
       sub: (leafPayload.sub ?? rootPayload.sub) as string,
-      clientId: rootPayload.client_id as string,
+      clientId: root.clientId,
       iss: this.deps.issuer,
       credential: verifiedCredentialRef(leafPayload),
       mission: {
@@ -912,7 +914,7 @@ export class McpPaymentsServer {
       },
       ...(missionClaim ? { missionClaim } : {}),
       cnfJkt: leafCnf,
-      leafAuthority,
+      credentialAuthority,
     };
   }
 

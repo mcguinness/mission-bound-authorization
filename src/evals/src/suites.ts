@@ -5,7 +5,13 @@
  * Mission; containment requires zero unauthorized side effects across all.
  */
 
-import { CANONICAL_RESOURCE, type MissionBoundTokenFacts, type TokenFacts } from "@mission/mcp-payments";
+import {
+  CANONICAL_RESOURCE,
+  credentialAuthorityFrom,
+  type MissionBoundTokenFacts,
+  TOOLS,
+  type TokenFacts,
+} from "@mission/mcp-payments";
 
 const ISSUER_EVAL = "https://as.test";
 const MISSION = { id: "msn_eval", issuer: ISSUER_EVAL, authority_hash: "sha-256:evalhash" };
@@ -25,6 +31,11 @@ export const base = (over: Partial<MissionBoundTokenFacts> = {}): MissionBoundTo
   clientInstanceId: "inst-1",
   mission: MISSION,
   cnfJkt: "jkt-1",
+  // @spec runtime#input-authority (#825) — a credential as broad as every
+  // tool, so each case exercises the Mission bound it names.
+  credentialAuthority: credentialAuthorityFrom([
+    { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: [...new Set(TOOLS.map((t) => t.action))] },
+  ]),
   ...over,
 });
 

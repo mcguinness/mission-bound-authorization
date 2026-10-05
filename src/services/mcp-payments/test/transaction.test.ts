@@ -26,6 +26,7 @@ import {
   TransactionEngine,
   type TxnConsumptionStore,
 } from "../src/index.js";
+import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 
 /** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
 const idem = (): string => `idem_${randomUUID()}`;
@@ -126,6 +127,7 @@ const TOKEN: TokenFacts = {
     approval_basis: { type: "direct" },
   },
   cnfJkt: HOLDER_JKT,
+  credentialAuthority: ALL_ACTIONS_CREDENTIAL,
 };
 
 /** @spec txn-authorization#resource-challenge — the client signal that gates a challenge. */
@@ -997,11 +999,13 @@ d("M5 transaction-assurance tier", () => {
       client_id: "ap-agent",
       cnf: { jkt: TOKEN.cnfJkt },
       mission: TOKEN.missionClaim,
+      authorization_details: [...ALL_ACTIONS_CREDENTIAL],
     })
       .setProtectedHeader({ alg: "ES256", kid: "as-txn", typ: "at+jwt" })
       .setIssuer(AS_ISSUER)
       .setAudience(CANONICAL_RESOURCE)
       .setIssuedAt()
+      .setJti(crypto.randomUUID())
       .setExpirationTime("5m")
       .sign(asTxn.privateKey);
     expect((await server.validateMissionToken(ordinary)).mission.id).toBe("msn_m5");
