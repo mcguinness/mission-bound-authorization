@@ -353,7 +353,14 @@ Mission's `drawdown_policy.id`) and `policy_version` (its
 issuance profile's standing-consent requirement) is the instant the
 Approver consented the ceiling that `ceiling_hash` commits, read
 from the Mission Issuer's retained record of that consent, never
-from the drawdown request. The child delegation
+from the drawdown request. Its record's `approval_event_id` identifies
+this drawdown, never the ceiling consent: a unique value the Mission
+Issuer allocates when it creates the exchange's
+`(client, creation_request_id)` reservation and retains with the
+committed successor ({{I-D.draft-mcguinness-oauth-mission-expansion}},
+Section "Creation Idempotency"). A retry recovers it; a reservation
+created after that key's tombstone expires receives a new one. The
+child delegation
 profile's `policy_drawdown` basis
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) is not
 reused: that value names policy-approved child creation, not a
@@ -459,7 +466,7 @@ per-Mission bound would reset at every step. A deployment:
 - MUST publish the concrete rate bound in the Mission Deployment
   Profile; and
 - MUST record each policy-adjudicated expansion as an approval event
-  whose approver context is the drawdown policy that authorized it
+  whose decision mechanism is the drawdown policy that authorized it
   ({{audit-linkage}}).
 
 Some authority classes always require a fresh human approval even
@@ -652,9 +659,11 @@ expansion stays denied.
 # Audit Linkage {#audit-linkage}
 
 Each policy-adjudicated in-ceiling expansion is an approval event and
-MUST be recorded as one: the approver context is the drawdown policy
-(its identifier and version) rather than a human principal, and the
-successor's `predecessor` member links the drawdown chain for an
+MUST be recorded as one: the decision mechanism is the drawdown policy
+(its identifier and version) rather than a human, the Approver who
+consented the ceiling remains the accountable `consent_principal`
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Role Mapping"), and
+the successor's `predecessor` member links the drawdown chain for an
 authorized auditor exactly as for human-approved expansions
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 
@@ -735,8 +744,8 @@ document adds the drawdown surface:
   ({{I-D.draft-mcguinness-mission-runtime}}).
 - The drawdown policy is authority-bearing governance. A misconfigured
   policy over-grants within the ceiling; it MUST be reviewed and
-  versioned like approval policy, and its identity and version are part
-  of the recorded approver context ({{audit-linkage}}).
+  versioned like approval policy, and its identity and version are
+  recorded as the decision mechanism ({{audit-linkage}}).
 - The ceiling is a consent artifact. It MUST be rendered to the
   Approver at the initial approval with the fact that in-ceiling
   expansion is policy-adjudicated ({{progressive-authorization}}); a
@@ -780,6 +789,17 @@ convention, none of which require registration.
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Audit Linkage and In-Ceiling Expansion name the drawdown policy as
+  the approval event's decision mechanism, not its approver; the
+  Approver who consented the ceiling stays the `consent_principal`,
+  matching the issuance profile's Role Mapping.
+- In-ceiling expansion: a `ceiling_drawdown` successor's
+  `approval_event_id` identifies the drawdown: a unique value allocated
+  with the exchange's `(client, creation_request_id)` reservation and
+  retained with the successor, so a retry recovers it and reuse of the
+  key after its tombstone expires receives a new one; no new member
+  (#1017).
 
 - In-ceiling expansion: a drawdown that passes every policy-adjudication
   guard completes synchronously in the token-exchange response,
