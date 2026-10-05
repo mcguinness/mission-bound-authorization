@@ -67,13 +67,13 @@ so this target cannot pass acceptance while either is missing.
 
 | Dimension | Adopted (D284, D293) | Reference at `57373c29` | Status | Gap owner |
 |---|---|---|---|---|
-| Topology | One configured issuer and trust domain; trusted Approver resolver, PEP, PDP and Resource; no implied federation | One process. `composeStack({ withAuthServer: true })` (`demo/src/stack.ts:191`) runs the AS on 4400 (issuer `http://localhost:4400`, `stack.ts:273-275`), the PEP `mcp-payments-pep` (`stack.ts:706-708`), the PDP (`stack.ts:539`), OpenFGA, and the in-process approval service. The resource audience is `http://localhost:4403/mcp` (`services/mcp-payments/src/pep.ts:67`); nothing listens there. The AS JWKS is fetched once at assembly (`stack.ts:373`) | Partial | No launcher for exactly this topology: no issue yet. `composeStack` also starts a MAS join route (see Binding). JWKS reload: #831 |
-| Binding | OAuth Mission-bound issuance, Runtime OAuth and AuthZEN; MAS join only in its separately declared path | Runtime OAuth credential validation and the AuthZEN request (§4, §5). The PDP is a direct call by default with no PEP authentication (`services/pdp/src/decision-channel.ts:56-61`); `MISSION_PDP_MODE=remote` adds a loopback HTTP hop keyed by a per-boot secret that is never configured, so it cannot cross processes as shipped (`decision-channel.ts:64-66`). `config/mas-join.json` names the payments resource governed, so `composeStack` also starts a MAS join route (`stack.ts:792-794`) the statement does not declare | Partial | Exclude or disable the MAS route on this target: no issue yet (#818 owns MAS itself) |
-| Operations | Enumerated payments operations, authority types, classes, phases and parameter binding; refuse outside the allowlist | Nine tools, all classed (§3). An unknown tool is refused `unknown_tool` before any PDP call (`pep.ts:1084`) | Partial | `hold_transfer` control: #918 leftovers. Profile drift (§3): no issue yet |
+| Topology | One configured issuer and trust domain; trusted Approver resolver, PEP, PDP and Resource; no implied federation | One process. `composeStack({ withAuthServer: true })` (`demo/src/stack.ts:191`) runs the AS on 4400 (issuer `http://localhost:4400`, `stack.ts:273-275`), the PEP `mcp-payments-pep` (`stack.ts:706-708`), the PDP (`stack.ts:539`), OpenFGA, and the in-process approval service. The resource audience is `http://localhost:4403/mcp` (`services/mcp-payments/src/pep.ts:67`); nothing listens there. The AS JWKS is fetched once at assembly (`stack.ts:373`) | Partial | Launcher for exactly this topology: #1105. JWKS reload: #831 |
+| Binding | OAuth Mission-bound issuance, Runtime OAuth and AuthZEN; MAS join only in its separately declared path | Runtime OAuth credential validation and the AuthZEN request (§4, §5). The PDP is a direct call by default with no PEP authentication (`services/pdp/src/decision-channel.ts:56-61`); `MISSION_PDP_MODE=remote` adds a loopback HTTP hop keyed by a per-boot secret that is never configured, so it cannot cross processes as shipped (`decision-channel.ts:64-66`). `config/mas-join.json` names the payments resource governed, so `composeStack` also starts a MAS join route (`stack.ts:792-794`) the statement does not declare | Partial | Exclude the MAS route on this target: #1105 (#818 owns MAS; #956 Q2 its declaration in the shared demo) |
+| Operations | Enumerated payments operations, authority types, classes, phases and parameter binding; refuse outside the allowlist | Nine tools, all classed (§3). An unknown tool is refused `unknown_tool` before any PDP call (`pep.ts:1084`) | Partial | `hold_transfer` permit control: #1080. Profile drift (§3): #1106 |
 | State | For this co-located target, the declared local committed read (D293 narrows D284's "authoritative Status"); per-class staleness, skew, permit and execution bounds; source ownership and unavailable behavior | The PEP and PDP read the AS kernel's committed record in process (`loadView`, `stack.ts:665-672`; the statement's state source is `kernel-committed load_view`, placement `pep`). That is the authoritative record behind Status, but it is not the Mission Status operation, introspection or Signals. Bounds and fail-closed behavior: §4 | Source accepted (D293); one unavailable-state witness missing (§4) | Separated PEP or PDP: #1101, which gates only a separated-deployment claim |
 | Policy | Conjunction of token authority, current effective Mission authority and independently administered Resource policy | Current effective Mission authority is enforced and tested. Token authority is read only for validity, audience, `cnf` and the `mission` reference. Independent Resource policy is not implemented (§5) | Required, not met: blocks acceptance | Token authority: #825 (PR #1062). Resource policy: #828 |
-| Evidence | Runtime/Decision Base and explicitly enabled evidence capabilities; emitters, verifiers, retention, failure carriers; missing telemetry is `indeterminate` | Decision Evidence, Refusal Records and Execution Evidence (§6). The `evidence` extension is not enabled, so there is no receipt issuer | Partial | Emission-failure tests: no issue yet |
-| Persistence | Every store, its transaction or acceptance boundary, and restart and reconciliation behavior | Only the PDP claim domain and the PEP write reservations are durable files; every other store is in memory (§7). The declared reconciler is not run | Partial | #250, #831, #917 and #918 leftovers |
+| Evidence | Runtime/Decision Base and explicitly enabled evidence capabilities; emitters, verifiers, retention, failure carriers; missing telemetry is `indeterminate` | Decision Evidence, Refusal Records and Execution Evidence (§6). The `evidence` extension is not enabled, so there is no receipt issuer | Partial | Emission failures: #1104 |
+| Persistence | Every store, its transaction or acceptance boundary, and restart and reconciliation behavior | Only the PDP claim domain and the PEP write reservations are durable files; every other store is in memory (§7). The declared reconciler is not run | Partial | Reconciliation never runs: #1103. #250, #831 |
 | Claims | Per-action limits only; execution and transaction handling for applicable operations; no aggregate cap, compromise containment or unattended prohibited-class exception | §8 | Partial | §8 |
 
 ## 3. Operation allowlist
@@ -104,8 +104,8 @@ Statement declares:
 
 Residuals:
 
-- **`hold_transfer`** has no permit-lifetime or idempotency control and stores nothing: `execute()` returns `{held: true}` (`services/mcp-payments/src/server.ts:1703-1704`). It is in the allowlist as the prepare phase, under #918's listed leftovers. No test yet.
-- **Operation Profile drift.** The profile says arguments are NFC-normalized and unknown members are refused `invalid_request`; neither is implemented in `services/mcp-payments/src`. Its `note` and `execute_after` members are neither served nor read. The key format is checked by the PDP (`evaluate.ts:1375`, `:1393`), not a schema. No issue yet.
+- **`hold_transfer`** has no permit-lifetime or idempotency control and stores nothing: `execute()` returns `{held: true}` (`services/mcp-payments/src/server.ts:1703-1704`). It is in the allowlist as the prepare phase. #1080 owns the permit control. No test yet.
+- **Operation Profile drift.** The profile says arguments are NFC-normalized and unknown members are refused `invalid_request`; neither is implemented in `services/mcp-payments/src`. Its `note` and `execute_after` members are neither served nor read. The key format is checked by the PDP (`evaluate.ts:1375`, `:1393`), not a schema. The schema list also omits `idempotency_key` on the two transaction-tier tools and lists an unserved `list_invoices` `status` filter. #1106 (owner ruling pending).
 
 ## 4. State and freshness
 
@@ -192,7 +192,7 @@ Deployment-administered gates that do exist: the action-bound approval for
 - **Outcomes** are `completed`, `failed` and `suppressed` (`services/mcp-payments/src/evidence.ts:213`). Nothing emits `failed`. An unknown outcome is not an Execution Evidence outcome; it is the PDP claim state `indeterminate`.
 - **Coverage gap.** A successful call outside the transaction tier emits no Execution Evidence (`server.ts:1019`, `:1082`, `:1286`); only its Decision Evidence exists. No test asserts the absence.
 - **Retention.** `EvidenceRetentionStore` is built without a file, so it is in memory (`stack.ts:566-568`), with a 31,536,000 s window from the `policy.json` audit horizon and no capacity limit. Restart recovery is shown only on a test file: `retention honors the declared audit window (@spec runtime-evidence#receipt-retention) > recovers the retained records, the emitter sequences and the key retirement metadata after a restart`.
-- **Emission failure.** A PDP whose emitter throws releases the claim, and the PEP refuses `pdp_unreachable`; a Refusal Record emission that throws rejects `enforce`; `suppressExecution` retries once and then records `gap: "emission_failed"`; the `completed` write after a connector commit has no error handling and leaves the operation `connector_committed`. No test yet for the emitter throw, the Refusal Record throw, either `suppressExecution` gap, or the `completed` write failure.
+- **Emission failure.** A PDP whose emitter throws releases the claim, and the PEP refuses `pdp_unreachable`; a Refusal Record emission that throws rejects `enforce`; `suppressExecution` retries once and then records `gap: "emission_failed"`; the `completed` write after a connector commit has no error handling and leaves the operation `connector_committed`. No test yet for the emitter throw, the Refusal Record throw, either `suppressExecution` gap, or the `completed` write failure. #1104.
 
 ## 7. Persistence and restart
 
@@ -216,9 +216,9 @@ and
 
 Residuals:
 
-- **The declared reconciler does not run.** `outcome_reconciliation` names `mcp-payments-pep`, a PT15M window and an operator alert, but `reconcileClaims` and `reconcile` have no non-test caller and no alert exists. After a PEP restart a claim keeps the old PEP epoch, so a retry is suppressed, and the new process cannot list or reconcile it: it closes `indeterminate` and the key stays refused. #917 leftovers.
-- **The operation key omits `idempotency_key`.** One redemption is allowed per Mission, action, phase and digest per process, so a new key for an unchanged invoice is refused `permit_consumed`: [FGA] `M5 transaction-assurance tier > a FRESH permit for an already-claimed operation is refused as operation_already_claimed and does not double-execute`. #917 and #918 leftovers.
-- **No assembled restart test.** Restart is tested only at the unit level for the two durable stores and the transaction-token crash window. #873, #250.
+- **The declared reconciler does not run.** `outcome_reconciliation` names `mcp-payments-pep`, a PT15M window and an operator alert, but `reconcileClaims` and `reconcile` have no non-test caller and no alert exists. After a PEP restart a claim keeps the old PEP epoch, so a retry is suppressed, and the new process cannot list or reconcile it: it closes `indeterminate` and the key stays refused. #1103.
+- **The operation key omits `idempotency_key`.** One redemption is allowed per Mission, action, phase and digest per process, so a new key for an unchanged invoice is refused `permit_consumed`: [FGA] `M5 transaction-assurance tier > a FRESH permit for an already-claimed operation is refused as operation_already_claimed and does not double-execute`. This target states it as a bound: a repeat is refused, never executed twice.
+- **No assembled restart test.** Restart is tested only at the unit level for the two durable stores and the transaction-token crash window. #873, #250, #1103.
 
 ## 8. Claims, exclusions and residuals by action path
 
@@ -228,9 +228,9 @@ unsupported obligation is refused or its claim excluded.
 | Action path | Claimed | Not claimed | Residuals and owners |
 |---|---|---|---|
 | Reads (`list_invoices`, `get_invoice`, `lookup_vendor`, `check_transfer`) | per-call decision on current Mission authority and state; per-action `vendors` | Execution Evidence on success | #825 and #828 (required, §1) |
-| Keyed writes (`schedule_payment`, `cancel_scheduled_payment`) | per-action `max_amount` and `vendors`; PEP-reserved idempotency with a durable record | reservation sweep; reconciliation of a `reserved` row | #918 leftovers |
-| Prepare (`hold_transfer`) | per-call decision; phase binding | idempotency or permit-lifetime control; any stored effect | #918 leftovers |
-| Transaction tier (`execute_wire_transfer`, `send_remittance_email`) | single-use permit, execution lease, PDP-held Exact claim, digest and phase binding, Execution Evidence; action-bound approval for remittance | restart recovery beyond the claim store; reconciliation run; transaction-grade resource witnesses; a failed commit predicate that retains the permit | #917 leftovers, #250, #817 |
+| Keyed writes (`schedule_payment`, `cancel_scheduled_payment`) | per-action `max_amount` and `vendors`; PEP-reserved idempotency with a durable record | reservation sweep; reconciliation of a `reserved` row | #1103 |
+| Prepare (`hold_transfer`) | per-call decision; phase binding | idempotency or permit-lifetime control; any stored effect | #1080 |
+| Transaction tier (`execute_wire_transfer`, `send_remittance_email`) | single-use permit, execution lease, PDP-held Exact claim, digest and phase binding, Execution Evidence; action-bound approval for remittance | restart recovery beyond the claim store; reconciliation run; transaction-grade resource witnesses; a failed commit predicate that retains the permit | #1103, #1104, #250, #817 |
 | Every path | per-action limits only | any aggregate cap; compromise containment; unattended prohibited-class exception | excluded by D284; #825 and #828 are required, not excluded (§1) |
 
 **The aggregate-cap exclusion is enforced by refusal.** The issuer refuses an
@@ -242,9 +242,11 @@ That test uses another member; no test names `max_budget`.
 
 **Unmet obligations by owner:**
 
-- #825 (token authority; PR #1062), #826 (Approver versus Subject; PR #1074), #828 (Resource policy), #831 (keys and verifier refresh), #250 (control-plane atomicity; revoke versus issue), #916 (approval commits before grant binding), #830 (identity changes apply at restart), #817 (resource-side execution capabilities), #773 (context-drift vectors, conditional), #873 (inherited floor obligations).
-- #917 and #918 are implemented (D245, D247) with listed leftovers; their issue bodies still read "Nothing merged".
-- No issue yet: the Operation Profile drift (§3); a launcher for exactly this topology (§2, Topology); excluding the MAS join route from this target (§2, Binding); emission-failure tests (§6).
+- Blocking acceptance: #825 (token authority; PR #1062) and #828 (Resource policy).
+- Acceptance-pack prerequisites: #1105 (launcher, MAS route excluded), #1103 (reconciliation never runs), #1104 (emission failures), #1106 (Operation Profile drift), #1080 (`hold_transfer` permit control).
+- Separated deployment only: #1101 (state source under D293).
+- Also open: #826 (Approver versus Subject; PR #1074), #831 (keys and verifier refresh), #250 (control-plane atomicity; revoke versus issue), #916 (approval commits before grant binding), #830 (identity changes apply at restart), #817 (resource-side execution capabilities), #773 (context-drift vectors, conditional), #873 (inherited floor obligations).
+- #917 and #918 are closed as implemented (D245, D247); their leftovers are owned by #1103 and #1080.
 
 ## 9. Pinned adoption closure
 
@@ -287,7 +289,7 @@ introspection (#1101).
 | `draft-mcguinness-oauth-mission-status-list.md` | `4fe0d0b0` | off |
 | `draft-mcguinness-oauth-mission-cross-domain.md` | `02014aa3` | no projected credentials or decisions on this path |
 | `draft-mcguinness-oauth-mission-attenuation.md` | `4fe0d0b0` | the AS does not advertise `mission_attenuation_supported` |
-| `draft-mcguinness-mission-authority-server.md` | `68b6713a` | the MAS join route is excluded from this target |
+| `draft-mcguinness-mission-authority-server.md` | `68b6713a` | the MAS join route is excluded from this target (#1105) |
 
 **Reader bundle, informative:** `draft-mcguinness-mission-architecture.md`
 `3f95ce1c`, `draft-mcguinness-mission-control-plane.md` `909a3ee7` (kept
@@ -305,7 +307,7 @@ The assembled acceptance pack (#253 Sketch step 3) pins the assembled path's
 revision and exercises each vector below. Only the `src/demo/test` files
 `remote-pdp-stack`, `mas-join-stack` and `pep-emission-boundary` run
 `composeStack`; no test yet drives an AS-issued Mission-bound token through
-`mcp-payments` and the real PDP.
+`mcp-payments` and the real PDP (#1105).
 
 The pack cannot pass while #825 or #828 is unmet (§1).
 
@@ -322,7 +324,9 @@ The pack cannot pass while #825 or #828 is unmet (§1).
 | Failed commit predicate with the permit retained | none | applies only to a connector that claims a commit-point predicate; none does at this revision (#817), so the guarantee stays excluded (§8) |
 | Bob for Alice, with and without `openid` | Subject selection only: `approval resolution establishes identity from the surface (#759, #761) > the pushed login_hint is resolved and authorized, never accepted as an arbitrary Subject` | #826 (PR #1074) |
 | Revoke during issuance | none on this surface | #250, #873 |
-| Restart and uncertain recovery | the unit-level witnesses in §7 | no assembled restart test |
+| Restart and uncertain recovery | the unit-level witnesses in §7 | no assembled restart test; reconciliation never runs (#1103) |
+| Emission failure | none (§6) | #1104 |
+| Unknown or authoritative argument member | none; unknown tools only (§3) | #1106 |
 
 Each new test in the pack must fail when its guard is disabled, and a ledger
 row reaches `tested` only with an exact `describe > it` citation at the
@@ -333,8 +337,8 @@ correct surface and role.
 No launcher assembles exactly this topology yet. `pnpm demo:serve`,
 `pnpm exhibit`, `pnpm agent` and `pnpm demo` assemble `composeStack` and need
 `docker compose up -d` (OpenFGA) and `pnpm setup` (`src/DEMO.md`); they also
-start the excluded MAS route and other surfaces. A dedicated launcher is part
-of the acceptance pack.
+start the excluded MAS route and other surfaces. #1105 owns a dedicated
+launcher with that route excluded.
 
 ## 12. Status
 
@@ -345,9 +349,11 @@ is #253 Sketch step 1. Next:
 1. **Runtime integration port (step 2):** extend
    [provider-integration-port.md](provider-integration-port.md) with protected
    state and lifecycle and resource composition rows, in its eight columns.
-2. **Acceptance pack (step 3):** the launcher and the vectors of §10.
-3. **Second route (step 4):** #818's legacy-estate/MAS evidence, separately
-   pinned.
+2. **Acceptance pack (step 3):** the launcher (#1105) and the vectors of
+   §10, after the required enforcement gaps (#825, #828) and the recovery
+   gaps (#1103, #1104) are resolved.
+3. **Second route (step 4):** #818's legacy-estate/MAS route, demonstrated
+   independently and separately pinned.
 
 A later commit invalidates any statement here until it is re-checked against
 that commit. #253 closes only when both reference routes are demonstrated,
