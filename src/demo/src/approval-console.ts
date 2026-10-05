@@ -1,11 +1,21 @@
 /** Trusted exhibit/console driver. Never imported by the agent OAuth helper. */
+import { APPROVAL_SUBJECT_HEADER } from "@mission/authorization-server";
 import { jarClosures, redeemMissionApproval, submitMissionApproval, type CookieJar, type IssueOpts, type SubmittedApproval } from "./oauth-client.js";
 
-export async function resolveMissionApproval(asUrl: string, approverToken: string, pending: { uid: string; jar: CookieJar }, decision: "approve" | "deny"): Promise<string | undefined> {
+/**
+ * The trusted console resolves an approval. `subject` is the Subject the
+ * console selects for an approval on another principal's behalf (#826): the
+ * demo's approver Bob approves for Alice; `null` is a self-approval. The
+ * agent's PAR never names it.
+ */
+export async function resolveMissionApproval(asUrl: string, approverToken: string, pending: { uid: string; jar: CookieJar }, decision: "approve" | "deny", subject: string | null = "alice"): Promise<string | undefined> {
   const { cookieHeader, storeCookies } = jarClosures(pending.jar);
   let res = await fetch(`${asUrl}/interaction/${pending.uid}/decide`, {
     method: "POST", redirect: "manual",
-    headers: { "content-type": "application/json", cookie: cookieHeader(), "x-service-token": approverToken },
+    headers: {
+      "content-type": "application/json", cookie: cookieHeader(), "x-service-token": approverToken,
+      ...(subject !== null ? { [APPROVAL_SUBJECT_HEADER]: subject } : {}),
+    },
     body: JSON.stringify({ decision }),
   });
   if (res.status >= 400) throw new Error(`approval resolution refused: ${res.status}`);

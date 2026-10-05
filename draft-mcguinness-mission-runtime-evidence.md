@@ -619,7 +619,7 @@ A Decision Evidence Object is closed to uncoordinated extension; see
 {{evidence-extensions}} for the extension rule and the coordinated
 extension members a deployment following the AuthZEN profile
 commonly carries (`taint`, `mission_history`, `capability_source`,
-`hop_reference`).
+`hop_reference`, `principal_mapping`, `join_view_id`).
 
 ## Refusal Record {#pre-decision-refusal}
 
@@ -1937,6 +1937,16 @@ a common wire carrier.
   than carrying the object again. Registered and owned by the
   cross-domain profile.
 
+`join_view_id`:
+: OPTIONAL. A string, recorded at the top level of Decision Evidence:
+  the joined-view commitment of a decision reached over a successful
+  Mission Join. REQUIRED on the Decision Evidence of every decision
+  reached over a successful join, including one that policy then
+  denies, and absent for a failed join and for a direct Mission-bound
+  decision. Registered and owned by the Mission Authority Server
+  ({{I-D.draft-mcguinness-mission-authority-server}}), which defines
+  what the commitment distinguishes.
+
 # Conformance {#conformance}
 
 This document defines conformance for four roles: a PRODUCER that
@@ -2371,6 +2381,12 @@ evidence representation their shared envelope carries (using the
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- `join_view_id` is a coordinated Decision Evidence extension member,
+  registered and owned by the Mission Authority Server: the
+  joined-view commitment of a decision reached over a successful
+  Mission Join (#972 item 27a). The list of commonly carried
+  coordinated members also names `principal_mapping`.
 
 - Decision Evidence's `mission.policy_view_id` is REQUIRED where the
   PDP evaluates through a materialized policy view; a PDP that

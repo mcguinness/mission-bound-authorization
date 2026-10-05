@@ -98,6 +98,15 @@ export {
   type SigningKeyStatus,
 } from "./compromise-boundary.js";
 export {
+  type CredentialAuthorityEntry,
+  CredentialAuthorityError,
+  type CredentialTarget,
+  credentialAuthorityPermits,
+  credentialEntriesFromAatTools,
+  credentialEntriesFromAuthority,
+  parseCredentialAuthority,
+} from "./credential-authority.js";
+export {
   type ActorCredentialEntry,
   CHAIN_DIGEST_TYP,
   CHAIN_MEDIA_TYPE,

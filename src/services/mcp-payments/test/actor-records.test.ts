@@ -5,7 +5,7 @@
  * against: "`max_depth` is evaluated from the deployment's actor records
  * rather than from a Mission-bound token's `act` chain", and "a delegate
  * with no actor record under the Mission is not recorded as acting under
- * it, and the join fails `mission_mismatch`". Every case where the ledger
+ * it, and the join fails `mission_binding_failed`". Every case where the ledger
  * does not record a rooted chain resolves ABSENT, which the PDP's resolver
  * denies (`services/pdp/test/mas-join.test.ts`).
  */

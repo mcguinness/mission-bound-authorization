@@ -7,16 +7,16 @@
     "content_sha256": "ec57264fec92ea2dd3c42ba1067c70d72195f251bc5c416ccad856cb1beac3a1"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "68b6713ad9cf5556704e40d0386c8e3716582be8",
-    "content_sha256": "dfffde4a2feed909aa58ab9d787aa77f801f5603d270809450cbfcfd445ae001"
+    "revision": "98445ffc2dcdaac18e6c701e63e382eb6e60c596",
+    "content_sha256": "bac0c0baea183b6e594d4adc7b9fee19791d9e5e6c7490004da921889eac3f8d"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "6f10361ef7fae0c457e78b003860587fb773ac4f",
     "content_sha256": "37d43c72d0ca7ebba7e3e2495460b125128ed61d60317542b473904ddab13cf0"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "f06f5e6a330dfe1274b231501edebcfd231955f3",
-    "content_sha256": "a2a1f271328ddd5634a826cbf588eadcc514418fad0f4679fe1f31c647056ec0"
+    "revision": "40705c1d1bab1ee18d0a5345f3071aaaa30d2031",
+    "content_sha256": "ea9be2ae2bb1b15bd13e30d8a9bdf328bfcbb89f15621f6cf31bf75eb400fca3"
    },
    "draft-mcguinness-mission-runtime.md": {
     "revision": "0c7ba9c38604240dbfbaa2b95586a235ed2dc0ca",
@@ -51,8 +51,8 @@
     "content_sha256": "544fd9439ba95abcfb530d84a834dd1532c136bce3ec5c32ea61bc152250cbcb"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "b79f4f0803a1afe5531e3f52a612dcd6c8b38da8",
-    "content_sha256": "14a4a413a5b087f8ca471accdf042bbe87e929abe6908d4986a75accfad46cb8"
+    "revision": "60552344e0c4184a6dca034ace9d424bbb6b4965",
+    "content_sha256": "262319038b786c962e4decbb1d68102cd09c6242378bcf8f85541204d0b3c37b"
    },
    "draft-mcguinness-oauth-mission-template.md": {
     "revision": "94f778aa73a09dba70239f5d1a9b51a45e63d8b3",
@@ -241,6 +241,7 @@
    "runtime.instance-context",
    "runtime.credential-lifetime-freshness",
    "mas.instance-bound-join",
+   "mas.expansion-child-creation",
    "derivation-limits.limit",
    "continuation.ica-transport",
    "submission-evidence.verification",
@@ -707,7 +708,7 @@
     },
     {
      "file": "src/demo/test/approval-resolution-identity.test.ts",
-     "name": "approval resolution establishes identity from the surface (#759, #761) > the pushed login_hint is resolved and authorized, never accepted as an arbitrary Subject",
+     "name": "approval resolution establishes identity from the surface (#759, #761) > the Subject is the approval surface's selection, authorized for the Approver, never the client's login_hint",
      "level": "cross-component",
      "surface": "approval-ceremony"
     },
@@ -3559,7 +3560,7 @@
     },
     {
      "file": "src/demo/test/approval-resolution-identity.test.ts",
-     "name": "approval resolution establishes identity from the surface (#759, #761) > the pushed login_hint is resolved and authorized, never accepted as an arbitrary Subject",
+     "name": "approval resolution establishes identity from the surface (#759, #761) > the Subject is the approval surface's selection, authorized for the Approver, never the client's login_hint",
      "level": "cross-component",
      "surface": "approval-ceremony"
     },
@@ -4016,7 +4017,7 @@
     },
     {
      "file": "src/services/authorization-server/test/authority-source-render.test.ts",
-     "name": "authority source rendering for a shared agent registration (@spec mission#approval-event, mission#authority-sources, #827) > renders the source of the Subject login_hint names, and refuses to render one that depends on an unnamed Subject",
+     "name": "authority source rendering for a shared agent registration (@spec mission#approval-event, mission#authority-sources, #827) > renders the source of the Subject the approval session selected, never one login_hint names, and refuses to render one that depends on an unnamed Subject",
      "level": "endpoint",
      "surface": "authorization-endpoint"
     },
@@ -4856,7 +4857,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "acr_values/max_age describe the requested authentication of the Approver, never the token's Subject; the Approver's achieved authentication must satisfy both the deployment's own floor and a client-requested acr_values/max_age, and the AS refuses the approval decision (access_denied, per {{error-mapping}}) when either is unmet",
-    "local": "the demo's headless adjudication surface has no real IdP login step, so the achieved context (approver_acr, approver_auth_time) is supplied directly on decide()'s body, the same way approver/subject already are; a deployment with a real approval UI sources it from that UI's own login/session. oidc-provider's own check_max_age middleware translates a literal max_age=0 to prompt=login and clears params.max_age before this handler runs, so the implementation recovers that signal from prompt=login (forceFreshLogin) rather than reading a cleared max_age."
+    "local": "the achieved context (acr, auth_time) comes from the authenticated approval surface: a trusted browser login's recorded context or a headless approval service's registration, never decide()'s body, which refuses identity members. oidc-provider accepts acr_values and max_age only with openid (lib/actions/authorization/check_openid_scope.js, 9.10.0), and openid is available only to a self-approval in this user agent (#826), so a client-requested strength is exercised on self-approvals; an approval for another principal cannot request one here: PAR refuses acr_values or max_age without openid invalid_request, before any interaction (the accepted fail-closed limitation, D305: unsupported, never ignored or downgraded; the published approval floor governs). oidc-provider's own check_max_age middleware translates a literal max_age=0 to prompt=login and clears params.max_age before this handler runs, so the implementation recovers that signal from prompt=login (forceFreshLogin) rather than reading a cleared max_age."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -4864,12 +4865,6 @@
     {
      "file": "src/services/authorization-server/test/rar-carriage.test.ts",
      "name": "Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > same-principal: a self-approved Mission satisfies a requested acr_values",
-     "level": "endpoint",
-     "surface": "approval-ceremony"
-    },
-    {
-     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
-     "name": "Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > split-principal: the Approver's own achieved acr satisfies the request, the Subject's identity is irrelevant, and the token carries neither",
      "level": "endpoint",
      "surface": "approval-ceremony"
     },
@@ -4884,9 +4879,15 @@
      "name": "Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > an unsupported acr is refused",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > a delegated request cannot ask for the Approver's acr_values or max_age: without openid, PAR refuses them invalid_request before any interaction",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
     }
    ],
-   "notes": "Adopted #636 acceptance criterion (approver-vs-subject tests). Split-principal and same-principal both use the same approver_acr/approver_auth_time discriminator, proving the check depends only on the Approver's own achieved context, never the Subject's identity. The Deferred Mission Approval companion ({{I-D.draft-mcguinness-oauth-mission-approval}} {{deferred-approval}}) that would relocate this same check to an asynchronous reviewer has no reference implementation in src/ (only the unrelated AROP post-Mission-widening deferral is implemented, a different mechanism, {{I-D.gerber-oauth-deferred-token-response}}); a deferred-review wire test is not implementable in this stack and is disclosed here rather than fabricated."
+   "notes": "Adopted #636 acceptance criterion (approver-vs-subject tests). The requested-strength cases run on self-approvals in a trusted browser session (#826: a delegated request cannot carry acr_values without openid here); the split-principal case moved to no-token-claim-carriage and openid-refused-when-approver-not-subject. The Deferred Mission Approval companion ({{I-D.draft-mcguinness-oauth-mission-approval}} {{deferred-approval}}) that would relocate this same check to an asynchronous reviewer has no reference implementation in src/ (only the unrelated AROP post-Mission-widening deferral is implemented, a different mechanism, {{I-D.gerber-oauth-deferred-token-response}}); a deferred-review wire test is not implementable in this stack and is disclosed here rather than fabricated."
   },
   {
    "id": "core.approval-authentication.no-token-claim-carriage",
@@ -4911,7 +4912,7 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/rar-carriage.test.ts",
-     "name": "Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > split-principal: the Approver's own achieved acr satisfies the request, the Subject's identity is irrelevant, and the token carries neither",
+     "name": "Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > split-principal: the Approver's authentication never becomes the Subject's: openid refuses, and the token carries the Subject and none of the Approver's authentication",
      "level": "endpoint",
      "surface": "approval-ceremony"
     }
@@ -4937,9 +4938,28 @@
     "normative": "an authorization request whose scope includes openid is refused with invalid_scope, and no Mission is created, when the authenticated Approver is not the established Subject"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#826 specification slice. The reference AS currently issues an ID Token asserting the Subject's authentication when another principal approves for that Subject (reproduced in #826); the implementation half of #826 adds the HTTP regression tests, with and without openid, for delegated approval, self-approval, and an organizational workload Subject."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > refuses openid invalid_scope when the Approver is not the Subject, leaving no Mission, grant, code or session for the Subject",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > approves an organizational workload Subject: the token carries the workload, and the approval leaves no authentication session",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > split-principal: the Approver's authentication never becomes the Subject's: openid refuses, and the token carries the Subject and none of the Approver's authentication",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#826. The Approver is the authenticated principal of the approval interaction; the Subject is the trusted approval surface's selection (never login_hint). openid with a different Subject finishes the interaction invalid_scope before kernel.approve, so no Mission, grant or code exists; the same refusal covers an organizational workload Subject. The reference AS also refuses openid on a headless approval (a service credential is not an End-User authenticated in this user agent), witnessed separately."
   },
   {
    "id": "core.approval-authentication.no-subject-authentication-from-approval",
@@ -4960,9 +4980,58 @@
     "normative": "when another principal approves for the Subject, with or without openid, no ID Token, UserInfo response, or authentication session for the Subject results from that approval; a later prompt=none request for the Subject is not satisfied by it; self-approval with openid still yields the ordinary ID Token"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#826 specification slice. The reference AS currently issues an ID Token asserting the Subject's authentication when another principal approves for that Subject (reproduced in #826); the implementation half of #826 adds the HTTP regression tests, with and without openid, for delegated approval, self-approval, and an organizational workload Subject."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > refuses openid invalid_scope when the Approver is not the Subject, leaving no Mission, grant, code or session for the Subject",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > approves for another principal without openid: the token and introspection carry the Subject, the record the Approver, and the provider account and session the Approver",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > an Alice session established before Bob approves for her is neither read nor refreshed by Bob's headless act, which still completes",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > a headless approval leaves the client's user agent no End-User session: the resume's login is destroyed and never delivered, and the code still redeems and refreshes",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > a later prompt=none request naming the Subject is not satisfied by another principal's approval",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > approves an organizational workload Subject: the token carries the workload, and the approval leaves no authentication session",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > self-approval keeps OIDC: the ID Token, the token and the session agree on the one End-User, with the achieved authentication time",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > refuses openid on a headless approval even for the Approver's own Mission: no End-User authenticated in this user agent",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#826. The provider account and grant are the Approver's, logged in with the achieved acr and authentication time; a browser approval keeps that session, and a headless approval leaves the client's user agent none (the resume runs without the user agent's session cookie, the session its login created is destroyed before the response is flushed and its cookie removed, and the code is not session-bound). Mission-bound tokens carry the Subject through the JWT customizer, refresh introspection reports the Subject. Discriminating witnesses: the session and grant belong to Bob and the token sub is Alice (delegated browser approval); a headless approval's resume session no longer exists and no session cookie reaches the user agent; and an earlier Alice session in the same user agent is neither replaced nor renewed. Two clauses hold in this assembly by construction as well: Mission access tokens are resource-audienced, so UserInfo refuses them, and every Mission authorization request needs its own approval interaction, so a prompt=none request is never satisfied silently; their tests assert the outcome, not that the defect alone would have changed it."
   },
   {
    "id": "core.grant-binding.mission-id-inert",
@@ -8243,6 +8312,90 @@
    "notes": "The reference Status endpoint has no consuming-Authorization-Server caller class or per-audience caller configuration, and no issuance-grant redemption path exists in src. Added with #963 decision D1; todo until a consuming-AS caller exists."
   },
   {
+   "id": "status.auth.challenge-token-scheme",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-auth-failures",
+   "text": "A request whose presented access token fails authentication receives HTTP 401 `unauthorized` with a `WWW-Authenticate` challenge in the scheme it used: `Bearer` with the error attributes of {{Section 3 of RFC6750}}, or `DPoP` under {{Section 7.1 of RFC9449}}, including its `algs` parameter and error codes",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a 401 for a failed Bearer token carries a Bearer challenge with RFC 6750 error attributes, and one for a failed DPoP token carries a DPoP challenge with algs"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference AS emits no WWW-Authenticate on the Status or Lifecycle endpoint and publishes no Protected Resource Metadata for them, so resource_metadata has no target. Todo until the AS publishes that metadata (#972 item 18)."
+  },
+  {
+   "id": "status.auth.challenge-no-token",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-auth-failures",
+   "text": "A request that presented no credential receives, where the endpoint accepts an access-token scheme, HTTP 401 `unauthorized` with one challenge for each access-token scheme the endpoint accepts and no `error` attribute",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a 401 for a request with no credential, at an endpoint accepting an access-token scheme, carries one challenge per accepted access-token scheme and no error attribute"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference AS emits no WWW-Authenticate on the Status or Lifecycle endpoint and publishes no Protected Resource Metadata for them, so resource_metadata has no target. Todo until the AS publishes that metadata (#972 item 18)."
+  },
+  {
+   "id": "status.auth.challenge-resource-metadata",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-auth-failures",
+   "text": "Every challenge carries the `resource_metadata` parameter naming the endpoint's Protected Resource Metadata",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "every 401 challenge names the endpoint's Protected Resource Metadata URL"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference AS emits no WWW-Authenticate on the Status or Lifecycle endpoint and publishes no Protected Resource Metadata for them, so resource_metadata has no target. Todo until the AS publishes that metadata (#972 item 18)."
+  },
+  {
+   "id": "status.auth.invalid-client",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-auth-failures",
+   "text": "A request whose mTLS or private-key-JWT client authentication fails at the HTTP layer receives HTTP 400 with the `invalid_client` error code",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a failed direct client authentication (mTLS or private_key_jwt) gets 400 invalid_client with no WWW-Authenticate challenge; so does a request with no credential at an endpoint that accepts no access-token scheme"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference AS authenticates Status and Lifecycle callers with a deployment service token, not mTLS or private_key_jwt, so it has no direct-client-authentication path to test. Todo (#972 item 18, #1099 review)."
+  },
+  {
    "id": "signals.discharge.authority-changed-rematerialize",
    "spec": "draft-mcguinness-oauth-mission-signals.md",
    "anchor": "consumer-behavior",
@@ -8755,7 +8908,7 @@
    "id": "mas.reference.strict-dictionary",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "mission-reference-field",
-   "text": "A receiver MUST reject as malformed, before map collapse: a duplicate `id` or `issuer` occurrence, a parameter on either member, an Inner List or any non-String value, and any member other than the two defined here",
+   "text": "A receiver MUST reject as malformed, before map collapse: a duplicate `id` or `issuer` occurrence, a parameter on either member, an Inner List or any non-String value, and any member outside the extension rule of {{reference-tuple}}",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -8858,7 +9011,7 @@
     },
     {
      "file": "src/services/mcp-payments/test/mas-join.test.ts",
-     "name": "baseline MAS Join: configuration gate (@spec authority-server#mission-join) > refuses unknown_mission for an ordinary credential with no propagated Mission reference at all, even with masJoin configured",
+     "name": "baseline MAS Join: configuration gate (@spec authority-server#mission-join) > refuses mission_reference_conflict for an ordinary credential with no propagated Mission reference at all on a MAS-governed route",
      "level": "unit",
      "surface": "verification"
     },
@@ -8870,13 +9023,13 @@
     },
     {
      "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
-     "name": "MAS-governed HTTP MCP channel (baseline Join) > refuses unknown_mission with the Mission-Reference field ABSENT: the credential establishes no Mission of its own",
+     "name": "MAS-governed HTTP MCP channel (baseline Join) > refuses mission_reference_conflict with the Mission-Reference field ABSENT: the route requires a reference and the credential establishes no Mission of its own",
      "level": "endpoint",
      "surface": "verification"
     },
     {
      "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
-     "name": "MAS-governed HTTP MCP channel (baseline Join) > refuses mission_reference_conflict with a MALFORMED Mission-Reference field, a different failure from an absent one",
+     "name": "MAS-governed HTTP MCP channel (baseline Join) > refuses mission_reference_conflict with a MALFORMED Mission-Reference field, as for an absent one",
      "level": "endpoint",
      "surface": "verification"
     }
@@ -8973,7 +9126,7 @@
    "id": "mas.reference.mcp-duplicate-keys",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "mcp-reference",
-   "text": "The value object is closed the same way as the HTTP field: a receiver MUST reject duplicate JSON member names at parse time, a member other than `mission_id` and `issuer`, a non-string member value, and the propagation key appearing more than once in `_meta`",
+   "text": "The value object is closed the same way as the HTTP field: a receiver MUST reject duplicate JSON member names at parse time, a member outside the extension rule of {{reference-tuple}}, a non-string member value, and the propagation key appearing more than once in `_meta`",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -9036,7 +9189,7 @@
    "id": "mas.join.stronger-claim-requires-issuance",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "mission-join",
-   "text": "A path claiming the Enterprise profile's high-consequence credential property MUST use Mission-bound issuance: an acting credential satisfying the mission-credential-bound composition of the Mission Binding Properties ({{I-D.draft-mcguinness-mission-architecture}}).",
+   "text": "A path claiming the Enterprise profile's high-consequence credential property MUST use Mission-bound issuance: an acting credential satisfying the composition defined in {{high-consequence-binding}}.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -9058,7 +9211,7 @@
    "id": "mas.join.issuance-required-high-consequence",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "enterprise-profile",
-   "text": "the PDP MUST require an acting credential satisfying the mission-credential-bound composition of the Mission Binding Properties ({{I-D.draft-mcguinness-mission-architecture}}): the credential-mission-bound equivalence plus presenter-key-bound possession, end to end",
+   "text": "the PDP MUST require an acting credential satisfying the composition defined in {{high-consequence-binding}}, with presenter proof of possession end to end",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -9212,7 +9365,7 @@
    "id": "mas.join.credential-mission-equality",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "high-consequence-binding",
-   "text": "requires exact equality of its issuer and Mission identifier with the credential's `mission` claim, and, where both convey `authority_hash`, a consistent value too, denying on any mismatch",
+   "text": "requires exact equality of its issuer and Mission identifier with the credential's `mission` claim, denying on any mismatch",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
@@ -9256,7 +9409,7 @@
    "id": "mas.baseline-join.reference-required",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "mission-join",
-   "text": "For governed work the PEP MUST supply the `mission_id` and `issuer` of the Mission the work is bound to, taken from its Mission binding (a Mission-aware harness records exactly this, {{I-D.draft-mcguinness-mission-harness}}) or from deployment configuration.",
+   "text": "For governed work the PEP MUST supply the `mission_id` and `issuer` of the Mission the work is bound to, taken from its Mission binding (a Mission-aware harness records exactly this, {{I-D.draft-mcguinness-mission-harness}}), from deployment configuration, or from a trusted propagated reference ({{reference-propagation}}).",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -9267,14 +9420,14 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "for a credential carrying no mission claim, the baseline-Join gateway path (RequestSignals.missionReference) is the ONLY source of the Mission reference, and the two unusable-carriage cases are reported apart: an ABSENT reference names no Mission at all and the credential carries none either, so the request refuses unknown_mission; a MALFORMED reference where governance requires one is carriage that cannot be used and refuses mission_reference_conflict. Neither is a silent no-op and neither falls back to some other guess. The configured route (src/demo/src/stack.ts, config/mas-join.json's governed_resources) supplies the reference over the wire as the Mission-Reference field"
+    "normative": "for a credential carrying no mission claim, the baseline-Join gateway path (RequestSignals.missionReference) is the ONLY source of the Mission reference. On that MAS-governed route a reference is required, so an ABSENT reference and a MALFORMED one are both unusable carriage and refuse mission_reference_conflict, while a supplied, well-formed reference that does not resolve refuses unknown_mission. None is a silent no-op and none falls back to some other guess. The configured route (src/demo/src/stack.ts, config/mas-join.json's governed_resources) supplies the reference over the wire as the Mission-Reference field"
    },
    "level": "unit",
    "coverage": "tested",
    "tests": [
     {
      "file": "src/services/mcp-payments/test/mas-join.test.ts",
-     "name": "baseline MAS Join: configuration gate (@spec authority-server#mission-join) > refuses unknown_mission for an ordinary credential with no propagated Mission reference at all, even with masJoin configured",
+     "name": "baseline MAS Join: configuration gate (@spec authority-server#mission-join) > refuses mission_reference_conflict for an ordinary credential with no propagated Mission reference at all on a MAS-governed route",
      "level": "unit",
      "surface": "decision-request"
     },
@@ -9298,13 +9451,13 @@
     },
     {
      "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
-     "name": "MAS-governed HTTP MCP channel (baseline Join) > refuses unknown_mission with the Mission-Reference field ABSENT: the credential establishes no Mission of its own",
+     "name": "MAS-governed HTTP MCP channel (baseline Join) > refuses mission_reference_conflict with the Mission-Reference field ABSENT: the route requires a reference and the credential establishes no Mission of its own",
      "level": "endpoint",
      "surface": "decision-request"
     },
     {
      "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
-     "name": "MAS-governed HTTP MCP channel (baseline Join) > refuses mission_reference_conflict with a MALFORMED Mission-Reference field, a different failure from an absent one",
+     "name": "MAS-governed HTTP MCP channel (baseline Join) > refuses mission_reference_conflict with a MALFORMED Mission-Reference field, as for an absent one",
      "level": "endpoint",
      "surface": "decision-request"
     },
@@ -9315,7 +9468,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "#557. Also proves the configuration gate: a deployment that never sets PepDeps.masJoin refuses every credential with no mission claim exactly as it did before this feature existed (unknown_mission), never a new implicit acceptance path. #557 stage C2 splits the reason: a malformed reference refuses mission_reference_conflict rather than unknown_mission, so an unusable reference and an unknown Mission are distinguishable. The row's level stays unit: the endpoint and cross-component entries auto-skip without OpenFGA, so the claim rests on the always-run unit cases and those are additional coverage."
+   "notes": "#557. Also proves the configuration gate: a deployment that never sets PepDeps.masJoin refuses every credential with no mission claim exactly as it did before this feature existed (unknown_mission), never a new implicit acceptance path. #557 stage C2 split an unusable reference from an unknown Mission; #972 item 13 (D289, #1100 review) puts a missing reference with the malformed one under mission_reference_conflict, and unknown_mission stays for a named Mission that does not resolve. The row's level stays unit: the endpoint and cross-component entries auto-skip without OpenFGA, so the claim rests on the always-run unit cases and those are additional coverage."
   },
   {
    "id": "mas.baseline-join.subject-join",
@@ -9332,7 +9485,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "evaluate() (services/pdp/src/evaluate.ts step 4b) itself calls resolveBaselineJoin when the decision request carries context.mission_join, comparing the authenticated subject {iss, sub} (req.subject.id/properties.iss, already-verified request facts) against the loaded MissionView's own subject by byte-equality; a mismatch on either member denies mission_mismatch as a genuine PDP Decision. Resolved IN the PDP (#557 review point 1), not by a PEP-side helper call the PDP never observes: the PEP no longer calls resolveBaselineJoin directly (src/services/mcp-payments/src/pep.ts)",
+    "normative": "evaluate() (services/pdp/src/evaluate.ts step 4b) itself calls resolveBaselineJoin when the decision request carries context.mission_join, comparing the authenticated subject {iss, sub} (req.subject.id/properties.iss, already-verified request facts) against the loaded MissionView's own subject by byte-equality; a mismatch on either member denies mission_binding_failed as a genuine PDP Decision. Resolved IN the PDP (#557 review point 1), not by a PEP-side helper call the PDP never observes: the PEP no longer calls resolveBaselineJoin directly (src/services/mcp-payments/src/pep.ts)",
     "local": "the same-namespace case only: an account-mapping contract for a differing AS/MAS subject namespace is not implemented (a deployment would supply an already-mapped subject to the resolver, per its own documented mapping)"
    },
    "level": "unit",
@@ -9346,25 +9499,25 @@
     },
     {
      "file": "src/services/pdp/test/mas-join.test.ts",
-     "name": "resolveBaselineJoin: subject join (@spec authority-server#mission-join rule 3) > denies mission_mismatch when the subject sub differs",
+     "name": "resolveBaselineJoin: subject join (@spec authority-server#mission-join rule 3) > denies mission_binding_failed when the subject sub differs",
      "level": "unit",
      "surface": "decision-request"
     },
     {
      "file": "src/services/pdp/test/mas-join.test.ts",
-     "name": "resolveBaselineJoin: subject join (@spec authority-server#mission-join rule 3) > denies mission_mismatch when the subject issuer differs (same sub)",
+     "name": "resolveBaselineJoin: subject join (@spec authority-server#mission-join rule 3) > denies mission_binding_failed when the subject issuer differs (same sub)",
      "level": "unit",
      "surface": "decision-request"
     },
     {
      "file": "src/services/pdp/test/evaluate-mission-join.test.ts",
-     "name": "evaluate(): baseline MAS Join, mission_mismatch (@spec authority-server#mission-join rule 6, #557 review point 1) > denies mission_mismatch when the authenticated subject does not match the Mission's subject, resolved BY THE PDP",
+     "name": "evaluate(): baseline MAS Join, mission_binding_failed (@spec authority-server#mission-join rule 6, #557 review point 1) > denies mission_binding_failed when the authenticated subject does not match the Mission's subject, resolved BY THE PDP",
      "level": "unit",
      "surface": "decision-request"
     },
     {
      "file": "src/services/mcp-payments/test/mas-join.test.ts",
-     "name": "baseline MAS Join: mission_mismatch (@spec authority-server#mission-join rule 6) > denies mission_mismatch when the authenticated subject does not match the Mission's subject",
+     "name": "baseline MAS Join: mission_binding_failed (@spec authority-server#mission-join rule 6) > denies mission_binding_failed when the authenticated subject does not match the Mission's subject",
      "level": "unit",
      "surface": "decision-request"
     }
@@ -9386,7 +9539,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "evaluate() (step 4b) resolves this itself, against req.context.actor.client_id (the already-authenticated OAuth client this envelope carries) and EvaluateOptions.delegatePolicy (forwarded from the deployment, #557 review point 1): joins directly when that client_id equals the Mission's own client_id; otherwise ONLY an explicit, enumerated DelegatePolicy entry for that exact client_id can join, and an unrecognized client with no policy at all, or a client absent from a configured policy, denies mission_mismatch -- never a default admission"
+    "normative": "evaluate() (step 4b) resolves this itself, against req.context.actor.client_id (the already-authenticated OAuth client this envelope carries) and EvaluateOptions.delegatePolicy (forwarded from the deployment, #557 review point 1): joins directly when that client_id equals the Mission's own client_id; otherwise ONLY an explicit, enumerated DelegatePolicy entry for that exact client_id can join, and an unrecognized client with no policy at all, or a client absent from a configured policy, denies mission_binding_failed -- never a default admission"
    },
    "level": "unit",
    "coverage": "tested",
@@ -9399,25 +9552,25 @@
     },
     {
      "file": "src/services/pdp/test/mas-join.test.ts",
-     "name": "resolveBaselineJoin: client join (@spec authority-server#mission-join rule 4) > denies mission_mismatch for an unrecognized client with no delegate policy at all",
+     "name": "resolveBaselineJoin: client join (@spec authority-server#mission-join rule 4) > denies mission_binding_failed for an unrecognized client with no delegate policy at all",
      "level": "unit",
      "surface": "decision-request"
     },
     {
      "file": "src/services/pdp/test/mas-join.test.ts",
-     "name": "resolveBaselineJoin: client join (@spec authority-server#mission-join rule 4) > denies mission_mismatch for a client not named in the delegate policy (no default)",
+     "name": "resolveBaselineJoin: client join (@spec authority-server#mission-join rule 4) > denies mission_binding_failed for a client not named in the delegate policy (no default)",
      "level": "unit",
      "surface": "decision-request"
     },
     {
      "file": "src/services/pdp/test/evaluate-mission-join.test.ts",
-     "name": "evaluate(): baseline MAS Join, mission_mismatch (@spec authority-server#mission-join rule 6, #557 review point 1) > denies mission_mismatch for an unrecognized client with no delegate policy configured, never falling back to the Mission's full authority",
+     "name": "evaluate(): baseline MAS Join, mission_binding_failed (@spec authority-server#mission-join rule 6, #557 review point 1) > denies mission_binding_failed for an unrecognized client with no delegate policy configured, never falling back to the Mission's full authority",
      "level": "unit",
      "surface": "decision-request"
     },
     {
      "file": "src/services/mcp-payments/test/mas-join.test.ts",
-     "name": "baseline MAS Join: mission_mismatch (@spec authority-server#mission-join rule 6) > denies mission_mismatch for a client that is neither the Mission's own client_id nor an authorized delegate, and never falls back to the unjoined authority",
+     "name": "baseline MAS Join: mission_binding_failed (@spec authority-server#mission-join rule 6) > denies mission_binding_failed for a client that is neither the Mission's own client_id nor an authorized delegate, and never falls back to the unjoined authority",
      "level": "unit",
      "surface": "decision-request"
     }
@@ -9439,7 +9592,7 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "evaluate() (step 4b) narrows a joined delegate's effective authority to entries carrying a join_delegation member whose allowed_delegates (when present) names that client; BOTH the deployment's DelegatePolicy.maxDepth ceiling AND each entry's own join_delegation.max_depth are compared against context.mission_join.delegate_depth, a REQUEST fact the PEP resolves fresh and carries onto the decision request (PepDeps.masJoin.resolveDelegateDepth), never a token act chain and never looked up by the PDP from static configuration (#557 review points 1, 3). The depth source is the deployment's own actor records (ActorRecords, services/mcp-payments/src/actor-records.ts): records are keyed on the canonical (issuer, id) pair, and resolveDepth walks delegated_by toward the Mission's own client_id (depth 0, adding 1 per hop), resolving ABSENT for no record, an unrooted chain, a cycle, or a chain that never reaches the Mission's client. An absent depth denies unconditionally on the delegate disposition, including where no max_depth is declared anywhere, per rule 5's own sentence: \"A delegate with no actor record under the Mission is not recorded as acting under it, and the join fails `mission_mismatch`.\" The hook the PEP resolves depth through takes the canonical (issuer, id) reference and the Mission's own client_id, both facts of the request the PEP already holds, so the ledger's resolver satisfies it with no issuer bound at construction: a record appended under one issuer is never consumed for a same-id Mission from another (#557 stage C2). The demo stack (src/demo/src/stack.ts) wires that ledger and seeds nothing into it, so every delegate join there denies until the deployment records an edge.",
+    "normative": "evaluate() (step 4b) narrows a joined delegate's effective authority to entries carrying a join_delegation member whose allowed_delegates (when present) names that client; BOTH the deployment's DelegatePolicy.maxDepth ceiling AND each entry's own join_delegation.max_depth are compared against context.mission_join.delegate_depth, a REQUEST fact the PEP resolves fresh and carries onto the decision request (PepDeps.masJoin.resolveDelegateDepth), never a token act chain and never looked up by the PDP from static configuration (#557 review points 1, 3). The depth source is the deployment's own actor records (ActorRecords, services/mcp-payments/src/actor-records.ts): records are keyed on the canonical (issuer, id) pair, and resolveDepth walks delegated_by toward the Mission's own client_id (depth 0, adding 1 per hop), resolving ABSENT for no record, an unrooted chain, a cycle, or a chain that never reaches the Mission's client. An absent depth denies unconditionally on the delegate disposition, including where no max_depth is declared anywhere, per rule 5's own sentence: \"A delegate with no actor record under the Mission is not recorded as acting under it, and the join fails `mission_binding_failed`.\" The hook the PEP resolves depth through takes the canonical (issuer, id) reference and the Mission's own client_id, both facts of the request the PEP already holds, so the ledger's resolver satisfies it with no issuer bound at construction: a record appended under one issuer is never consumed for a same-id Mission from another (#557 stage C2). The demo stack (src/demo/src/stack.ts) wires that ledger and seeds nothing into it, so every delegate join there denies until the deployment records an edge.",
     "local": "join_delegation is a PDP-package-local field (MissionView.authority_set[].join_delegation), not the kernel's own AuthorityEntry.delegation (authorization-server/src/kernel/types.ts, a richer DelegateMatcher-based shape this package has no dependency on). #557 review point 2: deriveJoinDelegation (services/pdp/src/mas-join.ts) is a deterministic adapter from the kernel shape, and the canonical Mission loader (src/demo/src/stack.ts's viewFor) now applies it when materializing a MissionView's authority_set, closing the 'no canonical loader populates it' gap; the client_id-vs-{sub,sub_profile} matching-semantics divergence itself remains (only an exact sub matcher maps deterministically, a sub_profile matcher is dropped fail-closed, see the adapter's own doc)"
    },
    "level": "unit",
@@ -9465,7 +9618,7 @@
     },
     {
      "file": "src/services/pdp/test/mas-join.test.ts",
-     "name": "resolveBaselineJoin: delegate narrowing (@spec authority-server#mission-join rule 5) > denies mission_mismatch when the recorded depth exceeds the delegate's max_depth",
+     "name": "resolveBaselineJoin: delegate narrowing (@spec authority-server#mission-join rule 5) > denies mission_binding_failed when the recorded depth exceeds the delegate's max_depth",
      "level": "unit",
      "surface": "decision-request"
     },
@@ -9495,13 +9648,13 @@
     },
     {
      "file": "src/services/mcp-payments/test/mas-join.test.ts",
-     "name": "baseline MAS Join: PepDeps.masJoin.resolveDelegateDepth (@spec authority-server#mission-join rule 5, #557 review point 1) > denies mission_mismatch when the resolved depth exceeds the entry's own join_delegation.max_depth",
+     "name": "baseline MAS Join: PepDeps.masJoin.resolveDelegateDepth (@spec authority-server#mission-join rule 5, #557 review point 1) > denies mission_binding_failed when the resolved depth exceeds the entry's own join_delegation.max_depth",
      "level": "unit",
      "surface": "decision-request"
     },
     {
      "file": "src/services/pdp/test/mas-join.test.ts",
-     "name": "resolveBaselineJoin: delegate narrowing (@spec authority-server#mission-join rule 5) > denies mission_mismatch when delegateDepth is absent and NOTHING declares a max_depth: no actor record means the delegate is not recorded as acting under the Mission",
+     "name": "resolveBaselineJoin: delegate narrowing (@spec authority-server#mission-join rule 5) > denies mission_binding_failed when delegateDepth is absent and NOTHING declares a max_depth: no actor record means the delegate is not recorded as acting under the Mission",
      "level": "unit",
      "surface": "decision-request"
     },
@@ -9555,13 +9708,13 @@
     },
     {
      "file": "src/services/mcp-payments/test/mas-join.test.ts",
-     "name": "baseline MAS Join: depth from the deployment's actor records (@spec authority-server#mission-join rule 5) > denies mission_mismatch for the SAME delegate once the recorded chain is one hop too long for the ceiling",
+     "name": "baseline MAS Join: depth from the deployment's actor records (@spec authority-server#mission-join rule 5) > denies mission_binding_failed for the SAME delegate once the recorded chain is one hop too long for the ceiling",
      "level": "unit",
      "surface": "decision-request"
     },
     {
      "file": "src/services/mcp-payments/test/mas-join.test.ts",
-     "name": "baseline MAS Join: depth from the deployment's actor records (@spec authority-server#mission-join rule 5) > denies mission_mismatch when the ledger records the delegation under a DIFFERENT issuer's same-id Mission",
+     "name": "baseline MAS Join: depth from the deployment's actor records (@spec authority-server#mission-join rule 5) > denies mission_binding_failed when the ledger records the delegation under a DIFFERENT issuer's same-id Mission",
      "level": "unit",
      "surface": "decision-request"
     },
@@ -9573,18 +9726,18 @@
     },
     {
      "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
-     "name": "MAS-governed HTTP MCP channel (baseline Join) > denies mission_mismatch for the SAME delegate when nothing recorded the edge: no actor record, no join",
+     "name": "MAS-governed HTTP MCP channel (baseline Join) > denies mission_binding_failed for the SAME delegate when nothing recorded the edge: no actor record, no join",
      "level": "endpoint",
      "surface": "decision-request"
     }
    ],
-   "notes": "#557. observation.local records the deliberate type-boundary divergence from the kernel's own delegation shape and the deterministic adapter that bridges it (#557 review point 2). The absent-record denial is rule 5's own sentence, quoted in observation.normative, not a local implementation policy. #557 stage C2 adds the endpoint arm: the same delegate joins over a real MAS-governed HTTP channel when the deployment recorded the edge and denies mission_mismatch when it did not, with nothing else about the request changed. Those two entries auto-skip without OpenFGA, so the row's level stays unit."
+   "notes": "#557. observation.local records the deliberate type-boundary divergence from the kernel's own delegation shape and the deterministic adapter that bridges it (#557 review point 2). The absent-record denial is rule 5's own sentence, quoted in observation.normative, not a local implementation policy. #557 stage C2 adds the endpoint arm: the same delegate joins over a real MAS-governed HTTP channel when the deployment recorded the edge and denies mission_binding_failed when it did not, with nothing else about the request changed. Those two entries auto-skip without OpenFGA, so the row's level stays unit."
   },
   {
    "id": "mas.baseline-join.no-fallback-denial",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "mission-join",
-   "text": "A failure of the subject or client join MUST be denied with the `mission_mismatch` denial reason: the presented credential does not join to the referenced Mission because its authenticated subject or client identifier does not match the Mission's `subject.sub` or `client_id` under the deployment's documented mapping and delegate policy. The PDP MUST NOT fall back to evaluating the action against the referenced Mission's authority when the join fails.",
+   "text": "A failure of the subject or client join MUST be denied with the `mission_binding_failed` denial reason, the AuthZEN profile's classification of a failed externally-established binding join ({{I-D.draft-mcguinness-mission-authzen}}): the presented credential does not join to the referenced Mission because its authenticated subject or client identifier does not match the Mission's `subject.sub` or `client_id` under the deployment's documented mapping and delegate policy. The PDP MUST NOT fall back to evaluating the action against the referenced Mission's authority when the join fails.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -9595,7 +9748,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "resolveBaselineJoin's failure variant carries no authoritySet member at all (a discriminated union, not an optional field defaulting to empty); evaluate() (step 4b) returns deny(\"mission_mismatch\") immediately on that failure and never reaches step 5's entry match, so a failed join is a genuine PDP Decision with nothing for ANY caller -- PEP or otherwise -- to accidentally evaluate against (#557 review point 1)"
+    "normative": "resolveBaselineJoin's failure variant carries no authoritySet member at all (a discriminated union, not an optional field defaulting to empty); evaluate() (step 4b) returns deny(\"mission_binding_failed\") immediately on that failure and never reaches step 5's entry match, so a failed join is a genuine PDP Decision with nothing for ANY caller -- PEP or otherwise -- to accidentally evaluate against (#557 review point 1)"
    },
    "level": "unit",
    "coverage": "tested",
@@ -9608,18 +9761,18 @@
     },
     {
      "file": "src/services/pdp/test/evaluate-mission-join.test.ts",
-     "name": "evaluate(): baseline MAS Join, mission_mismatch (@spec authority-server#mission-join rule 6, #557 review point 1) > denies mission_mismatch when the authenticated subject does not match the Mission's subject, resolved BY THE PDP",
+     "name": "evaluate(): baseline MAS Join, mission_binding_failed (@spec authority-server#mission-join rule 6, #557 review point 1) > denies mission_binding_failed when the authenticated subject does not match the Mission's subject, resolved BY THE PDP",
      "level": "unit",
      "surface": "decision-request"
     },
     {
      "file": "src/services/mcp-payments/test/mas-join.test.ts",
-     "name": "baseline MAS Join: mission_mismatch (@spec authority-server#mission-join rule 6) > denies mission_mismatch for a referenced Mission that does not resolve at all",
+     "name": "baseline MAS Join: mission_binding_failed (@spec authority-server#mission-join rule 6) > refuses unknown_mission, before any decision, for a referenced Mission that does not resolve at all",
      "level": "unit",
      "surface": "decision-request"
     }
    ],
-   "notes": "#557. DenialReason gains \"mission_mismatch\" (services/pdp/src/evaluate.ts) as the registered vocabulary member this reason rides; distinct from two unrelated same-named bare strings elsewhere in the tree (see evaluate.ts's own disambiguating comment). #557 review point 1: this denial is now a PDP-side deny() (evaluateInner step 4b), not a PEP-side refuse() before evaluate() is ever called; res.decision is defined on this path, where it was previously undefined."
+   "notes": "#557. DenialReason carries \"mission_binding_failed\" (services/pdp/src/evaluate.ts), the AuthZEN profile's classification for a failed external-binding join, which replaced the MAS-only mission_mismatch (#972 item 27b, D289); distinct from two unrelated same-named bare strings elsewhere in the tree (see evaluate.ts's own disambiguating comment). #557 review point 1: this denial is now a PDP-side deny() (evaluateInner step 4b), not a PEP-side refuse() before evaluate() is ever called; res.decision is defined on this path, where it was previously undefined."
   },
   {
    "id": "mas.baseline-join.authority-from-mission",
@@ -9744,7 +9897,7 @@
    "id": "mas.baseline-join.join-view-commitment",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "mission-join",
-   "text": "A decision reached over a successful join MUST carry a joined-view commitment (`join_view_id`) separate from `policy_view_id`, which alone does not distinguish a joined decision from a direct one. `join_view_id` MUST change whenever the joining client identifier, the join disposition (the Mission's own `client_id` or an authorized delegate), or the resulting effective Authority Set differs, so a verifier can tell a joined decision's evidence from a direct Mission-bound decision's, and one joined view from a differently-joined one.",
+   "text": "The PDP MUST record a joined-view commitment, `join_view_id`, as a top-level member of the Decision Evidence ({{I-D.draft-mcguinness-mission-runtime-evidence}}) of every decision reached over a successful join, including one that policy then denies. It is separate from `policy_view_id`, which alone does not distinguish a joined decision from a direct one, and it is absent for a failed join and for a direct Mission-bound decision; the AuthZEN response carries no view identifier. `join_view_id` MUST change whenever the joining client identifier, the join disposition (the Mission's own `client_id` or an authorized delegate), or the resulting effective Authority Set differs, so a verifier can tell a joined decision's evidence from a direct Mission-bound decision's, and one joined view from a differently-joined one.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -9752,10 +9905,10 @@
     "capability": "mas.baseline-join"
    },
    "profiles": [],
-   "surface": "decision-request",
+   "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "evaluate() (step 4b) stamps join_view_id (services/pdp/src/policy-view.ts's joinViewId) on the SAME base() context that always carries policy_view_id, additive and never a replacement, whenever the request resolved a baseline Join (joinedAuthority set); a decision reached with no context.mission_join, or over a join that itself failed (mission_mismatch, rule 6, no authoritySet ever exposed), never carries it. joinViewId's commitment is computed over the join disposition, the joining client_id, and the resolved (possibly delegate-narrowed) authoritySet, alongside the same (mission_id, mission_version, authority_hash, model_id) policyViewId already commits, so it changes whenever any of the three join-specific inputs differs",
+    "normative": "evaluate() (step 4b) records join_view_id (services/pdp/src/policy-view.ts's joinViewId) in a private per-evaluation JoinTrace once a baseline Join succeeds, and the PDP's Decision Evidence emitter signs it as a top-level member of the record (services/pdp/src/decision-evidence.ts), on the joined permit and on a later policy denial alike; the AuthZEN response context never carries it. A decision reached with no context.mission_join, or over a join that itself failed (mission_binding_failed, rule 6, no authoritySet ever exposed), records none. joinViewId's commitment is computed over the join disposition, the joining client_id, and the resolved (possibly delegate-narrowed) authoritySet, alongside the same (mission_id, mission_version, authority_hash, model_id) policyViewId already commits, so it changes whenever any of the three join-specific inputs differs",
     "local": "join_view_id does not itself commit the acting subject: resolveBaselineJoin (mas-join.ts) requires byte-equality between the presented subject and the Mission's own view.subject as the join's own precondition (rule 3), so on any successful join the subject cannot differ from the Mission's own and adds nothing a separate commitment input would distinguish. The per-request recorded delegate depth is likewise not itself committed, only its filtering effect on the resolved authoritySet"
    },
    "level": "unit",
@@ -9763,24 +9916,48 @@
    "tests": [
     {
      "file": "src/services/pdp/test/evaluate-mission-join.test.ts",
-     "name": "evaluate(): baseline MAS Join, direct client (@spec authority-server#mission-join rules 1-4, 7, #557 review point 1) > permits and stamps join_view_id when context.mission_join is present and the subject/client match directly",
+     "name": "evaluate(): baseline MAS Join, direct client (@spec authority-server#mission-join rules 1-4, 7, #557 review point 1) > permits when context.mission_join is present and the subject/client match directly, recording join_view_id in its signed Decision Evidence",
      "level": "unit",
-     "surface": "decision-request"
+     "surface": "evidence-emission"
     },
     {
      "file": "src/services/pdp/test/evaluate-mission-join.test.ts",
-     "name": "evaluate(): baseline MAS Join, direct client (@spec authority-server#mission-join rules 1-4, 7, #557 review point 1) > never carries join_view_id for an ORDINARY Mission-bound request (context.mission_join absent): the existing path is untouched",
+     "name": "evaluate(): baseline MAS Join, direct client (@spec authority-server#mission-join rules 1-4, 7, #557 review point 1) > never records join_view_id for an ORDINARY Mission-bound request (context.mission_join absent): the existing path is untouched",
      "level": "unit",
-     "surface": "decision-request"
+     "surface": "evidence-emission"
     },
     {
      "file": "src/services/pdp/test/evaluate-mission-join.test.ts",
-     "name": "evaluate(): baseline MAS Join, delegate narrowing (@spec authority-server#mission-join rule 5, #557 review point 1) > stamps a DIFFERENT join_view_id for the delegate's narrowed view than the direct client's full view",
+     "name": "evaluate(): baseline MAS Join, delegate narrowing (@spec authority-server#mission-join rule 5, #557 review point 1) > records a DIFFERENT join_view_id for the delegate's narrowed view than the direct client's full view",
      "level": "unit",
-     "surface": "decision-request"
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-mission-join.test.ts",
+     "name": "evaluate(): the joined-view commitment rides signed Decision Evidence only (@spec authority-server#join-rules rule 9, #972 item 27a) > signs join_view_id into the record: altering it fails verification",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-mission-join.test.ts",
+     "name": "evaluate(): the joined-view commitment rides signed Decision Evidence only (@spec authority-server#join-rules rule 9, #972 item 27a) > carries no view identifier on the AuthZEN response context of a joined decision",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-mission-join.test.ts",
+     "name": "evaluate(): the joined-view commitment rides signed Decision Evidence only (@spec authority-server#join-rules rule 9, #972 item 27a) > records the same join_view_id on a policy denial reached after a successful join",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-mission-join.test.ts",
+     "name": "evaluate(): the joined-view commitment rides signed Decision Evidence only (@spec authority-server#join-rules rule 9, #972 item 27a) > omits join_view_id from the Decision Evidence of a failed join",
+     "level": "unit",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#557 review point 4, ruled: promote distinguishability normative (rule 9), leave the digest construction unfixed (only one implementation exists; freezing it now would make a later correction a breaking change to evidence joins). The first two cited tests together prove the row's actual clause -- a SEPARATE-MEMBER claim, not a same-response value-inequality claim: join_view_id is truthy on a joined permit and undefined on a non-joined one, so presence/absence alone already separates joined evidence from direct evidence, which is exactly the defect the review identified (a joined decision's policy_view_id alone cannot be told apart from a direct decision's). No test asserts join_view_id !== policy_view_id within one response; that inequality follows structurally from joinViewId's commitment strictly extending policyViewId's inputs, not from a dedicated assertion, so it is not claimed as tested here. The third cited test proves the second sentence's input-sensitivity clause: a differently-joined view (a narrowed delegate vs. the direct client) yields a different join_view_id."
+   "notes": "#557 review point 4, ruled: promote distinguishability normative (rule 9), leave the digest construction unfixed. #972 item 27a (D289): the commitment rides signed Decision Evidence as a top-level member, with no response-context echo. Every cited test reads the record an independent verifier accepted. Together they prove: a joined permit's record carries join_view_id and a direct Mission-bound one does not (the separate-member claim); altering the member fails signature verification (it is inside the signed bytes); the response context carries none; a later policy denial over the same join records the same value; a failed join records none; and a narrowed delegate view records a different value than the direct client's (the input-sensitivity clause). Each was mutation-checked: removing the assignment, echoing it on the response context, assigning it before the join check, or assigning it on every decision fails at least one. No test asserts join_view_id !== policy_view_id; that inequality follows structurally from joinViewId's commitment strictly extending policyViewId's inputs, so it is not claimed as tested here."
   },
   {
    "id": "txn-authorization.challenge.not-client-supplied",
@@ -11995,9 +12172,39 @@
      "name": "mediated MCP channel (harness duty 2: no bypass) > 3b: a tampered credential (bad signature) is denied at the channel with no PEP evidence",
      "level": "cross-component",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > admits a conforming at+jwt over HTTP and the mediated channel, carrying its own authority",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > refuses a token with %s on both transports, yielding no facts",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > refuses a transaction token and an attenuation root presented as a Mission access token",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > refuses an at+jwt presented as an attenuation root",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > never demotes a Mission-bound token that fails its profile to the ordinary class on a gateway route",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "validateMissionToken rejects a token signed by the wrong key or carrying the wrong audience before either ever becomes a TokenFacts value a caller could pass on; mcp-channel.test.ts's 3b (CI-only, live OpenFGA) shows the same failure at the full channel level with zero PEP evidence produced, so the rejection precedes any use of the token's claims, not merely the return value."
+   "notes": "validateMissionToken rejects a token signed by the wrong key or carrying the wrong audience before either ever becomes a TokenFacts value a caller could pass on; mcp-channel.test.ts's 3b (CI-only, live OpenFGA) shows the same failure at the full channel level with zero PEP evidence produced, so the rejection precedes any use of the token's claims, not merely the return value. #825: the Mission access-token profile (typ at+jwt; exp, iat, jti, sub, client_id, cnf.jkt and the mission claim, each typed; authorization_details read in full) is met on the HTTP and mediated paths before any claim becomes a fact, each requirement refused individually, and a token of another class (transaction, attenuation root) or one failing the profile on a gateway route is never admitted as this class."
   },
   {
    "id": "runtime.token-validation.audience-and-pop",
@@ -12037,9 +12244,27 @@
      "name": "HTTP mediated MCP channel (harness duty 2 + DPoP proof-of-possession over HTTP) > 4b: DISCRIMINATING mismatched-key (DPoP proof signed by a DIFFERENT key than cnf.jkt) is rejected BEFORE the PEP -- zero evidence/ledger; a valid DPoP client on the SAME server then permits",
      "level": "cross-component",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: proof of possession binds the leaf, fresh and once (@spec runtime-oauth#token-validation, #825) > accepts a proof bound to the leaf, and refuses the same proof presented again",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: proof of possession binds the leaf, fresh and once (@spec runtime-oauth#token-validation, #825) > refuses a proof with %s",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: proof of possession binds the leaf, fresh and once (@spec runtime-oauth#token-validation, #825) > refuses a proof whose ath hashes the root rather than the leaf",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "Audience arm: a wrong-audience token is refused (runtime-refusal-backlog.test.ts, unconditional). Proof-of-possession arm: mcp-http-channel.test.ts's 4a (a valid DPoP-scheme token with no proof header, and the bearer scheme) and 4b (a well-formed proof signed by the wrong key) are both rejected at the gate before the PEP, with zero evidence/ledger, and a valid-DPoP client on the same live server then permits (non-vacuous); both CI-only (live OpenFGA, the file's shared beforeAll)."
+   "notes": "Audience arm: a wrong-audience token is refused (runtime-refusal-backlog.test.ts, unconditional). Proof-of-possession arm: mcp-http-channel.test.ts's 4a (a valid DPoP-scheme token with no proof header, and the bearer scheme) and 4b (a well-formed proof signed by the wrong key) are both rejected at the gate before the PEP, with zero evidence/ledger, and a valid-DPoP client on the same live server then permits (non-vacuous); both CI-only (live OpenFGA, the file's shared beforeAll). #825: an attenuation chain's proof of possession runs the same DPoP check: bound to the leaf token by ath, with a fresh iat and a jti refused on reuse."
   },
   {
    "id": "runtime.token-validation.no-cnf-is-bearer-for-high-consequence",
@@ -27993,7 +28218,7 @@
    "id": "mas.instance-join.no-coarse-fallback",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "mission-join",
-   "text": "Where the mapping contract requires an instance-bound join, the PDP MUST deny with `mission_mismatch` if the established instance is absent or does not match that contract, without falling back to a subject-and-client-only join.",
+   "text": "Where the mapping contract requires an instance-bound join, the PDP MUST deny with `mission_binding_failed` if the established instance is absent or does not match that contract, without falling back to a subject-and-client-only join.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -28004,7 +28229,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "A required instance mapping must match even when the subject/client mapping or Join Assertion succeeds; absence or mismatch denies mission_mismatch."
+    "normative": "A required instance mapping must match even when the subject/client mapping or Join Assertion succeeds; absence or mismatch denies mission_binding_failed."
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -28126,20 +28351,20 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the PDP runs the join, and stamps join_view_id, exactly when context.mission_join is present"
+    "normative": "the PDP runs the join, and records join_view_id in the decision's signed Decision Evidence, exactly when context.mission_join is present"
    },
    "level": "unit",
    "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/evaluate-mission-join.test.ts",
-     "name": "evaluate(): baseline MAS Join, direct client (@spec authority-server#mission-join rules 1-4, 7, #557 review point 1) > permits and stamps join_view_id when context.mission_join is present and the subject/client match directly",
+     "name": "evaluate(): baseline MAS Join, direct client (@spec authority-server#mission-join rules 1-4, 7, #557 review point 1) > permits when context.mission_join is present and the subject/client match directly, recording join_view_id in its signed Decision Evidence",
      "level": "unit",
      "surface": "decision-request"
     },
     {
      "file": "src/services/pdp/test/evaluate-mission-join.test.ts",
-     "name": "evaluate(): baseline MAS Join, direct client (@spec authority-server#mission-join rules 1-4, 7, #557 review point 1) > never carries join_view_id for an ORDINARY Mission-bound request (context.mission_join absent): the existing path is untouched",
+     "name": "evaluate(): baseline MAS Join, direct client (@spec authority-server#mission-join rules 1-4, 7, #557 review point 1) > never records join_view_id for an ORDINARY Mission-bound request (context.mission_join absent): the existing path is untouched",
      "level": "unit",
      "surface": "decision-request"
     }
@@ -28204,7 +28429,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "an assertion whose token binding differs from the PEP-reported digest or thumbprint is denied mission_mismatch"
+    "normative": "an assertion whose token binding differs from the PEP-reported digest or thumbprint is denied mission_binding_failed"
    },
    "level": "unit",
    "coverage": "todo",
@@ -28259,7 +28484,7 @@
    "id": "mas.join-assertion.depth-disagreement-denies",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "join-assertion-pdp",
-   "text": "When `context.mission_join` also carries `delegate_depth` and it differs from `join.depth`, the PDP MUST deny with `mission_mismatch`",
+   "text": "When `context.mission_join` also carries `delegate_depth` and it differs from `join.depth`, the PDP MUST deny with `mission_binding_failed`",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -28270,7 +28495,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "a PEP-reported delegate_depth that disagrees with join.depth is denied mission_mismatch"
+    "normative": "a PEP-reported delegate_depth that disagrees with join.depth is denied mission_binding_failed"
    },
    "level": "unit",
    "coverage": "todo",
@@ -28303,7 +28528,7 @@
    "id": "mas.join-assertion.failed-validation-denies",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "join-assertion-pdp",
-   "text": "denies with `mission_mismatch` when any check above fails",
+   "text": "denies with `mission_binding_failed` when any check above fails",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
@@ -28314,7 +28539,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "an assertion failing any PDP Consumption check is denied mission_mismatch, never treated as absent"
+    "normative": "an assertion failing any PDP Consumption check is denied mission_binding_failed, never treated as absent"
    },
    "level": "unit",
    "coverage": "todo",
@@ -28514,6 +28739,376 @@
    "coverage": "todo",
    "tests": [],
    "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+  },
+  {
+   "id": "mas.mapping-contract.floor-documented",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mapping-contract",
+   "text": "Every deployment documents the mapping contract its joins apply",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every deployment that joins documents its subject, client, delegate and instance mappings"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Deployment documentation; no runtime surface to test (#972 item 7)."
+  },
+  {
+   "id": "mas.mapping-contract.enterprise-publishes",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mapping-contract",
+   "text": "an enterprise MAS MUST publish it",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.enterprise"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an Enterprise MAS publishes its mapping contract"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Deployment documentation; no runtime surface to test (#972 item 7)."
+  },
+  {
+   "id": "mas.hc.mission-bound-instance-check",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "high-consequence-binding",
+   "text": "where the credential carries Instance Context whose association with the presenter is established, the instance check of {{join-instance}}",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.enterprise"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "on a Mission-bound high-consequence path, an established instance association is checked"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No Enterprise high-consequence path with Instance Context in the reference composition (#972 item 8)."
+  },
+  {
+   "id": "mas.join-assertion.audience-enrolled",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-request",
+   "text": "The MAS MUST NOT mint for an `audience` that names no PDP enrolled for the Mission's enforcement scope",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a request whose audience names no PDP enrolled for the Mission is refused join_failed, and no assertion is minted"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972 item 11)."
+  },
+  {
+   "id": "mas.join-assertion.aud-claim",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-artifact",
+   "text": "REQUIRED. A string. The request's `audience`: the consuming PDP",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every minted assertion carries aud equal to the request's audience"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972 item 11)."
+  },
+  {
+   "id": "mas.join-assertion.pdp-checks-aud",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-pdp",
+   "text": "that `exp` has not passed and `aud` names this PDP; an assertion with no `aud`, or one naming another PDP, fails this check",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an assertion with no aud, or one naming another PDP, is denied"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972 item 11)."
+  },
+  {
+   "id": "mas.join-assertion.cache-key",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-request",
+   "text": "The cache key is the qualified Mission reference (`issuer`, `mission_id`), the token digest, and the `audience`",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a cached assertion is served only for a request matching its Mission, token digest and audience"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972 item 11)."
+  },
+  {
+   "id": "mas.join-assertion.cache-rechecks",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-request",
+   "text": "Before serving a cached assertion, the MAS MUST recheck the caller against the endpoint's visibility set and apply the minting checks above",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a caller outside the visibility set, or a request failing a minting check, is refused even when a cached assertion matches"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972 item 11)."
+  },
+  {
+   "id": "mas.submission.unsupported-media-type",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-submission",
+   "text": "The MAS MUST reject a request of any other media type with HTTP 415 ({{Section 15.5.16 of RFC9110}}) and the `unsupported_media_type` error code",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a submission-endpoint request that is neither application/json nor form-urlencoded gets 415 unsupported_media_type"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#972 item 13)."
+  },
+  {
+   "id": "mas.submission.derivation-limit-refusal-code",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "intent-submission",
+   "text": "it SHOULD refuse an Intent that carries a `requested_derivation_limit` member, with the `invalid_mission_intent` error code and `requested_derivation_limit` as the `error_reason`",
+   "role": "Controller",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a refused requested_derivation_limit gets 400 invalid_mission_intent with error_reason requested_derivation_limit"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#972 item 13)."
+  },
+  {
+   "id": "mas.native.subject-mismatch-denied",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "native-binding",
+   "text": "On a mismatch, the MAS MUST resolve the submission to `denied` with the `mission_denial_reason` value `subject_mismatch`",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.expansion-child-creation"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an expansion whose established Subject differs from the predecessor's subject creates no successor and resolves denied with subject_mismatch"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#972 item 13)."
+  },
+  {
+   "id": "mas.reference.missing-required-refusal",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "reference-verification",
+   "text": "An attribution conflict, or a malformed or missing reference where governance requires one, is denied with the `mission_reference_conflict` denial reason",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "on a route whose governance requires a reference, a malformed reference and a missing one are both refused with mission_reference_conflict"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: configuration gate (@spec authority-server#mission-join) > refuses mission_reference_conflict for a malformed propagated reference, not unknown_mission",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
+     "name": "MAS-governed HTTP MCP channel (baseline Join) > refuses mission_reference_conflict with a MALFORMED Mission-Reference field, as for an absent one",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: configuration gate (@spec authority-server#mission-join) > refuses mission_reference_conflict for an ordinary credential with no propagated Mission reference at all on a MAS-governed route",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
+     "name": "MAS-governed HTTP MCP channel (baseline Join) > refuses mission_reference_conflict with the Mission-Reference field ABSENT: the route requires a reference and the credential establishes no Mission of its own",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "The reference PEP refuses both a malformed and a missing reference on the MAS-governed route with mission_reference_conflict (src/services/mcp-payments/src/pep.ts; the missing case mutation-checked against the former unknown_mission). The row level stays unit: the endpoint entries auto-skip without OpenFGA. Attribution conflicts are mas.reference.conflict-deny."
+  },
+  {
+   "id": "mas.submission.status-body-members",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "submission-status",
+   "text": "Every submission-status response carries `submission_id` and `status`",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every submission-status response, approved or not, carries submission_id and status"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#972 item 13)."
+  },
+  {
+   "id": "mas.submission.denied-carries-reason",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "submission-status",
+   "text": "A `denied` response carries `mission_denial_reason` where adjudication of an expansion or child creation denied the submission",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.expansion-child-creation"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a denied expansion or child-creation status response carries the adjudication's mission_denial_reason, to the submitting client only"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#972 item 13)."
+  },
+  {
+   "id": "mas.errors.unauthorized-challenges",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "submission-errors",
+   "text": "A 401 `unauthorized` response carries the `WWW-Authenticate` challenges that Mission Status defines for its endpoints",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a 401 from the submission or join-assertion endpoint carries the Mission Status challenges"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack has no MAS submission or join-assertion endpoint. Todo until a MAS service exists (#972 item 18)."
+  },
+  {
+   "id": "mas.errors.invalid-client",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "submission-errors",
+   "text": "A failed mTLS or private-key-JWT client authentication receives 400 `invalid_client`, not a token challenge",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a failed direct client authentication at the submission or join-assertion endpoint gets 400 invalid_client"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack has no MAS submission or join-assertion endpoint. Todo until a MAS service exists (#972 item 18, #1099 review)."
   },
   {
    "id": "authzen.instance-context.no-upstream-actor",
