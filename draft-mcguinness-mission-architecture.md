@@ -1583,9 +1583,10 @@ no Authority Set machinery imported
 ## Swarm Execution: Multiplication, Not Delegation {#swarm-execution}
 
 Swarm execution composes the three lifecycle-bearing objects
-({{three-objects}}): a Mission pinned to an Agent Deployment class or
-version, executed concurrently by N attested instances of that
-Deployment. It is multiplication, not delegation: no `act` hop, no
+({{three-objects}}): one Mission, executed concurrently by N instances
+acting under the same authorized agent identity. Where the deployment
+implements the Mission's Agent Deployment pin, every instance also
+satisfies it. It is multiplication, not delegation: no `act` hop, no
 Child Mission, no attenuation chain, because authority never moves
 between principals.
 
@@ -1593,18 +1594,25 @@ The Agent Deployment pin is a named architectural pattern, not a wire
 member the OAuth binding defines. That document reserves no Intent
 member for it and points to a dedicated Agent Deployment Binding
 profile, which a deployment wanting the pin implements
-({{I-D.draft-mcguinness-oauth-mission}}).
+({{I-D.draft-mcguinness-oauth-mission}}). An agent identity and an
+Agent Deployment are distinct objects ({{three-objects}}): a profile
+may map a Deployment version to a distinct client registration, but
+this document neither requires nor implies that mapping.
 
-Late binding is attestation: an instance joins the work by
-authenticating as the pinned Deployment with its own Client
-Attestation ({{I-D.draft-mcguinness-oauth-client-instance-id}}), not
-by receiving a credential from a peer. The invariant is class-grain
-authorization, instance-grain attribution. The class, the Agent
-Deployment projected as `client_id`, is an authorization subject,
-never an attribution subject. Attribution stays per-instance through
-the instance substrate, which attributes a presentation to an
+The invariant is shared-identity authorization with per-instance
+attribution. Authorization attaches to the shared agent identity, and
+that shared identity does not distinguish individual instances. For
+deployments using OAuth client authentication and the client-instance
+profile, including applicable MAS joined paths, late binding is
+attestation: an instance joins the work by authenticating as the shared
+client with its own Client Attestation
+({{I-D.draft-mcguinness-oauth-client-instance-id}}), not by receiving a
+credential from a peer. Attribution then stays per-instance through
+verified Instance Context, which attributes a presentation to an
 instance only under a sender-constraint key unique to it
-({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 7.3).
+({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 7.3). These
+mechanisms realize per-instance attribution; they do not themselves
+define the Deployment-version pin.
 
 The derivation limits profile's `derivation_limit`
 ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}) is not a
@@ -1617,7 +1625,7 @@ instance, so a swarm of instances shares one budget
 ({{I-D.draft-mcguinness-mission-metering}}).
 
 Swarm execution comes before the Delegate verb's chooser: more
-attested instances of the pinned Deployment deriving under one
+instances under the same authorized agent identity deriving under one
 Mission, with no new construct. A different principal acting inline,
 a durable sub-agent, and offline narrowing take the chooser's options.
 
@@ -2235,17 +2243,19 @@ split on it:
   details, so it is Mission-referenced, not a Mission-bound credential
   ({{I-D.draft-mcguinness-mission-aauth}}).
 
-For profiles that compose with the credential, the seam is the runtime
-profile's Mission binding establishment step
-({{I-D.draft-mcguinness-mission-runtime}}). At that step, the credential
-carries the Mission reference where the binding provides one; a binding
-without it supplies an externally established reference, verified under
-a join the binding defines, which the MAS profiles as its Mission Join.
+For profiles that compose with the credential, the seam is Mission
+binding establishment ({{I-D.draft-mcguinness-mission-runtime}}, Section
+"Mission Binding Establishment"). It has two modes. Credential-carried:
+the acting credential carries the Mission reference, where the binding
+provides one. Externally established: the PEP supplies a reference that
+the PDP verifies against the acting credential under a join the binding
+defines, which the MAS profiles as its Mission Join; an unverified
+reference establishes no Mission.
 
 Offline Attenuation attenuates this credential, and the token-carriage
 aspects of delegation ride it, so both require it. The companions that
 need a credential-to-Mission association (the runtime layer and the
-harness) route through the binding establishment step, which is what
+harness) route through Mission binding establishment, which is what
 makes the standalone binding possible.
 
 The issuance-grant companion
@@ -2807,39 +2817,55 @@ all of these conditions:
    not fail this condition where the issuer-retained record is
    otherwise reachable.
 
-A binding that claims substrate conformance evidences the definition
-through the capability claims of its own Mission Substrate Statement,
-not by protocol lineage. A binding earns the property only where its
-Statement's claims jointly cover every condition. Each condition
-names what establishes it, so a Statement capability claim maps to a
-condition rather than to the property as a whole. Condition 3 is the
-Substrate Statement's Monotonic Derivation capability; condition 5's
-active-state gate is its Lifecycle-Gated Authorization capability.
+A binding earns the property by one of two routes, never by protocol
+lineage. Either route must establish all six conditions for the
+covered path:
 
-The Substrate's Credential-Bound capability can select
-correlation-only fact semantics
+- **Substrate route.** A binding that claims substrate conformance
+  supplies its full Mission Substrate Statement
+  ({{I-D.draft-mcguinness-mission-substrate}}, Section "Mission
+  Substrate Statement"): its kernel mappings (among them the Mission
+  Reference, the Controller, the Actor handle and identifier mappings,
+  and the reliance bound) and its capability claims, together with the
+  deployment's applicable issuer trust configuration and the validated
+  credential's own evidence.
+- **Binding route.** A binding that claims no substrate conformance
+  establishes the conditions through its own specification and
+  conformance requirements.
+
+No fixed split assigns some conditions to the Statement and others to
+the credential, and a capability label alone never establishes a
+whole condition. Monotonic Derivation bears on condition 3, and
+Lifecycle-Gated Authorization on condition 5's active-state gate, but
+each condition also rests on the mappings, trust, and credential
+evidence it depends on. The Substrate's Credential-Bound capability
+can select correlation-only fact semantics
 ({{I-D.draft-mcguinness-mission-substrate}}), which by itself
 evidences neither the derivation-link condition (6) nor the
 authority-projection condition (3). A Credential-Bound claim alone,
 whatever semantics it selects, never by itself evidences
-`credential-mission-bound`, since conditions 1 and 4 come from the
+`credential-mission-bound`: conditions 1 and 4 also rest on the
 deployment's issuer trust configuration and the credential's own
-subject, `client_id`, and actor claims, never from a Statement
-capability row.
+subject, `client_id`, and actor claims, which no capability row
+supplies.
 
 The OAuth binding claims no substrate conformance and publishes no
-Statement. It is assessed through its own informative Mapping
-Assessment ({{I-D.draft-mcguinness-oauth-mission}}) and discharges
-the definition directly through its own Conformance gates,
-independent of the substrate contract. For the OAuth binding
-({{I-D.draft-mcguinness-oauth-mission}}):
+Statement, so it takes the binding route: its own Conformance gates
+establish the conditions, independent of the substrate contract
+({{I-D.draft-mcguinness-oauth-mission}}). Its informative Mapping
+Assessment explains that mapping and is not a conformance result;
+OAuth conformance stays governed by the OAuth binding. The OAuth
+binding's evidence for each condition:
 
-- the Mission Issuer role discharges condition 1;
-- the subset rule discharges condition 3;
-- the approval event discharges condition 4;
-- the lifecycle gate discharges condition 5's active-state gate; and
-- the same approval event's Mission Record, retained for the audit
-  horizon, discharges condition 6.
+| Condition | OAuth binding evidence |
+| --- | --- |
+| 1 | The Mission Issuer role and the applicable issuer trust |
+| 2 | The validated `mission.issuer` and `mission.id` |
+| 3 | The subset rule |
+| 4 | The recorded parties and their required binding into issued credentials |
+| 5 | Token lifetime bounds and the active-state issuance and refresh gates |
+| 6 | The Mission Record, retained for the audit horizon, and the credential's derivation link to it |
+{: title="How the OAuth binding establishes credential-mission-bound"}
 
 Sender constraint is not among the six conditions. Issuance-time key
 targeting and presentation-time proof are `presenter-key-bound`, a
@@ -2850,8 +2876,22 @@ tokens, and the generic Issuance Grant leaves `cnf` optional. Native
 issuance, the Mission Issuance Grant, and a conforming cross-domain
 exchange therefore satisfy the equivalence, and supply
 `presenter-key-bound` exactly where their confirmation binding is in
-force. A Mission Join Assertion fails conditions 3, 5, and 6 by
-design; that failure is what separates correlation from issuance.
+force.
+
+A verified Mission Join Assertion
+({{I-D.draft-mcguinness-mission-authority-server}}) establishes
+token-specific `credential-correlated`. For conditions 1, 2, and 4, it
+authenticates the Mission reference and attests the party join, but
+trusting the MAS's correlation does not establish that the acting
+token's issuer issued its authority for that Mission. Conditions 3, 5,
+and 6 stay unsatisfied by design; that gap is what separates correlation
+from issuance. The assertion alone establishes neither possession nor
+instance identity. On the joined path, `presenter-key-bound` comes from
+the acting credential and its validated presentation: the MAS mints an
+assertion only for a token with a `cnf` key, and the PEP reports that
+key only after verifying the request's proof of possession, or the
+certificate only after authenticating it on the request's mutual-TLS
+connection.
 
 **Presenter-key-bound** is possession and nothing more: the
 credential names a confirmation key at issuance, and the presenter
@@ -2896,8 +2936,9 @@ every member property:
 - **mission-credential-bound**: `credential-mission-bound` plus
   `presenter-key-bound`, end to end; `instance-bound` strengthens
   the claim where an instance identity exists and is verified; and
-- **runtime-action-bound**: authoritative Mission establishment plus
-  `action-bound`.
+- **runtime-action-bound**: Mission binding establishment
+  ({{I-D.draft-mcguinness-mission-runtime}}, Section "Mission Binding
+  Establishment") plus `action-bound`.
 
 The family defines no work-item-attribution composition. Holding
 `work-item-bound` and `action-bound` together does not prove the
@@ -2915,7 +2956,7 @@ The mechanism mapping is conservative:
 | --- | --- |
 | Propagated Mission-Reference | Selection only |
 | Mapping join | `credential-correlated`, with its equivalence-class ambiguity |
-| Mission Join Assertion | A stronger, token- and key-specific `credential-correlated`, still never issuance |
+| Mission Join Assertion | Token-specific `credential-correlated`, never issuance; `presenter-key-bound` comes from the acting credential's validated presentation, not from the assertion |
 | Trusted harness | `work-item-bound`, where its attacher requirements hold |
 | Native or issuance-grant-derived token | `credential-mission-bound`, and `presenter-key-bound` where its confirmation binding is in force end to end |
 | Instance Context | what makes the path `instance-bound`, where its association with the presenter is established over an instance-unique confirmation key and, for context preserved from an input token, authenticated provenance ({{I-D.draft-mcguinness-oauth-client-instance-id}}, Sections 7.3 and 7.5) |
@@ -4078,6 +4119,19 @@ bound profiled by `aauth-mission-expiry`.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Four clarifications from #953, with no change to any profile's
+  requirements. Mission Binding Properties states two routes to
+  `credential-mission-bound` (a substrate Statement with its kernel
+  mappings, issuer trust, and credential evidence, or a binding's own
+  conformance requirements), each establishing all six conditions,
+  and lists the OAuth binding's evidence for every condition; the
+  Mission Join Assertion's properties are stated from the MAS
+  definition; Swarm Execution describes instances under the same
+  authorized agent identity, keeps the Agent Deployment pin distinct
+  from `client_id`, and labels the client-attestation text by
+  mechanism; and the runtime seam is named Mission binding
+  establishment throughout.
 
 - The Approved-record integrity claim names what the anchors cover
   (the committed Intent, authority proposal, and Authority Set) and

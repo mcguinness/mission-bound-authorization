@@ -96,6 +96,8 @@ describe("validateToken is unchanged: still rejects a credential with no mission
   it("rejects outright, exactly as before masJoin existed", async () => {
     const token = await signToken();
     const proof = await dpopProofFor(dpopKeys, HTU, HTM, token);
-    await expect(server.validateToken(token, proof, HTU, HTM)).rejects.toThrow(/mission claim/);
+    // A no-claim credential is not the Mission access-token profile: it is
+    // refused on its token type (#825), or on its missing claim.
+    await expect(server.validateToken(token, proof, HTU, HTM)).rejects.toThrow(/typ must be at\+jwt|mission claim/);
   });
 });

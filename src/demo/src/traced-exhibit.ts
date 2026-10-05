@@ -8,7 +8,7 @@
 
 import { randomUUID } from "node:crypto";
 import { getTracer, initTelemetry } from "@mission/telemetry";
-import type { TokenFacts } from "@mission/mcp-payments";
+import { credentialAuthorityFrom, type TokenFacts } from "@mission/mcp-payments";
 import { TOPOLOGY } from "@mission/demo-data";
 import { approveDemoMission, composeStack } from "./stack.js";
 
@@ -42,6 +42,9 @@ async function main() {
     clientInstanceId: "inst-1",
     mission: { id: mission.id, issuer: "https://as.example.com", authority_hash: record?.authority_hash ?? "" },
     cnfJkt: "jkt-demo",
+    // @spec runtime#input-authority (#825) — what the issuer mints for this
+    // Mission: its own authority as the credential's.
+    credentialAuthority: credentialAuthorityFrom(record?.authority_set ?? []),
   });
 
   await traced("flow.read", () => stack.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, token()));
