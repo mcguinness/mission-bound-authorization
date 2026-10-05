@@ -19,8 +19,8 @@
     "content_sha256": "ea9be2ae2bb1b15bd13e30d8a9bdf328bfcbb89f15621f6cf31bf75eb400fca3"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "84822ae9e2d0d2d05b29fd1b14286ca6fef1ca74",
-    "content_sha256": "417dd729db9e3a999d209c40df9f3f3912afd77def975c7ff66f55cd1142c277"
+    "revision": "0c7ba9c38604240dbfbaa2b95586a235ed2dc0ca",
+    "content_sha256": "070186541b4e7296f2fc96dd5a5ed3c01beac8498e4a058e809d89a28044d8a0"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "2b422bf1c54a64ae5cdf4440f041a0d27f2a0e05",
@@ -71,8 +71,8 @@
     "content_sha256": "bf4b09b73adfdbf647f9740ef2451862b87212aaa7424496aa865b99d2a2a46d"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
-    "revision": "de4634bf6921d79368625d57b79911f31547dabe",
-    "content_sha256": "055d460354f9c98d981f74ce661daa606685695bedd42d04a31981158f8389d7"
+    "revision": "c969e70ad8aaeaf376730d9d98b23f4181b3819f",
+    "content_sha256": "799c3addb5bf932850706473c3b49491f91c551762041b5770f2f155d5543e96"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
     "revision": "4481fc1f4d24f824e79fedd8208568556a2e1c11",
@@ -239,6 +239,7 @@
    "core.instance-context",
    "core.delegation",
    "runtime.instance-context",
+   "runtime.credential-lifetime-freshness",
    "mas.instance-bound-join",
    "mas.expansion-child-creation",
    "derivation-limits.limit",
@@ -13416,6 +13417,30 @@
     }
    ],
    "notes": "Tested for the harness's own status-lease freshness path; not tested for a PDP-embedded active source such as introspection or Mission Status."
+  },
+  {
+   "id": "runtime.state-freshness.credential-lifetime-source-every-path",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "state-freshness",
+   "text": "Either conforms only where, on every issuance, refresh, and exchange path for those credentials, the age of the state observation a credential is minted from plus the credential's lifetime stays within the published staleness bound.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.credential-lifetime-freshness"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "on every issuance, refresh, and exchange path for a credential a class relies on as its Credential-lifetime freshness source, the issued credential's expiry is no later than the time of the state observation it was minted from plus the class's published staleness bound"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Includes paths that mint from an earlier observation without a fresh check, such as a later-redeemed issuance grant; existing freshness tests cover single gated paths, not every credential-producing path."
   },
   {
    "id": "runtime.state-freshness.containment-tightening-requires-containment-aware-source",

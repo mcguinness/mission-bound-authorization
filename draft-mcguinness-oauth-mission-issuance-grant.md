@@ -184,9 +184,12 @@ Mission receives no new grants. An AS with a Mission-state
 integration ({{conventions}}) also checks the Mission at redemption
 and at every refresh; one without issues no refresh tokens, so its
 tokens end with their own short lifetime. Either way, every path to
-new tokens passes a Mission-state check: the issuance-gate kill switch
-that a MAS alone does not provide
-({{I-D.draft-mcguinness-mission-authority-server}}).
+new tokens passes a Mission-state check, at minting or at redemption:
+the issuance-gate kill switch that a MAS alone does not provide
+({{I-D.draft-mcguinness-mission-authority-server}}). Without the
+integration that check is the grant's minting, so its age at
+redemption adds to the issued token's lifetime
+({{security-considerations}}).
 
 The AS implements none of the issuance profile's intake, approval
 ceremony, authority derivation, record, or lifecycle surfaces; those
@@ -685,9 +688,11 @@ On success the consuming AS mints tokens under these rules:
   token under the grant with an expiry later than the `mission`
   object's `expires_at`. That ceiling is the Mission horizon, not a
   liveness bound, so access tokens issued under a grant SHOULD be
-  short-lived: absent a redemption-time state check, an issued access
-  token's own lifetime is the window in which a revoked Mission's
-  token keeps working at the token layer.
+  short-lived: absent a redemption-time state check, a revoked
+  Mission's token can keep working at the token layer for the grant's
+  remaining redemption time and clock-skew leeway
+  ({{grant-validation}}) plus the issued token's own lifetime, never
+  past `expires_at`.
 - **Effective Authority Set projection.** A consuming AS with a
   Mission-state integration gates redemption and every refresh on
   current Mission state and projects the issued authority through the
@@ -1119,7 +1124,11 @@ exclusive validation rules ({{Section 3.11 of RFC8725}} and
 **Revocation latency.** New grants stop at the MAS `active` gate at
 the moment of state commit. A grant already issued can still be
 redeemed within its 300 seconds at a consuming AS without a
-Mission-state integration. Issued access tokens run to their own
+Mission-state integration, and the token it yields runs to its own
+expiry. The residual there is the sum: the grant's remaining lifetime
+and clock-skew leeway, plus the issued token's lifetime, plus that of
+each further exchange that checks no Mission state, capped by
+`expires_at`. Issued access tokens run to their own
 expiry, and an outstanding refresh token is refused at its next
 state-gated use; where the runtime layer is deployed, the Policy
 Decision Point's
