@@ -3874,9 +3874,11 @@ custody but makes neither High-Assurance claim. In this shape:
   member's definition in {{deployment-profile}} states the open
   verifier gap).
 - Its revocation residuals follow the runtime profile's arithmetic:
-  for a mediated class, the state valid-through (30 seconds, which
-  also caps each permit) plus the class's execution bound; for any
-  other path, the access-token lifetime.
+  for a mediated class, the 30-second staleness bound, plus whatever
+  permit window a reported lease end leaves beyond it (at most the
+  30-second permit window, and none where the source reports only an
+  observation time), plus the class's execution bound; for any other
+  path, the access-token lifetime.
 
 ~~~ json
 {
@@ -3898,6 +3900,7 @@ custody but makes neither High-Assurance claim. In this shape:
   "runtime": {
     "pdp": "authzen",
     "pep_locations": ["tool-gateway", "browser-action-proxy"],
+    "max_permit_window_seconds": 30,
     "execution_bound_seconds": 30,
     "mediated_action_classes": [
       "irreversible_action", "external_commitment",
@@ -3993,7 +3996,7 @@ custody but makes neither High-Assurance claim. In this shape:
   "residual_risks": [
     "mediated custody is declared, not evidenced: no High-Assurance claim is made",
     "unmediated local reasoning is outside enforcement",
-    "mediated classes: revocation stops new effect within 60 seconds",
+    "mediated classes: revocation stops new effect within 90 seconds",
     "other paths: revocation within the 300-second token lifetime",
     "PEP compromise is not prevented",
     "per-entry constraints reach scope-only resources only via the PEP",
