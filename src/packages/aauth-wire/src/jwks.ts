@@ -70,7 +70,10 @@ export class JwksResolver {
   private readonly lastAttempt = new Map<string, number>();
   private readonly inflight = new Map<string, Promise<CacheEntry | undefined>>();
   /** Per issuer: the last JWKS fetch, its floor and any fetch in flight. */
-  private readonly issuerJwks = new Map<string, { url: string; keys: unknown[] }>();
+  private readonly issuerJwks = new Map<
+    string,
+    { url: string; keys: unknown[]; fetchedAt: number }
+  >();
   private readonly issuerJwksAttempt = new Map<string, number>();
   private readonly issuerJwksInflight = new Map<
     string,
@@ -195,9 +198,13 @@ export class JwksResolver {
     const last = this.issuerJwksAttempt.get(issuer);
     if (last !== undefined && now - last < this.minRefreshIntervalMs) {
       const recent = this.issuerJwks.get(issuer);
-      if (recent?.url === url.href) return Promise.resolve(recent.keys);
+      // Only the fetch that set the floor is shared, never older keys a
+      // failed refresh left behind.
+      if (recent?.url === url.href && now - recent.fetchedAt < this.minRefreshIntervalMs) {
+        return Promise.resolve(recent.keys);
+      }
       return Promise.reject(
-        new SignatureError("unknown_key", `${issuer}'s JWKS was fetched within the floor`),
+        new SignatureError("unknown_key", `${issuer}'s JWKS was attempted within the floor`),
       );
     }
     remember(this.issuerJwksAttempt, issuer, now, this.maxIssuers);
@@ -207,7 +214,12 @@ export class JwksResolver {
         if (!Array.isArray(fetched)) {
           throw new SignatureError("unknown_key", "JWKS has no keys array");
         }
-        remember(this.issuerJwks, issuer, { url: url.href, keys: fetched }, this.maxIssuers);
+        remember(
+          this.issuerJwks,
+          issuer,
+          { url: url.href, keys: fetched, fetchedAt: now },
+          this.maxIssuers,
+        );
         return fetched;
       })
       .finally(() => this.issuerJwksInflight.delete(issuer));

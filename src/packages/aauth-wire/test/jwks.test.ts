@@ -100,6 +100,25 @@ describe("issuer key discovery (@spec aauth#section-11.4)", () => {
     expect(net.fetched).toContain(`${PS}/access-jwks.json`);
   });
 
+  it("never shares keys older than the floor after a failed JWKS refresh", async () => {
+    const net = new FakeNetwork();
+    net.issuer(PS, "aauth-person.json");
+    net.documents.set(`${PS}/.well-known/aauth-access.json`, {
+      issuer: PS,
+      jwks_uri: `${PS}/jwks.json`,
+    });
+    let now = NOW_MS;
+    const resolver = net.resolver(() => now);
+    await resolver.resolveKey(PS, "aauth-person.json", "key-1");
+    now += 24 * 60 * 60 * 1000 + 1;
+    const jwks = net.documents.get(`${PS}/jwks.json`);
+    net.documents.delete(`${PS}/jwks.json`);
+    expect(await code(resolver.resolveKey(PS, "aauth-person.json", "key-1"))).toBe("unknown_key");
+    net.documents.set(`${PS}/jwks.json`, jwks);
+    now += 10_000;
+    expect(await code(resolver.resolveKey(PS, "aauth-access.json", "key-1"))).toBe("unknown_key");
+  });
+
   it("discards cached keys after 24 hours", async () => {
     const net = new FakeNetwork();
     net.issuer(AP, "aauth-agent.json");
