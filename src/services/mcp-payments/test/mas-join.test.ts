@@ -26,6 +26,7 @@ import {
   type PepDeps,
   type TokenFacts,
 } from "../src/index.js";
+import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 
 // @spec runtime-evidence#decision-evidence-object (#741): one bundle per
 // test module. `signing`/`resolver` wire the PEP's store; `decide` is the
@@ -437,6 +438,7 @@ describe("baseline MAS Join: the Mission-bound path is unaffected (@spec authori
       iss: ISSUER,
       mission: { id: missionId, issuer: ISSUER, authority_hash: "sha-256:hash557" },
       cnfJkt: "jkt-1",
+      credentialAuthority: ALL_ACTIONS_CREDENTIAL,
     };
     const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, missionBoundToken);
     expect(res.permitted, JSON.stringify(res)).toBe(true);
@@ -497,6 +499,7 @@ describe("baseline MAS Join: context.mission_join carriage (@spec authority-serv
       iss: ISSUER,
       mission: { id: missionId, issuer: ISSUER, authority_hash: "sha-256:hash557" },
       cnfJkt: "jkt-1",
+      credentialAuthority: ALL_ACTIONS_CREDENTIAL,
     };
     await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, missionBoundToken);
     expect(capture.requests.length).toBeGreaterThan(0);

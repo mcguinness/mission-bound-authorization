@@ -205,3 +205,14 @@ export {
   startResourceMetadataServer,
 } from "./resource-metadata.js";
 export { ActorRecords, type ActorRecord, type MissionRef } from "./actor-records.js";
+export {
+  credentialAuthorityFrom,
+  ISSUED_AT_SKEW_S,
+  MISSION_ACCESS_TOKEN_TYP,
+  readAttenuationRootClaims,
+  readMissionAccessClaims,
+  TokenProfileError,
+  type VerifiedAttenuationRootClaims,
+  type VerifiedCredentialClaims,
+  type VerifiedMissionAccessClaims,
+} from "./token-verifier.js";

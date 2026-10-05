@@ -34,6 +34,7 @@ import {
   type ExecutionEvidence,
   type TokenFacts,
 } from "../src/index.js";
+import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 
 // @spec authzen#evaluation-request-digest-input: a fixture digest of a submitted
 // request (the AuthZEN profile's worked value), for emitter inputs that model one.
@@ -93,6 +94,7 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
     clientId: "ap-agent",
     mission: { id: missionId, issuer: "https://as.test", authority_hash: "sha-256:g1hash" },
     cnfJkt: "jkt-1",
+    credentialAuthority: ALL_ACTIONS_CREDENTIAL,
   };
 
   async function build(entry: MissionView["authority_set"][number]): Promise<{
@@ -341,6 +343,7 @@ describe("finding 3: a multi-vendor list_invoices names every returned vendor to
     clientId: "ap-agent",
     mission: { id: missionId, issuer: "https://as.test", authority_hash: "sha-256:g3hash" },
     cnfJkt: "jkt-1",
+    credentialAuthority: ALL_ACTIONS_CREDENTIAL,
   };
   const view: MissionView = {
     id: missionId,
@@ -411,6 +414,7 @@ describe("GAP 2: an unrecognized decision-context member makes a permit unusable
     clientId: "ap-agent",
     mission: { id: missionId, issuer: "https://as.test", authority_hash: "sha-256:g2hash" },
     cnfJkt: "jkt-1",
+    credentialAuthority: ALL_ACTIONS_CREDENTIAL,
   };
   const view: MissionView = {
     id: missionId,

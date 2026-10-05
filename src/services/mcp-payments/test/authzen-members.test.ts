@@ -21,12 +21,14 @@ import {
   type PepDeps,
   type TokenFacts,
 } from "../src/index.js";
+import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 
 const token: TokenFacts = {
   sub: "alice",
   clientId: "ap-agent",
   mission: { id: "msn_1004_pep", issuer: "https://as.test", authority_hash: "sha-256:h1004" },
   cnfJkt: "key",
+  credentialAuthority: ALL_ACTIONS_CREDENTIAL,
 };
 
 const view: MissionView = {

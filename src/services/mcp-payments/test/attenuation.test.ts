@@ -16,7 +16,8 @@
  * is fail-closed on an unknown tool-argument name.
  */
 
-import { aatToolId, type AATTools } from "@mission/core";
+import { createHash } from "node:crypto";
+import { aatToolId, type AATTools, credentialEntriesFromAatTools } from "@mission/core";
 import { calculateJwkThumbprint, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
@@ -101,14 +102,26 @@ const loadView = (ref: { id: string; issuer: string }) =>
     ? { view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } }
     : undefined;
 
+/** RFC 9449 Section 4.2: `ath` is the base64url SHA-256 of the access token presented. */
+const ath = (token: string): string => createHash("sha256").update(token).digest("base64url");
+
+/**
+ * A DPoP proof for presenting `leaf`, bound to it by `ath` (#825). `omit` and
+ * `override` build the malformed proofs the negative cases present.
+ */
 async function dpopProof(
   htu: string,
+  leaf: string,
   keys: { privateKey: CryptoKey; publicKey: CryptoKey } = delegateKeys,
+  opts: { omit?: ("ath" | "iat" | "jti")[]; iat?: number } = {},
 ): Promise<string> {
-  return new SignJWT({ htu, htm: "POST" })
+  const omit = new Set(opts.omit ?? []);
+  const claims: Record<string, unknown> = { htu, htm: "POST" };
+  if (!omit.has("ath")) claims.ath = ath(leaf);
+  if (!omit.has("iat")) claims.iat = opts.iat ?? Math.floor(Date.now() / 1000);
+  if (!omit.has("jti")) claims.jti = crypto.randomUUID();
+  return new SignJWT(claims)
     .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: await exportJWK(keys.publicKey) })
-    .setIssuedAt()
-    .setJti(crypto.randomUUID())
     .sign(keys.privateKey);
 }
 
@@ -192,7 +205,7 @@ beforeAll(async () => {
     jwks: { keys: [asPub] },
     issuer: AS_ISS,
   });
-  facts = await server.validateAttenuationChain(chain, await dpopProof(CANONICAL_RESOURCE), CANONICAL_RESOURCE, "POST");
+  facts = await server.validateAttenuationChain(chain, await dpopProof(CANONICAL_RESOURCE, child), CANONICAL_RESOURCE, "POST");
 });
 
 describe("§root-mapping (Authority Set <-> AAT tools)", () => {
@@ -216,16 +229,26 @@ describe("§root-mapping (Authority Set <-> AAT tools)", () => {
 });
 
 describe("attenuation chain: verify + leaf enforcement", () => {
-  it("derives TokenFacts whose effective authority is the leaf's narrowed tools", () => {
+  it("derives TokenFacts whose credential authority is the leaf's tools with every restriction they carry", () => {
     expect(facts.mission.id).toBe(view.id);
     expect(facts.cnfJkt).toBe(delegateJkt);
-    expect(facts.leafAuthority).toEqual([{ resource: CANONICAL_RESOURCE, actions: [READ_ACTION] }]);
+    // @spec runtime#input-authority (#825): the leaf's vendor and amount
+    // bounds ride along, not just its resource and action.
+    expect(facts.mission !== undefined && facts.credentialAuthority).toEqual(credentialEntriesFromAatTools(leafTools));
+    expect(facts.mission !== undefined && facts.credentialAuthority).toEqual([
+      {
+        type: "mission_resource_access",
+        resource: CANONICAL_RESOURCE,
+        actions: [READ_ACTION],
+        constraints: { vendors: ["acme"], max_amount: { amount: "500", currency: "USD" } },
+      },
+    ]);
   });
 
   it("denies an in-Mission-but-outside-leaf action out_of_authority (no OpenFGA needed)", async () => {
     const pep = new Pep({
       decide: EVIDENCE_KEYS.decide,
-      payments: new PaymentsStore(),
+      payments: seededPayments(),
       evidence: new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver),
       fga: {} as unknown as Fga, // never reached: the leaf guard precedes the PDP
       modelId: "m",
@@ -238,12 +261,89 @@ describe("attenuation chain: verify + leaf enforcement", () => {
   });
 });
 
+/** A store with Acme invoices of 50 and 125 USD, so the credential check is reached. */
+function seededPayments(): PaymentsStore {
+  const payments = new PaymentsStore();
+  payments.seed(
+    [{ id: "acme", name: "Acme", status: "approved" }],
+    [
+      { id: "inv-1", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct", status: "payable" },
+      { id: "inv-small", vendor_id: "acme", amount: "50.00", currency: "USD", payee_account: "acct", status: "payable" },
+    ],
+  );
+  return payments;
+}
+
+describe("attenuation chain: the leaf's restrictions bound the action (@spec runtime#input-authority, #825)", () => {
+  it("refuses an invoice above the leaf's narrowed amount bound before any PDP call, and admits one within it", async () => {
+    // The child narrows the read tool's amount bound from 500 to 100 USD
+    // (a capability-monotone narrowing), so the 125 USD invoice is outside
+    // the credential even though the Mission allows it.
+    const narrowedTools: AATTools = {
+      [READ_TOOL_ID]: { ...(leafTools[READ_TOOL_ID] ?? {}), amount_usd: { constraint_type: "range", max: 100 } },
+    };
+    const holderChild = await mintChildOffline(root, holderKeys.privateKey, narrowedTools, { cnfJkt: delegateJkt });
+    const narrowed = await server.validateAttenuationChain(
+      [root, holderChild],
+      await dpopProof(CANONICAL_RESOURCE, holderChild),
+      CANONICAL_RESOURCE,
+      "POST",
+    );
+    const decided: unknown[] = [];
+    const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
+    const pep = new Pep({
+      decide: async (req) => {
+        decided.push(req);
+        throw new Error("the PDP is not under test here");
+      },
+      payments: seededPayments(),
+      evidence,
+      fga: {} as unknown as Fga,
+      modelId: "m",
+      loadView,
+      instanceEpoch: "epoch-1",
+      allowedFreshnessSources: new Set(["load_view"]),
+    });
+    const refused = await pep.enforce("get_invoice", { invoice_id: "inv-1" }, narrowed);
+    expect(refused).toMatchObject({ permitted: false, denial_reason: "out_of_authority" });
+    expect(decided).toHaveLength(0);
+    const refusal = evidence.all().find((e) => e.kind === "refusal");
+    expect(refusal?.content).toMatchObject({ denial_reason: "credential_authority_insufficient", resource: { type: "invoice", id: "inv-1" } });
+
+    await pep.enforce("get_invoice", { invoice_id: "inv-small" }, narrowed);
+    expect(decided).toHaveLength(1);
+  });
+});
+
+describe("attenuation chain: proof of possession binds the leaf, fresh and once (@spec runtime-oauth#token-validation, #825)", () => {
+  it("accepts a proof bound to the leaf, and refuses the same proof presented again", async () => {
+    const proof = await dpopProof(CANONICAL_RESOURCE, chain[1] as string);
+    await expect(server.validateAttenuationChain(chain, proof, CANONICAL_RESOURCE, "POST")).resolves.toMatchObject({ cnfJkt: delegateJkt });
+    await expect(server.validateAttenuationChain(chain, proof, CANONICAL_RESOURCE, "POST")).rejects.toThrow(/replayed/);
+  });
+
+  it.each([
+    ["no ath", { omit: ["ath"] as ("ath" | "iat" | "jti")[] }, /no ath/],
+    ["no iat", { omit: ["iat"] as ("ath" | "iat" | "jti")[] }, /no iat/],
+    ["a stale iat", { iat: Math.floor(Date.now() / 1000) - 3600 }, /acceptance window/],
+    ["no jti", { omit: ["jti"] as ("ath" | "iat" | "jti")[] }, /jti/],
+  ])("refuses a proof with %s", async (_label, opts, error) => {
+    const proof = await dpopProof(CANONICAL_RESOURCE, chain[1] as string, delegateKeys, opts);
+    await expect(server.validateAttenuationChain(chain, proof, CANONICAL_RESOURCE, "POST")).rejects.toThrow(error);
+  });
+
+  it("refuses a proof whose ath hashes the root rather than the leaf", async () => {
+    const proof = await dpopProof(CANONICAL_RESOURCE, root);
+    await expect(server.validateAttenuationChain(chain, proof, CANONICAL_RESOURCE, "POST")).rejects.toThrow(/ath/);
+  });
+});
+
 describe("attenuation chain: keyed verification (negatives)", () => {
   it("rejects a child not signed by the key its parent's cnf commits to", async () => {
     // Signed with the delegate key, so header jwk thumbprint != root cnf.jkt.
     const forged = await mintChildOffline(root, delegateKeys.privateKey, leafTools, { cnfJkt: delegateJkt });
     await expect(
-      server.validateAttenuationChain([root, forged], await dpopProof(CANONICAL_RESOURCE), CANONICAL_RESOURCE, "POST"),
+      server.validateAttenuationChain([root, forged], await dpopProof(CANONICAL_RESOURCE, forged), CANONICAL_RESOURCE, "POST"),
     ).rejects.toThrow(/cnf/);
   });
 
@@ -251,7 +351,7 @@ describe("attenuation chain: keyed verification (negatives)", () => {
     await expect(
       server.validateAttenuationChain(
         chain,
-        await dpopProof(CANONICAL_RESOURCE, holderKeys),
+        await dpopProof(CANONICAL_RESOURCE, chain[1] as string, holderKeys),
         CANONICAL_RESOURCE,
         "POST",
       ),

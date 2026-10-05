@@ -43,6 +43,7 @@ import {
   type ActionMapping,
   type TokenFacts,
 } from "../src/index.js";
+import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 
 const EVIDENCE_KEYS = createEphemeralEvidenceKeys();
 const BASE_MS = Date.parse("2026-09-08T12:00:00.000Z");
@@ -70,6 +71,7 @@ const TOKEN: TokenFacts = {
     approval_basis: { type: "direct" },
   },
   cnfJkt: "jkt-252",
+  credentialAuthority: ALL_ACTIONS_CREDENTIAL,
 };
 
 interface Harness {

@@ -69,6 +69,7 @@ import {
   verifyEvidenceEnvelope,
   verifyMissionReceipt,
 } from "../src/index.js";
+import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 
 // @spec authzen#evaluation-request-digest-input: a fixture digest of a submitted
 // request (the AuthZEN profile's worked value), for emitter inputs that model one.
@@ -83,6 +84,7 @@ const TOKEN: TokenFacts = {
   clientId: "ap-agent",
   mission: { id: "msn_ret", issuer: ISSUER, authority_hash: "sha-256:rethash" },
   cnfJkt: "jkt-1",
+  credentialAuthority: ALL_ACTIONS_CREDENTIAL,
 };
 
 const view = (): MissionView => ({
@@ -156,8 +158,8 @@ describe("the enforcement path holds no PDP evidence key (@spec runtime-evidence
     const { keys } = decisionPointAndKeys();
     const { server, evidence } = buildServer(keys, true, { keys: [jwk] });
     const exp = Math.floor(Date.now() / 1000) + 600;
-    const sign = (key: CryptoKey) => new SignJWT({ sub: "alice", client_id: "ap-agent", mission: TOKEN.mission, cnf: { jkt: "jkt-1" }, raw_claim: "PRIVATE-CREDENTIAL-CLAIM" })
-      .setProtectedHeader({ alg: "ES256", kid: jwk.kid }).setIssuer(ISSUER).setAudience(CANONICAL_RESOURCE).setExpirationTime(exp).sign(key);
+    const sign = (key: CryptoKey) => new SignJWT({ sub: "alice", client_id: "ap-agent", mission: TOKEN.mission, cnf: { jkt: "jkt-1" }, authorization_details: [...ALL_ACTIONS_CREDENTIAL], raw_claim: "PRIVATE-CREDENTIAL-CLAIM" })
+      .setProtectedHeader({ alg: "ES256", kid: jwk.kid, typ: "at+jwt" }).setIssuer(ISSUER).setAudience(CANONICAL_RESOURCE).setIssuedAt().setJti(crypto.randomUUID()).setExpirationTime(exp).sign(key);
     const other = await generateKeyPair("ES256");
     await expect(server.validateMissionToken(await sign(other.privateKey))).rejects.toThrow();
     expect(evidence.all()).toEqual([]);

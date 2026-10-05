@@ -119,8 +119,8 @@
     "content_sha256": "b0fcb6a467d70b0348ba62d7ec2a567cf49101c94e5e39ad4f5c8490258f521e"
    },
    "draft-mcguinness-mission-aauth-management.md": {
-    "revision": "622d072fd453603bd406bd39ea0f11b43c6384e4",
-    "content_sha256": "be36c6e41489638f056832d274a9daadb25837ede6b13b5963fa76c5fc14c33c"
+    "revision": "0d59405c4b5a2c3fbd1b021b2f914b0701c8e8a7",
+    "content_sha256": "2a7df9ec7e7679bd56ec77e7d1bcbe457ae738fef4bbc1501b3195ab86a93386"
    }
   }
  },
@@ -11994,9 +11994,39 @@
      "name": "mediated MCP channel (harness duty 2: no bypass) > 3b: a tampered credential (bad signature) is denied at the channel with no PEP evidence",
      "level": "cross-component",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > admits a conforming at+jwt over HTTP and the mediated channel, carrying its own authority",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > refuses a token with %s on both transports, yielding no facts",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > refuses a transaction token and an attenuation root presented as a Mission access token",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > refuses an at+jwt presented as an attenuation root",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > never demotes a Mission-bound token that fails its profile to the ordinary class on a gateway route",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "validateMissionToken rejects a token signed by the wrong key or carrying the wrong audience before either ever becomes a TokenFacts value a caller could pass on; mcp-channel.test.ts's 3b (CI-only, live OpenFGA) shows the same failure at the full channel level with zero PEP evidence produced, so the rejection precedes any use of the token's claims, not merely the return value."
+   "notes": "validateMissionToken rejects a token signed by the wrong key or carrying the wrong audience before either ever becomes a TokenFacts value a caller could pass on; mcp-channel.test.ts's 3b (CI-only, live OpenFGA) shows the same failure at the full channel level with zero PEP evidence produced, so the rejection precedes any use of the token's claims, not merely the return value. #825: the Mission access-token profile (typ at+jwt; exp, iat, jti, sub, client_id, cnf.jkt and the mission claim, each typed; authorization_details read in full) is met on the HTTP and mediated paths before any claim becomes a fact, each requirement refused individually, and a token of another class (transaction, attenuation root) or one failing the profile on a gateway route is never admitted as this class."
   },
   {
    "id": "runtime.token-validation.audience-and-pop",
@@ -12036,9 +12066,27 @@
      "name": "HTTP mediated MCP channel (harness duty 2 + DPoP proof-of-possession over HTTP) > 4b: DISCRIMINATING mismatched-key (DPoP proof signed by a DIFFERENT key than cnf.jkt) is rejected BEFORE the PEP -- zero evidence/ledger; a valid DPoP client on the SAME server then permits",
      "level": "cross-component",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: proof of possession binds the leaf, fresh and once (@spec runtime-oauth#token-validation, #825) > accepts a proof bound to the leaf, and refuses the same proof presented again",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: proof of possession binds the leaf, fresh and once (@spec runtime-oauth#token-validation, #825) > refuses a proof with %s",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: proof of possession binds the leaf, fresh and once (@spec runtime-oauth#token-validation, #825) > refuses a proof whose ath hashes the root rather than the leaf",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "Audience arm: a wrong-audience token is refused (runtime-refusal-backlog.test.ts, unconditional). Proof-of-possession arm: mcp-http-channel.test.ts's 4a (a valid DPoP-scheme token with no proof header, and the bearer scheme) and 4b (a well-formed proof signed by the wrong key) are both rejected at the gate before the PEP, with zero evidence/ledger, and a valid-DPoP client on the same live server then permits (non-vacuous); both CI-only (live OpenFGA, the file's shared beforeAll)."
+   "notes": "Audience arm: a wrong-audience token is refused (runtime-refusal-backlog.test.ts, unconditional). Proof-of-possession arm: mcp-http-channel.test.ts's 4a (a valid DPoP-scheme token with no proof header, and the bearer scheme) and 4b (a well-formed proof signed by the wrong key) are both rejected at the gate before the PEP, with zero evidence/ledger, and a valid-DPoP client on the same live server then permits (non-vacuous); both CI-only (live OpenFGA, the file's shared beforeAll). #825: an attenuation chain's proof of possession runs the same DPoP check: bound to the leaf token by ath, with a fresh iat and a jti refused on reuse."
   },
   {
    "id": "runtime.token-validation.no-cnf-is-bearer-for-high-consequence",
@@ -29523,6 +29571,237 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#839 specification slice (PR #1063). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.residual.person-token-keeps-incomplete",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "terminate",
+   "text": "`complete` is true only when every Tracked Credential is either confirmed revoked or expired and the PS knows of no untracked access mode for the mission; it is false while any Person Token is live and unconfirmed, and never follows from Auth Tokens alone.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after termination, a mission with a live, unconfirmed Person Token reports complete false in token_residual, even when every Auth Token is confirmed revoked or expired"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice. Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.residual.complete-covers-withheld",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "terminate",
+   "text": "`complete` covers every Tracked Credential, including any the counters withhold from the caller.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "complete is false for a caller whose counters omit a credential it may not see, while that credential is live and unconfirmed"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice. Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.residual.unconfirmed-until-exp",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "terminate",
+   "text": "A credential whose recipient advertises no revocation endpoint, or whose revocation outcome is unknown, stays unconfirmed until its `exp`.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Tracked Credential whose recipient advertises no revocation endpoint, or whose outcome is unknown, is counted unconfirmed and keeps complete false until its exp passes"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice. Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.revocation.person-token-recipients",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "revocation-attempts",
+   "text": "The PS revokes a Person Token at the Resource named in its `aud` and at each AS it presented the token to (Section 11.12.2 of {{I-D.draft-hardt-oauth-aauth-protocol}}).",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "when the PS attempts to revoke a Person Token, its requests go to the Resource in the token's aud and to each AS it presented the token to, and to no other party; whether the PS attempts revocation at all is the SHOULD of aauth-management.revocation.attempt-after-termination"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice. Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.revocation.person-token-confirmation",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "revocation-attempts",
+   "text": "a Person Token is confirmed when the Resource in its `aud` and each AS it was presented to have each answered `200`;",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Person Token counts as confirmed revoked only after the Resource in its aud and every AS it was presented to answered 200; any missing answer leaves it unconfirmed"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice. Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.tracking.retain-credentials",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "tracking",
+   "text": "For each Person Token it issues under a mission, and each Auth Token it issues or provides under one, a conforming PS MUST retain:",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the PS's revocation and residual accounting for a terminated mission covers every Person Token and Auth Token issued under it, each keyed by (iss, jti) with its aud and exp, and reaches each AS a Person Token was presented to and the presented or upstream token a federated or chained credential derives from"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice (#1077 review). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.retention.terminal-state-through-credential-validity",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "logging",
+   "text": "The PS MUST retain the terminal state and its reason for at least as long as any Tracked Credential could remain valid, plus the deployment's audit and dispute period.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "status for a terminated mission keeps reporting terminated with its original reason for as long as any of its Person Tokens or Auth Tokens could remain valid"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice (#1077 review). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.residuals.document-lifetimes",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "residuals",
+   "text": "Deployment documentation MUST state which AAuth access modes are covered, the maximum configured Person Token and Auth Token lifetimes, whether Resources implement revocation, retry policy, and the worst-case residual expected under partition.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the deployment documentation states the covered access modes, the maximum Person Token and Auth Token lifetimes, whether Resources implement revocation, the retry policy, and the worst-case residual under partition"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice (#1077 review). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.revocation.attempt-after-termination",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "revocation-attempts",
+   "text": "After termination, the PS SHOULD revoke every unexpired Tracked Credential, as Section 11.12.4 of {{I-D.draft-hardt-oauth-aauth-protocol}} recommends when a PS revokes a mission.",
+   "role": "Controller",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after termination, the PS attempts revocation of each unexpired Person Token and Auth Token it tracks for the mission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice (#1077 review). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.conformance.publish-retention-and-lifetimes",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "conformance",
+   "text": "A deployment claiming conformance MUST publish or otherwise make available its caller-role authorization policy, Tracked Credential retention period, supported access-mode coverage, maximum token lifetime, revocation retry policy, expiry clock policy if used, and worst-case residual behavior.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a deployment claiming conformance makes available its caller-role authorization policy, Tracked Credential retention period, access-mode coverage, maximum token lifetime, revocation retry policy, expiry clock policy if used, and worst-case residual behavior"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice (#1077 review). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
+  },
+  {
+   "id": "aauth-management.residuals.short-lifetimes",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "residuals",
+   "text": "Risky deployments SHOULD use short Person Token and Auth Token lifetimes and action-time Resource checks in addition to PS gating.",
+   "role": "Controller",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a risky deployment configures short Person Token and Auth Token lifetimes and action-time Resource checks in addition to PS gating"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#834 half 1 specification slice (#1077 review). Native AAuth tests are scoped to the #836 pilot if it reaches management; no reference implementation of this companion exists."
   }
  ]
 }
