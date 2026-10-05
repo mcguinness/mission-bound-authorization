@@ -280,17 +280,19 @@ export type DenialReason =
    */
   | "principal_mapping_failed"
   /**
-   * @spec authority-server#mission-join rule 6 (#557) — the baseline MAS
-   * Join's uniform denial: "A failure of the subject or client join MUST be
-   * denied with the `mission_mismatch` denial reason ... The PDP MUST NOT
-   * fall back to evaluating the action against the referenced Mission's
-   * authority when the join fails." Distinct from the bare string
-   * `"mission_mismatch"` used in two unrelated enums elsewhere in this tree
-   * (authorization-server/src/adapters/provider.ts's Protected Events
-   * rejection, and mcp-payments/src/server.ts's `"txn_mission_mismatch"`
-   * transaction-authorization refusal): neither is this `DenialReason`.
+   * @spec authority-server#mission-join rule 6 (#557), authzen#runtime-denial-classification
+   * (#972 item 27b, D289) — the baseline MAS Join's uniform denial, the
+   * AuthZEN profile's classification for a failed externally-established
+   * binding join: "A failure of the subject or client join MUST be denied
+   * with the `mission_binding_failed` denial reason ... The PDP MUST NOT fall
+   * back to evaluating the action against the referenced Mission's authority
+   * when the join fails." This value replaced the MAS-only `mission_mismatch`
+   * for join failures; the same-spelled `"mission_mismatch"` in
+   * authorization-server/src/adapters/provider.ts (Protected Events) and
+   * mcp-payments/src/server.ts's `"txn_mission_mismatch"` are unrelated
+   * values and are unchanged.
    */
-  | "mission_mismatch"
+  | "mission_binding_failed"
   /**
    * @spec authzen#runtime-denial-classification, runtime#idempotency (#917):
    * the request's `idempotency_key` and operation identity match a prior
@@ -481,6 +483,16 @@ interface ClaimContext {
 }
 
 /**
+ * @spec authority-server#join-rules rule 9 (#972 item 27a) — private
+ * per-evaluation state, like {@link ClaimContext}: the joined-view commitment
+ * step 4b sets once the baseline Join succeeds, read only by the Decision
+ * Evidence emitter. Never placed on the AuthZEN response context.
+ */
+interface JoinTrace {
+  viewId?: string;
+}
+
+/**
  * The PDP's decision entry point as an enforcement component sees it: submit
  * the evaluation request, receive the decision, with the PDP-built, PDP-signed
  * record at `context.decision_evidence` when the decision point behind it
@@ -516,7 +528,8 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
       // never reconstruct outcomes by rewalking the authority set after a deny.
       const contributions = new Set<string>();
       const claim: ClaimContext = {};
-      const decision = await evaluateInner(req, opts, contributions, claim);
+      const join: JoinTrace = {};
+      const decision = await evaluateInner(req, opts, contributions, claim, join);
       span.setAttribute("mission.action", req.action.name);
       span.setAttribute("mission.decision", decision.decision);
       if (decision.context.denial_reason) {
@@ -528,7 +541,7 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
       if (claim.retransmitted) return decision;
       try {
         if (opts.evidence) {
-          decision.context.decision_evidence = await emitDecisionEvidence(req, opts, opts.evidence, decision, contributions, requestDigest);
+          decision.context.decision_evidence = await emitDecisionEvidence(req, opts, opts.evidence, decision, contributions, requestDigest, join);
         }
         // The single writer persists the whole decision before it returns,
         // so a crash after this point yields at most this same permit again.
@@ -564,6 +577,7 @@ async function emitDecisionEvidence(
   decision: Decision,
   contributions: ReadonlySet<string>,
   requestDigest: string,
+  join: Readonly<JoinTrace>,
 ): Promise<DecisionEvidenceObject> {
   const { view } = opts;
   // @spec cross-domain#origin-principal-mapping, runtime-evidence#principal_mapping,
@@ -602,6 +616,12 @@ async function emitDecisionEvidence(
         ? { authority_hash: view.authority_hash } : {}),
       ...(typeof req.context.mission.policy_version === "string" ? { policy_version: req.context.mission.policy_version } : {}),
     },
+    // @spec authority-server#join-rules rule 9 (#972 item 27a): the
+    // joined-view commitment rides the signed record, top-level, whenever
+    // this decision was reached over a successful join, a later policy
+    // denial included. A failed join or a direct Mission-bound decision
+    // never set it.
+    ...(join.viewId !== undefined ? { join_view_id: join.viewId } : {}),
     subject: {
       id: req.subject.id,
       ...(req.subject.properties?.iss !== undefined ? { properties: { iss: req.subject.properties.iss } } : {}),
@@ -645,6 +665,7 @@ async function evaluateInner(
   opts: EvaluateOptions,
   contributions: Set<string>,
   claim: ClaimContext,
+  join: JoinTrace,
 ): Promise<Decision> {
   const { view, fga, modelId, now } = opts;
   const pvid = policyViewId(view, modelId);
@@ -674,10 +695,10 @@ async function evaluateInner(
   // class's posture or of what the observation repeats.
   let signedFreshUntilMs: number | undefined;
   // @spec authority-server#mission-join (#557 review point 1) — set once
-  // step 4b below resolves the baseline Join, so `join_view_id` (below) is
-  // present on the SAME decision's Decision Evidence/Refusal Record
-  // regardless of which later step denies. Declared here, ahead of `base`,
-  // for the same temporal-dead-zone reason `principalMapping` is.
+  // step 4b below resolves the baseline Join; step 5 matches against its
+  // narrowed set. Step 4b also records the joined-view commitment in
+  // `join` (rule 9, #972 item 27a), so the decision's signed Decision
+  // Evidence carries `join_view_id` whichever later step denies.
   let joinedAuthority: { disposition: "direct" | "delegate"; clientId: string; authoritySet: AuthorityEntry[] } | undefined;
   // @spec authzen#response-context: `evaluation_id` is the profile's own
   // REQUIRED correlation identifier (ARAP's `evaluation_id`), additive
@@ -689,12 +710,6 @@ async function evaluateInner(
     decision_id: decisionId,
     evaluation_id: decisionId,
     policy_view_id: pvid,
-    // @spec authority-server#mission-join (#557 review point 4) — a SEPARATE
-    // commitment for a baseline-Join decision, additive alongside
-    // policy_view_id (never replacing it): distinguishes a joined decision
-    // from a direct Mission-bound one, and one joined view (a given
-    // subject/client/delegate-narrowed authority set) from another.
-    ...(joinedAuthority ? { join_view_id: joinViewId(view, modelId, joinedAuthority) } : {}),
     ...(actionClass ? { action_class: actionClass, class_source: "deployment" } : {}),
     ...(principalMapping
       ? {
@@ -1013,7 +1028,7 @@ async function evaluateInner(
   // no-op for the existing path -- byte-for-byte unchanged.
   if (req.context.mission_join) {
     const clientId = req.context.actor?.client_id;
-    if (typeof clientId !== "string" || !clientId) return deny("mission_mismatch");
+    if (typeof clientId !== "string" || !clientId) return deny("mission_binding_failed");
     const joined = resolveBaselineJoin({
       view,
       onEntryEvaluated: entry => { contributions.add(entry.type); },
@@ -1024,11 +1039,17 @@ async function evaluateInner(
         : {}),
       ...(opts.delegatePolicy !== undefined ? { delegatePolicy: opts.delegatePolicy } : {}),
     });
-    // Rule 6: uniform mission_mismatch, no fallback to the unjoined view --
-    // `joinedAuthority` stays undefined on failure, so step 5 below never
-    // sees `view.authority_set` for this request either.
-    if (!joined.ok) return deny("mission_mismatch");
+    // Rule 6: uniform mission_binding_failed, no fallback to the unjoined
+    // view -- `joinedAuthority` stays undefined on failure, so step 5 below
+    // never sees `view.authority_set` for this request either, and no
+    // joined-view commitment is recorded.
+    if (!joined.ok) return deny("mission_binding_failed");
     joinedAuthority = { disposition: joined.disposition, clientId, authoritySet: joined.authoritySet };
+    // Rule 9: a SEPARATE commitment for a joined decision, distinct from
+    // policy_view_id: it tells a joined decision from a direct Mission-bound
+    // one, and one joined view (a subject/client/delegate-narrowed authority
+    // set) from another (#557 review point 4).
+    join.viewId = joinViewId(view, modelId, joinedAuthority);
   }
 
   // 5. Authority entry match: the approved entry's resource is matched

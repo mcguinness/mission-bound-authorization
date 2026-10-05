@@ -40,6 +40,7 @@ import {
   type TokenFacts,
   TransactionEngine,
 } from "../src/index.js";
+import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 
 /** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
 const idem = (): string => `idem_${randomUUID()}`;
@@ -103,12 +104,14 @@ async function signMissionToken(opts: { missionId?: string; cnfJkt?: string; key
     client_instance_id: "inst-1",
     mission: { id: opts.missionId ?? VIEW.id, issuer: ISSUER, authority_hash: AUTHORITY_HASH },
     cnf: { jkt: opts.cnfJkt ?? cnfJkt },
+    authorization_details: [...ALL_ACTIONS_CREDENTIAL],
   })
-    .setProtectedHeader({ alg: "ES256", kid: "mission-key" })
+    .setProtectedHeader({ alg: "ES256", kid: "mission-key", typ: "at+jwt" })
     .setIssuer(ISSUER)
     .setAudience(CANONICAL_RESOURCE)
     .setSubject("alice")
     .setIssuedAt()
+    .setJti(crypto.randomUUID())
     .setExpirationTime("5m")
     .sign(opts.key ?? signKey);
 }
@@ -121,6 +124,7 @@ function tokenFacts(missionId: string = VIEW.id): TokenFacts {
     clientInstanceId: "inst-1",
     mission: { id: missionId, issuer: ISSUER, authority_hash: AUTHORITY_HASH },
     cnfJkt,
+    credentialAuthority: ALL_ACTIONS_CREDENTIAL,
   };
 }
 
@@ -586,16 +590,16 @@ d("MAS-governed HTTP MCP channel (baseline Join)", () => {
     expect(res.ok, JSON.stringify(res)).toBe(true);
   });
 
-  it("refuses unknown_mission with the Mission-Reference field ABSENT: the credential establishes no Mission of its own", async () => {
+  it("refuses mission_reference_conflict with the Mission-Reference field ABSENT: the route requires a reference and the credential establishes no Mission of its own", async () => {
     const { url } = await buildGoverned();
     const { client, close } = await createHttpMediatedClient(url, await signOrdinaryToken(), dpopKeys);
     cleanups.push(close);
     const res = await client.callTool("get_invoice", { invoice_id: "inv-1" });
     expect(res.ok).toBe(false);
-    expect(res.refusal_reason).toBe("unknown_mission");
+    expect(res.refusal_reason).toBe("mission_reference_conflict");
   });
 
-  it("refuses mission_reference_conflict with a MALFORMED Mission-Reference field, a different failure from an absent one", async () => {
+  it("refuses mission_reference_conflict with a MALFORMED Mission-Reference field, as for an absent one", async () => {
     const { url } = await buildGoverned();
     const { client, close } = await createHttpMediatedClient(url, await signOrdinaryToken(), dpopKeys, {
       "mission-reference": `id="${VIEW.id}", issuer="${ISSUER}", state="active"`,
@@ -633,7 +637,7 @@ d("MAS-governed HTTP MCP channel (baseline Join)", () => {
     expect(res.ok, JSON.stringify(res)).toBe(true);
   });
 
-  it("denies mission_mismatch for the SAME delegate when nothing recorded the edge: no actor record, no join", async () => {
+  it("denies mission_binding_failed for the SAME delegate when nothing recorded the edge: no actor record, no join", async () => {
     const { url } = await buildGoverned({ delegate: true });
     const { client, close } = await createHttpMediatedClient(
       url,
@@ -644,7 +648,7 @@ d("MAS-governed HTTP MCP channel (baseline Join)", () => {
     cleanups.push(close);
     const res = await client.callTool("get_invoice", { invoice_id: "inv-1" });
     expect(res.ok).toBe(false);
-    expect(res.denial_reason).toBe("mission_mismatch");
+    expect(res.denial_reason).toBe("mission_binding_failed");
   });
 
   it("the MISSION-BOUND channel rejects the same ordinary credential at the gate, before the PEP", async () => {

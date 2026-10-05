@@ -3,7 +3,7 @@
  *
  * Standalone unit coverage for the baseline mapping join resolver: subject
  * join (rule 3), client join direct/delegate (rule 4), delegate narrowing
- * (rule 5), and uniform mission_mismatch denial with no fallback (rule 6).
+ * (rule 5), and uniform mission_binding_failed denial with no fallback (rule 6).
  * Exercised directly against MissionView fixtures, independent of the PEP.
  *
  * Also covers `deriveJoinDelegation` composed with `resolveBaselineJoin`
@@ -53,14 +53,14 @@ describe("resolveBaselineJoin: subject join (@spec authority-server#mission-join
     expect(result).toEqual({ ok: true, disposition: "direct", authoritySet: [DIRECT_ENTRY] });
   });
 
-  it("denies mission_mismatch when the subject sub differs", () => {
+  it("denies mission_binding_failed when the subject sub differs", () => {
     const result = resolveBaselineJoin({ view: view(), subject: { ...SUBJECT, sub: "mallory" }, clientId: "ap-agent" });
-    expect(result).toEqual({ ok: false, reason: "mission_mismatch" });
+    expect(result).toEqual({ ok: false, reason: "mission_binding_failed" });
   });
 
-  it("denies mission_mismatch when the subject issuer differs (same sub)", () => {
+  it("denies mission_binding_failed when the subject issuer differs (same sub)", () => {
     const result = resolveBaselineJoin({ view: view(), subject: { iss: "https://other-idp.test", sub: "alice" }, clientId: "ap-agent" });
-    expect(result).toEqual({ ok: false, reason: "mission_mismatch" });
+    expect(result).toEqual({ ok: false, reason: "mission_binding_failed" });
   });
 });
 
@@ -71,19 +71,19 @@ describe("resolveBaselineJoin: client join (@spec authority-server#mission-join 
     expect(result.ok && result.disposition).toBe("direct");
   });
 
-  it("denies mission_mismatch for an unrecognized client with no delegate policy at all", () => {
+  it("denies mission_binding_failed for an unrecognized client with no delegate policy at all", () => {
     const result = resolveBaselineJoin({ view: view(), subject: SUBJECT, clientId: "unknown-client" });
-    expect(result).toEqual({ ok: false, reason: "mission_mismatch" });
+    expect(result).toEqual({ ok: false, reason: "mission_binding_failed" });
   });
 
-  it("denies mission_mismatch for a client not named in the delegate policy (no default)", () => {
+  it("denies mission_binding_failed for a client not named in the delegate policy (no default)", () => {
     const result = resolveBaselineJoin({
       view: view(),
       subject: SUBJECT,
       clientId: "unknown-client",
       delegatePolicy: { delegates: { "delegate-a": {} } },
     });
-    expect(result).toEqual({ ok: false, reason: "mission_mismatch" });
+    expect(result).toEqual({ ok: false, reason: "mission_binding_failed" });
   });
 });
 
@@ -109,7 +109,7 @@ describe("resolveBaselineJoin: delegate narrowing (@spec authority-server#missio
       // delegation member rather than for an absent actor record.
       delegateDepth: 1,
     });
-    expect(result).toEqual({ ok: false, reason: "mission_mismatch" });
+    expect(result).toEqual({ ok: false, reason: "mission_binding_failed" });
   });
 
   it("excludes an entry whose allowed_delegates does not name this delegate", () => {
@@ -127,10 +127,10 @@ describe("resolveBaselineJoin: delegate narrowing (@spec authority-server#missio
       // Recorded, so the denial is allowed_delegates', not an absent record's.
       delegateDepth: 1,
     });
-    expect(result).toEqual({ ok: false, reason: "mission_mismatch" });
+    expect(result).toEqual({ ok: false, reason: "mission_binding_failed" });
   });
 
-  it("denies mission_mismatch when the recorded depth exceeds the delegate's max_depth", () => {
+  it("denies mission_binding_failed when the recorded depth exceeds the delegate's max_depth", () => {
     const result = resolveBaselineJoin({
       view: view({ authority_set: [DELEGABLE_ENTRY] }),
       subject: SUBJECT,
@@ -138,7 +138,7 @@ describe("resolveBaselineJoin: delegate narrowing (@spec authority-server#missio
       delegatePolicy: { delegates: { "delegate-a": { maxDepth: 3 } } },
       delegateDepth: 5,
     });
-    expect(result).toEqual({ ok: false, reason: "mission_mismatch" });
+    expect(result).toEqual({ ok: false, reason: "mission_binding_failed" });
   });
 
   it("joins as a delegate when the recorded depth is within max_depth", () => {
@@ -152,17 +152,17 @@ describe("resolveBaselineJoin: delegate narrowing (@spec authority-server#missio
     expect(result.ok).toBe(true);
   });
 
-  it("denies mission_mismatch when delegateDepth is absent and DelegatePolicy declares a maxDepth (an absent actor record denies, it is not an unbounded depth)", () => {
+  it("denies mission_binding_failed when delegateDepth is absent and DelegatePolicy declares a maxDepth (an absent actor record denies, it is not an unbounded depth)", () => {
     const result = resolveBaselineJoin({
       view: view({ authority_set: [DELEGABLE_ENTRY] }),
       subject: SUBJECT,
       clientId: "delegate-a",
       delegatePolicy: { delegates: { "delegate-a": { maxDepth: 3 } } },
     });
-    expect(result).toEqual({ ok: false, reason: "mission_mismatch" });
+    expect(result).toEqual({ ok: false, reason: "mission_binding_failed" });
   });
 
-  it("denies mission_mismatch when delegateDepth is absent and NOTHING declares a max_depth: no actor record means the delegate is not recorded as acting under the Mission", () => {
+  it("denies mission_binding_failed when delegateDepth is absent and NOTHING declares a max_depth: no actor record means the delegate is not recorded as acting under the Mission", () => {
     // No max_depth on the entry and none in the delegate policy: before the
     // absent-record rule this delegate joined with no depth check at all.
     const unboundedEntry: AuthorityEntry = {
@@ -177,7 +177,7 @@ describe("resolveBaselineJoin: delegate narrowing (@spec authority-server#missio
       clientId: "delegate-a",
       delegatePolicy: { delegates: { "delegate-a": {} } },
     });
-    expect(result).toEqual({ ok: false, reason: "mission_mismatch" });
+    expect(result).toEqual({ ok: false, reason: "mission_binding_failed" });
   });
 
   it("joins that same no-max_depth delegable entry once an actor record supplies a depth", () => {
@@ -217,7 +217,7 @@ describe("resolveBaselineJoin: per-entry join_delegation.max_depth (@spec author
       delegatePolicy: { delegates: { "delegate-a": { maxDepth: 3 } } },
       delegateDepth: 1,
     });
-    expect(result).toEqual({ ok: false, reason: "mission_mismatch" });
+    expect(result).toEqual({ ok: false, reason: "mission_binding_failed" });
   });
 
   it("includes an entry whose own max_depth is 0 for a delegate at depth exactly 0", () => {
@@ -238,7 +238,7 @@ describe("resolveBaselineJoin: per-entry join_delegation.max_depth (@spec author
       clientId: "delegate-a",
       delegatePolicy: { delegates: { "delegate-a": { maxDepth: 3 } } },
     });
-    expect(result).toEqual({ ok: false, reason: "mission_mismatch" });
+    expect(result).toEqual({ ok: false, reason: "mission_binding_failed" });
   });
 });
 
@@ -282,7 +282,7 @@ describe("deriveJoinDelegation: kernel delegation adapter (@spec authority-serve
       clientId: "delegate-a",
       delegatePolicy: { delegates: { "delegate-a": {} } },
     });
-    expect(result).toEqual({ ok: false, reason: "mission_mismatch" });
+    expect(result).toEqual({ ok: false, reason: "mission_binding_failed" });
   });
 });
 
@@ -306,14 +306,14 @@ describe("deriveJoinDelegation + resolveBaselineJoin: canonical loader compositi
     join_delegation: deriveJoinDelegation({ max_depth: 1, allowed_delegates: [{ sub: "delegate-a" }] }),
   };
 
-  it("denies mission_mismatch for a loader-populated delegate entry when the caller supplies no delegateDepth", () => {
+  it("denies mission_binding_failed for a loader-populated delegate entry when the caller supplies no delegateDepth", () => {
     const result = resolveBaselineJoin({
       view: view({ authority_set: [kernelEntry] }),
       subject: SUBJECT,
       clientId: "delegate-a",
       delegatePolicy: { delegates: { "delegate-a": {} } },
     });
-    expect(result).toEqual({ ok: false, reason: "mission_mismatch" });
+    expect(result).toEqual({ ok: false, reason: "mission_binding_failed" });
   });
 
   it("joins as a delegate for a loader-populated entry once the caller supplies a delegateDepth within the kernel's max_depth", () => {
@@ -335,14 +335,14 @@ describe("deriveJoinDelegation + resolveBaselineJoin: canonical loader compositi
       delegatePolicy: { delegates: { "delegate-a": {} } },
       delegateDepth: 2,
     });
-    expect(result).toEqual({ ok: false, reason: "mission_mismatch" });
+    expect(result).toEqual({ ok: false, reason: "mission_binding_failed" });
   });
 });
 
 describe("resolveBaselineJoin: no fallback (@spec authority-server#mission-join rule 6)", () => {
   it("a failed join never returns a partial or unjoined authoritySet", () => {
     const result = resolveBaselineJoin({ view: view(), subject: { ...SUBJECT, sub: "mallory" }, clientId: "ap-agent" });
-    expect(result).toEqual({ ok: false, reason: "mission_mismatch" });
+    expect(result).toEqual({ ok: false, reason: "mission_binding_failed" });
     expect((result as { authoritySet?: unknown }).authoritySet).toBeUndefined();
   });
 });
