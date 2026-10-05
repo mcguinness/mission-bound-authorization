@@ -42,6 +42,8 @@ What is adopted (D284):
 - **Not waiting on #249 or #210:** the payments Operation Profile
   ([operation-profile-payments-v1.md](operation-profile-payments-v1.md)) is
   this target's resource contract.
+- **State source (D293):** the declared local committed read is accepted for
+  this co-located target (§4). #1101 owns a separated realization.
 
 What the reference asserts: nothing named. The published Enforcement Scope
 Statement (`config/enforcement-scope.json`) has no `claims` member, so it
@@ -58,12 +60,12 @@ keeps its own ruling; #820 and #424 stay parked.
 
 ## 2. Dimension contract
 
-| Dimension | Adopted (D284) | Reference at `57373c29` | Status | Gap owner |
+| Dimension | Adopted (D284, D293) | Reference at `57373c29` | Status | Gap owner |
 |---|---|---|---|---|
 | Topology | One configured issuer and trust domain; trusted Approver resolver, PEP, PDP and Resource; no implied federation | One process. `composeStack({ withAuthServer: true })` (`demo/src/stack.ts:191`) runs the AS on 4400 (issuer `http://localhost:4400`, `stack.ts:273-275`), the PEP `mcp-payments-pep` (`stack.ts:706-708`), the PDP (`stack.ts:539`), OpenFGA, and the in-process approval service. The resource audience is `http://localhost:4403/mcp` (`services/mcp-payments/src/pep.ts:67`); nothing listens there. The AS JWKS is fetched once at assembly (`stack.ts:373`) | Partial | No launcher for exactly this topology: no issue yet. `composeStack` also starts a MAS join route (see Binding). JWKS reload: #831 |
 | Binding | OAuth Mission-bound issuance, Runtime OAuth and AuthZEN; MAS join only in its separately declared path | Runtime OAuth credential validation and the AuthZEN request (§4, §5). The PDP is a direct call by default with no PEP authentication (`services/pdp/src/decision-channel.ts:56-61`); `MISSION_PDP_MODE=remote` adds a loopback HTTP hop keyed by a per-boot secret that is never configured, so it cannot cross processes as shipped (`decision-channel.ts:64-66`). `config/mas-join.json` names the payments resource governed, so `composeStack` also starts a MAS join route (`stack.ts:792-794`) the statement does not declare | Partial | Exclude or disable the MAS route on this target: no issue yet (#818 owns MAS itself) |
 | Operations | Enumerated payments operations, authority types, classes, phases and parameter binding; refuse outside the allowlist | Nine tools, all classed (§3). An unknown tool is refused `unknown_tool` before any PDP call (`pep.ts:1084`) | Partial | `hold_transfer` control: #918 leftovers. Profile drift (§3): no issue yet |
-| State | Authoritative Mission Status; per-class staleness, skew, permit and execution bounds; source selection and unavailable behavior | The PEP and PDP read the AS kernel's committed record in process (`loadView`, `stack.ts:665-672`; the statement's state source is `kernel-committed load_view`, placement `pep`). That is the authoritative record behind Status, but it is not the Mission Status operation, introspection or Signals. Bounds and fail-closed behavior: §4 | Partial: the source is deployment-defined and local | A PEP or PDP separated from the AS has no demonstrated state source: owner decision pending, no issue yet |
+| State | For this co-located target, the declared local committed read (D293 narrows D284's "authoritative Status"); per-class staleness, skew, permit and execution bounds; source ownership and unavailable behavior | The PEP and PDP read the AS kernel's committed record in process (`loadView`, `stack.ts:665-672`; the statement's state source is `kernel-committed load_view`, placement `pep`). That is the authoritative record behind Status, but it is not the Mission Status operation, introspection or Signals. Bounds and fail-closed behavior: §4 | Source accepted (D293); one unavailable-state witness missing (§4) | Separated PEP or PDP: #1101, which gates only a separated-deployment claim |
 | Policy | Conjunction of token authority, current effective Mission authority and independently administered Resource policy | Current effective Mission authority is enforced and tested. Token authority is read only for validity, audience, `cnf` and the `mission` reference. Independent Resource policy is not implemented (§5) | Partial | Token authority: #825 (PR #1062). Resource policy: #828 |
 | Evidence | Runtime/Decision Base and explicitly enabled evidence capabilities; emitters, verifiers, retention, failure carriers; missing telemetry is `indeterminate` | Decision Evidence, Refusal Records and Execution Evidence (§6). The `evidence` extension is not enabled, so there is no receipt issuer | Partial | Emission-failure tests: no issue yet |
 | Persistence | Every store, its transaction or acceptance boundary, and restart and reconciliation behavior | Only the PDP claim domain and the PEP write reservations are durable files; every other store is in memory (§7). The declared reconciler is not run | Partial | #250, #831, #917 and #918 leftovers |
@@ -102,6 +104,12 @@ Residuals:
 
 ## 4. State and freshness
 
+- **Decision (D293).** The synchronous committed read below is this
+  co-located target's declared local source; it is not a Mission Status wire
+  call. A PEP or PDP separated from the AS would use authenticated Mission
+  Status or per-decision introspection at the AS holding the Mission, with no
+  silent fallback or re-stamped observation (#1101). State alone supplies
+  neither current effective authority nor independent Resource policy.
 - **Source.** `loadView` (`stack.ts:665-672`) returns the kernel's committed state and version with `mode: "fresh"` and `freshness_at` set to now. Each read happens inside the request, so the bounds below bind only injected observations in tests: `the PEP sends the AuthZEN profile's members (@spec authzen#context-audience-freshness, #1004) > under PEP placement, carries the loader's observation at context.mission_state_observation, with state, mode and freshness_at, and no context.freshness`.
 - **Per-class bounds** (`config/enforcement-scope.json:15-26`): 300 s for `consequential_read`, `consequential_write` and `non_consequential`; 30 s for `irreversible_action` and `privileged_administration`; 60 s for `external_commitment`; none for `audit_only`; beyond the bound, deny; issuer ceiling 300 s. The loader refuses any other mode: `published runtime posture (@spec runtime#runtime-operational, status#status-operational) > refuses unsupported modes, malformed or missing bounds, and bounds exceeding the issuer ceiling`.
 - **Clock skew.** An observation up to 5 s in the future is accepted (`evaluate.ts:94`), and clamped to the decision instant for the permit cap: `permit deadline (@spec runtime#state-freshness) > clamps a skew-tolerated future observation to the decision instant, so skew cannot lengthen a permit`.
@@ -227,7 +235,7 @@ That test uses another member; no test names `max_budget`.
 
 - #825 (token authority; PR #1062), #826 (Approver versus Subject; PR #1074), #828 (Resource policy), #831 (keys and verifier refresh), #250 (control-plane atomicity; revoke versus issue), #916 (approval commits before grant binding), #830 (identity changes apply at restart), #817 (resource-side execution capabilities), #773 (context-drift vectors, conditional), #873 (inherited floor obligations).
 - #917 and #918 are implemented (D245, D247) with listed leftovers; their issue bodies still read "Nothing merged".
-- No issue yet: the separated-deployment state source (§2, State); the Operation Profile drift (§3); a launcher for exactly this topology (§2, Topology); excluding the MAS join route from this target (§2, Binding); emission-failure tests (§6).
+- No issue yet: the Operation Profile drift (§3); a launcher for exactly this topology (§2, Topology); excluding the MAS join route from this target (§2, Binding); emission-failure tests (§6).
 
 ## 9. Pinned adoption closure
 
@@ -255,8 +263,9 @@ no pin.
 **Relied on for terms, not as the wire source:**
 `draft-mcguinness-oauth-mission-status.md` `b79f4f08` defines the Effective
 Authority Set, the lifecycle states, `mission_max_stale_seconds` and the
-floor's `revoke`. Its Mission Status operation is not this deployment's state
-source (§2, State).
+floor's `revoke`. Its Mission Status operation is not this co-located
+target's state source (D293, §4); a separated realization uses it or core
+introspection (#1101).
 
 **Conditional, not triggered:**
 
