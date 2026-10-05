@@ -662,12 +662,10 @@ class and makes no production-readiness claim.
 
 This document is the documentation foundation for #873: the deployment
 contract, the claim and residual matrix, a hook inventory, and an index of
-existing evidence. #873 still requires the following before it closes:
+existing evidence. The full obligation matrix is in
+[provider-integration-port.md](provider-integration-port.md) (#893, D184).
+#873 still requires the following before it closes:
 
-- **`src/docs/provider-integration-port.md`:** the full obligation matrix,
-  covering the transaction and acceptance boundary, permitted asynchronous
-  work, crash and recovery behavior, public-surface test, and residual for
-  each obligation.
 - **The executable acceptance pack's missing cases:**
   - revoke-during-issuance and failure after reservation or artifact
     acceptance (tied to #250);
