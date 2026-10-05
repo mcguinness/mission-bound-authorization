@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-05T18:55:44Z
-Source repository commit: ca761a6690c2dc6c3f791e6ed37139f06d5e7723
+Generated: 2026-10-05T22:11:23Z
+Source repository commit: 54b01de4c0f0b76259c4e981b603000d4174dda9
 Member count: 9
 
 Reading order:
@@ -187,6 +187,14 @@ Table of Contents
    that cannot size authority to a task compensates with read-only
    scoping, a human executing every write, or permanently fenced pilots;
    the Mission is the representation those controls substitute for.
+
+   What the family standardizes is agreement across components.
+   Independently implemented components, under a declared binding and
+   the deployment's declared mappings, preserve the same approved task
+   context, narrowing rules, lifecycle meaning, and provenance.  Inside
+   one administrative domain a conventional stack implements much of
+   this locally (Appendix B); each deployment still configures its
+   bindings, mappings, and the trust between components.
 
    The model is decomposed into bindings and optional companions.  The
    bindings are these:
@@ -730,6 +738,14 @@ Table of Contents
    interoperable form and is deployment discipline, declared in the
    Deployment Profile (Section 12.6) rather than claimed.
 
+   A bound makes an error survivable only along the dimension it meters.
+   A per-action cap, a cumulative budget, and a recipient list each
+   bound their own quantity; an incorrect run inside every bound can
+   still cause harm none of them measures, so staying within the
+   authorized envelope does not by itself make the harm tolerable.  A
+   deployment states which harms its bounds cover and lists the rest as
+   residuals (Section 12.6).
+
 5.  Non-Goals
 
    The family does not define:
@@ -936,8 +952,12 @@ Table of Contents
    Authorizer:  the Mission Issuer at issuance (the OAuth binding); the
       PDP per action ([I-D.draft-mcguinness-mission-runtime]).
 
-   Approved agent:  the OAuth client, client_id on every derived token
+   Approved agent:  the client the Mission Record records at approval
       (the OAuth binding).
+
+   Requesting client:  client_id on each issued or derived token, naming
+      the client that requested it, never the approved agent (the OAuth
+      binding).
 
    Executing delegate:  the outermost act actor (the OAuth binding's
       Delegation section).
@@ -1577,7 +1597,10 @@ Table of Contents
 
    Projection preserves authority across the boundary rather than
    narrowing it to a sub-actor, which makes it a distinct verb from
-   Delegate.  Downstream revocation latency is the local token lifetime.
+   Delegate.  Downstream revocation latency is the local token lifetime
+   plus, where the Resource AS checks no Mission state when it mints
+   from the projection grant, that grant's remaining lifetime
+   (Section 10.4).
 
 7.9.  Continue
 
@@ -1948,25 +1971,29 @@ Table of Contents
 
    The contract has a dual of equal force.  The resource owns what an
    action means; the Mission owns why it is happening and where the
-   undertaking stands, and that context exists nowhere else in the
-   stack.  A resource evaluates each request at perfect local resolution
-   and zero task resolution: it can price every consequence its ontology
-   names but cannot see the undertaking the request belongs to.  A risk
-   decision composes both sides of this context asymmetry.  Semantics
-   without purpose prices every delete the same; purpose without
-   semantics cannot read the call.
+   undertaking stands, and carries that context in one form that
+   independently implemented components on the path share.  A resource
+   that does not itself run the undertaking evaluates each request at
+   perfect local resolution and zero task resolution: it can price every
+   consequence its ontology names but cannot see the undertaking the
+   request belongs to.  A risk decision composes both sides of this
+   context asymmetry.  Semantics without purpose prices every delete the
+   same; purpose without semantics cannot read the call.
 
    "Delete database" in isolation is indistinguishable from catastrophe.
-   "Delete database" inside an approved migration whose copy steps
-   already completed is a priced, checkable step.  That judgment needs
-   the undertaking's history, and no resource-local view contains it.
-   After the fact, that history is reconstructible from the join of
-   Decision and Execution Evidence on the Mission's identity.  At
-   decision time, a task-aware decision point can draw the same history
-   from trusted prior workflow state or another authoritative source.
-   The runtime profile names the mechanism: sequence-aware evaluation
-   over the undertaking's history is an optional decision input, guarded
-   so that history informs a decision and never widens one
+   "Delete database" inside an approved migration whose copy of that
+   same database, at the revision being deleted, already completed is a
+   priced, checkable step.  That judgment needs the undertaking's
+   history bound to the object and its revision, which a resource-local
+   view holds only where the resource itself runs the workflow.  After
+   the fact, that history is reconstructible from the join of Decision
+   and Execution Evidence on the Mission's identity.  At decision time,
+   a task-aware decision point can draw the same history from trusted
+   prior workflow state or another authoritative source.  The runtime
+   profile names the mechanisms: sequence-aware evaluation over the
+   undertaking's history is an optional decision input, guarded so that
+   history informs a decision and never widens one, and Evaluation-
+   Context Binding commits the revision a decision relied on
    ([I-D.draft-mcguinness-mission-runtime]).
 
 9.2.  The Authority Derivation Boundary
@@ -1996,14 +2023,16 @@ Table of Contents
    policy_version), never whether it was the right reading of the task.
 
    Narrowing mode is the interoperable path: each derived entry is a
-   subset of a proposed entry, so the result is reproducible and the
-   client can check it against its proposal.  A deployment whose
-   partners must reason about its derivations can publish a derivation
-   policy identifier and test fixtures that pin Intent-to-Authority-Set
-   outcomes, making the local policy reviewable even though it does not
-   travel.  The OAuth binding's informative Derivation Policy appendix
-   ([I-D.draft-mcguinness-oauth-mission]) illustrates that policy
-   artifact: a worked narrowing rule, fixtures, and ownership.
+   subset of a proposed entry, so the client can check that the result
+   stays within its proposal.  Reproducing which subset was derived
+   takes the retained derivation policy and its inputs.  A deployment
+   whose partners must reason about its derivations can publish a
+   derivation policy identifier and test fixtures that pin Intent-to-
+   Authority-Set outcomes, making the local policy reviewable even
+   though it does not travel.  The OAuth binding's informative
+   Derivation Policy appendix ([I-D.draft-mcguinness-oauth-mission])
+   illustrates that policy artifact: a worked narrowing rule, fixtures,
+   and ownership.
 
    The ceiling the derivation narrows against is a composition, not a
    single object.  The derived Authority Set sits inside every bound on
@@ -2342,6 +2371,16 @@ Table of Contents
    every applicable horizon to be open, and no horizon substitutes for
    another.
 
+   The minimum applies to horizons enforced together on one use, not to
+   sequential reminting.  An exchange that mints a new artifact without
+   a fresh state check relies on the observation behind the artifact it
+   consumed, so the residual sums: the consumed artifact's remaining
+   redemption time with its clock-skew leeway, plus the new artifact's
+   lifetime, plus that of each further unchecked exchange, capped by the
+   expiry ceilings that already apply.  A grant redeemed at a consuming
+   Authorization Server without a Mission-state integration is the
+   family's case ([I-D.draft-mcguinness-oauth-mission-issuance-grant]).
+
    The horizons also give the deployment its freshness dial, whose TTL-
    only end is a first-class posture, not a fallback.  A deployment that
    relies on lifetimes alone verifies with local cryptography and a
@@ -2657,9 +2696,10 @@ Table of Contents
       *Lifetime-bounded reliance*, access-token lifetimes no longer than
       the deployment's tolerated staleness
       ([I-D.draft-mcguinness-oauth-mission-status]), gives a quantified
-      cutoff: revocation within one token lifetime, with no Resource
-      Server changes and no status traffic.  Expiry closes the temporal
-      bound by the clock alone and observes no revocation, suspension,
+      cutoff: revocation within one token lifetime on every path whose
+      minting checks current Mission state, with no Resource Server
+      changes and no status traffic.  Expiry closes the temporal bound
+      by the clock alone and observes no revocation, suspension,
       completion, or containment, so the lifetime must not exceed the
       tolerated staleness.  Revocation latency is a number, not a level:
       the higher levels add per-action enforcement, parameter binding,
@@ -2672,7 +2712,9 @@ Table of Contents
       states that.  The issuance join
       ([I-D.draft-mcguinness-oauth-mission-issuance-grant]) restores
       gated issuance at each consuming Authorization Server, and
-      Baseline with it.
+      Baseline with it.  At a consuming Authorization Server that checks
+      no Mission state at redemption, the bound is the grant's remaining
+      redemption time plus the issued token's lifetime (Section 10.4).
 
       *AAuth*: the nearest comparison, stated as capabilities rather
       than a level, is native approval, exact-byte commitment, active or
@@ -2704,7 +2746,8 @@ Table of Contents
       *Grants*: per-action enforcement and bounded revocation (for gated
       classes, within the staleness bound plus the permit window plus
       the class's execution bound; for paths no runtime gate reaches,
-      within token lifetime where issuance is gated).
+      within token lifetime where minting checks current state, and the
+      summed residual of Section 10.4 where it does not).
 
       Runtime-Enforced is the smallest deployment that turns a Mission
       from governed issuance into action-time defense.  Every normative
@@ -2753,9 +2796,11 @@ Table of Contents
       of untrusted content alone.
 
       Both claims are named high bars, never implied by basic adoption.
-      A deployment can bind its Enforcement Scope Statement to
-      execution-environment attestation so a claim is technical rather
-      than organizational ([I-D.draft-mcguinness-mission-runtime],
+      Each requires execution-environment attestation of the Enforcement
+      Scope Statement, with the evidence bindings the runtime profile
+      fixes, so the claim is technical rather than organizational; base
+      runtime conformance requires no attestation
+      ([I-D.draft-mcguinness-mission-runtime],
       [I-D.draft-mcguinness-mission-harness]).
 
    Read in adoption order, each level makes a broader class of agent
@@ -2867,8 +2912,9 @@ Table of Contents
       paths it covers: for a runtime-gated class, the published
       staleness bound plus the permit window plus the class's execution
       bound ([I-D.draft-mcguinness-mission-runtime]); for a lifecycle-
-      gated path, the outstanding credential lifetime; an ungated path
-      has no bound to claim.
+      gated path, the outstanding credential lifetime; for a path that
+      remints without a fresh state check, the summed residual of
+      Section 10.4; an ungated path has no bound to claim.
 
    *  *Action-time enforcement*: PEP coverage for the Enforcement Scope
       Statement's mediated set, and nothing outside it.
@@ -3402,19 +3448,20 @@ Table of Contents
    |        |using a     |that class   | denied at the   |gate reaches:|
    |        |containment-|("Containment| class's next    |token        |
    |        |aware state |Properties");| gated action    |lifetime     |
-   |        |source      |Baseline only| once the        |where        |
-   |        |within its  |for the      | source          |issuance is  |
-   |        |published   |classes in   | reflects the    |gated,       |
-   |        |bound (note |note 4       | overlay,        |otherwise no |
-   |        |3)          |             | within the      |bound        |
-   |        |            |             | staleness       |             |
-   |        |            |             | bound plus the  |             |
-   |        |            |             | permit window   |             |
-   |        |            |             | plus the        |             |
-   |        |            |             | class's         |             |
-   |        |            |             | execution       |             |
-   |        |            |             | bound (runtime  |             |
-   |        |            |             | profile)        |             |
+   |        |source      |Baseline only| once the        |where minting|
+   |        |within its  |for the      | source          |checks       |
+   |        |published   |classes in   | reflects the    |current      |
+   |        |bound (note |note 4       | overlay,        |state, the   |
+   |        |3)          |             | within the      |summed       |
+   |        |            |             | staleness       |residual     |
+   |        |            |             | bound plus the  |where it     |
+   |        |            |             | permit window   |remints from |
+   |        |            |             | plus the        |an earlier   |
+   |        |            |             | class's         |observation  |
+   |        |            |             | execution       |(Section     |
+   |        |            |             | bound (runtime  |10.4),       |
+   |        |            |             | profile)        |otherwise no |
+   |        |            |             |                 |bound        |
    +--------+------------+-------------+-----------------+-------------+
    |Baseline|MAS as      |Baseline,    | New grant       |An           |
    |Issuance|estate      |from         | minting: the    |outstanding  |
@@ -3507,7 +3554,8 @@ Table of Contents
        none checks no Mission state at redemption, issues no refresh
        tokens, and relies on the Mission Issuer's minting gate, so a
        grant minted before the transition can still redeem within its
-       300-second lifetime.
+       300-second lifetime, and the token it yields then runs to its own
+       exp: the residual is the two summed (Section 10.4).
 
    6.  Under the OAuth binding with offline attenuation, a consumer
        accepts a chain only under runtime enforcement, with a fresh
@@ -4787,6 +4835,13 @@ Appendix F.  Deployment Profile Example Shapes
       custody statement made legible, not a checked assurance grade (the
       member's definition in Section 12.6 states the open verifier gap).
 
+   *  Its revocation residuals follow the runtime profile's arithmetic:
+      for a mediated class, the 30-second staleness bound, plus whatever
+      permit window a reported lease end leaves beyond it (at most the
+      30-second permit window, and none where the source reports only an
+      observation time), plus the class's execution bound; for any other
+      path, the access-token lifetime.
+
    {
      "profile": "mission-governed-agent-runtime",
      "assurance_claims": [
@@ -4800,11 +4855,14 @@ Appendix F.  Deployment Profile Example Shapes
      "issuance": {
        "binding": "oauth-core",
        "mission_claim_required": true,
-       "refresh_gated_on_active_state": true
+       "refresh_gated_on_active_state": true,
+       "max_access_token_lifetime_seconds": 300
      },
      "runtime": {
        "pdp": "authzen",
        "pep_locations": ["tool-gateway", "browser-action-proxy"],
+       "max_permit_window_seconds": 30,
+       "execution_bound_seconds": 30,
        "mediated_action_classes": [
          "irreversible_action", "external_commitment",
          "privileged_administration"
@@ -4899,7 +4957,8 @@ Appendix F.  Deployment Profile Example Shapes
      "residual_risks": [
        "mediated custody is declared, not evidenced: no High-Assurance claim is made",
        "unmediated local reasoning is outside enforcement",
-       "revocation latency up to 30 seconds",
+       "mediated classes: revocation stops new effect within 90 seconds",
+       "other paths: revocation within the 300-second token lifetime",
        "PEP compromise is not prevented",
        "per-entry constraints reach scope-only resources only via the PEP",
        "long-term memory and provider model context are not Mission-scoped exposure points"
@@ -5327,6 +5386,19 @@ Appendix G.  Mission Document Map
 Appendix H.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Corrections from the fourth outside review.  The Validity Model
+      sums the residual across an exchange that mints without a fresh
+      state check, and Project, The Four Levels, Assurance Claims,
+      Composed Kill-Switch Reality, and Appendix F's first shape state
+      revocation figures from that arithmetic.  The Actor Chain
+      separates the approved agent, recorded at approval, from the
+      requesting client_id.  Both High-Assurance claims require
+      attestation.  The Ontology Contract describes task context as
+      shared across components; the Derivation Boundary calls narrowing
+      checkable, not reproducible; Survivable Incorrectness separates a
+      bounded dimension from tolerable harm; and the Introduction states
+      the standardization thesis.
 
    *  Four clarifications from #953, with no change to any profile's
       requirements.  Mission Binding Properties states two routes to
@@ -16786,13 +16858,15 @@ Table of Contents
       bound without its latency consequence is non-conformant.  For a
       PDP-gated class, a Mission's revocation takes effect, in the worst
       case, after the staleness bound plus the permit validity window
-      plus the class's execution bound (Section 8); the derived
-      credential's lifetime is the bound only for paths outside PDP
-      gating.  This document imposes no universal value because the
-      acceptable latency is deployment- and consequence-specific; the
-      bound is the number that determines the profile's headline
-      revocation property.  The per-class budgets below are the
-      RECOMMENDED defaults for the value.
+      plus the class's execution bound (Section 8).  For a path outside
+      PDP gating, the bound is the derived credential's lifetime where
+      its minting checked current state, and otherwise that lifetime
+      plus the age of the observation it was minted from (Credential-
+      lifetime freshness, below).  This document imposes no universal
+      value because the acceptable latency is deployment- and
+      consequence-specific; the bound is the number that determines the
+      profile's headline revocation property.  The per-class budgets
+      below are the RECOMMENDED defaults for the value.
 
    *  For the high-consequence classes, the state source MUST be an
       active freshness mechanism that can reflect a revocation within
@@ -16822,30 +16896,31 @@ Table of Contents
    own term because a state source reporting an explicit lease end can
    leave a permit window beyond the staleness bound; under observation-
    time reporting the permit cap collapses that term.  A path outside
-   PDP gating keeps only the derived credential's lifetime as its bound.
+   PDP gating keeps the derived credential's lifetime as its bound, plus
+   the age of the observation it was minted from where that minting
+   checked no current state.
 
-   For a deployment whose Mission-bound credentials are short-lived and
-   whose issuance and refresh are themselves gated on live Mission
-   state, the refresh cycle itself is a conforming active freshness
-   source for any action class whose published staleness bound the
-   credential lifetime meets: the issuance gate is an active check, and
-   a credential that exists is evidence the Mission was active within
-   the lifetime.  This source's revocation latency floor is the
-   credential lifetime, so it conforms only for classes whose bound
-   admits that floor, and a higher-frequency source remains the path to
-   tighter bounds.
-
-   *Credential-lifetime freshness.* Below the high-consequence floor,
-   credential expiry is itself a conforming state source where
-   derivation and refresh are gated on active, so a credential's
-   remaining lifetime bounds the staleness of the authority it carries,
-   and the published staleness bound for a class relying on it is the
-   maximum credential lifetime.  Expiry is a state check performed by
-   the clock: no status call, no query, no change at the consuming
-   resource.  A deployment declares it per class in its Enforcement
-   Scope Statement like any other source; what it cannot do is reflect a
-   revocation faster than the lifetime, which is why the high-
-   consequence classes require an active source.
+   *Credential-lifetime freshness.* Below the high-consequence floor, a
+   deployment whose Mission-bound credentials are short-lived can use
+   them as its state source, in two forms: credential expiry, and the
+   refresh cycle gated on live Mission state, whose issuance gate is an
+   active check.  Either conforms only where, on every issuance,
+   refresh, and exchange path for those credentials, the age of the
+   state observation a credential is minted from plus the credential's
+   lifetime stays within the published staleness bound.  A credential
+   minted after a fresh check is evidence the Mission was active within
+   its lifetime, so the bound is at least the maximum credential
+   lifetime.  A credential minted from an earlier observation without a
+   fresh check, such as a grant redeemed later, is evidence only as of
+   that observation, so the observation's age adds to its lifetime
+   ([I-D.draft-mcguinness-mission-architecture], Section "The Validity
+   Model").  Expiry is a state check performed by the clock: no status
+   call, no query, no change at the consuming resource.  A deployment
+   declares the source per class in its Enforcement Scope Statement like
+   any other.  Its revocation latency floor is the credential lifetime,
+   so it cannot reflect a revocation faster than that: the high-
+   consequence classes require an active source, and a higher-frequency
+   source remains the path to tighter bounds.
 
    Together the sources form a single freshness dial, and a deployment
    picks a position per action class rather than one posture for the
@@ -20765,6 +20840,18 @@ Appendix C.  Runtime Evidence Worked Examples
 Appendix D.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Mission State and Freshness states credential expiry and the
+      state-gated refresh cycle as one Credential-lifetime freshness
+      source below the high-consequence floor, conforming only where
+      every issuance, refresh, and exchange path checks Mission state
+      within the published bound (observation age plus lifetime); a
+      credential minted from an earlier observation adds that
+      observation's age, and the latency statements for paths outside
+      PDP gating carry the same sum.  No BCP 14 sentence changed; the
+      stated conformance condition, previously gated derivation and
+      refresh, now covers every issuance, refresh, and exchange path and
+      has its own ledger row.
 
    *  Evaluation-Context Binding no longer speaks of "Runtime-Enforced
       conformance": a level is guidance, never a conformance class.  No

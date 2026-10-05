@@ -150,9 +150,11 @@ Table of Contents
    integration (Section 2) also checks the Mission at redemption and at
    every refresh; one without issues no refresh tokens, so its tokens
    end with their own short lifetime.  Either way, every path to new
-   tokens passes a Mission-state check: the issuance-gate kill switch
-   that a MAS alone does not provide
-   ([I-D.draft-mcguinness-mission-authority-server]).
+   tokens passes a Mission-state check, at minting or at redemption: the
+   issuance-gate kill switch that a MAS alone does not provide
+   ([I-D.draft-mcguinness-mission-authority-server]).  Without the
+   integration that check is the grant's minting, so its age at
+   redemption adds to the issued token's lifetime (Section 11).
 
    The AS implements none of the issuance profile's intake, approval
    ceremony, authority derivation, record, or lifecycle surfaces; those
@@ -654,9 +656,11 @@ Table of Contents
       token under the grant with an expiry later than the mission
       object's expires_at.  That ceiling is the Mission horizon, not a
       liveness bound, so access tokens issued under a grant SHOULD be
-      short-lived: absent a redemption-time state check, an issued
-      access token's own lifetime is the window in which a revoked
-      Mission's token keeps working at the token layer.
+      short-lived: absent a redemption-time state check, a revoked
+      Mission's token can keep working at the token layer for the
+      grant's remaining redemption time and clock-skew leeway
+      (Section 6.1) plus the issued token's own lifetime, never past
+      expires_at.
 
    *  *Effective Authority Set projection.* A consuming AS with a
       Mission-state integration gates redemption and every refresh on
@@ -1108,13 +1112,17 @@ Table of Contents
    *Revocation latency.* New grants stop at the MAS active gate at the
    moment of state commit.  A grant already issued can still be redeemed
    within its 300 seconds at a consuming AS without a Mission-state
-   integration.  Issued access tokens run to their own expiry, and an
-   outstanding refresh token is refused at its next state-gated use;
-   where the runtime layer is deployed, the Policy Decision Point's re-
-   check bounds outstanding-token use independently.  A refresh re-
-   projects through the Effective Authority Set (Section 6.3), so a
-   Mission contained or discharged between issuance and refresh does not
-   renew its original, now-narrowed authority.  A deployment states the
+   integration, and the token it yields runs to its own expiry.  The
+   residual there is the sum: the grant's remaining lifetime and clock-
+   skew leeway, plus the issued token's lifetime, plus that of each
+   further exchange that checks no Mission state, capped by expires_at.
+   Issued access tokens run to their own expiry, and an outstanding
+   refresh token is refused at its next state-gated use; where the
+   runtime layer is deployed, the Policy Decision Point's re-check
+   bounds outstanding-token use independently.  A refresh re-projects
+   through the Effective Authority Set (Section 6.3), so a Mission
+   contained or discharged between issuance and refresh does not renew
+   its original, now-narrowed authority.  A deployment states the
    refresh staleness bound it publishes (Section 10).
 
    *Consent integrity.* The approval the grant rests on was rendered and

@@ -1353,9 +1353,12 @@ Mission receives no new grants. An AS with a Mission-state
 integration (<a href="#conventions" class="auto internal xref">Section 2</a>) also checks the Mission at redemption
 and at every refresh; one without issues no refresh tokens, so its
 tokens end with their own short lifetime. Either way, every path to
-new tokens passes a Mission-state check: the issuance-gate kill switch
-that a MAS alone does not provide
-(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>).<a href="#section-1-3" class="pilcrow">¶</a></p>
+new tokens passes a Mission-state check, at minting or at redemption:
+the issuance-gate kill switch that a MAS alone does not provide
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>). Without the
+integration that check is the grant's minting, so its age at
+redemption adds to the issued token's lifetime
+(<a href="#security-considerations" class="auto internal xref">Section 11</a>).<a href="#section-1-3" class="pilcrow">¶</a></p>
 <p id="section-1-4">The AS implements none of the issuance profile's intake, approval
 ceremony, authority derivation, record, or lifecycle surfaces; those
 stay at the MAS. A deployment can adopt the issuance join at some
@@ -2054,9 +2057,11 @@ therefore supports <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</spa
 token under the grant with an expiry later than the <code>mission</code>
 object's <code>expires_at</code>. That ceiling is the Mission horizon, not a
 liveness bound, so access tokens issued under a grant <span class="bcp14">SHOULD</span> be
-short-lived: absent a redemption-time state check, an issued access
-token's own lifetime is the window in which a revoked Mission's
-token keeps working at the token layer.<a href="#section-6.2-2.5.1" class="pilcrow">¶</a></p>
+short-lived: absent a redemption-time state check, a revoked
+Mission's token can keep working at the token layer for the grant's
+remaining redemption time and clock-skew leeway
+(<a href="#grant-validation" class="auto internal xref">Section 6.1</a>) plus the issued token's own lifetime, never
+past <code>expires_at</code>.<a href="#section-6.2-2.5.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.2-2.6">
             <p id="section-6.2-2.6.1"><strong>Effective Authority Set projection.</strong> A consuming AS with a
@@ -2621,7 +2626,11 @@ exclusive validation rules (<span><a href="https://rfc-editor.org/rfc/rfc8725#se
 <p id="section-11-7"><strong>Revocation latency.</strong> New grants stop at the MAS <code>active</code> gate at
 the moment of state commit. A grant already issued can still be
 redeemed within its 300 seconds at a consuming AS without a
-Mission-state integration. Issued access tokens run to their own
+Mission-state integration, and the token it yields runs to its own
+expiry. The residual there is the sum: the grant's remaining lifetime
+and clock-skew leeway, plus the issued token's lifetime, plus that of
+each further exchange that checks no Mission state, capped by
+<code>expires_at</code>. Issued access tokens run to their own
 expiry, and an outstanding refresh token is refused at its next
 state-gated use; where the runtime layer is deployed, the Policy
 Decision Point's
