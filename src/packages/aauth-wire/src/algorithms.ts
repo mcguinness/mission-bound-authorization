@@ -54,7 +54,8 @@ export function determineAlgorithm(
   if (typeof k.kty !== "string") {
     throw new SignatureError("invalid_key", "key is missing kty");
   }
-  const required = PUBLIC_MEMBERS[k.kty];
+  // Own properties only: a kty such as "constructor" must not reach Object.prototype.
+  const required = Object.hasOwn(PUBLIC_MEMBERS, k.kty) ? PUBLIC_MEMBERS[k.kty] : undefined;
   if (required?.some((m) => typeof k[m] !== "string")) {
     throw new SignatureError("invalid_key", `key is missing members required for kty ${k.kty}`);
   }

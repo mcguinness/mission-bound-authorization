@@ -5,7 +5,7 @@ import {
   isAgentIdentifier,
   isServerIdentifier,
   JwksResolver,
-  type SignatureError,
+  SignatureError,
 } from "../src/index.js";
 import { AP, FakeNetwork, NOW_MS } from "./fixtures.js";
 
@@ -107,6 +107,19 @@ describe("algorithm determination (@spec aauth#section-11.3.1)", () => {
     } catch (e) {
       expect((e as SignatureError).code).toBe("invalid_key");
       expect((e as SignatureError).detail).toMatch(/missing members/);
+    }
+  });
+
+  it("answers invalid_key, not a TypeError, for a kty naming an Object.prototype member", () => {
+    const { x } = generateSigningKey("Ed25519").publicJwk as { x: string };
+    for (const kty of ["constructor", "__proto__", "toString", "hasOwnProperty"]) {
+      try {
+        determineAlgorithm({ kty, crv: "Ed25519", x, alg: "Ed25519" });
+        expect.unreachable();
+      } catch (e) {
+        expect(e).toBeInstanceOf(SignatureError);
+        expect((e as SignatureError).code).toBe("invalid_key");
+      }
     }
   });
 

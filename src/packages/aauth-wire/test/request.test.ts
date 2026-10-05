@@ -133,6 +133,27 @@ describe("signing and verifying an agent request (@spec aauth#section-11.3)", ()
     expect(result.signer).toEqual({ id: PS, dwk: "aauth-person.json", kid: "key-1" });
   });
 
+  it("answers invalid_key for a jwks_uri key whose kty names an Object.prototype member", async () => {
+    const ps = net.issuer(PS, "aauth-person.json");
+    const jwks = net.documents.get(`${PS}/jwks.json`) as { keys: Record<string, unknown>[] };
+    for (const k of jwks.keys) k.kty = "constructor";
+    const message = post(`${RESOURCE}/revoke`);
+    const added = signRequest(message, {
+      alg: ps.alg,
+      privateKey: ps.privateKey,
+      signatureKey: { scheme: "jwks_uri", id: PS, dwk: "aauth-person.json", kid: ps.kid },
+      created: NOW,
+    });
+    const signed = {
+      ...message,
+      headers: { ...(message.headers as Record<string, string>), ...added },
+    };
+    await rejects(
+      verifyRequest(signed, options({ acceptedSchemes: ["jwks_uri"], requireBodyComponents: true })),
+      "invalid_key",
+    );
+  });
+
   it("verifies a person token presented under the jwt scheme to the resource it names", async () => {
     const ps = net.issuer(PS, "aauth-person.json");
     const person = await mintToken(
