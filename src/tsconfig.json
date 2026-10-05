@@ -8,6 +8,7 @@
     { "path": "packages/actor-chain" },
     { "path": "packages/mission-signals" },
     { "path": "packages/orchestration" },
+    { "path": "packages/aauth-wire" },
     { "path": "services/authorization-server" },
     { "path": "services/pdp" },
     { "path": "services/mcp-payments" },
