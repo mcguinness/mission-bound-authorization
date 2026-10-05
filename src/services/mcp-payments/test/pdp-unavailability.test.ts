@@ -3,6 +3,7 @@ import { canonicalDigest } from "@mission/core";
 import { createDecisionChannel, createEphemeralDecisionPoint, type DecisionEvidenceObject, type DecisionFn, type DecisionOptions, type EvaluationRequest, evaluateRemote, type Fga, isDecisionChannelRefusal, type MissionView, RUNTIME_POSTURE, loadRuntimePosture, relationForAction, stalenessBound } from "@mission/pdp";
 import { CANONICAL_RESOURCE, createEphemeralEvidenceKeys, EvidenceStore, McpPaymentsServer, PaymentsStore, Pep, type TokenFacts } from "../src/index.js";
 import { PaymentsToolCatalog } from "../src/tool-catalog.js";
+import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 
 async function build(mode: "co-resident" | "remote", override?: DecisionFn) {
   const point = createEphemeralDecisionPoint({ emitterId: CANONICAL_RESOURCE, audience: CANONICAL_RESOURCE });
@@ -25,7 +26,7 @@ async function build(mode: "co-resident" | "remote", override?: DecisionFn) {
   const pep = new Pep({ payments, evidence, fga, modelId: "test", loadView, instanceEpoch: "epoch", decide: override ?? channel.decide, observe });
   const statement = loadRuntimePosture({ ...RUNTIME_POSTURE, remote_decision_channels: channel.remoteDecisionChannels });
   const server = new McpPaymentsServer({ pep, payments, loadView, issuer: view.issuer, jwks: { keys: [] }, enforcementScopeStatement: statement });
-  const token: TokenFacts = { sub: "alice", clientId: "agent", cnfJkt: "jkt", mission: { id: view.id, issuer: view.issuer, authority_hash: view.authority_hash } };
+  const token: TokenFacts = { sub: "alice", clientId: "agent", cnfJkt: "jkt", mission: { id: view.id, issuer: view.issuer, authority_hash: view.authority_hash }, credentialAuthority: ALL_ACTIONS_CREDENTIAL };
   return { point, channel, server, pep, payments, evidence, token, view, observe, getOptions };
 }
 

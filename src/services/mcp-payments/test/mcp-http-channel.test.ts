@@ -40,6 +40,7 @@ import {
   type TokenFacts,
   TransactionEngine,
 } from "../src/index.js";
+import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 
 /** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
 const idem = (): string => `idem_${randomUUID()}`;
@@ -103,12 +104,14 @@ async function signMissionToken(opts: { missionId?: string; cnfJkt?: string; key
     client_instance_id: "inst-1",
     mission: { id: opts.missionId ?? VIEW.id, issuer: ISSUER, authority_hash: AUTHORITY_HASH },
     cnf: { jkt: opts.cnfJkt ?? cnfJkt },
+    authorization_details: [...ALL_ACTIONS_CREDENTIAL],
   })
-    .setProtectedHeader({ alg: "ES256", kid: "mission-key" })
+    .setProtectedHeader({ alg: "ES256", kid: "mission-key", typ: "at+jwt" })
     .setIssuer(ISSUER)
     .setAudience(CANONICAL_RESOURCE)
     .setSubject("alice")
     .setIssuedAt()
+    .setJti(crypto.randomUUID())
     .setExpirationTime("5m")
     .sign(opts.key ?? signKey);
 }
@@ -121,6 +124,7 @@ function tokenFacts(missionId: string = VIEW.id): TokenFacts {
     clientInstanceId: "inst-1",
     mission: { id: missionId, issuer: ISSUER, authority_hash: AUTHORITY_HASH },
     cnfJkt,
+    credentialAuthority: ALL_ACTIONS_CREDENTIAL,
   };
 }
 
