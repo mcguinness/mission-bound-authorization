@@ -3246,7 +3246,7 @@
    "id": "core.standing-consent.activation-event-id",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "standing-consent-bases",
-   "text": "That value identifies the activation event, never the standing approval",
+   "text": "That value identifies this instance's approval event, never the standing approval",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -3260,7 +3260,7 @@
    "surface": "token-endpoint",
    "assertion": "replay",
    "observation": {
-    "normative": "for an instance activated under a standing-consent basis, the record's approval_event_id identifies that activation: a retried activation returns the committed Mission, and two distinct activations under one standing consent create two Missions"
+    "normative": "for an instance activated under a standing-consent basis, the record's approval_event_id identifies that instance's approval event: a retried activation returns the committed Mission, and two distinct activations under one standing consent create two Missions"
    },
    "level": "unit",
    "coverage": "tested",

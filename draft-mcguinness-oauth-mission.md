@@ -2160,8 +2160,9 @@ plus a declared post-expiry period. A deployment retains a terminal
 
 A companion profile can generalize approval to a named standing-consent
 basis, under which a template or policy activates Mission instances
-against an accountable human's earlier approval, with no fresh approval
-event per instance. The `type` values `template`
+against an accountable human's earlier approval, with no fresh human
+approval per instance; each instance is still created at its own
+approval event ({{approval-event}}). The `type` values `template`
 ({{I-D.draft-mcguinness-oauth-mission-template}}), `policy_drawdown`
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), and
 `ceiling_drawdown` ({{I-D.draft-mcguinness-oauth-mission-progressive}})
@@ -2182,12 +2183,13 @@ deactivate the Mission.
 
 A companion profile defining a standing-consent `type` MUST make its
 `consent_principal` and `root_commitment` trace to an accountable
-human's approval of the named standing consent, with no fresh approval
-event per instance, MUST carry that approval's instant as
+human's approval of the named standing consent, with no fresh human
+approval per instance, MUST carry that approval's instant as
 `approved_at`, and MUST state what the record's `approval_event_id`
-carries for an instance it activates. That value identifies the
-activation event, never the standing approval, so a retried activation
-deduplicates and each distinct activation creates its own Mission.
+carries for an instance it activates. That value identifies this
+instance's approval event, never the standing approval, so a retried
+activation deduplicates and each distinct activation creates its own
+Mission.
 
 `approved_at`:
 : REQUIRED for every standing-consent `type`. An RFC 3339 date-time: the
