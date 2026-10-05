@@ -128,21 +128,22 @@ function pinnedLookup(url: URL, options: FetchJsonOptions): LookupFunction {
         : lookupOptions.family === "IPv6"
           ? 6
           : lookupOptions.family;
-    lookup(hostname)
-      .then((resolved) => {
-        if (
+    // Two-argument then: the callback runs exactly once, and a throw inside
+    // it never re-enters it through a catch.
+    lookup(hostname).then(
+      (resolved) => {
+        const refused =
           !options.admitPrivateDestination?.(url) &&
-          resolved.some((a) => isNonPublicAddress(a.address))
-        ) {
-          throw new Error(`${hostname} resolves to a non-public address`);
-        }
+          resolved.some((a) => isNonPublicAddress(a.address));
         const addresses = family ? resolved.filter((a) => a.family === family) : resolved;
         const [first] = addresses;
-        if (!first) throw new Error(`${hostname} has no usable address`);
-        if (lookupOptions.all) callback(null, addresses);
+        if (refused) callback(new Error(`${hostname} resolves to a non-public address`), "", 0);
+        else if (!first) callback(new Error(`${hostname} has no usable address`), "", 0);
+        else if (lookupOptions.all) callback(null, addresses);
         else callback(null, first.address, first.family);
-      })
-      .catch((err: Error) => callback(err, "", 0));
+      },
+      (err: Error) => callback(err, "", 0),
+    );
   };
 }
 
