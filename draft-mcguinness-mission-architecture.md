@@ -4171,6 +4171,19 @@ bound profiled by `aauth-mission-expiry`.
 
 \[\[ To be removed from the final specification ]]
 
+- Corrections from the fourth outside review, with no change to any
+  profile's requirements. The Validity Model sums the residual across
+  an exchange that mints without a fresh state check, and The Four
+  Levels, Assurance Claims, Composed Kill-Switch Reality, and
+  Appendix F's first shape state revocation figures from that
+  arithmetic. The Actor Chain separates the approved agent, recorded
+  at approval, from the requesting `client_id`. Both High-Assurance
+  claims require attestation. The Ontology Contract describes task
+  context as shared across components; the Derivation Boundary calls
+  narrowing checkable, not reproducible; Survivable Incorrectness
+  separates a bounded dimension from tolerable harm; and the
+  Introduction states the standardization thesis.
+
 - Four clarifications from #953, with no change to any profile's
   requirements. Mission Binding Properties states two routes to
   `credential-mission-bound` (a substrate Statement with its kernel
