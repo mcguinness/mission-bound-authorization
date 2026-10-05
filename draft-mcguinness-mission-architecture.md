@@ -427,6 +427,14 @@ cannot size authority to a task compensates with read-only scoping, a
 human executing every write, or permanently fenced pilots; the Mission
 is the representation those controls substitute for.
 
+What the family standardizes is agreement across components.
+Independently implemented components, under a declared binding and the
+deployment's declared mappings, preserve the same approved task
+context, narrowing rules, lifecycle meaning, and provenance. Inside one
+administrative domain a conventional stack implements much of this
+locally ({{standardization-crossovers}}); each deployment still
+configures its bindings, mappings, and the trust between components.
+
 The model is decomposed into bindings and optional companions. The
 bindings are these:
 
