@@ -19,8 +19,8 @@
     "content_sha256": "a2a1f271328ddd5634a826cbf588eadcc514418fad0f4679fe1f31c647056ec0"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "95967d597e34bdde7fcfe17828060076985fa20e",
-    "content_sha256": "44f4c42faee666e377b253a3b02e015c4ee42b96a6b01ff40ca71df5e22ce757"
+    "revision": "0c7ba9c38604240dbfbaa2b95586a235ed2dc0ca",
+    "content_sha256": "070186541b4e7296f2fc96dd5a5ed3c01beac8498e4a058e809d89a28044d8a0"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "2b422bf1c54a64ae5cdf4440f041a0d27f2a0e05",
@@ -239,6 +239,7 @@
    "core.instance-context",
    "core.delegation",
    "runtime.instance-context",
+   "runtime.credential-lifetime-freshness",
    "mas.instance-bound-join",
    "derivation-limits.limit",
    "continuation.ica-transport",
@@ -13191,6 +13192,30 @@
     }
    ],
    "notes": "Tested for the harness's own status-lease freshness path; not tested for a PDP-embedded active source such as introspection or Mission Status."
+  },
+  {
+   "id": "runtime.state-freshness.credential-lifetime-source-every-path",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "state-freshness",
+   "text": "Either conforms only where, on every issuance, refresh, and exchange path for those credentials, the age of the state observation a credential is minted from plus the credential's lifetime stays within the published staleness bound.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.credential-lifetime-freshness"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "on every issuance, refresh, and exchange path for a credential a class relies on as its Credential-lifetime freshness source, the issued credential's expiry is no later than the time of the state observation it was minted from plus the class's published staleness bound"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Includes paths that mint from an earlier observation without a fresh check, such as a later-redeemed issuance grant; existing freshness tests cover single gated paths, not every credential-producing path."
   },
   {
    "id": "runtime.state-freshness.containment-tightening-requires-containment-aware-source",
