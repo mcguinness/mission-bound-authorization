@@ -2106,12 +2106,13 @@ with a published policy identifier, version, and test fixtures.
 
 ## Approval Fidelity {#approval-fidelity}
 
-For the portable-authority bindings, the approval event authenticates
-the Approver, establishes the Subject, derives and renders the Authority
-Set for consent, and computes the anchors over the consented set, the
-approved Intent, and, where one was submitted, the authority proposal.
-That approval event creates the record in `active` atomically with the
-decision.
+For the portable-authority bindings, a direct approval event
+authenticates the Approver, establishes the Subject, derives and
+renders the Authority Set for consent, and computes the anchors over
+the consented set, the approved Intent, and, where one was submitted,
+the authority proposal. Every approval event, including one decided
+under a standing consent, creates the record in `active` atomically
+with the decision.
 
 AAuth approval has different fidelity: the native propose, clarify, and
 approve interaction authenticates the parties, returns the approved
@@ -2648,7 +2649,7 @@ work defensible to grant.
 | --- | --- |
 | Baseline Issuance | Consequential reads and writes outside the high-consequence classes whose bounds the receiving Resource Server enforces, attributable and killable at the issuance gate, outstanding tokens running to their own expiry or the next introspection |
 | Runtime-Enforced | Consequential actions that need a per-action decision: parameter-bound writes and bounds finer than the receiving Resource Server enforces; reversal and compensation stay the orchestration profile's, where adopted |
-| Governed Agent | Unattended operation and delegation, with Consent Evidence binding each approval event |
+| Governed Agent | Unattended operation and delegation, with Consent Evidence binding each human approval, including the standing consent unattended instances run under |
 | High-Assurance Agent | The high-consequence classes ({{I-D.draft-mcguinness-mission-runtime}}), under mediated custody and action-bound approval |
 {: title="What each level makes defensible to grant"}
 
@@ -4119,6 +4120,11 @@ bound profiled by `aauth-mission-expiry`.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Approval Fidelity and the level table distinguish the direct
+  approval event from creation under a standing consent: every
+  approval event creates the record, and Consent Evidence binds each
+  human approval (#1078).
 
 - Four clarifications from #953, with no change to any profile's
   requirements. Mission Binding Properties states two routes to
