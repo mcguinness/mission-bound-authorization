@@ -209,8 +209,11 @@ the store.
   headless approval, where no End-User authenticated in this user agent.
   oidc-provider accepts `acr_values` and `max_age` only with `openid`, so a
   delegated request cannot name an Approver strength: PAR refuses it
-  `invalid_request` before any interaction. The issuer's approval floor
-  still applies; requested strength on a delegated approval is open on #826.
+  `invalid_request` before any interaction. That is the accepted limitation
+  (D305): client-requested strength on a delegated approval, including a
+  client registration's incompatible OIDC defaults, is unsupported and fails
+  closed, never ignored or downgraded. The issuer's published approval floor
+  governs the Approver's strength, and no other carrier is defined.
   Tests (HTTP, `approver-subject-separation.test.ts`):
   `Approver and Subject stay separate identities (@spec mission#approval-authentication, #826)`,
   every case.
