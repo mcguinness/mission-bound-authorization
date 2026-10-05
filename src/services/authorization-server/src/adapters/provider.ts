@@ -6,7 +6,7 @@
 
 import { createHash, timingSafeEqual } from "node:crypto";
 import { MISSION_MAX_STALE_SECONDS } from "@mission/demo-data";
-import { ApprovalSessionStore, MISSION_APPROVAL_SCOPE, validApprovalPrincipal, type ApprovalPrincipal } from "./approval-resolution.js";
+import { APPROVAL_SUBJECT_HEADER, ApprovalSessionStore, MISSION_APPROVAL_SCOPE, validApprovalPrincipal, type ApprovalPrincipal } from "./approval-resolution.js";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
   DERIVATION_POLICY,
@@ -46,6 +46,9 @@ import {
  * parameter allow-list drops it from every PAR and authorization request.
  */
 export const DERIVED_AUTHORIZATION_DETAILS_MARKER = "__mission_derived_authorization_details";
+/** Interaction-result member marking an approval no End-User authenticated
+ *  in the user agent (a headless approval service's, #826). */
+const HEADLESS_APPROVAL_RESULT = "mission_headless_approval";
 
 /**
  * @spec mission#authority-proposal — the client's authority proposal as the
@@ -633,6 +636,28 @@ export function sourceUnavailableError(description: string): errors.OIDCProvider
   return err;
 }
 
+/**
+ * @spec mission#approval-authentication (#826): the provider's account
+ * lookup. An unknown id is no account. An interactive login is always the
+ * authenticated Approver, a configured user; a workload principal stays
+ * resolvable only because the Mission-bound mint paths record a Mission's
+ * Subject as the token account, and a workload Subject never obtains
+ * `openid`, so it never reaches UserInfo.
+ */
+export function accountFinder(knownSubjects: ReadonlySet<string>) {
+  return async (_ctx: unknown, id: string) => {
+    const user = USERS.find((u) => u.sub === id);
+    if (!user && !knownSubjects.has(id)) return undefined;
+    return {
+      accountId: id,
+      claims: async () => ({
+        sub: id,
+        ...(user ? { name: user.name, email: user.email, preferred_username: user.sub } : {}),
+      }),
+    };
+  };
+}
+
 export function buildProvider(opts: AdapterOptions): Provider {
   const { kernel } = opts;
   // @spec expansion#creation-request-id — idempotency is NOT optional wiring:
@@ -1150,6 +1175,14 @@ export function buildProvider(opts: AdapterOptions): Provider {
       }
       return true;
     },
+    // @spec mission#approval-authentication (#826): a headless approval's
+    // code has no End-User session to bind to (its resume session is torn
+    // down, see the headless-resume middleware), so it and the tokens it
+    // yields are not session-bound. Otherwise oidc-provider's default.
+    expiresWithSession: async (ctx, code) =>
+      (ctx.oidc.result as Record<string, unknown> | undefined)?.[HEADLESS_APPROVAL_RESULT] === true
+        ? false
+        : !code.scopes.has("offline_access"),
     pkce: { required: () => true },
     interactions: { url: (_ctx, interaction) => `/interaction/${interaction.uid}` },
     // @spec mission#downgrade-by-omission — the per-client Mission-governance
@@ -1158,16 +1191,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
     // validate hook below to reject a governed client's bare
     // authorization_details request.
     extraClientMetadata: { properties: ["mission_governed", "required_intent_evidence_types"] },
-    async findAccount(_ctx, id) {
-      const user = USERS.find((u) => u.sub === id);
-      return {
-        accountId: id,
-        claims: async () => ({
-          sub: id,
-          ...(user ? { name: user.name, email: user.email, preferred_username: user.sub } : {}),
-        }),
-      };
-    },
+    findAccount: accountFinder(opts.knownSubjects) as never,
     features: {
       // We serve our own approval interaction (the mission-kernel adapter).
       devInteractions: { enabled: false },
@@ -1482,10 +1506,22 @@ export function buildProvider(opts: AdapterOptions): Provider {
       customizers: {
         jwt: async (_ctx: unknown, token: unknown, jwt: { payload: Record<string, unknown> }) => {
           if (jwt.payload.mission === undefined) return;
-          const t = token as { scope?: string };
+          const t = token as { scope?: string; grantId?: string };
           if (!projectedTokens.has(t)) {
             throw new errors.InvalidTarget("Mission-bound token without a scope projection");
           }
+          // @spec mission#mission-bound-tokens, mission#approval-authentication
+          // (#826): a Mission-bound token's `sub` is the Mission's Subject.
+          // oidc-provider writes `sub` from the grant's account, which is the
+          // authenticated Approver; when the Approver approved for another
+          // principal they differ. Resolved from the grant the `mission` claim
+          // was gated on (no second count), failing closed when it no longer
+          // resolves. ID Tokens never reach this hook.
+          const target = t.grantId ? missionGateTarget(t.grantId) : undefined;
+          if (!target) {
+            throw new errors.InvalidGrant("Mission-bound token whose Mission no longer resolves");
+          }
+          jwt.payload.sub = target.record.subject.sub;
           if (t.scope) jwt.payload.scope = t.scope;
           else delete jwt.payload.scope;
           // @spec mission#rs-enforcement — the delegated-routing backstop. No
@@ -1784,6 +1820,55 @@ export function buildProvider(opts: AdapterOptions): Provider {
   provider.use(async (ctx, next) => {
     await next();
     await opts.kernel.drainLifecycleOutbox();
+  });
+
+  // @spec mission#approval-authentication (#826): a headless approval
+  // leaves the client's user agent no End-User session. Its resume runs
+  // without the session cookie this user agent holds, so that session is
+  // neither read nor modified. Once the route returns, before the response is
+  // flushed, the session the resume's login created is destroyed and its
+  // cookie removed, on success or error, so the user agent never holds it.
+  // The code it issued is not session-bound (expiresWithSession). The
+  // headless marker is read from the stored interaction, written only by
+  // `decide()`.
+  //
+  // The resume is recognized by the interaction it resumes, not by its path.
+  // oidc-provider's resume action loads the interaction named by the resume
+  // cookie and never by the path's `:uid`, and its router is neither strict
+  // about a trailing slash nor case-sensitive, and serves HEAD on the GET
+  // route. A client that owns the user agent controls all of these, so any
+  // request whose resume cookie names a headless interaction gets this
+  // treatment. The cookie is read exactly as the resume action reads it
+  // (same name, the provider's default signing).
+  provider.use(async (ctx, next) => {
+    // `cookieName` is the provider's own resolver (configured names
+    // included); oidc-provider's types omit it.
+    const resumeCookie = (provider as unknown as { cookieName(type: "resume"): string }).cookieName("resume");
+    const resumeId = ctx.cookies.get(resumeCookie);
+    const interaction = resumeId ? await provider.Interaction.find(resumeId) : undefined;
+    const result = interaction?.result as Record<string, unknown> | undefined;
+    if (result?.[HEADLESS_APPROVAL_RESULT] !== true) return next();
+    const sessionCookie = /^_session(?:\.sig)?$/;
+    const kept = (ctx.req.headers.cookie ?? "")
+      .split(";")
+      .filter((c) => c.trim() && !sessionCookie.test(c.trim().split("=")[0] ?? ""));
+    if (kept.length) ctx.req.headers.cookie = kept.join(";");
+    else delete ctx.req.headers.cookie;
+    try {
+      await next();
+    } finally {
+      const set = ctx.response.get("set-cookie") as unknown as string[] | string | undefined;
+      const lines = typeof set === "string" ? [set] : set ?? [];
+      for (const line of lines) {
+        const [name, value] = (line.split(";")[0] ?? "").split("=");
+        if (name?.trim() === "_session" && value) await (await provider.Session.find(value.trim()))?.destroy();
+      }
+      const rest = lines.filter((l) => !sessionCookie.test((l.split("=")[0] ?? "").trim()));
+      if (rest.length !== lines.length) {
+        if (rest.length) ctx.set("set-cookie", rest);
+        else ctx.remove("set-cookie");
+      }
+    }
   });
 
   provider.use(makeRoutes(provider, opts));
@@ -2425,16 +2510,16 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // time; a catalog change before the decision re-enters `kernel.approve`
       // with the changed inputs, which re-establishes the source and refuses
       // rather than committing what was never rendered. The Subject the
-      // decision binds is `login_hint` when present (#827), so the rendering
-      // resolves for it; without one it shows only a provenance every source
-      // of this client shares.
+      // decision binds is the one the approval session for this interaction
+      // selected (#827, #826; `login_hint` concerns the Approver), so the
+      // rendering resolves for it; without a session it shows only a
+      // provenance every source of this client shares.
+      const selectedSubject = opts.approvalSessions?.subjectFor(ctx.get("cookie"), interactionMatch[1] as string);
       let authoritySource: AuthoritySource;
       try {
         authoritySource = kernel.renderAuthoritySource({
           clientId: String(params.client_id),
-          ...(typeof params.login_hint === "string"
-            ? { subject: { iss: opts.issuer, sub: params.login_hint } }
-            : {}),
+          ...(selectedSubject ? { subject: { iss: opts.issuer, sub: selectedSubject } } : {}),
         });
       } catch (e) {
         if (e instanceof IntentError) {
@@ -2472,14 +2557,20 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         : undefined;
       const token = ctx.get("x-service-token");
       const service = token && Object.hasOwn(serviceTokenPrincipals, token) ? serviceTokenPrincipals[token] : undefined;
-      const principal = browser ?? (opts.allowHeadlessAdjudication && service?.scopes.includes(MISSION_APPROVAL_SCOPE) &&
-        validApprovalPrincipal(service.approver) ? service.approver : undefined);
+      // @spec mission#approval-event (step 2) (#826): a trusted headless
+      // approval service names the Subject it resolved on its own
+      // authenticated request; a browser session carries the selection its
+      // trusted login recorded. Neither comes from the client.
+      const headless = !browser && opts.allowHeadlessAdjudication && service?.scopes.includes(MISSION_APPROVAL_SCOPE) &&
+        validApprovalPrincipal(service.approver) ? service.approver : undefined;
+      const selected = ctx.get(APPROVAL_SUBJECT_HEADER);
+      const principal = browser ?? (headless ? { ...headless, ...(selected ? { subject: selected } : {}) } : undefined);
       if (!principal || principal.auth_time > Math.floor(opts.kernel.nowDate().getTime() / 1000)) {
         ctx.status = 401;
         ctx.body = { error: "unauthorized" };
         return;
       }
-      await decide(provider, opts, ctx, body, principal);
+      await decide(provider, opts, ctx, body, principal, browser !== undefined);
       return;
     }
 
@@ -3096,7 +3187,9 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         ctx.body = {
           active: true,
           iss: opts.issuer,
-          ...(rt.accountId ? { sub: rt.accountId } : {}),
+          // @spec mission#approval-authentication (#826): the Mission's Subject,
+          // never the refresh token's provider account (the Approver).
+          sub: record.subject.sub,
           ...(rt.clientId ? { client_id: rt.clientId } : {}),
           ...(typeof rt.exp === "number" ? { exp: rt.exp } : {}),
           ...(typeof rt.iat === "number" ? { iat: rt.iat } : {}),
@@ -3866,6 +3959,9 @@ async function decide(
   ctx: KoaCtx,
   body: Record<string, unknown>,
   principal: ApprovalPrincipal,
+  /** The Approver authenticated in this user agent (a trusted browser
+   *  session), not through a headless approval service. */
+  interactive: boolean,
 ) {
   const details = await provider.interactionDetails(ctx.req, ctx.res);
   if (details.uid !== ctx.path.split("/")[2]) {
@@ -3916,8 +4012,13 @@ async function decide(
     proposalRaw !== undefined
       ? opts.kernel.validateProposal(proposalRaw, intent.target_resources)
       : undefined;
+  // @spec mission#approval-event (step 2), mission#approval-authentication
+  // (#826): the Subject is the one the authenticated approval surface
+  // selected, or the Approver for a self-approval; never `login_hint`, which
+  // concerns the Approver. An approval for another principal still needs the
+  // Approver's local approve-for authorization.
   const approver = principal.sub;
-  const subject = typeof params.login_hint === "string" ? params.login_hint : approver;
+  const subject = principal.subject ?? approver;
   if (!opts.knownSubjects.has(subject) || (subject !== approver && !opts.approverApprovesFor.get(approver)?.has(subject))) {
     ctx.status = 403;
     ctx.body = { error: "approval_forbidden" };
@@ -3930,6 +4031,29 @@ async function decide(
       error_description: "approver denied the mission",
     });
     return;
+  }
+
+  // @spec mission#approval-authentication (#826): `openid` asks for an ID
+  // Token about the End-User this interaction authenticates, the Approver.
+  // Refused `invalid_scope` before anything is created when the Approver is
+  // not the Subject (issuer-qualified principals compared), and when no
+  // End-User authenticated in this user agent at all: a headless approval
+  // service's credential is not an interactive login.
+  const requestedScope = splitScope(params.scope);
+  if (requestedScope.oidc.includes("openid")) {
+    const approverPrincipal = { iss: opts.issuer, sub: approver };
+    const subjectPrincipal = { iss: opts.issuer, sub: subject };
+    const samePrincipal =
+      approverPrincipal.iss === subjectPrincipal.iss && approverPrincipal.sub === subjectPrincipal.sub;
+    if (!samePrincipal || !interactive) {
+      await provider.interactionFinished(ctx.req, ctx.res, {
+        error: "invalid_scope",
+        error_description: samePrincipal
+          ? "openid requires an End-User authenticated in this user agent; a headless approval is not one"
+          : "openid is unavailable when the Approver is not the Mission's Subject",
+      });
+      return;
+    }
   }
 
   // @spec mission#approval-authentication — the client's requested
@@ -3999,7 +4123,6 @@ async function decide(
   // pending authorization request. An unknown mapping or a target with no
   // safe projection is left to the token endpoint, which refuses it
   // `invalid_target` (the mapping error takes precedence).
-  const requestedScope = splitScope(params.scope);
   const audience = typeof params.resource === "string" ? params.resource : authority[0]?.resource;
   if (requestedScope.resource.length && audience) {
     const outcome = projectScope({
@@ -4053,7 +4176,10 @@ async function decide(
     throw e;
   }
 
-  const grant = new provider.Grant({ accountId: subject, clientId: String(params.client_id) });
+  // @spec mission#approval-authentication (#826): the provider account is the
+  // authenticated Approver; the Mission records the Subject, and every
+  // Mission-bound token projects it (the JWT customizer).
+  const grant = new provider.Grant({ accountId: approver, clientId: String(params.client_id) });
   // @spec mission#scope-projection — the grant holds exactly what the
   // request named: its OIDC values (openid enables an id_token), and any
   // resource values the check above let through, so the authorization code
@@ -4092,9 +4218,23 @@ async function decide(
     await details.save(Math.max(1, (details.exp ?? 0) - Math.floor(Date.now() / 1000)));
   }
 
+  // @spec mission#approval-authentication (#826): the login is the
+  // Approver's own, with its achieved `acr` and authentication time, never a
+  // time manufactured from the approval click and never an authentication of
+  // a different Subject. oidc-provider finishes an interaction only through
+  // a login, which on a headless approval is the code's account and nothing
+  // more: this user agent is the client's, no End-User authenticated in it,
+  // and the resume leaves it no session (the headless-resume middleware).
+  // The resume runs on a fresh session, so the interaction no longer names
+  // the one this user agent held when it began.
+  if (!interactive && details.session?.uid) {
+    delete (details.session as { uid?: string }).uid;
+    await details.save(Math.max(1, (details.exp ?? 0) - Math.floor(Date.now() / 1000)));
+  }
   await provider.interactionFinished(ctx.req, ctx.res, {
-    login: { accountId: subject },
+    login: { accountId: approver, acr: principal.acr, ts: principal.auth_time, remember: interactive },
     consent: { grantId },
+    ...(interactive ? {} : { [HEADLESS_APPROVAL_RESULT]: true }),
   });
 }
 

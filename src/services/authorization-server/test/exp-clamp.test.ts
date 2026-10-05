@@ -7,13 +7,13 @@
  * inside each credential's configured lifetime and read the minted `exp`
  * back, plus a far Mission as the control.
  */
-import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { browserApprovalHeaders, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 
 import { type Server } from "node:http";
 import { CANONICAL_RESOURCE } from "@mission/demo-data";
 import { decodeJwt, exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { buildAuthorizationServer, type BuiltAs } from "../src/index.js";
+import { buildAuthorizationServer, type BuiltAs, ApprovalSessionStore } from "../src/index.js";
 
 const PORT = 14745;
 const ISSUER = `http://localhost:${PORT}`;
@@ -84,6 +84,9 @@ async function authorizationRedirect(
   expiresAt: string | undefined,
   extra: Record<string, string> = {},
   beforeResume: () => void = () => {},
+  // A trusted browser approval (#826): the Approver authenticated in this
+  // user agent, which an ID Token requires; otherwise the headless service.
+  browser?: { sub: string; subject?: string },
 ): Promise<URL> {
   const challenge = Buffer.from(
     await crypto.subtle.digest("SHA-256", new TextEncoder().encode(VERIFIER)),
@@ -134,7 +137,10 @@ async function authorizationRedirect(
     res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
       method: "POST",
       redirect: "manual",
-      headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookie() },
+      headers: {
+        ...(browser ? browserApprovalHeaders(SESSIONS, uid, browser, cookie()) : { ...trustedApprovalHeaders(), cookie: cookie() }),
+        "content-type": "application/json",
+      },
       body: JSON.stringify({ decision: "approve" }),
     });
     keep(res);
@@ -150,8 +156,12 @@ async function authorizationRedirect(
 }
 
 /** PAR, approval and the redirect: an authorization code under a Mission ending at `expiresAt`. */
-async function authorize(expiresAt: string | undefined, extra: Record<string, string> = {}): Promise<string> {
-  const redirect = await authorizationRedirect(expiresAt, extra);
+async function authorize(
+  expiresAt: string | undefined,
+  extra: Record<string, string> = {},
+  browser?: { sub: string; subject?: string },
+): Promise<string> {
+  const redirect = await authorizationRedirect(expiresAt, extra, () => {}, browser);
   const code = redirect.searchParams.get("code");
   expect(code, redirect.href).toBeTruthy();
   return code as string;
@@ -175,11 +185,15 @@ function missionOf(accessToken: string): { id: string; expS: number } {
   return { id, expS: epoch(as.kernel.get(id)?.expires_at as string) };
 }
 
+// The trusted browser login for approvals an ID Token can describe (#826).
+const SESSIONS = new ApprovalSessionStore();
+
 beforeAll(async () => {
   as = await buildAuthorizationServer({
     issuer: ISSUER,
     allowHeadlessAdjudication: true,
     serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
+    approvalSessions: SESSIONS,
   });
   server = as.provider.listen(PORT);
   await new Promise<void>((r) => server.once("listening", () => r()));
@@ -218,7 +232,9 @@ describe("credentials never outlive the Mission (@spec mission#mission-bound-tok
   });
 
   it("an ID Token issued on the code exchange expires no later than the Mission", async () => {
-    const res = await exchange(await authorize(inSeconds(30), { scope: "openid" }));
+    // An ID Token describes the End-User this interaction authenticated: a
+    // self-approval in this user agent (#826).
+    const res = await exchange(await authorize(inSeconds(30), { scope: "openid" }, { sub: "alice" }));
     expect(res.status, JSON.stringify(res.body)).toBe(200);
     const idToken = decodeJwt(res.body.id_token as string) as { iat: number; exp: number };
     const { expS } = missionOf(res.body.access_token as string);
