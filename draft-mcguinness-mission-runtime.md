@@ -3776,7 +3776,9 @@ worked example shows the concrete record
   source below the high-consequence floor, conforming only where every
   issuance, refresh, and exchange path checks Mission state within the
   stated bound; a credential minted from an earlier observation adds
-  that observation's age. No requirement changed.
+  that observation's age. No BCP 14 requirement changed; the
+  conformance condition, previously gated derivation and refresh, now
+  names every issuance, refresh, and exchange path.
 
 - Evaluation-Context Binding no longer speaks of "Runtime-Enforced
   conformance": a level is guidance, never a conformance class. No
