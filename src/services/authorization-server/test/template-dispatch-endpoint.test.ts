@@ -39,7 +39,12 @@ import {
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { MISSION_DISPATCH_GRANT_TYPE } from "../src/adapters/provider.js";
-import { buildAuthorizationServer, type BuiltAs } from "../src/index.js";
+import {
+  buildAuthorizationServer,
+  type BuiltAs,
+  registerIntentSubmissionEvidenceType,
+  unregisterIntentSubmissionEvidenceType,
+} from "../src/index.js";
 
 const PORT = 14477;
 const ISSUER = `http://localhost:${PORT}`;
@@ -523,4 +528,79 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
     expect(body.mission_denial_reason).toBe("review_overdue");
     expect(body.access_token).toBeUndefined();
   }, 15_000);
+});
+
+describe("Dispatch idempotency at /token (@spec mission-template#dispatch, mission#intent-submission-evidence)", () => {
+  // A test evidence type whose stage-2 verifier can be flipped to FAIL,
+  // simulating an artifact that lapsed AFTER the first Dispatch completed.
+  // Registered by this block only; the shipped registry is empty.
+  const STUB_TYPE = "urn:test:intent-evidence:dispatch-stub";
+  let failVerification = false;
+  beforeAll(() => {
+    registerIntentSubmissionEvidenceType(STUB_TYPE, {
+      validate(entry) {
+        if (typeof entry.assertion !== "string") throw new Error("assertion required");
+      },
+      async verify() {
+        if (failVerification) throw new Error("artifact expired after completion");
+        return { admitted: true };
+      },
+    });
+  });
+  afterAll(() => unregisterIntentSubmissionEvidenceType(STUB_TYPE));
+
+  /** The read-only Intent's Submission envelope, with optional evidence. */
+  const envelope = (goal: string, assertion?: string): string =>
+    JSON.stringify({
+      intent: { goal, target_resources: [RESOURCE], expires_at: FAR_FUTURE },
+      ...(assertion ? { evidence: [{ type: STUB_TYPE, assertion }] } : {}),
+    });
+  const newTemplate = async (): Promise<string> => {
+    const created = await createTemplateAdmin(readOnlyTemplateBody());
+    return ((await created.json()) as { template_id: string }).template_id;
+  };
+
+  it("a completed Dispatch recovers before evidence re-verification; a new Dispatch still verifies", async () => {
+    failVerification = false;
+    const templateId = await newTemplate();
+    const first = await dispatch({ templateId, intent: envelope("reconcile Acme invoices", "a-1"), dispatchEventId: "evt-evidence" });
+    const fb = (await first.json()) as { mission_id?: string };
+    expect(first.status, JSON.stringify(fb)).toBe(200);
+
+    // The artifact lapses: stage-2 verification would now fail...
+    failVerification = true;
+    // ...but the identical retry of the completed Dispatch recovers it.
+    const retry = await dispatch({ templateId, intent: envelope("reconcile Acme invoices", "a-1"), dispatchEventId: "evt-evidence" });
+    const rb = (await retry.json()) as { mission_id?: string; error?: string };
+    expect(retry.status, JSON.stringify(rb)).toBe(200);
+    expect(rb.mission_id).toBe(fb.mission_id);
+
+    // A new Dispatch is not a recovery: verification runs and refuses.
+    const fresh = await dispatch({ templateId, intent: envelope("reconcile Acme invoices", "a-1"), dispatchEventId: "evt-evidence-new" });
+    const nb = (await fresh.json()) as { error?: string; error_description?: string };
+    expect(fresh.status, JSON.stringify(nb)).toBe(400);
+    expect(nb.error).toBe("invalid_mission_intent_evidence");
+    failVerification = false;
+  });
+
+  it("a reused dispatch_event_id with a different intent or evidence is invalid_request, with no mission_denial_reason", async () => {
+    failVerification = false;
+    const templateId = await newTemplate();
+    const first = await dispatch({ templateId, intent: envelope("reconcile Acme invoices", "b-1"), dispatchEventId: "evt-mismatch" });
+    expect(first.status).toBe(200);
+    const firstBody = (await first.json()) as { mission_id?: string };
+
+    for (const changed of [envelope("reconcile Globex invoices", "b-1"), envelope("reconcile Acme invoices", "b-2")]) {
+      const res = await dispatch({ templateId, intent: changed, dispatchEventId: "evt-mismatch" });
+      const body = (await res.json()) as { error?: string; error_description?: string; mission_denial_reason?: string };
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_request");
+      expect(body.error_description).toContain("dispatch_event_id");
+      expect(body.mission_denial_reason).toBeUndefined();
+    }
+
+    // The unchanged retry still recovers the committed instance.
+    const retry = await dispatch({ templateId, intent: envelope("reconcile Acme invoices", "b-1"), dispatchEventId: "evt-mismatch" });
+    expect(((await retry.json()) as { mission_id?: string }).mission_id).toBe(firstBody.mission_id);
+  });
 });
