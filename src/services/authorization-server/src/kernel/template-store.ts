@@ -69,9 +69,9 @@ CREATE TABLE template_source_bindings (
   PRIMARY KEY (template_id, subject_iss, subject_sub, agent)
 ) STRICT;
 CREATE TABLE dispatch_events (
-  dispatch_event_id TEXT PRIMARY KEY,
+  mission_id TEXT PRIMARY KEY,
+  dispatch_event_id TEXT NOT NULL,
   template_id TEXT NOT NULL,
-  mission_id TEXT NOT NULL,
   created_at TEXT NOT NULL
 ) STRICT;
 `;
@@ -330,7 +330,12 @@ export class TemplateStore {
     this.db.prepare("UPDATE templates SET state = 'revoked' WHERE id = ?").run(id);
   }
 
-  /** Record one dispatch for the rate / max-active bounds and the audit trail. */
+  /**
+   * Record one dispatch for the rate / max-active bounds and the audit trail.
+   * Keyed by the dispatched instance, not the `dispatch_event_id`: that
+   * identifier is unique only per Dispatcher, and only while its idempotency
+   * tombstone lives (@spec mission-template#dispatch).
+   */
   recordDispatch(input: { dispatchEventId: string; templateId: string; missionId: string }): void {
     this.db
       .prepare(
