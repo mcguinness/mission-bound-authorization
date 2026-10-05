@@ -5776,7 +5776,7 @@ resolve before interoperating.
 
 # OAuth Binding Mapping Assessment {#oauth-statement}
 
-<!-- assessed-substrate-digest: dbcbb50fd1a96f25 -->
+<!-- assessed-substrate-digest: 5488bd571ad351f0 -->
 
 This appendix is informative. It is this document's Mapping
 Assessment of itself against the kernel and capabilities of the
@@ -5818,10 +5818,13 @@ For the kernel:
    (`intent_hash`, `proposal_hash`, `authority_hash`); a material
    change obtains a new approval through an expansion successor.
 5. The approval ceremony is this document's approval event
-   ({{approval-event}}): authenticated Approver, established Subject
-   and authority source, rendering of the derived Authority Set and
-   the effective expiry, and atomic record commit, with deferred,
-   interactive, and dispatch realizations.
+   ({{approval-event}}). Its direct realization, interactive or
+   deferred, authenticates the Approver, establishes the Subject and
+   authority source, renders the derived Authority Set and the
+   effective expiry, and commits the record atomically. Under a
+   standing-consent basis, such as a dispatch, the authorized policy
+   ceremony decides the instance, and `consent_principal` remains the
+   accountable owner ({{standing-consent-bases}}).
 6. The active predicate is stored `state` equal to `active` with
    the decision time strictly before the record's effective
    `expires_at`, the issuer materializing the resulting `expired`
@@ -5920,7 +5923,9 @@ Cross-Domain:
   and the other creation rules still bind its approval event.
   Standing-Consent Bases says no fresh human approval per instance,
   and an instance's `approval_event_id` identifies this instance's
-  approval event (#1078).
+  approval event. The Mapping Assessment's approval-ceremony item
+  separates the direct realization from a standing-consent basis
+  (#1078).
 
 - Standing-Consent Bases: a companion profile defining a
   standing-consent type states what the record's `approval_event_id`
