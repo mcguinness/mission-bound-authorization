@@ -2015,7 +2015,9 @@ unrecognized declaration refuses rather than guesses.
 
 The contract has a dual of equal force. The resource owns what an action
 means; the Mission owns why it is happening and where the undertaking
-stands, and that context exists nowhere else in the stack. A resource
+stands, and carries that context in one form that independently
+implemented components on the path share. A resource that does not
+itself run the undertaking
 evaluates each request at perfect local resolution and zero task
 resolution: it can price every consequence its ontology names but
 cannot see the undertaking the request belongs to. A risk decision
@@ -2024,16 +2026,19 @@ purpose prices every delete the same; purpose without semantics cannot
 read the call.
 
 "Delete database" in isolation is indistinguishable from catastrophe.
-"Delete database" inside an approved migration whose copy steps already
-completed is a priced, checkable step. That judgment needs the
-undertaking's history, and no resource-local view contains it. After
+"Delete database" inside an approved migration whose copy of that same
+database, at the revision being deleted, already completed is a priced,
+checkable step. That judgment needs the undertaking's history bound to
+the object and its revision, which a resource-local view holds only
+where the resource itself runs the workflow. After
 the fact, that history is reconstructible from the join of Decision and
 Execution Evidence on the Mission's identity. At decision time, a
 task-aware decision point can draw the same history from trusted prior
 workflow state or another authoritative source. The runtime profile
-names the mechanism: sequence-aware evaluation over the undertaking's
+names the mechanisms: sequence-aware evaluation over the undertaking's
 history is an optional decision input, guarded so that history informs a
-decision and never widens one
+decision and never widens one, and Evaluation-Context Binding commits
+the revision a decision relied on
 ({{I-D.draft-mcguinness-mission-runtime}}).
 
 ## The Authority Derivation Boundary {#derivation-boundary}
