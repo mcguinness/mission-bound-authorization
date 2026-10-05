@@ -17,7 +17,10 @@ export interface JwksResolverOptions {
    * @spec aauth#section-11.4
    */
   admitEgress?: EgressAdmission;
-  /** Fetch floor per issuer: no more than one fetch per this interval. */
+  /**
+   * Fetch floor: each metadata document, and each issuer's JWKS across all
+   * of its documents, is fetched no more than once per this interval.
+   */
   minRefreshIntervalMs?: number;
   /** Cached keys are discarded after this age regardless of cache headers. */
   maxAgeMs?: number;
@@ -35,8 +38,11 @@ interface CacheEntry {
  * checking that the metadata's `issuer` equals the identifier it was
  * fetched under. Keys are selected by `kid` alone, so an unselected
  * member the verifier cannot use never fails the lookup. At most one fetch
- * per issuer per minute, shared by concurrent callers; an unknown `kid` or
- * a refresh request fetches again once the floor allows; a failed fetch
+ * per metadata document per minute, and one fetch of an issuer's JWKS per
+ * minute however many of its documents name it, each shared by concurrent
+ * callers; an unknown `kid` or a refresh request fetches again once the
+ * floor allows, and within the issuer's JWKS floor a document reuses the
+ * keys its issuer's last JWKS fetch returned; a failed fetch
  * falls back to cached keys; entries are discarded after 24 hours. The
  * cache is bounded, since unauthenticated callers choose the issuers.
  *
@@ -54,6 +60,10 @@ export class JwksResolver {
   private readonly cache = new Map<string, CacheEntry>();
   private readonly lastAttempt = new Map<string, number>();
   private readonly inflight = new Map<string, Promise<CacheEntry | undefined>>();
+  /** Per issuer: the last JWKS fetch, its floor and any fetch in flight. */
+  private readonly issuerJwks = new Map<string, { url: string; keys: unknown[] }>();
+  private readonly issuerJwksAttempt = new Map<string, number>();
+  private readonly issuerJwksInflight = new Map<string, { url: string; keys: Promise<unknown[]> }>();
 
   constructor(options: JwksResolverOptions = {}) {
     this.fetchJson = options.fetchJson ?? createFetchJson();
@@ -155,9 +165,41 @@ export class JwksResolver {
     } catch {
       throw new SignatureError("unknown_key", "jwks_uri is not a URL");
     }
-    const jwks = await this.get(jwksUrl, "jwks", issuer);
-    const keys = (jwks as { keys?: unknown } | null)?.keys;
-    if (!Array.isArray(keys)) throw new SignatureError("unknown_key", "JWKS has no keys array");
+    return this.issuerKeys(issuer, jwksUrl);
+  }
+
+  /**
+   * The issuer's JWKS, fetched at most once per floor interval across all
+   * of the issuer's metadata documents. Within the floor, a document naming
+   * the JWKS just fetched reuses its keys; one naming another JWKS cannot
+   * be fetched until the floor allows.
+   *
+   * @spec aauth#section-11.4
+   */
+  private issuerKeys(issuer: string, url: URL): Promise<unknown[]> {
+    const pending = this.issuerJwksInflight.get(issuer);
+    if (pending?.url === url.href) return pending.keys;
+    const now = this.now();
+    const last = this.issuerJwksAttempt.get(issuer);
+    if (last !== undefined && now - last < this.minRefreshIntervalMs) {
+      const recent = this.issuerJwks.get(issuer);
+      if (recent?.url === url.href) return Promise.resolve(recent.keys);
+      return Promise.reject(
+        new SignatureError("unknown_key", `${issuer}'s JWKS was fetched within the floor`),
+      );
+    }
+    remember(this.issuerJwksAttempt, issuer, now, this.maxIssuers);
+    const keys = this.get(url, "jwks", issuer)
+      .then((jwks) => {
+        const fetched = (jwks as { keys?: unknown } | null)?.keys;
+        if (!Array.isArray(fetched)) {
+          throw new SignatureError("unknown_key", "JWKS has no keys array");
+        }
+        remember(this.issuerJwks, issuer, { url: url.href, keys: fetched }, this.maxIssuers);
+        return fetched;
+      })
+      .finally(() => this.issuerJwksInflight.delete(issuer));
+    this.issuerJwksInflight.set(issuer, { url: url.href, keys });
     return keys;
   }
 

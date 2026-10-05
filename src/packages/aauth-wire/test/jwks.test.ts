@@ -7,7 +7,7 @@ import {
   JwksResolver,
   SignatureError,
 } from "../src/index.js";
-import { AP, FakeNetwork, NOW_MS } from "./fixtures.js";
+import { AP, FakeNetwork, NOW_MS, PS } from "./fixtures.js";
 
 async function code(promise: Promise<unknown>): Promise<string | undefined> {
   return promise.then(
@@ -54,6 +54,50 @@ describe("issuer key discovery (@spec aauth#section-11.4)", () => {
     now += 60_000;
     await resolver.resolveKey(AP, "aauth-agent.json", "key-2");
     expect(net.fetched).toHaveLength(4);
+  });
+
+  it("fetches an issuer's JWKS once for all of its documents", async () => {
+    const net = new FakeNetwork();
+    net.issuer(PS, "aauth-person.json");
+    net.issuer(PS, "aauth-access.json", "Ed25519", "key-2");
+    const resolver = net.resolver();
+    await resolver.resolveKey(PS, "aauth-person.json", "key-1");
+    await resolver.resolveKey(PS, "aauth-access.json", "key-2");
+    expect(net.fetched).toEqual([
+      `${PS}/.well-known/aauth-person.json`,
+      `${PS}/jwks.json`,
+      `${PS}/.well-known/aauth-access.json`,
+    ]);
+  });
+
+  it("shares one JWKS fetch between an issuer's documents resolved at the same instant", async () => {
+    const net = new FakeNetwork();
+    net.issuer(PS, "aauth-person.json");
+    net.issuer(PS, "aauth-access.json", "Ed25519", "key-2");
+    const resolver = net.resolver();
+    await Promise.all([
+      resolver.resolveKey(PS, "aauth-person.json", "key-1"),
+      resolver.resolveKey(PS, "aauth-access.json", "key-2"),
+    ]);
+    expect(net.fetched.filter((u) => u === `${PS}/jwks.json`)).toHaveLength(1);
+  });
+
+  it("does not fetch a second JWKS for the same issuer within the floor", async () => {
+    const net = new FakeNetwork();
+    net.issuer(PS, "aauth-person.json");
+    net.documents.set(`${PS}/.well-known/aauth-access.json`, {
+      issuer: PS,
+      jwks_uri: `${PS}/access-jwks.json`,
+    });
+    net.documents.set(`${PS}/access-jwks.json`, net.documents.get(`${PS}/jwks.json`));
+    let now = NOW_MS;
+    const resolver = net.resolver(() => now);
+    await resolver.resolveKey(PS, "aauth-person.json", "key-1");
+    expect(await code(resolver.resolveKey(PS, "aauth-access.json", "key-1"))).toBe("unknown_key");
+    expect(net.fetched).not.toContain(`${PS}/access-jwks.json`);
+    now += 60_000;
+    await resolver.resolveKey(PS, "aauth-access.json", "key-1");
+    expect(net.fetched).toContain(`${PS}/access-jwks.json`);
   });
 
   it("discards cached keys after 24 hours", async () => {
