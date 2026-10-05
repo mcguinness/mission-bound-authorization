@@ -132,9 +132,10 @@ Unavailable or stale state fails closed:
 | PDP throws, times out, is unreachable or answers non-2xx | `pdp_unreachable` | `configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > refuses a decision function that throws synchronously as pdp_unreachable, with one Refusal Record and no effect` |
 | Unsigned, malformed or oversized PDP response | `channel_failure` | `configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > refuses an unsigned 200 response as channel_failure, with no PDP decision retained` |
 
-Revocation after a decision is a stated bound, not a defect: an admitted
-high-consequence action runs to completion inside its permit window (about
-30 s or 60 s) under the runtime profile's run-to-completion rule;
+Revocation after a decision is a stated bound, not a defect, and no
+instantaneous revocation is claimed: an admitted high-consequence action runs
+to completion inside its permit window (about 30 s or 60 s) under the runtime
+profile's run-to-completion rule;
 `callTransactionTool` does not re-read Mission state after `enforce`
 (`server.ts:1321-1480`). No test yet. The next call decides afresh:
 `compound-action phases (@spec runtime#compound-actions) > denies the fresh commit Decision when the Mission deactivates after prepare`.
@@ -229,7 +230,7 @@ unsupported obligation is refused or its claim excluded.
 | Reads (`list_invoices`, `get_invoice`, `lookup_vendor`, `check_transfer`) | per-call decision on current Mission authority and state; per-action `vendors` | Execution Evidence on success | #825 and #828 (required, §1) |
 | Keyed writes (`schedule_payment`, `cancel_scheduled_payment`) | per-action `max_amount` and `vendors`; PEP-reserved idempotency with a durable record | reservation sweep; reconciliation of a `reserved` row | #918 leftovers |
 | Prepare (`hold_transfer`) | per-call decision; phase binding | idempotency or permit-lifetime control; any stored effect | #918 leftovers |
-| Transaction tier (`execute_wire_transfer`, `send_remittance_email`) | single-use permit, execution lease, PDP-held Exact claim, digest and phase binding, Execution Evidence; action-bound approval for remittance | restart recovery beyond the claim store; reconciliation run; transaction-grade resource witnesses | #917 leftovers, #250, #817 |
+| Transaction tier (`execute_wire_transfer`, `send_remittance_email`) | single-use permit, execution lease, PDP-held Exact claim, digest and phase binding, Execution Evidence; action-bound approval for remittance | restart recovery beyond the claim store; reconciliation run; transaction-grade resource witnesses; a failed commit predicate that retains the permit | #917 leftovers, #250, #817 |
 | Every path | per-action limits only | any aggregate cap; compromise containment; unattended prohibited-class exception | excluded by D284; #825 and #828 are required, not excluded (§1) |
 
 **The aggregate-cap exclusion is enforced by refusal.** The issuer refuses an
@@ -313,11 +314,12 @@ The pack cannot pass while #825 or #828 is unmet (§1).
 | Valid request | [FGA] `M4 core enforcement tier > scenario 2: happy path -- in-authority read permitted, Decision Evidence recorded` | not on the assembled path |
 | Narrowed token | none | #825 (PR #1062); required, blocks acceptance |
 | Independent policy revocation | a stubbed policy only: `finding 3: a multi-vendor list_invoices names every returned vendor to Resource policy, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy denies one: the whole read refuses out_of_authority, never a narrowed result` | #828; required, blocks acceptance |
-| Stale or non-active Mission at the effect boundary | decision time and the commit crossing (§4) | between permit and effect, by the stated run-to-completion bound |
+| Stale or non-active Mission at admission and at each fresh commit-phase decision | the §4 refusal table; `compound-action phases (@spec runtime#compound-actions) > denies the fresh commit Decision when the Mission deactivates after prepare` | not on the assembled path |
+| Run to completion after an earlier valid permit | none | no test yet that an admitted action completes only inside its permit and lease bounds and that the next decision refuses; no instantaneous revocation is implied (§4) |
 | Parameter digest mismatch | [FGA] `M4 core enforcement tier > scenario 3: TOCTOU -- invoice mutated between decision and execute -> parameter_mismatch refusal` | |
 | Permit replay | [FGA] `M5 transaction-assurance tier > the SAME evaluation identifier presented again is refused as permit_consumed, and the completed record stands` | |
 | Phase mismatch | `compound-action phases (@spec runtime#compound-actions) > refuses a commit presenting check_transfer's preflight permit` | |
-| Failed commit predicate with the permit retained | none | no connector declares a commit-point predicate (#817) |
+| Failed commit predicate with the permit retained | none | applies only to a connector that claims a commit-point predicate; none does at this revision (#817), so the guarantee stays excluded (§8) |
 | Bob for Alice, with and without `openid` | Subject selection only: `approval resolution establishes identity from the surface (#759, #761) > the pushed login_hint is resolved and authorized, never accepted as an arbitrary Subject` | #826 (PR #1074) |
 | Revoke during issuance | none on this surface | #250, #873 |
 | Restart and uncertain recovery | the unit-level witnesses in §7 | no assembled restart test |
