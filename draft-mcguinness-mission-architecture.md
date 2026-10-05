@@ -1353,7 +1353,7 @@ A document can serve more than one package, and the document map
 
 | Verb | Owning documents | Packages |
 | --- | --- | --- |
-| propose | `mission-shaping`, `oauth-mission-submission-evidence` | Agent Execution Governance |
+| propose | `mission-shaping`, `oauth-mission-submission-evidence`, `oauth-mission-request-provenance` | Agent Execution Governance |
 | approve and record | `oauth-mission`, `mission-authority-server`, `mission-aauth`, `mission-uma`, `mission-gnap`, `mission-substrate`, `oauth-mission-resource-access`, `oauth-mission-issuance-grant`, `oauth-mission-consent-evidence`, `oauth-mission-approval`, `oauth-mission-approval-revision`, `oauth-mission-template`, `mission-approval-governance` | Mission Control; Authority Distribution; Evidence and Accountability |
 | govern | `oauth-mission-status`, `oauth-mission-status-list`, `oauth-mission-signals`, `oauth-mission-management`, `oauth-mission-discharge`, `oauth-mission-expansion`, `oauth-mission-progressive`, `oauth-mission-containment`, `oauth-mission-derivation-limits`, `mission-control-plane`, `mission-discovery`, `mission-metering`, `mission-aauth-management`, `aauth-mission-expiry` | Mission Control; Runtime Enforcement (metering); Agent Execution Governance (discovery) |
 | enforce each action | `mission-runtime`, `mission-runtime-oauth`, `mission-authzen`, `mission-runtime-evidence`, `mission-capability-binding`, `oauth-mission-transaction-authorization` | Runtime Enforcement; Evidence and Accountability |
@@ -2701,8 +2701,13 @@ named **assurance claims**, each with a proof obligation an existing
 profile fixes, listed in the Deployment Profile
 ({{deployment-profile}}) rather than implied by a level:
 
-- **Approved-record integrity**: the anchors reproduce from the
-  record alone (the OAuth binding's integrity anchors).
+- **Approved-record integrity**: the committed Intent, authority
+  proposal, and Authority Set reproduce from the retained record alone
+  (the OAuth binding's integrity anchors). The claim covers neither the
+  record's provenance members nor an issuer that substitutes a record
+  and its anchors together; defending against post-approval
+  substitution takes an independently pinned anchor
+  ({{I-D.draft-mcguinness-oauth-mission-approved-set-verification}}).
 - **Bounded revocation latency**, per path and mechanism, naming the
   paths it covers: for a runtime-gated class, the published staleness
   bound plus the permit window plus the class's execution bound
@@ -3994,6 +3999,7 @@ bound profiled by `aauth-mission-expiry`.
 |---|---|
 | `mission-shaping` | Client-side shaping of a user's request into a candidate Mission Intent, as untrusted proposal. |
 | `oauth-mission-submission-evidence` | The Intent Submission Evidence framework: entry convention, binding, and verification bounds; defines no types. |
+| `oauth-mission-request-provenance` | Optional evidence type: a trusted intake's signed record of who originated the request behind an Intent, with a secret-keyed request digest. |
 | `oauth-mission-consent-evidence` | The `consent_rendering_hash` anchor and signed evidence of what the Approver was shown. |
 | `oauth-mission-approval` | Asynchronous approval over the deferred substrate. |
 | `mission-approval-governance` | The Approval Governance Record: authenticated assertions behind an approval, committed atomically with activation. |
@@ -4072,6 +4078,11 @@ bound profiled by `aauth-mission-expiry`.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The Approved-record integrity claim names what the anchors cover
+  (the committed Intent, authority proposal, and Authority Set) and
+  states that provenance members and an issuer substituting a record
+  with its anchors are outside it.
 
 - What ends an already-issued credential is worded the same way in
   Approval and Lifecycle, the possession-independent revocation

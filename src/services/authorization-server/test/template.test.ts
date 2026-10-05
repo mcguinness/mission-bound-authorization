@@ -8,6 +8,7 @@ import {
   createTemplate,
   type CreateTemplateInput,
   DispatchError,
+  DispatchMismatchError,
   type DispatchInput,
   type DispatchPolicies,
   dispatchFromTemplate,
@@ -18,6 +19,7 @@ import {
   TemplateError,
   TemplateStore,
 } from "../src/index.js";
+import { CreationIdempotencyStore } from "../src/kernel/creation-idempotency.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 const ISS = "https://as.test";
@@ -703,5 +705,77 @@ describe("seeded demo reconciliation template (@spec mission-template)", () => {
     expect(actions).toContain("payments:invoice.read");
     expect(actions).not.toContain("payments:payment.execute");
     expect(actions).not.toContain("payments:payment.schedule");
+  });
+});
+
+/** Expect `fn` to be refused as a fingerprint mismatch (invalid_request, not a Dispatch refusal reason). */
+const expectMismatch = (fn: () => unknown) => expect(fn).toThrow(DispatchMismatchError);
+
+describe("approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases)", () => {
+  it("two Dispatches under one template consent create two Missions, each with its own approval_event_id, never the template's", () => {
+    const t = mkTemplate();
+    const a = dispatch(t.id, { dispatchEventId: "evt-a" }).mission;
+    const b = dispatch(t.id, { dispatchEventId: "evt-b" }).mission;
+    expect(b.id).not.toBe(a.id);
+    expect(b.approval_event_id).not.toBe(a.approval_event_id);
+    expect(a.approval_event_id).not.toBe(t.approval_event_id);
+    expect(b.approval_event_id).not.toBe(t.approval_event_id);
+    // Allocated per reservation, not derived from the reusable identifier.
+    expect(a.approval_event_id).not.toBe("dsp_evt-a");
+  });
+
+  it("a retry by the same Dispatcher recovers the committed instance and its approval_event_id", () => {
+    const t = mkTemplate();
+    const first = dispatch(t.id, { dispatchEventId: "evt-retry" }).mission;
+    const retry = dispatch(t.id, { dispatchEventId: "evt-retry" }).mission;
+    expect(retry.id).toBe(first.id);
+    expect(retry.approval_event_id).toBe(first.approval_event_id);
+    expect(store.dispatchesSince(t.id, "1970-01-01T00:00:00Z")).toBe(1);
+  });
+
+  it("another permitted Dispatcher reusing the same dispatch_event_id gets its own instance, never the first Dispatcher's", () => {
+    const t = mkTemplate({ dispatchers: ["orchestrator", "orchestrator-2"] });
+    const first = dispatch(t.id, { dispatchEventId: "evt-shared", dispatcher: "orchestrator" }).mission;
+    const second = dispatch(t.id, { dispatchEventId: "evt-shared", dispatcher: "orchestrator-2" }).mission;
+    expect(second.id).not.toBe(first.id);
+    expect(second.approval_event_id).not.toBe(first.approval_event_id);
+    expect(second.approval_basis.activation_actor.sub).toBe("orchestrator-2");
+    expect(first.approval_basis.activation_actor.sub).toBe("orchestrator");
+  });
+
+  it("a dispatch_event_id reused after its tombstone expires creates a new instance with a new approval_event_id", () => {
+    const t = mkTemplate();
+    const idempotency = new CreationIdempotencyStore(kernel, { retentionSeconds: 60 });
+    const first = dispatch(t.id, { dispatchEventId: "evt-horizon", idempotency }).mission;
+    // Within the retry horizon the key recovers the committed instance.
+    clockMs = T0 + 30_000;
+    expect(dispatch(t.id, { dispatchEventId: "evt-horizon", idempotency }).mission.id).toBe(first.id);
+    // Past it, the tombstone is gone: the same key is a new operation.
+    clockMs = T0 + 61_000;
+    const reused = dispatch(t.id, { dispatchEventId: "evt-horizon", idempotency }).mission;
+    expect(reused.id).not.toBe(first.id);
+    expect(reused.approval_event_id).not.toBe(first.approval_event_id);
+  });
+
+  it("the same Dispatcher's dispatch_event_id with a different fingerprint is refused, never recovered", () => {
+    const t = mkTemplate();
+    const other = mkTemplate();
+    const first = dispatch(t.id, { dispatchEventId: "evt-fp", presenterJkt: "jkt-1" }).mission;
+    const committed = kernel.allMissions().length;
+    // A different template (the fingerprint's source).
+    expectMismatch(() => dispatch(other.id, { dispatchEventId: "evt-fp", presenterJkt: "jkt-1" }));
+    // A different presenter key (the fingerprint's cnf).
+    expectMismatch(() => dispatch(t.id, { dispatchEventId: "evt-fp", presenterJkt: "jkt-2" }));
+    // A different proposal (the fingerprint's proposal).
+    expectMismatch(() =>
+      dispatch(t.id, {
+        dispatchEventId: "evt-fp",
+        presenterJkt: "jkt-1",
+        proposedAuthority: proposalOf(["payments:invoice.read"], "100.00"),
+      }),
+    );
+    // Nothing new committed, and the unchanged retry still recovers.
+    expect(kernel.allMissions().length).toBe(committed);
+    expect(dispatch(t.id, { dispatchEventId: "evt-fp", presenterJkt: "jkt-1" }).mission.id).toBe(first.id);
   });
 });
