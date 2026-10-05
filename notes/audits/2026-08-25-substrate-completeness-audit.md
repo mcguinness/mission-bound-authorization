@@ -396,3 +396,24 @@ No BCP 14 keyword line changed, so the clause-level inventory in (a) is
 unaffected and no fresh audit is warranted. `candidate-gate.json` now
 attests these bytes: `report.document_sha256` records them and
 `audited_by` names `eb59a919`, where the substrate has them.
+
+## (h) Re-review, 2026-10-05
+
+The substrate's bytes changed again, to sha256
+`5488bd571ad351f0e17675a52a18200b6fed96bd503d4029e84bb0a8f964578c`
+(commit `0ddf5037`, #1078). The complete diff from the bytes (g) attests
+is informative text in the Family Use appendix and its Document
+History: the family vocabulary mapping's Approver row distinguishes a
+direct approval's Approver (`consent_principal`) from a standing-consent
+basis, a new Approval event row maps the kernel's approval event to the
+creation of a Mission under any approval basis, and a new paragraph maps
+the kernel's Approver to the family's `consent_principal`,
+`activation_actor`, and `adjudication` without relabeling a deciding
+policy as the family's human Approver.
+
+No BCP 14 keyword line changed: the ordered keyword sequence is
+identical (105 to 105), with no anchor lost or added. The clause-level
+inventory in (a) is unaffected and no fresh audit is warranted.
+`candidate-gate.json` now attests these bytes: `report.document_sha256`
+records them and `audited_by` names `0ddf5037`, where the substrate has
+them.
