@@ -162,8 +162,8 @@ it deterministically.
 An agent that runs a recurring task dispatches it many times: once per
 ticket, per document, per scheduled window. Mission-Bound Authorization
 for OAuth 2.0 {{I-D.draft-mcguinness-oauth-mission}} (the "issuance
-profile") commits a Mission's authority at a single human approval
-event. Requiring that event at every dispatch does not scale to machine
+profile") commits a Mission's authority at a human approval event. A
+fresh human approval at every dispatch does not scale to machine
 speed, and the alternative, a single standing Mission broad enough to
 cover every dispatch, over-provisions: the agent holds the full breadth
 the whole time, and a fresh approval per run is what the deployment was
@@ -450,9 +450,12 @@ Mission's outstanding tokens.
 
 # Template Consent {#template-consent}
 
-Creating a Mission Template is itself a human approval event under the
-issuance profile ({{I-D.draft-mcguinness-oauth-mission}}). Its consent
-object is the Mission Template: the human consents to the ceiling, the
+Creating a Mission Template is itself a human approval under the
+issuance profile ({{I-D.draft-mcguinness-oauth-mission}}). It creates
+no Mission, so it is not an approval event: it is the standing consent
+under which each dispatched instance's approval event is decided. Its
+consent object is the Mission Template: the human consents to the
+ceiling, the
 dispatch policy, the allowed dispatchers and recipients, and the
 bounds, and the approval commits them under `template_hash`
 ({{template-hash}}), the anchor over the object consented to.
@@ -1009,8 +1012,9 @@ conforming issuance-profile Mission Issuer
 - record a consented Mission Template with the required members and
   commit it under `template_hash` with `typ` `mission-template`
   ({{the-mission-template}}, {{template-hash}}), and treat template
-  creation as a human approval event whose disclosure renders the
-  ceiling, the no-per-instance-approval fact, and the prohibited-class
+  creation as a human approval under the issuance profile whose
+  disclosure renders the ceiling, the no-per-instance-approval fact,
+  and the prohibited-class
   reservation ({{template-consent}});
 - adjudicate a Dispatch in the order of {{dispatch}}: authenticate and
   authorize the Dispatcher, derive the instance Authority Set,
@@ -1114,6 +1118,11 @@ IANA action. Following the restraint of the sibling profiles:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Template Consent: creating a Mission Template is a human approval
+  that creates no Mission, so it is the standing consent each
+  dispatched instance's approval event is decided under, not an
+  approval event itself (#1078).
 
 - Dispatch: a dispatched instance's `approval_event_id` identifies the
   Dispatch, never the template's approval: a unique value allocated
