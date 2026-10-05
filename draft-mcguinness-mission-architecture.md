@@ -2303,6 +2303,16 @@ Action-approval freshness:
 The horizons compose by minimum: reliance at any moment requires every
 applicable horizon to be open, and no horizon substitutes for another.
 
+The minimum applies to horizons enforced together on one use, not to
+sequential reminting. An exchange that mints a new artifact without a
+fresh state check relies on the observation behind the artifact it
+consumed, so the residual sums: the consumed artifact's remaining
+redemption time with its clock-skew leeway, plus the new artifact's
+lifetime, plus that of each further unchecked exchange, capped by the
+expiry ceilings that already apply. A grant redeemed at a consuming
+Authorization Server without a Mission-state integration is the
+family's case ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}).
+
 The horizons also give the deployment its freshness dial, whose
 TTL-only end is a first-class posture, not a fallback. A deployment
 that relies on lifetimes alone verifies with local cryptography and a
@@ -2542,8 +2552,9 @@ Each level includes the one before it:
   **Lifetime-bounded reliance**, access-token lifetimes no longer than
   the deployment's tolerated staleness
   ({{I-D.draft-mcguinness-oauth-mission-status}}), gives a quantified
-  cutoff: revocation within one token lifetime, with no Resource
-  Server changes and no status traffic. Expiry closes the temporal
+  cutoff: revocation within one token lifetime on every path whose
+  minting checks current Mission state, with no Resource Server
+  changes and no status traffic. Expiry closes the temporal
   bound by the clock alone and observes no revocation, suspension,
   completion, or containment, so the lifetime must not exceed the
   tolerated staleness. Revocation latency is a number, not a level:
@@ -2557,7 +2568,9 @@ Each level includes the one before it:
   that. The issuance join
   ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) restores
   gated issuance at each consuming Authorization Server, and Baseline
-  with it.
+  with it. At a consuming Authorization Server that checks no Mission
+  state at redemption, the bound is the grant's remaining redemption
+  time plus the issued token's lifetime ({{validity-model}}).
 
   **AAuth**: the nearest comparison, stated as capabilities rather
   than a level, is native approval, exact-byte commitment, active or
@@ -2726,8 +2739,9 @@ profile fixes, listed in the Deployment Profile
   paths it covers: for a runtime-gated class, the published staleness
   bound plus the permit window plus the class's execution bound
   ({{I-D.draft-mcguinness-mission-runtime}}); for a lifecycle-gated
-  path, the outstanding credential lifetime; an ungated path has no
-  bound to claim.
+  path, the outstanding credential lifetime; for a path that remints
+  without a fresh state check, the summed residual of
+  {{validity-model}}; an ungated path has no bound to claim.
 - **Action-time enforcement**: PEP coverage for the Enforcement Scope
   Statement's mediated set, and nothing outside it.
 - **Parameter-bound enforcement**: permits bound to concrete
@@ -3120,7 +3134,9 @@ Notes:
    is not such an integration. One that has none checks no Mission
    state at redemption, issues no refresh tokens, and relies on the
    Mission Issuer's minting gate, so a grant minted before the
-   transition can still redeem within its 300-second lifetime.
+   transition can still redeem within its 300-second lifetime, and the
+   token it yields then runs to its own `exp`: the residual is the two
+   summed ({{validity-model}}).
 6. Under the OAuth binding with offline attenuation, a consumer accepts
    a chain only under runtime enforcement, with a fresh active-state
    check on every presentation regardless of action class
@@ -3833,6 +3849,10 @@ custody but makes neither High-Assurance claim. In this shape:
   custody statement made legible, not a checked assurance grade (the
   member's definition in {{deployment-profile}} states the open
   verifier gap).
+- Its revocation residuals follow the runtime profile's arithmetic:
+  for a mediated class, the state valid-through (30 seconds, which
+  also caps each permit) plus the class's execution bound; for any
+  other path, the access-token lifetime.
 
 ~~~ json
 {
@@ -3848,11 +3868,13 @@ custody but makes neither High-Assurance claim. In this shape:
   "issuance": {
     "binding": "oauth-core",
     "mission_claim_required": true,
-    "refresh_gated_on_active_state": true
+    "refresh_gated_on_active_state": true,
+    "max_access_token_lifetime_seconds": 300
   },
   "runtime": {
     "pdp": "authzen",
     "pep_locations": ["tool-gateway", "browser-action-proxy"],
+    "execution_bound_seconds": 30,
     "mediated_action_classes": [
       "irreversible_action", "external_commitment",
       "privileged_administration"
@@ -3947,7 +3969,8 @@ custody but makes neither High-Assurance claim. In this shape:
   "residual_risks": [
     "mediated custody is declared, not evidenced: no High-Assurance claim is made",
     "unmediated local reasoning is outside enforcement",
-    "revocation latency up to 30 seconds",
+    "mediated classes: revocation stops new effect within 60 seconds",
+    "other paths: revocation within the 300-second token lifetime",
     "PEP compromise is not prevented",
     "per-entry constraints reach scope-only resources only via the PEP",
     "long-term memory and provider model context are not Mission-scoped exposure points"
