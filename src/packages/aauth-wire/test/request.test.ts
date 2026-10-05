@@ -149,7 +149,10 @@ describe("signing and verifying an agent request (@spec aauth#section-11.3)", ()
       headers: { ...(message.headers as Record<string, string>), ...added },
     };
     await rejects(
-      verifyRequest(signed, options({ acceptedSchemes: ["jwks_uri"], requireBodyComponents: true })),
+      verifyRequest(
+        signed,
+        options({ acceptedSchemes: ["jwks_uri"], requireBodyComponents: true }),
+      ),
       "invalid_key",
     );
   });
