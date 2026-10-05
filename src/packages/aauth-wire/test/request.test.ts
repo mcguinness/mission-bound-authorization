@@ -279,6 +279,16 @@ describe("verification steps in order (@spec aauth#section-11.3.4)", () => {
     expect(err.headers["accept-signature-alg"]).toBe("Ed25519, ES256");
   });
 
+  it("step 6: Accept-Signature-Alg names exactly the algorithms this server accepts", async () => {
+    const { alg: _alg, ...withoutAlg } = agentKey.publicJwk;
+    const signed = signAsAgent(get(), await agentToken(ap, agentKey, { cnf: { jwk: withoutAlg } }));
+    const err = await rejects(
+      verifyRequest(signed, options({ acceptedAlgorithms: ["Ed25519"] })),
+      "unsupported_algorithm",
+    );
+    expect(err.headers["accept-signature-alg"]).toBe("Ed25519");
+  });
+
   it("step 6: the polymorphic EdDSA identifier is unsupported_algorithm", async () => {
     const jwk = { ...agentKey.publicJwk, alg: "EdDSA" };
     const signed = signAsAgent(get(), await agentToken(ap, agentKey, { cnf: { jwk } }));

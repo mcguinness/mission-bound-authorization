@@ -423,6 +423,7 @@ async function verifyPresentedToken(
   if (options.now) tokenOptions.now = options.now;
   if (options.iatSkewSeconds !== undefined) tokenOptions.iatSkewSeconds = options.iatSkewSeconds;
   if (options.isRevoked) tokenOptions.isRevoked = options.isRevoked;
+  if (options.acceptedAlgorithms) tokenOptions.acceptedAlgorithms = options.acceptedAlgorithms;
   if (typ === "aa-agent+jwt") return verifyAgentToken(jwt, tokenOptions);
   if (options.audience === undefined) {
     throw new TypeError("audience is required to verify a person or auth token");

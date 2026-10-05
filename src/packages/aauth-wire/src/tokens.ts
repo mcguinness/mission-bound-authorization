@@ -30,6 +30,11 @@ export interface TokenVerificationOptions {
   iatSkewSeconds?: number;
   /** Return true when the issuer has revoked this `jti` (`revoked_jwt`). */
   isRevoked?: (issuer: string, jti: string) => boolean | Promise<boolean>;
+  /**
+   * Algorithms accepted for `cnf.jwk`, the list an `unsupported_algorithm`
+   * answer names. Default Ed25519, ES256.
+   */
+  acceptedAlgorithms?: readonly SupportedAlgorithm[];
 }
 
 interface CommonRules {
@@ -147,12 +152,12 @@ async function verifyCommon(
  * @spec aauth#section-9.4.3.2
  * @spec aauth#section-11.5.1
  */
-function requireCnfJwk(payload: Record<string, unknown>): void {
+function requireCnfJwk(payload: Record<string, unknown>, options: TokenVerificationOptions): void {
   const cnf = payload.cnf as { jwk?: unknown } | undefined;
   if (typeof cnf !== "object" || cnf === null || typeof cnf.jwk !== "object" || cnf.jwk === null) {
     throw invalid("cnf.jwk is missing");
   }
-  determineAlgorithm(cnf.jwk);
+  determineAlgorithm(cnf.jwk, options.acceptedAlgorithms);
 }
 
 function requireAudience(payload: Record<string, unknown>, audience: string): void {
@@ -187,7 +192,7 @@ export async function verifyAgentToken(
   if (payload.iss !== `https://${domain}`) {
     throw invalid("sub names an agent of another agent provider");
   }
-  requireCnfJwk(payload);
+  requireCnfJwk(payload, options);
   if (payload.ps !== undefined && !isServerIdentifier(payload.ps)) {
     throw invalid("ps is not a server identifier");
   }
@@ -216,7 +221,7 @@ export async function verifyPersonToken(
   const { payload } = token;
   requireAudience(payload, options.audience);
   requireSub(payload);
-  requireCnfJwk(payload);
+  requireCnfJwk(payload, options);
   if ("scope" in payload || "account" in payload) {
     throw invalid("a person token carries no scope or account");
   }
@@ -287,6 +292,6 @@ export async function verifyAuthToken(
   if (payload.dwk === "aauth-person.json" && payload.ps !== payload.iss) {
     throw invalid("a PS-issued auth token names itself in ps");
   }
-  requireCnfJwk(payload);
+  requireCnfJwk(payload, options);
   return token;
 }
