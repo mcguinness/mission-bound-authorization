@@ -7,8 +7,8 @@
     "content_sha256": "ec57264fec92ea2dd3c42ba1067c70d72195f251bc5c416ccad856cb1beac3a1"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "68b6713ad9cf5556704e40d0386c8e3716582be8",
-    "content_sha256": "dfffde4a2feed909aa58ab9d787aa77f801f5603d270809450cbfcfd445ae001"
+    "revision": "7c6ed5b062069cf4b24300fca8ae3dcbfb7cedef",
+    "content_sha256": "157a30b0df33d99ffad37d3f6752cfc6c03c75620c86495c2d78c19bf50c1864"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "6f10361ef7fae0c457e78b003860587fb773ac4f",
@@ -8754,7 +8754,7 @@
    "id": "mas.reference.strict-dictionary",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "mission-reference-field",
-   "text": "A receiver MUST reject as malformed, before map collapse: a duplicate `id` or `issuer` occurrence, a parameter on either member, an Inner List or any non-String value, and any member other than the two defined here",
+   "text": "A receiver MUST reject as malformed, before map collapse: a duplicate `id` or `issuer` occurrence, a parameter on either member, an Inner List or any non-String value, and any member outside the extension rule of {{reference-tuple}}",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -8972,7 +8972,7 @@
    "id": "mas.reference.mcp-duplicate-keys",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "mcp-reference",
-   "text": "The value object is closed the same way as the HTTP field: a receiver MUST reject duplicate JSON member names at parse time, a member other than `mission_id` and `issuer`, a non-string member value, and the propagation key appearing more than once in `_meta`",
+   "text": "The value object is closed the same way as the HTTP field: a receiver MUST reject duplicate JSON member names at parse time, a member outside the extension rule of {{reference-tuple}}, a non-string member value, and the propagation key appearing more than once in `_meta`",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -9035,7 +9035,7 @@
    "id": "mas.join.stronger-claim-requires-issuance",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "mission-join",
-   "text": "A path claiming the Enterprise profile's high-consequence credential property MUST use Mission-bound issuance: an acting credential satisfying the mission-credential-bound composition of the Mission Binding Properties ({{I-D.draft-mcguinness-mission-architecture}}).",
+   "text": "A path claiming the Enterprise profile's high-consequence credential property MUST use Mission-bound issuance: an acting credential satisfying the composition defined in {{high-consequence-binding}}.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -9057,7 +9057,7 @@
    "id": "mas.join.issuance-required-high-consequence",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "enterprise-profile",
-   "text": "the PDP MUST require an acting credential satisfying the mission-credential-bound composition of the Mission Binding Properties ({{I-D.draft-mcguinness-mission-architecture}}): the credential-mission-bound equivalence plus presenter-key-bound possession, end to end",
+   "text": "the PDP MUST require an acting credential satisfying the composition defined in {{high-consequence-binding}}, with presenter proof of possession end to end",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -9211,7 +9211,7 @@
    "id": "mas.join.credential-mission-equality",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "high-consequence-binding",
-   "text": "requires exact equality of its issuer and Mission identifier with the credential's `mission` claim, and, where both convey `authority_hash`, a consistent value too, denying on any mismatch",
+   "text": "requires exact equality of its issuer and Mission identifier with the credential's `mission` claim, denying on any mismatch",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
@@ -9255,7 +9255,7 @@
    "id": "mas.baseline-join.reference-required",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "mission-join",
-   "text": "For governed work the PEP MUST supply the `mission_id` and `issuer` of the Mission the work is bound to, taken from its Mission binding (a Mission-aware harness records exactly this, {{I-D.draft-mcguinness-mission-harness}}) or from deployment configuration.",
+   "text": "For governed work the PEP MUST supply the `mission_id` and `issuer` of the Mission the work is bound to, taken from its Mission binding (a Mission-aware harness records exactly this, {{I-D.draft-mcguinness-mission-harness}}), from deployment configuration, or from a trusted propagated reference ({{reference-propagation}}).",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -28537,6 +28537,71 @@
    "coverage": "todo",
    "tests": [],
    "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+  },
+  {
+   "id": "mas.mapping-contract.floor-documented",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mapping-contract",
+   "text": "Every deployment documents the mapping contract its joins apply",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every deployment that joins documents its subject, client, delegate and instance mappings"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Deployment documentation; no runtime surface to test (#972 item 7)."
+  },
+  {
+   "id": "mas.mapping-contract.enterprise-publishes",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mapping-contract",
+   "text": "an enterprise MAS MUST publish it",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.enterprise"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an Enterprise MAS publishes its mapping contract"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Deployment documentation; no runtime surface to test (#972 item 7)."
+  },
+  {
+   "id": "mas.hc.mission-bound-instance-check",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "high-consequence-binding",
+   "text": "where the credential carries Instance Context whose association with the presenter is established, the instance check of {{join-instance}}",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.enterprise"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "on a Mission-bound high-consequence path, an established instance association is checked"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No Enterprise high-consequence path with Instance Context in the reference composition (#972 item 8)."
   },
   {
    "id": "authzen.instance-context.no-upstream-actor",
