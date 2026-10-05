@@ -946,6 +946,14 @@ memory, and context assembly scoped to the Mission) has no
 interoperable form and is deployment discipline, declared in the
 Deployment Profile ({{deployment-profile}}) rather than claimed.
 
+A bound makes an error survivable only along the dimension it meters.
+A per-action cap, a cumulative budget, and a recipient list each bound
+their own quantity; an incorrect run inside every bound can still cause
+harm none of them measures, so staying within the authorized envelope
+does not by itself make the harm tolerable. A deployment states which
+harms its bounds cover and lists the rest as residuals
+({{deployment-profile}}).
+
 # Non-Goals {#non-goals}
 
 The family does not define:
