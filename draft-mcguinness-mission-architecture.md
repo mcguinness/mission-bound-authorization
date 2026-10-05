@@ -2063,8 +2063,9 @@ Audit can establish what was derived (against `intent_hash` and
 `policy_version`), never whether it was the right reading of the task.
 
 Narrowing mode is the interoperable path: each derived entry is a
-subset of a proposed entry, so the result is reproducible and the
-client can check it against its proposal. A deployment whose partners
+subset of a proposed entry, so the client can check that the result
+stays within its proposal. Reproducing which subset was derived takes
+the retained derivation policy and its inputs. A deployment whose partners
 must reason about its derivations can publish a derivation policy
 identifier and test fixtures that pin Intent-to-Authority-Set
 outcomes, making the local policy reviewable even though it does not
