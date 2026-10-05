@@ -17,13 +17,13 @@ import {
 } from "./algorithms.js";
 import { contentDigest, verifyContentDigest } from "./content-digest.js";
 import { SignatureError } from "./errors.js";
-import { isServerIdentifier, isWellKnownName } from "./identifiers.js";
+import { isServerIdentifier } from "./identifiers.js";
 import type { JwksResolver } from "./jwks.js";
 import { jwkThumbprint } from "./keys.js";
 import {
+  carriesBody,
   combinedFieldValue,
   type HttpRequestMessage,
-  hasBody,
   type NormalizedRequest,
   normalizeRequest,
 } from "./message.js";
@@ -56,6 +56,30 @@ export const BASE_COMPONENTS = ["@method", "@authority", "@path", "signature-key
  * @spec aauth#section-11.3.3.1
  */
 export const BODY_COMPONENTS = ["content-digest", "content-type"] as const;
+
+/**
+ * The metadata documents a server signing under `jwks_uri` names in `dwk`.
+ *
+ * @spec aauth#section-11.3.2
+ */
+export const AAUTH_SERVER_DOCUMENTS = [
+  "aauth-person.json",
+  "aauth-access.json",
+  "aauth-agent.json",
+  "aauth-resource.json",
+] as const;
+
+/**
+ * The request's content. A request whose framing declares content that the
+ * caller did not supply cannot have its Content-Digest checked; that is a
+ * caller error, not a property of the request.
+ */
+function requireBody(request: NormalizedRequest): Uint8Array {
+  if (request.body === undefined && carriesBody(request)) {
+    throw new TypeError("the request carries a body; pass it to sign or verify Content-Digest");
+  }
+  return request.body ?? new Uint8Array();
+}
 
 export interface SignRequestOptions {
   alg: SupportedAlgorithm;
@@ -92,14 +116,14 @@ export function signRequest(
   const request = normalizeRequest(message);
   const components =
     options.components ??
-    (hasBody(request) ? [...BASE_COMPONENTS, ...BODY_COMPONENTS] : [...BASE_COMPONENTS]);
+    (carriesBody(request) ? [...BASE_COMPONENTS, ...BODY_COMPONENTS] : [...BASE_COMPONENTS]);
   const added: Record<string, string> = {};
   const set = (name: string, value: string) => {
     added[name] = value;
     request.fields.set(name, [value]);
   };
   if (components.includes("content-digest") && !request.fields.has("content-digest")) {
-    set("content-digest", contentDigest(request.body ?? new Uint8Array()));
+    set("content-digest", contentDigest(requireBody(request)));
   }
   set("signature-key", serializeSignatureKey(label, options.signatureKey));
   const params: Parameters = new Map([
@@ -239,7 +263,7 @@ export async function verifyRequest(
 
   // Step 2.
   const required: string[] = [...BASE_COMPONENTS];
-  if (options.requireBodyComponents && hasBody(request)) required.push(...BODY_COMPONENTS);
+  if (options.requireBodyComponents && carriesBody(request)) required.push(...BODY_COMPONENTS);
   for (const c of options.additionalComponents ?? []) if (!required.includes(c)) required.push(c);
   if (required.some((c) => !covered.includes(c))) {
     throw new SignatureError("invalid_input", "required components are not covered", {
@@ -292,21 +316,21 @@ export async function verifyRequest(
     if (typeof id !== "string" || typeof dwk !== "string" || typeof kid !== "string") {
       throw fail("invalid_key", "jwks_uri needs id, dwk and kid");
     }
-    if (!isServerIdentifier(id) || !isWellKnownName(dwk)) {
-      throw fail("invalid_key", "id or dwk is malformed");
+    if (!isServerIdentifier(id)) throw fail("invalid_key", "id is not a server identifier");
+    if (!(AAUTH_SERVER_DOCUMENTS as readonly string[]).includes(dwk)) {
+      throw fail("invalid_key", `dwk ${dwk} is not an AAuth metadata document`);
     }
     jwk = await options.resolver.resolveKey(id, dwk, kid);
     signer = { id, dwk, kid };
   }
 
   // Step 6.
-  const { alg, key } = determineAlgorithm(jwk, acceptedAlgorithms);
-  const publicJwk = jwk as Record<string, unknown>;
-  const thumbprint = await jwkThumbprint(publicJwk);
+  let { alg, key } = determineAlgorithm(jwk, acceptedAlgorithms);
+  let publicJwk = jwk as Record<string, unknown>;
   // @spec aauth#section-11.3.3.2: a keyid must name the Signature-Key key.
   const keyid = input[1].get("keyid");
   if (keyid !== undefined) {
-    const names = signer ? [signer.kid] : [publicJwk.kid, thumbprint];
+    const names = signer ? [signer.kid] : [publicJwk.kid, await jwkThumbprint(publicJwk)];
     if (!names.includes(keyid)) throw fail("invalid_key", "keyid names a different key");
   }
 
@@ -319,23 +343,42 @@ export async function verifyRequest(
     throw err;
   }
   const signatureBytes = new Uint8Array(signatureMember[0]);
-  if (!httpVerify(alg, key, Buffer.from(base, "ascii"), signatureBytes)) {
-    throw fail("invalid_signature", "signature verification failed");
+  const baseBytes = Buffer.from(base, "ascii");
+  let verifiedSignature = httpVerify(alg, key, baseBytes, signatureBytes);
+  if (!verifiedSignature && signer) {
+    // @spec signature-key#section-7.2: a cached key that fails is refreshed
+    // once (the issuer may have re-keyed under the same kid).
+    const refreshed = await options.resolver.resolveKey(signer.id, signer.dwk, signer.kid, {
+      refresh: true,
+    });
+    ({ alg, key } = determineAlgorithm(refreshed, acceptedAlgorithms));
+    publicJwk = refreshed;
+    verifiedSignature = httpVerify(alg, key, baseBytes, signatureBytes);
   }
+  if (!verifiedSignature) throw fail("invalid_signature", "signature verification failed");
+  const thumbprint = await jwkThumbprint(publicJwk);
 
-  const authority = request.url.host;
-  const path = request.url.pathname || "/";
-  if (options.replayCache) {
-    const replayKey = JSON.stringify([thumbprint, created, request.method, authority, path]);
-    const expiresAt = (created + windowSeconds) * 1000;
-    if (!options.replayCache.checkAndRecord(replayKey, expiresAt, nowMs)) {
-      throw fail("invalid_signature", "duplicate signed request");
-    }
-  }
+  // The body is checked before the replay slot is taken, so a copy with a
+  // tampered body cannot burn the slot of the genuine request.
   if (covered.includes("content-digest")) {
     const digest = combinedFieldValue(request, "content-digest") ?? "";
-    if (!verifyContentDigest(digest, request.body ?? new Uint8Array())) {
+    if (!verifyContentDigest(digest, requireBody(request))) {
       throw fail("invalid_signature", "Content-Digest does not match the body");
+    }
+  }
+  if (options.replayCache) {
+    const replayKey = JSON.stringify([
+      thumbprint,
+      created,
+      request.method,
+      request.url.host,
+      request.path,
+    ]);
+    // Freshness accepts `created` through the whole second at the window's
+    // edge, so the entry outlives it by that second.
+    const expiresAt = (created + windowSeconds + 1) * 1000;
+    if (!options.replayCache.checkAndRecord(replayKey, expiresAt, nowMs)) {
+      throw fail("invalid_signature", "duplicate signed request");
     }
   }
 

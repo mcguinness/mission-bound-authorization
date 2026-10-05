@@ -138,11 +138,21 @@ async function verifyCommon(
   };
 }
 
+/**
+ * `cnf.jwk` is required, structurally complete for its key type and
+ * carries a fully-specified `alg` agreeing with it. A failure keeps the
+ * key's own code (`invalid_key`, `unsupported_algorithm`), which a
+ * Signature-Key path answers as is and a parameter path maps.
+ *
+ * @spec aauth#section-9.4.3.2
+ * @spec aauth#section-11.5.1
+ */
 function requireCnfJwk(payload: Record<string, unknown>): void {
   const cnf = payload.cnf as { jwk?: unknown } | undefined;
   if (typeof cnf !== "object" || cnf === null || typeof cnf.jwk !== "object" || cnf.jwk === null) {
     throw invalid("cnf.jwk is missing");
   }
+  determineAlgorithm(cnf.jwk);
 }
 
 function requireAudience(payload: Record<string, unknown>, audience: string): void {
@@ -171,6 +181,12 @@ export async function verifyAgentToken(
   );
   const { payload } = token;
   if (!isAgentIdentifier(payload.sub)) throw invalid("sub is not an agent identifier");
+  // @spec aauth#section-5.1, aauth#section-11.2.1: an AP is named in both the
+  // domain of the identifiers it assigns and the iss of the tokens it signs.
+  const domain = payload.sub.slice(payload.sub.lastIndexOf("@") + 1);
+  if (payload.iss !== `https://${domain}`) {
+    throw invalid("sub names an agent of another agent provider");
+  }
   requireCnfJwk(payload);
   if (payload.ps !== undefined && !isServerIdentifier(payload.ps)) {
     throw invalid("ps is not a server identifier");

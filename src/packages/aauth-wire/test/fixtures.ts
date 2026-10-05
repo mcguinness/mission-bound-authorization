@@ -1,7 +1,9 @@
 import { randomUUID } from "node:crypto";
 import {
+  createEgressAdmission,
   type FetchJson,
   generateSigningKey,
+  type HostLookup,
   JwksResolver,
   mintToken,
   type SigningKey,
@@ -11,6 +13,9 @@ import {
 /** A fixed clock: 2025-10-09T08:53:20Z. */
 export const NOW_MS = 1_760_000_000_000;
 export const NOW = NOW_MS / 1000;
+
+/** Every host name resolves to one public address. */
+export const PUBLIC_DNS: HostLookup = async () => [{ address: "93.184.215.14", family: 4 }];
 
 /** An in-memory network of issuer metadata and JWKS documents. */
 export class FakeNetwork {
@@ -24,8 +29,17 @@ export class FakeNetwork {
       : { status: 404, body: null };
   };
 
-  resolver(now: () => number = () => NOW_MS): JwksResolver {
-    return new JwksResolver({ fetchJson: this.fetchJson, now });
+  /**
+   * A resolver over this network under the default egress policy, with
+   * every host name resolving to a public address.
+   */
+  resolver(now: () => number = () => NOW_MS, maxIssuers?: number): JwksResolver {
+    return new JwksResolver({
+      fetchJson: this.fetchJson,
+      now,
+      admitEgress: createEgressAdmission({ lookup: PUBLIC_DNS }),
+      ...(maxIssuers === undefined ? {} : { maxIssuers }),
+    });
   }
 
   /** Publish an issuer's metadata document and JWKS; return its signing key. */

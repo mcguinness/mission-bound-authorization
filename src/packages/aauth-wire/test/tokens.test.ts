@@ -302,3 +302,29 @@ describe("auth token (@spec aauth#section-9.4.3)", () => {
     );
   });
 });
+
+describe("review hardening: token claims (@spec aauth#section-5.1, aauth#section-9.4.3.2)", () => {
+  it("rejects an agent identifier from another agent provider's domain", async () => {
+    const jwt = await agentToken(ap, agentKey, { sub: "aauth:assistant@bank.example" });
+    await rejects(verifyAgentToken(jwt, opts()), "invalid_jwt", /another agent provider/);
+  });
+
+  it("checks cnf.jwk structure in a standalone person token verification", async () => {
+    const jwt = await mintToken(
+      "aa-person+jwt",
+      personClaims({ cnf: { jwk: { kty: "OKP", crv: "Ed25519" } } }),
+      ps,
+    );
+    await rejects(
+      verifyPersonToken(jwt, { ...opts(), audience: RESOURCE }),
+      "invalid_key",
+      /missing members/,
+    );
+  });
+
+  it("checks the cnf.jwk alg in a standalone auth token verification", async () => {
+    const { alg: _alg, ...withoutAlg } = agentKey.publicJwk;
+    const jwt = await mintToken("aa-auth+jwt", authClaims({ cnf: { jwk: withoutAlg } }), ps);
+    await rejects(verifyAuthToken(jwt, { ...opts(), audience: RESOURCE }), "unsupported_algorithm");
+  });
+});

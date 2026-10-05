@@ -37,7 +37,7 @@ export function verifyContentDigest(fieldValue: string, body: Uint8Array): boole
   }
   let matched = false;
   for (const [name, member] of members) {
-    if (!(name in HASH)) continue;
+    if (!Object.hasOwn(HASH, name)) continue;
     if (isInnerList(member) || !(member[0] instanceof ArrayBuffer)) return false;
     const expected = createHash(HASH[name as DigestAlgorithm])
       .update(body)

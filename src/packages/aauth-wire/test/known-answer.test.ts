@@ -104,3 +104,46 @@ describe("RFC 9530 Appendix B digests (@spec rfc9530#section-2)", () => {
     expect(verifyContentDigest("md5=:Sd/dVLAcvNLSq16eXua5uQ==:", body)).toBe(false);
   });
 });
+
+describe("Content-Digest robustness (@spec rfc9530#section-2)", () => {
+  const body = new TextEncoder().encode('{"hello": "world"}');
+
+  it("treats a member named like an Object property as an unknown algorithm", () => {
+    expect(verifyContentDigest("constructor=:AAAA:", body)).toBe(false);
+    expect(
+      verifyContentDigest(
+        "constructor=:AAAA:, sha-256=:X48E9qOokqqrvdts8nOJRJN3OWDUoyWxBf7kbu9DBPE=:",
+        body,
+      ),
+    ).toBe(true);
+  });
+
+  it("requires every computable digest to match", () => {
+    expect(
+      verifyContentDigest(
+        "sha-256=:X48E9qOokqqrvdts8nOJRJN3OWDUoyWxBf7kbu9DBPE=:, sha-512=:AAAA:",
+        body,
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("derived components from the URI as sent (@spec rfc9421#section-2.2.6)", () => {
+  it("keeps dot segments and percent-encoding in @path and @query", () => {
+    const request = normalizeRequest({
+      method: "GET",
+      url: "https://example.com/a/%2e%2e/b{c}?x=%7B#frag",
+      headers: {},
+    });
+    const base = buildSignatureBase(
+      request,
+      signatureParams(["@path", "@query", "@request-target", "@target-uri"], new Map()),
+    );
+    expect(base.split("\n").slice(0, 4)).toEqual([
+      '"@path": /a/%2e%2e/b{c}',
+      '"@query": ?x=%7B',
+      '"@request-target": /a/%2e%2e/b{c}?x=%7B',
+      '"@target-uri": https://example.com/a/%2e%2e/b{c}?x=%7B',
+    ]);
+  });
+});

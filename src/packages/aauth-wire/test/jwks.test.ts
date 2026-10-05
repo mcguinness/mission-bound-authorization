@@ -140,3 +140,28 @@ describe("identifiers (@spec aauth#section-11.1.1, aauth#section-5.2)", () => {
     expect(isAgentIdentifier(value)).toBe(expected);
   });
 });
+
+describe("resolver bounds and concurrency (@spec signature-key#section-7.2)", () => {
+  it("bounds the cache: an evicted issuer is fetched again", async () => {
+    const net = new FakeNetwork();
+    net.issuer(AP, "aauth-agent.json");
+    net.issuer("https://ap2.example", "aauth-agent.json");
+    const resolver = net.resolver(() => NOW_MS, 1);
+    await resolver.resolveKey(AP, "aauth-agent.json", "key-1");
+    await resolver.resolveKey("https://ap2.example", "aauth-agent.json", "key-1");
+    await resolver.resolveKey(AP, "aauth-agent.json", "key-1");
+    expect(net.fetched).toHaveLength(6);
+  });
+
+  it("shares one fetch between concurrent first lookups", async () => {
+    const net = new FakeNetwork();
+    net.issuer(AP, "aauth-agent.json");
+    const resolver = net.resolver();
+    const results = await Promise.allSettled([
+      resolver.resolveKey(AP, "aauth-agent.json", "key-1"),
+      resolver.resolveKey(AP, "aauth-agent.json", "key-1"),
+    ]);
+    expect(results.map((r) => r.status)).toEqual(["fulfilled", "fulfilled"]);
+    expect(net.fetched).toHaveLength(2);
+  });
+});

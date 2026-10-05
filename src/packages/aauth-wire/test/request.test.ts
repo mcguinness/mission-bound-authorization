@@ -434,3 +434,165 @@ describe("signature input handling (@spec rfc9421#section-2.5, aauth#section-11.
     await rejects(verifyRequest({ ...signed, headers }, options()), "invalid_signature", /absent/);
   });
 });
+
+describe("review hardening (@spec aauth#section-11.3.4.2, signature-key#section-7.2)", () => {
+  it("refuses a replay at the edge of the window", async () => {
+    const signed = signAsAgent(get(), await agentToken(ap, agentKey));
+    const replayCache = new InMemoryReplayCache();
+    await verifyRequest(signed, options({ replayCache }));
+    await rejects(
+      verifyRequest(signed, options({ replayCache, now: () => NOW_MS + 60_500 })),
+      "invalid_signature",
+      /duplicate/,
+    );
+  });
+
+  it("keys the replay cache by path: another path at the same created is not a replay", async () => {
+    const replayCache = new InMemoryReplayCache();
+    const jwt = await agentToken(ap, agentKey);
+    await verifyRequest(signAsAgent(get(`${RESOURCE}/a`), jwt), options({ replayCache }));
+    await verifyRequest(signAsAgent(get(`${RESOURCE}/b`), jwt), options({ replayCache }));
+  });
+
+  it("checks the body before taking the replay slot", async () => {
+    const signed = signAsAgent(post(), await agentToken(ap, agentKey));
+    const replayCache = new InMemoryReplayCache();
+    const tampered = { ...signed, body: JSON.stringify({ resource_token: "y" }) };
+    await rejects(verifyRequest(tampered, options({ replayCache })), "invalid_signature");
+    await verifyRequest(signed, options({ replayCache }));
+  });
+
+  it("checks freshness before the token: a stale request with an expired token is too old", async () => {
+    const signed = signAsAgent(get(), await agentToken(ap, agentKey, { exp: NOW - 1 }), {
+      created: NOW - 61,
+    });
+    await rejects(verifyRequest(signed, options()), "invalid_signature", /too old/);
+  });
+
+  it("requires the body components when the framing declares a body the caller did not pass", async () => {
+    const signed = signAsAgent(get(`${PS}/token`), await agentToken(ap, agentKey));
+    const headers = { ...(signed.headers as Record<string, string>), "content-length": "20" };
+    await rejects(
+      verifyRequest(
+        { ...signed, method: "POST", headers },
+        options({ requireBodyComponents: true }),
+      ),
+      "invalid_input",
+    );
+  });
+
+  it("will not check a covered Content-Digest without the body", async () => {
+    const signed = signAsAgent(post(), await agentToken(ap, agentKey));
+    const { body: _body, ...withoutBody } = signed;
+    const headers = { ...(signed.headers as Record<string, string>), "content-length": "26" };
+    await expect(verifyRequest({ ...withoutBody, headers }, options())).rejects.toThrow(TypeError);
+  });
+
+  it("covers the path as sent, without dot-segment removal or re-encoding", async () => {
+    const url = `${RESOURCE}/a/%2e%2e/b?x=%7B`;
+    const signed = signAsAgent(get(url), await agentToken(ap, agentKey), {
+      components: [...BASE, "@query"],
+    });
+    await verifyRequest(signed, options());
+    await rejects(
+      verifyRequest({ ...signed, url: `${RESOURCE}/b?x=%7B` }, options()),
+      "invalid_signature",
+      /verification failed/,
+    );
+  });
+});
+
+describe("servers signing under jwks_uri (@spec aauth#section-11.3.2)", () => {
+  async function psSigned(
+    dwk: string,
+    ps: ReturnType<FakeNetwork["issuer"]>,
+  ): Promise<HttpRequestMessage> {
+    const message = post(`${RESOURCE}/revoke`);
+    const added = signRequest(message, {
+      alg: ps.alg,
+      privateKey: ps.privateKey,
+      signatureKey: { scheme: "jwks_uri", id: PS, dwk, kid: ps.kid },
+      created: NOW,
+    });
+    return { ...message, headers: { ...(message.headers as Record<string, string>), ...added } };
+  }
+
+  it("refuses a dwk that is not an AAuth metadata document", async () => {
+    const ps = net.issuer(PS, "openid-configuration");
+    await rejects(
+      verifyRequest(
+        await psSigned("openid-configuration", ps),
+        options({ acceptedSchemes: ["jwks_uri"] }),
+      ),
+      "invalid_key",
+      /not an AAuth metadata document/,
+    );
+  });
+
+  it("refreshes a server key that fails once (re-keyed under the same kid)", async () => {
+    let now = NOW_MS;
+    const resolver = net.resolver(() => now);
+    const ps = net.issuer(PS, "aauth-person.json");
+    const opts = () => options({ resolver, now: () => now, acceptedSchemes: ["jwks_uri"] });
+    await verifyRequest(await psSigned("aauth-person.json", ps), opts());
+    const rekeyed = { ...generateSigningKey("Ed25519", ps.kid), kid: ps.kid, id: PS };
+    net.documents.set(`${PS}/jwks.json`, { keys: [rekeyed.publicJwk] });
+    now += 60_000;
+    const message = post(`${RESOURCE}/revoke`);
+    const added = signRequest(message, {
+      alg: rekeyed.alg,
+      privateKey: rekeyed.privateKey,
+      signatureKey: { scheme: "jwks_uri", id: PS, dwk: "aauth-person.json", kid: ps.kid },
+      created: Math.floor(now / 1000),
+    });
+    const signed = {
+      ...message,
+      headers: { ...(message.headers as Record<string, string>), ...added },
+    };
+    expect((await verifyRequest(signed, opts())).signer?.kid).toBe(ps.kid);
+  });
+
+  it("accepts a keyid equal to the jwks_uri kid", async () => {
+    const ps = net.issuer(PS, "aauth-person.json");
+    const message = get(`${RESOURCE}/x`);
+    const headers: Record<string, string> = {
+      "signature-key": serializeSignatureKey("sig", {
+        scheme: "jwks_uri",
+        id: PS,
+        dwk: "aauth-person.json",
+        kid: ps.kid,
+      }),
+    };
+    const params = new Map<string, number | string>([
+      ["created", NOW],
+      ["keyid", ps.kid],
+    ]);
+    const base = buildSignatureBase(normalizeRequest({ ...message, headers }), [
+      bare(BASE),
+      params,
+    ]);
+    const signature = httpSign(ps.alg, ps.privateKey, Buffer.from(base, "ascii"));
+    headers["signature-input"] = serializeDictionary(new Map([["sig", [bare(BASE), params]]]));
+    headers.signature = serializeDictionary(
+      new Map([["sig", [new Uint8Array(signature), new Map()]]]),
+    );
+    const result = await verifyRequest(
+      { ...message, headers },
+      options({ acceptedSchemes: ["jwks_uri"] }),
+    );
+    expect(result.signer?.kid).toBe(ps.kid);
+  });
+
+  it("accepts a keyid equal to the cnf.jwk kid", async () => {
+    agentKey = generateSigningKey("Ed25519", "agent-key-1");
+    const signed = await handSigned(
+      bare(BASE),
+      new Map<string, number | string>([
+        ["created", NOW],
+        ["keyid", "agent-key-1"],
+      ]),
+      await agentToken(ap, agentKey),
+    );
+    expect((await verifyRequest(signed, options())).scheme).toBe("jwt");
+  });
+});

@@ -27,18 +27,19 @@ function derivedValue(request: NormalizedRequest, name: string): string {
     case "@method":
       return request.method;
     case "@target-uri":
-      return url.href;
+      return request.targetUri;
     case "@authority":
       // URL lowercases the host and omits the scheme's default port.
       return url.host;
     case "@scheme":
       return url.protocol.slice(0, -1).toLowerCase();
     case "@request-target":
-      return `${url.pathname || "/"}${url.search}`;
+      return `${request.path}${request.query}`;
     case "@path":
-      return url.pathname || "/";
+      // The path as sent: no dot-segment removal, no re-encoding.
+      return request.path;
     case "@query":
-      return url.search === "" ? "?" : url.search;
+      return request.query === "" ? "?" : request.query;
     default:
       throw new SignatureBaseError(`unsupported derived component ${name}`);
   }
