@@ -14,7 +14,7 @@ which open issue owns each gap. Selection is not a conformance,
 production-readiness or interoperability claim (D284 ruling 1).
 
 Every behavioral statement is true of the reference implementation read at
-origin/main `538d0d61` and cites the function (`file:line`, paths relative to
+origin/main `c3368067` and cites the function (`file:line`, paths relative to
 `src/`) or the exact test (`describe > it`) that shows it. A path with no
 witnessing test says "no test yet". Tests marked [FGA] are skipped without a
 live OpenFGA, so a local run can pass where CI with OpenFGA fails, or the
@@ -66,7 +66,7 @@ so this target cannot pass acceptance while either is missing.
 
 ## 2. Dimension contract
 
-| Dimension | Adopted (D284, D293) | Reference at `538d0d61` | Status | Gap owner |
+| Dimension | Adopted (D284, D293) | Reference at `c3368067` | Status | Gap owner |
 |---|---|---|---|---|
 | Topology | One configured issuer and trust domain; trusted Approver resolver, PEP, PDP and Resource; no implied federation | One process. `composeStack({ withAuthServer: true })` (`demo/src/stack.ts:191`) runs the AS on 4400 (issuer `http://localhost:4400`, `stack.ts:273-275`), the PEP `mcp-payments-pep` (`stack.ts:706-708`), the PDP (`stack.ts:539`), OpenFGA, and the in-process approval service. The resource audience is `http://localhost:4403/mcp` (`services/mcp-payments/src/pep.ts:69`); nothing listens there. The AS JWKS is fetched once at assembly (`stack.ts:373`) | Partial | Launcher for exactly this topology: #1105. JWKS reload: #831 |
 | Binding | OAuth Mission-bound issuance, Runtime OAuth and AuthZEN; MAS join only in its separately declared path | Runtime OAuth credential validation and the AuthZEN request (§4, §5). The PDP is a direct call by default with no PEP authentication (`services/pdp/src/decision-channel.ts:56-61`); `MISSION_PDP_MODE=remote` adds a loopback HTTP hop keyed by a per-boot secret that is never configured, so it cannot cross processes as shipped (`decision-channel.ts:64-66`). `config/mas-join.json` names the payments resource governed, so `composeStack` also starts a MAS join route (`stack.ts:792-794`) the statement does not declare | Partial | Exclude the MAS route on this target: #1105 (#818 owns MAS; #956 Q2 its declaration in the shared demo) |
@@ -262,12 +262,12 @@ That test uses another member; no test names `max_budget`.
 - Blocking acceptance: #825 (token authority; PR 1 merged as #1062, PR 2 remains) and #828 (Resource policy).
 - Acceptance-pack prerequisites: #1105 (launcher, MAS route excluded), #1103 (reconciliation never runs), #1104 (emission failures), #1106 (Operation Profile drift), #1080 (`hold_transfer` permit control).
 - Separated deployment only: #1101 (state source under D293).
-- Also open: #826 (Approver versus Subject; PR #1074), #831 (keys and verifier refresh), #250 (control-plane atomicity; revoke versus issue), #916 (approval commits before grant binding), #830 (identity changes apply at restart), #817 (resource-side execution capabilities), #773 (context-drift vectors, conditional), #873 (inherited floor obligations).
+- Also open: #826 (Approver versus Subject; implemented by #1074, D306, awaiting acceptance), #831 (keys and verifier refresh), #250 (control-plane atomicity; revoke versus issue), #916 (approval commits before grant binding), #830 (identity changes apply at restart), #817 (resource-side execution capabilities), #773 (context-drift vectors, conditional), #873 (inherited floor obligations).
 - #917 and #918 are closed as implemented (D245, D247); their leftovers are owned by #1103 and #1080.
 
 ## 9. Pinned adoption closure
 
-Computed from `family-manifest.json` at `538d0d61`: the start set, its
+Computed from `family-manifest.json` at `c3368067`: the start set, its
 `adoption_requires` transitively, and each `requires_when` evaluated for this
 deployment. Each hash is `git log -1 --format=%h -- <draft>.md` at that
 commit. Each pinned draft's bytes there equal its `conformance-manifest.json`
@@ -339,7 +339,7 @@ The pack cannot pass while #825 or #828 is unmet (§1).
 | Permit replay | [FGA] `M5 transaction-assurance tier > the SAME evaluation identifier presented again is refused as permit_consumed, and the completed record stands` | |
 | Phase mismatch | `compound-action phases (@spec runtime#compound-actions) > refuses a commit presenting check_transfer's preflight permit` | |
 | Failed commit predicate with the permit retained | none | applies only to a connector that claims a commit-point predicate; none does at this revision (#817), so the guarantee stays excluded (§8) |
-| Bob for Alice, with and without `openid` | Subject selection only: `approval resolution establishes identity from the surface (#759, #761) > the pushed login_hint is resolved and authorized, never accepted as an arbitrary Subject` | #826 (PR #1074) |
+| Bob for Alice, with and without `openid` | `Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > refuses openid invalid_scope when the Approver is not the Subject, leaving no Mission, grant, code or session for the Subject` and `Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > approves for another principal without openid: the token and introspection carry the Subject, the record the Approver, and the provider account and session the Approver` | not on the assembled path; #826 awaits implementation acceptance |
 | Revoke during issuance | none on this surface | #250, #873 |
 | Restart and uncertain recovery | the unit-level witnesses in §7 | no assembled restart test; reconciliation never runs (#1103) |
 | Emission failure | none (§6) | #1104 |
