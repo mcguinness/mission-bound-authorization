@@ -1553,8 +1553,9 @@ instance's adjudication supply the human decision: the Approver's
 authentication (step 1), the Approver's authorization for the Subject
 and the authority source (steps 2 and 3), and the consent rendering
 (step 5). The other creation rules still bind the instance's approval
-event wherever they apply: Subject establishment and mapping (step 2),
-the authority source and its ceiling ({{authority-sources}}), the
+event wherever they apply: the Subject is never taken from
+unauthenticated client input and is mapped injectively (step 2), the
+authority source and its ceiling ({{authority-sources}}), the
 effective expiry and its creation-commit check (steps 4 and 7), the
 integrity anchors (step 6), and atomic creation deduplicated on
 `approval_event_id` ({{mission-record}}).
