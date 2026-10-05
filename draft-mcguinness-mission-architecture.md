@@ -1906,6 +1906,12 @@ Composition:
   states the same property in its "Composition and the Effective
   Ceiling" section ({{I-D.draft-mcguinness-oauth-mission}}).
 
+  Cross-issuer joint authorization is outside the family's scope.
+  Independent issuers run independent Missions, each bounded on its
+  own, and no aggregate bound follows from the individual Mission
+  bounds. Evidence can correlate such Missions, but it does not make an
+  operation require every issuer's approval.
+
 # Meaning and Derivation {#meaning-and-derivation}
 
 Three questions sit between a proposed task and enforced authority:
@@ -4176,6 +4182,12 @@ bound profiled by `aauth-mission-expiry`.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Composition states that cross-issuer joint authorization is outside
+  the family's scope: independent issuers run independent Missions,
+  each bounded on its own, and evidence that correlates them does not
+  make an operation require every issuer's approval. No profile's
+  requirements change.
 
 - Corrections from the fourth outside review. The Validity Model sums
   the residual across an exchange that mints without a fresh state
