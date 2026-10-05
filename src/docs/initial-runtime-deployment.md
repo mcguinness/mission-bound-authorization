@@ -58,6 +58,11 @@ Excluded from this target (D284 ruling 5): aggregate-budget enforcement,
 compromise containment, and any unattended prohibited-class exception. #813
 keeps its own ruling; #820 and #424 stay parked.
 
+Required, not excluded: token authority (#825) and independently
+administered Resource policy (#828) belong to the adopted policy conjunction.
+Both are unmet (§5). Under D284 ruling 4 they are acceptance prerequisites,
+so this target cannot pass acceptance while either is missing.
+
 ## 2. Dimension contract
 
 | Dimension | Adopted (D284, D293) | Reference at `57373c29` | Status | Gap owner |
@@ -66,7 +71,7 @@ keeps its own ruling; #820 and #424 stay parked.
 | Binding | OAuth Mission-bound issuance, Runtime OAuth and AuthZEN; MAS join only in its separately declared path | Runtime OAuth credential validation and the AuthZEN request (§4, §5). The PDP is a direct call by default with no PEP authentication (`services/pdp/src/decision-channel.ts:56-61`); `MISSION_PDP_MODE=remote` adds a loopback HTTP hop keyed by a per-boot secret that is never configured, so it cannot cross processes as shipped (`decision-channel.ts:64-66`). `config/mas-join.json` names the payments resource governed, so `composeStack` also starts a MAS join route (`stack.ts:792-794`) the statement does not declare | Partial | Exclude or disable the MAS route on this target: no issue yet (#818 owns MAS itself) |
 | Operations | Enumerated payments operations, authority types, classes, phases and parameter binding; refuse outside the allowlist | Nine tools, all classed (§3). An unknown tool is refused `unknown_tool` before any PDP call (`pep.ts:1084`) | Partial | `hold_transfer` control: #918 leftovers. Profile drift (§3): no issue yet |
 | State | For this co-located target, the declared local committed read (D293 narrows D284's "authoritative Status"); per-class staleness, skew, permit and execution bounds; source ownership and unavailable behavior | The PEP and PDP read the AS kernel's committed record in process (`loadView`, `stack.ts:665-672`; the statement's state source is `kernel-committed load_view`, placement `pep`). That is the authoritative record behind Status, but it is not the Mission Status operation, introspection or Signals. Bounds and fail-closed behavior: §4 | Source accepted (D293); one unavailable-state witness missing (§4) | Separated PEP or PDP: #1101, which gates only a separated-deployment claim |
-| Policy | Conjunction of token authority, current effective Mission authority and independently administered Resource policy | Current effective Mission authority is enforced and tested. Token authority is read only for validity, audience, `cnf` and the `mission` reference. Independent Resource policy is not implemented (§5) | Partial | Token authority: #825 (PR #1062). Resource policy: #828 |
+| Policy | Conjunction of token authority, current effective Mission authority and independently administered Resource policy | Current effective Mission authority is enforced and tested. Token authority is read only for validity, audience, `cnf` and the `mission` reference. Independent Resource policy is not implemented (§5) | Required, not met: blocks acceptance | Token authority: #825 (PR #1062). Resource policy: #828 |
 | Evidence | Runtime/Decision Base and explicitly enabled evidence capabilities; emitters, verifiers, retention, failure carriers; missing telemetry is `indeterminate` | Decision Evidence, Refusal Records and Execution Evidence (§6). The `evidence` extension is not enabled, so there is no receipt issuer | Partial | Emission-failure tests: no issue yet |
 | Persistence | Every store, its transaction or acceptance boundary, and restart and reconciliation behavior | Only the PDP claim domain and the PEP write reservations are durable files; every other store is in memory (§7). The declared reconciler is not run | Partial | #250, #831, #917 and #918 leftovers |
 | Claims | Per-action limits only; execution and transaction handling for applicable operations; no aggregate cap, compromise containment or unattended prohibited-class exception | §8 | Partial | §8 |
@@ -135,6 +140,9 @@ high-consequence action runs to completion inside its permit window (about
 `compound-action phases (@spec runtime#compound-actions) > denies the fresh commit Decision when the Mission deactivates after prepare`.
 
 ## 5. Policy conjunction
+
+All three parts are required. Token authority and independent Resource
+policy are not met; §10 makes each an acceptance gate.
 
 **Current effective Mission authority** (PDP, `evaluate.ts`): view consistency
 (`view_inconsistent`), state (`mission_inactive`), the entry matching
@@ -218,11 +226,11 @@ unsupported obligation is refused or its claim excluded.
 
 | Action path | Claimed | Not claimed | Residuals and owners |
 |---|---|---|---|
-| Reads (`list_invoices`, `get_invoice`, `lookup_vendor`, `check_transfer`) | per-call decision on current Mission authority and state; per-action `vendors` | Execution Evidence on success; token-side narrowing; independent Resource policy | #825, #828 |
+| Reads (`list_invoices`, `get_invoice`, `lookup_vendor`, `check_transfer`) | per-call decision on current Mission authority and state; per-action `vendors` | Execution Evidence on success | #825 and #828 (required, §1) |
 | Keyed writes (`schedule_payment`, `cancel_scheduled_payment`) | per-action `max_amount` and `vendors`; PEP-reserved idempotency with a durable record | reservation sweep; reconciliation of a `reserved` row | #918 leftovers |
 | Prepare (`hold_transfer`) | per-call decision; phase binding | idempotency or permit-lifetime control; any stored effect | #918 leftovers |
 | Transaction tier (`execute_wire_transfer`, `send_remittance_email`) | single-use permit, execution lease, PDP-held Exact claim, digest and phase binding, Execution Evidence; action-bound approval for remittance | restart recovery beyond the claim store; reconciliation run; transaction-grade resource witnesses | #917 leftovers, #250, #817 |
-| Every path | per-action limits only | any aggregate cap; compromise containment; unattended prohibited-class exception | excluded by D284 |
+| Every path | per-action limits only | any aggregate cap; compromise containment; unattended prohibited-class exception | excluded by D284; #825 and #828 are required, not excluded (§1) |
 
 **The aggregate-cap exclusion is enforced by refusal.** The issuer refuses an
 Intent carrying a member it does not implement, such as `max_budget`, under
@@ -298,11 +306,13 @@ revision and exercises each vector below. Only the `src/demo/test` files
 `composeStack`; no test yet drives an AS-issued Mission-bound token through
 `mcp-payments` and the real PDP.
 
+The pack cannot pass while #825 or #828 is unmet (§1).
+
 | Vector | Existing witness | Gap |
 |---|---|---|
 | Valid request | [FGA] `M4 core enforcement tier > scenario 2: happy path -- in-authority read permitted, Decision Evidence recorded` | not on the assembled path |
-| Narrowed token | none | #825 (PR #1062) |
-| Independent policy revocation | a stubbed policy only: `finding 3: a multi-vendor list_invoices names every returned vendor to Resource policy, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy denies one: the whole read refuses out_of_authority, never a narrowed result` | #828 |
+| Narrowed token | none | #825 (PR #1062); required, blocks acceptance |
+| Independent policy revocation | a stubbed policy only: `finding 3: a multi-vendor list_invoices names every returned vendor to Resource policy, not just one representative (@spec read-binding) > Mission authority includes two vendors; Resource policy denies one: the whole read refuses out_of_authority, never a narrowed result` | #828; required, blocks acceptance |
 | Stale or non-active Mission at the effect boundary | decision time and the commit crossing (§4) | between permit and effect, by the stated run-to-completion bound |
 | Parameter digest mismatch | [FGA] `M4 core enforcement tier > scenario 3: TOCTOU -- invoice mutated between decision and execute -> parameter_mismatch refusal` | |
 | Permit replay | [FGA] `M5 transaction-assurance tier > the SAME evaluation identifier presented again is refused as permit_consumed, and the completed record stands` | |
