@@ -14,7 +14,7 @@ which open issue owns each gap. Selection is not a conformance,
 production-readiness or interoperability claim (D284 ruling 1).
 
 Every behavioral statement is true of the reference implementation read at
-origin/main `c3368067` and cites the function (`file:line`, paths relative to
+origin/main `e9001b2f` and cites the function (`file:line`, paths relative to
 `src/`) or the exact test (`describe > it`) that shows it. A path with no
 witnessing test says "no test yet". Tests marked [FGA] are skipped without a
 live OpenFGA, so a local run can pass where CI with OpenFGA fails, or the
@@ -66,7 +66,7 @@ so this target cannot pass acceptance while either is missing.
 
 ## 2. Dimension contract
 
-| Dimension | Adopted (D284, D293) | Reference at `c3368067` | Status | Gap owner |
+| Dimension | Adopted (D284, D293) | Reference at `e9001b2f` | Status | Gap owner |
 |---|---|---|---|---|
 | Topology | One configured issuer and trust domain; trusted Approver resolver, PEP, PDP and Resource; no implied federation | One process. `composeStack({ withAuthServer: true })` (`demo/src/stack.ts:191`) runs the AS on 4400 (issuer `http://localhost:4400`, `stack.ts:273-275`), the PEP `mcp-payments-pep` (`stack.ts:706-708`), the PDP (`stack.ts:539`), OpenFGA, and the in-process approval service. The resource audience is `http://localhost:4403/mcp` (`services/mcp-payments/src/pep.ts:69`); nothing listens there. The AS JWKS is fetched once at assembly (`stack.ts:373`) | Partial | Launcher for exactly this topology: #1105. JWKS reload: #831 |
 | Binding | OAuth Mission-bound issuance, Runtime OAuth and AuthZEN; MAS join only in its separately declared path | Runtime OAuth credential validation and the AuthZEN request (§4, §5). The PDP is a direct call by default with no PEP authentication (`services/pdp/src/decision-channel.ts:56-61`); `MISSION_PDP_MODE=remote` adds a loopback HTTP hop keyed by a per-boot secret that is never configured, so it cannot cross processes as shipped (`decision-channel.ts:64-66`). `config/mas-join.json` names the payments resource governed, so `composeStack` also starts a MAS join route (`stack.ts:792-794`) the statement does not declare | Partial | Exclude the MAS route on this target: #1105 (#818 owns MAS; #956 Q2 its declaration in the shared demo) |
@@ -267,7 +267,7 @@ That test uses another member; no test names `max_budget`.
 
 ## 9. Pinned adoption closure
 
-Computed from `family-manifest.json` at `c3368067`: the start set, its
+Computed from `family-manifest.json` at `e9001b2f`: the start set, its
 `adoption_requires` transitively, and each `requires_when` evaluated for this
 deployment. Each hash is `git log -1 --format=%h -- <draft>.md` at that
 commit. Each pinned draft's bytes there equal its `conformance-manifest.json`
@@ -282,7 +282,7 @@ no pin.
 | `draft-mcguinness-oauth-mission.md` (the OAuth binding) | `73859449` | the floor; Mission-bound issuance |
 | `draft-mcguinness-oauth-mission-resource-access.md` | `19fa5a0e` | `mission_resource_access`, the statement's only entry type |
 | `draft-mcguinness-mission-substrate.md` | `eb59a919` | `adoption_requires` of runtime, runtime-oauth, authzen and runtime-evidence |
-| `draft-mcguinness-mission-runtime.md` | `84822ae9` | the runtime overlay |
+| `draft-mcguinness-mission-runtime.md` | `0c7ba9c3` | the runtime overlay |
 | `draft-mcguinness-mission-runtime-oauth.md` | `2b422bf1` | Runtime OAuth credential validation |
 | `draft-mcguinness-mission-authzen.md` | `6f10361e` | the decision wire: Decision Base, Transaction Assurance, Runtime Evidence and ARAP; not Obligations, History or Batch |
 | `draft-mcguinness-mission-runtime-evidence.md` | `c8a4d8b8` | the portable Decision, Execution and Refusal objects |
@@ -309,7 +309,7 @@ introspection (#1101).
 | `draft-mcguinness-mission-authority-server.md` | `30933b36` | the MAS join route is excluded from this target (#1105) |
 
 **Reader bundle, informative:** `draft-mcguinness-mission-architecture.md`
-`3f95ce1c`, `draft-mcguinness-mission-control-plane.md` `909a3ee7` (kept
+`106d552f`, `draft-mcguinness-mission-control-plane.md` `909a3ee7` (kept
 informative as on the floor; adopting it would pull in Signals and Status),
 and `draft-mcguinness-mission-security-model.md` `20706d3b`.
 
