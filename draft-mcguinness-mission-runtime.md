@@ -593,27 +593,26 @@ beyond the staleness bound; under observation-time reporting the
 permit cap collapses that term. A path outside PDP gating keeps only
 the derived credential's lifetime as its bound.
 
-For a deployment whose Mission-bound credentials are short-lived and
-whose issuance and refresh are themselves gated on live Mission state,
-the refresh cycle itself is a conforming active freshness source for
-any action class whose published staleness bound the credential
-lifetime meets: the issuance gate is an active check, and a credential
-that exists is evidence the Mission was `active` within the lifetime.
-This source's revocation latency floor is the credential lifetime, so
-it conforms only for classes whose bound admits that floor, and a
-higher-frequency source remains the path to tighter bounds.
-
-**Credential-lifetime freshness.** Below the high-consequence floor,
-credential expiry is itself a conforming state source where derivation
-and refresh are gated on `active`, so a credential's remaining
-lifetime bounds the staleness of the authority it carries, and the
-published staleness bound for a class relying on it is the maximum
-credential lifetime. Expiry is a state check performed by the clock:
-no status call, no query, no change at the consuming resource. A
-deployment declares it per class in its Enforcement Scope Statement
-like any other source; what it cannot do is reflect a revocation
-faster than the lifetime, which is why the high-consequence classes
-require an active source.
+**Credential-lifetime freshness.** Below the high-consequence floor, a
+deployment whose Mission-bound credentials are short-lived can use them
+as its state source, in two forms: credential expiry, and the refresh
+cycle gated on live Mission state, whose issuance gate is an active
+check. Either conforms only where every issuance, refresh, and
+exchange path for those credentials checks Mission state within the
+stated bound. A credential minted on such a path is evidence the
+Mission was `active` within its lifetime, and the published staleness
+bound for a class relying on it is the maximum credential lifetime. A
+credential minted from an earlier observation without a fresh check,
+such as a grant redeemed later, is evidence only as of that
+observation, so the observation's age adds to the lifetime
+({{I-D.draft-mcguinness-mission-architecture}}, Section "The Validity
+Model"). Expiry is a state check performed by the clock: no status
+call, no query, no change at the consuming resource. A deployment
+declares the source per class in its Enforcement Scope Statement like
+any other. Its revocation latency floor is the credential lifetime, so
+it cannot reflect a revocation faster than that: the high-consequence
+classes require an active source, and a higher-frequency source
+remains the path to tighter bounds.
 
 Together the sources form a single freshness dial, and a deployment
 picks a position per action class rather than one posture for the
@@ -3771,6 +3770,13 @@ worked example shows the concrete record
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Mission State and Freshness states credential expiry and the
+  state-gated refresh cycle as one Credential-lifetime freshness
+  source below the high-consequence floor, conforming only where every
+  issuance, refresh, and exchange path checks Mission state within the
+  stated bound; a credential minted from an earlier observation adds
+  that observation's age. No requirement changed.
 
 - Evaluation-Context Binding no longer speaks of "Runtime-Enforced
   conformance": a level is guidance, never a conformance class. No
