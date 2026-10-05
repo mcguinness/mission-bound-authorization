@@ -1306,6 +1306,17 @@ further-issuance column returns for consuming Authorization
 Servers: new grants stop at the MAS commit, and refresh is gated
 within each server's published staleness bound.
 
+Revocation does not prohibit equivalent authority under a separately
+approved Mission. Under the OAuth binding, it prevents further issuance
+and drawdown under the revoked Mission, prevents pending Expansion from
+completing against that predecessor
+({{I-D.draft-mcguinness-oauth-mission-expansion}}), and cascades to
+children as Child Delegation specifies
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). Outstanding
+credentials and runtime decisions retain the documented revocation
+windows. Preventing equivalent authority from being approved again
+requires policy covering the relevant approval paths.
+
 | Configuration | Worst-case window | Governing parameter |
 |---|---|---|
 | Baseline (token lifetime only) | until the token expires | access-token `exp` |
@@ -1503,6 +1514,11 @@ model and pipeline layers, and saying so is the point:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Revocation-to-Action Latency states that revoking a Mission does not
+  prohibit equivalent authority under a separately approved Mission,
+  and that preventing re-approval takes policy over the relevant
+  approval paths.
 
 - The effective-ceiling composition residual states that the
   per-Mission figures do not compose into a lifetime total, and
