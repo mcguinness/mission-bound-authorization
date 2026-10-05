@@ -14,7 +14,7 @@ which open issue owns each gap. Selection is not a conformance,
 production-readiness or interoperability claim (D284 ruling 1).
 
 Every behavioral statement is true of the reference implementation read at
-origin/main `57373c29` and cites the function (`file:line`, paths relative to
+origin/main `538d0d61` and cites the function (`file:line`, paths relative to
 `src/`) or the exact test (`describe > it`) that shows it. A path with no
 witnessing test says "no test yet". Tests marked [FGA] are skipped without a
 live OpenFGA, so a local run can pass where CI with OpenFGA fails, or the
@@ -65,11 +65,11 @@ so this target cannot pass acceptance while either is missing.
 
 ## 2. Dimension contract
 
-| Dimension | Adopted (D284, D293) | Reference at `57373c29` | Status | Gap owner |
+| Dimension | Adopted (D284, D293) | Reference at `538d0d61` | Status | Gap owner |
 |---|---|---|---|---|
-| Topology | One configured issuer and trust domain; trusted Approver resolver, PEP, PDP and Resource; no implied federation | One process. `composeStack({ withAuthServer: true })` (`demo/src/stack.ts:191`) runs the AS on 4400 (issuer `http://localhost:4400`, `stack.ts:273-275`), the PEP `mcp-payments-pep` (`stack.ts:706-708`), the PDP (`stack.ts:539`), OpenFGA, and the in-process approval service. The resource audience is `http://localhost:4403/mcp` (`services/mcp-payments/src/pep.ts:67`); nothing listens there. The AS JWKS is fetched once at assembly (`stack.ts:373`) | Partial | Launcher for exactly this topology: #1105. JWKS reload: #831 |
+| Topology | One configured issuer and trust domain; trusted Approver resolver, PEP, PDP and Resource; no implied federation | One process. `composeStack({ withAuthServer: true })` (`demo/src/stack.ts:191`) runs the AS on 4400 (issuer `http://localhost:4400`, `stack.ts:273-275`), the PEP `mcp-payments-pep` (`stack.ts:706-708`), the PDP (`stack.ts:539`), OpenFGA, and the in-process approval service. The resource audience is `http://localhost:4403/mcp` (`services/mcp-payments/src/pep.ts:69`); nothing listens there. The AS JWKS is fetched once at assembly (`stack.ts:373`) | Partial | Launcher for exactly this topology: #1105. JWKS reload: #831 |
 | Binding | OAuth Mission-bound issuance, Runtime OAuth and AuthZEN; MAS join only in its separately declared path | Runtime OAuth credential validation and the AuthZEN request (§4, §5). The PDP is a direct call by default with no PEP authentication (`services/pdp/src/decision-channel.ts:56-61`); `MISSION_PDP_MODE=remote` adds a loopback HTTP hop keyed by a per-boot secret that is never configured, so it cannot cross processes as shipped (`decision-channel.ts:64-66`). `config/mas-join.json` names the payments resource governed, so `composeStack` also starts a MAS join route (`stack.ts:792-794`) the statement does not declare | Partial | Exclude the MAS route on this target: #1105 (#818 owns MAS; #956 Q2 its declaration in the shared demo) |
-| Operations | Enumerated payments operations, authority types, classes, phases and parameter binding; refuse outside the allowlist | Nine tools, all classed (§3). An unknown tool is refused `unknown_tool` before any PDP call (`pep.ts:1084`) | Partial | `hold_transfer` permit control: #1080. Profile drift (§3): #1106 |
+| Operations | Enumerated payments operations, authority types, classes, phases and parameter binding; refuse outside the allowlist | Nine tools, all classed (§3). An unknown tool is refused `unknown_tool` before any PDP call (`pep.ts:1095`) | Partial | `hold_transfer` permit control: #1080. Profile drift (§3): #1106 |
 | State | For this co-located target, the declared local committed read (D293 narrows D284's "authoritative Status"); per-class staleness, skew, permit and execution bounds; source ownership and unavailable behavior | The PEP and PDP read the AS kernel's committed record in process (`loadView`, `stack.ts:665-672`; the statement's state source is `kernel-committed load_view`, placement `pep`). That is the authoritative record behind Status, but it is not the Mission Status operation, introspection or Signals. Bounds and fail-closed behavior: §4 | Source accepted (D293); one unavailable-state witness missing (§4) | Separated PEP or PDP: #1101, which gates only a separated-deployment claim |
 | Policy | Conjunction of token authority, current effective Mission authority and independently administered Resource policy | Current effective Mission authority is enforced and tested. Token authority is read only for validity, audience, `cnf` and the `mission` reference. Independent Resource policy is not implemented (§5) | Required, not met: blocks acceptance | Token authority: #825 (PR #1062). Resource policy: #828 |
 | Evidence | Runtime/Decision Base and explicitly enabled evidence capabilities; emitters, verifiers, retention, failure carriers; missing telemetry is `indeterminate` | Decision Evidence, Refusal Records and Execution Evidence (§6). The `evidence` extension is not enabled, so there is no receipt issuer | Partial | Emission failures: #1104 |
@@ -78,7 +78,7 @@ so this target cannot pass acceptance while either is missing.
 
 ## 3. Operation allowlist
 
-The operations are `TOOL_ACTIONS` (`services/mcp-payments/src/pep.ts:286-296`),
+The operations are `TOOL_ACTIONS` (`services/mcp-payments/src/pep.ts:297-307`),
 served from `config/tool-catalogs/payments.json`, with compound phases in
 `config/catalog.json`. Every action carries a class the Enforcement Scope
 Statement declares:
@@ -98,14 +98,14 @@ Statement declares:
 
 - **Invoice form** (`buildEffectiveParams`, `services/mcp-payments/src/effective-params.ts:27-44`): `action`, `invoice_id`, `invoice_version`, `vendor_id`, `vendor_version`, `amount`, `payee_account` and `resource`, read from the payments store, not from arguments. **List form** (`:69-80`): `action`, `resource`, `vendor_scope`, `vendor_scope_source`.
 - **Compound action:** one action and one digest serve three tools; the phase rides `context.action_phase` and is checked at every use: `compound-action phases (@spec runtime#compound-actions) > refuses a commit presenting prepare's permit, zero connector effects`.
-- **Per-action limits** (`config/policy.json`): the read entry allows vendor `acme`; the write entry allows `max_amount` 500.00 USD and vendor `acme`. The PDP compares `max_amount` by exact decimal (`services/pdp/src/evaluate.ts:1240-1255`, refusal `parameter_violation`): `PDP per-action max_amount cap compares by exact decimal value (@spec mission#max-amount) > an amount exactly at the cap permits (the comparison is <=, not <)`, and [FGA] `M4 core enforcement tier > over-cap invoice denied parameter_violation`.
+- **Per-action limits** (`config/policy.json`): the read entry allows vendor `acme`; the write entry allows `max_amount` 500.00 USD and vendor `acme`. The PDP compares `max_amount` by exact decimal (`services/pdp/src/evaluate.ts:1261-1276`, refusal `parameter_violation`): `PDP per-action max_amount cap compares by exact decimal value (@spec mission#max-amount) > an amount exactly at the cap permits (the comparison is <=, not <)`, and [FGA] `M4 core enforcement tier > over-cap invoice denied parameter_violation`.
 - **Action-bound approval:** `send_remittance_email` also requires an approval (`stack.ts:694-701`), refused `action_approval_required` otherwise: [FGA] `PDP decisions against OpenFGA (@spec authzen) > an approval past approved_until -> deny action_approval_required (ARAP)`.
-- **Outside the allowlist:** an unknown tool name is refused `unknown_tool` before any PDP call, with a Refusal Record carrying `request_unsupported` (`pep.ts:915-938`, `:1084`): `approval resolution is outside the mediated tool boundary (#759) > approval-resolution tool names refuse unknown_tool and retain one PEP Refusal Record`. That test calls the PEP directly and does not assert the `request_unsupported` value; no transport-level test yet. An ungranted known tool is hidden from `tools/list` and still refused if called: `a tool-catalog filter is not a substitute for the runtime gate (@spec runtime#pep-placement) > a tool absent from tools/list because it is ungranted is still refused by the runtime gate when called directly, never executed`.
+- **Outside the allowlist:** an unknown tool name is refused `unknown_tool` before any PDP call, with a Refusal Record carrying `request_unsupported` (`pep.ts:926-949`, `:1095`): `approval resolution is outside the mediated tool boundary (#759) > approval-resolution tool names refuse unknown_tool and retain one PEP Refusal Record`. That test calls the PEP directly and does not assert the `request_unsupported` value; no transport-level test yet. An ungranted known tool is hidden from `tools/list` and still refused if called: `a tool-catalog filter is not a substitute for the runtime gate (@spec runtime#pep-placement) > a tool absent from tools/list because it is ungranted is still refused by the runtime gate when called directly, never executed`.
 
 Residuals:
 
-- **`hold_transfer`** has no permit-lifetime or idempotency control and stores nothing: `execute()` returns `{held: true}` (`services/mcp-payments/src/server.ts:1703-1704`). It is in the allowlist as the prepare phase. #1080 owns the permit control. No test yet.
-- **Operation Profile drift.** The profile says arguments are NFC-normalized and unknown members are refused `invalid_request`; neither is implemented in `services/mcp-payments/src`. Its `note` and `execute_after` members are neither served nor read. The key format is checked by the PDP (`evaluate.ts:1375`, `:1393`), not a schema. The schema list also omits `idempotency_key` on the two transaction-tier tools and lists an unserved `list_invoices` `status` filter. #1106 (owner ruling pending).
+- **`hold_transfer`** has no permit-lifetime or idempotency control and stores nothing: `execute()` returns `{held: true}` (`services/mcp-payments/src/server.ts:1705-1706`). It is in the allowlist as the prepare phase. #1080 owns the permit control. No test yet.
+- **Operation Profile drift.** The profile says arguments are NFC-normalized and unknown members are refused `invalid_request`; neither is implemented in `services/mcp-payments/src`. Its `note` and `execute_after` members are neither served nor read. The key format is checked by the PDP (`evaluate.ts:1396`, `:1414`), not a schema. The schema list also omits `idempotency_key` on the two transaction-tier tools and lists an unserved `list_invoices` `status` filter. #1106 (owner ruling pending).
 
 ## 4. State and freshness
 
@@ -118,15 +118,15 @@ Residuals:
 - **Source.** `loadView` (`stack.ts:665-672`) returns the kernel's committed state and version with `mode: "fresh"` and `freshness_at` set to now. Each read happens inside the request, so the bounds below bind only injected observations in tests: `the PEP sends the AuthZEN profile's members (@spec authzen#context-audience-freshness, #1004) > under PEP placement, carries the loader's observation at context.mission_state_observation, with state, mode and freshness_at, and no context.freshness`.
 - **Per-class bounds** (`config/enforcement-scope.json:15-26`): 300 s for `consequential_read`, `consequential_write` and `non_consequential`; 30 s for `irreversible_action` and `privileged_administration`; 60 s for `external_commitment`; none for `audit_only`; beyond the bound, deny; issuer ceiling 300 s. The loader refuses any other mode: `published runtime posture (@spec runtime#runtime-operational, status#status-operational) > refuses unsupported modes, malformed or missing bounds, and bounds exceeding the issuer ceiling`.
 - **Clock skew.** An observation up to 5 s in the future is accepted (`evaluate.ts:94`), and clamped to the decision instant for the permit cap: `permit deadline (@spec runtime#state-freshness) > clamps a skew-tolerated future observation to the decision instant, so skew cannot lengthen a permit`.
-- **Permit lifetime.** 120 s for `irreversible_action`, 300 s otherwise (`evaluate.ts:1318`), capped by the observation plus the class bound, a reported expiry, a signed `fresh_until`, and 300 s for the two keyed writes (`evaluate.ts:1336-1356`). The high-consequence classes get `use_limit` 1: `a permit expires no later than the state view it was decided against (@spec runtime#state-freshness) > caps valid_until at the state observation plus the class staleness bound`.
-- **Execution lease.** 30 s for both high-consequence classes, capped by `valid_until`; validity and phase are checked at admission and again just before commit (`server.ts:1364`, `:1473`): [FGA] `M5 transaction-assurance tier > derives the execution lease from the published transaction_assurance maximum, capped by the permit's validity`.
+- **Permit lifetime.** 120 s for `irreversible_action`, 300 s otherwise (`evaluate.ts:1339`), capped by the observation plus the class bound, a reported expiry, a signed `fresh_until`, and 300 s for the two keyed writes (`evaluate.ts:1357-1377`). The high-consequence classes get `use_limit` 1: `a permit expires no later than the state view it was decided against (@spec runtime#state-freshness) > caps valid_until at the state observation plus the class staleness bound`.
+- **Execution lease.** 30 s for both high-consequence classes, capped by `valid_until`; validity and phase are checked at admission and again just before commit (`server.ts:1366`, `:1475`): [FGA] `M5 transaction-assurance tier > derives the execution lease from the published transaction_assurance maximum, capped by the permit's validity`.
 
 Unavailable or stale state fails closed:
 
 | Condition | Refusal | Witness |
 |---|---|---|
-| Mission not found by the loader | `unknown_mission`, signed `state_unavailable` (`pep.ts:1121`) | no test yet on the Mission-bound path |
-| Malformed observation | `state_unavailable`, the PDP is not asked (`pep.ts:1196-1198`) | `the PEP sends the AuthZEN profile's members (@spec authzen#context-audience-freshness, #1004) > under PEP placement, refuses state_unavailable without asking the PDP when the loader's observation lacks a member its mode requires or carries a malformed one` |
+| Mission not found by the loader | `unknown_mission`, signed `state_unavailable` (`pep.ts:1132`) | no test yet on the Mission-bound path |
+| Malformed observation | `state_unavailable`, the PDP is not asked (`pep.ts:1207-1209`) | `the PEP sends the AuthZEN profile's members (@spec authzen#context-audience-freshness, #1004) > under PEP placement, refuses state_unavailable without asking the PDP when the loader's observation lacks a member its mode requires or carries a malformed one` |
 | Observation absent, stale or past the skew; version mismatch | `stale_state` | `AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > under PEP placement the PDP reads context.mission_state_observation > a missing observation denies stale_state for every high-consequence class` |
 | Mission not `active` (the PDP's view wins) | `mission_inactive` | `AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > the PEP-supplied state is exactly active, and the PDP's own view wins on disagreement (@spec authzen#pdp-request rule 1) > the PDP's own revoked view against a PEP-supplied active state denies mission_inactive: the PDP's view wins` |
 | PDP throws, times out, is unreachable or answers non-2xx | `pdp_unreachable` | `configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > refuses a decision function that throws synchronously as pdp_unreachable, with one Refusal Record and no effect` |
@@ -137,7 +137,7 @@ instantaneous revocation is claimed: an admitted high-consequence action runs
 to completion inside its permit window (about 30 s or 60 s) under the runtime
 profile's run-to-completion rule;
 `callTransactionTool` does not re-read Mission state after `enforce`
-(`server.ts:1321-1480`). No test yet. The next call decides afresh:
+(`server.ts:1323-1482`). No test yet. The next call decides afresh:
 `compound-action phases (@spec runtime#compound-actions) > denies the fresh commit Decision when the Mission deactivates after prepare`.
 
 ## 5. Policy conjunction
@@ -159,10 +159,10 @@ The gates are independently necessary:
 
 **Token authority:** partial. The PEP validates the token's signature,
 issuer, audience, `cnf` and DPoP, and requires the `mission` claim
-(`verifyDpopBoundToken`, `server.ts:474-495`):
+(`verifyDpopBoundToken`, `server.ts:478-495`):
 `the PEP establishes token validity before using any of its claims as decision inputs (@spec runtime#token-validation) > a token whose audience does not name this resource is refused, before any of its claims reach a decision (@spec runtime#token-validation, audience)`.
 It does not read the Mission-bound token's `authorization_details` or `scope`;
-the PDP matches the kernel's current Authority Set (`evaluate.ts:1049-1056`).
+the PDP matches the kernel's current Authority Set (`evaluate.ts:1070-1077`).
 A narrowed token is therefore not honored as narrower. Credential expiry is
 checked only at validation; the PDP records `context.credential.expires_at`
 in evidence but does not deny on it. Owner: #825 (PR 1 is #1062).
@@ -183,14 +183,14 @@ Deployment-administered gates that do exist: the action-bound approval for
 
 | Record | Emitter | When |
 |---|---|---|
-| Decision Evidence | PDP, role `pdp`, kid `pdp-decision-evidence`, key generated per boot (`stack.ts:520`) | every decision, permit or deny; a retransmission returns the stored record (`evaluate.ts:528-532`) |
-| Refusal Record | PEP, role `pep` | every refusal before a PDP decision (`pep.ts:2043-2104`) |
-| Execution Evidence, `suppressed` | PEP, role `pep` | every post-permit failure (`suppressExecution`, `pep.ts:1803-1846`), and a keyed write whose retry returns the stored result (`operation_already_claimed`) |
-| Execution Evidence, `completed` | role `executor` | the transaction tier after the connector commits (`server.ts:1566-1597`), and reconciliation from the connector ledger |
+| Decision Evidence | PDP, role `pdp`, kid `pdp-decision-evidence`, key generated per boot (`stack.ts:520`) | every decision, permit or deny; a retransmission returns the stored record (`evaluate.ts:541-545`) |
+| Refusal Record | PEP, role `pep` | every refusal before a PDP decision (`pep.ts:2079-2140`) |
+| Execution Evidence, `suppressed` | PEP, role `pep` | every post-permit failure (`suppressExecution`, `pep.ts:1839-1882`), and a keyed write whose retry returns the stored result (`operation_already_claimed`) |
+| Execution Evidence, `completed` | role `executor` | the transaction tier after the connector commits (`server.ts:1568-1599`), and reconciliation from the connector ledger |
 
-- **Verification.** The PEP verifies Decision Evidence (byte equality, signature, emitter-bound kid, role, audience) and retains it verbatim; a permit whose record fails is refused `decision_evidence_unverifiable` (`pep.ts:1498-1510`): `a permit the PDP did not evidence is refused, never executed (#741) > refuses the action when the decision carries no Decision Evidence`.
+- **Verification.** The PEP verifies Decision Evidence (byte equality, signature, emitter-bound kid, role, audience) and retains it verbatim; a permit whose record fails is refused `decision_evidence_unverifiable` (`pep.ts:1534-1546`): `a permit the PDP did not evidence is refused, never executed (#741) > refuses the action when the decision carries no Decision Evidence`.
 - **Outcomes** are `completed`, `failed` and `suppressed` (`services/mcp-payments/src/evidence.ts:213`). Nothing emits `failed`. An unknown outcome is not an Execution Evidence outcome; it is the PDP claim state `indeterminate`.
-- **Coverage gap.** A successful call outside the transaction tier emits no Execution Evidence (`server.ts:1019`, `:1082`, `:1286`); only its Decision Evidence exists. No test asserts the absence.
+- **Coverage gap.** A successful call outside the transaction tier emits no Execution Evidence (`server.ts:1021`, `:1084`, `:1288`); only its Decision Evidence exists. No test asserts the absence.
 - **Retention.** `EvidenceRetentionStore` is built without a file, so it is in memory (`stack.ts:566-568`), with a 31,536,000 s window from the `policy.json` audit horizon and no capacity limit. Restart recovery is shown only on a test file: `retention honors the declared audit window (@spec runtime-evidence#receipt-retention) > recovers the retained records, the emitter sequences and the key retirement metadata after a restart`.
 - **Emission failure.** A PDP whose emitter throws releases the claim, and the PEP refuses `pdp_unreachable`; a Refusal Record emission that throws rejects `enforce`; `suppressExecution` retries once and then records `gap: "emission_failed"`; the `completed` write after a connector commit has no error handling and leaves the operation `connector_committed`. No test yet for the emitter throw, the Refusal Record throw, either `suppressExecution` gap, or the `completed` write failure. #1104.
 
@@ -251,11 +251,11 @@ That test uses another member; no test names `max_budget`.
 
 ## 9. Pinned adoption closure
 
-Computed from `family-manifest.json` at `57373c29`: the start set, its
+Computed from `family-manifest.json` at `538d0d61`: the start set, its
 `adoption_requires` transitively, and each `requires_when` evaluated for this
 deployment. Each hash is `git log -1 --format=%h -- <draft>.md` at that
 commit. Each pinned draft's bytes there equal its `conformance-manifest.json`
-pin (Substrate and Signals are pinned at the byte-identical `19fa5a0e`);
+pin (Substrate and Signals are pinned at the byte-identical `19fa5a0e`, Runtime Evidence at `40705c1d`, Status at `60552344` and the MAS draft at `98445ffc`);
 containment, Status List, attenuation, Architecture and Security Model carry
 no pin.
 
@@ -269,11 +269,11 @@ no pin.
 | `draft-mcguinness-mission-runtime.md` | `84822ae9` | the runtime overlay |
 | `draft-mcguinness-mission-runtime-oauth.md` | `2b422bf1` | Runtime OAuth credential validation |
 | `draft-mcguinness-mission-authzen.md` | `6f10361e` | the decision wire: Decision Base, Transaction Assurance, Runtime Evidence and ARAP; not Obligations, History or Batch |
-| `draft-mcguinness-mission-runtime-evidence.md` | `f06f5e6a` | the portable Decision, Execution and Refusal objects |
+| `draft-mcguinness-mission-runtime-evidence.md` | `c8a4d8b8` | the portable Decision, Execution and Refusal objects |
 | `draft-mcguinness-mission-capability-binding.md` | `2dc6ca1d` | `config/catalog.json` sources every payments action, and the PDP refuses `capability_drift` |
 
 **Relied on for terms, not as the wire source:**
-`draft-mcguinness-oauth-mission-status.md` `b79f4f08` defines the Effective
+`draft-mcguinness-oauth-mission-status.md` `48521467` defines the Effective
 Authority Set, the lifecycle states, `mission_max_stale_seconds` and the
 floor's `revoke`. Its Mission Status operation is not this co-located
 target's state source (D293, §4); a separated realization uses it or core
@@ -290,7 +290,7 @@ introspection (#1101).
 | `draft-mcguinness-oauth-mission-status-list.md` | `4fe0d0b0` | off |
 | `draft-mcguinness-oauth-mission-cross-domain.md` | `02014aa3` | no projected credentials or decisions on this path |
 | `draft-mcguinness-oauth-mission-attenuation.md` | `4fe0d0b0` | the AS does not advertise `mission_attenuation_supported` |
-| `draft-mcguinness-mission-authority-server.md` | `68b6713a` | the MAS join route is excluded from this target (#1105) |
+| `draft-mcguinness-mission-authority-server.md` | `30933b36` | the MAS join route is excluded from this target (#1105) |
 
 **Reader bundle, informative:** `draft-mcguinness-mission-architecture.md`
 `3f95ce1c`, `draft-mcguinness-mission-control-plane.md` `909a3ee7` (kept
