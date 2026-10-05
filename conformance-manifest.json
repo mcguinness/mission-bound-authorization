@@ -8942,7 +8942,7 @@
     },
     {
      "file": "src/services/mcp-payments/test/mas-join.test.ts",
-     "name": "baseline MAS Join: configuration gate (@spec authority-server#mission-join) > refuses unknown_mission for an ordinary credential with no propagated Mission reference at all, even with masJoin configured",
+     "name": "baseline MAS Join: configuration gate (@spec authority-server#mission-join) > refuses mission_reference_conflict for an ordinary credential with no propagated Mission reference at all on a MAS-governed route",
      "level": "unit",
      "surface": "verification"
     },
@@ -8954,13 +8954,13 @@
     },
     {
      "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
-     "name": "MAS-governed HTTP MCP channel (baseline Join) > refuses unknown_mission with the Mission-Reference field ABSENT: the credential establishes no Mission of its own",
+     "name": "MAS-governed HTTP MCP channel (baseline Join) > refuses mission_reference_conflict with the Mission-Reference field ABSENT: the route requires a reference and the credential establishes no Mission of its own",
      "level": "endpoint",
      "surface": "verification"
     },
     {
      "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
-     "name": "MAS-governed HTTP MCP channel (baseline Join) > refuses mission_reference_conflict with a MALFORMED Mission-Reference field, a different failure from an absent one",
+     "name": "MAS-governed HTTP MCP channel (baseline Join) > refuses mission_reference_conflict with a MALFORMED Mission-Reference field, as for an absent one",
      "level": "endpoint",
      "surface": "verification"
     }
@@ -9351,14 +9351,14 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "for a credential carrying no mission claim, the baseline-Join gateway path (RequestSignals.missionReference) is the ONLY source of the Mission reference, and the two unusable-carriage cases are reported apart: an ABSENT reference names no Mission at all and the credential carries none either, so the request is refused (the reference PEP emits unknown_mission, where reference-verification specifies mission_reference_conflict: row mas.reference.missing-required-refusal); a MALFORMED reference where governance requires one is carriage that cannot be used and refuses mission_reference_conflict. Neither is a silent no-op and neither falls back to some other guess. The configured route (src/demo/src/stack.ts, config/mas-join.json's governed_resources) supplies the reference over the wire as the Mission-Reference field"
+    "normative": "for a credential carrying no mission claim, the baseline-Join gateway path (RequestSignals.missionReference) is the ONLY source of the Mission reference. On that MAS-governed route a reference is required, so an ABSENT reference and a MALFORMED one are both unusable carriage and refuse mission_reference_conflict, while a supplied, well-formed reference that does not resolve refuses unknown_mission. None is a silent no-op and none falls back to some other guess. The configured route (src/demo/src/stack.ts, config/mas-join.json's governed_resources) supplies the reference over the wire as the Mission-Reference field"
    },
    "level": "unit",
    "coverage": "tested",
    "tests": [
     {
      "file": "src/services/mcp-payments/test/mas-join.test.ts",
-     "name": "baseline MAS Join: configuration gate (@spec authority-server#mission-join) > refuses unknown_mission for an ordinary credential with no propagated Mission reference at all, even with masJoin configured",
+     "name": "baseline MAS Join: configuration gate (@spec authority-server#mission-join) > refuses mission_reference_conflict for an ordinary credential with no propagated Mission reference at all on a MAS-governed route",
      "level": "unit",
      "surface": "decision-request"
     },
@@ -9382,13 +9382,13 @@
     },
     {
      "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
-     "name": "MAS-governed HTTP MCP channel (baseline Join) > refuses unknown_mission with the Mission-Reference field ABSENT: the credential establishes no Mission of its own",
+     "name": "MAS-governed HTTP MCP channel (baseline Join) > refuses mission_reference_conflict with the Mission-Reference field ABSENT: the route requires a reference and the credential establishes no Mission of its own",
      "level": "endpoint",
      "surface": "decision-request"
     },
     {
      "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
-     "name": "MAS-governed HTTP MCP channel (baseline Join) > refuses mission_reference_conflict with a MALFORMED Mission-Reference field, a different failure from an absent one",
+     "name": "MAS-governed HTTP MCP channel (baseline Join) > refuses mission_reference_conflict with a MALFORMED Mission-Reference field, as for an absent one",
      "level": "endpoint",
      "surface": "decision-request"
     },
@@ -9399,7 +9399,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "#557. Also proves the configuration gate: a deployment that never sets PepDeps.masJoin refuses every credential with no mission claim exactly as it did before this feature existed (unknown_mission), never a new implicit acceptance path. #557 stage C2 splits the reason: a malformed reference refuses mission_reference_conflict rather than unknown_mission, so an unusable reference and an unknown Mission are distinguishable. The row's level stays unit: the endpoint and cross-component entries auto-skip without OpenFGA, so the claim rests on the always-run unit cases and those are additional coverage."
+   "notes": "#557. Also proves the configuration gate: a deployment that never sets PepDeps.masJoin refuses every credential with no mission claim exactly as it did before this feature existed (unknown_mission), never a new implicit acceptance path. #557 stage C2 split an unusable reference from an unknown Mission; #972 item 13 (D289, #1100 review) puts a missing reference with the malformed one under mission_reference_conflict, and unknown_mission stays for a named Mission that does not resolve. The row's level stays unit: the endpoint and cross-component entries auto-skip without OpenFGA, so the claim rests on the always-run unit cases and those are additional coverage."
   },
   {
    "id": "mas.baseline-join.subject-join",
@@ -28855,7 +28855,7 @@
     "normative": "on a route whose governance requires a reference, a malformed reference and a missing one are both refused with mission_reference_conflict"
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/mcp-payments/test/mas-join.test.ts",
@@ -28865,12 +28865,24 @@
     },
     {
      "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
-     "name": "MAS-governed HTTP MCP channel (baseline Join) > refuses mission_reference_conflict with a MALFORMED Mission-Reference field, a different failure from an absent one",
+     "name": "MAS-governed HTTP MCP channel (baseline Join) > refuses mission_reference_conflict with a MALFORMED Mission-Reference field, as for an absent one",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join.test.ts",
+     "name": "baseline MAS Join: configuration gate (@spec authority-server#mission-join) > refuses mission_reference_conflict for an ordinary credential with no propagated Mission reference at all on a MAS-governed route",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
+     "name": "MAS-governed HTTP MCP channel (baseline Join) > refuses mission_reference_conflict with the Mission-Reference field ABSENT: the route requires a reference and the credential establishes no Mission of its own",
      "level": "endpoint",
      "surface": "decision-request"
     }
    ],
-   "notes": "Partial: the malformed case is tested. The reference PEP refuses a missing reference on the MAS-governed route with the undocumented unknown_mission (src/services/mcp-payments/src/pep.ts), not mission_reference_conflict; the PEP migration is not part of this slice (#972 item 13). Attribution conflicts are mas.reference.conflict-deny."
+   "notes": "The reference PEP refuses both a malformed and a missing reference on the MAS-governed route with mission_reference_conflict (src/services/mcp-payments/src/pep.ts; the missing case mutation-checked against the former unknown_mission). The row level stays unit: the endpoint entries auto-skip without OpenFGA. Attribution conflicts are mas.reference.conflict-deny."
   },
   {
    "id": "mas.submission.status-body-members",

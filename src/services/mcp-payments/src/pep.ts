@@ -1139,15 +1139,15 @@ export class Pep {
       // behavior would have (an unrecognized/no-claim credential).
       if (!this.deps.masJoin) return await this.refuse(token, "unknown_mission", mapping.action);
 
-      // @spec authority-server#mission-reference-field (#557) — an ABSENT
-      // reference and an UNUSABLE one are different failures. An absent
-      // reference names no Mission at all, and this credential carries no
-      // claim either, so nothing establishes a Mission: `unknown_mission`.
-      // A malformed reference where governance requires one is carriage that
-      // cannot be used, refused `mission_reference_conflict` rather than
+      // @spec authority-server#reference-verification (#557, #972 item 13,
+      // D289) — this route is MAS-governed, so governance requires a
+      // reference here. A MISSING reference and a MALFORMED one are both
+      // unusable carriage, refused `mission_reference_conflict` rather than
       // parsed on a best-effort basis or reported as an unknown Mission.
+      // `unknown_mission` stays for a supplied, well-formed reference that
+      // does not resolve (below): a Mission named but not found.
       const propagated = signals?.missionReference;
-      if (!propagated) return await this.refuse(token, "unknown_mission", mapping.action);
+      if (!propagated) return await this.refuse(token, "mission_reference_conflict", mapping.action);
       if ("malformed" in propagated) {
         return await this.refuse(token, "mission_reference_conflict", mapping.action);
       }

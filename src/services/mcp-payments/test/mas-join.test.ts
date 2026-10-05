@@ -106,11 +106,15 @@ describe("baseline MAS Join: configuration gate (@spec authority-server#mission-
     expect(res.refusal_reason).toBe("unknown_mission");
   });
 
-  it("refuses unknown_mission for an ordinary credential with no propagated Mission reference at all, even with masJoin configured", async () => {
+  it("refuses mission_reference_conflict for an ordinary credential with no propagated Mission reference at all on a MAS-governed route", async () => {
     const pep = build({ masJoin: { resolveOrdinaryAuthority: FULL_AUTHORITY } });
     const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, ORDINARY_TOKEN);
     expect(res.permitted).toBe(false);
-    expect(res.refusal_reason).toBe("unknown_mission");
+    // @spec authority-server#reference-verification (#972 item 13, D289) — a
+    // MISSING reference where governance requires one is unusable carriage,
+    // the same value as a malformed one; `unknown_mission` is kept for a
+    // supplied reference that does not resolve.
+    expect(res.refusal_reason).toBe("mission_reference_conflict");
   });
 
   it("refuses mission_reference_conflict for a malformed propagated reference, not unknown_mission", async () => {
