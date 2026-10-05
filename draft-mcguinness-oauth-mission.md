@@ -5912,6 +5912,16 @@ Cross-Domain:
 
 -01
 
+- Mission Approval: the approval event is the atomic, adjudicated
+  transition that creates a Mission under its approval basis, for
+  every basis. The authorization-code flow and its steps are the
+  direct realization; a standing-consent basis supplies the human
+  decision from the standing consent and the instance's adjudication,
+  and the other creation rules still bind its approval event.
+  Standing-Consent Bases says no fresh human approval per instance,
+  and an instance's `approval_event_id` identifies this instance's
+  approval event (#1078).
+
 - Standing-Consent Bases: a companion profile defining a
   standing-consent type states what the record's `approval_event_id`
   carries for an instance it activates; the value identifies the
