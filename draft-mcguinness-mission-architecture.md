@@ -1155,8 +1155,12 @@ Authorizer:
   ({{I-D.draft-mcguinness-mission-runtime}}).
 
 Approved agent:
-: the OAuth client, `client_id` on every derived token (the OAuth
+: the client the Mission Record records at approval (the OAuth
   binding).
+
+Requesting client:
+: `client_id` on each issued or derived token, naming the client that
+  requested it, never the approved agent (the OAuth binding).
 
 Executing delegate:
 : the outermost `act` actor (the OAuth binding's Delegation section).
