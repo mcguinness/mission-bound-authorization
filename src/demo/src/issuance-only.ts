@@ -15,6 +15,7 @@ import type { Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  APPROVAL_SUBJECT_HEADER,
   buildAuthorizationServer,
   type BuiltAs,
   MISSION_APPROVAL_SCOPE,
@@ -235,7 +236,6 @@ export async function runWalkthrough(
       resource: audience,
       code_challenge: challenge,
       code_challenge_method: "S256",
-      login_hint: "alice",
       mission_intent: JSON.stringify({
         intent: {
           goal: "Read the quarterly reports",
@@ -274,7 +274,9 @@ export async function runWalkthrough(
   keep(res);
   const uid = (res.headers.get("location") ?? "").split("/interaction/")[1] ?? "";
 
-  // 2. Approval by the approver console (the demo's trusted approval input).
+  // 2. Approval by the approver console (the demo's trusted approval input):
+  // Bob approves, and the console selects Alice as the Subject (#826); the
+  // agent's PAR never names her.
   res = await fetch(`${asUrl}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
@@ -282,6 +284,7 @@ export async function runWalkthrough(
       "content-type": "application/json",
       cookie: cookie(),
       "x-service-token": creds.approverServiceToken,
+      [APPROVAL_SUBJECT_HEADER]: "alice",
     },
     body: JSON.stringify({ decision: "approve" }),
   });

@@ -707,7 +707,7 @@
     },
     {
      "file": "src/demo/test/approval-resolution-identity.test.ts",
-     "name": "approval resolution establishes identity from the surface (#759, #761) > the pushed login_hint is resolved and authorized, never accepted as an arbitrary Subject",
+     "name": "approval resolution establishes identity from the surface (#759, #761) > the Subject is the approval surface's selection, authorized for the Approver, never the client's login_hint",
      "level": "cross-component",
      "surface": "approval-ceremony"
     },
@@ -3559,7 +3559,7 @@
     },
     {
      "file": "src/demo/test/approval-resolution-identity.test.ts",
-     "name": "approval resolution establishes identity from the surface (#759, #761) > the pushed login_hint is resolved and authorized, never accepted as an arbitrary Subject",
+     "name": "approval resolution establishes identity from the surface (#759, #761) > the Subject is the approval surface's selection, authorized for the Approver, never the client's login_hint",
      "level": "cross-component",
      "surface": "approval-ceremony"
     },
@@ -4016,7 +4016,7 @@
     },
     {
      "file": "src/services/authorization-server/test/authority-source-render.test.ts",
-     "name": "authority source rendering for a shared agent registration (@spec mission#approval-event, mission#authority-sources, #827) > renders the source of the Subject login_hint names, and refuses to render one that depends on an unnamed Subject",
+     "name": "authority source rendering for a shared agent registration (@spec mission#approval-event, mission#authority-sources, #827) > renders the source of the Subject the approval session selected, never one login_hint names, and refuses to render one that depends on an unnamed Subject",
      "level": "endpoint",
      "surface": "authorization-endpoint"
     },
@@ -4856,7 +4856,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "acr_values/max_age describe the requested authentication of the Approver, never the token's Subject; the Approver's achieved authentication must satisfy both the deployment's own floor and a client-requested acr_values/max_age, and the AS refuses the approval decision (access_denied, per {{error-mapping}}) when either is unmet",
-    "local": "the demo's headless adjudication surface has no real IdP login step, so the achieved context (approver_acr, approver_auth_time) is supplied directly on decide()'s body, the same way approver/subject already are; a deployment with a real approval UI sources it from that UI's own login/session. oidc-provider's own check_max_age middleware translates a literal max_age=0 to prompt=login and clears params.max_age before this handler runs, so the implementation recovers that signal from prompt=login (forceFreshLogin) rather than reading a cleared max_age."
+    "local": "the achieved context (acr, auth_time) comes from the authenticated approval surface: a trusted browser login's recorded context or a headless approval service's registration, never decide()'s body, which refuses identity members. oidc-provider accepts acr_values and max_age only with openid (lib/actions/authorization/check_openid_scope.js, 9.10.0), and openid is available only to a self-approval in this user agent (#826), so a client-requested strength is exercised on self-approvals; an approval for another principal cannot request one here: PAR refuses acr_values or max_age without openid invalid_request, before any interaction (the accepted fail-closed limitation, D305: unsupported, never ignored or downgraded; the published approval floor governs). oidc-provider's own check_max_age middleware translates a literal max_age=0 to prompt=login and clears params.max_age before this handler runs, so the implementation recovers that signal from prompt=login (forceFreshLogin) rather than reading a cleared max_age."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -4864,12 +4864,6 @@
     {
      "file": "src/services/authorization-server/test/rar-carriage.test.ts",
      "name": "Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > same-principal: a self-approved Mission satisfies a requested acr_values",
-     "level": "endpoint",
-     "surface": "approval-ceremony"
-    },
-    {
-     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
-     "name": "Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > split-principal: the Approver's own achieved acr satisfies the request, the Subject's identity is irrelevant, and the token carries neither",
      "level": "endpoint",
      "surface": "approval-ceremony"
     },
@@ -4884,9 +4878,15 @@
      "name": "Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > an unsupported acr is refused",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > a delegated request cannot ask for the Approver's acr_values or max_age: without openid, PAR refuses them invalid_request before any interaction",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
     }
    ],
-   "notes": "Adopted #636 acceptance criterion (approver-vs-subject tests). Split-principal and same-principal both use the same approver_acr/approver_auth_time discriminator, proving the check depends only on the Approver's own achieved context, never the Subject's identity. The Deferred Mission Approval companion ({{I-D.draft-mcguinness-oauth-mission-approval}} {{deferred-approval}}) that would relocate this same check to an asynchronous reviewer has no reference implementation in src/ (only the unrelated AROP post-Mission-widening deferral is implemented, a different mechanism, {{I-D.gerber-oauth-deferred-token-response}}); a deferred-review wire test is not implementable in this stack and is disclosed here rather than fabricated."
+   "notes": "Adopted #636 acceptance criterion (approver-vs-subject tests). The requested-strength cases run on self-approvals in a trusted browser session (#826: a delegated request cannot carry acr_values without openid here); the split-principal case moved to no-token-claim-carriage and openid-refused-when-approver-not-subject. The Deferred Mission Approval companion ({{I-D.draft-mcguinness-oauth-mission-approval}} {{deferred-approval}}) that would relocate this same check to an asynchronous reviewer has no reference implementation in src/ (only the unrelated AROP post-Mission-widening deferral is implemented, a different mechanism, {{I-D.gerber-oauth-deferred-token-response}}); a deferred-review wire test is not implementable in this stack and is disclosed here rather than fabricated."
   },
   {
    "id": "core.approval-authentication.no-token-claim-carriage",
@@ -4911,7 +4911,7 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/rar-carriage.test.ts",
-     "name": "Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > split-principal: the Approver's own achieved acr satisfies the request, the Subject's identity is irrelevant, and the token carries neither",
+     "name": "Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > split-principal: the Approver's authentication never becomes the Subject's: openid refuses, and the token carries the Subject and none of the Approver's authentication",
      "level": "endpoint",
      "surface": "approval-ceremony"
     }
@@ -4937,9 +4937,28 @@
     "normative": "an authorization request whose scope includes openid is refused with invalid_scope, and no Mission is created, when the authenticated Approver is not the established Subject"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#826 specification slice. The reference AS currently issues an ID Token asserting the Subject's authentication when another principal approves for that Subject (reproduced in #826); the implementation half of #826 adds the HTTP regression tests, with and without openid, for delegated approval, self-approval, and an organizational workload Subject."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > refuses openid invalid_scope when the Approver is not the Subject, leaving no Mission, grant, code or session for the Subject",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > approves an organizational workload Subject: the token carries the workload, and the approval leaves no authentication session",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "Approver Authentication Strength (@spec mission#approval-authentication, issue #636) > split-principal: the Approver's authentication never becomes the Subject's: openid refuses, and the token carries the Subject and none of the Approver's authentication",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#826. The Approver is the authenticated principal of the approval interaction; the Subject is the trusted approval surface's selection (never login_hint). openid with a different Subject finishes the interaction invalid_scope before kernel.approve, so no Mission, grant or code exists; the same refusal covers an organizational workload Subject. The reference AS also refuses openid on a headless approval (a service credential is not an End-User authenticated in this user agent), witnessed separately."
   },
   {
    "id": "core.approval-authentication.no-subject-authentication-from-approval",
@@ -4960,9 +4979,58 @@
     "normative": "when another principal approves for the Subject, with or without openid, no ID Token, UserInfo response, or authentication session for the Subject results from that approval; a later prompt=none request for the Subject is not satisfied by it; self-approval with openid still yields the ordinary ID Token"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#826 specification slice. The reference AS currently issues an ID Token asserting the Subject's authentication when another principal approves for that Subject (reproduced in #826); the implementation half of #826 adds the HTTP regression tests, with and without openid, for delegated approval, self-approval, and an organizational workload Subject."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > refuses openid invalid_scope when the Approver is not the Subject, leaving no Mission, grant, code or session for the Subject",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > approves for another principal without openid: the token and introspection carry the Subject, the record the Approver, and the provider account and session the Approver",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > an Alice session established before Bob approves for her is neither read nor refreshed by Bob's headless act, which still completes",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > a headless approval leaves the client's user agent no End-User session: the resume's login is destroyed and never delivered, and the code still redeems and refreshes",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > a later prompt=none request naming the Subject is not satisfied by another principal's approval",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > approves an organizational workload Subject: the token carries the workload, and the approval leaves no authentication session",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > self-approval keeps OIDC: the ID Token, the token and the session agree on the one End-User, with the achieved authentication time",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approver-subject-separation.test.ts",
+     "name": "Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > refuses openid on a headless approval even for the Approver's own Mission: no End-User authenticated in this user agent",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#826. The provider account and grant are the Approver's, logged in with the achieved acr and authentication time; a browser approval keeps that session, and a headless approval leaves the client's user agent none (the resume runs without the user agent's session cookie, the session its login created is destroyed before the response is flushed and its cookie removed, and the code is not session-bound). Mission-bound tokens carry the Subject through the JWT customizer, refresh introspection reports the Subject. Discriminating witnesses: the session and grant belong to Bob and the token sub is Alice (delegated browser approval); a headless approval's resume session no longer exists and no session cookie reaches the user agent; and an earlier Alice session in the same user agent is neither replaced nor renewed. Two clauses hold in this assembly by construction as well: Mission access tokens are resource-audienced, so UserInfo refuses them, and every Mission authorization request needs its own approval interaction, so a prompt=none request is never satisfied silently; their tests assert the outcome, not that the defect alone would have changed it."
   },
   {
    "id": "core.grant-binding.mission-id-inert",

@@ -30,8 +30,8 @@ import {
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
-import { type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
-import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { ApprovalSessionStore, type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
+import { browserApprovalHeaders, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 
 const PORT = 14620;
 const RS_PORT = 14621;
@@ -139,7 +139,9 @@ async function token(
   return { status: res.status, body: (await res.json()) as Json };
 }
 
-/** PAR -> approval: returns the authorization code for a Mission over `proposal`. */
+/** The trusted browser login, for the approvals an ID Token can describe (#826). */
+const SESSIONS = new ApprovalSessionStore();
+
 /**
  * PAR -> approval for a Mission over `proposal`, optionally naming `scope`:
  * the PAR response, then the authorization response's code or error.
@@ -193,7 +195,15 @@ async function authorize(
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookie() },
+    // An `openid` request needs an End-User authenticated in this user agent
+    // and approving for themself (#826): a trusted browser self-approval.
+    // Every other request keeps the headless approval for alice.
+    headers: {
+      ...(opts.scope?.split(" ").includes("openid")
+        ? browserApprovalHeaders(SESSIONS, uid, { sub: "alice" }, cookie())
+        : { ...trustedApprovalHeaders(), cookie: cookie() }),
+      "content-type": "application/json",
+    },
     body: JSON.stringify({ decision: "approve" }),
   });
   keep(res);
@@ -266,6 +276,7 @@ beforeAll(async () => {
     issuer: ISSUER,
     allowHeadlessAdjudication: true,
     serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
+    approvalSessions: SESSIONS,
     scopeProjection: MAPPING,
     testTokenSigningJwk: (await exportJWK(signing.privateKey)) as JWK,
   });

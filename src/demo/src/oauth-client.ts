@@ -22,7 +22,11 @@ export interface DpopKeys {
 }
 
 export interface IssueOpts {
-  /** Requested subject hint; the AS resolves it and authorizes the independent approver. */
+  /**
+   * An OPTIONAL `login_hint`: a hint about the Approver, never the Mission
+   * Subject (#826). The agent never names the Subject; the trusted approval
+   * surface selects it.
+   */
   loginHint?: string;
   acrValues?: string;
   maxAge?: string;
@@ -139,7 +143,7 @@ export async function submitMissionApproval(
     code_challenge: challenge,
     code_challenge_method: "S256",
     mission_intent: opts.missionIntent,
-    login_hint: opts.loginHint ?? "alice",
+    ...(opts.loginHint ? { login_hint: opts.loginHint } : {}),
     ...(opts.acrValues ? { acr_values: opts.acrValues } : {}),
     ...(opts.maxAge !== undefined ? { max_age: opts.maxAge } : {}),
     ...(opts.authorizationDetails ? { authorization_details: opts.authorizationDetails } : {}),
