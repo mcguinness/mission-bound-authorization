@@ -2652,10 +2652,12 @@ Each level includes the one before it:
   With both halves, an injected agent cannot egress on the strength of
   untrusted content alone.
 
-  Both claims are named high bars, never implied by basic adoption. A
-  deployment can bind its Enforcement Scope Statement to
-  execution-environment attestation so a claim is technical rather
-  than organizational ({{I-D.draft-mcguinness-mission-runtime}},
+  Both claims are named high bars, never implied by basic adoption.
+  Each requires execution-environment attestation of the Enforcement
+  Scope Statement, with the evidence bindings the runtime profile
+  fixes, so the claim is technical rather than organizational; base
+  runtime conformance requires no attestation
+  ({{I-D.draft-mcguinness-mission-runtime}},
   {{I-D.draft-mcguinness-mission-harness}}).
 
 Read in adoption order, each level makes a broader class of agent
