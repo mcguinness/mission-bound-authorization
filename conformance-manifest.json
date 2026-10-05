@@ -7,8 +7,8 @@
     "content_sha256": "ec57264fec92ea2dd3c42ba1067c70d72195f251bc5c416ccad856cb1beac3a1"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "820e815d5ca0a47b9f27ee35959077cd87d9f062",
-    "content_sha256": "d191eb780f369e815a85ba1a1af8f4c3e2e371b0b5005135ec974090dbce3a41"
+    "revision": "60552344e0c4184a6dca034ace9d424bbb6b4965",
+    "content_sha256": "9e360999409ce8a52450f2df9991471beec7d08a3d0ad86bc999b95baadf7090"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "6f10361ef7fae0c457e78b003860587fb773ac4f",
@@ -51,8 +51,8 @@
     "content_sha256": "544fd9439ba95abcfb530d84a834dd1532c136bce3ec5c32ea61bc152250cbcb"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "b79f4f0803a1afe5531e3f52a612dcd6c8b38da8",
-    "content_sha256": "14a4a413a5b087f8ca471accdf042bbe87e929abe6908d4986a75accfad46cb8"
+    "revision": "60552344e0c4184a6dca034ace9d424bbb6b4965",
+    "content_sha256": "262319038b786c962e4decbb1d68102cd09c6242378bcf8f85541204d0b3c37b"
    },
    "draft-mcguinness-oauth-mission-template.md": {
     "revision": "94f778aa73a09dba70239f5d1a9b51a45e63d8b3",
@@ -8241,6 +8241,90 @@
    "coverage": "todo",
    "tests": [],
    "notes": "The reference Status endpoint has no consuming-Authorization-Server caller class or per-audience caller configuration, and no issuance-grant redemption path exists in src. Added with #963 decision D1; todo until a consuming-AS caller exists."
+  },
+  {
+   "id": "status.auth.challenge-token-scheme",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-auth-failures",
+   "text": "A request whose presented access token fails authentication receives HTTP 401 `unauthorized` with a `WWW-Authenticate` challenge in the scheme it used: `Bearer` with the error attributes of {{Section 3 of RFC6750}}, or `DPoP` under {{Section 7.1 of RFC9449}}, including its `algs` parameter and error codes",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a 401 for a failed Bearer token carries a Bearer challenge with RFC 6750 error attributes, and one for a failed DPoP token carries a DPoP challenge with algs"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference AS emits no WWW-Authenticate on the Status or Lifecycle endpoint and publishes no Protected Resource Metadata for them, so resource_metadata has no target. Todo until the AS publishes that metadata (#972 item 18)."
+  },
+  {
+   "id": "status.auth.challenge-no-token",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-auth-failures",
+   "text": "A request that presented no credential receives, where the endpoint accepts an access-token scheme, HTTP 401 `unauthorized` with one challenge for each access-token scheme the endpoint accepts and no `error` attribute",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a 401 for a request with no credential, at an endpoint accepting an access-token scheme, carries one challenge per accepted access-token scheme and no error attribute"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference AS emits no WWW-Authenticate on the Status or Lifecycle endpoint and publishes no Protected Resource Metadata for them, so resource_metadata has no target. Todo until the AS publishes that metadata (#972 item 18)."
+  },
+  {
+   "id": "status.auth.challenge-resource-metadata",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-auth-failures",
+   "text": "Every challenge carries the `resource_metadata` parameter naming the endpoint's Protected Resource Metadata",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "every 401 challenge names the endpoint's Protected Resource Metadata URL"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference AS emits no WWW-Authenticate on the Status or Lifecycle endpoint and publishes no Protected Resource Metadata for them, so resource_metadata has no target. Todo until the AS publishes that metadata (#972 item 18)."
+  },
+  {
+   "id": "status.auth.invalid-client",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-auth-failures",
+   "text": "A request whose mTLS or private-key-JWT client authentication fails at the HTTP layer receives HTTP 400 with the `invalid_client` error code",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a failed direct client authentication (mTLS or private_key_jwt) gets 400 invalid_client with no WWW-Authenticate challenge; so does a request with no credential at an endpoint that accepts no access-token scheme"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference AS authenticates Status and Lifecycle callers with a deployment service token, not mTLS or private_key_jwt, so it has no direct-client-authentication path to test. Todo (#972 item 18, #1099 review)."
   },
   {
    "id": "signals.discharge.authority-changed-rematerialize",
@@ -28854,6 +28938,48 @@
    "coverage": "todo",
    "tests": [],
    "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#972 item 13)."
+  },
+  {
+   "id": "mas.errors.unauthorized-challenges",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "submission-errors",
+   "text": "A 401 `unauthorized` response carries the `WWW-Authenticate` challenges that Mission Status defines for its endpoints",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a 401 from the submission or join-assertion endpoint carries the Mission Status challenges"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack has no MAS submission or join-assertion endpoint. Todo until a MAS service exists (#972 item 18)."
+  },
+  {
+   "id": "mas.errors.invalid-client",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "submission-errors",
+   "text": "A failed mTLS or private-key-JWT client authentication receives 400 `invalid_client`, not a token challenge",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a failed direct client authentication at the submission or join-assertion endpoint gets 400 invalid_client"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference stack has no MAS submission or join-assertion endpoint. Todo until a MAS service exists (#972 item 18, #1099 review)."
   },
   {
    "id": "authzen.instance-context.no-upstream-actor",
