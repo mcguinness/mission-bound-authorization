@@ -723,14 +723,15 @@ JSON object body:
 
 A consumer MUST ignore members it does not recognize.
 
-A 401 `unauthorized` response carries the `WWW-Authenticate`
-challenges that Mission Status defines for its endpoints
-({{I-D.draft-mcguinness-oauth-mission-status}}, Section
-"Authentication Challenges"), naming the Protected Resource Metadata
-of the endpoint called. A failed mTLS or private-key-JWT client
-authentication is not reported as an access-token failure, and an
-authenticated caller to whom a submission or Mission is not visible
-still receives `not_found`.
+An authentication failure takes the outcome Mission Status defines
+for its endpoints ({{I-D.draft-mcguinness-oauth-mission-status}},
+Section "Authentication Failures"). A 401 `unauthorized` response
+carries the `WWW-Authenticate` challenges that Mission Status defines
+for its endpoints, naming the Protected Resource Metadata of the
+endpoint called. A failed mTLS or private-key-JWT client
+authentication receives 400 `invalid_client`, not a token challenge,
+and an authenticated caller to whom a submission or Mission is not
+visible still receives `not_found`.
 
 | `error` | HTTP | Returned by | Description |
 |---|---|---|---|
@@ -738,7 +739,8 @@ still receives `not_found`.
 | `invalid_authority` | 400 | submission | Well-formed Intent, but no valid Authority Set is derivable under policy. |
 | `invalid_mission_intent_evidence` | 400 | submission | An evidence entry of unsupported type or failing its type's verification, or a policy-required evidence type absent from the submission. |
 | `unsupported_media_type` | 415 | submission | The request media type is neither of the two the endpoint dispatches on ({{mission-submission}}). |
-| `unauthorized` | 401 | submission, join assertion | Request not authenticated; the response carries the challenges Mission Status defines. |
+| `invalid_client` | 400 | submission, join assertion | Direct client authentication (mTLS or private-key JWT) failed, or no credential was presented where no access-token scheme is accepted, as Mission Status defines. |
+| `unauthorized` | 401 | submission, join assertion | Access-token authentication failed, or no credential was presented where an access-token scheme is accepted; the response carries the challenges Mission Status defines. |
 | `invalid_join_request` | 400 | join assertion | The request body is not a JSON object carrying `mission_id`, a string `audience`, and exactly one token form ({{join-assertion-request}}). |
 | `join_failed` | 403 | join assertion | The referenced Mission is not `active`, the `audience` names no enrolled PDP, or the acting token is inactive, carries no `cnf` confirmation, or does not join the referenced Mission ({{join-assertion-request}}). |
 | `not_found` | 404 | submission, join assertion | A referenced submission or Mission does not exist or is not visible to the caller. |
@@ -1256,12 +1258,13 @@ of this channel.
 
 ## The Reference Tuple {#reference-tuple}
 
-The propagated value is exactly the Mission reference tuple:
+The propagated value is the Mission reference tuple:
 `mission_id` and `issuer`, compared as the canonical (`issuer`,
 `mission_id`) pair under the OAuth binding's comparison rules
 ({{I-D.draft-mcguinness-oauth-mission}}). The channel carries nothing
-else. State, integrity anchors, authority, and policy data always
-come from the MAS's signed Mission Status response
+else beyond the extension members admitted below. State, integrity
+anchors, authority, and policy data always come from the MAS's
+signed Mission Status response
 ({{lifecycle-and-state}}), and a request carrying any of them in this
 channel MUST be refused, never silently ignored, so ambiguity is
 detectable rather than absorbed. Each carriage below maps this one
@@ -1294,10 +1297,10 @@ Mission-Reference: id="msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
 
 - The field is a request header field and MUST NOT be sent as a
   trailer field.
-- The value is a Dictionary carrying exactly two members, both
-  REQUIRED: `id`, a String carrying the Mission identifier, and
-  `issuer`, a String carrying the exact issuer identifier the MAS
-  publishes in its metadata ({{discovery}}). A MAS participating in
+- The value is a Dictionary carrying two REQUIRED members: `id`, a
+  String carrying the Mission identifier, and `issuer`, a String
+  carrying the exact issuer identifier the MAS publishes in its
+  metadata ({{discovery}}). A MAS participating in
   this profile MUST publish an ASCII issuer identifier (Structured
   Field Strings are ASCII). The sender copies that published string
   with no URI normalization of any kind, and equality is byte
@@ -1347,7 +1350,7 @@ the reference:
 }
 ~~~
 
-The value carries exactly `mission_id` and `issuer`, with the tuple
+The value carries `mission_id` and `issuer`, with the tuple
 semantics of {{reference-tuple}} unchanged. The value object is
 closed the same way as the HTTP field: a receiver MUST reject
 duplicate JSON member names at parse time, a member outside the
@@ -3247,9 +3250,10 @@ shows the denial:
   set; signed records made before the change are left as they are.
   The AuthZEN examples use the profile's request and response shapes.
 
-- Authentication challenges (#972 item 18, D289). A 401 from the
+- Authentication failures (#972 item 18, D289). A 401 from the
   submission or join-assertion endpoint carries the challenges Mission
-  Status defines.
+  Status defines, and a failed direct client authentication receives
+  400 `invalid_client`.
 
 - Assertion audience and submission outcomes (#972, D289). A Join
   Assertion request names its consuming PDP in a required `audience`,

@@ -829,6 +829,13 @@ describe("approval basis (@spec mission#approval-basis, child-delegation#child-c
       // at the PARENT's approval event: retained state, never the request.
       approved_at: parent.created_at,
     });
+    // @spec child-delegation#record-requirements — the record's
+    // approval_event_id is the creation's activation_event_id, never the
+    // Parent Mission's approval event.
+    const activationEventId = (persisted?.approval_basis.activation as { activation_event_id?: string })
+      .activation_event_id;
+    expect(persisted?.approval_event_id).toBe(activationEventId);
+    expect(persisted?.approval_event_id).not.toBe(parent.approval_event_id);
     // approver IS approval_basis.consent_principal (D48/O-38 convergence).
     expect(persisted?.approver).toEqual(persisted?.approval_basis.consent_principal);
     expect(persisted?.approval_basis.activation_actor).not.toEqual(
@@ -916,6 +923,13 @@ describe("approval basis (@spec mission#approval-basis, child-delegation#child-c
       policy_digest: policyRef.digest,
       activation_event_id: child.approval_event_id,
     });
+    // @spec child-delegation#record-requirements — under a child_creation_policy
+    // too, the record's approval_event_id is the creation's activation_event_id,
+    // never the Parent Mission's approval event.
+    const policyActivationEventId = (persisted?.approval_basis.activation as { activation_event_id?: string })
+      .activation_event_id;
+    expect(persisted?.approval_event_id).toBe(policyActivationEventId);
+    expect(persisted?.approval_event_id).not.toBe(parent.approval_event_id);
 
     // @spec mission#standing-consent-bases, child-delegation#child-creation —
     // the held snapshot no longer matching the committed digest (content

@@ -30,6 +30,7 @@ author:
 
 normative:
   RFC3339:
+  RFC6749:
   RFC6750:
   RFC6838:
   RFC7009:
@@ -411,7 +412,9 @@ per request:
 
 Plain Basic or POST client authentication MUST NOT be used for this
 endpoint. The AS MUST refuse a request not authenticated by one of the
-three mechanisms with `unauthorized` (HTTP 401). The mechanism is
+three mechanisms, with the outcome {{mission-status-auth-failures}}
+assigns: `unauthorized` (HTTP 401) or `invalid_client` (HTTP 400). The
+mechanism is
 determined by wire evidence in order: a request presenting an access
 token in `Authorization` is mechanism 2, and any client certificate is
 then evaluated only as that token's mTLS sender constraint; otherwise a
@@ -467,24 +470,32 @@ endpoint ({{as-metadata}}), not read from the token endpoint's
 `token_endpoint_auth_methods_supported` {{RFC8414}}. Both paths are
 therefore discoverable.
 
-### Authentication Challenges {#mission-status-challenges}
+### Authentication Failures {#mission-status-auth-failures}
 
-Where the endpoint accepts an access-token scheme, a 401
-`unauthorized` response carries a `WWW-Authenticate` challenge:
+A request that fails authentication receives the outcome for the
+credential it presented:
 
 - A request whose presented access token fails authentication receives
-  a challenge in the scheme it used: `Bearer` with the error attributes
-  of {{Section 3 of RFC6750}}, or `DPoP` under
+  HTTP 401 `unauthorized` with a `WWW-Authenticate` challenge in the
+  scheme it used: `Bearer` with the error attributes of
+  {{Section 3 of RFC6750}}, or `DPoP` under
   {{Section 7.1 of RFC9449}}, including its `algs` parameter and error
   codes.
-- A request that presented no access token, including one that failed
-  mTLS or private-key-JWT client authentication, receives one challenge
-  for each access-token scheme the endpoint accepts, with no `error`
-  attribute ({{Section 3.1 of RFC6750}}). Such a failure is not
-  reported as an access-token failure.
-- Every challenge carries the `resource_metadata` parameter naming the
-  endpoint's Protected Resource Metadata ({{Section 5.1 of RFC9728}}).
+- A request whose mTLS or private-key-JWT client authentication fails
+  at the HTTP layer receives HTTP 400 with the `invalid_client` error
+  code, as {{Section 5.2 of RFC6749}} answers a failed client
+  authentication carried outside the `Authorization` header. It carries
+  no `WWW-Authenticate` challenge and is not reported as an
+  access-token failure. A client certificate rejected during the TLS
+  handshake fails at the TLS layer, before any HTTP response.
+- A request that presented no credential receives, where the endpoint
+  accepts an access-token scheme, HTTP 401 `unauthorized` with one
+  challenge for each access-token scheme the endpoint accepts and no
+  `error` attribute ({{Section 3.1 of RFC6750}}); where it accepts
+  none, it receives HTTP 400 `invalid_client`.
 
+Every challenge carries the `resource_metadata` parameter naming the
+endpoint's Protected Resource Metadata ({{Section 5.1 of RFC9728}}).
 An authenticated caller not authorized for the referenced Mission
 receives `not_found` (404) with no challenge
 ({{mission-status-anti-oracle}}).
@@ -774,18 +785,20 @@ Wire error codes (carried in the `error` member of a JSON body):
 | `error` | HTTP | Description |
 |---|---|---|
 | `invalid_request` | 400 | Malformed request: an unparseable body, a required member missing or malformed, an invalid member combination, or a retransmitted `nonce` paired with a request that is not byte-identical to the original ({{idempotency}}). |
-| `unauthorized` | 401 | Request not authenticated; the response carries the challenges of {{mission-status-challenges}}. |
+| `invalid_client` | 400 | Direct client authentication (mTLS or private-key JWT) failed, or no credential was presented where no access-token scheme is accepted ({{mission-status-auth-failures}}). |
+| `unauthorized` | 401 | Access-token authentication failed, or no credential was presented where an access-token scheme is accepted; the response carries the challenges of {{mission-status-auth-failures}}. |
 | `not_found` | 404 | Reference does not exist OR is not visible. |
 | `conflict` | 409 | Lifecycle operation not legal from the current state ({{idempotency}}). |
 | `stale_version` | 409 | `expected_version` differs from the current state version ({{idempotency}}). |
 | `rate_limited` | 429 | Consumer is rate-limited. |
 | `unavailable` | 503 | AS temporarily cannot serve status. |
 
-Note the distinction between the two access failures: `unauthorized`
-(401) means the request carried no valid authentication, whereas a
-request that is authenticated but not authorized for the referenced
-Mission returns `not_found` (404), never 401, so that an unauthorized
-reference is indistinguishable from an unknown one
+Note the distinction between the access failures: `unauthorized`
+(401) and `invalid_client` (400) mean the request carried no valid
+authentication, whereas a request that is authenticated but not
+authorized for the referenced Mission returns `not_found` (404), never
+an authentication failure, so that an unauthorized reference is
+indistinguishable from an unknown one
 ({{mission-status-anti-oracle}}). The error body is:
 
 ~~~ http-message
@@ -1135,8 +1148,8 @@ or private-key JWT. Its discovery mirrors that endpoint: the accepted
 methods in `mission_lifecycle_endpoint_auth_methods_supported` and, for
 `private_key_jwt`, the accepted client-assertion algorithms in
 `mission_lifecycle_endpoint_auth_signing_alg_values_supported`
-({{as-metadata}}). Its 401 responses carry the challenges of
-{{mission-status-challenges}}.
+({{as-metadata}}). Its authentication failures follow
+{{mission-status-auth-failures}}.
 
 For the sender-constrained access-token path, this
 endpoint is an OAuth protected resource exactly as the Mission Status
@@ -1878,11 +1891,13 @@ Authorization work for feedback that shaped these extensions.
 
 \[\[ To be removed from the final specification ]]
 
-- A 401 from the Status or Lifecycle endpoint carries a
-  `WWW-Authenticate` challenge: the scheme of a failed access token
-  (`Bearer` or `DPoP`), or each accepted access-token scheme when the
-  request presented no access token, always with `resource_metadata`
-  (#972 item 18).
+- Authentication failures at the Status and Lifecycle endpoints: a
+  failed access token gets a 401 `WWW-Authenticate` challenge in its
+  scheme (`Bearer` or `DPoP`); a request with no credential gets a
+  challenge for each accepted access-token scheme, always with
+  `resource_metadata`; failed mTLS or private-key-JWT client
+  authentication, or no credential where no access-token scheme is
+  accepted, gets 400 `invalid_client` (#972 item 18).
 
 - A derivation refused because the Mission is `suspended` or
   `completed` carries the `mission_error` value `mission_suspended` or
