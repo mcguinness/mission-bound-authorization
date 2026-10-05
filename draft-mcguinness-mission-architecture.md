@@ -1667,7 +1667,9 @@ Owner:
 
 Projection preserves authority across the boundary rather than narrowing
 it to a sub-actor, which makes it a distinct verb from Delegate.
-Downstream revocation latency is the local token lifetime.
+Downstream revocation latency is the local token lifetime plus, where
+the Resource AS checks no Mission state when it mints from the
+projection grant, that grant's remaining lifetime ({{validity-model}}).
 
 ## Continue
 
@@ -2625,7 +2627,8 @@ Each level includes the one before it:
   **Grants**: per-action enforcement and bounded revocation (for
   gated classes, within the staleness bound plus the permit window
   plus the class's execution bound; for paths no runtime gate
-  reaches, within token lifetime where issuance is gated).
+  reaches, within token lifetime where minting checks current state,
+  and the summed residual of {{validity-model}} where it does not).
 
   Runtime-Enforced is the smallest deployment that turns a Mission
   from governed issuance into action-time defense. Every normative
@@ -3117,7 +3120,7 @@ cell says so; "runtime profile" is
 |---|---|---|---|---|
 | Baseline Issuance | OAuth binding, structured-authority | Baseline, a new-derivation kill ("Containment Properties") | New derivation, delegation, and cross-domain projection minted after the transition ("Derivation Gating") | Tokens already issued, to `exp`, and a consequential read under the token-lifetime default, the same bound (runtime profile); pre-transition projection grants (note 1) |
 | Baseline Issuance | Standalone MAS, no credential-carried authority | Neither; the runtime layer is the only cutoff, and it is absent at this level | Nothing at the resource; the transition commits and is visible on the Mission Status Response and the introspection projection ("Visibility") | Every action, to the resource's own bound, if any (note 2) |
-| Runtime-Enforced | Any binding, a class using a containment-aware state source within its published bound (note 3) | Runtime-Enforced for that class ("Containment Properties"); Baseline only for the classes in note 4 | The contained capability, denied at the class's next gated action once the source reflects the overlay, within the staleness bound plus the permit window plus the class's execution bound (runtime profile) | Paths no action-time gate reaches: token lifetime where issuance is gated, otherwise no bound |
+| Runtime-Enforced | Any binding, a class using a containment-aware state source within its published bound (note 3) | Runtime-Enforced for that class ("Containment Properties"); Baseline only for the classes in note 4 | The contained capability, denied at the class's next gated action once the source reflects the overlay, within the staleness bound plus the permit window plus the class's execution bound (runtime profile) | Paths no action-time gate reaches: token lifetime where minting checks current state, the summed residual where it remints from an earlier observation ({{validity-model}}), otherwise no bound |
 | Baseline Issuance | MAS as estate control plane, issuance join at each consuming AS | Baseline, from Derivation Gating at the Mission Issuer ("Derivation Gating") and, at a consuming AS with a Mission-state integration, from projecting each redemption and refresh through the Effective Authority Set (note 5) | New grant minting: the Mission Issuer's Derivation Gating evaluates the Effective Authority Set, so a grant minted after the transition excludes contained authority ("Derivation Gating"); and, at a consuming AS with a Mission-state integration, each redemption and refresh once its state source reflects the transition (issuance grant, "Effective Authority Set Projection") | An outstanding grant redeems once, within its 300-second lifetime, at a consuming AS without a Mission-state integration, which checks no Mission state at redemption and issues no refresh tokens; tokens already issued run to their own `exp` (issuance grant, "Redemption") |
 | Runtime-Enforced | OAuth binding with offline attenuation, a consumer whose check is active-state only (note 6) | Baseline ("Containment Properties"): a contained Mission stays `active` | New attenuation roots, which exclude contained authority ("Derivation Gating") | Roots minted before the transition, to their own lifetime (note 6) |
 {: title="What a capability kill stops, and what runs to its own bound"}
@@ -4174,12 +4177,11 @@ bound profiled by `aauth-mission-expiry`.
 
 \[\[ To be removed from the final specification ]]
 
-- Corrections from the fourth outside review, with no change to any
-  profile's requirements. The Validity Model sums the residual across
-  an exchange that mints without a fresh state check, and The Four
-  Levels, Assurance Claims, Composed Kill-Switch Reality, and
-  Appendix F's first shape state revocation figures from that
-  arithmetic. The Actor Chain separates the approved agent, recorded
+- Corrections from the fourth outside review. The Validity Model sums
+  the residual across an exchange that mints without a fresh state
+  check, and Project, The Four Levels, Assurance Claims, Composed
+  Kill-Switch Reality, and Appendix F's first shape state revocation
+  figures from that arithmetic. The Actor Chain separates the approved agent, recorded
   at approval, from the requesting `client_id`. Both High-Assurance
   claims require attestation. The Ontology Contract describes task
   context as shared across components; the Derivation Boundary calls
