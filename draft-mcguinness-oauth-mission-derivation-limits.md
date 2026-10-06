@@ -81,6 +81,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-progressive:
+    title: "Mission Progressive Authorization for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-template:
     title: "Mission Template for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html
@@ -237,15 +245,26 @@ dispatched Template instance's
 ({{I-D.draft-mcguinness-oauth-mission-template}}), and an Expansion
 successor's ({{I-D.draft-mcguinness-oauth-mission-expansion}}),
 exactly as at direct approval. An established `derivation_limit` is
-never inherited unchanged from a parent, a template, or a predecessor
-Mission, with one exception: a Child Delegation carryover replacement
-preserves the old child's `derivation_limit` and derivation count, so
-carryover cannot replenish a derivation budget
-({{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section "No
-State, Authority, Expiry, or Budget Reset"). Otherwise each Mission
-Record's ceiling comes only from its own Intent's
-`requested_derivation_limit`, clamped by the deployment's policy for
-that Mission.
+never inherited from a parent, a template, or a predecessor Mission,
+with two exceptions, each defined by the profile that creates the
+Mission, so that neither can replenish a derivation budget:
+
+- a Child Delegation carryover replacement preserves the old child's
+  `derivation_limit` and derivation count
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section
+  "No State, Authority, Expiry, or Budget Reset"); and
+- a policy-adjudicated ceiling-drawdown successor carries forward its
+  predecessor's committed derivation count, and its
+  `derivation_limit` never exceeds the predecessor's: a stricter
+  policy or requested ceiling narrows it further, and a predecessor
+  with no `derivation_limit` passes on no finite limit
+  ({{I-D.draft-mcguinness-oauth-mission-progressive}}, Section
+  "In-ceiling expansion").
+
+Otherwise each Mission Record's ceiling comes only from its own
+Intent's `requested_derivation_limit`, clamped by the deployment's
+policy for that Mission. A successor created by a fresh human
+approval and each distinct Template dispatch establish theirs afresh.
 
 ## Mission Record Member {#record-member}
 
@@ -289,7 +308,10 @@ A child-creation token exchange
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) is not
 counted against the Parent Mission's limit. The Child Mission's first
 issuance, its redemption of the child's initial grant, is counted
-against the child's own `derivation_limit`.
+against the child's own `derivation_limit`. The successor access token
+a ceiling-drawdown response returns is one derivation, counted against
+the successor, never the predecessor
+({{I-D.draft-mcguinness-oauth-mission-progressive}}).
 
 ## Atomicity and Concurrency {#concurrency}
 
@@ -641,6 +663,10 @@ intent_hash = sha-256:r--mF07yZfWRGV6N28A2u_8rUzIG-bNhpvFSS5FhoBk
 
 -00
 
+- Effective Limit and What Counts: a ceiling-drawdown successor
+  carries forward its predecessor's committed derivation count and
+  never exceeds its limit, alongside the carryover exception; its
+  successor access token counts once, against the successor (#1079).
 - Approval Rendering applies where the limit is established at a
   human approval event; a policy-adjudicated instance has no consent
   rendering (#1078).
